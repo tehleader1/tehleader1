@@ -169,14 +169,51 @@ def _post_to_shopify(title, html, meta, handle):
         print("[engine] Could not get Shopify blog ID — skipping")
         return None
 
+    # Build SEO-rich HTML with CTA
+    cta_html = """
+<hr>
+<div style="background:#f9f5f3;border-radius:12px;padding:24px;text-align:center;margin-top:32px;">
+  <p style="font-size:18px;font-style:italic;margin-bottom:8px;">Get your personalized hair routine</p>
+  <p style="font-size:14px;color:#666;margin-bottom:16px;">Chat with Aria, our AI hair advisor, for expert advice tailored to your hair type.</p>
+  <a href="https://ai-hair-advisor.onrender.com" style="background:#c1a3a2;color:#fff;padding:12px 28px;border-radius:30px;text-decoration:none;font-size:13px;">Chat with Aria Free →</a>
+</div>"""
+
+    full_html = html + cta_html
+
+    # Extract keywords from title for SEO tags
+    keywords = ["hair care", "hair tips", "SupportRD", "Dominican hair care",
+                "hair growth", "healthy hair"]
+    title_lower = title.lower()
+    if "damage" in title_lower or "repair" in title_lower: keywords.append("damaged hair repair")
+    if "growth" in title_lower or "grow" in title_lower:   keywords.append("hair growth tips")
+    if "curl" in title_lower or "natural" in title_lower:  keywords.append("natural hair care")
+    if "scalp" in title_lower:                             keywords.append("scalp health")
+    if "dry" in title_lower or "moisture" in title_lower:  keywords.append("dry hair treatment")
+    if "loss" in title_lower or "thin" in title_lower:     keywords.append("hair loss solutions")
+    tags = ", ".join(keywords[:8])
+
     article_payload = json.dumps({
         "article": {
             "title":        title,
-            "body_html":    html,
+            "body_html":    full_html,
             "summary_html": meta,
             "published":    True,
             "handle":       handle,
-            "tags":         "hair care, hair growth, hair tips, SupportRD"
+            "tags":         tags,
+            "metafields": [
+                {
+                    "key":       "title_tag",
+                    "value":     title + " | SupportRD",
+                    "type":      "single_line_text_field",
+                    "namespace": "global"
+                },
+                {
+                    "key":       "description_tag",
+                    "value":     meta,
+                    "type":      "single_line_text_field",
+                    "namespace": "global"
+                }
+            ]
         }
     }).encode("utf-8")
 
@@ -185,20 +222,21 @@ def _post_to_shopify(title, html, meta, handle):
         url,
         data=article_payload,
         headers={
-            "Content-Type":             "application/json",
-            "X-Shopify-Access-Token":   SHOPIFY_ADMIN_TOKEN
+            "Content-Type":           "application/json",
+            "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN
         },
         method="POST"
     )
     try:
         with urlreq.urlopen(req, timeout=20) as resp:
-            data    = json.loads(resp.read().decode("utf-8"))
-            art     = data.get("article", {})
+            data       = json.loads(resp.read().decode("utf-8"))
+            art        = data.get("article", {})
             art_handle = art.get("handle", handle)
+            art_id     = art.get("id", "")
             blog_handle = _get_shopify_blog_handle(blog_id)
-            if blog_handle:
-                return f"https://{SHOPIFY_STORE}/blogs/{blog_handle}/{art_handle}"
-            return f"https://{SHOPIFY_STORE}/blogs/news/{art_handle}"
+            shopify_url = f"https://supportrd.com/blogs/{blog_handle}/{art_handle}" if blog_handle else f"https://supportrd.com/blogs/news/{art_handle}"
+            print(f"[engine] ✅ Shopify article created: {art_id} → {shopify_url}")
+            return shopify_url
     except Exception as e:
         print(f"[engine] Shopify article post error: {e}")
         return None
