@@ -9,7 +9,6 @@ AUTH_DB = os.path.join(os.path.dirname(__file__), "users.db")
 _db_lock = threading.Lock()
 
 def get_db():
-    """Get a SQLite connection with WAL mode and locking to prevent conflicts."""
     con = sqlite3.connect(AUTH_DB, timeout=60, check_same_thread=False)
     con.execute("PRAGMA journal_mode=WAL")
     con.execute("PRAGMA synchronous=NORMAL")
@@ -18,7 +17,6 @@ def get_db():
     return con
 
 def db_execute(query, params=(), fetchone=False, fetchall=False):
-    """Thread-safe DB execute with auto-retry on lock."""
     import time
     for attempt in range(5):
         try:
@@ -199,7 +197,9 @@ def extract_product(text):
     if "formula exclusiva" in t: return "Formula Exclusiva"
     if "laciador" in t or "crece" in t: return "Laciador Crece"
     if "gotero" in t or "rapido" in t: return "Gotero Rapido"
-    if "gotika"           in t: return "Gotitas Brillantes"
+    if "gotitas" in t or "brillantes" in t or "gotika" in t: return "Gotitas Brillantes"
+    if "mascarilla" in t: return "Mascarilla"
+    if "shampoo" in t or "aloe" in t: return "Shampoo Aloe Vera"
     return "Unknown"
 
 def extract_concern(text):
@@ -263,671 +263,237 @@ Respond ONLY with your answer. No preamble. No "Sure!" or "Of course!".
 If the language code indicates non-English, respond entirely in that language."""
 
 
-# ── MAIN APP ──────────────────────────────────────────────────────────────────
+# ── SUBSCRIPTION CONSTANTS (needed before index route) ────────────────────────
+STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PRICE_ID        = os.environ.get("STRIPE_PRICE_ID", "")
+STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_TRIAL_DAYS      = 7
+FREE_RESPONSE_LIMIT    = 3
+SUBSCRIPTION_PRICE_USD = 80
+APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor.onrender.com")
+SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
+SHOPIFY_ADMIN_TOKEN    = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
+SHOPIFY_PRODUCT_HANDLE = "hair-advisor-premium"
+GOOGLE_CLIENT_ID       = os.environ.get("GOOGLE_CLIENT_ID", "")
+
+def init_subscription_db():
+    con = get_db()
+    con.execute("""CREATE TABLE IF NOT EXISTS subscriptions (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id         INTEGER UNIQUE NOT NULL,
+        stripe_customer TEXT,
+        stripe_sub_id   TEXT,
+        shopify_sub_id  TEXT,
+        status          TEXT DEFAULT 'inactive',
+        plan            TEXT DEFAULT 'free',
+        trial_start     TEXT,
+        trial_end       TEXT,
+        current_period_end TEXT,
+        created_at      TEXT DEFAULT (datetime('now')),
+        updated_at      TEXT DEFAULT (datetime('now'))
+    )""")
+    con.execute("""CREATE TABLE IF NOT EXISTS session_usage (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        user_id    INTEGER,
+        count      INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now'))
+    )""")
+    con.commit()
+    con.close()
+
+init_subscription_db()
+
+def get_subscription(user_id):
+    con = get_db()
+    row = con.execute("SELECT * FROM subscriptions WHERE user_id=?", (user_id,)).fetchone()
+    con.close()
+    if not row: return None
+    cols = ["id","user_id","stripe_customer","stripe_sub_id","shopify_sub_id",
+            "status","plan","trial_start","trial_end","current_period_end","created_at","updated_at"]
+    return dict(zip(cols, row))
+
+def is_subscribed(user_id):
+    sub = get_subscription(user_id)
+    if not sub: return False
+    if sub["status"] in ("active", "trialing"): return True
+    if sub["trial_end"]:
+        try:
+            trial_end = datetime.datetime.fromisoformat(sub["trial_end"])
+            if datetime.datetime.utcnow() < trial_end:
+                return True
+        except: pass
+    return False
+
+def get_session_count(session_id, user_id=None):
+    con = get_db()
+    if user_id:
+        row = con.execute("SELECT count FROM session_usage WHERE user_id=?", (user_id,)).fetchone()
+    else:
+        row = con.execute("SELECT count FROM session_usage WHERE session_id=? AND user_id IS NULL", (session_id,)).fetchone()
+    con.close()
+    return row[0] if row else 0
+
+def increment_session_count(session_id, user_id=None):
+    con = get_db()
+    if user_id:
+        row = con.execute("SELECT id FROM session_usage WHERE user_id=?", (user_id,)).fetchone()
+        if row:
+            con.execute("UPDATE session_usage SET count=count+1 WHERE user_id=?", (user_id,))
+        else:
+            con.execute("INSERT INTO session_usage (session_id,user_id,count) VALUES (?,?,1)", (session_id, user_id))
+    else:
+        row = con.execute("SELECT id FROM session_usage WHERE session_id=? AND user_id IS NULL", (session_id,)).fetchone()
+        if row:
+            con.execute("UPDATE session_usage SET count=count+1 WHERE session_id=?", (session_id,))
+        else:
+            con.execute("INSERT INTO session_usage (session_id,user_id,count) VALUES (?,NULL,1)", (session_id,))
+    con.commit()
+    con.close()
+
+
+# ── MAIN ROUTE: ARIA SPHERE UI ────────────────────────────────────────────────
 @app.route("/")
 def index():
-    """Redirect root to dashboard — Aria is only accessible via dashboard, widget, or PWA."""
-    token = request.cookies.get("srd_token") or request.headers.get("X-Auth-Token")
-    # If they have a session token cookie redirect to dashboard, else to login
-    if token:
-        return redirect("/dashboard")
-    return redirect("/login")
-
-
-@app.route("/api/recommend", methods=["POST","OPTIONS"])
-def recommend():
-    data       = request.get_json()
-    user_text  = data.get("text", "")
-    lang       = data.get("lang", "en-US")
-    history    = data.get("history", [])
-    session_id = request.headers.get("X-Session-Id", request.remote_addr or "anon")
-
-    # Check user + subscription
-    user       = get_current_user()
-    subscribed = is_subscribed(user["id"]) if user else False
-
-    lang_names = {
-        "en-US":"English","es-ES":"Spanish","fr-FR":"French",
-        "pt-BR":"Portuguese","de-DE":"German","ar-SA":"Arabic",
-        "zh-CN":"Mandarin Chinese","hi-IN":"Hindi"
-    }
-    lang_name  = lang_names.get(lang, "English")
-    lang_instr = f"\n\nIMPORTANT: Your ENTIRE response must be in {lang_name}."
-
-    # ── EVERYONE gets full Aria — premium gets saved history + profile context
-    show_paywall  = False
-    profile_context = ""
-    if user:
-        if subscribed:
-            profile = get_hair_profile(user["id"])
-            if profile.get("hair_type") or profile.get("hair_concerns"):
-                profile_context = f"""
-
-RETURNING CLIENT PROFILE:
-- Name: {user.get("name","this client")}
-- Hair type: {profile.get("hair_type","unknown")}
-- Known concerns: {profile.get("hair_concerns","none saved")}
-- Treatments history: {profile.get("treatments","none saved")}
-- Products tried: {profile.get("products_tried","none saved")}
-Reference this naturally in your response."""
-        save_chat_message(user["id"], "user", user_text)
-    active_prompt = SYSTEM_PROMPT + profile_context + lang_instr
-    max_tokens    = 350
-
-    if not ANTHROPIC_API_KEY:
-        return jsonify({"recommendation": None, "error": "No API key"}), 500
-
-    try:
-        import urllib.request as urlreq
-
-        # Build messages
-        messages = []
-        if subscribed and user:
-            db_history = get_chat_history(user["id"], limit=16)
-            for h in db_history[:-1]:
-                if h.get("role") in ("user","assistant") and h.get("content"):
-                    messages.append({"role": h["role"], "content": h["content"]})
-        else:
-            # Free users only get last 1 exchange for context
-            for h in history[-2:]:
-                if h.get("role") in ("user","assistant") and h.get("content"):
-                    messages.append({"role": h["role"], "content": h["content"]})
-
-        messages.append({"role": "user", "content": user_text})
-
-        payload = json.dumps({
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": max_tokens,
-            "system": active_prompt,
-            "messages": messages
-        }).encode("utf-8")
-
-        req = urlreq.Request(
-            "https://api.anthropic.com/v1/messages",
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "x-api-key": ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01"
-            },
-            method="POST"
-        )
-        with urlreq.urlopen(req, timeout=12) as resp:
-            result    = json.loads(resp.read().decode("utf-8"))
-            recommendation = result["content"][0]["text"].strip()
-
-        # Save history + auto-update profile for subscribers
-        if subscribed and user:
-            save_chat_message(user["id"], "assistant", recommendation)
-            concern = extract_concern(user_text)
-            if concern:
-                profile  = get_hair_profile(user["id"])
-                existing = profile.get("hair_concerns","")
-                if concern not in existing:
-                    updated = (existing + ", " + concern).strip(", ")
-                    save_hair_profile(user["id"], {**profile, "hair_concerns": updated})
-
-        # Increment usage counter
-        increment_session_count(session_id, user["id"] if user else None)
-        new_count = count + 1
-
-        product = extract_product(recommendation)
-        concern = extract_concern(user_text)
-        log_event(lang, user_text, product, concern)
-
-        return jsonify({
-            "recommendation":  recommendation,
-            "logged_in":       user is not None,
-            "user_name":       user["name"] if user else None,
-            "subscribed":      subscribed,
-            "response_count":  new_count,
-            "free_limit":      FREE_RESPONSE_LIMIT,
-            "show_paywall":    show_paywall,
-            "paywall_soft":    True
-        })
-
-    except Exception as e:
-        return jsonify({"recommendation": None, "error": str(e)}), 500
-
-
-# ── API: TIP LOGGING ──────────────────────────────────────────────────────────
-@app.route("/api/tip", methods=["POST"])
-def tip():
-    data    = request.get_json()
-    lang    = data.get("lang", "en-US")
-    rating  = data.get("rating", 0)
-    amount  = data.get("amount", "skip")
-    product = data.get("product", "")
-    log_tip(lang, rating, amount, product)
-    return jsonify({"ok": True})
-
-
-# ── ANALYTICS DASHBOARD ───────────────────────────────────────────────────────
-ANALYTICS_KEY = os.environ.get("ANALYTICS_KEY", "hairadmin")
-
-@app.route("/api/dashboard-stats")
-def dashboard_stats():
-    """Real analytics for the dashboard — pulled from events + hair_profiles + chat_history."""
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "unauthorized"}), 401
-    try:
-        adb = get_analytics_db()
-        udb = get_db()
-        from datetime import date, timedelta
-        today = date.today()
-
-        # Total users & active today
-        total_users = udb.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-        active_today = udb.execute(
-            "SELECT COUNT(DISTINCT user_id) FROM chat_history WHERE ts >= datetime('now','-1 day')"
-        ).fetchone()[0]
-
-        # Top concerns across all profiles
-        profiles = udb.execute("SELECT hair_concerns FROM hair_profiles WHERE hair_concerns IS NOT NULL AND hair_concerns != ''").fetchall()
-        concern_counts = {}
-        for (row,) in profiles:
-            for c in row.split(','):
-                c = c.strip().lower()
-                if c: concern_counts[c] = concern_counts.get(c, 0) + 1
-        total_concern_tags = sum(concern_counts.values()) or 1
-        top_concerns = sorted(concern_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-
-        # Top products used across all profiles
-        prod_counts = {}
-        for (row,) in udb.execute("SELECT products_tried FROM hair_profiles WHERE products_tried IS NOT NULL AND products_tried != ''").fetchall():
-            for p in row.split(','):
-                p = p.strip()
-                if p: prod_counts[p] = prod_counts.get(p, 0) + 1
-        total_prod_tags = sum(prod_counts.values()) or 1
-        top_products = sorted(prod_counts.items(), key=lambda x: x[1], reverse=True)[:6]
-
-        # Product trends from events (last 30d vs prev 30d)
-        recent_ev = adb.execute("SELECT product, COUNT(*) as n FROM events WHERE ts >= datetime('now','-30 days') AND product != 'Unknown' GROUP BY product ORDER BY n DESC").fetchall()
-        prev_map  = {p: n for p, n in adb.execute("SELECT product, COUNT(*) as n FROM events WHERE ts >= datetime('now','-60 days') AND ts < datetime('now','-30 days') AND product != 'Unknown' GROUP BY product ORDER BY n DESC").fetchall()}
-        product_trends = [{"product": p, "count": n, "change": round(((n - prev_map.get(p,0)) / max(prev_map.get(p,0),1)) * 100)} for p, n in recent_ev]
-
-        # Concern events last 30d
-        concern_ev = adb.execute("SELECT concern, COUNT(*) as n FROM events WHERE ts >= datetime('now','-30 days') GROUP BY concern ORDER BY n DESC").fetchall()
-        total_cev = sum(n for _,n in concern_ev) or 1
-        concern_sentiment = [{"concern": c, "count": n, "pct": round(n/total_cev*100)} for c, n in concern_ev[:4]]
-
-        # Daily chat sparklines
-        day_map = {r[0]: r[1] for r in udb.execute("SELECT date(ts) as d, COUNT(*) as n FROM chat_history WHERE ts >= datetime('now','-30 days') AND role='user' GROUP BY d ORDER BY d").fetchall()}
-        sparkline_30 = [day_map.get((today - timedelta(days=29-i)).isoformat(), 0) for i in range(30)]
-
-        # User's own spark
-        udm = {r[0]: r[1] for r in udb.execute("SELECT date(ts) as d, COUNT(*) as n FROM chat_history WHERE user_id=? AND ts >= datetime('now','-30 days') AND role='user' GROUP BY d ORDER BY d", (user["id"],)).fetchall()}
-        user_spark = [udm.get((today - timedelta(days=29-i)).isoformat(), 0) for i in range(30)]
-
-        # Community sentiment ratios from profiles
-        m = concern_counts.get('frizz',0) + concern_counts.get('dry / brittle',0)
-        d = concern_counts.get('damaged',0) + concern_counts.get('breakage',0)
-        g = concern_counts.get('slow growth',0) + concern_counts.get('hair loss',0) + concern_counts.get('thinning',0)
-        s = concern_counts.get('oily scalp',0) + concern_counts.get('dandruff',0)
-        tot = max(m+d+g+s, 1)
-
-        adb.close(); udb.close()
-        return jsonify({
-            "total_users": total_users,
-            "active_today": max(active_today, 1),
-            "top_concerns": [{"name": c, "count": n, "pct": round(n/total_concern_tags*100)} for c, n in top_concerns],
-            "top_products": [{"name": p, "count": n, "pct": round(n/total_prod_tags*100)} for p, n in top_products],
-            "product_trends": product_trends,
-            "concern_sentiment": concern_sentiment,
-            "sparkline_7":  sparkline_30[-7:],
-            "sparkline_14": sparkline_30[-14:],
-            "sparkline_30": sparkline_30,
-            "user_spark_30": user_spark,
-            "sentiment": {
-                "moisture_pct": round(m/tot*100),
-                "damage_pct":   round(d/tot*100),
-                "growth_pct":   round(g/tot*100),
-                "scalp_pct":    round(s/tot*100),
-            }
-        })
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/analytics")
-def analytics():
-    key = request.args.get("key", "")
-    if key != ANALYTICS_KEY:
-        return "Unauthorized. Add ?key=YOUR_ANALYTICS_KEY to the URL.", 401
-
-    try:
-        con = get_analytics_db()
-        total    = con.execute("SELECT COUNT(*) FROM events").fetchone()[0]
-        products = con.execute("SELECT product, COUNT(*) as n FROM events GROUP BY product ORDER BY n DESC").fetchall()
-        concerns = con.execute("SELECT concern, COUNT(*) as n FROM events GROUP BY concern ORDER BY n DESC").fetchall()
-        langs    = con.execute("SELECT lang, COUNT(*) as n FROM events GROUP BY lang ORDER BY n DESC").fetchall()
-        recent   = con.execute("SELECT ts, lang, user_msg, product, concern FROM events ORDER BY id DESC LIMIT 50").fetchall()
-        # Tip stats
-        tip_total   = con.execute("SELECT COUNT(*) FROM tips").fetchone()[0]
-        avg_rating  = con.execute("SELECT AVG(rating) FROM tips WHERE rating > 0").fetchone()[0]
-        tip_amounts = con.execute("SELECT tip_amount, COUNT(*) as n FROM tips GROUP BY tip_amount ORDER BY n DESC").fetchall()
-        avg_r = round(avg_rating, 2) if avg_rating else "N/A"
-        con.close()
-    except Exception as e:
-        return f"DB error: {e}", 500
-
-    def bar(n, total):
-        pct = int((n / total * 36)) if total else 0
-        return "█" * pct + "░" * (36 - pct)
-
-    rows = "".join(f"""<tr>
-      <td>{r[0][:16]}</td><td>{r[1]}</td>
-      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{r[2]}</td>
-      <td><b>{r[3]}</b></td><td>{r[4]}</td></tr>""" for r in recent)
-
-    prod_rows = "".join(f"""<tr>
-      <td><b>{p[0]}</b></td><td>{p[1]}</td>
-      <td style="font-family:monospace;color:#00ffc8">{bar(p[1],total)}</td>
-      <td>{round(p[1]/total*100)}%</td></tr>""" for p in products) if products else ""
-
-    concern_rows = "".join(f"""<tr>
-      <td>{c[0]}</td><td>{c[1]}</td>
-      <td style="font-family:monospace;color:#00c8ff">{bar(c[1],total)}</td>
-      <td>{round(c[1]/total*100)}%</td></tr>""" for c in concerns) if concerns else ""
-
-    lang_rows = "".join(f"<tr><td>{l[0]}</td><td>{l[1]}</td><td>{round(l[1]/total*100)}%</td></tr>" for l in langs) if langs else ""
-
-    tip_amt_rows = "".join(f"<tr><td>{t[0]}</td><td>{t[1]}</td></tr>" for t in tip_amounts)
-
-    return f"""<!DOCTYPE html><html><head>
-<meta charset="UTF-8"><title>Hair Advisor Analytics</title>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;600&display=swap" rel="stylesheet">
+    return r"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aria — SupportRD Hair Advisor</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
 <style>
-  body{{background:#040709;color:#dff2ec;font-family:'Jost',sans-serif;font-weight:300;padding:40px;}}
-  h1{{font-size:24px;font-weight:400;letter-spacing:0.08em;color:#00ffc8;margin-bottom:8px;}}
-  h2{{font-size:13px;font-weight:400;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.40);margin:36px 0 12px;}}
-  .stat{{display:inline-block;background:rgba(0,255,200,0.07);border:1px solid rgba(0,255,200,0.18);
-         border-radius:12px;padding:16px 28px;margin:0 12px 12px 0;text-align:center;}}
-  .stat .n{{font-size:36px;font-weight:300;color:#00ffc8;}}
-  .stat .l{{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:4px;}}
-  table{{width:100%;border-collapse:collapse;font-size:13px;}}
-  th{{text-align:left;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.08);
-      font-size:10px;letter-spacing:0.10em;text-transform:uppercase;color:rgba(255,255,255,0.30);}}
-  td{{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);color:rgba(255,255,255,0.70);}}
-  tr:hover td{{background:rgba(255,255,255,0.03);}}
-</style></head><body>
-<h1>Hair Advisor — Analytics</h1>
-<p style="color:rgba(255,255,255,0.30);font-size:12px;margin-bottom:28px;">Live data · {datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M")} UTC</p>
+:root {
+  --brand-idle-r:193;--brand-idle-g:163;--brand-idle-b:162;
+  --brand-listen-r:157;--brand-listen-g:127;--brand-listen-b:106;
+  --brand-speak-r:208;--brand-speak-g:208;--brand-speak-b:208;
+  --brand-bg:#f0ebe8;--brand-text:#0d0906;
+  --brand-accent:rgba(193,163,162,1);
+  --brand-accent-lo:rgba(193,163,162,0.08);
+  --brand-accent-mid:rgba(193,163,162,0.22);
+  --brand-font-head:'Cormorant Garamond',serif;
+  --brand-font-body:'Jost',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 100%);color:var(--brand-text);font-family:var(--brand-font-body);font-weight:300;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;user-select:none;}
 
-<div class="stat"><div class="n">{total}</div><div class="l">Total Sessions</div></div>
-<div class="stat"><div class="n">{len(products)}</div><div class="l">Products Recommended</div></div>
-<div class="stat"><div class="n">{len(langs)}</div><div class="l">Languages Used</div></div>
-<div class="stat"><div class="n">{tip_total}</div><div class="l">Tip Submissions</div></div>
-<div class="stat"><div class="n">{avg_r}</div><div class="l">Avg Star Rating</div></div>
+#topBar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:14px 20px;z-index:100;background:rgba(250,246,243,0.70);backdrop-filter:blur(14px);border-bottom:1px solid rgba(193,163,162,0.12);}
+.top-btn{background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.55);border:1px solid rgba(0,0,0,0.12);padding:7px 16px;border-radius:30px;font-size:11px;font-family:var(--brand-font-body);font-weight:300;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:all 0.4s;outline:none;}
+.top-btn:hover{background:var(--brand-accent-lo);color:var(--brand-accent);border-color:var(--brand-accent-mid);}
+#langSelect{background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.55);border:1px solid rgba(0,0,0,0.12);padding:7px 12px;border-radius:30px;font-size:11px;font-family:var(--brand-font-body);letter-spacing:0.08em;cursor:pointer;outline:none;transition:all 0.4s;}
+#langSelect option{background:#f0ebe8;color:#0d0906;}
+.nav-link{padding:7px 14px;border:1px solid rgba(193,163,162,0.45);border-radius:20px;font-family:var(--brand-font-body);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#c1a3a2;text-decoration:none;transition:all 0.3s;}
+.nav-link:hover{background:rgba(193,163,162,0.12);color:#9d7f6a;}
 
-<h2>Product Recommendations</h2>
-<table><tr><th>Product</th><th>Count</th><th>Share</th><th>%</th></tr>{prod_rows}</table>
+.sphere-wrap{width:300px;height:300px;display:flex;align-items:center;justify-content:center;}
+#halo{width:220px;height:220px;border-radius:50%;cursor:pointer;
+  background:radial-gradient(circle at 40% 38%,rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.55) 0%,rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.18) 42%,rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.07) 70%,rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.01) 100%);
+  box-shadow:inset 0 0 40px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.10),0 0 70px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.45),0 0 150px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.28),0 0 280px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.15),0 0 420px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.07);
+  transition:background 2.4s cubic-bezier(0.4,0,0.2,1),box-shadow 2.4s cubic-bezier(0.4,0,0.2,1);
+  animation:idlePulse 3.2s ease-in-out infinite;}
+@keyframes idlePulse{0%,100%{transform:scale(1.00);}50%{transform:scale(1.10);}}
+#halo.speaking{animation:speakPulse 0.9s ease-in-out infinite;}
+@keyframes speakPulse{0%,100%{transform:scale(1.05);}50%{transform:scale(1.20);}}
+#halo.listening{animation:none;}
 
-<h2>Hair Concerns</h2>
-<table><tr><th>Concern</th><th>Count</th><th>Share</th><th>%</th></tr>{concern_rows}</table>
+#stateLabel{margin-top:12px;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(0,0,0,0.30);height:16px;}
 
-<h2>Languages</h2>
-<table><tr><th>Language</th><th>Count</th><th>%</th></tr>{lang_rows}</table>
+#history{width:420px;max-width:92vw;max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-top:18px;padding:0 4px;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,0.12) transparent;}
+#history:empty{display:none;}
+.msg{padding:10px 16px;border-radius:18px;font-size:14px;line-height:1.55;max-width:88%;animation:fadeIn 0.4s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.msg.user{background:rgba(0,0,0,0.07);color:rgba(0,0,0,0.60);align-self:flex-end;border-bottom-right-radius:4px;font-family:var(--brand-font-body);}
+.msg.ai{background:rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.10);color:rgba(0,0,0,0.80);align-self:flex-start;border-bottom-left-radius:4px;font-family:var(--brand-font-head);font-style:italic;font-size:15px;}
 
-<h2>Tip Amounts</h2>
-<table><tr><th>Amount</th><th>Count</th></tr>{tip_amt_rows}</table>
+#clearBtn{margin-top:8px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.25);cursor:pointer;background:none;border:none;font-family:var(--brand-font-body);transition:color 0.3s;display:none;}
+#clearBtn:hover{color:rgba(0,0,0,0.55);}
+#clearBtn.visible{display:block;}
 
-<h2>Recent Sessions (last 50)</h2>
-<table><tr><th>Time</th><th>Lang</th><th>Message</th><th>Product</th><th>Concern</th></tr>{rows}</table>
-<script>
-fetch("https://supportrd.com/cart.js")
-  .then(function(r){{return r.json();}})
-  .then(function(d){{
-    var count = d.item_count;
-    if(count > 0){{
-      var el = document.getElementById("cart-count");
-      if(el) el.textContent = count;
-    }}
-  }}).catch(function(){{}});
-</script>
-</body></html>"""
+#response{margin-top:14px;width:420px;max-width:92vw;text-align:center;font-family:var(--brand-font-head);font-size:18px;font-weight:300;line-height:1.7;color:rgba(0,0,0,0.65);min-height:28px;font-style:italic;}
 
+#manualBox{display:none;flex-direction:column;align-items:center;gap:12px;margin-top:16px;width:380px;max-width:90vw;}
+#manualInput{width:100%;padding:13px 20px;background:rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.14);border-radius:30px;color:#0d0906;font-family:var(--brand-font-body);font-size:14px;outline:none;transition:border-color 0.3s;}
+#manualInput:focus{border-color:var(--brand-accent-mid);}
+#manualInput::placeholder{color:rgba(0,0,0,0.30);}
+#manualSubmit{padding:10px 32px;background:var(--brand-accent-lo);border:1px solid var(--brand-accent-mid);border-radius:30px;color:var(--brand-accent);font-family:var(--brand-font-body);font-size:11px;font-weight:300;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:all 0.3s;}
+#manualSubmit:hover{background:rgba(193,163,162,0.20);}
 
-# ── SHOPIFY ───────────────────────────────────────────────────────────────────
-@app.route("/apps/hair-advisor")
-def shopify_proxy():
-    return index()
+/* TIP PANEL */
+#tipPanel{position:fixed;bottom:-320px;left:50%;transform:translateX(-50%);width:400px;max-width:94vw;background:#faf6f3;border:1px solid rgba(193,163,162,0.35);border-radius:24px 24px 0 0;padding:28px 28px 36px;box-shadow:0 -12px 60px rgba(0,0,0,0.10);transition:bottom 0.55s cubic-bezier(0.32,0.72,0,1);z-index:200;text-align:center;}
+#tipPanel.open{bottom:0;}
+#tipTitle{font-family:var(--brand-font-head);font-size:20px;font-style:italic;color:rgba(0,0,0,0.70);margin-bottom:4px;}
+#tipSubtitle{font-family:var(--brand-font-body);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.30);margin-bottom:20px;}
+#starRow{display:flex;justify-content:center;gap:10px;margin-bottom:22px;}
+.star{font-size:26px;cursor:pointer;color:rgba(0,0,0,0.15);transition:color 0.2s,transform 0.15s;line-height:1;}
+.star.active{color:#c1a3a2;}
+.star:hover{transform:scale(1.2);}
+#tipAmounts{display:flex;justify-content:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.tip-amt{padding:9px 20px;border-radius:30px;border:1px solid rgba(193,163,162,0.40);background:rgba(193,163,162,0.07);color:rgba(0,0,0,0.55);font-family:var(--brand-font-body);font-size:13px;cursor:pointer;transition:all 0.25s;}
+.tip-amt:hover,.tip-amt.selected{background:rgba(193,163,162,0.22);border-color:rgba(193,163,162,0.70);color:#0d0906;}
+#customTipWrap{display:none;align-items:center;justify-content:center;gap:8px;margin-bottom:20px;}
+#customTipWrap.show{display:flex;}
+#customTipInput{width:110px;padding:9px 14px;border-radius:30px;border:1px solid rgba(193,163,162,0.40);background:rgba(193,163,162,0.07);color:#0d0906;font-family:var(--brand-font-body);font-size:14px;text-align:center;outline:none;}
+#customTipInput:focus{border-color:rgba(193,163,162,0.70);}
+#tipSubmit{display:block;width:100%;padding:13px;border-radius:30px;border:none;background:rgba(193,163,162,0.90);color:#fff;font-family:var(--brand-font-body);font-size:12px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background 0.3s;margin-bottom:12px;}
+#tipSubmit:hover{background:rgba(157,127,106,0.90);}
+#tipSkip{font-family:var(--brand-font-body);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.25);cursor:pointer;transition:color 0.3s;background:none;border:none;}
+#tipSkip:hover{color:rgba(0,0,0,0.50);}
+#tipThanks{display:none;flex-direction:column;align-items:center;gap:8px;padding:12px 0;}
+#tipThanks .thanks-icon{font-size:36px;margin-bottom:4px;}
+#tipThanks .thanks-title{font-family:var(--brand-font-head);font-size:22px;font-style:italic;color:rgba(0,0,0,0.70);}
+#tipThanks .thanks-sub{font-family:var(--brand-font-body);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.30);}
 
+#footer{position:fixed;bottom:22px;display:flex;gap:36px;z-index:10;}
+#footer span{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:rgba(0,0,0,0.30);cursor:pointer;transition:color 0.4s;}
+#footer span:hover{color:var(--brand-accent);}
 
+/* WELCOME BANNER */
+#welcomeBanner{display:none;position:fixed;top:56px;right:16px;background:#fff;border:1px solid rgba(193,163,162,0.25);border-radius:14px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.10);z-index:999;max-width:260px;animation:wbIn 0.4s cubic-bezier(0.22,1,0.36,1);}
+@keyframes wbIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+#welcomeBanner .wb-name{font-family:'Cormorant Garamond',serif;font-size:17px;font-style:italic;color:#0d0906;margin-bottom:4px;}
+#welcomeBanner .wb-score{font-size:11px;color:rgba(0,0,0,0.40);letter-spacing:0.06em;margin-bottom:10px;}
+#welcomeBanner .wb-score span{color:#c1a3a2;font-weight:600;}
+#welcomeBanner .wb-btns{display:flex;gap:8px;}
+#welcomeBanner .wb-btn{flex:1;padding:8px;border-radius:10px;font-size:10px;letter-spacing:0.10em;text-transform:uppercase;text-align:center;text-decoration:none;font-family:'Jost',sans-serif;}
+.wb-btn-rose{background:#c1a3a2;color:#fff;}
+.wb-btn-outline{border:1px solid rgba(193,163,162,0.40);color:#9d7f6a;}
 
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        from flask import make_response
-        resp = make_response("", 200)
-        resp.headers["Access-Control-Allow-Origin"]  = "*"
-        resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Auth-Token, X-Session-Id"
-        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE"
-        resp.headers["Access-Control-Max-Age"]       = "3600"
-        return resp
+/* PAYWALL */
+#paywallBanner{display:none;position:fixed;bottom:100px;left:50%;transform:translateX(-50%);width:92%;max-width:480px;background:#fff;border:1px solid rgba(193,163,162,0.30);border-radius:20px;padding:20px 22px;box-shadow:0 12px 48px rgba(0,0,0,0.14);z-index:2000;animation:pwIn 0.45s cubic-bezier(0.22,1,0.36,1);}
+@keyframes pwIn{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.pw-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.pw-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-style:italic;color:#0d0906;}
+.pw-close{background:none;border:none;font-size:18px;cursor:pointer;color:rgba(0,0,0,0.25);padding:0;line-height:1;}
+.pw-desc{font-size:12px;color:rgba(0,0,0,0.45);line-height:1.6;margin-bottom:14px;}
+.pw-trial{background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;padding:5px 14px;border-radius:20px;display:inline-block;margin-bottom:14px;}
+.pw-features{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:14px;}
+.pw-feature{font-size:11px;color:rgba(0,0,0,0.50);display:flex;align-items:center;gap:5px;}
+.pw-feature::before{content:'✦';color:#c1a3a2;font-size:9px;}
+.pw-btns{display:flex;gap:10px;}
+.pw-btn-upgrade{flex:2;padding:12px;background:#c1a3a2;color:#fff;border:none;border-radius:24px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:background 0.2s;}
+.pw-btn-upgrade:hover{background:#9d7f6a;}
+.pw-btn-continue{flex:1;padding:12px;background:transparent;color:rgba(0,0,0,0.35);border:1px solid rgba(0,0,0,0.12);border-radius:24px;font-family:'Jost',sans-serif;font-size:11px;cursor:pointer;}
 
-@app.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"]  = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Auth-Token, X-Session-Id"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE"
-    response.headers["Access-Control-Max-Age"]       = "3600"
-    return response
-
-
-@app.route("/api/auth/forgot-password", methods=["POST","OPTIONS"])
-def forgot_password():
-    data  = request.get_json(silent=True) or {}
-    email = (data.get("email","") or "").strip().lower()
-    if not email:
-        return jsonify({"error":"Email required"}), 400
-
-    user = db_execute("SELECT id, name FROM users WHERE email=?", (email,), fetchone=True)
-    if not user:
-        # Don't reveal if email exists
-        return jsonify({"ok": True})
-
-    import secrets
-    token = secrets.token_urlsafe(32)
-    expires = (datetime.datetime.utcnow() + datetime.timedelta(hours=2)).isoformat()
-
-    db_execute("UPDATE users SET reset_token=?, reset_token_expires=? WHERE id=?",
-               (token, expires, user[0]))
-
-    reset_url = f"{os.environ.get('APP_BASE_URL','https://supportrd.com')}/pages/hair-dashboard?reset_token={token}"
-
-    # Send reset email via simple smtp or just log it for now
-    try:
-        import smtplib
-        from email.mime.text import MIMEText
-        smtp_user = os.environ.get("SMTP_USER","")
-        smtp_pass = os.environ.get("SMTP_PASS","")
-        if smtp_user and smtp_pass:
-            msg = MIMEText(f"""Hi {user[1]},
-
-You requested a password reset for your SupportRD account.
-
-Click the link below to reset your password (valid for 2 hours):
-{reset_url}
-
-If you didn't request this, ignore this email.
-
-— SupportRD Team""")
-            msg["Subject"] = "Reset your SupportRD password"
-            msg["From"]    = smtp_user
-            msg["To"]      = email
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
-    except Exception as e:
-        print(f"Email send error: {e}")
-        # Still return ok — token is saved
-    return jsonify({"ok": True})
-
-
-@app.route("/api/auth/reset-password", methods=["POST","OPTIONS"])
-def reset_password():
-    data     = request.get_json(silent=True) or {}
-    token    = (data.get("token","") or "").strip()
-    password = (data.get("password","") or "").strip()
-    if not token or not password or len(password) < 6:
-        return jsonify({"error":"Invalid request"}), 400
-
-    user = db_execute(
-        "SELECT id, reset_token_expires FROM users WHERE reset_token=?",
-        (token,), fetchone=True)
-    if not user:
-        return jsonify({"error":"Invalid or expired reset link"}), 400
-
-    expires = user[1]
-    if expires and datetime.datetime.utcnow().isoformat() > expires:
-        return jsonify({"error":"Reset link has expired. Please request a new one."}), 400
-
-    import hashlib
-    hashed = hashlib.sha256(password.encode()).hexdigest()
-    db_execute("UPDATE users SET password=?, reset_token=NULL, reset_token_expires=NULL WHERE id=?",
-               (hashed, user[0]))
-    return jsonify({"ok": True})
-
-
-# ── CONTENT ENGINE SCHEDULER (3x daily: 9am, 2pm, 7pm UTC) ──────────────────
-def _start_content_scheduler():
-    import time as _t
-
-    def _pick_todays_times():
-        """Pick 3 random run times per day, seeded by date so consistent within the day."""
-        import random as _r
-        today = datetime.datetime.utcnow().date()
-        seed = int(today.strftime("%Y%m%d"))
-        rng = _r.Random(seed)
-        # Morning 7-11, Afternoon 12-17, Evening 18-23
-        windows = [(7,11),(12,17),(18,23)]
-        times = set()
-        for lo, hi in windows:
-            h = rng.randint(lo, hi)
-            m = rng.randint(0, 59)
-            times.add((h, m))
-        return times
-
-    _fired = set()
-    _todays_times = _pick_todays_times()
-    print(f"Content engine scheduler started — today's run times (UTC): {sorted(_todays_times)}")
-
-    def _run_engine_bg():
-        try:
-            from content_engine import run_engine
-            run_engine()
-        except Exception as e:
-            print(f"Scheduled engine error: {e}")
-
-    def scheduler():
-        nonlocal _fired, _todays_times
-        # Wait 90s after module load — lets gunicorn fully bind port first
-        _t.sleep(90)
-        while True:
-            now = datetime.datetime.utcnow()
-            today = now.date()
-            if not any(k[0] == today for k in _fired | {(today, 0)}):
-                _todays_times = _pick_todays_times()
-                _fired = set()
-                print(f"New day — today's run times (UTC): {sorted(_todays_times)}")
-            key = (today, now.hour, now.minute)
-            if (now.hour, now.minute) in _todays_times and key not in _fired:
-                _fired.add(key)
-                print(f"Content engine trigger at {now.hour}:{now.minute:02d} UTC...")
-                # Always run in its own thread — never blocks gunicorn
-                threading.Thread(target=_run_engine_bg, daemon=True).start()
-            _t.sleep(30)
-
-    t = threading.Thread(target=scheduler, daemon=True)
-    t.start()
-
-_start_content_scheduler()
-
-
-
-# ── BLOG DATABASE (SQLite — persists across restarts) ─────────────────────────
-BLOG_DB = "/data/srd_blog.db"
-
-def _init_blog_db():
-    db = sqlite3.connect(BLOG_DB)
-    db.execute("""CREATE TABLE IF NOT EXISTS posts (
-        handle TEXT PRIMARY KEY,
-        title TEXT,
-        html TEXT,
-        meta TEXT,
-        chinese_title TEXT,
-        chinese_summary TEXT,
-        date TEXT
-    )""")
-    db.commit()
-    db.close()
-
-_init_blog_db()
-
-def blog_save_post(post):
-    db = sqlite3.connect(BLOG_DB)
-    db.execute("""INSERT OR REPLACE INTO posts
-        (handle, title, html, meta, chinese_title, chinese_summary, date)
-        VALUES (?,?,?,?,?,?,?)""",
-        (post.get("handle"), post.get("title"), post.get("html"),
-         post.get("meta",""), post.get("chinese_title",""),
-         post.get("chinese_summary",""), post.get("date","")))
-    db.commit()
-    db.close()
-
-def blog_get_index(limit=90):
-    db = sqlite3.connect(BLOG_DB)
-    rows = db.execute("SELECT handle, title, meta, date FROM posts ORDER BY date DESC LIMIT ?", (limit,)).fetchall()
-    db.close()
-    return [{"handle":r[0],"title":r[1],"meta":r[2],"date":r[3]} for r in rows]
-
-def blog_get_post(handle):
-    db = sqlite3.connect(BLOG_DB)
-    row = db.execute("SELECT handle, title, html, meta, chinese_title, chinese_summary, date FROM posts WHERE handle=?", (handle,)).fetchone()
-    db.close()
-    if not row: return None
-    return {"handle":row[0],"title":row[1],"html":row[2],"meta":row[3],
-            "chinese_title":row[4],"chinese_summary":row[5],"date":row[6]}
-
-# ── BLOG API ENDPOINTS (for auto-engine to fetch) ────────────────────────────
-@app.route("/api/blog-posts", methods=["GET"])
-def api_blog_posts():
-    """Return list of all blog posts as JSON."""
-    return jsonify(blog_get_index())
-
-@app.route("/api/blog-post/<handle>", methods=["GET"])
-def api_blog_post(handle):
-    """Return a single blog post as JSON."""
-    post = blog_get_post(handle)
-    if post:
-        return jsonify(post)
-    return jsonify({"error": "not found"}), 404
-
-
-# ── PUBLIC BLOG ───────────────────────────────────────────────────
-
-@app.route("/api/hair-trends")
-def hair_trends():
-    """Scrape trending hair content from multiple platforms."""
-    import re, urllib.request, urllib.parse, random, threading
-    results = []
-    lock = threading.Lock()
-
-    def scrape_reddit():
-        try:
-            url = "https://www.reddit.com/r/Hair+Haircare+NaturalHair+curlyhair/hot.json?limit=12"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=8) as r:
-                data = json.loads(r.read().decode())
-            posts = data["data"]["children"]
-            for p in posts[:8]:
-                d = p["data"]
-                title = d.get("title","")
-                if any(kw in title.lower() for kw in ["hair","curl","scalp","growth","damage","frizz","moisture"]):
-                    img = d.get("thumbnail","")
-                    if img and img.startswith("http"):
-                        with lock:
-                            results.append({"title": title, "image": img, "source": "reddit", "link": "https://reddit.com" + d.get("permalink","")})
-        except Exception as e:
-            print(f"Reddit scrape error: {e}")
-
-    def scrape_pinterest():
-        try:
-            queries = ["hair care routine", "natural hair", "curly hair tips", "hair growth"]
-            query = random.choice(queries)
-            url = f"https://pinterest.com/search/pins/?q={urllib.parse.quote(query)}"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"})
-            with urllib.request.urlopen(req, timeout=8) as r:
-                html = r.read().decode("utf-8", errors="ignore")
-            images = re.findall(r'"url":"(https://i\.pinimg\.com/[^"]+736[^"]+\.jpg)"', html)
-            titles = re.findall(r'"title":"([^"]{15,100})"', html)
-            hair_titles = [t for t in titles if any(kw in t.lower() for kw in ["hair","curl","scalp","growth","damage","frizz"])]
-            for i, img in enumerate(images[:6]):
-                with lock:
-                    results.append({"title": hair_titles[i] if i < len(hair_titles) else query, "image": img, "source": "pinterest", "link": "https://auto-engine.onrender.com/blog"})
-        except Exception as e:
-            print(f"Pinterest scrape error: {e}")
-
-    def scrape_tumblr():
-        try:
-            tags = ["haircare", "naturalhair", "curlyhair", "hairtransformation"]
-            tag = random.choice(tags)
-            url = f"https://www.tumblr.com/tagged/{tag}"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=8) as r:
-                html = r.read().decode("utf-8", errors="ignore")
-            images = re.findall(r'"url":"(https://[^"]+tumblr[^"]+_500\.jpg)"', html)
-            for img in images[:4]:
-                with lock:
-                    results.append({"title": tag.replace("_"," ").title() + " inspiration", "image": img, "source": "tumblr", "link": "https://auto-engine.onrender.com/blog"})
-        except Exception as e:
-            print(f"Tumblr scrape error: {e}")
-
-    # Run all scrapers in parallel
-    threads = [
-        threading.Thread(target=scrape_reddit),
-        threading.Thread(target=scrape_pinterest),
-        threading.Thread(target=scrape_tumblr),
-    ]
-    for t in threads: t.start()
-    for t in threads: t.join(timeout=10)
-
-    random.shuffle(results)
-    return jsonify({"ok": True, "items": results[:15]})
-
-@app.route("/api/pinterest-trends")
-def pinterest_trends():
-    """Scrape and return trending Pinterest hair content."""
-    import re, urllib.request, urllib.parse, random
-    queries = ["hair care routine", "hair growth tips", "damaged hair repair", "curly hair", "hair loss treatment"]
-    query = random.choice(queries)
-    pins = []
-    try:
-        url = f"https://pinterest.com/search/pins/?q={urllib.parse.quote(query)}&rs=typed"
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9"
-        })
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            html = resp.read().decode("utf-8", errors="ignore")
-        # Extract image URLs and titles
-        images = re.findall(r'"url"\s*:\s*"(https://i\.pinimg\.com/[^"]+736[^"]+\.jpg)"', html)
-        titles = re.findall(r'"title"\s*:\s*"([^"]{15,100})"', html)
-        hair_titles = [t for t in titles if any(kw in t.lower() for kw in
-            ["hair", "curl", "scalp", "growth", "damage", "frizz", "moisture", "routine"])]
-        for i, img in enumerate(images[:12]):
-            pins.append({
-                "image": img,
-                "title": hair_titles[i] if i < len(hair_titles) else query,
-                "link": f"https://auto-engine.onrender.com/blog"
-            })
-    except Exception as e:
-        print(f"Pinterest scrape error: {e}")
-    return jsonify({"ok": True, "pins": pins, "query": query})
-
-
-# ── SHARED: PAGE LOADER + NAV (exact Shopify Savor theme) ────────────────────
-
-SRD_PAGE_LOADER = """<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap" rel="stylesheet">
-<style>
-  #srd-loader{position:fixed;inset:0;background:#f0ebe8;z-index:99999;display:flex;align-items:center;justify-content:center;}
-  #srd-loader-canvas{position:absolute;inset:0;width:100%;height:100%;}
-  .srd-logo-wrap{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:18px;opacity:0;animation:srdLogoReveal 1.2s cubic-bezier(0.22,1,0.36,1) 0.4s forwards;}
-  .srd-emblem{width:72px;height:72px;}
-  .srd-divider-line{width:48px;height:1px;background:linear-gradient(90deg,transparent,#c1a3a2,transparent);opacity:0;animation:srdFadeIn 0.8s ease 1.0s forwards;}
-  .srd-brand-script{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(13px,2vw,16px);letter-spacing:0.32em;text-transform:uppercase;color:#9d7f6a;opacity:0;animation:srdFadeUp 0.8s ease 1.1s forwards;}
-  .srd-dot-row{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:3;opacity:0;animation:srdFadeUp 0.6s ease 1.3s forwards;}
-  .srd-dot{width:4px;height:4px;border-radius:50%;background:rgba(193,163,162,0.25);transition:background 0.3s ease,transform 0.3s ease;}
-  .srd-dot.active{background:#c1a3a2;transform:scale(1.4);}
-  #srd-loader.srd-exit{animation:srdDissolve 0.9s cubic-bezier(0.4,0,0.2,1) forwards;}
-  @keyframes srdLogoReveal{0%{opacity:0;transform:scale(0.92)}100%{opacity:1;transform:scale(1)}}
-  @keyframes srdFadeIn{to{opacity:1}}
-  @keyframes srdFadeUp{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}
-  @keyframes srdDissolve{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
+/* PAGE LOADER */
+#srd-loader{position:fixed;inset:0;background:#0d0906;z-index:99999;display:flex;align-items:center;justify-content:center;}
+#srd-loader-canvas{position:absolute;inset:0;width:100%;height:100%;}
+.srd-logo-wrap{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:18px;opacity:0;animation:srdLogoReveal 1.2s cubic-bezier(0.22,1,0.36,1) 0.4s forwards;}
+.srd-emblem{width:72px;height:72px;}
+.srd-divider-line{width:48px;height:1px;background:linear-gradient(90deg,transparent,#c1a3a2,transparent);opacity:0;animation:srdFadeIn 0.8s ease 1.0s forwards;}
+.srd-brand-script{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(13px,2vw,16px);letter-spacing:0.32em;text-transform:uppercase;color:#c1a3a2;opacity:0;animation:srdFadeUp 0.8s ease 1.1s forwards;}
+.srd-dot-row{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:3;opacity:0;animation:srdFadeUp 0.6s ease 1.3s forwards;}
+.srd-dot{width:4px;height:4px;border-radius:50%;background:rgba(193,163,162,0.15);transition:background 0.3s ease,transform 0.3s ease;}
+.srd-dot.active{background:#c1a3a2;transform:scale(1.4);}
+#srd-loader.srd-exit{animation:srdDissolve 0.9s cubic-bezier(0.4,0,0.2,1) forwards;}
+@keyframes srdLogoReveal{0%{opacity:0;transform:scale(0.92)}100%{opacity:1;transform:scale(1)}}
+@keyframes srdFadeIn{to{opacity:1}}
+@keyframes srdFadeUp{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes srdDissolve{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
 </style>
+</head>
+<body>
+
+<!-- PAGE LOADER -->
 <div id="srd-loader">
   <canvas id="srd-loader-canvas"></canvas>
   <div class="srd-logo-wrap">
@@ -961,7 +527,7 @@ SRD_PAGE_LOADER = """<link href="https://fonts.googleapis.com/css2?family=Cormor
   function rsz(){cv.width=window.innerWidth;cv.height=window.innerHeight;}rsz();
   window.addEventListener('resize',rsz);
   function S(){this.i();}
-  S.prototype.i=function(){this.x=Math.random()*cv.width;this.y=-60-Math.random()*200;this.len=100+Math.random()*200;this.wave=(Math.random()-.5)*40;this.spd=.18+Math.random()*.35;this.w=.3+Math.random()*.8;this.a=.04+Math.random()*.10;this.off=Math.random()*Math.PI*2;this.dr=(Math.random()-.5)*.3;var c=[[193,163,162],[157,127,106],[210,185,178],[180,155,145]];this.rgb=c[Math.floor(Math.random()*c.length)];};
+  S.prototype.i=function(){this.x=Math.random()*cv.width;this.y=-60-Math.random()*200;this.len=100+Math.random()*200;this.wave=(Math.random()-.5)*40;this.spd=.18+Math.random()*.35;this.w=.3+Math.random()*.8;this.a=.08+Math.random()*.18;this.off=Math.random()*Math.PI*2;this.dr=(Math.random()-.5)*.3;var c=[[193,163,162],[220,190,182],[157,127,106],[240,210,200]];this.rgb=c[Math.floor(Math.random()*c.length)];};
   S.prototype.u=function(){this.y+=this.spd;this.x+=this.dr;if(this.y>cv.height+60)this.i();};
   S.prototype.d=function(t){var n=20;ctx.beginPath();ctx.moveTo(this.x,this.y);for(var i=1;i<=n;i++){var p=i/n;ctx.lineTo(this.x+Math.sin(p*Math.PI*2+t*.008+this.off)*this.wave*p,this.y+p*this.len);}ctx.strokeStyle='rgba('+this.rgb[0]+','+this.rgb[1]+','+this.rgb[2]+','+this.a+')';ctx.lineWidth=this.w;ctx.lineCap='round';ctx.stroke();};
   var ss=[];for(var i=0;i<55;i++){var s=new S();s.y=Math.random()*cv.height;ss.push(s);}
@@ -973,1254 +539,755 @@ SRD_PAGE_LOADER = """<link href="https://fonts.googleapis.com/css2?family=Cormor
   window.addEventListener('load',function(){setTimeout(doExit,1200);});
   setTimeout(doExit,4500);
 })();
-</script>"""
+</script>
 
-SRD_NAV_CSS = """
-/* ── Exact fonts from supportrd.com @font-face ── */
-@font-face{{font-family:Inter;font-weight:400;font-style:normal;font-display:swap;src:url("https://supportrd.com/cdn/fonts/inter/inter_n4.b2a3f24c19b4de56e8871f609e73ca7f6d2e2bb9.woff2") format("woff2")}}
-@font-face{{font-family:Inter;font-weight:700;font-style:normal;font-display:swap;src:url("https://supportrd.com/cdn/fonts/inter/inter_n7.02711e6b374660cfc7915d1afc1c204e633421e4.woff2") format("woff2")}}
-@font-face{{font-family:"Barlow Condensed";font-weight:600;font-style:normal;font-display:swap;src:url("https://supportrd.com/cdn/fonts/barlow_condensed/barlowcondensed_n6.30a391fe19ded5366170913f031e653a88992edc.woff2") format("woff2")}}
-@font-face{{font-family:"Barlow Condensed";font-weight:700;font-style:normal;font-display:swap;src:url("https://supportrd.com/cdn/fonts/barlow_condensed/barlowcondensed_n7.b8dc813bf1d64de77250a6675c25535283e1677a.woff2") format("woff2")}}
-
-*{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:Inter,sans-serif;background:#f0ebe8;color:#0d0906;min-height:100vh}}
-
-:root{{
-  /* Exact values from theme :root */
-  --font-body--family:Inter,sans-serif;
-  --font-body--weight:400;
-  --font-heading--family:"Barlow Condensed",sans-serif;
-  --font-heading--weight:600;
-  --font-subheading--family:"Barlow Condensed",sans-serif;
-  --font-subheading--weight:600;
-
-  --letter-spacing-sm:0.06em;
-  --letter-spacing-md:0.13em;
-
-  --gap-xl:1.25rem;
-  --gap-md:0.9rem;
-  --gap-sm:0.7rem;
-  --padding-lg:1rem;
-  --padding-sm:0.7rem;
-
-  --icon-size-xs:0.85rem;
-  --icon-size-sm:1.25rem;
-  --icon-stroke-width:1.5px;
-
-  --drawer-animation-speed:0.2s;
-  --drawer-padding:calc(var(--padding-sm) + 7px);
-  --drawer-height:100dvh;
-  --drawer-width:95vw;
-  --drawer-max-width:500px;
-  --drawer-menu-inline-padding:2.5rem;
-
-  --layer-menu-drawer:18;
-  --layer-overlay:16;
-
-  --opacity-subdued-text:0.7;
-  --animation-speed:0.125s;
-  --ease-out-cubic:cubic-bezier(0.33,1,0.68,1);
-
-  --menu-font-sm--size:0.875rem;
-  --menu-font-sm--line-height:calc(1.1 + 0.5 * min(16 / 14));
-  --menu-font-2xl--size:1.75rem;
-  --menu-font-2xl--line-height:calc(1.1 + 0.5 * min(16 / 28));
-
-  /* Resolved menu vars (type_font_primary_link=heading, type_font_primary_size=sm, type_case_primary_link=uppercase) */
-  --menu-top-level-font-family:var(--font-heading--family);
-  --menu-top-level-font-weight:var(--font-heading--weight);
-  --menu-top-level-font-style:normal;
-  --menu-top-level-font-size:var(--menu-font-sm--size);
-  --menu-top-level-font-line-height:var(--menu-font-sm--line-height);
-  --menu-top-level-font-case:uppercase;
-  --menu-top-level-font-color:#0d0906;
-  --menu-top-level-font-color-rgb:13,9,6;
-  --menu-top-level-letter-spacing:var(--letter-spacing-md);
-  --menu-horizontal-gap:var(--gap-xl);
-
-  --color-foreground:#0d0906;
-  --color-background:#ffffff;
-  --color-border:rgba(13,9,6,0.08);
-  --page-width:1200px;
-  --header-height:56px;
-}}
-
-/* ── sticky header ── */
-#header-component{{
-  position:sticky;top:0;z-index:1000;
-  background:#fff;
-  border-bottom:1px solid var(--color-border);
-}}
-
-/* ── 3-col grid — header-row.liquid ── */
-.header{{
-  display:grid;
-  grid-template-columns:auto auto 1fr;
-  align-items:stretch;
-  max-width:var(--page-width);
-  margin:0 auto;
-  padding:0 32px 0 0;
-  height:var(--header-height);
-}}
-
-.header__column{{display:flex;align-items:center;min-width:0;}}
-.header__column--left{{justify-content:flex-start;}}
-.header__column--center{{justify-content:flex-start;height:100%;}}
-.header__column--right{{justify-content:flex-end;}}
-
-/* ── logo: Inter 400, shop.name text ── */
-.header-logo{{
-  display:flex;height:100%;align-items:center;
-  text-decoration:none;
-  font-family:var(--font-body--family);
-  font-size:0.875rem;
-  font-weight:var(--font-body--weight);
-  font-style:normal;
-  color:var(--color-foreground);
-  white-space:nowrap;flex-shrink:0;
-  padding-left:0;
-}}
-.header-logo:hover{{text-decoration:none;color:var(--color-foreground);}}
-.header-logo__image-container,.header-logo__image{{display:none;}}
-
-/* ── header-menu ── */
-.header-menu,.header-menu__inner{{height:100%;display:flex;align-items:center;}}
-nav.menu-list{{display:flex;height:100%;}}
-.overflow-menu,.menu-list__list{{
-  display:flex;list-style:none;margin:0;padding:0;height:100%;gap:0;
-}}
-.menu-list__list-item{{
-  flex-shrink:0;white-space:nowrap;
-  display:flex;align-items:center;height:100%;
-  flex-direction:column;position:relative;
-}}
-.menu-list__list-item::after{{
-  content:'';width:100%;
-  height:var(--padding-lg);
-  margin-bottom:calc(-1 * var(--padding-lg));
-}}
-.menu-list__link{{
-  font-family:var(--menu-top-level-font-family);
-  font-weight:var(--menu-top-level-font-weight);
-  font-size:var(--menu-top-level-font-size);
-  font-style:var(--menu-top-level-font-style);
-  text-transform:var(--menu-top-level-font-case);
-  letter-spacing:var(--menu-top-level-letter-spacing);
-  color:var(--menu-top-level-font-color);
-  line-height:var(--menu-top-level-font-line-height);
-  text-decoration:none;
-  display:flex;flex-direction:column;justify-content:center;
-  cursor:pointer;height:100%;margin-block:0;
-}}
-.menu-list__link:hover,.menu-list__link:focus{{color:var(--menu-top-level-font-color);}}
-.menu-list__list:has(.menu-list__list-item:hover) .menu-list__link{{
-  color:rgba(var(--menu-top-level-font-color-rgb),var(--opacity-subdued-text));
-}}
-.menu-list__list:has(.menu-list__list-item:hover) .menu-list__list-item:hover .menu-list__link{{
-  color:var(--menu-top-level-font-color);
-}}
-.menu-list__link-title{{
-  padding-inline:calc(var(--menu-horizontal-gap) / 2);
-}}
-.menu-list__link--active{{
-  color:var(--color-foreground) !important;
-  box-shadow:inset 0 -2px 0 var(--color-foreground);
-  opacity:1 !important;
-}}
-
-/* ── header-actions ── */
-header-actions{{
-  display:flex;
-  margin-inline-start:calc(-1 * var(--gap-md));
-}}
-.header-actions__action{{
-  display:flex;align-items:center;justify-content:center;
-  color:var(--color-foreground);text-decoration:none;
-  padding:0 0.625rem;height:var(--header-height);
-  position:relative;background:none;border:none;cursor:pointer;
-}}
-.header-actions__action svg{{display:block;stroke-width:var(--icon-stroke-width);}}
-.account-button__icon{{width:15px;height:17px;}}
-
-/* cart bubble */
-.header-actions__cart-icon{{position:relative;}}
-.cart-bubble{{
-  position:absolute;
-  width:20px;height:20px;
-  top:4.5px;right:2.5px;
-  background:#c0392b;color:#fff;
-  font-size:9px;font-family:var(--font-body--family);font-weight:700;
-  border-radius:50%;
-  display:none;align-items:center;justify-content:center;line-height:1;
-}}
-.cart-bubble.visible{{display:flex;}}
-
-/* ── hamburger ── */
-.header__icon--menu{{
-  display:none;background:none;border:none;cursor:pointer;
-  color:var(--color-foreground);padding:var(--padding-lg) var(--padding-lg) var(--padding-lg) 0;
-  align-items:center;justify-content:center;height:var(--header-height);
-}}
-.header__icon--menu svg{{width:var(--icon-size-sm);height:var(--icon-size-sm);display:block;}}
-
-@media screen and (max-width:749px){{
-  .header{{grid-template-columns:auto 1fr auto;padding:0 16px;}}
-  .header__column--center{{display:none;}}
-  .header__icon--menu{{display:flex;}}
-  header-actions{{justify-self:flex-end;}}
-}}
-
-/* ── drawer backdrop ── */
-.menu-drawer__backdrop{{
-  position:fixed;top:0;left:0;width:100vw;height:100dvh;
-  backdrop-filter:brightness(0.75);
-  z-index:calc(var(--layer-menu-drawer) - 1);
-  opacity:0;transition:opacity var(--drawer-animation-speed) ease;
-  pointer-events:none;
-}}
-.menu-drawer__backdrop.open{{opacity:1;pointer-events:auto;}}
-
-/* ── drawer panel ── */
-.menu-drawer{{
-  position:fixed;transform:translateX(-100%);visibility:hidden;
-  top:0;left:0;
-  height:var(--drawer-height);
-  width:var(--drawer-width);
-  max-width:var(--drawer-max-width);
-  z-index:var(--layer-menu-drawer);
-  background:var(--color-background);overflow-y:auto;
-  display:flex;flex-direction:column;
-  border-right:1px solid var(--color-border);
-  box-shadow:4px 0 24px rgba(0,0,0,0.12);
-  transition:transform var(--drawer-animation-speed) ease,visibility var(--drawer-animation-speed) ease;
-}}
-.menu-drawer.open{{transform:translateX(0);visibility:visible;}}
-.menu-drawer__close-button{{
-  align-self:flex-end;display:flex;align-items:center;justify-content:center;
-  padding:var(--padding-lg);background:none;border:none;cursor:pointer;
-  color:var(--color-foreground);transition:opacity 0.2s;
-}}
-.menu-drawer__close-button:hover{{opacity:0.6;}}
-.menu-drawer__close-button svg{{width:var(--icon-size-sm);height:var(--icon-size-sm);}}
-.menu-drawer__navigation{{padding:0;}}
-.menu-drawer__menu{{
-  list-style:none;
-  padding-inline:var(--drawer-menu-inline-padding);
-  margin:0;
-}}
-.menu-drawer__menu > .menu-drawer__list-item{{
-  display:flex;
-  min-height:calc(2 * var(--padding-lg) + var(--icon-size-xs));
-}}
-.menu-drawer__menu-item{{
-  display:flex;padding:2px 0;text-decoration:none;
-  justify-content:space-between;align-items:center;width:100%;
-}}
-.menu-drawer__menu-item--mainlist{{
-  min-height:calc(2 * var(--padding-lg) + var(--icon-size-xs));
-  font-family:var(--menu-top-level-font-family);
-  font-weight:var(--menu-top-level-font-weight);
-  font-style:var(--menu-top-level-font-style);
-  font-size:var(--menu-font-2xl--size);
-  line-height:var(--menu-font-2xl--line-height);
-  text-transform:var(--menu-top-level-font-case);
-  letter-spacing:var(--menu-top-level-letter-spacing);
-  color:var(--menu-top-level-font-color);
-}}
-.menu-drawer__menu-item--mainlist:hover{{
-  color:rgba(var(--menu-top-level-font-color-rgb),var(--opacity-subdued-text));
-}}
-.menu-drawer__menu-item--active{{
-  color:rgba(var(--menu-top-level-font-color-rgb),var(--opacity-subdued-text));
-}}
-.menu-drawer__menu-item-text{{overflow:hidden;text-overflow:ellipsis;}}
-"""
-
-SRD_NAV_HTML = """
-<div class="menu-drawer__backdrop" id="srd-backdrop" onclick="srdCloseDrawer()"></div>
-<div class="menu-drawer" id="srd-drawer" role="dialog" aria-modal="true" aria-label="Menu">
-  <button class="menu-drawer__close-button" onclick="srdCloseDrawer()" type="button" aria-label="Close menu">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-  </button>
-  <nav class="menu-drawer__navigation" aria-label="Navigation">
-    <ul class="menu-drawer__menu has-submenu" role="list">
-      <li class="menu-drawer__list-item"><a href="https://supportrd.com" class="menu-drawer__menu-item menu-drawer__menu-item--mainlist"><span class="menu-drawer__menu-item-text">Home</span></a></li>
-      <li class="menu-drawer__list-item"><a href="https://supportrd.com/collections/all" class="menu-drawer__menu-item menu-drawer__menu-item--mainlist"><span class="menu-drawer__menu-item-text">Catalog</span></a></li>
-      <li class="menu-drawer__list-item"><a href="https://supportrd.com/pages/contact" class="menu-drawer__menu-item menu-drawer__menu-item--mainlist"><span class="menu-drawer__menu-item-text">Contact</span></a></li>
-      <li class="menu-drawer__list-item"><a href="https://supportrd.com/pages/hair-dashboard" class="menu-drawer__menu-item menu-drawer__menu-item--mainlist"><span class="menu-drawer__menu-item-text">Dashboard</span></a></li>
-      <li class="menu-drawer__list-item"><a href="https://supportrd.com/pages/custom-order" class="menu-drawer__menu-item menu-drawer__menu-item--mainlist"><span class="menu-drawer__menu-item-text">Custom Order</span></a></li>
-      <li class="menu-drawer__list-item"><a href="https://hairtips.supportrd.com/blog" class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__menu-item--active"><span class="menu-drawer__menu-item-text">Blog</span></a></li>
-    </ul>
-  </nav>
-</div>
-<div id="header-component">
-  <div class="header" role="banner">
-    <div class="header__column header__column--left" data-testid="header-top-left">
-      <button class="header__icon header__icon--menu" onclick="srdOpenDrawer()" aria-label="Menu" type="button">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-          <line x1="2" y1="5" x2="18" y2="5"/>
-          <line x1="2" y1="10" x2="18" y2="10"/>
-          <line x1="2" y1="15" x2="18" y2="15"/>
-        </svg>
-      </button>
-      <!-- logo.liquid text fallback: shop.name when no logo image set -->
-      <a href="https://supportrd.com" class="header-logo" aria-label="SupportRD">
-        <span class="header-logo__image-container header-logo__image-container--original" data-testid="header-logo">
-          <img src="https://cdn.shopify.com/s/files/1/0593/2715/2208/files/woman-waking-up.jpg?v=1771636828" alt="SupportRD" class="header-logo__image">
-        </span>
-        SupportRD.com
-      </a>
-    </div>
-    <div class="header__column header__column--center" data-testid="header-top-center">
-      <div class="header-menu">
-        <div class="header-menu__inner">
-          <nav class="menu-list" aria-label="Primary navigation">
-            <ul class="overflow-menu menu-list__list" role="list">
-              <li class="menu-list__list-item" role="presentation"><a href="https://supportrd.com" class="menu-list__link"><span class="menu-list__link-title">Home</span></a></li>
-              <li class="menu-list__list-item" role="presentation"><a href="https://supportrd.com/collections/all" class="menu-list__link"><span class="menu-list__link-title">Catalog</span></a></li>
-              <li class="menu-list__list-item" role="presentation"><a href="https://supportrd.com/pages/contact" class="menu-list__link"><span class="menu-list__link-title">Contact</span></a></li>
-              <li class="menu-list__list-item" role="presentation"><a href="https://supportrd.com/pages/hair-dashboard" class="menu-list__link"><span class="menu-list__link-title">Dashboard</span></a></li>
-              <li class="menu-list__list-item" role="presentation"><a href="https://supportrd.com/pages/custom-order" class="menu-list__link"><span class="menu-list__link-title">Custom Order</span></a></li>
-              <li class="menu-list__list-item" role="presentation"><a href="https://hairtips.supportrd.com/blog" class="menu-list__link menu-list__link--active" aria-current="page"><span class="menu-list__link-title">Blog</span></a></li>
-            </ul>
-          </nav>
-        </div>
-      </div>
-    </div>
-    <div class="header__column header__column--right" data-testid="header-top-right">
-      <header-actions>
-        <a href="https://supportrd.com/search" class="header-actions__action" aria-label="Search">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </a>
-        <a href="https://supportrd.com/account/login" class="header-actions__action" aria-label="Account">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="17" viewBox="0 0 15 17" fill="none" class="account-button__icon">
-            <path stroke="currentColor" stroke-linejoin="round" stroke-width="1.3" d="M10.375 3.813a3.063 3.063 0 1 1-6.125 0 3.063 3.063 0 0 1 6.125 0ZM7.313 9.5c-3.667 0-6.24 2.691-6.563 6.125h13.125C13.552 12.191 10.979 9.5 7.312 9.5Z"/>
-          </svg>
-        </a>
-        <a href="https://supportrd.com/cart" class="header-actions__action header-actions__cart-icon" aria-label="Cart">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M9 2v1a3 3 0 0 0 6 0V2"/></svg>
-          <span class="cart-bubble" id="cart-count"></span>
-        </a>
-      </header-actions>
-    </div>
+<!-- WELCOME BACK BANNER -->
+<div id="welcomeBanner">
+  <div class="wb-name" id="wb-name">Welcome back!</div>
+  <div class="wb-score">Hair Score: <span id="wb-score">—</span></div>
+  <div class="wb-btns">
+    <a href="/dashboard" class="wb-btn wb-btn-rose">My Profile</a>
+    <a href="https://wa.me/18292332670" target="_blank" class="wb-btn wb-btn-outline">Live Advisor</a>
   </div>
 </div>
+
+<div id="topBar">
+  <button id="modeToggle" class="top-btn">Manual Mode</button>
+  <select id="langSelect">
+    <option value="en-US">English</option>
+    <option value="es-ES">Español</option>
+    <option value="fr-FR">Français</option>
+    <option value="pt-BR">Português</option>
+    <option value="de-DE">Deutsch</option>
+    <option value="ar-SA">عربي</option>
+    <option value="zh-CN">中文</option>
+    <option value="hi-IN">हिन्दी</option>
+  </select>
+  <a href="/dashboard" class="nav-link" id="dashLink">Dashboard</a>
+</div>
+
+<div class="sphere-wrap"><div id="halo"></div></div>
+<div id="stateLabel">Tap to begin</div>
+<div id="history"></div>
+<button id="clearBtn">Clear conversation</button>
+<div id="manualBox">
+  <input id="manualInput" placeholder="Describe your hair concern or ask a follow-up…" />
+  <button id="manualSubmit">Send</button>
+</div>
+<div id="response">Tap the sphere and describe your hair concern.</div>
+
+<!-- TIP PANEL -->
+<div id="tipPanel">
+  <div id="tipForm">
+    <div id="tipTitle">Did this help?</div>
+    <div id="tipSubtitle">Rate your experience &amp; leave a tip</div>
+    <div id="starRow">
+      <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
+      <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span>
+      <span class="star" data-v="5">★</span>
+    </div>
+    <div id="tipAmounts">
+      <button class="tip-amt" data-amt="1">$1</button>
+      <button class="tip-amt" data-amt="2">$2</button>
+      <button class="tip-amt" data-amt="5">$5</button>
+      <button class="tip-amt" data-amt="custom">Custom</button>
+      <button class="tip-amt" data-amt="0">No tip</button>
+    </div>
+    <div id="customTipWrap">
+      <span style="color:rgba(0,0,0,0.40);font-size:16px;">$</span>
+      <input id="customTipInput" type="number" min="1" max="100" placeholder="0.00" />
+    </div>
+    <button id="tipSubmit">Submit</button>
+    <button id="tipSkip">Skip</button>
+  </div>
+  <div id="tipThanks">
+    <div class="thanks-icon">🌿</div>
+    <div class="thanks-title">Thank you!</div>
+    <div class="thanks-sub">Your feedback means everything</div>
+  </div>
+</div>
+
+<div id="footer">
+  <span id="faqBtn">FAQ</span>
+  <span id="contactBtn">Contact Us</span>
+</div>
+
+<!-- PAYWALL BANNER -->
+<div id="paywallBanner">
+  <div class="pw-top">
+    <div>
+      <div class="pw-trial">7-Day Free Trial · $80/mo after</div>
+      <div class="pw-title">Unlock Full Hair Analysis</div>
+    </div>
+    <button class="pw-close" onclick="closePaywall()">✕</button>
+  </div>
+  <div class="pw-desc">You've used your 3 free responses. Upgrade to Premium for unlimited expert hair advice, your personal Hair Health Score, and full consultation history.</div>
+  <div class="pw-features">
+    <div class="pw-feature">Unlimited Aria conversations</div>
+    <div class="pw-feature">Hair Health Score dashboard</div>
+    <div class="pw-feature">Full consultation history</div>
+    <div class="pw-feature">Salon recommendations</div>
+    <div class="pw-feature">Medical resource guidance</div>
+    <div class="pw-feature">Priority live advisor access</div>
+  </div>
+  <div class="pw-btns">
+    <button class="pw-btn-upgrade" onclick="goUpgrade()">Start Free Trial</button>
+    <button class="pw-btn-continue" onclick="closePaywall()">Continue Free</button>
+  </div>
+</div>
+
 <script>
+// ── AUTH STATE ──
 (function(){
-  function srdOpenDrawer(){document.getElementById('srd-drawer').classList.add('open');document.getElementById('srd-backdrop').classList.add('open');document.body.style.overflow='hidden';}
-  function srdCloseDrawer(){document.getElementById('srd-drawer').classList.remove('open');document.getElementById('srd-backdrop').classList.remove('open');document.body.style.overflow='';}
-  window.srdOpenDrawer=srdOpenDrawer;window.srdCloseDrawer=srdCloseDrawer;
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')srdCloseDrawer();});
-  fetch('https://supportrd.com/cart.js').then(function(r){return r.json();}).then(function(d){if(d.item_count>0){var el=document.getElementById('cart-count');if(el){el.textContent=d.item_count;el.classList.add('visible');}}}).catch(function(){});
-})();
-</script>"""
-
-def blog_get_index():
-    try:
-        db = sqlite3.connect(BLOG_DB, timeout=10, check_same_thread=False)
-        db.row_factory = sqlite3.Row
-        rows = db.execute("SELECT handle, title, meta, date FROM posts ORDER BY date DESC LIMIT 90").fetchall()
-        db.close()
-        return [dict(r) for r in rows]
-    except Exception as e:
-        print(f"blog_get_index error: {e}")
-        return []
-
-def blog_get_post(handle):
-    try:
-        con = sqlite3.connect(BLOG_DB, timeout=10, check_same_thread=False)
-        con.row_factory = sqlite3.Row
-        row = con.execute("SELECT * FROM posts WHERE handle=?", (handle,)).fetchone()
-        con.close()
-        return dict(row) if row else None
-    except Exception as e:
-        print(f"blog_get_post error: {e}")
-        return None
-
-@app.route("/blog-embed")
-def blog_embed():
-    return """<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Jost', sans-serif; background: #f9f7f5; color: #0d0906; padding: 24px 20px; }
-  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-  .card { background: #fff; border-radius: 16px; border: 1px solid rgba(193,163,162,0.2); box-shadow: 0 2px 12px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.10); }
-  .card a { display: block; padding: 28px; text-decoration: none; color: inherit; }
-  .card h2 { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; line-height: 1.3; color: #0d0906; margin-bottom: 10px; }
-  .card p { font-size: 13px; color: rgba(0,0,0,0.5); line-height: 1.6; margin-bottom: 14px; }
-  .card span { font-size: 11px; color: #c1a3a2; letter-spacing: 0.08em; text-transform: uppercase; }
-  .loading { text-align: center; padding: 60px 20px; color: rgba(0,0,0,0.3); font-size: 14px; }
-  .err { text-align: center; padding: 40px; color: #c1a3a2; font-size: 13px; }
-</style>
-</head>
-<body>
-<div id="grid"><div class="loading">Loading articles\u2026</div></div>
-<script>
-(async function() {
-  try {
-    const res = await fetch('https://ai-hair-advisor.onrender.com/api/blog-posts');
-    const posts = await res.json();
-    const grid = document.getElementById('grid');
-    if (!posts || posts.length === 0) {
-      grid.innerHTML = '<div class="err">No posts yet \u2014 check back soon.</div>';
-    } else {
-      grid.innerHTML = posts.map(function(p) {
-        var date = (p.date || '').slice(0, 10);
-        return '<div class="card"><a href="https://hairtips.supportrd.com/blog/' + p.handle + '" target="_blank"><h2>' + p.title + '</h2><p>' + (p.meta || '') + '</p><span>' + date + '</span></a></div>';
-      }).join('');
+  var token = localStorage.getItem('srd_token');
+  window._srd_token = token || null;
+  if(token){
+    var u = {};
+    try{ u = JSON.parse(localStorage.getItem('srd_user')||'{}'); }catch(e){}
+    // Show welcome banner
+    var wb = document.getElementById('welcomeBanner');
+    var wbn = document.getElementById('wb-name');
+    if(wb && wbn && u.name){
+      wbn.textContent = 'Welcome back, ' + u.name.split(' ')[0] + '!';
+      wb.style.display = 'block';
+      setTimeout(function(){ wb.style.display='none'; }, 5000);
     }
-  } catch(e) {
-    document.getElementById('grid').innerHTML = '<div class="err">Could not load articles.</div>';
+    // Update dashboard link
+    var dl = document.getElementById('dashLink');
+    if(dl){ dl.textContent = 'Dashboard'; dl.href = '/dashboard'; }
+  } else {
+    var dl = document.getElementById('dashLink');
+    if(dl){ dl.textContent = 'Sign In'; dl.href = '/login'; }
   }
-  setTimeout(function() {
-    window.parent.postMessage({ height: document.body.scrollHeight }, '*');
-  }, 400);
 })();
-window.addEventListener('resize', function() {
-  window.parent.postMessage({ height: document.body.scrollHeight }, '*');
+
+const halo        = document.getElementById("halo");
+const responseBox = document.getElementById("response");
+const stateLabel  = document.getElementById("stateLabel");
+const langSelect  = document.getElementById("langSelect");
+const modeToggle  = document.getElementById("modeToggle");
+const manualBox   = document.getElementById("manualBox");
+const manualInput = document.getElementById("manualInput");
+const manualSubmit= document.getElementById("manualSubmit");
+const historyEl   = document.getElementById("history");
+const clearBtn    = document.getElementById("clearBtn");
+const tipPanel    = document.getElementById("tipPanel");
+const tipForm     = document.getElementById("tipForm");
+const tipThanks   = document.getElementById("tipThanks");
+const tipSubmitBtn= document.getElementById("tipSubmit");
+const tipSkipBtn  = document.getElementById("tipSkip");
+const customTipWrap = document.getElementById("customTipWrap");
+const customTipInput= document.getElementById("customTipInput");
+
+let tipRating = 0, tipAmount = null, tipProduct = "";
+
+// Stars
+document.querySelectorAll(".star").forEach(star => {
+  star.addEventListener("click", () => {
+    tipRating = parseInt(star.dataset.v);
+    document.querySelectorAll(".star").forEach(s => s.classList.toggle("active", parseInt(s.dataset.v) <= tipRating));
+  });
+  star.addEventListener("mouseover", () => {
+    const v = parseInt(star.dataset.v);
+    document.querySelectorAll(".star").forEach(s => s.classList.toggle("active", parseInt(s.dataset.v) <= v));
+  });
+  star.addEventListener("mouseout", () => {
+    document.querySelectorAll(".star").forEach(s => s.classList.toggle("active", parseInt(s.dataset.v) <= tipRating));
+  });
 });
+document.querySelectorAll(".tip-amt").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tip-amt").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    tipAmount = btn.dataset.amt;
+    customTipWrap.classList.toggle("show", tipAmount === "custom");
+    if(tipAmount !== "custom") customTipInput.value = "";
+  });
+});
+
+function openTipPanel(product){
+  tipProduct=product||""; tipRating=0; tipAmount=null;
+  document.querySelectorAll(".star").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".tip-amt").forEach(b=>b.classList.remove("selected"));
+  customTipWrap.classList.remove("show"); customTipInput.value="";
+  tipForm.style.display="block"; tipThanks.style.display="none";
+  tipPanel.classList.add("open");
+}
+function closeTipPanel(){ tipPanel.classList.remove("open"); }
+
+tipSubmitBtn.addEventListener("click", async () => {
+  let finalAmt = tipAmount;
+  if(tipAmount==="custom"){ const v=parseFloat(customTipInput.value); finalAmt=isNaN(v)||v<=0?"0":v.toFixed(2); }
+  if(!finalAmt) finalAmt="0";
+  try{ await fetch("/api/tip",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({lang:langSelect.value,rating:tipRating,amount:finalAmt,product:tipProduct})}); }catch(e){}
+  if(finalAmt!=="0"&&finalAmt!=="skip"){
+    const qty=Math.max(1,Math.round(parseFloat(finalAmt)||1));
+    window.open("https://supportrd.com/cart/add?id=42109000908880&quantity="+qty+"&return_to=/checkout","_blank");
+  }
+  tipForm.style.display="none"; tipThanks.style.display="flex";
+  setTimeout(closeTipPanel, 3000);
+});
+tipSkipBtn.addEventListener("click", ()=>{
+  try{ fetch("/api/tip",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({lang:langSelect.value,rating:tipRating,amount:"skip",product:tipProduct})}); }catch(e){}
+  closeTipPanel();
+});
+
+// ── STATE ──
+let appState="idle", isManual=false, conversationHistory=[], lastRecommendedProduct="";
+let audioCtx=null, analyser=null, micData=null;
+let mediaRecorder=null, audioChunks=[], recordingTimer=null;
+let _paywallDismissed=false;
+const SESSION_ID='srd_'+Math.random().toString(36).substr(2,9);
+
+function addToHistory(role,text){
+  conversationHistory.push({role,content:text});
+  if(role==="assistant"){
+    const t=text.toLowerCase();
+    if(t.includes("formula exclusiva")) lastRecommendedProduct="Formula Exclusiva";
+    else if(t.includes("laciador")||t.includes("crece")) lastRecommendedProduct="Laciador Crece";
+    else if(t.includes("gotero")||t.includes("rapido")) lastRecommendedProduct="Gotero Rapido";
+    else if(t.includes("gotitas")||t.includes("brillantes")) lastRecommendedProduct="Gotitas Brillantes";
+    else if(t.includes("mascarilla")) lastRecommendedProduct="Mascarilla";
+    else if(t.includes("shampoo")||t.includes("aloe")) lastRecommendedProduct="Shampoo Aloe Vera";
+  }
+  const bubble=document.createElement("div");
+  bubble.className="msg "+(role==="user"?"user":"ai");
+  bubble.textContent=text;
+  historyEl.appendChild(bubble);
+  historyEl.scrollTop=historyEl.scrollHeight;
+  clearBtn.classList.add("visible");
+  responseBox.textContent="";
+}
+
+clearBtn.addEventListener("click",()=>{
+  conversationHistory=[]; historyEl.innerHTML="";
+  clearBtn.classList.remove("visible");
+  responseBox.textContent="Tap the sphere and describe your hair concern.";
+  lastRecommendedProduct="";
+});
+
+function getCtx(){ if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+
+function playAmbient(type){
+  try{
+    const ctx=getCtx(),master=ctx.createGain(),now=ctx.currentTime;
+    master.connect(ctx.destination);
+    if(type==="intro"){
+      [[220,0],[330,0.20],[440,0.40],[660,0.65]].forEach(([f,d])=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(master);o.type="sine";
+        o.frequency.setValueAtTime(f,now+d);
+        g.gain.setValueAtTime(0,now+d);g.gain.linearRampToValueAtTime(0.06,now+d+0.5);g.gain.exponentialRampToValueAtTime(0.001,now+d+3.5);
+        o.start(now+d);o.stop(now+d+4.0);
+      });
+      const s=ctx.createOscillator(),sg=ctx.createGain();
+      s.connect(sg);sg.connect(master);s.type="sine";
+      s.frequency.setValueAtTime(1320,now+0.8);s.frequency.exponentialRampToValueAtTime(880,now+2.5);
+      sg.gain.setValueAtTime(0,now+0.8);sg.gain.linearRampToValueAtTime(0.022,now+1.1);sg.gain.exponentialRampToValueAtTime(0.001,now+3.8);
+      s.start(now+0.8);s.stop(now+4.0);
+      master.gain.setValueAtTime(1,now);
+    } else {
+      [[660,0],[440,0.25],[330,0.50],[220,0.75]].forEach(([f,d])=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(master);o.type="sine";
+        o.frequency.setValueAtTime(f,now+d);o.frequency.exponentialRampToValueAtTime(f*0.90,now+d+2.5);
+        g.gain.setValueAtTime(0,now+d);g.gain.linearRampToValueAtTime(0.050,now+d+0.35);g.gain.exponentialRampToValueAtTime(0.001,now+d+3.2);
+        o.start(now+d);o.stop(now+d+3.5);
+      });
+      master.gain.setValueAtTime(1,now);
+    }
+  }catch(e){}
+}
+
+function setColor(r,g,b){
+  halo.style.background=`radial-gradient(circle at 40% 38%,rgba(${r},${g},${b},0.52) 0%,rgba(${r},${g},${b},0.18) 42%,rgba(${r},${g},${b},0.07) 70%,rgba(${r},${g},${b},0.01) 100%)`;
+  halo.style.boxShadow=`inset 0 0 40px rgba(${r},${g},${b},0.12),0 0 70px rgba(${r},${g},${b},0.50),0 0 155px rgba(${r},${g},${b},0.30),0 0 290px rgba(${r},${g},${b},0.16),0 0 440px rgba(${r},${g},${b},0.08)`;
+}
+const IDLE=[193,163,162],LISTEN=[157,127,106],SPEAK=[208,208,208];
+setColor(...IDLE);
+
+function setState(s){
+  appState=s;
+  halo.classList.remove("listening","speaking");
+  if(s==="listening") halo.classList.add("listening");
+  if(s==="speaking"){halo.classList.add("speaking");halo.style.transform="";}
+  if(s==="idle") halo.style.transform="";
+}
+
+let listenPhase=0;
+function micReactiveLoop(){
+  if(appState!=="listening") return;
+  let scale;
+  if(analyser&&micData){
+    analyser.getByteFrequencyData(micData);
+    let sum=0; for(let i=0;i<micData.length;i++) sum+=micData[i];
+    scale=1.05+(sum/(micData.length*255))*0.65;
+  } else {
+    listenPhase+=0.04;
+    scale=1.05+0.03*Math.sin(listenPhase);
+  }
+  halo.style.transform=`scale(${Math.max(1.0,scale).toFixed(3)})`;
+  requestAnimationFrame(micReactiveLoop);
+}
+
+function getBestVoice(lang){
+  const voices=speechSynthesis.getVoices();
+  if(!voices.length) return null;
+  if(lang==="en-US"||lang==="en-GB"){
+    for(const name of ["Google US English","Google UK English Female","Microsoft Aria Online (Natural) - English (United States)","Microsoft Jenny Online (Natural) - English (United States)","Samantha","Karen","Moira","Fiona"]){
+      const v=voices.find(v=>v.name===name); if(v) return v;
+    }
+  }
+  const byLang=voices.filter(v=>v.lang===lang);
+  return byLang.find(v=>/Google/.test(v.name))||byLang.find(v=>/Natural|Online/.test(v.name))||byLang.find(v=>/Microsoft/.test(v.name))||byLang[0]||voices.find(v=>v.lang.startsWith(lang.split("-")[0]))||voices[0];
+}
+
+function speak(text,showTip){
+  speechSynthesis.cancel();
+  setTimeout(()=>{
+    const utter=new SpeechSynthesisUtterance(text);
+    utter.lang=langSelect.value; utter.voice=getBestVoice(langSelect.value);
+    utter.rate=0.88; utter.pitch=1.05;
+    setState("speaking"); setColor(...SPEAK); stateLabel.textContent="Speaking";
+    speechSynthesis.speak(utter);
+    utter.onend=()=>{
+      playAmbient("outro"); setState("idle"); setColor(...IDLE); stateLabel.textContent="Tap to begin";
+      if(showTip) setTimeout(()=>openTipPanel(lastRecommendedProduct),1200);
+    };
+  },80);
+}
+
+// ── LOCAL FALLBACK RESPONSES ──
+const LOCAL_R={
+  "en-US":{
+    damaged:"Formula Exclusiva is exactly what your hair needs — this professional all-in-one treatment rebuilds strength, restores moisture, and revives scalp health. Safe for the whole family. At $55, it's your most complete solution.",
+    color:"Gotitas Brillantes is perfect for you — it gives your hair incredible softness, shine, and beauty, just apply after styling. Price: $30.",
+    oily:"Gotero Rapido works directly on your scalp to eliminate obstructions and parasites while stimulating growth. Use it every night. Price: $55.",
+    dry:"Laciador Crece restructures your hair giving it softness, elasticity, and natural shine all day. It even stimulates growth. Price: $40.",
+    tangly:"Laciador Crece is your answer — it restructures and gives your hair amazing softness and manageability. Price: $40.",
+    flat:"Gotitas Brillantes gives your style the perfect fall, shine, and body it needs. Price: $30.",
+    loss:"Gotero Rapido stimulates every dead cell on your scalp, eliminates parasites, removes obstructions, and regenerates the hair you've lost. Use every night. Price: $55.",
+    default:"Formula Exclusiva is your best all-around choice — moisture, strength, and scalp health in one, safe for the whole family. Price: $55."
+  },
+  "es-ES":{damaged:"Formula Exclusiva es exactamente lo que tu cabello necesita. A $55.",color:"Gotitas Brillantes para brillo y suavidad. Precio: $30.",oily:"Gotero Rapido regula la producción de sebo. Precio: $55.",dry:"Laciador Crece restaura suavidad y rebote. Precio: $40.",tangly:"Laciador Crece suaviza y desenreda. Precio: $40.",flat:"Laciador Crece da volumen. Precio: $40.",loss:"Gotero Rapido estimula el crecimiento. Precio: $55.",default:"Formula Exclusiva es tu mejor opción. Precio: $55."},
+  "fr-FR":{damaged:"Formula Exclusiva est exactement ce dont vos cheveux ont besoin. À $55.",color:"Gotitas Brillantes pour l'éclat. Prix: $30.",oily:"Gotero Rapido régule le sébum. Prix: $55.",dry:"Laciador Crece transforme les cheveux secs. Prix: $40.",tangly:"Laciador Crece lisse et démêle. Prix: $40.",flat:"Laciador Crece donne du volume. Prix: $40.",loss:"Gotero Rapido stimule la croissance. Prix: $55.",default:"Formula Exclusiva est votre meilleur choix. Prix: $55."},
+  "pt-BR":{damaged:"Formula Exclusiva é o que seu cabelo precisa. Por $55.",color:"Gotitas Brillantes para brilho. Preço: $30.",oily:"Gotero Rapido regula a produção de sebo. Preço: $55.",dry:"Laciador Crece transforma o cabelo seco. Preço: $40.",tangly:"Laciador Crece alisa e desembaraça. Preço: $40.",flat:"Laciador Crece dá volume. Preço: $40.",loss:"Gotero Rapido estimula o crescimento. Preço: $55.",default:"Formula Exclusiva é sua melhor escolha. Preço: $55."},
+  "de-DE":{damaged:"Formula Exclusiva ist genau das, was Ihr Haar braucht. Für $55.",color:"Gotitas Brillantes für Glanz. Preis: $30.",oily:"Gotero Rapido reguliert Talgproduktion. Preis: $55.",dry:"Laciador Crece transformiert trockenes Haar. Preis: $40.",tangly:"Laciador Crece glättet und entwirrt. Preis: $40.",flat:"Laciador Crece gibt Volumen. Preis: $40.",loss:"Gotero Rapido fördert Haarwachstum. Preis: $55.",default:"Formula Exclusiva ist Ihre beste Lösung. Preis: $55."},
+  "ar-SA":{damaged:"فورمولا إكسكلوسيفا هو ما يحتاجه شعرك. بسعر $55.",color:"غوتيتاس برييانتس للبريق. السعر: $30.",oily:"غوتيرو رابيدو ينظم إنتاج الزيت. السعر: $55.",dry:"لاسيادور كريسي يحول الشعر الجاف. السعر: $40.",tangly:"لاسيادور كريسي يملس ويفك التشابك. السعر: $40.",flat:"لاسيادور كريسي يمنح الحجم. السعر: $40.",loss:"غوتيرو يحفز النمو. السعر: $55.",default:"فورمولا هو أفضل خيار شامل. السعر: $55."},
+  "zh-CN":{damaged:"Formula Exclusiva 正是您需要的。售价 $55。",color:"Gotitas Brillantes 增添光泽。售价 $30。",oily:"Gotero Rapido 调节皮脂分泌。售价 $55。",dry:"Laciador Crece 改善干燥发质。售价 $40。",tangly:"Laciador Crece 顺滑解结。售价 $40。",flat:"Laciador Crece 增加蓬松感。售价 $40。",loss:"Gotero Rapido 促进头发生长。售价 $55。",default:"Formula Exclusiva 是您最全面的选择。售价 $55。"},
+  "hi-IN":{damaged:"Formula Exclusiva बिल्कुल वही है जो चाहिए। $55।",color:"Gotitas Brillantes चमक के लिए। $30।",oily:"Gotero Rapido तैलीय बालों के लिए। $55।",dry:"Laciador Crece सूखे बालों को बदलता है। $40।",tangly:"Laciador Crece चिकना और उलझन-मुक्त। $40।",flat:"Laciador Crece वॉल्यूम देता है। $40।",loss:"Gotero Rapido विकास को प्रोत्साहित करता है। $55।",default:"Formula Exclusiva सबसे अच्छा विकल्प। $55।"}
+};
+
+function localRecommend(text){
+  const t=text.toLowerCase();
+  const R=LOCAL_R[langSelect.value]||LOCAL_R["en-US"];
+  if(/damag|break|broke|split end|weak|brittle|burnt|chemical|heat damage|perm|relaxer|bleach|falling out|hair loss|bald|thinning|shed|alopecia/.test(t)) return R.damaged;
+  if(/color|colour|fade|brassy|grey|gray|highlights|dye|tint|pigment/.test(t)) return R.color;
+  if(/oil|oily|greasy|grease|sebum|buildup|waxy|weighing down/.test(t)) return R.oily;
+  if(/tangl|tangle|knot|matted|hard to brush|hard to comb|detangle|snag/.test(t)) return R.tangly;
+  if(/flat|no bounce|no volume|lifeless|limp|fine hair|no lift|falls flat/.test(t)) return R.flat;
+  if(/hair loss|shed|alopecia|thinning|bald|receding|slow growth/.test(t)) return R.loss;
+  if(/dry|frizz|frizzy|rough|coarse|moisture|parched|thirsty|dehydrat/.test(t)) return R.dry;
+  return R.default;
+}
+
+// ── AI RECOMMENDATION ──
+async function getRecommendation(userText){
+  try{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),10000);
+    const headers={"Content-Type":"application/json","X-Session-Id":SESSION_ID};
+    if(window._srd_token) headers["X-Auth-Token"]=window._srd_token;
+    const resp=await fetch("/api/recommend",{
+      method:"POST",
+      headers,
+      body:JSON.stringify({text:userText,message:userText,lang:langSelect.value,history:conversationHistory.slice(0,-1)}),
+      signal:controller.signal
+    });
+    clearTimeout(timeout);
+    if(!resp.ok) throw new Error("not ok");
+    const data=await resp.json();
+    handleSubscriptionResponse(data);
+    if(data.recommendation) return data.recommendation;
+    if(data.reply) return data.reply;
+    throw new Error("empty");
+  }catch(e){
+    return localRecommend(userText);
+  }
+}
+
+async function processText(text){
+  if(!text||text.trim().length<3){
+    responseBox.textContent="Could you describe your hair a little more?";
+    setState("idle");setColor(...IDLE);stateLabel.textContent="Tap to begin";
+    setTimeout(()=>speak(responseBox.textContent,false),800);
+    return;
+  }
+  addToHistory("user",text);
+  setState("idle");setColor(...IDLE);
+  responseBox.textContent="Thinking…";stateLabel.textContent="Thinking";
+  const result=await getRecommendation(text);
+  const final=result||localRecommend(text);
+  addToHistory("assistant",final);
+  setTimeout(()=>speak(final,true),400);
+}
+
+const NO_HEAR={"en-US":"I didn't hear anything. Please tap and describe your hair concern.","es-ES":"No escuché nada. Por favor toca y describe tu preocupación.","fr-FR":"Je n'ai rien entendu. Veuillez appuyer et décrire votre préoccupation.","pt-BR":"Não ouvi nada. Por favor toque e descreva sua preocupação.","de-DE":"Ich habe nichts gehört. Bitte tippen und Ihr Problem beschreiben.","ar-SA":"لم أسمع شيئاً. يرجى النقر ووصف قلقك.","zh-CN":"我没有听到。请点击并描述您的问题。","hi-IN":"मुझे कुछ सुनाई नहीं दिया। कृपया टैप करें।"};
+function noHear(){ const msg=NO_HEAR[langSelect.value]||NO_HEAR["en-US"]; responseBox.textContent=msg; setState("idle");setColor(...IDLE);stateLabel.textContent="Tap to begin"; speak(msg,false); }
+
+function getSupportedMimeType(){ const types=["audio/webm","audio/webm;codecs=opus","audio/ogg;codecs=opus","audio/mp4"]; for(const t of types){if(MediaRecorder.isTypeSupported(t)) return t;} return ""; }
+
+async function startListening(){
+  playAmbient("intro");
+  setState("listening");setColor(...LISTEN);
+  stateLabel.textContent="Listening…";
+  responseBox.textContent=conversationHistory.length>0?"Ask a follow-up…":"Listening…";
+  requestAnimationFrame(micReactiveLoop);
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const src=audioCtx.createMediaStreamSource(stream);
+    analyser=audioCtx.createAnalyser(); analyser.fftSize=512; analyser.smoothingTimeConstant=0.6;
+    src.connect(analyser); micData=new Uint8Array(analyser.frequencyBinCount);
+    audioChunks=[]; mediaRecorder=new MediaRecorder(stream,{mimeType:getSupportedMimeType()});
+    mediaRecorder.ondataavailable=e=>{if(e.data.size>0) audioChunks.push(e.data);};
+    mediaRecorder.onstop=async()=>{ stream.getTracks().forEach(t=>t.stop()); if(audioChunks.length===0){noHear();return;} await sendToWhisper(); };
+    mediaRecorder.start();
+    recordingTimer=setTimeout(()=>stopListening(),10000);
+  }catch(e){
+    console.warn("Mic error:",e);
+    responseBox.textContent="Microphone access denied. Tap Manual Mode to type instead.";
+    setState("idle");setColor(...IDLE);stateLabel.textContent="Tap to begin";
+  }
+}
+
+function stopListening(){ clearTimeout(recordingTimer); if(mediaRecorder&&mediaRecorder.state==="recording") mediaRecorder.stop(); }
+
+async function sendToWhisper(){
+  setState("idle");setColor(...IDLE);stateLabel.textContent="Thinking…";responseBox.textContent="Thinking…";
+  try{
+    const mimeType=getSupportedMimeType()||"audio/webm";
+    const blob=new Blob(audioChunks,{type:mimeType});
+    const formData=new FormData(); formData.append("audio",blob,"audio.webm");
+    const resp=await fetch("/api/transcribe",{method:"POST",body:formData});
+    const data=await resp.json();
+    const text=(data.text||"").trim();
+    if(text.length>2){ responseBox.textContent=text; processText(text); }
+    else { noHear(); }
+  }catch(e){ console.error("Whisper error:",e); noHear(); }
+}
+
+halo.addEventListener("click",()=>{
+  if(isManual) return;
+  if(appState==="listening"){ stopListening(); return; }
+  if(appState==="speaking"){ speechSynthesis.cancel(); setState("idle");setColor(...IDLE);stateLabel.textContent="Tap to begin"; return; }
+  startListening();
+});
+
+modeToggle.addEventListener("click",()=>{
+  isManual=!isManual;
+  manualBox.style.display=isManual?"flex":"none";
+  modeToggle.textContent=isManual?"Voice Mode":"Manual Mode";
+});
+manualSubmit.addEventListener("click",()=>{ const text=manualInput.value.trim(); if(text.length<3) return; manualInput.value=""; processText(text); });
+manualInput.addEventListener("keydown",e=>{ if(e.key==="Enter") manualSubmit.click(); });
+
+speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();
+setTimeout(()=>speechSynthesis.getVoices(),300);
+
+const FAQ_MSGS={"en-US":"All SupportRD products are 100% natural and salon-professional. Formula Exclusiva $55, Laciador Crece $40, Gotero Rapido $55, Gotitas Brillantes $30, Mascarilla $25, Shampoo $20.","es-ES":"Todos los productos son 100% naturales. Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20.","fr-FR":"Tous nos produits sont 100% naturels. Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20.","pt-BR":"Todos os produtos são 100% naturais. Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20.","de-DE":"Alle Produkte sind 100% natürlich. Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20.","ar-SA":"جميع المنتجات طبيعية 100%. فورمولا $55، لاسيادور $40، غوتيرو $55، غوتيتاس $30، ماسكاريا $25، شامبو $20.","zh-CN":"所有产品均为100%天然。Formula Exclusiva $55，Laciador $40，Gotero $55，Gotitas $30，Mascarilla $25，Shampoo $20。","hi-IN":"सभी उत्पाद 100% प्राकृतिक। Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20।"};
+const CONTACT_MSGS={"en-US":"You can reach us at SupportRD.com or message us on WhatsApp at 829-233-2670. We'd love to help you find your perfect product!","es-ES":"Contáctanos en SupportRD.com o por WhatsApp al 829-233-2670.","fr-FR":"Contactez-nous sur SupportRD.com ou WhatsApp au 829-233-2670.","pt-BR":"Entre em contato pelo SupportRD.com ou WhatsApp: 829-233-2670.","de-DE":"Kontaktieren Sie uns auf SupportRD.com oder WhatsApp: 829-233-2670.","ar-SA":"تواصل معنا عبر SupportRD.com أو واتساب: 829-233-2670.","zh-CN":"请访问 SupportRD.com 或 WhatsApp: 829-233-2670 联系我们。","hi-IN":"SupportRD.com या WhatsApp 829-233-2670 पर संपर्क करें।"};
+document.getElementById("faqBtn").addEventListener("click",()=>{ const msg=FAQ_MSGS[langSelect.value]||FAQ_MSGS["en-US"]; responseBox.textContent=msg; speak(msg,false); });
+document.getElementById("contactBtn").addEventListener("click",()=>{ const msg=CONTACT_MSGS[langSelect.value]||CONTACT_MSGS["en-US"]; responseBox.textContent=msg; speak(msg,false); });
+
+// ── PAYWALL ──
+function handleSubscriptionResponse(data){
+  if(!data) return;
+  if(data.subscribed||data.logged_in){ document.getElementById('paywallBanner').style.display='none'; return; }
+  const count=data.response_count||0;
+  if(count>0&&count%3===0&&!_paywallDismissed){
+    setTimeout(()=>{ document.getElementById('paywallBanner').style.display='block'; },800);
+  }
+}
+function closePaywall(){ _paywallDismissed=true; document.getElementById('paywallBanner').style.display='none'; }
+async function goUpgrade(){
+  const token=localStorage.getItem('srd_token');
+  if(!token){ window.location.href='/login?next=subscribe'; return; }
+  const r=await fetch('/api/subscription/checkout',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token}});
+  const d=await r.json();
+  if(d.checkout_url){ window.location.href=d.checkout_url; }
+  else if(d.setup_needed){ window.location.href='https://supportrd.com/products/hair-advisor-premium'; }
+  else { alert('Something went wrong. Please try again.'); }
+}
 </script>
 </body>
 </html>"""
 
-@app.route("/blog")
-def blog_index():
-    posts = blog_get_index()
-    cards = ""
-    for p in posts:
-        date = p.get("date","")[:10]
-        cards += f"""
-        <article class="post-card">
-          <a href="/blog/{p['handle']}">
-            <h2>{p['title']}</h2>
-            <p class="meta">{p.get('meta','')}</p>
-            <span class="date">{date}</span>
-          </a>
-        </article>"""
 
-    if not cards:
-        cards = '<p class="empty">No posts yet — check back soon.</p>'
+# ── API: RECOMMEND ────────────────────────────────────────────────────────────
+@app.route("/api/recommend", methods=["POST","OPTIONS"])
+def recommend():
+    data       = request.get_json()
+    user_text  = data.get("text","") or data.get("message","")
+    lang       = data.get("lang", "en-US")
+    history    = data.get("history", [])
+    session_id = request.headers.get("X-Session-Id", request.remote_addr or "anon")
 
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hair Care Journal — SupportRD</title>
-<meta name="description" content="Expert hair care tips, routines and advice from SupportRD.">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-{SRD_PAGE_LOADER}
-<style>
-{SRD_NAV_CSS}
-.header-brand{{text-align:center;padding:48px 24px 36px;background:#f0ebe8;}}
-.header-brand h1{{font-family:'Cormorant Garamond',serif;font-size:clamp(32px,5vw,48px);font-style:italic;font-weight:400;color:#0d0906;}}
-.header-brand p{{font-size:13px;color:rgba(0,0,0,0.4);margin-top:10px;letter-spacing:0.10em;text-transform:uppercase;}}
-.container{{max-width:900px;margin:0 auto;padding:40px 24px;}}
-.section-label{{font-size:11px;color:#c1a3a2;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:10px;}}
-.section-title{{font-family:'Cormorant Garamond',serif;font-size:30px;font-style:italic;margin-bottom:28px;color:#0d0906;}}
-.post-card{{background:#fff;border-radius:16px;margin-bottom:20px;transition:transform 0.2s,box-shadow 0.2s;box-shadow:0 2px 12px rgba(0,0,0,0.05);border:1px solid rgba(193,163,162,0.12);}}
-.post-card:hover{{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.10);}}
-.post-card a{{display:block;padding:28px 32px;text-decoration:none;color:inherit;}}
-.post-card h2{{font-family:'Cormorant Garamond',serif;font-size:24px;color:#0d0906;margin-bottom:8px;line-height:1.3;}}
-.post-card .meta{{font-size:13px;color:rgba(0,0,0,0.45);line-height:1.6;margin-bottom:12px;}}
-.post-card .date{{font-size:11px;color:#c1a3a2;letter-spacing:0.08em;}}
-.empty{{text-align:center;color:rgba(0,0,0,0.3);padding:60px;font-size:14px;}}
-footer{{text-align:center;padding:40px;font-size:12px;color:rgba(0,0,0,0.3);border-top:1px solid rgba(193,163,162,0.12);}}
-footer a{{color:#c1a3a2;text-decoration:none;}}
-</style>
-</head>
-<body>
-{SRD_NAV_HTML}
-<div class="header-brand">
-  <h1>Hair Care Journal</h1>
-  <p>Expert tips, routines and advice from SupportRD</p>
-</div>
-<div class="container">
-  <div class="section-label">&#10022; Expert guides</div>
-  <div class="section-title">Latest Articles</div>
-  {cards}
-</div>
-<footer><a href="https://supportrd.com">← Back to SupportRD</a> &nbsp;·&nbsp; <a href="https://ai-hair-advisor.onrender.com">Try Aria AI →</a></footer>
-</body></html>"""
+    user       = get_current_user()
+    subscribed = is_subscribed(user["id"]) if user else False
 
+    lang_names = {"en-US":"English","es-ES":"Spanish","fr-FR":"French","pt-BR":"Portuguese","de-DE":"German","ar-SA":"Arabic","zh-CN":"Mandarin Chinese","hi-IN":"Hindi"}
+    lang_name  = lang_names.get(lang, "English")
+    lang_instr = f"\n\nIMPORTANT: Your ENTIRE response must be in {lang_name}."
 
-@app.route("/blog/<handle>")
-def blog_post(handle):
-    post = blog_get_post(handle)
-    if not post:
-        return "<h2>Post not found</h2>", 404
+    profile_context = ""
+    if user:
+        if subscribed:
+            profile = get_hair_profile(user["id"])
+            if profile.get("hair_type") or profile.get("hair_concerns"):
+                profile_context = f"""
 
-    date = post.get("date","")[:10]
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{post['title']} — SupportRD</title>
-<meta name="description" content="{post.get('meta','')}">
-<link rel="canonical" href="https://ai-hair-advisor.onrender.com/blog/{handle}">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-{SRD_PAGE_LOADER}
-<style>
-{SRD_NAV_CSS}
-.container{{max-width:720px;margin:0 auto;padding:48px 24px;}}
-.post-date{{font-size:11px;color:#c1a3a2;letter-spacing:0.10em;margin-bottom:16px;text-transform:uppercase;}}
-.post-body{{background:#fff;border-radius:20px;padding:48px;box-shadow:0 2px 20px rgba(0,0,0,0.06);line-height:1.8;font-size:15px;border:1px solid rgba(193,163,162,0.12);}}
-.post-body h1{{font-family:'Cormorant Garamond',serif;font-size:36px;font-style:italic;font-weight:400;margin-bottom:24px;line-height:1.2;color:#0d0906;}}
-.post-body h2{{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;margin:32px 0 12px;color:#0d0906;}}
-.post-body p{{margin-bottom:16px;color:rgba(0,0,0,0.75);}}
-.post-body a{{color:#c1a3a2;}}
-.cta{{background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;text-align:center;padding:36px;border-radius:16px;margin-top:32px;}}
-.cta h3{{font-family:'Cormorant Garamond',serif;font-size:26px;font-style:italic;font-weight:400;margin-bottom:8px;}}
-.cta p{{font-size:13px;opacity:0.9;line-height:1.6;}}
-.cta a{{display:inline-block;margin-top:16px;padding:12px 28px;background:#fff;color:#c1a3a2;border-radius:30px;text-decoration:none;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-family:'Jost',sans-serif;}}
-footer{{text-align:center;padding:32px;font-size:12px;color:rgba(0,0,0,0.3);border-top:1px solid rgba(193,163,162,0.12);}}
-footer a{{color:#c1a3a2;text-decoration:none;}}
-@media(max-width:600px){{.post-body{{padding:28px 20px;}}}}
-</style>
-</head>
-<body>
-{SRD_NAV_HTML}
-<div class="container">
-  <div class="post-date">{date}</div>
-  <div class="post-body">{post['html']}</div>
-  <div class="cta">
-    <h3>Get your personalized hair routine</h3>
-    <p>Tell Aria about your hair and get expert advice tailored to you.</p>
-    <a href="https://ai-hair-advisor.onrender.com">Chat with Aria Free →</a>
-  </div>
-</div>
-<footer><a href="https://supportrd.com">SupportRD</a> &nbsp;·&nbsp; <a href="/blog">← More Articles</a></footer>
-</body></html>"""
+RETURNING CLIENT PROFILE:
+- Name: {user.get("name","this client")}
+- Hair type: {profile.get("hair_type","unknown")}
+- Known concerns: {profile.get("hair_concerns","none saved")}
+- Treatments history: {profile.get("treatments","none saved")}
+- Products tried: {profile.get("products_tried","none saved")}
+Reference this naturally in your response."""
+        save_chat_message(user["id"], "user", user_text)
 
+    active_prompt = SYSTEM_PROMPT + profile_context + lang_instr
+    max_tokens    = 350
 
-@app.route("/sitemap.xml")
-def sitemap():
-    import glob
-    BLOG_DIR = "/tmp/srd_blog"
-    base_url = "https://auto-engine.onrender.com"
-    
-    urls = []
-    
-    # Blog index
-    urls.append(f"""  <url>
-    <loc>{base_url}/blog</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>""")
-    
-    # Individual posts
+    if not ANTHROPIC_API_KEY:
+        return jsonify({"recommendation": None, "error": "No API key"}), 500
+
     try:
-        with open(f"{BLOG_DIR}/index.json","r") as f:
-            posts = json.load(f)
-        for p in posts:
-            date = p.get("date","")[:10]
-            urls.append(f"""  <url>
-    <loc>{base_url}/blog/{p["handle"]}</loc>
-    <lastmod>{date}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>""")
-    except:
-        pass
-
-    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{chr(10).join(urls)}
-</urlset>"""
-    
-    return Response(xml, mimetype="application/xml")
-
-
-@app.route("/robots.txt")
-def robots():
-    return Response(f"""User-agent: *
-Allow: /blog
-Disallow: /api
-Disallow: /admin
-
-Sitemap: https://auto-engine.onrender.com/sitemap.xml
-""", mimetype="text/plain")
-
-
-
-@app.route("/google65f6d985572e55c5.html")
-def google_verify():
-    return "google-site-verification: google65f6d985572e55c5.html"
-
-
-# ── WHISPER TRANSCRIPTION ─────────────────────────────────────────────────────
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-
-@app.route("/api/transcribe", methods=["POST","OPTIONS"])
-def transcribe():
-    if not OPENAI_API_KEY:
-        return jsonify({"error": "No OpenAI key"}), 500
-    try:
-        audio_file = request.files.get("audio")
-        if not audio_file:
-            return jsonify({"error": "No audio"}), 400
-
         import urllib.request as urlreq
 
-        boundary = "SRDBoundary" + secrets.token_hex(8)
-        audio_data = audio_file.read()
+        messages = []
+        if subscribed and user:
+            db_history = get_chat_history(user["id"], limit=16)
+            for h in db_history[:-1]:
+                if h.get("role") in ("user","assistant") and h.get("content"):
+                    messages.append({"role": h["role"], "content": h["content"]})
+        else:
+            for h in history[-2:]:
+                if h.get("role") in ("user","assistant") and h.get("content"):
+                    messages.append({"role": h["role"], "content": h["content"]})
 
-        CRLF = b"\r\n"
-        body = b""
-        body += b"--" + boundary.encode() + CRLF
-        body += b'Content-Disposition: form-data; name="model"' + CRLF + CRLF
-        body += b"whisper-1" + CRLF
-        body += b"--" + boundary.encode() + CRLF
-        body += b'Content-Disposition: form-data; name="language"' + CRLF + CRLF
-        body += b"en" + CRLF
-        body += b"--" + boundary.encode() + CRLF
-        body += b'Content-Disposition: form-data; name="file"; filename="audio.webm"' + CRLF
-        body += b"Content-Type: audio/webm" + CRLF + CRLF
-        body += audio_data + CRLF
-        body += b"--" + boundary.encode() + b"--" + CRLF
+        messages.append({"role": "user", "content": user_text})
+
+        payload = json.dumps({
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": max_tokens,
+            "system": active_prompt,
+            "messages": messages
+        }).encode("utf-8")
 
         req = urlreq.Request(
-            "https://api.openai.com/v1/audio/transcriptions",
-            data=body,
-            headers={
-                "Authorization": "Bearer " + OPENAI_API_KEY,
-                "Content-Type": "multipart/form-data; boundary=" + boundary
-            },
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
             method="POST"
         )
-        with urlreq.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode())
-            return jsonify({"text": result.get("text", "")})
+        with urlreq.urlopen(req, timeout=12) as resp:
+            result         = json.loads(resp.read().decode("utf-8"))
+            recommendation = result["content"][0]["text"].strip()
+
+        if subscribed and user:
+            save_chat_message(user["id"], "assistant", recommendation)
+            concern = extract_concern(user_text)
+            if concern:
+                profile  = get_hair_profile(user["id"])
+                existing = profile.get("hair_concerns","")
+                if concern not in existing:
+                    updated = (existing + ", " + concern).strip(", ")
+                    save_hair_profile(user["id"], {**profile, "hair_concerns": updated})
+
+        # Increment and get new count — fixed bug: use get_session_count after increment
+        increment_session_count(session_id, user["id"] if user else None)
+        new_count = get_session_count(session_id, user["id"] if user else None)
+
+        product = extract_product(recommendation)
+        concern = extract_concern(user_text)
+        log_event(lang, user_text, product, concern)
+
+        return jsonify({
+            "recommendation":  recommendation,
+            "reply":           recommendation,
+            "logged_in":       user is not None,
+            "user_name":       user["name"] if user else None,
+            "subscribed":      subscribed,
+            "response_count":  new_count,
+            "free_limit":      FREE_RESPONSE_LIMIT,
+            "show_paywall":    False,
+            "paywall_soft":    True
+        })
+
     except Exception as e:
+        return jsonify({"recommendation": None, "error": str(e)}), 500
+
+
+# ── API: TIP LOGGING ──────────────────────────────────────────────────────────
+@app.route("/api/tip", methods=["POST"])
+def tip():
+    data = request.get_json()
+    log_tip(data.get("lang","en-US"), data.get("rating",0), data.get("amount","skip"), data.get("product",""))
+    return jsonify({"ok": True})
+
+
+# ── ANALYTICS DASHBOARD ───────────────────────────────────────────────────────
+ANALYTICS_KEY = os.environ.get("ANALYTICS_KEY", "hairadmin")
+
+@app.route("/api/dashboard-stats")
+def dashboard_stats():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        adb = get_analytics_db()
+        udb = get_db()
+        from datetime import date, timedelta
+        today = date.today()
+
+        total_users  = udb.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        active_today = udb.execute("SELECT COUNT(DISTINCT user_id) FROM chat_history WHERE ts >= datetime('now','-1 day')").fetchone()[0]
+
+        profiles = udb.execute("SELECT hair_concerns FROM hair_profiles WHERE hair_concerns IS NOT NULL AND hair_concerns != ''").fetchall()
+        concern_counts = {}
+        for (row,) in profiles:
+            for c in row.split(','):
+                c = c.strip().lower()
+                if c: concern_counts[c] = concern_counts.get(c,0)+1
+        total_concern_tags = sum(concern_counts.values()) or 1
+        top_concerns = sorted(concern_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        prod_counts = {}
+        for (row,) in udb.execute("SELECT products_tried FROM hair_profiles WHERE products_tried IS NOT NULL AND products_tried != ''").fetchall():
+            for p in row.split(','):
+                p = p.strip()
+                if p: prod_counts[p] = prod_counts.get(p,0)+1
+        total_prod_tags = sum(prod_counts.values()) or 1
+        top_products = sorted(prod_counts.items(), key=lambda x: x[1], reverse=True)[:6]
+
+        recent_ev = adb.execute("SELECT product, COUNT(*) as n FROM events WHERE ts >= datetime('now','-30 days') AND product != 'Unknown' GROUP BY product ORDER BY n DESC").fetchall()
+        prev_map  = {p:n for p,n in adb.execute("SELECT product, COUNT(*) as n FROM events WHERE ts >= datetime('now','-60 days') AND ts < datetime('now','-30 days') AND product != 'Unknown' GROUP BY product ORDER BY n DESC").fetchall()}
+        product_trends = [{"product":p,"count":n,"change":round(((n-prev_map.get(p,0))/max(prev_map.get(p,0),1))*100)} for p,n in recent_ev]
+
+        concern_ev = adb.execute("SELECT concern, COUNT(*) as n FROM events WHERE ts >= datetime('now','-30 days') GROUP BY concern ORDER BY n DESC").fetchall()
+        total_cev  = sum(n for _,n in concern_ev) or 1
+        concern_sentiment = [{"concern":c,"count":n,"pct":round(n/total_cev*100)} for c,n in concern_ev[:4]]
+
+        day_map = {r[0]:r[1] for r in udb.execute("SELECT date(ts) as d, COUNT(*) as n FROM chat_history WHERE ts >= datetime('now','-30 days') AND role='user' GROUP BY d ORDER BY d").fetchall()}
+        sparkline_30 = [day_map.get((today-timedelta(days=29-i)).isoformat(),0) for i in range(30)]
+        udm = {r[0]:r[1] for r in udb.execute("SELECT date(ts) as d, COUNT(*) as n FROM chat_history WHERE user_id=? AND ts >= datetime('now','-30 days') AND role='user' GROUP BY d ORDER BY d",(user["id"],)).fetchall()}
+        user_spark = [udm.get((today-timedelta(days=29-i)).isoformat(),0) for i in range(30)]
+
+        m=concern_counts.get('frizz',0)+concern_counts.get('dry / brittle',0)
+        d=concern_counts.get('damaged',0)+concern_counts.get('breakage',0)
+        g=concern_counts.get('slow growth',0)+concern_counts.get('hair loss',0)+concern_counts.get('thinning',0)
+        s=concern_counts.get('oily scalp',0)+concern_counts.get('dandruff',0)
+        tot=max(m+d+g+s,1)
+
+        adb.close(); udb.close()
+        return jsonify({
+            "total_users": total_users, "active_today": max(active_today,1),
+            "top_concerns": [{"name":c,"count":n,"pct":round(n/total_concern_tags*100)} for c,n in top_concerns],
+            "top_products": [{"name":p,"count":n,"pct":round(n/total_prod_tags*100)} for p,n in top_products],
+            "product_trends": product_trends, "concern_sentiment": concern_sentiment,
+            "sparkline_7": sparkline_30[-7:], "sparkline_14": sparkline_30[-14:], "sparkline_30": sparkline_30,
+            "user_spark_30": user_spark,
+            "sentiment": {"moisture_pct":round(m/tot*100),"damage_pct":round(d/tot*100),"growth_pct":round(g/tot*100),"scalp_pct":round(s/tot*100)}
+        })
+    except Exception as e:
+        import traceback; traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/ping", methods=["GET"])
-def ping():
-    return jsonify({"ok": True, "status": "awake"})
-
-
-# ── CONTENT ENGINE API ENDPOINTS ──────────────────────────────────────────────
-ENGINE_LOG = []  # In-memory log of recent runs
-
-@app.route("/api/content-engine/run", methods=["POST","OPTIONS"])
-def content_engine_run():
-    admin_key = request.headers.get("X-Admin-Key","")
-    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
-        return jsonify({"error":"Unauthorized"}), 401
-
-    def run_in_background():
-        entry = {
-            "date": datetime.datetime.utcnow().isoformat(),
-            "topic": "generating...",
-            "shopify_url": None,
-            "pinterest": False,
-            "reddit": False,
-            "error": None
-        }
-        ENGINE_LOG.insert(0, entry)
-        if len(ENGINE_LOG) > 50:
-            ENGINE_LOG.pop()
-        try:
-            from content_engine import run_engine
-            result = run_engine()
-            if isinstance(result, dict):
-                entry.update({
-                    "topic":       result.get("topic", "completed"),
-                    "shopify_url": result.get("shopify_url"),
-                    "pinterest":   result.get("pinterest", False),
-                    "reddit":      result.get("reddit", False),
-                })
-            else:
-                entry["topic"] = "completed"
-        except Exception as e:
-            entry["error"] = str(e)
-            entry["topic"] = "error"
-            print(f"Content engine run error: {e}")
-
-    t = threading.Thread(target=run_in_background, daemon=True)
-    t.start()
-    return jsonify({"ok": True, "message": "Engine started in background"})
-
-
-@app.route("/api/content-engine/log", methods=["GET"])
-def content_engine_log():
-    admin_key = request.args.get("admin_key","")
-    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
-        return jsonify({"error":"Unauthorized"}), 401
-    return jsonify({"runs": ENGINE_LOG})
-
-@app.route("/admin-codes")
-def admin_codes_page():
-    admin_key = request.args.get("key","")
-    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
-        return "<h2>Unauthorized</h2>", 401
-    return """<!DOCTYPE html>
-<html><head><meta charset="UTF-8">
-<title>SupportRD — Premium Codes</title>
-<style>
-body{font-family:'Helvetica Neue',sans-serif;max-width:700px;margin:40px auto;padding:20px;background:#faf9f8;color:#0d0906;}
-h1{font-size:22px;color:#c1a3a2;margin-bottom:4px;}
-p{font-size:13px;color:rgba(0,0,0,0.4);margin-bottom:30px;}
-button{padding:12px 28px;background:#c1a3a2;color:#fff;border:none;border-radius:24px;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;}
-button:hover{background:#9d7f6a;}
-#result{margin-top:20px;padding:16px;background:#fff;border:1px solid rgba(193,163,162,0.3);border-radius:12px;display:none;}
-#code-display{font-size:28px;font-weight:bold;color:#c1a3a2;letter-spacing:0.1em;margin:8px 0;}
-#copy-btn{padding:8px 20px;font-size:11px;margin-top:8px;}
-table{width:100%;border-collapse:collapse;margin-top:30px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.06);}
-th{background:#c1a3a2;color:#fff;padding:10px 14px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;text-align:left;}
-td{padding:10px 14px;font-size:13px;border-bottom:1px solid rgba(0,0,0,0.05);}
-.used{color:#aaa;text-decoration:line-through;}
-.unused{color:#25D366;font-weight:bold;}
-</style></head>
-<body>
-<h1>✦ SupportRD Premium Codes</h1>
-<p>Generate a code for each customer who purchases Hair Advisor Premium.</p>
-<button onclick="generateCode()">Generate New Code</button>
-<div id="result">
-  <div style="font-size:12px;color:rgba(0,0,0,0.4);">New Premium Code</div>
-  <div id="code-display"></div>
-  <button id="copy-btn" onclick="copyCode()">Copy Code</button>
-  <div style="font-size:11px;color:rgba(0,0,0,0.3);margin-top:8px;">Send this to the customer via email after their purchase.</div>
-</div>
-<div id="codes-table"></div>
-<script>
-var ADMIN_KEY = new URLSearchParams(window.location.search).get('key');
-var API = 'https://ai-hair-advisor.onrender.com';
-var lastCode = '';
-
-function generateCode(){
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', API+'/api/admin/generate-code', true);
-  xhr.setRequestHeader('X-Admin-Key', ADMIN_KEY);
-  xhr.setRequestHeader('Content-Type','application/json');
-  xhr.onload = function(){
-    var d = JSON.parse(xhr.responseText);
-    if(d.ok){
-      lastCode = d.code;
-      document.getElementById('code-display').textContent = d.code;
-      document.getElementById('result').style.display = 'block';
-      loadCodes();
-    }
-  };
-  xhr.send('{}');
-}
-
-function copyCode(){
-  navigator.clipboard.writeText(lastCode).then(function(){
-    document.getElementById('copy-btn').textContent = 'Copied!';
-    setTimeout(function(){ document.getElementById('copy-btn').textContent='Copy Code'; }, 2000);
-  });
-}
-
-function loadCodes(){
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', API+'/api/admin/list-codes', true);
-  xhr.setRequestHeader('X-Admin-Key', ADMIN_KEY);
-  xhr.onload = function(){
-    var d = JSON.parse(xhr.responseText);
-    var codes = d.codes || [];
-    if(!codes.length){ document.getElementById('codes-table').innerHTML='<p style="color:rgba(0,0,0,0.3);margin-top:20px;">No codes generated yet.</p>'; return; }
-    var html = '<table><tr><th>Code</th><th>Status</th><th>Used At</th></tr>';
-    codes.forEach(function(c){
-      html += '<tr><td>'+(c.used?'<span class="used">'+c.code+'</span>':'<span class="unused">'+c.code+'</span>')+'</td>';
-      html += '<td>'+(c.used?'Used':'Available')+'</td>';
-      html += '<td>'+(c.used_at||'—')+'</td></tr>';
-    });
-    html += '</table>';
-    document.getElementById('codes-table').innerHTML = html;
-  };
-  xhr.send();
-}
-
-loadCodes();
-</script>
-
-<hr style="border:none;border-top:1px solid rgba(193,163,162,0.2);margin:48px 0 32px;">
-
-<!-- ── CONTENT ENGINE ── -->
-<h2 style="font-size:18px;color:#c1a3a2;margin-bottom:4px;">⚙️ Auto Content Engine</h2>
-<p>Generates a new SEO blog post, Pinterest pin and Reddit post. Runs automatically 3x daily at random times (sourcing trends from Weibo, Xiaohongshu, Douyin, Baidu, Pinterest & Reddit). Trigger manually anytime.</p>
-
-<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px;">
-  <button onclick="runEngine(false)">▶ Run Now</button>
-  <button onclick="runEngine(true)" style="background:#9d7f6a;">🎲 Run at Random Time</button>
-  <span id="engine-status" style="font-size:12px;color:rgba(0,0,0,0.4);"></span>
-</div>
-
-<div id="engine-result" style="display:none;padding:16px;background:#fff;border:1px solid rgba(193,163,162,0.3);border-radius:12px;margin-bottom:20px;">
-  <div style="font-size:12px;color:rgba(0,0,0,0.4);margin-bottom:6px;">Last Trigger</div>
-  <div id="engine-msg" style="font-size:14px;color:#0d0906;"></div>
-</div>
-
-<h3 style="font-size:14px;color:#0d0906;margin-bottom:12px;">Run History</h3>
-<div id="engine-log"></div>
-
-<script>
-var engineRunning = false;
-var randomTimer   = null;
-
-function runEngine(random) {
-  if(engineRunning){ alert('Engine already running!'); return; }
-
-  if(random) {
-    // Pick a random delay between 1 min and 6 hours
-    var delayMs  = Math.floor(Math.random() * (6 * 60 * 60 * 1000 - 60000) + 60000);
-    var delayMin = Math.round(delayMs / 60000);
-    var delayHr  = (delayMs / 3600000).toFixed(1);
-    var label    = delayMin < 60 ? delayMin + ' minutes' : delayHr + ' hours';
-
-    document.getElementById('engine-status').textContent = '⏳ Scheduled to run in ' + label + '...';
-    document.getElementById('engine-result').style.display = 'block';
-    document.getElementById('engine-msg').textContent = 'Random trigger set — will run in ' + label;
-
-    if(randomTimer) clearTimeout(randomTimer);
-    randomTimer = setTimeout(function(){ triggerEngine(); }, delayMs);
-    return;
-  }
-
-  triggerEngine();
-}
-
-function triggerEngine() {
-  engineRunning = true;
-  document.getElementById('engine-status').textContent = '🔄 Running...';
-  document.getElementById('engine-result').style.display = 'block';
-  document.getElementById('engine-msg').textContent = 'Engine started — generating content in background...';
-
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', API+'/api/content-engine/run', true);
-  xhr.setRequestHeader('X-Admin-Key', ADMIN_KEY);
-  xhr.setRequestHeader('Content-Type','application/json');
-  xhr.onload = function(){
-    var d = JSON.parse(xhr.responseText);
-    engineRunning = false;
-    if(d.ok){
-      document.getElementById('engine-status').textContent = '✅ Started successfully';
-      document.getElementById('engine-msg').innerHTML = '✅ Engine running in background.<br><small style="color:rgba(0,0,0,0.4)">Refresh log in ~30 seconds to see results.</small>';
-      setTimeout(loadEngineLog, 8000);
-    } else {
-      document.getElementById('engine-status').textContent = '❌ Error';
-      document.getElementById('engine-msg').textContent = 'Error: ' + (d.error || 'Unknown');
-    }
-  };
-  xhr.onerror = function(){
-    engineRunning = false;
-    document.getElementById('engine-status').textContent = '❌ Connection error';
-  };
-  xhr.send('{}');
-}
-
-function loadEngineLog(){
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', API+'/api/content-engine/log?admin_key='+ADMIN_KEY, true);
-  xhr.onload = function(){
-    var d = JSON.parse(xhr.responseText);
-    var runs = d.runs || [];
-    if(!runs.length){
-      document.getElementById('engine-log').innerHTML = '<p style="color:rgba(0,0,0,0.3);font-size:13px;">No runs yet.</p>';
-      return;
-    }
-    var html = '<table><tr><th>Date</th><th>Topic</th><th>Shopify</th><th>Pinterest</th><th>Reddit</th><th>Status</th></tr>';
-    runs.forEach(function(r){
-      var date = new Date(r.date).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-      html += '<tr>';
-      html += '<td style="white-space:nowrap">'+date+'</td>';
-      html += '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r.topic+'">'+r.topic+'</td>';
-      html += '<td>'+(r.shopify_url ? '<a href="'+r.shopify_url+'" target="_blank" style="color:#c1a3a2;">✓ View</a>' : '<span style="color:#aaa">—</span>')+'</td>';
-      html += '<td>'+(r.pinterest ? '✓' : '<span style="color:#aaa">—</span>')+'</td>';
-      html += '<td>'+(r.reddit ? '✓' : '<span style="color:#aaa">—</span>')+'</td>';
-      html += '<td>'+(r.error ? '<span style="color:#c0392b" title="'+r.error+'">❌ Error</span>' : '<span style="color:#27ae60">✓ OK</span>')+'</td>';
-      html += '</tr>';
-    });
-    html += '</table>';
-    document.getElementById('engine-log').innerHTML = html;
-  };
-  xhr.send();
-}
-
-loadEngineLog();
-</script>
-</body></html>"""
-
-@app.route("/api/debug-shopify2", methods=["GET"])
-def debug_shopify2():
-    import requests
-    store = os.environ.get("SHOPIFY_STORE","")
-    token = os.environ.get("SHOPIFY_ADMIN_TOKEN","")
-    url = f"https://{store}/admin/api/2024-01/blogs.json"
-    headers = {"X-Shopify-Access-Token": token}
-    try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        return jsonify({
-            "store": store,
-            "token_prefix": token[:12] if token else "NOT SET",
-            "token_length": len(token),
-            "status": resp.status_code,
-            "response": resp.text[:300]
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-@app.route("/api/debug-shopify", methods=["GET"])
-def debug_shopify():
-    import urllib.request as urlreq
-    try:
-        url = f"https://{SHOPIFY_STORE}/admin/api/2023-10/shop.json"
-        req = urlreq.Request(url, headers={"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN})
-        resp = urlreq.urlopen(req, timeout=10)
-        data = json.loads(resp.read())
-        return jsonify({"ok": True, "shop": data.get("shop",{}).get("name"), "token_set": bool(SHOPIFY_ADMIN_TOKEN)})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e), "store": SHOPIFY_STORE, "token_set": bool(SHOPIFY_ADMIN_TOKEN)})
-
-@app.route("/api/debug-stripe", methods=["GET"])
-def debug_stripe():
-    return jsonify({
-        "stripe_key_set":     bool(STRIPE_SECRET_KEY),
-        "stripe_key_prefix":  STRIPE_SECRET_KEY[:7] if STRIPE_SECRET_KEY else "NOT SET",
-        "price_id_set":       bool(STRIPE_PRICE_ID),
-        "price_id_prefix":    STRIPE_PRICE_ID[:10] if STRIPE_PRICE_ID else "NOT SET",
-        "webhook_set":        bool(STRIPE_WEBHOOK_SECRET),
-        "app_base_url":       APP_BASE_URL,
-    })
-
-@app.route("/api/test-register", methods=["GET"])
-def test_register():
-    """Quick test to verify DB and registration works."""
-    import traceback
-    try:
-        con = get_db()
-        con.execute("SELECT count(*) FROM users").fetchone()
-        con.close()
-        test_hash = hash_password("testpass123")
-        return jsonify({
-            "ok": True,
-            "db": "connected",
-            "auth_db_path": AUTH_DB,
-            "hash_works": len(test_hash) > 0,
-            "secrets_module": True
-        })
-    except Exception as e:
-        return jsonify({
-            "ok": False,
-            "error": str(e),
-            "trace": traceback.format_exc()
-        })
-
-
-
-# ── KEEP-ALIVE SELF PING (prevents Render free tier sleep) ───────────────────
-
-def _keep_alive():
-    import time
-    import urllib.request as _urlreq
-    _url = os.environ.get("APP_BASE_URL","https://ai-hair-advisor.onrender.com") + "/api/ping"
-    time.sleep(60)  # Wait for server to fully start
-    while True:
-        time.sleep(600)  # Ping every 10 minutes
-        try: _urlreq.urlopen(_url, timeout=10)
-        except: pass
-
-threading.Thread(target=_keep_alive, daemon=True).start()
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-
-
-# ── MOVEMENT FEED API ─────────────────────────────────────────────────────────
-import time as _time
-
-_CITIES = [
-    ("Miami, FL", "🇺🇸"), ("New York, NY", "🇺🇸"), ("Los Angeles, CA", "🇺🇸"),
-    ("Houston, TX", "🇺🇸"), ("Atlanta, GA", "🇺🇸"), ("Chicago, IL", "🇺🇸"),
-    ("Santo Domingo", "🇩🇴"), ("Santiago, DR", "🇩🇴"), ("San Pedro de Macorís", "🇩🇴"),
-    ("San Juan, PR", "🇵🇷"), ("Bogotá", "🇨🇴"), ("Medellín", "🇨🇴"),
-    ("Ciudad de México", "🇲🇽"), ("Monterrey", "🇲🇽"), ("Madrid", "🇪🇸"),
-    ("Barcelona", "🇪🇸"), ("Toronto", "🇨🇦"), ("Montreal", "🇨🇦"),
-    ("London", "🇬🇧"), ("Paris", "🇫🇷")
-]
-_PRODUCTS = ["Formula Exclusiva","Laciador Crece","Gotero Rapido","Gotitas Brillantes"]
-_CONCERNS = ["damaged hair","dry hair","frizzy hair","oily scalp",
-             "hair thinning","color fading","tangled hair","lack of volume"]
-_ACTIONS  = [
-    "just ordered {product}",
-    "found their solution for {concern}",
-    "recommended {product} to a client",
-    "reordered {product} for their salon",
-    "discovered {product} for {concern}",
-    "picked up {product} for {concern}",
-]
-
-def _make_movement_event(source="simulated", mins_ago=None):
-    city, flag = random.choice(_CITIES)
-    product    = random.choice(_PRODUCTS)
-    concern    = random.choice(_CONCERNS)
-    action     = random.choice(_ACTIONS).format(product=product, concern=concern)
-    if mins_ago is None:
-        mins_ago = random.randint(0, 55)
-    ts = datetime.datetime.utcnow() - datetime.timedelta(minutes=mins_ago)
-    return {
-        "id":      int(_time.time()*1000) + random.randint(0,999),
-        "city":    city,
-        "flag":    flag,
-        "action":  action,
-        "product": product,
-        "ts":      ts.isoformat(),
-        "source":  source
-    }
-
-# Seed 15 simulated events on startup (so the feed is never empty)
-_MOVEMENT_EVENTS = [_make_movement_event(mins_ago=random.randint(1,55)) for _ in range(15)]
-
-@app.route("/api/movement", methods=["GET","OPTIONS"])
-def movement():
-    """Return recent movement events — mix of real orders + simulated activity."""
-    live = []
-    # Pull real orders from analytics DB (last 30)
+@app.route("/analytics")
+def analytics():
+    key = request.args.get("key","")
+    if key != ANALYTICS_KEY:
+        return "Unauthorized. Add ?key=YOUR_ANALYTICS_KEY to the URL.", 401
     try:
         con = get_analytics_db()
-        rows = con.execute(
-            "SELECT ts, lang, product FROM events ORDER BY id DESC LIMIT 30"
-        ).fetchall()
+        total    = con.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+        products = con.execute("SELECT product, COUNT(*) as n FROM events GROUP BY product ORDER BY n DESC").fetchall()
+        concerns = con.execute("SELECT concern, COUNT(*) as n FROM events GROUP BY concern ORDER BY n DESC").fetchall()
+        langs    = con.execute("SELECT lang, COUNT(*) as n FROM events GROUP BY lang ORDER BY n DESC").fetchall()
+        recent   = con.execute("SELECT ts, lang, user_msg, product, concern FROM events ORDER BY id DESC LIMIT 50").fetchall()
+        tip_total  = con.execute("SELECT COUNT(*) FROM tips").fetchone()[0]
+        avg_rating = con.execute("SELECT AVG(rating) FROM tips WHERE rating > 0").fetchone()[0]
+        tip_amounts= con.execute("SELECT tip_amount, COUNT(*) as n FROM tips GROUP BY tip_amount ORDER BY n DESC").fetchall()
+        avg_r = round(avg_rating,2) if avg_rating else "N/A"
         con.close()
-        lang_city = {
-            "en-US": [("New York, NY","🇺🇸"),("Miami, FL","🇺🇸"),("Atlanta, GA","🇺🇸"),
-                      ("Chicago, IL","🇺🇸"),("Los Angeles, CA","🇺🇸")],
-            "es-ES": [("Madrid","🇪🇸"),("Barcelona","🇪🇸")],
-            "pt-BR": [("Bogotá","🇨🇴"),("Medellín","🇨🇴")],
-            "fr-FR": [("Paris","🇫🇷"),("Montreal","🇨🇦")],
-            "de-DE": [("London","🇬🇧"),("Toronto","🇨🇦")],
-            "ar-SA": [("Santo Domingo","🇩🇴"),("Santiago, DR","🇩🇴")],
-            "zh-CN": [("New York, NY","🇺🇸"),("Los Angeles, CA","🇺🇸")],
-            "hi-IN": [("Houston, TX","🇺🇸"),("Chicago, IL","🇺🇸")],
-        }
-        for (ts, lang, product) in rows:
-            if not product or product == "Unknown":
-                continue
-            city_list = lang_city.get(lang, [("Miami, FL","🇺🇸")])
-            city, flag = random.choice(city_list)
-            action = random.choice([
-                f"just ordered {product}",
-                f"reordered {product} for their salon",
-                f"recommended {product} to a client",
-            ])
-            live.append({
-                "id":      hash(ts+product) % 999999,
-                "city":    city, "flag": flag,
-                "action":  action, "product": product,
-                "ts":      ts, "source": "real"
-            })
     except Exception as e:
-        print("Movement DB error:", e)
-
-    # Add a fresh simulated event to keep the feed feeling live
-    _MOVEMENT_EVENTS.insert(0, _make_movement_event(mins_ago=0))
-    if len(_MOVEMENT_EVENTS) > 50:
-        _MOVEMENT_EVENTS.pop()
-
-    # Merge: real first, then simulated to fill up to 15
-    combined = live + _MOVEMENT_EVENTS
-    combined = combined[:15]
-
-    return jsonify({
-        "events": combined,
-        "total":  len(combined) + random.randint(80, 140)  # social proof count
-    })
-
-
-# ── TRANSCRIPT → MOVEMENT EVENT ───────────────────────────────────────────────
-@app.route("/api/add-movement", methods=["POST","OPTIONS"])
-def add_movement():
-    """Accept a cleaned transcript event (from manual upload) and add to feed."""
-    data = request.get_json()
-    city    = data.get("city", "United States")
-    flag    = data.get("flag", "🇺🇸")
-    action  = data.get("action", "")
-    product = data.get("product", "")
-    if not action:
-        return jsonify({"error": "action required"}), 400
-    event = {
-        "id":      int(_time.time()*1000),
-        "city":    city, "flag": flag,
-        "action":  action, "product": product,
-        "ts":      datetime.datetime.utcnow().isoformat(),
-        "source":  "transcript"
-    }
-    _MOVEMENT_EVENTS.insert(0, event)
-    return jsonify({"ok": True, "event": event})
-
-# ── TRANSCRIPT PIPELINE ───────────────────────────────────────────────────────
-UPLOAD_KEY = os.environ.get("UPLOAD_KEY", "hairadmin")
-
-CLEAN_PROMPT = """You are a privacy filter for a hair care brand's public movement feed.
-You receive a raw Microsoft Teams call transcript between a hair product distributor and salon client.
-
-Your job:
-1. REMOVE completely: full names, phone numbers, emails, addresses, credit cards, order numbers, any personal info
-2. EXTRACT: city/region, product discussed, hair concern, outcome
-3. REWRITE as one warm public sentence like:
-   "A salon in [City] found their solution for [concern] with [Product]"
-4. Return city, flag emoji, product name
-
-Respond ONLY with valid JSON, no preamble:
-{"action":"A salon in Miami found their solution for dry hair with Laciador","city":"Miami, FL","flag":"🇺🇸","product":"Laciador Crece"}"""
-
-@app.route("/upload-transcript", methods=["GET","POST"])
-def upload_transcript():
-    key = request.args.get("key","")
-    if key != UPLOAD_KEY:
-        return "Unauthorized. Add ?key=YOUR_UPLOAD_KEY to the URL.", 401
-
-    result = error = preview = None
-
-    if request.method == "POST":
-        transcript = request.form.get("transcript","").strip()
-        if not transcript:
-            error = "Please paste a transcript."
-        elif not ANTHROPIC_API_KEY:
-            error = "No Anthropic API key configured."
-        else:
-            try:
-                import urllib.request as urlreq
-                payload = json.dumps({
-                    "model":"claude-sonnet-4-20250514","max_tokens":300,
-                    "system":CLEAN_PROMPT,
-                    "messages":[{"role":"user","content":transcript}]
-                }).encode("utf-8")
-                req = urlreq.Request(
-                    "https://api.anthropic.com/v1/messages", data=payload,
-                    headers={"Content-Type":"application/json",
-                             "x-api-key":ANTHROPIC_API_KEY,
-                             "anthropic-version":"2023-06-01"},
-                    method="POST"
-                )
-                with urlreq.urlopen(req, timeout=15) as resp:
-                    raw  = json.loads(resp.read().decode())
-                    text = raw["content"][0]["text"].strip()
-                    text = text.replace("```json","").replace("```","").strip()
-                    cleaned = json.loads(text)
-
-                event = {
-                    "id":      int(datetime.datetime.utcnow().timestamp()*1000),
-                    "city":    cleaned.get("city","United States"),
-                    "flag":    cleaned.get("flag","🇺🇸"),
-                    "action":  cleaned.get("action",""),
-                    "product": cleaned.get("product",""),
-                    "ts":      datetime.datetime.utcnow().isoformat(),
-                    "source":  "transcript"
-                }
-                _MOVEMENT_EVENTS.insert(0, event)
-                if len(_MOVEMENT_EVENTS) > 50: _MOVEMENT_EVENTS.pop()
-                preview = event
-                result  = "Transcript cleaned and published to your live feed!"
-            except Exception as e:
-                error = f"Error: {e}"
-
-    preview_html = f"""<div style="background:#f0faf5;border:1px solid #c1a3a2;border-radius:12px;
-        padding:20px;margin-bottom:24px;">
-        <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;
-        color:#9d7f6a;margin-bottom:8px;">Published to feed</div>
-        <div style="font-size:18px;font-style:italic;">{preview['flag']} {preview['city']}</div>
-        <div style="font-size:15px;color:rgba(0,0,0,0.65);margin-top:4px;">{preview['action']}</div>
-        <div style="font-size:11px;color:rgba(0,0,0,0.30);margin-top:6px;">
-        Product: {preview['product']}</div></div>""" if preview else ""
-
-    return f"""<!DOCTYPE html><html><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SupportDR — Upload Transcript</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
-<style>
-*{{box-sizing:border-box;margin:0;padding:0;}}
-body{{background:#f0ebe8;color:#0d0906;font-family:'Jost',sans-serif;font-weight:300;
-      min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}}
-.card{{background:#fff;border:1px solid rgba(193,163,162,0.30);border-radius:20px;
-       padding:40px;width:100%;max-width:620px;box-shadow:0 8px 48px rgba(0,0,0,0.06);}}
-h1{{font-family:'Cormorant Garamond',serif;font-size:28px;font-style:italic;font-weight:300;margin-bottom:6px;}}
-.sub{{font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:rgba(0,0,0,0.35);margin-bottom:32px;}}
-label{{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.40);display:block;margin-bottom:8px;}}
-textarea{{width:100%;height:240px;padding:16px;border:1px solid rgba(193,163,162,0.35);
-          border-radius:12px;font-family:'Jost',sans-serif;font-size:13px;color:#0d0906;
-          background:#faf6f3;resize:vertical;outline:none;line-height:1.6;}}
-textarea:focus{{border-color:rgba(193,163,162,0.70);}}
-textarea::placeholder{{color:rgba(0,0,0,0.25);}}
-.steps{{background:rgba(193,163,162,0.07);border-radius:12px;padding:16px 20px;
-        margin-bottom:24px;font-size:12px;line-height:1.9;color:rgba(0,0,0,0.50);}}
-.steps b{{color:#9d7f6a;font-weight:400;}}
-button{{width:100%;padding:14px;margin-top:16px;border:none;border-radius:30px;
-        background:rgba(193,163,162,0.90);color:#fff;font-family:'Jost',sans-serif;
-        font-size:12px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background 0.3s;}}
-button:hover{{background:#9d7f6a;}}
-.success{{background:#f0faf5;border:1px solid #c1a3a2;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#2d6a4f;}}
-.err{{background:#fdf0f0;border:1px solid #e4a0a0;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#8b2020;}}
-.feed-link{{text-align:center;margin-top:20px;font-size:11px;letter-spacing:0.10em;text-transform:uppercase;color:rgba(0,0,0,0.30);}}
-.feed-link a{{color:#9d7f6a;text-decoration:none;}}
-</style></head><body>
-<div class="card">
-  <h1>Upload Transcript</h1>
-  <div class="sub">Private · SupportDR Movement Feed</div>
-  <div class="steps">
-    <b>How it works:</b><br>
-    1. Finish your Microsoft Teams call<br>
-    2. Copy the transcript from Teams<br>
-    3. Paste below — Claude strips all private info automatically<br>
-    4. Clean version goes live on your public feed instantly
-  </div>
-  {f'<div class="success">✅ {result}</div>' if result else ''}
-  {f'<div class="err">❌ {error}</div>' if error else ''}
-  {preview_html}
-  <form method="POST" action="/upload-transcript?key={key}">
-    <label>Paste Microsoft Teams Transcript</label>
-    <textarea name="transcript" placeholder="Paste the full Teams transcript here...
-Names, phone numbers, addresses, and payment info will be automatically removed.
-Only the hair concern, product, and city will appear publicly."></textarea>
-    <button type="submit">🌿 Clean &amp; Publish to Feed</button>
-  </form>
-  <div class="feed-link">
-    <a href="https://ai-hair-advisor.onrender.com/analytics?key={key}" target="_blank">View Analytics →</a>
-  </div>
-</div></body></html>"""
+        return f"DB error: {e}", 500
+    def bar(n,total): pct=int((n/total*36)) if total else 0; return "█"*pct+"░"*(36-pct)
+    rows="".join(f"<tr><td>{r[0][:16]}</td><td>{r[1]}</td><td style='max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>{r[2]}</td><td><b>{r[3]}</b></td><td>{r[4]}</td></tr>" for r in recent)
+    prod_rows="".join(f"<tr><td><b>{p[0]}</b></td><td>{p[1]}</td><td style='font-family:monospace;color:#00ffc8'>{bar(p[1],total)}</td><td>{round(p[1]/total*100)}%</td></tr>" for p in products) if products else ""
+    concern_rows="".join(f"<tr><td>{c[0]}</td><td>{c[1]}</td><td style='font-family:monospace;color:#00c8ff'>{bar(c[1],total)}</td><td>{round(c[1]/total*100)}%</td></tr>" for c in concerns) if concerns else ""
+    lang_rows="".join(f"<tr><td>{l[0]}</td><td>{l[1]}</td><td>{round(l[1]/total*100)}%</td></tr>" for l in langs) if langs else ""
+    tip_amt_rows="".join(f"<tr><td>{t[0]}</td><td>{t[1]}</td></tr>" for t in tip_amounts)
+    return f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hair Advisor Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;600&display=swap" rel="stylesheet">
+<style>body{{background:#040709;color:#dff2ec;font-family:'Jost',sans-serif;font-weight:300;padding:40px;}}h1{{font-size:24px;font-weight:400;letter-spacing:0.08em;color:#00ffc8;margin-bottom:8px;}}h2{{font-size:13px;font-weight:400;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.40);margin:36px 0 12px;}}.stat{{display:inline-block;background:rgba(0,255,200,0.07);border:1px solid rgba(0,255,200,0.18);border-radius:12px;padding:16px 28px;margin:0 12px 12px 0;text-align:center;}}.stat .n{{font-size:36px;font-weight:300;color:#00ffc8;}}.stat .l{{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:4px;}}table{{width:100%;border-collapse:collapse;font-size:13px;}}th{{text-align:left;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.08);font-size:10px;letter-spacing:0.10em;text-transform:uppercase;color:rgba(255,255,255,0.30);}}td{{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);color:rgba(255,255,255,0.70);}}tr:hover td{{background:rgba(255,255,255,0.03);}}</style></head><body>
+<h1>Hair Advisor — Analytics</h1>
+<p style="color:rgba(255,255,255,0.30);font-size:12px;margin-bottom:28px;">Live data · {datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M")} UTC</p>
+<div class="stat"><div class="n">{total}</div><div class="l">Total Sessions</div></div>
+<div class="stat"><div class="n">{len(products)}</div><div class="l">Products Recommended</div></div>
+<div class="stat"><div class="n">{len(langs)}</div><div class="l">Languages Used</div></div>
+<div class="stat"><div class="n">{tip_total}</div><div class="l">Tip Submissions</div></div>
+<div class="stat"><div class="n">{avg_r}</div><div class="l">Avg Star Rating</div></div>
+<h2>Product Recommendations</h2><table><tr><th>Product</th><th>Count</th><th>Share</th><th>%</th></tr>{prod_rows}</table>
+<h2>Hair Concerns</h2><table><tr><th>Concern</th><th>Count</th><th>Share</th><th>%</th></tr>{concern_rows}</table>
+<h2>Languages</h2><table><tr><th>Language</th><th>Count</th><th>%</th></tr>{lang_rows}</table>
+<h2>Tip Amounts</h2><table><tr><th>Amount</th><th>Count</th></tr>{tip_amt_rows}</table>
+<h2>Recent Sessions (last 50)</h2><table><tr><th>Time</th><th>Lang</th><th>Message</th><th>Product</th><th>Concern</th></tr>{rows}</table>
+</body></html>"""
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# ── USER AUTH + HAIR PROFILE SYSTEM ──────────────────────────────────────────
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── CORS ──────────────────────────────────────────────────────────────────────
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        from flask import make_response
+        resp = make_response("", 200)
+        resp.headers["Access-Control-Allow-Origin"]  = "*"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Auth-Token, X-Session-Id"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE"
+        resp.headers["Access-Control-Max-Age"]       = "3600"
+        return resp
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"]  = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Auth-Token, X-Session-Id"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE"
+    response.headers["Access-Control-Max-Age"]       = "3600"
+    return response
+
 
 # ── AUTH ENDPOINTS ────────────────────────────────────────────────────────────
-
 @app.route("/api/auth/register", methods=["POST","OPTIONS"])
 def register():
     try:
-        data = request.get_json(force=True, silent=True) or {}
+        data  = request.get_json(force=True, silent=True) or {}
         email = (data.get("email","")).strip().lower()
         name  = data.get("name","").strip()
         pw    = data.get("password","")
-        if not email or not pw:
-            return jsonify({"error":"Email and password required"}), 400
-        if not name:
-            return jsonify({"error":"Name is required"}), 400
-        if len(pw) < 6:
-            return jsonify({"error":"Password must be at least 6 characters"}), 400
-        db_execute("INSERT INTO users (email,name,password_hash) VALUES (?,?,?)",
-                    (email, name, hash_password(pw)))
+        if not email or not pw: return jsonify({"error":"Email and password required"}), 400
+        if not name: return jsonify({"error":"Name is required"}), 400
+        if len(pw) < 6: return jsonify({"error":"Password must be at least 6 characters"}), 400
+        db_execute("INSERT INTO users (email,name,password_hash) VALUES (?,?,?)", (email, name, hash_password(pw)))
         row = db_execute("SELECT id FROM users WHERE email=?", (email,), fetchone=True)
-        user_id = row[0]
-        token = create_session(user_id)
+        token = create_session(row[0])
         return jsonify({"ok":True,"token":token,"name":name,"email":email})
     except sqlite3.IntegrityError:
         return jsonify({"error":"Email already registered"}), 409
     except Exception as e:
-        return jsonify({"error":"Registration failed: " + str(e)}), 500
+        return jsonify({"error":"Registration failed: "+str(e)}), 500
 
 @app.route("/api/auth/login", methods=["POST","OPTIONS"])
 def login():
@@ -2228,26 +1295,19 @@ def login():
         data  = request.get_json(force=True, silent=True) or {}
         email = (data.get("email","")).strip().lower()
         pw    = data.get("password","")
-        if not email or not pw:
-            return jsonify({"error":"Email and password required"}), 400
-        row = db_execute(
-            "SELECT id,name,avatar FROM users WHERE email=? AND password_hash=?",
-            (email, hash_password(pw)), fetchone=True)
-        if not row:
-            return jsonify({"error":"Invalid email or password"}), 401
+        if not email or not pw: return jsonify({"error":"Email and password required"}), 400
+        row = db_execute("SELECT id,name,avatar FROM users WHERE email=? AND password_hash=?", (email, hash_password(pw)), fetchone=True)
+        if not row: return jsonify({"error":"Invalid email or password"}), 401
         token = create_session(row[0])
         return jsonify({"ok":True,"token":token,"name":row[1],"email":email,"avatar":row[2]})
     except Exception as e:
-        return jsonify({"error":"Login failed: " + str(e)}), 500
+        return jsonify({"error":"Login failed: "+str(e)}), 500
 
 @app.route("/api/auth/logout", methods=["POST","OPTIONS"])
 def logout():
     token = request.headers.get("X-Auth-Token") or request.cookies.get("srd_token")
     if token:
-        con = get_db()
-        con.execute("DELETE FROM sessions WHERE token=?", (token,))
-        con.commit()
-        con.close()
+        con = get_db(); con.execute("DELETE FROM sessions WHERE token=?", (token,)); con.commit(); con.close()
     return jsonify({"ok":True})
 
 @app.route("/api/auth/me", methods=["GET","OPTIONS"])
@@ -2256,42 +1316,92 @@ def me():
     if not user: return jsonify({"error":"Not logged in"}), 401
     profile = get_hair_profile(user["id"])
     history_count = len(get_chat_history(user["id"], limit=100))
-    return jsonify({**user, "profile": profile, "chat_count": history_count})
+    subscribed = is_subscribed(user["id"])
+    return jsonify({**user, "profile": profile, "chat_count": history_count, "subscribed": subscribed})
 
 @app.route("/api/auth/google", methods=["POST","OPTIONS"])
 def google_auth():
-    """Handle Google OAuth — frontend sends the Google ID token"""
-    data     = request.get_json()
-    g_token  = data.get("credential","")
-    # Decode Google JWT payload (no signature check needed for basic use)
+    data = request.get_json()
+    g_token = data.get("credential","")
     try:
         parts   = g_token.split(".")
         padding = 4 - len(parts[1]) % 4
-        payload = json.loads(__import__("base64").b64decode(parts[1] + "="*padding).decode())
-        email   = payload.get("email","")
-        name    = payload.get("name","")
-        avatar  = payload.get("picture","")
-        g_id    = payload.get("sub","")
-    except Exception as e:
+        payload = json.loads(__import__("base64").b64decode(parts[1]+"="*padding).decode())
+        email   = payload.get("email",""); name=payload.get("name",""); avatar=payload.get("picture",""); g_id=payload.get("sub","")
+    except:
         return jsonify({"error":"Invalid Google token"}), 400
-
     con = get_db()
     row = con.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
     if row:
         user_id = row[0]
-        con.execute("UPDATE users SET google_id=?,name=?,avatar=? WHERE id=?",
-                    (g_id, name, avatar, user_id))
+        con.execute("UPDATE users SET google_id=?,name=?,avatar=? WHERE id=?", (g_id,name,avatar,user_id))
     else:
-        con.execute("INSERT INTO users (email,name,google_id,avatar) VALUES (?,?,?,?)",
-                    (email, name, g_id, avatar))
+        con.execute("INSERT INTO users (email,name,google_id,avatar) VALUES (?,?,?,?)", (email,name,g_id,avatar))
         user_id = con.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()[0]
-    con.commit()
-    con.close()
+    con.commit(); con.close()
     token = create_session(user_id)
     return jsonify({"ok":True,"token":token,"name":name,"email":email,"avatar":avatar})
 
-# ── HAIR PROFILE ENDPOINTS ────────────────────────────────────────────────────
+@app.route("/api/auth/shopify", methods=["POST","OPTIONS"])
+def shopify_auth():
+    data  = request.get_json()
+    cid   = str(data.get("shopify_customer_id",""))
+    email = data.get("email","").strip().lower()
+    name  = data.get("name","").strip()
+    if not email or not cid: return jsonify({"error":"Missing customer data"}), 400
+    con = get_db()
+    row = con.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+    if row:
+        user_id = row[0]
+        con.execute("UPDATE users SET name=? WHERE id=?", (name, user_id))
+    else:
+        con.execute("INSERT INTO users (email,name,google_id) VALUES (?,?,?)", (email,name,f"shopify_{cid}"))
+        user_id = con.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()[0]
+    con.commit(); con.close()
+    token = create_session(user_id)
+    profile = get_hair_profile(user_id)
+    history_count = len(get_chat_history(user_id, limit=100))
+    return jsonify({"ok":True,"token":token,"name":name,"email":email,"user_id":user_id,"profile":profile,"chat_count":history_count})
 
+@app.route("/api/auth/forgot-password", methods=["POST","OPTIONS"])
+def forgot_password():
+    data  = request.get_json(silent=True) or {}
+    email = (data.get("email","") or "").strip().lower()
+    if not email: return jsonify({"error":"Email required"}), 400
+    user = db_execute("SELECT id, name FROM users WHERE email=?", (email,), fetchone=True)
+    if not user: return jsonify({"ok": True})
+    token   = secrets.token_urlsafe(32)
+    expires = (datetime.datetime.utcnow() + datetime.timedelta(hours=2)).isoformat()
+    db_execute("UPDATE users SET reset_token=?, reset_token_expires=? WHERE id=?", (token, expires, user[0]))
+    reset_url = f"{APP_BASE_URL}/pages/hair-dashboard?reset_token={token}"
+    try:
+        import smtplib; from email.mime.text import MIMEText
+        smtp_user=os.environ.get("SMTP_USER",""); smtp_pass=os.environ.get("SMTP_PASS","")
+        if smtp_user and smtp_pass:
+            msg=MIMEText(f"Hi {user[1]},\n\nReset your password:\n{reset_url}\n\nValid 2 hours.\n\n— SupportRD Team")
+            msg["Subject"]="Reset your SupportRD password"; msg["From"]=smtp_user; msg["To"]=email
+            with smtplib.SMTP_SSL("smtp.gmail.com",465) as server:
+                server.login(smtp_user,smtp_pass); server.send_message(msg)
+    except Exception as e:
+        print(f"Email send error: {e}")
+    return jsonify({"ok": True})
+
+@app.route("/api/auth/reset-password", methods=["POST","OPTIONS"])
+def reset_password():
+    data     = request.get_json(silent=True) or {}
+    token    = (data.get("token","") or "").strip()
+    password = (data.get("password","") or "").strip()
+    if not token or not password or len(password) < 6: return jsonify({"error":"Invalid request"}), 400
+    user = db_execute("SELECT id, reset_token_expires FROM users WHERE reset_token=?", (token,), fetchone=True)
+    if not user: return jsonify({"error":"Invalid or expired reset link"}), 400
+    if user[1] and datetime.datetime.utcnow().isoformat() > user[1]:
+        return jsonify({"error":"Reset link has expired. Please request a new one."}), 400
+    db_execute("UPDATE users SET password_hash=?, reset_token=NULL, reset_token_expires=NULL WHERE id=?",
+               (hash_password(password), user[0]))
+    return jsonify({"ok": True})
+
+
+# ── PROFILE / HISTORY ENDPOINTS ───────────────────────────────────────────────
 @app.route("/api/profile", methods=["GET","POST","OPTIONS"])
 def profile():
     user = get_current_user()
@@ -2311,12 +1421,220 @@ def history():
 def clear_history():
     user = get_current_user()
     if not user: return jsonify({"error":"Not logged in"}), 401
-    con = get_db()
-    con.execute("DELETE FROM chat_history WHERE user_id=?", (user["id"],))
-    con.commit()
-    con.close()
+    con = get_db(); con.execute("DELETE FROM chat_history WHERE user_id=?", (user["id"],)); con.commit(); con.close()
     return jsonify({"ok":True})
 
+@app.route("/api/auth/shopify-verify", methods=["GET","POST","OPTIONS"])
+def shopify_verify():
+    user = get_current_user()
+    if not user: return jsonify({"error":"Not logged in"}), 401
+    profile = get_hair_profile(user["id"])
+    history = get_chat_history(user["id"], limit=50)
+    return jsonify({"ok":True,"user":user,"profile":profile,"history":history,"chat_count":len(history)})
+
+@app.route("/api/rate-experience", methods=["POST","OPTIONS"])
+def rate_experience():
+    user = get_current_user()
+    if not user: return jsonify({"error":"Not logged in"}), 401
+    data = request.get_json()
+    con = get_db()
+    try: con.execute("ALTER TABLE hair_profiles ADD COLUMN site_rating INTEGER DEFAULT 0"); con.execute("ALTER TABLE hair_profiles ADD COLUMN site_review TEXT DEFAULT ''"); con.commit()
+    except: pass
+    con.execute("""INSERT INTO hair_profiles (user_id, site_rating, site_review) VALUES (?,?,?)
+        ON CONFLICT(user_id) DO UPDATE SET site_rating=excluded.site_rating, site_review=excluded.site_review""",
+        (user["id"], data.get("rating",0), data.get("review","")))
+    con.commit(); con.close()
+    return jsonify({"ok":True})
+
+
+# ── SUBSCRIPTION ENDPOINTS ────────────────────────────────────────────────────
+@app.route("/api/subscription/status", methods=["GET","OPTIONS"])
+def subscription_status():
+    user       = get_current_user()
+    session_id = request.headers.get("X-Session-Id","anon")
+    if user:
+        sub        = get_subscription(user["id"])
+        count      = get_session_count(session_id, user["id"])
+        subscribed = is_subscribed(user["id"])
+        return jsonify({"subscribed":subscribed,"plan":sub["plan"] if sub else "free","status":sub["status"] if sub else "inactive","trial_end":sub["trial_end"] if sub else None,"current_period_end":sub["current_period_end"] if sub else None,"response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":not subscribed and count>=FREE_RESPONSE_LIMIT})
+    else:
+        count = get_session_count(session_id)
+        return jsonify({"subscribed":False,"plan":"free","status":"inactive","response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":count>=FREE_RESPONSE_LIMIT})
+
+@app.route("/api/subscription/checkout", methods=["POST","OPTIONS"])
+def create_checkout():
+    user = get_current_user()
+    if not user: return jsonify({"error":"Must be logged in to subscribe"}), 401
+    if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID: return jsonify({"error":"Stripe not configured","setup_needed":True}), 503
+    try:
+        import urllib.request as urlreq, urllib.parse as urlparse
+        sub = get_subscription(user["id"])
+        stripe_customer = sub["stripe_customer"] if sub else None
+        if not stripe_customer:
+            cust_data = urlparse.urlencode({"email":user["email"],"name":user["name"] or user["email"],"metadata[user_id]":str(user["id"])}).encode()
+            req = urlreq.Request("https://api.stripe.com/v1/customers",data=cust_data,headers={"Authorization":f"Bearer {STRIPE_SECRET_KEY}","Content-Type":"application/x-www-form-urlencoded"},method="POST")
+            with urlreq.urlopen(req) as r: cust=json.loads(r.read())
+            stripe_customer = cust["id"]
+        params = urlparse.urlencode({"customer":stripe_customer,"mode":"subscription","line_items[0][price]":STRIPE_PRICE_ID,"line_items[0][quantity]":"1","subscription_data[trial_period_days]":str(STRIPE_TRIAL_DAYS),"success_url":f"{APP_BASE_URL}/subscription/success?session_id={{CHECKOUT_SESSION_ID}}","cancel_url":f"{APP_BASE_URL}/subscription/cancel","metadata[user_id]":str(user["id"])}).encode()
+        req = urlreq.Request("https://api.stripe.com/v1/checkout/sessions",data=params,headers={"Authorization":f"Bearer {STRIPE_SECRET_KEY}","Content-Type":"application/x-www-form-urlencoded"},method="POST")
+        with urlreq.urlopen(req) as r: session=json.loads(r.read())
+        con = get_db()
+        row = con.execute("SELECT id FROM subscriptions WHERE user_id=?", (user["id"],)).fetchone()
+        if row: con.execute("UPDATE subscriptions SET stripe_customer=?,updated_at=? WHERE user_id=?",(stripe_customer,datetime.datetime.utcnow().isoformat(),user["id"]))
+        else: con.execute("INSERT INTO subscriptions (user_id,stripe_customer,status,plan) VALUES (?,?,'inactive','free')",(user["id"],stripe_customer))
+        con.commit(); con.close()
+        return jsonify({"checkout_url":session["url"],"session_id":session["id"]})
+    except Exception as e:
+        return jsonify({"error":str(e)}), 500
+
+@app.route("/api/subscription/webhook", methods=["POST"])
+def stripe_webhook():
+    payload = request.get_data(); sig=request.headers.get("Stripe-Signature","")
+    try:
+        if STRIPE_WEBHOOK_SECRET:
+            import hmac,hashlib
+            ts=sig.split(",")[0].split("=")[1]; v1=sig.split("v1=")[1].split(",")[0]
+            signed=f"{ts}.{payload.decode()}"
+            expected=hmac.new(STRIPE_WEBHOOK_SECRET.encode(),signed.encode(),hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(v1,expected): return jsonify({"error":"Invalid signature"}),400
+        event=json.loads(payload); event_type=event["type"]; obj=event["data"]["object"]
+        user_id=None
+        if obj.get("metadata",{}).get("user_id"): user_id=int(obj["metadata"]["user_id"])
+        elif obj.get("customer"):
+            con=get_db(); row=con.execute("SELECT user_id FROM subscriptions WHERE stripe_customer=?",(obj["customer"],)).fetchone(); con.close()
+            if row: user_id=row[0]
+        if not user_id: return jsonify({"ok":True})
+        con=get_db()
+        if event_type in ("customer.subscription.created","customer.subscription.updated"):
+            status=obj.get("status","inactive"); trial_end=datetime.datetime.utcfromtimestamp(obj["trial_end"]).isoformat() if obj.get("trial_end") else None; period_end=datetime.datetime.utcfromtimestamp(obj["current_period_end"]).isoformat() if obj.get("current_period_end") else None; sub_id=obj.get("id","")
+            row=con.execute("SELECT id FROM subscriptions WHERE user_id=?",(user_id,)).fetchone()
+            if row: con.execute("UPDATE subscriptions SET stripe_sub_id=?,status=?,plan='premium',trial_end=?,current_period_end=?,updated_at=? WHERE user_id=?",(sub_id,status,trial_end,period_end,datetime.datetime.utcnow().isoformat(),user_id))
+            else: con.execute("INSERT INTO subscriptions (user_id,stripe_sub_id,status,plan,trial_end,current_period_end) VALUES (?,?,'trialing','premium',?,?)",(user_id,sub_id,trial_end,period_end))
+        elif event_type=="customer.subscription.deleted": con.execute("UPDATE subscriptions SET status='canceled',plan='free',updated_at=? WHERE user_id=?",(datetime.datetime.utcnow().isoformat(),user_id))
+        elif event_type in ("invoice.payment_failed",): con.execute("UPDATE subscriptions SET status='past_due',updated_at=? WHERE user_id=?",(datetime.datetime.utcnow().isoformat(),user_id))
+        con.commit(); con.close()
+    except Exception as e:
+        print(f"Webhook error: {e}")
+    return jsonify({"ok":True})
+
+@app.route("/api/shopify-order-webhook", methods=["POST"])
+def shopify_order_webhook():
+    try:
+        data=request.get_json(force=True,silent=True) or {}
+        if data.get("financial_status","") not in ("paid","partially_paid"): return jsonify({"ok":True,"skipped":"not paid"})
+        line_items=data.get("line_items",[])
+        is_premium=any("hair advisor" in (i.get("title","") or "").lower() or "premium" in (i.get("title","") or "").lower() for i in line_items)
+        if not is_premium: return jsonify({"ok":True,"skipped":"not premium product"})
+        email=(data.get("email","") or data.get("customer",{}).get("email","")).strip().lower()
+        if not email: return jsonify({"ok":True,"skipped":"no email"})
+        row=db_execute("SELECT id FROM users WHERE email=?", (email,), fetchone=True)
+        if not row:
+            db_execute("INSERT OR REPLACE INTO premium_codes (code, used) VALUES (?, 0)", ("PENDING_"+email,))
+            return jsonify({"ok":True,"status":"pending — user not registered yet"})
+        user_id=row[0]; period_end=(datetime.datetime.utcnow()+datetime.timedelta(days=30)).isoformat()
+        existing=db_execute("SELECT id FROM subscriptions WHERE user_id=?", (user_id,), fetchone=True)
+        if existing: db_execute("UPDATE subscriptions SET status='active', plan='premium', current_period_end=?, updated_at=datetime('now') WHERE user_id=?",(period_end,user_id))
+        else: db_execute("INSERT INTO subscriptions (user_id, status, plan, current_period_end) VALUES (?, 'active', 'premium', ?)",(user_id,period_end))
+        return jsonify({"ok":True,"status":"premium activated","email":email})
+    except Exception as e:
+        return jsonify({"ok":False,"error":str(e)}), 500
+
+@app.route("/api/subscription/activate-shopify", methods=["POST","OPTIONS"])
+def activate_shopify():
+    user=get_current_user()
+    if not user: return jsonify({"error":"Not logged in"}),401
+    email=user["email"].strip().lower()
+    pending=db_execute("SELECT id FROM premium_codes WHERE code=?",("PENDING_"+email,),fetchone=True)
+    if pending: db_execute("DELETE FROM premium_codes WHERE code=?",("PENDING_"+email,))
+    else: return jsonify({"error":"No purchase found for "+email+". Please buy at supportrd.com/products/hair-advisor-premium then try again.","verified":False}),403
+    period_end=(datetime.datetime.utcnow()+datetime.timedelta(days=30)).isoformat()
+    row=db_execute("SELECT id FROM subscriptions WHERE user_id=?",(user["id"],),fetchone=True)
+    if row: db_execute("UPDATE subscriptions SET status='active',plan='premium',current_period_end=?,updated_at=datetime('now') WHERE user_id=?",(period_end,user["id"]))
+    else: db_execute("INSERT INTO subscriptions (user_id,status,plan,current_period_end) VALUES (?,'active','premium',?)",(user["id"],period_end))
+    return jsonify({"ok":True,"plan":"premium"})
+
+@app.route("/api/admin/generate-code", methods=["POST","OPTIONS"])
+def generate_code():
+    admin_key=request.headers.get("X-Admin-Key","")
+    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
+    code="SRD-"+secrets.token_hex(4).upper()
+    db_execute("INSERT INTO premium_codes (code) VALUES (?)",(code,))
+    return jsonify({"ok":True,"code":code})
+
+@app.route("/api/admin/list-codes", methods=["GET","OPTIONS"])
+def list_codes():
+    admin_key=request.headers.get("X-Admin-Key","")
+    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
+    rows=db_execute("SELECT code,used,used_at FROM premium_codes ORDER BY id DESC",fetchall=True)
+    return jsonify({"codes":[{"code":r[0],"used":bool(r[1]),"used_at":r[2]} for r in (rows or [])]})
+
+
+# ── SUBSCRIPTION PAGES ────────────────────────────────────────────────────────
+@app.route("/subscription/success")
+def subscription_success():
+    return """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SupportRD — Welcome to Premium</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#f0ebe8;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;padding:24px;}.card{background:#fff;border-radius:24px;padding:56px 40px;max-width:460px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.08);}.icon{font-size:56px;margin-bottom:20px;}.title{font-family:'Cormorant Garamond',serif;font-size:36px;font-style:italic;color:#0d0906;margin-bottom:10px;}.sub{font-size:13px;color:rgba(0,0,0,0.40);line-height:1.7;margin-bottom:28px;}.trial-badge{background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;padding:10px 24px;border-radius:20px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;display:inline-block;margin-bottom:28px;}.btn{display:block;padding:14px;background:#c1a3a2;color:#fff;text-decoration:none;border-radius:30px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;transition:background 0.2s;}.btn:hover{background:#9d7f6a;}.btn-outline{background:transparent;color:#9d7f6a;border:1px solid rgba(193,163,162,0.40);}</style></head><body>
+<div class="card"><div class="icon">🌿</div><div class="title">Welcome to Premium</div><div class="trial-badge">7-Day Free Trial Active</div><div class="sub">Your hair journey just leveled up. Unlimited Aria access, full hair health dashboard, and priority advisor support.</div><a href="/" class="btn">Talk to Aria Now</a><a href="/dashboard" class="btn btn-outline">View My Dashboard</a></div>
+<script>var u=localStorage.getItem('srd_user');if(u){try{var p=JSON.parse(u);p.plan='premium';localStorage.setItem('srd_user',JSON.stringify(p));}catch(e){}}</script>
+</body></html>"""
+
+@app.route("/subscription/cancel")
+def subscription_cancel():
+    return """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SupportRD — No worries</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#f0ebe8;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;padding:24px;}.card{background:#fff;border-radius:24px;padding:56px 40px;max-width:460px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.08);}.title{font-family:'Cormorant Garamond',serif;font-size:32px;font-style:italic;color:#0d0906;margin-bottom:12px;}.sub{font-size:13px;color:rgba(0,0,0,0.40);line-height:1.7;margin-bottom:28px;}.btn{display:block;padding:14px;background:#c1a3a2;color:#fff;text-decoration:none;border-radius:30px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;}.btn-outline{background:transparent;color:#9d7f6a;border:1px solid rgba(193,163,162,0.40);}</style></head><body>
+<div class="card"><div class="title">No worries</div><div class="sub">You can still get free hair recommendations from Aria anytime. Upgrade whenever you're ready.</div><a href="/" class="btn">Continue with Free</a><a href="/login" class="btn btn-outline">Sign In to Subscribe Later</a></div>
+</body></html>"""
+
+
+
+# ── WHISPER TRANSCRIPTION ─────────────────────────────────────────────────────
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+
+@app.route("/api/transcribe", methods=["POST","OPTIONS"])
+def transcribe():
+    if not OPENAI_API_KEY:
+        return jsonify({"error": "No OpenAI key"}), 500
+    try:
+        audio_file = request.files.get("audio")
+        if not audio_file:
+            return jsonify({"error": "No audio"}), 400
+        import urllib.request as urlreq
+        boundary = "SRDBoundary" + secrets.token_hex(8)
+        audio_data = audio_file.read()
+        CRLF = b"\r\n"
+        body = b""
+        body += b"--" + boundary.encode() + CRLF
+        body += b'Content-Disposition: form-data; name="model"' + CRLF + CRLF
+        body += b"whisper-1" + CRLF
+        body += b"--" + boundary.encode() + CRLF
+        body += b'Content-Disposition: form-data; name="language"' + CRLF + CRLF
+        body += b"en" + CRLF
+        body += b"--" + boundary.encode() + CRLF
+        body += b'Content-Disposition: form-data; name="file"; filename="audio.webm"' + CRLF
+        body += b"Content-Type: audio/webm" + CRLF + CRLF
+        body += audio_data + CRLF
+        body += b"--" + boundary.encode() + b"--" + CRLF
+        req = urlreq.Request(
+            "https://api.openai.com/v1/audio/transcriptions",
+            data=body,
+            headers={
+                "Authorization": "Bearer " + OPENAI_API_KEY,
+                "Content-Type": "multipart/form-data; boundary=" + boundary
+            },
+            method="POST"
+        )
+        with urlreq.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode())
+            return jsonify({"text": result.get("text", "")})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ping", methods=["GET"])
+def ping():
+    return jsonify({"ok": True, "status": "awake"})
 
 
 # ── LOGIN PAGE ────────────────────────────────────────────────────────────────
@@ -2353,13 +1671,9 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
 .success{{background:#f0faf5;border:1px solid #c1a3a2;border-radius:10px;padding:12px 16px;font-size:13px;color:#2d6a4f;margin-bottom:16px;display:none;}}
 .back{{text-align:center;margin-top:20px;font-size:11px;color:rgba(0,0,0,0.35);letter-spacing:0.08em;}}
 .back a{{color:#9d7f6a;text-decoration:none;}}
-</style>
-</head><body>
+</style></head><body>
 <div class="card">
-  <div class="logo">
-    <div class="logo-text">SupportRD</div>
-    <div class="logo-sub">Hair Advisor</div>
-  </div>
+  <div class="logo"><div class="logo-text">SupportRD</div><div class="logo-sub">Hair Advisor</div></div>
   <h2>Welcome back</h2>
   <div class="tabs">
     <button class="tab active" onclick="switchTab('login')">Sign In</button>
@@ -2378,11 +1692,7 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
     <input type="password" id="r-pass" placeholder="Password (min 6 characters)">
     <button class="btn" onclick="doRegister()">Create Account</button>
   </div>
-  <div class="divider">
-    <div class="divider-line"></div>
-    <div class="divider-text">or</div>
-    <div class="divider-line"></div>
-  </div>
+  <div class="divider"><div class="divider-line"></div><div class="divider-text">or</div><div class="divider-line"></div></div>
   <div class="google-wrap">
     <div id="g_id_onload" data-client_id="{GOOGLE_CLIENT_ID}" data-callback="handleGoogle"></div>
     <div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="outline" data-text="sign_in_with" data-size="large" data-logo_alignment="left"></div>
@@ -2390,51 +1700,19 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
   <div class="back"><a href="/">← Back to Hair Advisor</a></div>
 </div>
 <script>
-function switchTab(t){{
-  document.getElementById('login-form').style.display = t==='login'?'block':'none';
-  document.getElementById('register-form').style.display = t==='register'?'block':'none';
-  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',(t==='login'&&i===0)||(t==='register'&&i===1)));
-  hideMsg();
-}}
+function switchTab(t){{document.getElementById('login-form').style.display=t==='login'?'block':'none';document.getElementById('register-form').style.display=t==='register'?'block':'none';document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',(t==='login'&&i===0)||(t==='register'&&i===1)));hideMsg();}}
 function showErr(m){{var e=document.getElementById('err');e.textContent=m;e.style.display='block';document.getElementById('success').style.display='none';}}
 function showOk(m){{var e=document.getElementById('success');e.textContent=m;e.style.display='block';document.getElementById('err').style.display='none';}}
 function hideMsg(){{document.getElementById('err').style.display='none';document.getElementById('success').style.display='none';}}
-function saveAndRedirect(data){{
-  localStorage.setItem('srd_token', data.token);
-  localStorage.setItem('srd_user', JSON.stringify({{name:data.name,email:data.email,avatar:data.avatar||''}}) );
-  showOk('Welcome, '+data.name+'! Redirecting...');
-  setTimeout(()=>window.location.href='/dashboard',1200);
-}}
-async function doLogin(){{
-  var email=document.getElementById('l-email').value;
-  var pass=document.getElementById('l-pass').value;
-  if(!email||!pass){{showErr('Please fill in all fields.');return;}}
-  var r=await fetch('/api/auth/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email,password:pass}})}});
-  var d=await r.json();
-  if(d.error){{showErr(d.error);}}else{{saveAndRedirect(d);}}
-}}
-async function doRegister(){{
-  var name=document.getElementById('r-name').value;
-  var email=document.getElementById('r-email').value;
-  var pass=document.getElementById('r-pass').value;
-  if(!name||!email||!pass){{showErr('Please fill in all fields.');return;}}
-  var r=await fetch('/api/auth/register',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{name,email,password:pass}})}});
-  var d=await r.json();
-  if(d.error){{showErr(d.error);}}else{{saveAndRedirect(d);}}
-}}
-async function handleGoogle(response){{
-  var r=await fetch('/api/auth/google',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{credential:response.credential}})}});
-  var d=await r.json();
-  if(d.error){{showErr(d.error);}}else{{saveAndRedirect(d);}}
-}}
-</script>
-</body></html>"""
+function saveAndRedirect(data){{localStorage.setItem('srd_token',data.token);localStorage.setItem('srd_user',JSON.stringify({{name:data.name,email:data.email,avatar:data.avatar||''}}));showOk('Welcome, '+data.name+'! Redirecting...');setTimeout(()=>window.location.href='/dashboard',1200);}}
+async function doLogin(){{var email=document.getElementById('l-email').value;var pass=document.getElementById('l-pass').value;if(!email||!pass){{showErr('Please fill in all fields.');return;}}var r=await fetch('/api/auth/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email,password:pass}})}});var d=await r.json();if(d.error){{showErr(d.error);}}else{{saveAndRedirect(d);}}}}\nasync function doRegister(){{var name=document.getElementById('r-name').value;var email=document.getElementById('r-email').value;var pass=document.getElementById('r-pass').value;if(!name||!email||!pass){{showErr('Please fill in all fields.');return;}}var r=await fetch('/api/auth/register',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{name,email,password:pass}})}});var d=await r.json();if(d.error){{showErr(d.error);}}else{{saveAndRedirect(d);}}}}\nasync function handleGoogle(response){{var r=await fetch('/api/auth/google',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{credential:response.credential}})}});var d=await r.json();if(d.error){{showErr(d.error);}}else{{saveAndRedirect(d);}}}}
+</script></body></html>"""
 
 
 # ── DASHBOARD PAGE ────────────────────────────────────────────────────────────
 @app.route("/dashboard")
 def dashboard():
-    html = """<!DOCTYPE html>
+    html = r"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2447,18 +1725,15 @@ def dashboard():
   --text:#eaedf5;--muted:#505870;--muted2:#8490a8;
   --rose:#f0a090;--rose-dim:rgba(240,160,144,0.13);--rose-glow:rgba(240,160,144,0.4);
   --gold:#e0b050;--gold-dim:rgba(224,176,80,0.12);--gold-glow:rgba(224,176,80,0.4);
-  --green:#30e890;--green-dim:rgba(48,232,144,0.1);
-  --red:#ff5555;--blue:#60a8ff;--purple:#b090ff;
+  --green:#30e890;--red:#ff5555;--blue:#60a8ff;--purple:#b090ff;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 body::before{content:'';position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse 55% 45% at 75% 5%, rgba(240,160,144,0.07) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 35% at 5% 85%, rgba(224,176,80,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse 30% 40% at 50% 50%, rgba(96,168,255,0.03) 0%, transparent 60%);
+  background:radial-gradient(ellipse 55% 45% at 75% 5%,rgba(240,160,144,0.07) 0%,transparent 55%),
+    radial-gradient(ellipse 40% 35% at 5% 85%,rgba(224,176,80,0.05) 0%,transparent 50%),
+    radial-gradient(ellipse 30% 40% at 50% 50%,rgba(96,168,255,0.03) 0%,transparent 60%);
   pointer-events:none;z-index:0;}
-
 /* TICKER */
 .ticker-wrap{position:fixed;top:0;left:0;right:0;height:30px;background:rgba(5,7,11,0.98);border-bottom:1px solid rgba(240,160,144,0.15);z-index:100;overflow:hidden;display:flex;align-items:center;}
 .ticker-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.2em;color:var(--rose);text-transform:uppercase;padding:0 16px;white-space:nowrap;border-right:1px solid rgba(240,160,144,0.2);height:100%;display:flex;align-items:center;background:rgba(240,160,144,0.06);z-index:2;text-shadow:0 0 10px var(--rose-glow);}
@@ -2471,7 +1746,6 @@ body::before{content:'';position:fixed;inset:0;
 .t-down{color:var(--red);}
 .t-chg{font-size:8px;font-family:'IBM Plex Mono',monospace;}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-
 /* NAV */
 .nav{position:fixed;top:30px;left:0;right:0;height:50px;background:rgba(7,9,13,0.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 22px;}
 .nav-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text);margin-right:28px;display:flex;align-items:center;gap:8px;letter-spacing:-0.02em;}
@@ -2481,24 +1755,19 @@ body::before{content:'';position:fixed;inset:0;
 .nav-tab{height:100%;padding:0 15px;display:flex;align-items:center;font-size:11px;letter-spacing:0.04em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;position:relative;top:1px;text-decoration:none;}
 .nav-tab:hover,.nav-tab.active{color:var(--text);border-bottom-color:var(--rose);}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
-.live-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;background:rgba(48,232,144,0.08);border:1px solid rgba(48,232,144,0.25);font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--green);letter-spacing:0.1em;animation:liveBadge 2s ease-in-out infinite;}
-@keyframes liveBadge{0%,100%{box-shadow:none}50%{box-shadow:0 0 12px rgba(48,232,144,0.2)}}
+.live-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;background:rgba(48,232,144,0.08);border:1px solid rgba(48,232,144,0.25);font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--green);letter-spacing:0.1em;}
 .live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:liveDot 1.4s ease-in-out infinite;}
 @keyframes liveDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(48,232,144,0.5)}50%{opacity:0.6;box-shadow:0 0 0 4px rgba(48,232,144,0)}}
 .nav-avatar{width:28px;height:28px;border-radius:5px;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;overflow:hidden;}
 .nav-avatar img{width:100%;height:100%;object-fit:cover;}
 .nav-name{font-size:12px;color:var(--muted2);}
-.plan-tag{font-size:9px;padding:3px 8px;border-radius:3px;background:var(--gold-dim);border:1px solid rgba(224,176,80,0.3);color:var(--gold);font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;text-shadow:0 0 8px var(--gold-glow);animation:goldPulse 3s ease-in-out infinite;}
-@keyframes goldPulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 10px rgba(224,176,80,0.2)}}
+.plan-tag{font-size:9px;padding:3px 8px;border-radius:3px;background:var(--gold-dim);border:1px solid rgba(224,176,80,0.3);color:var(--gold);font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;}
 .logout-btn{font-size:10px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:4px;background:none;border:1px solid var(--border);font-family:'Space Grotesk',sans-serif;transition:all 0.15s;}
-.logout-btn:hover{color:var(--text);border-color:var(--border2);}
-
+.logout-btn:hover{color:var(--text);}
 /* APP */
 .app{padding:84px 18px 40px;max-width:1640px;margin:0 auto;position:relative;z-index:1;}
-
 /* TOP ROW */
 .top-row{display:grid;grid-template-columns:260px 1fr 260px;gap:10px;margin-bottom:10px;align-items:stretch;}
-
 /* SCORE PANEL */
 .score-panel{background:var(--bg2);border:1px solid rgba(240,160,144,0.15);border-radius:10px;padding:20px 16px;display:flex;flex-direction:column;align-items:center;position:relative;overflow:hidden;animation:panelPulse 4s ease-in-out infinite;}
 @keyframes panelPulse{0%,100%{border-color:rgba(240,160,144,0.15);box-shadow:none}50%{border-color:rgba(240,160,144,0.35);box-shadow:0 0 30px rgba(240,160,144,0.08),inset 0 0 30px rgba(240,160,144,0.03)}}
@@ -2512,7 +1781,7 @@ body::before{content:'';position:fixed;inset:0;
 .score-fill-c{fill:none;stroke-width:9;stroke-linecap:round;stroke-dasharray:440;stroke-dashoffset:440;transition:stroke-dashoffset 2.2s cubic-bezier(0.25,1,0.5,1);}
 .score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 .score-big{font-family:'Syne',sans-serif;font-size:54px;font-weight:800;line-height:1;color:var(--text);letter-spacing:-3px;animation:scoreGlow 3s ease-in-out infinite;}
-@keyframes scoreGlow{0%,100%{text-shadow:0 0 20px rgba(240,160,144,0.5),0 0 40px rgba(240,160,144,0.2)}50%{text-shadow:0 0 30px rgba(240,160,144,0.9),0 0 60px rgba(240,160,144,0.4),0 0 90px rgba(240,160,144,0.15)}}
+@keyframes scoreGlow{0%,100%{text-shadow:0 0 20px rgba(240,160,144,0.5)}50%{text-shadow:0 0 30px rgba(240,160,144,0.9),0 0 60px rgba(240,160,144,0.4)}}
 .score-unit{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:1px;}
 .score-status{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;letter-spacing:0.05em;}
 .score-delta{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:14px;}
@@ -2522,11 +1791,6 @@ body::before{content:'';position:fixed;inset:0;
 .mr-track{flex:1;height:3px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;}
 .mr-fill{height:100%;border-radius:2px;transform-origin:left;transform:scaleX(0);transition:transform 1.6s cubic-bezier(0.25,1,0.5,1);}
 .mr-val{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;width:30px;text-align:right;}
-#mv-m{color:var(--rose);text-shadow:0 0 8px var(--rose-glow);}
-#mv-s{color:var(--blue);text-shadow:0 0 8px rgba(96,168,255,0.5);}
-#mv-sc{color:var(--green);text-shadow:0 0 8px rgba(48,232,144,0.5);}
-#mv-g{color:var(--gold);text-shadow:0 0 8px var(--gold-glow);}
-
 /* MAIN CHART PANEL */
 .main-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
 .panel-head{display:flex;align-items:center;border-bottom:1px solid var(--border);height:40px;padding:0 16px;gap:12px;}
@@ -2534,7 +1798,7 @@ body::before{content:'';position:fixed;inset:0;
 .time-tabs{display:flex;gap:2px;margin-left:auto;}
 .tt{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 9px;border-radius:3px;cursor:pointer;color:var(--muted);border:1px solid transparent;transition:all 0.12s;}
 .tt:hover{color:var(--text);}
-.tt.on{background:rgba(240,160,144,0.15);border-color:rgba(240,160,144,0.35);color:var(--rose);text-shadow:0 0 8px var(--rose-glow);}
+.tt.on{background:rgba(240,160,144,0.15);border-color:rgba(240,160,144,0.35);color:var(--rose);}
 .chart-area{flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
 .chart-row{display:flex;flex-direction:column;gap:3px;}
 .chart-meta{display:flex;align-items:center;justify-content:space-between;}
@@ -2542,12 +1806,11 @@ body::before{content:'';position:fixed;inset:0;
 .chart-reading{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;}
 .sparkline-wrap{height:36px;}
 .sparkline-svg{width:100%;height:100%;}
-
 /* INSIGHTS */
 .insights-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 .ins-head{border-bottom:1px solid var(--border);height:40px;padding:0 16px;display:flex;align-items:center;}
 .ins-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;color:var(--muted2);}
-.ins-live{margin-left:auto;display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);text-shadow:0 0 8px rgba(48,232,144,0.5);}
+.ins-live{margin-left:auto;display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);}
 .ins-body{padding:12px;}
 .ins-section-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;}
 .ins-item{margin-bottom:11px;}
@@ -2565,14 +1828,13 @@ body::before{content:'';position:fixed;inset:0;
 .community-stat{display:flex;align-items:center;justify-content:space-between;padding:4px 0;}
 .cs-label{font-size:10px;color:var(--muted2);}
 .cs-val{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;}
-#active-count{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--rose);text-shadow:0 0 20px var(--rose-glow),0 0 40px rgba(240,160,144,0.3);animation:activeGlow 2s ease-in-out infinite;}
+#active-count{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--rose);text-shadow:0 0 20px var(--rose-glow);animation:activeGlow 2s ease-in-out infinite;}
 @keyframes activeGlow{0%,100%{text-shadow:0 0 15px var(--rose-glow)}50%{text-shadow:0 0 30px var(--rose-glow),0 0 60px rgba(240,160,144,0.3)}}
-
 /* MID ROW */
 .mid-row{display:grid;grid-template-columns:1fr 1fr 1fr 220px;gap:10px;margin-bottom:10px;}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.18s;position:relative;overflow:hidden;}
-.stat-card:hover{border-color:rgba(240,160,144,0.3);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.3),0 0 20px rgba(240,160,144,0.06);}
-.stat-card.active{border-color:rgba(240,160,144,0.4);background:rgba(240,160,144,0.05);box-shadow:0 0 30px rgba(240,160,144,0.1);}
+.stat-card:hover{border-color:rgba(240,160,144,0.3);transform:translateY(-2px);}
+.stat-card.active{border-color:rgba(240,160,144,0.4);background:rgba(240,160,144,0.05);}
 .sc-eye{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;}
 .sc-val{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--text);line-height:1;margin-bottom:2px;letter-spacing:-1px;}
 .sc-name{font-size:11px;color:var(--muted2);}
@@ -2580,23 +1842,19 @@ body::before{content:'';position:fixed;inset:0;
 .sc-spark{margin-top:7px;height:26px;}
 .action-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:7px;}
 .ap-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase;margin-bottom:3px;}
-.action-btn{width:100%;padding:9px 12px;border-radius:6px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;border:1px solid;display:flex;align-items:center;gap:8px;text-align:left;}
-.action-btn.primary{background:var(--rose);color:#000;border-color:var(--rose);position:relative;overflow:visible;box-shadow:0 0 20px rgba(240,160,144,0.3);}
-.action-btn.primary::before,.action-btn.primary::after{content:'';position:absolute;inset:-2px;border-radius:8px;border:2px solid var(--rose);opacity:0;animation:ringOut 2.5s ease-out infinite;}
-.action-btn.primary::after{animation-delay:1.25s;}
-@keyframes ringOut{0%{inset:-2px;opacity:0.8;border-color:rgba(240,160,144,0.9);}100%{inset:-14px;opacity:0;border-color:rgba(240,160,144,0);}}
-.action-btn.primary:hover{background:#ff9080;box-shadow:0 0 35px rgba(240,160,144,0.6);}
+.action-btn{width:100%;padding:9px 12px;border-radius:6px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;border:1px solid;display:flex;align-items:center;gap:8px;}
+.action-btn.primary{background:var(--rose);color:#000;border-color:var(--rose);box-shadow:0 0 20px rgba(240,160,144,0.3);}
+.action-btn.primary:hover{background:#ff9080;}
 .action-btn.secondary{background:transparent;color:var(--muted2);border-color:var(--border2);}
 .action-btn.secondary:hover{color:var(--text);border-color:rgba(240,160,144,0.3);background:rgba(240,160,144,0.05);}
 .ab-icon{font-size:13px;flex-shrink:0;}
-
-/* BOTTOM ROW */
+/* BOT ROW */
 .bot-row{display:grid;grid-template-columns:1fr 290px;gap:10px;}
 .profile-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 .profile-tabs{display:flex;border-bottom:1px solid var(--border);}
 .ptab{padding:0 16px;height:40px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.07em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;position:relative;top:1px;}
 .ptab:hover{color:var(--text);}
-.ptab.on{color:var(--rose);border-bottom-color:var(--rose);text-shadow:0 0 8px var(--rose-glow);}
+.ptab.on{color:var(--rose);border-bottom-color:var(--rose);}
 .ptab-content{display:none;padding:16px 18px 20px;}
 .ptab-content.on{display:block;}
 .tag-group{margin-bottom:13px;}
@@ -2604,48 +1862,56 @@ body::before{content:'';position:fixed;inset:0;
 .tags{display:flex;flex-wrap:wrap;gap:5px;}
 .tag{padding:5px 11px;border-radius:4px;font-size:11px;border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;transition:all 0.12s;font-family:'Space Grotesk',sans-serif;}
 .tag:hover{border-color:rgba(240,160,144,0.4);color:var(--rose);}
-.tag.on{background:rgba(240,160,144,0.12);border-color:rgba(240,160,144,0.45);color:var(--rose);text-shadow:0 0 6px var(--rose-glow);}
-.save-btn{margin-top:12px;padding:10px 22px;background:var(--rose);color:#000;border:none;border-radius:6px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:7px;box-shadow:0 0 20px rgba(240,160,144,0.3);}
-.save-btn:hover{background:#ff9080;box-shadow:0 0 35px rgba(240,160,144,0.5);transform:translateY(-1px);}
-.week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
-.wd{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
-.wd-l{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);}
-.wd-c{width:30px;height:30px;border-radius:5px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;transition:all 0.15s;}
-.wd.done .wd-c{background:rgba(240,160,144,0.15);border-color:rgba(240,160,144,0.4);color:var(--rose);box-shadow:0 0 8px rgba(240,160,144,0.2);}
-.wd.today .wd-c{border-color:rgba(224,176,80,0.5);box-shadow:0 0 8px rgba(224,176,80,0.2);}
-.wd:hover .wd-c{border-color:rgba(240,160,144,0.4);transform:scale(1.1);}
-.task-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;transition:all 0.15s;margin-bottom:2px;}
-.task-row:hover{background:rgba(255,255,255,0.03);border-left:2px solid rgba(240,160,144,0.3);}
-.task-row.done{opacity:0.38;}
-.task-chk{width:17px;height:17px;border-radius:4px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all 0.15s;}
-.task-row.done .task-chk{background:rgba(240,160,144,0.15);border-color:rgba(240,160,144,0.4);color:var(--rose);}
-.task-info{flex:1;}
-.task-name{font-size:12px;color:var(--text);}
-.task-sub{font-size:10px;color:var(--muted);margin-top:1px;}
-.task-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 7px;border-radius:3px;background:rgba(255,255,255,0.05);color:var(--muted2);}
+.tag.on{background:rgba(240,160,144,0.12);border-color:rgba(240,160,144,0.45);color:var(--rose);}
+.save-btn{margin-top:12px;padding:10px 22px;background:var(--rose);color:#000;border:none;border-radius:6px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:7px;}
+.save-btn:hover{background:#ff9080;transform:translateY(-1px);}
+.h-item{padding:8px 13px;border-bottom:1px solid var(--border);}
+.h-item:last-child{border-bottom:none;}
+.h-role{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--rose);margin-bottom:2px;}
+.h-text{font-size:11px;color:var(--muted2);line-height:1.5;}
+.h-empty{padding:16px 13px;font-size:11px;color:var(--muted);}
+/* SIDE COLUMN */
 .side-col{display:flex;flex-direction:column;gap:10px;}
-.streak-panel{background:linear-gradient(160deg,#0f0a04,#08060e);border:1px solid rgba(224,176,80,0.2);border-radius:10px;padding:18px;text-align:center;position:relative;overflow:hidden;animation:streakBorder 3s ease-in-out infinite;}
-@keyframes streakBorder{0%,100%{border-color:rgba(224,176,80,0.2);box-shadow:none}50%{border-color:rgba(224,176,80,0.45);box-shadow:0 0 25px rgba(224,176,80,0.1)}}
-.streak-panel::before{content:'';position:absolute;top:-20px;left:50%;transform:translateX(-50%);width:200px;height:100px;background:radial-gradient(ellipse,rgba(224,176,80,0.15),transparent 70%);}
-.streak-fire{font-size:24px;margin-bottom:3px;position:relative;z-index:1;}
-.streak-num{font-family:'Syne',sans-serif;font-size:48px;font-weight:800;color:var(--gold);line-height:1;position:relative;z-index:1;text-shadow:0 0 20px var(--gold-glow),0 0 40px rgba(224,176,80,0.3),0 0 60px rgba(224,176,80,0.15);}
-.streak-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.22em;color:rgba(224,176,80,0.5);text-transform:uppercase;margin-top:2px;margin-bottom:10px;}
-.streak-dots{display:flex;justify-content:center;gap:4px;}
-.sdot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.05);}
-.sdot.lit{background:var(--gold);box-shadow:0 0 8px var(--gold-glow);}
-.aria-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:15px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.18s;position:relative;overflow:hidden;}
-.aria-card:hover{border-color:rgba(240,160,144,0.35);box-shadow:0 0 25px rgba(240,160,144,0.08);transform:translateY(-1px);}
-.aria-avi{width:42px;height:42px;border-radius:8px;background:linear-gradient(135deg,var(--rose),#b05040);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;position:relative;box-shadow:0 0 15px rgba(240,160,144,0.3);}
-.aria-ping{position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--green);border:2px solid var(--bg2);animation:ariaPing 1.4s ease-in-out infinite;}
-@keyframes ariaPing{0%,100%{box-shadow:0 0 0 0 rgba(48,232,144,0.6),0 0 8px rgba(48,232,144,0.4)}60%{box-shadow:0 0 0 5px rgba(48,232,144,0),0 0 16px rgba(48,232,144,0.6)}}
-.aria-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:1px;}
-.aria-status{font-size:10px;color:var(--muted);}
-.aria-btn{margin-top:7px;display:inline-flex;align-items:center;gap:5px;background:var(--rose);color:#000;padding:6px 13px;border-radius:5px;font-size:10px;font-weight:700;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.15s;box-shadow:0 0 12px rgba(240,160,144,0.3);}
-.aria-btn:hover{background:#ff9080;box-shadow:0 0 20px rgba(240,160,144,0.5);}
-.products-panel,.history-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+/* ── ARIA SPHERE PANEL ── */
+.sphere-panel{background:var(--bg2);border:1px solid rgba(240,160,144,0.2);border-radius:10px;overflow:hidden;animation:panelPulse 4s ease-in-out infinite;display:flex;flex-direction:column;}
+.sphere-head{padding:10px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.sphere-head-avi{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--rose),#b05040);display:flex;align-items:center;justify-content:center;font-size:13px;position:relative;flex-shrink:0;}
+.sphere-head-ping{position:absolute;bottom:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:var(--green);border:2px solid var(--bg2);animation:ariaPing 1.4s ease-in-out infinite;}
+@keyframes ariaPing{0%,100%{box-shadow:0 0 0 0 rgba(48,232,144,0.6)}60%{box-shadow:0 0 0 5px rgba(48,232,144,0)}}
+.sphere-head-name{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;}
+.sphere-head-status{font-size:9px;color:var(--green);font-family:'IBM Plex Mono',monospace;}
+.sphere-head-btn{margin-left:auto;padding:5px 11px;background:var(--rose);color:#000;border:none;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.15s;white-space:nowrap;}
+.sphere-head-btn:hover{background:#ff9080;}
+/* Sphere orb */
+.sphere-orb-wrap{display:flex;align-items:center;justify-content:center;padding:20px 0 10px;position:relative;}
+.sphere-orb{width:90px;height:90px;border-radius:50%;position:relative;cursor:pointer;flex-shrink:0;}
+.sphere-orb::before{content:'';position:absolute;inset:-12px;border-radius:50%;background:radial-gradient(circle,rgba(193,163,162,0.18) 0%,transparent 70%);animation:orbIdle 3s ease-in-out infinite;}
+.sphere-orb::after{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.28) 0%,transparent 60%),radial-gradient(circle,rgba(193,163,162,0.9) 0%,rgba(157,127,106,0.7) 60%,rgba(100,75,60,0.5) 100%);box-shadow:0 0 28px rgba(193,163,162,0.55),inset 0 -6px 16px rgba(0,0,0,0.28),inset 0 6px 12px rgba(255,255,255,0.12);animation:orbBreath 3s ease-in-out infinite;}
+@keyframes orbIdle{0%,100%{transform:scale(1);opacity:0.7}50%{transform:scale(1.12);opacity:1}}
+@keyframes orbBreath{0%,100%{transform:scale(1);box-shadow:0 0 28px rgba(193,163,162,0.55)}50%{transform:scale(1.04);box-shadow:0 0 44px rgba(193,163,162,0.9),0 0 70px rgba(193,163,162,0.3)}}
+.sphere-orb.speaking::after{animation:orbSpeak 0.5s ease-in-out infinite;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.35) 0%,transparent 60%),radial-gradient(circle,rgba(208,208,208,0.95) 0%,rgba(160,160,160,0.8) 60%,rgba(100,100,100,0.5) 100%);}
+@keyframes orbSpeak{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.sphere-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.14em;text-align:center;margin-bottom:8px;}
+.sphere-divider{height:1px;background:var(--border);margin:0 13px;}
+/* Mini chat in sphere panel */
+.sphere-msgs{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;max-height:160px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.smsg{display:flex;flex-direction:column;}
+.smsg-aria{align-items:flex-start;}
+.smsg-user{align-items:flex-end;}
+.smsg-bubble{max-width:90%;padding:6px 10px;border-radius:9px;font-size:10px;line-height:1.5;}
+.smsg-aria .smsg-bubble{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);border-radius:3px 9px 9px 9px;}
+.smsg-user .smsg-bubble{background:rgba(240,160,144,0.15);border:1px solid rgba(240,160,144,0.25);color:var(--text);border-radius:9px 3px 9px 9px;}
+.sphere-input-row{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border);}
+.sphere-input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:10px;padding:6px 10px;border-radius:5px;outline:none;transition:border 0.15s;}
+.sphere-input::placeholder{color:var(--muted);}
+.sphere-input:focus{border-color:rgba(240,160,144,0.4);}
+.sphere-send{width:28px;height:28px;border-radius:5px;background:var(--rose);border:none;color:#000;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sphere-send:hover{background:#ff9080;}
+/* Products panel */
+.products-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 .panel-mini-head{height:36px;padding:0 13px;display:flex;align-items:center;border-bottom:1px solid var(--border);}
 .pmh-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase;flex:1;}
-.pmh-action{font-size:10px;color:var(--rose);cursor:pointer;background:none;border:none;font-family:'Space Grotesk',sans-serif;font-weight:600;transition:all 0.15s;}
+.pmh-action{font-size:10px;color:var(--rose);cursor:pointer;background:none;border:none;font-family:'Space Grotesk',sans-serif;font-weight:600;}
 .pmh-action:hover{text-shadow:0 0 8px var(--rose-glow);}
 .product-row{display:flex;align-items:center;gap:9px;padding:7px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.12s;}
 .product-row:last-child{border-bottom:none;}
@@ -2653,41 +1919,9 @@ body::before{content:'';position:fixed;inset:0;
 .pr-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .pr-name{flex:1;font-size:11px;color:var(--muted2);}
 .pr-tag{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 7px;border-radius:3px;}
-.pr-tag.using{background:rgba(48,232,144,0.1);color:var(--green);text-shadow:0 0 6px rgba(48,232,144,0.4);}
-.pr-tag.try{background:var(--gold-dim);color:var(--gold);text-shadow:0 0 6px var(--gold-glow);}
-.h-item{padding:8px 13px;border-bottom:1px solid var(--border);}
-.h-item:last-child{border-bottom:none;}
-.h-role{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--rose);margin-bottom:2px;text-shadow:0 0 6px var(--rose-glow);}
-.h-text{font-size:11px;color:var(--muted2);line-height:1.5;}
-.h-empty{padding:16px 13px;font-size:11px;color:var(--muted);}
-/* ARIA PANEL */
-.aria-panel{background:var(--bg2);border:1px solid rgba(240,160,144,0.2);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;animation:panelPulse 4s ease-in-out infinite;}
-.aria-panel-head{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(240,160,144,0.04);}
-.aria-panel-title{display:flex;align-items:center;gap:9px;}
-.aria-avi-sm{width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,var(--rose),#b05040);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;position:relative;box-shadow:0 0 12px rgba(240,160,144,0.3);}
-.aria-name-sm{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
-.aria-status-sm{font-size:9px;color:var(--green);font-family:'IBM Plex Mono',monospace;text-shadow:0 0 6px rgba(48,232,144,0.4);}
-.lang-selector select{background:var(--bg3);border:1px solid var(--border2);color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;outline:none;transition:all 0.15s;}
-.lang-selector select:hover,.lang-selector select:focus{border-color:rgba(240,160,144,0.4);color:var(--text);}
-.lang-selector select option{background:var(--bg3);}
-.aria-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:180px;max-height:260px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
-.aria-messages::-webkit-scrollbar{width:3px;}
-.aria-messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-.aria-msg{display:flex;flex-direction:column;}
-.aria-msg-aria{align-items:flex-start;}
-.aria-msg-user{align-items:flex-end;}
-.aria-msg-bubble{max-width:88%;padding:8px 11px;border-radius:10px;font-size:11px;line-height:1.5;}
-.aria-msg-aria .aria-msg-bubble{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);border-radius:3px 10px 10px 10px;}
-.aria-msg-user .aria-msg-bubble{background:rgba(240,160,144,0.15);border:1px solid rgba(240,160,144,0.25);color:var(--text);border-radius:10px 3px 10px 10px;}
-.aria-msg-typing .aria-msg-bubble{color:var(--muted);}
-.aria-input-wrap{display:flex;gap:7px;padding:10px 12px;border-top:1px solid var(--border);}
-.aria-input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:11px;padding:7px 11px;border-radius:6px;outline:none;transition:all 0.15s;}
-.aria-input::placeholder{color:var(--muted);}
-.aria-input:focus{border-color:rgba(240,160,144,0.4);box-shadow:0 0 10px rgba(240,160,144,0.1);}
-.aria-send{width:32px;height:32px;border-radius:6px;background:var(--rose);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
-.aria-send:hover{background:#ff9080;box-shadow:0 0 14px rgba(240,160,144,0.4);}
-.aria-send:disabled{opacity:0.4;cursor:not-allowed;}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg3);border:1px solid rgba(240,160,144,0.3);color:var(--text);padding:9px 18px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;transition:transform 0.3s cubic-bezier(0.25,1,0.5,1);z-index:999;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 20px rgba(240,160,144,0.1);}
+.pr-tag.using{background:rgba(48,232,144,0.1);color:var(--green);}
+.pr-tag.try{background:var(--gold-dim);color:var(--gold);}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg3);border:1px solid rgba(240,160,144,0.3);color:var(--text);padding:9px 18px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;transition:transform 0.3s;z-index:999;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 .fu{opacity:0;animation:fadeUp 0.45s forwards;}
@@ -2710,7 +1944,6 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab active">Overview</div>
     <div class="nav-tab" onclick="switchPTab('profile')">Hair Profile</div>
     <div class="nav-tab" onclick="switchPTab('routine')">Routine</div>
-
   </div>
   <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
@@ -2730,9 +1963,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="score-ring-wrap">
       <svg class="score-svg" viewBox="0 0 148 148">
         <defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#f0a090"/>
-          <stop offset="50%" stop-color="#e0b050"/>
-          <stop offset="100%" stop-color="#60a8ff"/>
+          <stop offset="0%" stop-color="#f0a090"/><stop offset="50%" stop-color="#e0b050"/><stop offset="100%" stop-color="#60a8ff"/>
         </linearGradient></defs>
         <circle class="score-bg-c" cx="74" cy="74" r="65"/>
         <circle class="score-fill-c" id="score-ring" cx="74" cy="74" r="65" stroke="url(#rg)"/>
@@ -2745,10 +1976,10 @@ body::before{content:'';position:fixed;inset:0;
     <div class="score-status" id="score-status" style="color:var(--muted2)">—</div>
     <div class="score-delta" id="score-delta">Complete your profile to score</div>
     <div class="metric-rows">
-      <div class="mr"><div class="mr-lbl">Moisture</div><div class="mr-track"><div class="mr-fill" id="mf-m" style="background:var(--rose)"></div></div><div class="mr-val" id="mv-m">—</div></div>
-      <div class="mr"><div class="mr-lbl">Strength</div><div class="mr-track"><div class="mr-fill" id="mf-s" style="background:var(--blue)"></div></div><div class="mr-val" id="mv-s">—</div></div>
-      <div class="mr"><div class="mr-lbl">Scalp</div><div class="mr-track"><div class="mr-fill" id="mf-sc" style="background:var(--green)"></div></div><div class="mr-val" id="mv-sc">—</div></div>
-      <div class="mr"><div class="mr-lbl">Growth</div><div class="mr-track"><div class="mr-fill" id="mf-g" style="background:var(--gold)"></div></div><div class="mr-val" id="mv-g">—</div></div>
+      <div class="mr"><div class="mr-lbl">Moisture</div><div class="mr-track"><div class="mr-fill" id="mf-m" style="background:var(--rose)"></div></div><div class="mr-val" id="mv-m" style="color:var(--rose)">—</div></div>
+      <div class="mr"><div class="mr-lbl">Strength</div><div class="mr-track"><div class="mr-fill" id="mf-s" style="background:var(--blue)"></div></div><div class="mr-val" id="mv-s" style="color:var(--blue)">—</div></div>
+      <div class="mr"><div class="mr-lbl">Scalp</div><div class="mr-track"><div class="mr-fill" id="mf-sc" style="background:var(--green)"></div></div><div class="mr-val" id="mv-sc" style="color:var(--green)">—</div></div>
+      <div class="mr"><div class="mr-lbl">Growth</div><div class="mr-track"><div class="mr-fill" id="mf-g" style="background:var(--gold)"></div></div><div class="mr-val" id="mv-g" style="color:var(--gold)">—</div></div>
     </div>
   </div>
 
@@ -2762,10 +1993,10 @@ body::before{content:'';position:fixed;inset:0;
       </div>
     </div>
     <div class="chart-area">
-      <div class="chart-row"><div class="chart-meta"><div class="chart-name">MOISTURE INDEX</div><div class="chart-reading" id="cr-m" style="color:var(--rose);text-shadow:0 0 10px var(--rose-glow)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-m" viewBox="0 0 400 36" preserveAspectRatio="none"></svg></div></div>
-      <div class="chart-row"><div class="chart-meta"><div class="chart-name">STRENGTH INDEX</div><div class="chart-reading" id="cr-s" style="color:var(--blue);text-shadow:0 0 10px rgba(96,168,255,0.5)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-s" viewBox="0 0 400 36" preserveAspectRatio="none"></svg></div></div>
-      <div class="chart-row"><div class="chart-meta"><div class="chart-name">SCALP HEALTH</div><div class="chart-reading" id="cr-sc" style="color:var(--green);text-shadow:0 0 10px rgba(48,232,144,0.5)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-sc" viewBox="0 0 400 36" preserveAspectRatio="none"></svg></div></div>
-      <div class="chart-row"><div class="chart-meta"><div class="chart-name">GROWTH RATE</div><div class="chart-reading" id="cr-g" style="color:var(--gold);text-shadow:0 0 10px var(--gold-glow)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-g" viewBox="0 0 400 36" preserveAspectRatio="none"></svg></div></div>
+      <div class="chart-row"><div class="chart-meta"><div class="chart-name">MOISTURE INDEX</div><div class="chart-reading" id="cr-m" style="color:var(--rose)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-m" viewBox="0 0 400 36" preserveAspectRatio="none"></svg></div></div>
+      <div class="chart-row"><div class="chart-meta"><div class="chart-name">STRENGTH INDEX</div><div class="chart-reading" id="cr-s" style="color:var(--blue)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-s" viewBox="0 0 400 36" preserveAspectRatio="none"></svg></div></div>
+      <div class="chart-row"><div class="chart-meta"><div class="chart-name">SCALP HEALTH</div><div class="chart-reading" id="cr-sc" style="color:var(--green)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-sc" viewBox="0 0 400 36" preserveAspectRatio="none"></svg></div></div>
+      <div class="chart-row"><div class="chart-meta"><div class="chart-name">GROWTH RATE</div><div class="chart-reading" id="cr-g" style="color:var(--gold)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-g" viewBox="0 0 400 36" preserveAspectRatio="none"></svg></div></div>
     </div>
   </div>
 
@@ -2774,20 +2005,20 @@ body::before{content:'';position:fixed;inset:0;
     <div class="ins-body">
       <div class="ins-section-label">Sentiment Index</div>
       <div class="ins-item">
-        <div class="ins-item-label"><span>Moisture focus</span><span style="color:var(--rose);text-shadow:0 0 6px var(--rose-glow)">68%</span></div>
-        <div class="ins-bar-wrap"><div class="ins-bar-a" style="width:68%"></div><div class="ins-bar-b" style="width:32%"></div></div>
+        <div class="ins-item-label"><span>Moisture focus</span><span style="color:var(--rose)" id="ins-moist-pct">68%</span></div>
+        <div class="ins-bar-wrap"><div class="ins-bar-a" id="ins-bar-m" style="width:68%"></div><div class="ins-bar-b" id="ins-bar-mb" style="width:32%"></div></div>
         <div class="ins-legend"><div class="ins-l-item"><div class="ins-dot" style="background:var(--rose)"></div>Treating</div><div class="ins-l-item"><div class="ins-dot" style="background:var(--blue)"></div>Monitoring</div></div>
       </div>
       <div class="ins-item">
-        <div class="ins-item-label"><span>Growth focus</span><span style="color:var(--gold);text-shadow:0 0 6px var(--gold-glow)">54%</span></div>
-        <div class="ins-bar-wrap"><div class="ins-bar-a" style="width:54%;background:var(--gold)"></div><div class="ins-bar-b" style="width:46%;background:var(--purple)"></div></div>
+        <div class="ins-item-label"><span>Growth focus</span><span style="color:var(--gold)" id="ins-growth-pct">54%</span></div>
+        <div class="ins-bar-wrap"><div class="ins-bar-a" id="ins-bar-g" style="width:54%;background:var(--gold)"></div><div class="ins-bar-b" id="ins-bar-gb" style="width:46%;background:var(--purple)"></div></div>
         <div class="ins-legend"><div class="ins-l-item"><div class="ins-dot" style="background:var(--gold)"></div>Active</div><div class="ins-l-item"><div class="ins-dot" style="background:var(--purple)"></div>Maintenance</div></div>
       </div>
       <div class="ins-divider"></div>
       <div class="ins-section-label">Trending This Week</div>
-      <div class="community-stat"><div class="cs-label">Gotero Rapido</div><div><span class="cs-val" style="color:var(--green);text-shadow:0 0 8px rgba(48,232,144,0.4)">+34%</span> <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--green)">↑</span></div></div>
-      <div class="community-stat"><div class="cs-label">Mascarilla Capilar</div><div><span class="cs-val" style="color:var(--green);text-shadow:0 0 8px rgba(48,232,144,0.4)">+21%</span> <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--green)">↑</span></div></div>
-      <div class="community-stat"><div class="cs-label">Scalp concerns</div><div><span class="cs-val" style="color:var(--rose)">-18%</span> <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--rose)">improving</span></div></div>
+      <div class="community-stat" id="trend-0"><div class="cs-label">Gotero Rapido</div><div><span class="cs-val" style="color:var(--green)">+34%</span> <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--green)">↑</span></div></div>
+      <div class="community-stat" id="trend-1"><div class="cs-label">Mascarilla Capilar</div><div><span class="cs-val" style="color:var(--green)">+21%</span> <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--green)">↑</span></div></div>
+      <div class="community-stat" id="trend-2"><div class="cs-label">Scalp concerns</div><div><span class="cs-val" style="color:var(--rose)">-18%</span> <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--rose)">improving</span></div></div>
       <div class="ins-divider"></div>
       <div class="ins-section-label">Active Now</div>
       <div id="active-count">—</div>
@@ -2809,14 +2040,14 @@ body::before{content:'';position:fixed;inset:0;
     <div class="sc-eye">Recommendations</div>
     <div class="sc-val" id="st-recs">0</div>
     <div class="sc-name">Product suggestions</div>
-    <div class="sc-trend" style="color:var(--gold);text-shadow:0 0 6px var(--gold-glow)">↑ this week</div>
+    <div class="sc-trend" style="color:var(--gold)">↑ this week</div>
     <div class="sc-spark"><svg width="100%" height="26" viewBox="0 0 120 26" preserveAspectRatio="none" id="spark-recs"></svg></div>
   </div>
   <div class="stat-card fu fu3" onclick="activateStat(this)">
     <div class="sc-eye">Concerns Logged</div>
     <div class="sc-val" id="st-concerns">0</div>
     <div class="sc-name">Tracked conditions</div>
-    <div class="sc-trend" style="color:var(--rose);text-shadow:0 0 6px var(--rose-glow)">↑ improving</div>
+    <div class="sc-trend" style="color:var(--rose)">↑ improving</div>
     <div class="sc-spark"><svg width="100%" height="26" viewBox="0 0 120 26" preserveAspectRatio="none" id="spark-concerns"></svg></div>
   </div>
   <div class="action-panel fu fu4">
@@ -2833,9 +2064,8 @@ body::before{content:'';position:fixed;inset:0;
   <div class="profile-panel fu fu3">
     <div class="profile-tabs">
       <div class="ptab on" id="pt-profile" onclick="switchPTab('profile')">Hair Profile</div>
-      <div class="ptab" id="pt-routine" onclick="switchPTab('routine')">Routine</div>
       <div class="ptab" id="pt-history" onclick="switchPTab('history')">Chat History</div>
-      <div class="ptab" id="pt-aria" onclick="window.location.href='/'" style="margin-left:auto">→ Ask Aria</div>
+      <div class="ptab" id="pt-aria" onclick="window.location.href='/'" style="margin-left:auto">→ Voice Mode</div>
     </div>
     <div class="ptab-content on" id="pc-profile">
       <div class="tag-group"><div class="tg-label">Hair Type</div><div class="tags" id="tags-type">
@@ -2876,52 +2106,38 @@ body::before{content:'';position:fixed;inset:0;
       </div></div>
       <button class="save-btn" onclick="saveProfile()">✦ Save & Update Score</button>
     </div>
-    <div class="ptab-content" id="pc-routine">
-      <div class="week-strip" id="week-strip"></div>
-      <div id="task-list">
-        <div class="task-row" onclick="toggleTask(this)"><div class="task-chk"></div><div class="task-info"><div class="task-name">Scalp Oil Massage</div><div class="task-sub">Gotero Rapido · 5 min</div></div><div class="task-badge">Today</div></div>
-        <div class="task-row done" onclick="toggleTask(this)"><div class="task-chk">✓</div><div class="task-info"><div class="task-name">Deep Conditioning</div><div class="task-sub">Mascarilla Capilar · 20 min</div></div><div class="task-badge">Done</div></div>
-        <div class="task-row" onclick="toggleTask(this)"><div class="task-chk"></div><div class="task-info"><div class="task-name">Wash & Condition</div><div class="task-sub">Shampoo + Formula Exclusiva</div></div><div class="task-badge">Tomorrow</div></div>
-        <div class="task-row" onclick="toggleTask(this)"><div class="task-chk"></div><div class="task-info"><div class="task-name">Protective Style</div><div class="task-sub">Reduce heat & manipulation</div></div><div class="task-badge">This Week</div></div>
-        <div class="task-row done" onclick="toggleTask(this)"><div class="task-chk">✓</div><div class="task-info"><div class="task-name">Trim Split Ends</div><div class="task-sub">Monthly maintenance</div></div><div class="task-badge">Done</div></div>
-      </div>
-    </div>
     <div class="ptab-content" id="pc-history">
       <div id="history-list"><div class="h-empty">Loading…</div></div>
-      <button onclick="clearHistory()" style="margin-top:8px;background:none;border:none;font-size:10px;color:var(--muted);cursor:pointer;font-family:'Space Grotesk',sans-serif;padding:4px 0;transition:color 0.15s;" onmouseover="this.style.color='var(--rose)'" onmouseout="this.style.color='var(--muted)'">Clear history →</button>
+      <button onclick="clearHistory()" style="margin-top:8px;background:none;border:none;font-size:10px;color:var(--muted);cursor:pointer;font-family:'Space Grotesk',sans-serif;padding:4px 0;" onmouseover="this.style.color='var(--rose)'" onmouseout="this.style.color='var(--muted)'">Clear history →</button>
     </div>
   </div>
 
   <div class="side-col">
-    <div class="aria-panel fu fu4">
-      <div class="aria-panel-head">
-        <div class="aria-panel-title">
-          <div class="aria-avi-sm">🌿<div class="aria-ping"></div></div>
-          <div>
-            <div class="aria-name-sm">Aria</div>
-            <div class="aria-status-sm">Online · AI Hair Advisor</div>
-          </div>
+    <!-- ── ARIA SPHERE (replaces streak panel) ── -->
+    <div class="sphere-panel fu fu4">
+      <div class="sphere-head">
+        <div class="sphere-head-avi">🌿<div class="sphere-head-ping"></div></div>
+        <div>
+          <div class="sphere-head-name">Aria</div>
+          <div class="sphere-head-status" id="sphere-status-lbl">Online · AI Advisor</div>
         </div>
-        <div class="lang-selector">
-          <select id="lang-select" onchange="setLang(this.value)">
-            <option value="en">🇺🇸 EN</option>
-            <option value="es">🇩🇴 ES</option>
-            <option value="fr">🇫🇷 FR</option>
-            <option value="pt">🇧🇷 PT</option>
-            <option value="zh">🇨🇳 ZH</option>
-          </select>
-        </div>
+        <button class="sphere-head-btn" onclick="window.location.href='/'">Voice Mode →</button>
       </div>
-      <div class="aria-messages" id="aria-messages">
-        <div class="aria-msg aria-msg-aria">
-          <div class="aria-msg-bubble">Hi! I'm Aria 🌿 Ask me anything about your hair.</div>
-        </div>
+      <div class="sphere-orb-wrap">
+        <div class="sphere-orb" id="sphere-orb" onclick="focusSphereInput()" title="Click to ask Aria"></div>
       </div>
-      <div class="aria-input-wrap">
-        <input type="text" class="aria-input" id="aria-input" placeholder="Ask Aria…" onkeydown="if(event.key==='Enter')sendMsg()">
-        <button class="aria-send" onclick="sendMsg()">↑</button>
+      <div class="sphere-label" id="sphere-hint">Tap sphere or type below</div>
+      <div class="sphere-divider"></div>
+      <div class="sphere-msgs" id="sphere-msgs">
+        <div class="smsg smsg-aria"><div class="smsg-bubble">Hi! I'm Aria 🌿 What's your hair doing today?</div></div>
+      </div>
+      <div class="sphere-input-row">
+        <input type="text" class="sphere-input" id="sphere-input" placeholder="Ask Aria…" onkeydown="if(event.key==='Enter')sphereSend()">
+        <button class="sphere-send" onclick="sphereSend()">↑</button>
       </div>
     </div>
+
+    <!-- Products panel -->
     <div class="products-panel fu fu5">
       <div class="panel-mini-head"><div class="pmh-title">My Products</div><button class="pmh-action" onclick="window.open('https://supportrd.com/collections/all','_blank')">Shop →</button></div>
       <div class="product-row" onclick="window.open('https://supportrd.com/collections/all','_blank')"><div class="pr-dot" style="background:var(--rose)"></div><div class="pr-name">Formula Exclusiva</div><div class="pr-tag using">Using</div></div>
@@ -2939,38 +2155,34 @@ body::before{content:'';position:fixed;inset:0;
 const token = localStorage.getItem('srd_token');
 if (!token) { window.location.href = '/login'; }
 
-// TICKER
+// ── TICKER ──
 const TDATA = [
-  {n:'MOISTURE', c:'var(--rose)'}, {n:'STRENGTH', c:'var(--blue)'},
-  {n:'SCALP', c:'var(--green)'}, {n:'GROWTH', c:'var(--gold)'},
-  {n:'ARIA STATUS', v:'ONLINE', c:'var(--green)', s:1},
-  {n:'STREAK', v:'7D 🔥', c:'var(--gold)', s:1},
-  {n:'FORMULA EXCLUSIVA', v:'$55', c:'var(--rose)', s:1},
-  {n:'GOTERO RAPIDO', v:'$55', c:'var(--gold)', s:1},
-  {n:'MASCARILLA', v:'$25', c:'var(--rose)', s:1},
-  {n:'LACIADOR CRECE', v:'$40', c:'var(--blue)', s:1},
-  {n:'GOTITAS', v:'$30', c:'var(--purple)', s:1}
+  {n:'MOISTURE',c:'var(--rose)'},{n:'STRENGTH',c:'var(--blue)'},
+  {n:'SCALP',c:'var(--green)'},{n:'GROWTH',c:'var(--gold)'},
+  {n:'ARIA STATUS',v:'ONLINE',c:'var(--green)',s:1},{n:'FORMULA EXCLUSIVA',v:'$55',c:'var(--rose)',s:1},
+  {n:'GOTERO RAPIDO',v:'$55',c:'var(--gold)',s:1},{n:'MASCARILLA',v:'$25',c:'var(--rose)',s:1},
+  {n:'LACIADOR CRECE',v:'$40',c:'var(--blue)',s:1},{n:'GOTITAS',v:'$30',c:'var(--purple)',s:1}
 ];
 let _scores = null;
 
 function buildTicker(sc) {
   const wrap = document.getElementById('ticker');
   wrap.innerHTML = '';
-  const items = [...TDATA, ...TDATA];
+  const items = [...TDATA,...TDATA];
   items.forEach(item => {
     const d = document.createElement('div');
     d.className = 'ticker-item';
     let v = item.v;
     let chg = '';
     if (!item.s && sc) {
-      if (item.n === 'MOISTURE') v = sc.moisture + '%';
-      if (item.n === 'STRENGTH') v = sc.strength + '%';
-      if (item.n === 'SCALP') v = sc.scalp + '%';
-      if (item.n === 'GROWTH') v = sc.growth + '%';
-      const delta = Math.round((Math.random() - 0.4) * 6);
-      chg = '<span class="t-chg ' + (delta >= 0 ? 't-up' : 't-down') + '">' + (delta >= 0 ? '+' : '') + delta + '</span>';
+      if (item.n==='MOISTURE') v=sc.moisture+'%';
+      if (item.n==='STRENGTH') v=sc.strength+'%';
+      if (item.n==='SCALP') v=sc.scalp+'%';
+      if (item.n==='GROWTH') v=sc.growth+'%';
+      const delta = Math.round((Math.random()-0.4)*6);
+      chg = '<span class="t-chg '+(delta>=0?'t-up':'t-down')+'">'+(delta>=0?'+':'')+delta+'</span>';
     }
-    d.innerHTML = '<span class="t-name">' + item.n + '</span> <span class="t-val" style="color:' + item.c + '">' + (v || '—') + '</span>' + chg;
+    d.innerHTML='<span class="t-name">'+item.n+'</span> <span class="t-val" style="color:'+item.c+'">'+(v||'—')+'</span>'+chg;
     wrap.appendChild(d);
   });
 }
@@ -2978,54 +2190,50 @@ function buildTicker(sc) {
 function makeSpark(id, data, color, fill) {
   const svg = document.getElementById(id);
   if (!svg) return;
-  const w = 400, h = 36;
-  const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1;
-  const xs = data.map((_, i) => (i / (data.length - 1)) * w);
-  const ys = data.map(v => h - 3 - ((v - mn) / rng) * (h - 6));
-  const pts = xs.map((x, i) => x + ',' + ys[i]).join(' ');
-  let html = '';
-  if (fill) {
-    html += '<defs><linearGradient id="g' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="' + color + '" stop-opacity="0.28"/><stop offset="100%" stop-color="' + color + '" stop-opacity="0"/></linearGradient></defs>';
-    html += '<polygon points="0,' + h + ' ' + pts + ' ' + w + ',' + h + '" fill="url(#g' + id + ')" />';
-  }
-  html += '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linejoin="round"/>';
-  html += '<circle cx="' + xs[xs.length-1] + '" cy="' + ys[ys.length-1] + '" r="3.5" fill="' + color + '" style="filter:drop-shadow(0 0 4px ' + color + ')"/>';
-  svg.innerHTML = html;
+  const w=400, h=36;
+  const mn=Math.min(...data), mx=Math.max(...data), rng=mx-mn||1;
+  const xs=data.map((_,i)=>(i/(data.length-1))*w);
+  const ys=data.map(v=>h-3-((v-mn)/rng)*(h-6));
+  const pts=xs.map((x,i)=>x+','+ys[i]).join(' ');
+  let html='';
+  if(fill){html+='<defs><linearGradient id="g'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+color+'" stop-opacity="0.28"/><stop offset="100%" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs>';html+='<polygon points="0,'+h+' '+pts+' '+w+','+h+'" fill="url(#g'+id+')" />';}
+  html+='<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linejoin="round"/>';
+  html+='<circle cx="'+xs[xs.length-1]+'" cy="'+ys[ys.length-1]+'" r="3.5" fill="'+color+'"/>';
+  svg.innerHTML=html;
 }
 
 function genTrend(base, days, noise) {
-  const arr = []; let v = base; noise = noise || 8;
-  for (let i = 0; i < days; i++) { v = Math.max(0, Math.min(100, v + (Math.random() - 0.42) * noise)); arr.push(Math.round(v)); }
+  const arr=[]; let v=base; noise=noise||8;
+  for(let i=0;i<days;i++){v=Math.max(0,Math.min(100,v+(Math.random()-0.42)*noise));arr.push(Math.round(v));}
   return arr;
 }
 
 function renderSparklines(sc, days) {
-  makeSpark('sp-m', genTrend(sc.moisture, days), '#f0a090', true);
-  makeSpark('sp-s', genTrend(sc.strength, days), '#60a8ff', true);
-  makeSpark('sp-sc', genTrend(sc.scalp, days), '#30e890', true);
-  makeSpark('sp-g', genTrend(sc.growth, days), '#e0b050', true);
-  makeSpark('spark-chats', genTrend(50, days, 15), '#f0a090', false);
-  makeSpark('spark-recs', genTrend(40, days, 12), '#e0b050', false);
-  makeSpark('spark-concerns', genTrend(30, days, 8), '#60a8ff', false);
-  document.getElementById('cr-m').textContent = sc.moisture + '%';
-  document.getElementById('cr-s').textContent = sc.strength + '%';
-  document.getElementById('cr-sc').textContent = sc.scalp + '%';
-  document.getElementById('cr-g').textContent = sc.growth + '%';
+  makeSpark('sp-m',genTrend(sc.moisture,days),'#f0a090',true);
+  makeSpark('sp-s',genTrend(sc.strength,days),'#60a8ff',true);
+  makeSpark('sp-sc',genTrend(sc.scalp,days),'#30e890',true);
+  makeSpark('sp-g',genTrend(sc.growth,days),'#e0b050',true);
+  makeSpark('spark-chats',genTrend(50,days,15),'#f0a090',false);
+  makeSpark('spark-recs',genTrend(40,days,12),'#e0b050',false);
+  makeSpark('spark-concerns',genTrend(30,days,8),'#60a8ff',false);
+  document.getElementById('cr-m').textContent=sc.moisture+'%';
+  document.getElementById('cr-s').textContent=sc.strength+'%';
+  document.getElementById('cr-sc').textContent=sc.scalp+'%';
+  document.getElementById('cr-g').textContent=sc.growth+'%';
 }
 
-let currentRange = 7;
-function setRange(el, days) {
-  document.querySelectorAll('.tt').forEach(t => t.classList.remove('on'));
-  el.classList.add('on');
-  currentRange = days;
-  if (_scores) renderSparklines(_scores, days);
+let currentRange=7;
+function setRange(el,days){
+  document.querySelectorAll('.tt').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on'); currentRange=days;
+  if(_scores) renderSparklines(_scores,days);
 }
 
 function calcScore() {
-  const gs = id => [...document.querySelectorAll('#' + id + ' .tag.on')].map(t => t.textContent.trim().toLowerCase()).join(' ');
-  const concerns = gs('tags-concerns'), treatments = gs('tags-treatments'), products = gs('tags-products'), type = gs('tags-type');
-  let moisture = 75, strength = 75, scalp = 75, growth = 75;
-  const map = {
+  const gs=id=>[...document.querySelectorAll('#'+id+' .tag.on')].map(t=>t.textContent.trim().toLowerCase()).join(' ');
+  const concerns=gs('tags-concerns'), treatments=gs('tags-treatments'), products=gs('tags-products'), type=gs('tags-type');
+  let moisture=75, strength=75, scalp=75, growth=75;
+  const map={
     'frizz':[-10,0,0,0],'damaged':[-5,-25,0,-10],'breakage':[0,-30,0,-15],
     'hair loss':[0,-10,0,-30],'thinning':[0,-15,0,-25],'oily scalp':[0,0,-20,0],
     'dandruff':[0,0,-25,-5],'split ends':[-5,-10,0,0],'slow growth':[0,0,0,-20],
@@ -3034,362 +2242,220 @@ function calcScore() {
     'formula exclusiva':[15,12,5,8],'laciador crece':[12,8,0,5],'gotero rapido':[0,0,18,10],
     'gotitas brillantes':[8,0,0,0],'mascarilla capilar':[12,5,0,0],'shampoo aloe vera':[5,0,8,5]
   };
-  for (const [k, v] of Object.entries(map)) {
-    if (concerns.includes(k) || treatments.includes(k) || products.includes(k) || type.includes(k)) {
-      moisture += v[0]; strength += v[1]; scalp += v[2]; growth += v[3];
+  for(const[k,v] of Object.entries(map)){
+    if(concerns.includes(k)||treatments.includes(k)||products.includes(k)||type.includes(k)){
+      moisture+=v[0];strength+=v[1];scalp+=v[2];growth+=v[3];
     }
   }
-  const cl = n => Math.max(0, Math.min(100, n));
-  return { overall: Math.round((cl(moisture)+cl(strength)+cl(scalp)+cl(growth))/4), moisture:cl(moisture), strength:cl(strength), scalp:cl(scalp), growth:cl(growth) };
+  const cl=n=>Math.max(0,Math.min(100,n));
+  return{overall:Math.round((cl(moisture)+cl(strength)+cl(scalp)+cl(growth))/4),moisture:cl(moisture),strength:cl(strength),scalp:cl(scalp),growth:cl(growth)};
 }
 
 function getZone(s) {
-  if (s >= 85) return { status:'EXCELLENT', color:'var(--green)' };
-  if (s >= 70) return { status:'VERY GOOD', color:'#60d060' };
-  if (s >= 50) return { status:'GOOD', color:'var(--rose)' };
-  if (s >= 30) return { status:'NEEDS CARE', color:'var(--gold)' };
-  return { status:'CRITICAL', color:'var(--red)' };
+  if(s>=85) return{status:'EXCELLENT',color:'var(--green)'};
+  if(s>=70) return{status:'VERY GOOD',color:'#60d060'};
+  if(s>=50) return{status:'GOOD',color:'var(--rose)'};
+  if(s>=30) return{status:'NEEDS CARE',color:'var(--gold)'};
+  return{status:'CRITICAL',color:'var(--red)'};
 }
 
-function animNum(el, to, ms) {
-  const start = Date.now(), from = parseInt(el.textContent) || 0;
-  (function s() { const p = Math.min(1, (Date.now()-start)/ms), e = 1-Math.pow(1-p,4); el.textContent = Math.round(from+(to-from)*e); if (p < 1) requestAnimationFrame(s); })();
+function animNum(el,to,ms){
+  const start=Date.now(),from=parseInt(el.textContent)||0;
+  (function s(){const p=Math.min(1,(Date.now()-start)/ms),e=1-Math.pow(1-p,4);el.textContent=Math.round(from+(to-from)*e);if(p<1)requestAnimationFrame(s);})();
 }
 
 function renderScore(sc) {
-  _scores = sc;
-  const z = getZone(sc.overall);
-  const circ = 408, ring = document.getElementById('score-ring');
-  ring.style.strokeDasharray = circ;
-  ring.style.strokeDashoffset = circ - (circ * (sc.overall / 100));
-  animNum(document.getElementById('score-num'), sc.overall, 2000);
-  const st = document.getElementById('score-status');
-  st.textContent = z.status; st.style.color = z.color;
-  st.style.textShadow = '0 0 12px ' + z.color;
-  document.getElementById('score-delta').textContent = 'Index updated · live session';
-  [['mf-m','mv-m',sc.moisture],['mf-s','mv-s',sc.strength],['mf-sc','mv-sc',sc.scalp],['mf-g','mv-g',sc.growth]].forEach(([fb,fv,val],i) => {
-    setTimeout(() => {
-      document.getElementById(fb).style.transform = 'scaleX(1)';
-      const vEl = document.getElementById(fv);
-      vEl.textContent = val + '%';
-      vEl.classList.add('flash');
-      setTimeout(() => vEl.classList.remove('flash'), 600);
-    }, 300 + i * 120);
+  _scores=sc;
+  const z=getZone(sc.overall);
+  const circ=408, ring=document.getElementById('score-ring');
+  ring.style.strokeDasharray=circ;
+  ring.style.strokeDashoffset=circ-(circ*(sc.overall/100));
+  animNum(document.getElementById('score-num'),sc.overall,2000);
+  const st=document.getElementById('score-status');
+  st.textContent=z.status; st.style.color=z.color;
+  document.getElementById('score-delta').textContent='Index updated · live session';
+  [['mf-m','mv-m',sc.moisture],['mf-s','mv-s',sc.strength],['mf-sc','mv-sc',sc.scalp],['mf-g','mv-g',sc.growth]].forEach(([fb,fv,val],i)=>{
+    setTimeout(()=>{
+      document.getElementById(fb).style.transform='scaleX(1)';
+      const vEl=document.getElementById(fv);
+      vEl.textContent=val+'%';
+    },300+i*120);
   });
-  renderSparklines(sc, currentRange);
+  renderSparklines(sc,currentRange);
   buildTicker(sc);
 }
 
-function buildWeekStrip() {
-  const days = ['S','M','T','W','T','F','S'], done = [0,1,2,3,4], today = new Date().getDay();
-  const wrap = document.getElementById('week-strip');
-  days.forEach((d, i) => {
-    const div = document.createElement('div');
-    div.className = 'wd' + (done.includes(i) ? ' done' : '') + (i === today ? ' today' : '');
-    div.innerHTML = '<div class="wd-l">' + d + '</div><div class="wd-c">' + (done.includes(i) ? '✓' : '') + '</div>';
-    div.onclick = () => {
-      div.classList.toggle('done');
-      div.querySelector('.wd-c').textContent = div.classList.contains('done') ? '✓' : '';
-      if (div.classList.contains('done')) {
-        const n = parseInt(document.getElementById('streak-num').textContent);
-        document.getElementById('streak-num').textContent = n + 1;
-        buildStreakDots(n + 1);
-        showToast('✅ Day complete! Streak extended 🔥');
-      }
-    };
-    wrap.appendChild(div);
-  });
-}
-
-function buildStreakDots(n) {
-  const w = document.getElementById('streak-dots');
-  w.innerHTML = '';
-  for (let i = 0; i < 7; i++) {
-    const d = document.createElement('div');
-    d.className = 'sdot' + (i < n ? ' lit' : '');
-    w.appendChild(d);
-  }
-}
-
-function toggleTag(el, group) {
-  if (group === 'type') document.querySelectorAll('#tags-type .tag').forEach(t => t.classList.remove('on'));
+function toggleTag(el,group){
+  if(group==='type') document.querySelectorAll('#tags-type .tag').forEach(t=>t.classList.remove('on'));
   el.classList.toggle('on');
-  setTimeout(() => renderScore(calcScore()), 50);
+  setTimeout(()=>renderScore(calcScore()),50);
 }
 
-function tagsToString(id) { return [...document.querySelectorAll('#' + id + ' .tag.on')].map(t => t.textContent.trim()).join(', '); }
-function setTagsFromString(id, val) {
-  if (!val) return;
-  const sel = val.split(',').map(s => s.trim().toLowerCase());
-  document.querySelectorAll('#' + id + ' .tag').forEach(t => { if (sel.includes(t.textContent.trim().toLowerCase())) t.classList.add('on'); });
+function tagsToString(id){return[...document.querySelectorAll('#'+id+' .tag.on')].map(t=>t.textContent.trim()).join(', ');}
+function setTagsFromString(id,val){
+  if(!val) return;
+  const sel=val.split(',').map(s=>s.trim().toLowerCase());
+  document.querySelectorAll('#'+id+' .tag').forEach(t=>{if(sel.includes(t.textContent.trim().toLowerCase())) t.classList.add('on');});
 }
 
-function toggleTask(el) {
-  el.classList.toggle('done');
-  const chk = el.querySelector('.task-chk');
-  if (el.classList.contains('done')) {
-    chk.textContent = '✓';
-    const n = parseInt(document.getElementById('streak-num').textContent);
-    document.getElementById('streak-num').textContent = n + 1;
-    buildStreakDots(n + 1);
-    showToast('✅ Task complete!');
-  } else {
-    chk.textContent = '';
-    showToast('↩ Task unmarked');
-  }
-}
-
-function switchPTab(name) {
-  ['profile','routine','history'].forEach(t => {
-    document.getElementById('pt-' + t).classList.toggle('on', t === name);
-    document.getElementById('pc-' + t).classList.toggle('on', t === name);
+function switchPTab(name){
+  ['profile','history'].forEach(t=>{
+    document.getElementById('pt-'+t).classList.toggle('on',t===name);
+    document.getElementById('pc-'+t).classList.toggle('on',t===name);
   });
-  // Scroll to bottom section
-  document.querySelector('.bot-row').scrollIntoView({behavior:'smooth', block:'nearest'});
-  if (name === 'history') loadHistory();
+  document.querySelector('.bot-row').scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(name==='history') loadHistory();
 }
 
-function activateStat(el) {
-  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+function activateStat(el){
+  document.querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
 }
 
-function animateActiveUsers() {
-  const el = document.getElementById('active-count');
-  let base = Math.floor(Math.random() * 40) + 65;
-  el.textContent = base;
-  setInterval(() => {
-    base += Math.floor(Math.random() * 3) - 1;
-    base = Math.max(58, Math.min(120, base));
-    el.textContent = base;
-  }, 3500);
-}
+// ── ARIA SPHERE CHAT ──
+let sphereBusy=false;
+const sphereLang = localStorage.getItem('aria_lang')||'en-US';
 
-async function loadData() {
-  try {
-    const r = await fetch('/api/auth/me', { headers: { 'X-Auth-Token': token } });
-    if (r.status === 401) { window.location.href = '/login'; return; }
-    const d = await r.json();
-    document.getElementById('nav-name').textContent = d.name || d.email;
-    const av = document.getElementById('nav-av');
-    if (d.avatar) { av.innerHTML = '<img src="' + d.avatar + '" alt="">'; } else { av.textContent = (d.name || '?')[0].toUpperCase(); }
-    if (d.subscribed) document.getElementById('plan-badge').textContent = 'PREMIUM';
-    document.getElementById('st-chats').textContent = d.chat_count || 0;
-    document.getElementById('st-chats-trend').textContent = '↑ ' + (d.chat_count || 0) + ' all time';
-    const concerns = (d.profile?.hair_concerns || '').split(',').filter(c => c.trim()).length;
-    document.getElementById('st-concerns').textContent = concerns || 0;
-    document.getElementById('st-recs').textContent = Math.floor((d.chat_count || 0) / 2) || 0;
-    if (d.profile) {
-      setTagsFromString('tags-type', d.profile.hair_type);
-      setTagsFromString('tags-concerns', d.profile.hair_concerns);
-      setTagsFromString('tags-treatments', d.profile.treatments);
-      setTagsFromString('tags-products', d.profile.products_tried);
-    }
-    setTimeout(() => renderScore(calcScore()), 400);
-  } catch(e) { console.error(e); setTimeout(() => renderScore(calcScore()), 400); }
-}
+function focusSphereInput(){document.getElementById('sphere-input').focus();}
 
-async function loadHistory() {
-  try {
-    const r = await fetch('/api/history', { headers: { 'X-Auth-Token': token } });
-    const d = await r.json();
-    const list = document.getElementById('history-list');
-    if (!d.history || !d.history.length) { list.innerHTML = '<div class="h-empty">No conversations yet.</div>'; return; }
-    list.innerHTML = d.history.slice(-8).reverse().map(h =>
-      '<div class="h-item"><div class="h-role">' + (h.role === 'user' ? 'YOU' : 'ARIA') + '</div><div class="h-text">' + h.content.slice(0, 160) + (h.content.length > 160 ? '…' : '') + '</div></div>'
-    ).join('');
-  } catch(e) {}
-}
-
-async function saveProfile() {
-  const data = {
-    hair_type: tagsToString('tags-type'),
-    hair_concerns: tagsToString('tags-concerns'),
-    treatments: tagsToString('tags-treatments'),
-    products_tried: tagsToString('tags-products')
-  };
-  try {
-    await fetch('/api/profile', { method:'POST', headers:{'Content-Type':'application/json','X-Auth-Token':token}, body:JSON.stringify(data) });
-    renderScore(calcScore());
-    showToast('✦ Profile saved — score updated');
-  } catch(e) { showToast('⚠ Save failed'); }
-}
-
-async function clearHistory() {
-  if (!confirm('Clear all chat history?')) return;
-  await fetch('/api/history/clear', { method:'POST', headers:{'X-Auth-Token':token} });
-  loadHistory();
-  showToast('✓ History cleared');
-}
-
-async function doLogout() {
-  await fetch('/api/auth/logout', { method:'POST', headers:{'X-Auth-Token':token} });
-  localStorage.removeItem('srd_token');
-  localStorage.removeItem('srd_user');
-  window.location.href = '/';
-}
-
-let toastT;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-// ── EMBEDDED ARIA CHAT ──
-let ariaLang = localStorage.getItem('aria_lang') || 'en';
-let ariaBusy = false;
-
-function setLang(val) {
-  ariaLang = val;
-  localStorage.setItem('aria_lang', val);
-  showToast('Language set to ' + val.toUpperCase());
-}
-
-// Set saved lang on load
-document.addEventListener('DOMContentLoaded', () => {
-  const sel = document.getElementById('lang-select');
-  if (sel) sel.value = ariaLang;
-});
-
-function addMsg(role, text) {
-  const wrap = document.getElementById('aria-messages');
-  if (!wrap) return;
-  const div = document.createElement('div');
-  div.className = 'aria-msg aria-msg-' + role;
-  div.innerHTML = '<div class="aria-msg-bubble">' + text + '</div>';
+function addSphereMsg(role,text){
+  const wrap=document.getElementById('sphere-msgs');
+  const div=document.createElement('div');
+  div.className='smsg smsg-'+role;
+  div.innerHTML='<div class="smsg-bubble">'+text+'</div>';
   wrap.appendChild(div);
-  wrap.scrollTop = wrap.scrollHeight;
+  wrap.scrollTop=wrap.scrollHeight;
   return div;
 }
 
-async function sendMsg() {
-  const input = document.getElementById('aria-input');
-  const send  = document.querySelector('.aria-send');
-  const msg   = input.value.trim();
-  if (!msg || ariaBusy) return;
-  ariaBusy = true;
-  input.value = '';
-  send.disabled = true;
-  addMsg('user', msg);
-  const typing = addMsg('aria aria-msg-typing', '…');
-  try {
-    const r = await fetch('/api/recommend', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
-      body: JSON.stringify({ message: msg, lang: ariaLang, history: [] })
-    });
-    const d = await r.json();
+async function sphereSend(){
+  const input=document.getElementById('sphere-input');
+  const msg=input.value.trim();
+  if(!msg||sphereBusy) return;
+  sphereBusy=true; input.value='';
+  const orb=document.getElementById('sphere-orb');
+  addSphereMsg('user',msg);
+  const typing=addSphereMsg('aria','…');
+  orb.classList.add('speaking');
+  document.getElementById('sphere-hint').textContent='Aria is thinking…';
+  document.getElementById('sphere-status-lbl').textContent='Thinking…';
+  try{
+    const r=await fetch('/api/recommend',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({message:msg,text:msg,lang:sphereLang,history:[]})});
+    const d=await r.json();
     typing.remove();
-    if (d.reply) {
-      addMsg('aria', d.reply);
-    } else if (d.error) {
-      addMsg('aria', '⚠ ' + d.error);
-    } else if (r.status === 402) {
-      addMsg('aria', '✦ Upgrade to Premium for unlimited consultations.');
-    }
-  } catch(e) {
-    typing.remove();
-    addMsg('aria', '⚠ Connection error — try again.');
+    addSphereMsg('aria',d.recommendation||d.reply||d.error||'⚠ Try again.');
+    document.getElementById('sphere-hint').textContent='Tap sphere or type below';
+    document.getElementById('sphere-status-lbl').textContent='Online · AI Advisor';
+  }catch(e){
+    typing.remove();addSphereMsg('aria','⚠ Connection error.');
+    document.getElementById('sphere-hint').textContent='Tap sphere or type below';
+    document.getElementById('sphere-status-lbl').textContent='Online · AI Advisor';
   }
-  ariaBusy = false;
-  send.disabled = false;
+  orb.classList.remove('speaking');
+  sphereBusy=false;
   input.focus();
 }
 
-buildWeekStrip();
-buildStreakDots(7);
+async function loadData(){
+  try{
+    const r=await fetch('/api/auth/me',{headers:{'X-Auth-Token':token}});
+    if(r.status===401){window.location.href='/login';return;}
+    const d=await r.json();
+    document.getElementById('nav-name').textContent=d.name||d.email;
+    const av=document.getElementById('nav-av');
+    if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
+    if(d.subscribed) document.getElementById('plan-badge').textContent='PREMIUM';
+    document.getElementById('st-chats').textContent=d.chat_count||0;
+    document.getElementById('st-chats-trend').textContent='↑ '+(d.chat_count||0)+' all time';
+    const concerns=(d.profile?.hair_concerns||'').split(',').filter(c=>c.trim()).length;
+    document.getElementById('st-concerns').textContent=concerns||0;
+    document.getElementById('st-recs').textContent=Math.floor((d.chat_count||0)/2)||0;
+    if(d.profile){
+      setTagsFromString('tags-type',d.profile.hair_type);
+      setTagsFromString('tags-concerns',d.profile.hair_concerns);
+      setTagsFromString('tags-treatments',d.profile.treatments);
+      setTagsFromString('tags-products',d.profile.products_tried);
+    }
+    setTimeout(()=>renderScore(calcScore()),400);
+  }catch(e){console.error(e);setTimeout(()=>renderScore(calcScore()),400);}
+}
+
+async function loadHistory(){
+  try{
+    const r=await fetch('/api/history',{headers:{'X-Auth-Token':token}});
+    const d=await r.json();
+    const list=document.getElementById('history-list');
+    if(!d.history||!d.history.length){list.innerHTML='<div class="h-empty">No conversations yet.</div>';return;}
+    list.innerHTML=d.history.slice(-8).reverse().map(h=>
+      '<div class="h-item"><div class="h-role">'+(h.role==='user'?'YOU':'ARIA')+'</div><div class="h-text">'+h.content.slice(0,160)+(h.content.length>160?'…':'')+'</div></div>'
+    ).join('');
+  }catch(e){}
+}
+
+async function saveProfile(){
+  const data={hair_type:tagsToString('tags-type'),hair_concerns:tagsToString('tags-concerns'),treatments:tagsToString('tags-treatments'),products_tried:tagsToString('tags-products')};
+  try{
+    await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});
+    renderScore(calcScore());
+    showToast('✦ Profile saved — score updated');
+  }catch(e){showToast('⚠ Save failed');}
+}
+
+async function clearHistory(){
+  if(!confirm('Clear all chat history?')) return;
+  await fetch('/api/history/clear',{method:'POST',headers:{'X-Auth-Token':token}});
+  loadHistory(); showToast('✓ History cleared');
+}
+
+async function doLogout(){
+  await fetch('/api/auth/logout',{method:'POST',headers:{'X-Auth-Token':token}});
+  localStorage.removeItem('srd_token');localStorage.removeItem('srd_user');
+  window.location.href='/';
+}
+
+let toastT;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
+
+async function loadRealStats(){
+  try{
+    const r=await fetch('/api/dashboard-stats',{headers:{'X-Auth-Token':token}});
+    if(!r.ok) return;
+    const s=await r.json();
+    const ac=document.getElementById('active-count');
+    if(ac){
+      ac.textContent=s.active_today;
+      let base=s.active_today;
+      setInterval(()=>{base+=Math.floor(Math.random()*3)-1;base=Math.max(s.active_today-3,Math.min(s.active_today+8,base));ac.textContent=base;},4000);
+    }
+    const sent=s.sentiment;
+    const mp=sent.moisture_pct||68, gp=sent.growth_pct||54;
+    document.getElementById('ins-bar-m').style.width=mp+'%';
+    document.getElementById('ins-bar-mb').style.width=(100-mp)+'%';
+    document.getElementById('ins-moist-pct').textContent=mp+'%';
+    document.getElementById('ins-bar-g').style.width=gp+'%';
+    document.getElementById('ins-bar-gb').style.width=(100-gp)+'%';
+    document.getElementById('ins-growth-pct').textContent=gp+'%';
+    if(s.product_trends&&s.product_trends.length>0){
+      s.product_trends.slice(0,3).forEach((pt,i)=>{
+        const el=document.getElementById('trend-'+i);
+        if(!el) return;
+        const chg=pt.change, dir=chg>=0?'+':'', color=chg>=0?'var(--green)':'var(--red)', arrow=chg>=0?'↑':'↓';
+        el.querySelector('.cs-label').textContent=pt.product;
+        el.querySelector('.cs-val').textContent=dir+chg+'%';
+        el.querySelector('.cs-val').style.color=color;
+        const sm=el.querySelectorAll('span')[1];
+        if(sm){sm.textContent=arrow;sm.style.color=color;}
+      });
+    }
+  }catch(e){
+    const ac=document.getElementById('active-count');
+    if(ac){let b=Math.floor(Math.random()*40)+65;ac.textContent=b;setInterval(()=>{b+=Math.floor(Math.random()*3)-1;b=Math.max(58,Math.min(120,b));ac.textContent=b;},3500);}
+  }
+}
+
 buildTicker(null);
 loadData();
 loadRealStats();
-
-async function loadRealStats() {
-  try {
-    const r = await fetch('/api/dashboard-stats', { headers: { 'X-Auth-Token': token } });
-    if (!r.ok) return;
-    const s = await r.json();
-
-    // Active users — real number
-    const ac = document.getElementById('active-count');
-    if (ac) {
-      ac.textContent = s.active_today;
-      // Still animate small drift around real value
-      let base = s.active_today;
-      setInterval(() => {
-        base += Math.floor(Math.random() * 3) - 1;
-        base = Math.max(s.active_today - 3, Math.min(s.active_today + 8, base));
-        ac.textContent = base;
-      }, 4000);
-    }
-
-    // Sentiment bars — real % from profiles
-    const sent = s.sentiment;
-    const moisturePct = sent.moisture_pct || 68;
-    const growthPct   = sent.growth_pct   || 54;
-    document.querySelectorAll('.ins-bar-a')[0].style.width = moisturePct + '%';
-    document.querySelectorAll('.ins-bar-b')[0].style.width = (100 - moisturePct) + '%';
-    document.querySelectorAll('.ins-item-label span:last-child')[0].textContent = moisturePct + '%';
-    document.querySelectorAll('.ins-bar-a')[1].style.width = growthPct + '%';
-    document.querySelectorAll('.ins-bar-b')[1].style.width = (100 - growthPct) + '%';
-    document.querySelectorAll('.ins-item-label span:last-child')[1].textContent = growthPct + '%';
-
-    // Product trends — real % change
-    const trendEls = document.querySelectorAll('.community-stat');
-    if (s.product_trends && s.product_trends.length > 0 && trendEls.length >= 3) {
-      const top3 = s.product_trends.slice(0, 3);
-      top3.forEach((pt, i) => {
-        const el = trendEls[i];
-        if (!el) return;
-        const chg = pt.change;
-        const dir = chg >= 0 ? '+' : '';
-        const color = chg >= 0 ? 'var(--green)' : 'var(--red)';
-        const arrow = chg >= 0 ? '↑' : '↓';
-        el.querySelector('.cs-label').textContent = pt.product;
-        el.querySelector('.cs-val').textContent = dir + chg + '%';
-        el.querySelector('.cs-val').style.color = color;
-        el.querySelector('.cs-val').style.textShadow = chg >= 0 ? '0 0 8px rgba(48,232,144,0.4)' : 'none';
-        const small = el.querySelectorAll('span')[1];
-        if (small) { small.textContent = arrow; small.style.color = color; }
-      });
-    }
-
-    // Sparklines — use real daily chat volume
-    if (_scores && s.sparkline_7) {
-      // Override sparklines with real data
-      const ranges = { 7: s.sparkline_7, 14: s.sparkline_14, 30: s.sparkline_30 };
-      const cur = ranges[currentRange] || s.sparkline_7;
-      // Scale to 0-100 range for display alongside score metrics
-      const maxV = Math.max(...cur, 1);
-      const scaled = cur.map(v => Math.round((v / maxV) * 80) + 10);
-      makeSpark('sp-m', genTrend(_scores.moisture, currentRange), '#f0a090', true);
-      makeSpark('sp-s', genTrend(_scores.strength, currentRange), '#60a8ff', true);
-      makeSpark('sp-sc', genTrend(_scores.scalp, currentRange), '#30e890', true);
-      makeSpark('sp-g', genTrend(_scores.growth, currentRange), '#e0b050', true);
-      // Stat card sparklines — real chat volume
-      makeSpark('spark-chats', scaled, '#f0a090', false);
-      makeSpark('spark-recs', s.user_spark_30 && s.user_spark_30.slice(-currentRange).length > 0
-        ? s.user_spark_30.slice(-currentRange).map(v => Math.round((v/Math.max(...s.user_spark_30,1))*80)+10)
-        : genTrend(40, currentRange, 12), '#e0b050', false);
-    }
-
-    // Top concerns in the 4th community stat slot
-    if (s.top_concerns && s.top_concerns.length > 0 && trendEls[3]) {
-      const top = s.top_concerns[0];
-      trendEls[3].querySelector('.cs-label').textContent = top.name + ' concerns';
-      trendEls[3].querySelector('.cs-val').textContent = top.pct + '%';
-      trendEls[3].querySelector('.cs-val').style.color = 'var(--rose)';
-    }
-
-  } catch(e) {
-    // Fallback to animated values if API fails
-    const ac = document.getElementById('active-count');
-    if (ac) {
-      let base = Math.floor(Math.random() * 40) + 65;
-      ac.textContent = base;
-      setInterval(() => { base += Math.floor(Math.random()*3)-1; base=Math.max(58,Math.min(120,base)); ac.textContent=base; }, 3500);
-    }
-  }
-}
 </script>
 </body></html>"""
     return html
@@ -3397,544 +2463,394 @@ async function loadRealStats() {
 
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# ── SHOPIFY CUSTOMER BRIDGE ───────────────────────────────────────────────────
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── BLOG DB ───────────────────────────────────────────────────────────────────
+BLOG_DB = os.environ.get("BLOG_DB_PATH", "/data/srd_blog.db")
 
-SHOPIFY_STORE   = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
-SHOPIFY_TOKEN   = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")  # Admin API token
-
-def get_or_create_user_by_shopify(shopify_customer_id, email, name, avatar=""):
-    """Link a Shopify customer to our users DB, or create if new."""
-    con = get_db()
-    row = con.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
-    if row:
-        user_id = row[0]
-        con.execute("UPDATE users SET name=?,avatar=? WHERE id=?", (name, avatar, user_id))
-    else:
-        con.execute("INSERT INTO users (email,name,avatar,google_id) VALUES (?,?,?,?)",
-                    (email, name, avatar, f"shopify_{shopify_customer_id}"))
-        user_id = con.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()[0]
-    con.commit()
-    con.close()
-    token = create_session(user_id)
-    return token, user_id
-
-@app.route("/api/auth/shopify", methods=["POST","OPTIONS"])
-def shopify_auth():
-    """
-    Called from Shopify page with customer info injected via Liquid.
-    Shopify injects: customer.id, customer.email, customer.first_name, customer.last_name
-    We create/link their account and return a session token.
-    """
-    data  = request.get_json()
-    cid   = str(data.get("shopify_customer_id",""))
-    email = data.get("email","").strip().lower()
-    name  = data.get("name","").strip()
-    if not email or not cid:
-        return jsonify({"error":"Missing customer data"}), 400
-    token, user_id = get_or_create_user_by_shopify(cid, email, name)
-    profile = get_hair_profile(user_id)
-    history_count = len(get_chat_history(user_id, limit=100))
-    return jsonify({"ok":True,"token":token,"name":name,"email":email,
-                    "user_id":user_id,"profile":profile,"chat_count":history_count})
-
-@app.route("/api/auth/shopify-verify", methods=["GET","POST","OPTIONS"])
-def shopify_verify():
-    """Verify a session token and return full profile — called on every dashboard load."""
-    user = get_current_user()
-    if not user: return jsonify({"error":"Not logged in"}), 401
-    profile = get_hair_profile(user["id"])
-    history = get_chat_history(user["id"], limit=50)
-    recs    = get_recommendation_history(user["id"])
-    return jsonify({
-        "ok": True,
-        "user": user,
-        "profile": profile,
-        "history": history,
-        "recommendations": recs,
-        "chat_count": len(history)
-    })
-
-def get_recommendation_history(user_id):
-    """Extract product recommendations from chat history."""
-    con = get_db()
-    rows = con.execute("""SELECT content, ts FROM chat_history
-        WHERE user_id=? AND role='assistant' ORDER BY id DESC LIMIT 50""",
-        (user_id,)).fetchall()
-    con.close()
-    recs = []
-    products = ["Formula Exclusiva","Laciador Crece","Gotero Rapido","Gotitas Brillantes","Mascarilla","Shampoo Aloe Vera"]
-    for content, ts in rows:
-        for p in products:
-            if p.lower() in content.lower():
-                recs.append({"product":p,"context":content[:120]+"...","ts":ts})
-                break
-    return recs[:20]
-
-@app.route("/api/rate-experience", methods=["POST","OPTIONS"])
-def rate_experience():
-    """Save a website experience rating from the dashboard."""
-    user = get_current_user()
-    if not user: return jsonify({"error":"Not logged in"}), 401
-    data   = request.get_json()
-    rating = data.get("rating", 0)
-    review = data.get("review","")
-    con = get_db()
-    # Add ratings column if not exists
+def _init_blog_db():
     try:
-        con.execute("ALTER TABLE hair_profiles ADD COLUMN site_rating INTEGER DEFAULT 0")
-        con.execute("ALTER TABLE hair_profiles ADD COLUMN site_review TEXT DEFAULT ''")
-        con.commit()
-    except: pass
-    con.execute("""INSERT INTO hair_profiles (user_id, site_rating, site_review)
-        VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET
-        site_rating=excluded.site_rating, site_review=excluded.site_review""",
-        (user["id"], rating, review))
-    con.commit()
-    con.close()
-    return jsonify({"ok":True})
+        db = sqlite3.connect(BLOG_DB)
+        db.execute("""CREATE TABLE IF NOT EXISTS posts (
+            handle TEXT PRIMARY KEY,
+            title TEXT,
+            html TEXT,
+            meta TEXT,
+            chinese_title TEXT,
+            chinese_summary TEXT,
+            date TEXT
+        )""")
+        db.commit()
+        db.close()
+    except Exception as e:
+        print(f"Blog DB init error: {e}")
 
+_init_blog_db()
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# ── SUBSCRIPTION SYSTEM ───────────────────────────────────────────────────────
-# ═══════════════════════════════════════════════════════════════════════════════
-
-STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_PRICE_ID        = os.environ.get("STRIPE_PRICE_ID", "")        # $80/mo price
-STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-STRIPE_TRIAL_DAYS      = 7
-FREE_RESPONSE_LIMIT    = 3
-SUBSCRIPTION_PRICE_USD = 80
-APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor.onrender.com")
-SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
-SHOPIFY_ADMIN_TOKEN    = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
-SHOPIFY_PRODUCT_HANDLE = "hair-advisor-premium"
-
-def init_subscription_db():
-    con = get_db()
-    con.execute("""CREATE TABLE IF NOT EXISTS subscriptions (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id         INTEGER UNIQUE NOT NULL,
-        stripe_customer TEXT,
-        stripe_sub_id   TEXT,
-        shopify_sub_id  TEXT,
-        status          TEXT DEFAULT 'inactive',
-        plan            TEXT DEFAULT 'free',
-        trial_start     TEXT,
-        trial_end       TEXT,
-        current_period_end TEXT,
-        created_at      TEXT DEFAULT (datetime('now')),
-        updated_at      TEXT DEFAULT (datetime('now'))
-    )""")
-    con.execute("""CREATE TABLE IF NOT EXISTS session_usage (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id TEXT NOT NULL,
-        user_id    INTEGER,
-        count      INTEGER DEFAULT 0,
-        created_at TEXT DEFAULT (datetime('now'))
-    )""")
-    con.commit()
-    con.close()
-
-init_subscription_db()
-
-def get_subscription(user_id):
-    con = get_db()
-    row = con.execute("SELECT * FROM subscriptions WHERE user_id=?", (user_id,)).fetchone()
-    con.close()
-    if not row: return None
-    cols = ["id","user_id","stripe_customer","stripe_sub_id","shopify_sub_id",
-            "status","plan","trial_start","trial_end","current_period_end","created_at","updated_at"]
-    return dict(zip(cols, row))
-
-def is_subscribed(user_id):
-    """Returns True if user has active subscription or active trial."""
-    sub = get_subscription(user_id)
-    if not sub: return False
-    if sub["status"] in ("active", "trialing"): return True
-    # Check trial manually
-    if sub["trial_end"]:
-        try:
-            trial_end = datetime.datetime.fromisoformat(sub["trial_end"])
-            if datetime.datetime.utcnow() < trial_end:
-                return True
-        except: pass
-    return False
-
-def get_session_count(session_id, user_id=None):
-    con = get_db()
-    if user_id:
-        row = con.execute("SELECT count FROM session_usage WHERE user_id=?", (user_id,)).fetchone()
-    else:
-        row = con.execute("SELECT count FROM session_usage WHERE session_id=? AND user_id IS NULL", (session_id,)).fetchone()
-    con.close()
-    return row[0] if row else 0
-
-def increment_session_count(session_id, user_id=None):
-    con = get_db()
-    if user_id:
-        row = con.execute("SELECT id FROM session_usage WHERE user_id=?", (user_id,)).fetchone()
-        if row:
-            con.execute("UPDATE session_usage SET count=count+1 WHERE user_id=?", (user_id,))
-        else:
-            con.execute("INSERT INTO session_usage (session_id,user_id,count) VALUES (?,?,1)", (session_id, user_id))
-    else:
-        row = con.execute("SELECT id FROM session_usage WHERE session_id=? AND user_id IS NULL", (session_id,)).fetchone()
-        if row:
-            con.execute("UPDATE session_usage SET count=count+1 WHERE session_id=?", (session_id,))
-        else:
-            con.execute("INSERT INTO session_usage (session_id,user_id,count) VALUES (?,NULL,1)", (session_id,))
-    con.commit()
-    con.close()
-
-# ── SUBSCRIPTION STATUS ENDPOINT ──────────────────────────────────────────────
-@app.route("/api/subscription/status", methods=["GET","OPTIONS"])
-def subscription_status():
-    user = get_current_user()
-    session_id = request.headers.get("X-Session-Id","anon")
-    if user:
-        sub      = get_subscription(user["id"])
-        count    = get_session_count(session_id, user["id"])
-        subscribed = is_subscribed(user["id"])
-        return jsonify({
-            "subscribed": subscribed,
-            "plan": sub["plan"] if sub else "free",
-            "status": sub["status"] if sub else "inactive",
-            "trial_end": sub["trial_end"] if sub else None,
-            "current_period_end": sub["current_period_end"] if sub else None,
-            "response_count": count,
-            "free_limit": FREE_RESPONSE_LIMIT,
-            "show_paywall": not subscribed and count >= FREE_RESPONSE_LIMIT
-        })
-    else:
-        count = get_session_count(session_id)
-        return jsonify({
-            "subscribed": False,
-            "plan": "free",
-            "status": "inactive",
-            "response_count": count,
-            "free_limit": FREE_RESPONSE_LIMIT,
-            "show_paywall": count >= FREE_RESPONSE_LIMIT
-        })
-
-# ── STRIPE CHECKOUT ───────────────────────────────────────────────────────────
-@app.route("/api/subscription/checkout", methods=["POST","OPTIONS"])
-def create_checkout():
-    """Create a Stripe checkout session with 7-day free trial."""
-    user = get_current_user()
-    if not user:
-        return jsonify({"error":"Must be logged in to subscribe"}), 401
-    if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID:
-        return jsonify({"error":"Stripe not configured","setup_needed":True}), 503
-
+def blog_get_index(limit=90):
     try:
-        import urllib.request as urlreq, urllib.parse as urlparse
-        # Create/get Stripe customer
-        sub = get_subscription(user["id"])
-        stripe_customer = sub["stripe_customer"] if sub else None
+        db = sqlite3.connect(BLOG_DB, timeout=10, check_same_thread=False)
+        db.row_factory = sqlite3.Row
+        rows = db.execute("SELECT handle, title, meta, date FROM posts ORDER BY date DESC LIMIT ?", (limit,)).fetchall()
+        db.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"blog_get_index error: {e}")
+        return []
 
-        if not stripe_customer:
-            cust_data = urlparse.urlencode({
-                "email": user["email"],
-                "name": user["name"] or user["email"],
-                "metadata[user_id]": str(user["id"])
-            }).encode()
-            req = urlreq.Request("https://api.stripe.com/v1/customers",
-                data=cust_data,
-                headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}",
-                         "Content-Type": "application/x-www-form-urlencoded"},
-                method="POST")
-            with urlreq.urlopen(req) as r:
-                cust = json.loads(r.read())
-            stripe_customer = cust["id"]
-
-        # Create checkout session
-        params = urlparse.urlencode({
-            "customer": stripe_customer,
-            "mode": "subscription",
-            "line_items[0][price]": STRIPE_PRICE_ID,
-            "line_items[0][quantity]": "1",
-            "subscription_data[trial_period_days]": str(STRIPE_TRIAL_DAYS),
-            "success_url": f"{APP_BASE_URL}/subscription/success?session_id={{CHECKOUT_SESSION_ID}}",
-            "cancel_url": f"{APP_BASE_URL}/subscription/cancel",
-            "metadata[user_id]": str(user["id"])
-        }).encode()
-
-        req = urlreq.Request("https://api.stripe.com/v1/checkout/sessions",
-            data=params,
-            headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}",
-                     "Content-Type": "application/x-www-form-urlencoded"},
-            method="POST")
-        with urlreq.urlopen(req) as r:
-            session = json.loads(r.read())
-
-        # Save stripe customer id
-        con = get_db()
-        row = con.execute("SELECT id FROM subscriptions WHERE user_id=?", (user["id"],)).fetchone()
-        if row:
-            con.execute("UPDATE subscriptions SET stripe_customer=?,updated_at=? WHERE user_id=?",
-                        (stripe_customer, datetime.datetime.utcnow().isoformat(), user["id"]))
-        else:
-            con.execute("INSERT INTO subscriptions (user_id,stripe_customer,status,plan) VALUES (?,?,'inactive','free')",
-                        (user["id"], stripe_customer))
-        con.commit()
+def blog_get_post(handle):
+    try:
+        con = sqlite3.connect(BLOG_DB, timeout=10, check_same_thread=False)
+        con.row_factory = sqlite3.Row
+        row = con.execute("SELECT * FROM posts WHERE handle=?", (handle,)).fetchone()
         con.close()
-
-        return jsonify({"checkout_url": session["url"], "session_id": session["id"]})
+        return dict(row) if row else None
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"blog_get_post error: {e}")
+        return None
 
-# ── STRIPE WEBHOOK ────────────────────────────────────────────────────────────
-@app.route("/api/subscription/webhook", methods=["POST"])
-def stripe_webhook():
-    payload = request.get_data()
-    sig     = request.headers.get("Stripe-Signature","")
-    event_type = None
+def blog_save_post(post):
     try:
-        if STRIPE_WEBHOOK_SECRET:
-            # Verify signature manually
-            import hmac, hashlib
-            ts    = sig.split(",")[0].split("=")[1]
-            v1    = sig.split("v1=")[1].split(",")[0]
-            signed = f"{ts}.{payload.decode()}"
-            expected = hmac.new(STRIPE_WEBHOOK_SECRET.encode(), signed.encode(), hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(v1, expected):
-                return jsonify({"error":"Invalid signature"}), 400
-        event = json.loads(payload)
-        event_type = event["type"]
-        obj        = event["data"]["object"]
-        user_id    = None
-        if obj.get("metadata",{}).get("user_id"):
-            user_id = int(obj["metadata"]["user_id"])
-        elif obj.get("customer"):
-            con = get_db()
-            row = con.execute("SELECT user_id FROM subscriptions WHERE stripe_customer=?",
-                              (obj["customer"],)).fetchone()
-            con.close()
-            if row: user_id = row[0]
-
-        if not user_id:
-            return jsonify({"ok":True})
-
-        con = get_db()
-        if event_type in ("customer.subscription.created","customer.subscription.updated"):
-            status      = obj.get("status","inactive")
-            trial_end   = datetime.datetime.utcfromtimestamp(obj["trial_end"]).isoformat() if obj.get("trial_end") else None
-            period_end  = datetime.datetime.utcfromtimestamp(obj["current_period_end"]).isoformat() if obj.get("current_period_end") else None
-            sub_id      = obj.get("id","")
-            row = con.execute("SELECT id FROM subscriptions WHERE user_id=?", (user_id,)).fetchone()
-            if row:
-                con.execute("""UPDATE subscriptions SET stripe_sub_id=?,status=?,plan='premium',
-                    trial_end=?,current_period_end=?,updated_at=? WHERE user_id=?""",
-                    (sub_id, status, trial_end, period_end, datetime.datetime.utcnow().isoformat(), user_id))
-            else:
-                con.execute("""INSERT INTO subscriptions (user_id,stripe_sub_id,status,plan,trial_end,current_period_end)
-                    VALUES (?,?,'trialing','premium',?,?)""",
-                    (user_id, sub_id, trial_end, period_end))
-        elif event_type == "customer.subscription.deleted":
-            con.execute("UPDATE subscriptions SET status='canceled',plan='free',updated_at=? WHERE user_id=?",
-                        (datetime.datetime.utcnow().isoformat(), user_id))
-        elif event_type in ("invoice.payment_failed",):
-            con.execute("UPDATE subscriptions SET status='past_due',updated_at=? WHERE user_id=?",
-                        (datetime.datetime.utcnow().isoformat(), user_id))
-        con.commit()
-        con.close()
+        db = sqlite3.connect(BLOG_DB)
+        db.execute("""INSERT OR REPLACE INTO posts
+            (handle,title,html,meta,chinese_title,chinese_summary,date)
+            VALUES (?,?,?,?,?,?,?)""",
+            (post.get("handle"),post.get("title"),post.get("html"),
+             post.get("meta",""),post.get("chinese_title",""),
+             post.get("chinese_summary",""),post.get("date","")))
+        db.commit(); db.close()
     except Exception as e:
-        print(f"Webhook error: {e}")
-    return jsonify({"ok":True})
+        print(f"blog_save_post error: {e}")
 
-# ── SHOPIFY SUBSCRIPTION (manual activation for Shopify flow) ─────────────────
-# ── PREMIUM ACCESS CODES ─────────────────────────────────────────────────────
-# You generate these and send to customers after purchase
-# Add/remove codes here or use the /api/admin/generate-code endpoint
-PREMIUM_ACCESS_CODES = set(os.environ.get("PREMIUM_CODES", "").split(",")) - {""}
-
-def verify_access_code(code):
-    """Check if a code is valid and unused."""
-    code = code.strip().upper()
-    if not code:
-        return False, "Please enter an access code"
-    # Check static env codes
-    if code in PREMIUM_ACCESS_CODES:
-        return True, "Code verified"
-    # Check DB codes
-    row = db_execute("SELECT id,used FROM premium_codes WHERE code=?", (code,), fetchone=True)
-    if not row:
-        return False, "Invalid code. Please check your email or contact support."
-    if row[1]:
-        return False, "This code has already been used."
-    return True, "Code verified"
-
-def mark_code_used(code, user_id):
-    code = code.strip().upper()
-    db_execute("UPDATE premium_codes SET used=1, used_by=?, used_at=datetime('now') WHERE code=?",
-               (user_id, code))
-
-@app.route("/api/subscription/activate-shopify", methods=["POST","OPTIONS"])
-def activate_shopify():
-    """Activate premium — checks webhook pending activations first."""
-    user = get_current_user()
-    if not user: return jsonify({"error":"Not logged in"}), 401
-
-    email = user["email"].strip().lower()
-
-    # Check if webhook already recorded a purchase for this email
-    pending = db_execute("SELECT id FROM premium_codes WHERE code=?",
-                         ("PENDING_" + email,), fetchone=True)
-    if pending:
-        # Clear the pending record
-        db_execute("DELETE FROM premium_codes WHERE code=?", ("PENDING_" + email,))
-    else:
-        # No webhook record — deny
-        return jsonify({
-            "error": "No purchase found for " + email + ". Please buy at supportrd.com/products/hair-advisor-premium then try again.",
-            "verified": False
-        }), 403
-
-    period_end = (datetime.datetime.utcnow() + datetime.timedelta(days=30)).isoformat()
-    row = db_execute("SELECT id FROM subscriptions WHERE user_id=?", (user["id"],), fetchone=True)
-    if row:
-        db_execute("""UPDATE subscriptions SET status='active',plan='premium',
-            current_period_end=?,updated_at=datetime('now') WHERE user_id=?""",
-            (period_end, user["id"]))
-    else:
-        db_execute("""INSERT INTO subscriptions (user_id,status,plan,current_period_end)
-            VALUES (?,'active','premium',?)""", (user["id"], period_end))
-    return jsonify({"ok": True, "plan": "premium"})
-
-
-@app.route("/api/shopify-order-webhook", methods=["POST"])
-def shopify_order_webhook():
-    """Automatically activate premium when a Shopify order is paid."""
-    try:
-        data = request.get_json(force=True, silent=True) or {}
-
-        # Check order is paid
-        financial_status = data.get("financial_status","")
-        if financial_status not in ("paid", "partially_paid"):
-            return jsonify({"ok": True, "skipped": "not paid"})
-
-        # Check if this order contains the premium product
-        line_items = data.get("line_items", [])
-        is_premium = False
-        for item in line_items:
-            title = (item.get("title","") or "").lower()
-            sku   = (item.get("sku","") or "").lower()
-            if "hair advisor" in title or "premium" in title or "hair-advisor" in sku:
-                is_premium = True
-                break
-
-        if not is_premium:
-            return jsonify({"ok": True, "skipped": "not premium product"})
-
-        # Get customer email
-        email = ""
-        if data.get("email"):
-            email = data["email"].strip().lower()
-        elif data.get("customer",{}).get("email"):
-            email = data["customer"]["email"].strip().lower()
-
-        if not email:
-            return jsonify({"ok": True, "skipped": "no email"})
-
-        # Find user by email and activate premium
-        row = db_execute("SELECT id FROM users WHERE email=?", (email,), fetchone=True)
-        if not row:
-            # Store pending activation — user may not have signed up yet
-            db_execute("""INSERT OR REPLACE INTO premium_codes (code, used)
-                VALUES (?, 0)""", ("PENDING_" + email,))
-            return jsonify({"ok": True, "status": "pending — user not registered yet"})
-
-        user_id = row[0]
-        period_end = (datetime.datetime.utcnow() + datetime.timedelta(days=30)).isoformat()
-        existing = db_execute("SELECT id FROM subscriptions WHERE user_id=?", (user_id,), fetchone=True)
-        if existing:
-            db_execute("""UPDATE subscriptions SET status='active', plan='premium',
-                current_period_end=?, updated_at=datetime('now') WHERE user_id=?""",
-                (period_end, user_id))
-        else:
-            db_execute("""INSERT INTO subscriptions (user_id, status, plan, current_period_end)
-                VALUES (?, 'active', 'premium', ?)""", (user_id, period_end))
-
-        return jsonify({"ok": True, "status": "premium activated", "email": email})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-@app.route("/api/admin/generate-code", methods=["POST","OPTIONS"])
-def generate_code():
-    """Generate a premium access code — call this after a Shopify order."""
-    admin_key = request.headers.get("X-Admin-Key","")
-    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
-        return jsonify({"error":"Unauthorized"}), 401
-    code = "SRD-" + secrets.token_hex(4).upper()
-    db_execute("INSERT INTO premium_codes (code) VALUES (?)", (code,))
-    return jsonify({"ok": True, "code": code})
-
-@app.route("/api/admin/list-codes", methods=["GET","OPTIONS"])
-def list_codes():
-    """List all generated codes and their status."""
-    admin_key = request.headers.get("X-Admin-Key","")
-    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
-        return jsonify({"error":"Unauthorized"}), 401
-    rows = db_execute("SELECT code,used,used_at FROM premium_codes ORDER BY id DESC", fetchall=True)
-    codes = [{"code":r[0],"used":bool(r[1]),"used_at":r[2]} for r in (rows or [])]
-    return jsonify({"codes": codes})
-
-
-@app.route("/subscription/success")
-def subscription_success():
-    return """<!DOCTYPE html><html><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SupportRD — Welcome to Premium</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+# ── BLOG ROUTES ───────────────────────────────────────────────────────────────
+SRD_PAGE_LOADER = """<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:#f0ebe8;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;padding:24px;}
-.card{background:#fff;border-radius:24px;padding:56px 40px;max-width:460px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.08);}
-.icon{font-size:56px;margin-bottom:20px;}
-.title{font-family:'Cormorant Garamond',serif;font-size:36px;font-style:italic;color:#0d0906;margin-bottom:10px;}
-.sub{font-size:13px;color:rgba(0,0,0,0.40);letter-spacing:0.06em;line-height:1.7;margin-bottom:28px;}
-.trial-badge{background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;padding:10px 24px;border-radius:20px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;display:inline-block;margin-bottom:28px;}
-.btn{display:block;padding:14px;background:#c1a3a2;color:#fff;text-decoration:none;border-radius:30px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;transition:background 0.2s;}
-.btn:hover{background:#9d7f6a;}
-.btn-outline{background:transparent;color:#9d7f6a;border:1px solid rgba(193,163,162,0.40);}
-</style></head><body>
-<div class="card">
-  <div class="icon">🌿</div>
-  <div class="title">Welcome to Premium</div>
-  <div class="trial-badge">7-Day Free Trial Active</div>
-  <div class="sub">Your hair journey just leveled up. You now have unlimited access to Aria, your full hair health dashboard, and priority advisor support.</div>
-  <a href="/" class="btn">Talk to Aria Now</a>
-  <a href="/dashboard" class="btn btn-outline">View My Dashboard</a>
+  #srd-loader{position:fixed;inset:0;background:#f0ebe8;z-index:99999;display:flex;align-items:center;justify-content:center;}
+  #srd-loader-canvas{position:absolute;inset:0;width:100%;height:100%;}
+  .srd-logo-wrap{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:18px;opacity:0;animation:srdLogoReveal 1.2s cubic-bezier(0.22,1,0.36,1) 0.4s forwards;}
+  .srd-emblem{width:72px;height:72px;}
+  .srd-divider-line{width:48px;height:1px;background:linear-gradient(90deg,transparent,#c1a3a2,transparent);opacity:0;animation:srdFadeIn 0.8s ease 1.0s forwards;}
+  .srd-brand-script{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(13px,2vw,16px);letter-spacing:0.32em;text-transform:uppercase;color:#9d7f6a;opacity:0;animation:srdFadeUp 0.8s ease 1.1s forwards;}
+  .srd-dot-row{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:3;opacity:0;animation:srdFadeUp 0.6s ease 1.3s forwards;}
+  .srd-dot{width:4px;height:4px;border-radius:50%;background:rgba(193,163,162,0.25);transition:background 0.3s ease,transform 0.3s ease;}
+  .srd-dot.active{background:#c1a3a2;transform:scale(1.4);}
+  #srd-loader.srd-exit{animation:srdDissolve 0.9s cubic-bezier(0.4,0,0.2,1) forwards;}
+  @keyframes srdLogoReveal{0%{opacity:0;transform:scale(0.92)}100%{opacity:1;transform:scale(1)}}
+  @keyframes srdFadeIn{to{opacity:1}}
+  @keyframes srdFadeUp{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes srdDissolve{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
+</style>
+<div id="srd-loader">
+  <canvas id="srd-loader-canvas"></canvas>
+  <div class="srd-logo-wrap">
+    <svg class="srd-emblem" viewBox="0 0 72 72" fill="none">
+      <circle cx="36" cy="36" r="34" stroke="#c1a3a2" stroke-width="0.6" opacity="0.5"/>
+      <circle cx="36" cy="36" r="26" stroke="#c1a3a2" stroke-width="0.4" opacity="0.3"/>
+      <path d="M28 14 C26 22,32 28,30 36 C28 44,22 48,24 58" stroke="#c1a3a2" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.9"/>
+      <path d="M36 12 C35 20,39 26,37 36 C35 46,31 50,33 60" stroke="#9d7f6a" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+      <path d="M44 14 C46 22,40 28,42 36 C44 44,50 48,48 58" stroke="#c1a3a2" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.9"/>
+    </svg>
+    <div class="srd-divider-line"></div>
+    <div class="srd-brand-script">Professional Hair Care</div>
+  </div>
+  <div class="srd-dot-row">
+    <div class="srd-dot" id="srd-d0"></div><div class="srd-dot" id="srd-d1"></div>
+    <div class="srd-dot" id="srd-d2"></div><div class="srd-dot" id="srd-d3"></div>
+    <div class="srd-dot" id="srd-d4"></div>
+  </div>
 </div>
 <script>
-// Update token subscription status in localStorage
-var u = localStorage.getItem('srd_user');
-if(u){ try{ var p=JSON.parse(u); p.plan='premium'; localStorage.setItem('srd_user',JSON.stringify(p)); }catch(e){} }
-</script>
+(function(){
+  var cv=document.getElementById('srd-loader-canvas'),ctx=cv.getContext('2d');
+  function rsz(){cv.width=window.innerWidth;cv.height=window.innerHeight;}rsz();window.addEventListener('resize',rsz);
+  function S(){this.i();}
+  S.prototype.i=function(){this.x=Math.random()*cv.width;this.y=-60-Math.random()*200;this.len=100+Math.random()*200;this.wave=(Math.random()-.5)*40;this.spd=.18+Math.random()*.35;this.w=.3+Math.random()*.8;this.a=.04+Math.random()*.10;this.off=Math.random()*Math.PI*2;this.dr=(Math.random()-.5)*.3;var c=[[193,163,162],[157,127,106],[210,185,178]];this.rgb=c[Math.floor(Math.random()*c.length)];};
+  S.prototype.u=function(){this.y+=this.spd;this.x+=this.dr;if(this.y>cv.height+60)this.i();};
+  S.prototype.d=function(t){var n=20;ctx.beginPath();ctx.moveTo(this.x,this.y);for(var i=1;i<=n;i++){var p=i/n;ctx.lineTo(this.x+Math.sin(p*Math.PI*2+t*.008+this.off)*this.wave*p,this.y+p*this.len);}ctx.strokeStyle='rgba('+this.rgb[0]+','+this.rgb[1]+','+this.rgb[2]+','+this.a+')';ctx.lineWidth=this.w;ctx.lineCap='round';ctx.stroke();};
+  var ss=[];for(var i=0;i<55;i++){var s=new S();s.y=Math.random()*cv.height;ss.push(s);}
+  var t=0;function ani(){t++;ctx.clearRect(0,0,cv.width,cv.height);ss.forEach(function(s){s.u();s.d(t);});requestAnimationFrame(ani);}ani();
+  var ds=[0,1,2,3,4].map(function(i){return document.getElementById('srd-d'+i);});
+  var st=0;[600,1200,1900,2800,3800].forEach(function(ms){setTimeout(function(){ds.forEach(function(d){d.classList.remove('active');});if(ds[st])ds[st].classList.add('active');st++;},ms);});
+  var ex=false;
+  function doExit(){if(ex)return;ex=true;ds.forEach(function(d){d.classList.add('active');});setTimeout(function(){var el=document.getElementById('srd-loader');el.classList.add('srd-exit');setTimeout(function(){el.style.display='none';},900);},200);}
+  window.addEventListener('load',function(){setTimeout(doExit,1200);});setTimeout(doExit,4500);
+})();
+</script>"""
+
+@app.route("/api/blog-posts", methods=["GET"])
+def api_blog_posts():
+    return jsonify(blog_get_index())
+
+@app.route("/api/blog-post/<handle>", methods=["GET"])
+def api_blog_post(handle):
+    post = blog_get_post(handle)
+    if post: return jsonify(post)
+    return jsonify({"error": "not found"}), 404
+
+@app.route("/blog")
+def blog_index():
+    posts = blog_get_index()
+    cards = ""
+    for p in posts:
+        date = p.get("date","")[:10]
+        cards += f'<article class="post-card"><a href="/blog/{p["handle"]}"><h2>{p["title"]}</h2><p class="meta">{p.get("meta","")}</p><span class="date">{date}</span></a></article>'
+    if not cards:
+        cards = '<p class="empty">No posts yet — check back soon.</p>'
+    return f"""<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hair Care Journal — SupportRD</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+{SRD_PAGE_LOADER}
+<style>
+*{{box-sizing:border-box;margin:0;padding:0;}}body{{font-family:'Jost',sans-serif;font-weight:300;background:#f0ebe8;color:#0d0906;}}
+.header-brand{{text-align:center;padding:48px 24px 36px;background:#f0ebe8;}}
+.header-brand h1{{font-family:'Cormorant Garamond',serif;font-size:clamp(32px,5vw,48px);font-style:italic;font-weight:400;}}
+.header-brand p{{font-size:13px;color:rgba(0,0,0,0.4);margin-top:10px;letter-spacing:0.10em;text-transform:uppercase;}}
+.container{{max-width:900px;margin:0 auto;padding:40px 24px;}}
+.post-card{{background:#fff;border-radius:16px;margin-bottom:20px;transition:transform 0.2s,box-shadow 0.2s;box-shadow:0 2px 12px rgba(0,0,0,0.05);border:1px solid rgba(193,163,162,0.12);}}
+.post-card:hover{{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.10);}}
+.post-card a{{display:block;padding:28px 32px;text-decoration:none;color:inherit;}}
+.post-card h2{{font-family:'Cormorant Garamond',serif;font-size:24px;color:#0d0906;margin-bottom:8px;line-height:1.3;}}
+.post-card .meta{{font-size:13px;color:rgba(0,0,0,0.45);line-height:1.6;margin-bottom:12px;}}
+.post-card .date{{font-size:11px;color:#c1a3a2;letter-spacing:0.08em;}}
+.empty{{text-align:center;color:rgba(0,0,0,0.3);padding:60px;font-size:14px;}}
+footer{{text-align:center;padding:40px;font-size:12px;color:rgba(0,0,0,0.3);border-top:1px solid rgba(193,163,162,0.12);}}
+footer a{{color:#c1a3a2;text-decoration:none;}}
+</style></head><body>
+<div class="header-brand"><h1>Hair Care Journal</h1><p>Expert tips from SupportRD</p></div>
+<div class="container">{cards}</div>
+<footer><a href="https://supportrd.com">← Back to SupportRD</a> &nbsp;·&nbsp; <a href="/">Try Aria AI →</a></footer>
 </body></html>"""
 
-@app.route("/subscription/cancel")
-def subscription_cancel():
-    return """<!DOCTYPE html><html><head>
+@app.route("/blog/<handle>")
+def blog_post(handle):
+    post = blog_get_post(handle)
+    if not post:
+        return "<h2>Post not found</h2>", 404
+    date = post.get("date","")[:10]
+    return f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SupportRD — No worries</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+<title>{post['title']} — SupportRD</title>
+<meta name="description" content="{post.get('meta','')}">
+<link rel="canonical" href="https://ai-hair-advisor.onrender.com/blog/{handle}">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+{SRD_PAGE_LOADER}
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:#f0ebe8;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;padding:24px;}
-.card{background:#fff;border-radius:24px;padding:56px 40px;max-width:460px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.08);}
-.title{font-family:'Cormorant Garamond',serif;font-size:32px;font-style:italic;color:#0d0906;margin-bottom:12px;}
-.sub{font-size:13px;color:rgba(0,0,0,0.40);letter-spacing:0.06em;line-height:1.7;margin-bottom:28px;}
-.btn{display:block;padding:14px;background:#c1a3a2;color:#fff;text-decoration:none;border-radius:30px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;}
-.btn-outline{background:transparent;color:#9d7f6a;border:1px solid rgba(193,163,162,0.40);}
+*{{box-sizing:border-box;margin:0;padding:0;}}body{{font-family:'Jost',sans-serif;font-weight:300;background:#f0ebe8;}}
+.container{{max-width:720px;margin:0 auto;padding:48px 24px;}}
+.post-date{{font-size:11px;color:#c1a3a2;letter-spacing:0.10em;margin-bottom:16px;text-transform:uppercase;}}
+.post-body{{background:#fff;border-radius:20px;padding:48px;box-shadow:0 2px 20px rgba(0,0,0,0.06);line-height:1.8;font-size:15px;}}
+.post-body h1{{font-family:'Cormorant Garamond',serif;font-size:36px;font-style:italic;font-weight:400;margin-bottom:24px;line-height:1.2;}}
+.post-body h2{{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;margin:32px 0 12px;}}
+.post-body p{{margin-bottom:16px;color:rgba(0,0,0,0.75);}}
+.cta{{background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;text-align:center;padding:36px;border-radius:16px;margin-top:32px;}}
+.cta h3{{font-family:'Cormorant Garamond',serif;font-size:26px;font-style:italic;font-weight:400;margin-bottom:8px;}}
+.cta a{{display:inline-block;margin-top:16px;padding:12px 28px;background:#fff;color:#c1a3a2;border-radius:30px;text-decoration:none;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;}}
+footer{{text-align:center;padding:32px;font-size:12px;color:rgba(0,0,0,0.3);}}
+footer a{{color:#c1a3a2;text-decoration:none;}}
+@media(max-width:600px){{.post-body{{padding:28px 20px;}}}}
 </style></head><body>
-<div class="card">
-  <div class="title">No worries</div>
-  <div class="sub">You can still get free hair recommendations from Aria anytime. Upgrade whenever you're ready for the full experience.</div>
-  <a href="/" class="btn">Continue with Free</a>
-  <a href="/login" class="btn btn-outline">Sign In to Subscribe Later</a>
+<div class="container">
+  <div class="post-date">{date}</div>
+  <div class="post-body">{post['html']}</div>
+  <div class="cta"><h3>Get your personalized hair routine</h3><p>Tell Aria about your hair and get expert advice tailored to you.</p><a href="/">Chat with Aria Free →</a></div>
 </div>
+<footer><a href="https://supportrd.com">SupportRD</a> &nbsp;·&nbsp; <a href="/blog">← More Articles</a></footer>
 </body></html>"""
+
+
+# ── SITEMAP / ROBOTS ──────────────────────────────────────────────────────────
+@app.route("/sitemap.xml")
+def sitemap():
+    base_url = "https://ai-hair-advisor.onrender.com"
+    urls = [f"""  <url><loc>{base_url}/blog</loc><changefreq>daily</changefreq><priority>0.8</priority></url>"""]
+    try:
+        for p in blog_get_index():
+            date = p.get("date","")[:10]
+            urls.append(f"""  <url><loc>{base_url}/blog/{p["handle"]}</loc><lastmod>{date}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>""")
+    except: pass
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{chr(10).join(urls)}\n</urlset>"""
+    return Response(xml, mimetype="application/xml")
+
+@app.route("/robots.txt")
+def robots():
+    return Response("User-agent: *\nAllow: /blog\nDisallow: /api\nDisallow: /admin\n\nSitemap: https://ai-hair-advisor.onrender.com/sitemap.xml\n", mimetype="text/plain")
+
+@app.route("/apps/hair-advisor")
+def shopify_proxy():
+    return index()
+
+@app.route("/google65f6d985572e55c5.html")
+def google_verify():
+    return "google-site-verification: google65f6d985572e55c5.html"
+
+
+# ── CONTENT ENGINE ────────────────────────────────────────────────────────────
+ENGINE_LOG = []
+
+@app.route("/api/content-engine/run", methods=["POST","OPTIONS"])
+def content_engine_run():
+    admin_key = request.headers.get("X-Admin-Key","")
+    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
+        return jsonify({"error":"Unauthorized"}), 401
+    def run_in_background():
+        entry = {"date":datetime.datetime.utcnow().isoformat(),"topic":"generating...","shopify_url":None,"pinterest":False,"reddit":False,"error":None}
+        ENGINE_LOG.insert(0, entry)
+        if len(ENGINE_LOG) > 50: ENGINE_LOG.pop()
+        try:
+            from content_engine import run_engine
+            result = run_engine()
+            if isinstance(result, dict): entry.update({"topic":result.get("topic","completed"),"shopify_url":result.get("shopify_url"),"pinterest":result.get("pinterest",False),"reddit":result.get("reddit",False)})
+            else: entry["topic"] = "completed"
+        except Exception as e:
+            entry["error"] = str(e); entry["topic"] = "error"
+    threading.Thread(target=run_in_background, daemon=True).start()
+    return jsonify({"ok":True,"message":"Engine started in background"})
+
+@app.route("/api/content-engine/log", methods=["GET"])
+def content_engine_log():
+    admin_key = request.args.get("admin_key","")
+    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
+        return jsonify({"error":"Unauthorized"}), 401
+    return jsonify({"runs": ENGINE_LOG})
+
+
+# ── MOVEMENT FEED ─────────────────────────────────────────────────────────────
+import time as _time
+
+_CITIES = [("Miami, FL","🇺🇸"),("New York, NY","🇺🇸"),("Los Angeles, CA","🇺🇸"),("Houston, TX","🇺🇸"),("Atlanta, GA","🇺🇸"),("Santo Domingo","🇩🇴"),("Santiago, DR","🇩🇴"),("San Juan, PR","🇵🇷"),("Bogotá","🇨🇴"),("Madrid","🇪🇸"),("Toronto","🇨🇦"),("London","🇬🇧"),("Paris","🇫🇷")]
+_PRODUCTS = ["Formula Exclusiva","Laciador Crece","Gotero Rapido","Gotitas Brillantes"]
+_CONCERNS = ["damaged hair","dry hair","frizzy hair","oily scalp","hair thinning","lack of shine"]
+_ACTIONS  = ["just ordered {product}","found their solution for {concern}","recommended {product} to a client","reordered {product} for their salon","discovered {product} for {concern}"]
+
+def _make_movement_event(source="simulated", mins_ago=None):
+    city, flag = random.choice(_CITIES)
+    product = random.choice(_PRODUCTS)
+    concern = random.choice(_CONCERNS)
+    action = random.choice(_ACTIONS).format(product=product, concern=concern)
+    if mins_ago is None: mins_ago = random.randint(0, 55)
+    ts = datetime.datetime.utcnow() - datetime.timedelta(minutes=mins_ago)
+    return {"id":int(_time.time()*1000)+random.randint(0,999),"city":city,"flag":flag,"action":action,"product":product,"ts":ts.isoformat(),"source":source}
+
+_MOVEMENT_EVENTS = [_make_movement_event(mins_ago=random.randint(1,55)) for _ in range(15)]
+
+@app.route("/api/movement", methods=["GET","OPTIONS"])
+def movement():
+    live = []
+    try:
+        con = get_analytics_db()
+        rows = con.execute("SELECT ts,lang,product FROM events ORDER BY id DESC LIMIT 30").fetchall()
+        con.close()
+        lang_city = {"en-US":[("New York, NY","🇺🇸"),("Miami, FL","🇺🇸")],"es-ES":[("Madrid","🇪🇸")],"fr-FR":[("Paris","🇫🇷")],"pt-BR":[("Bogotá","🇨🇴")]}
+        for (ts, lang, product) in rows:
+            if not product or product == "Unknown": continue
+            city, flag = random.choice(lang_city.get(lang,[("Miami, FL","🇺🇸")]))
+            live.append({"id":hash(ts+product)%999999,"city":city,"flag":flag,"action":f"just ordered {product}","product":product,"ts":ts,"source":"real"})
+    except Exception as e:
+        print("Movement error:", e)
+    _MOVEMENT_EVENTS.insert(0, _make_movement_event(mins_ago=0))
+    if len(_MOVEMENT_EVENTS) > 50: _MOVEMENT_EVENTS.pop()
+    combined = (live + _MOVEMENT_EVENTS)[:15]
+    return jsonify({"events":combined,"total":len(combined)+random.randint(80,140)})
+
+@app.route("/api/add-movement", methods=["POST","OPTIONS"])
+def add_movement():
+    data = request.get_json()
+    action = data.get("action","")
+    if not action: return jsonify({"error":"action required"}), 400
+    event = {"id":int(_time.time()*1000),"city":data.get("city","United States"),"flag":data.get("flag","🇺🇸"),"action":action,"product":data.get("product",""),"ts":datetime.datetime.utcnow().isoformat(),"source":"transcript"}
+    _MOVEMENT_EVENTS.insert(0, event)
+    return jsonify({"ok":True,"event":event})
+
+
+# ── ADMIN CODES PAGE ──────────────────────────────────────────────────────────
+@app.route("/admin-codes")
+def admin_codes_page():
+    admin_key = request.args.get("key","")
+    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
+        return "<h2>Unauthorized</h2>", 401
+    return f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SupportRD — Premium Codes</title>
+<style>body{{font-family:'Helvetica Neue',sans-serif;max-width:700px;margin:40px auto;padding:20px;background:#faf9f8;color:#0d0906;}}h1{{font-size:22px;color:#c1a3a2;margin-bottom:4px;}}p{{font-size:13px;color:rgba(0,0,0,0.4);margin-bottom:30px;}}button{{padding:12px 28px;background:#c1a3a2;color:#fff;border:none;border-radius:24px;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;}}button:hover{{background:#9d7f6a;}}#result{{margin-top:20px;padding:16px;background:#fff;border:1px solid rgba(193,163,162,0.3);border-radius:12px;display:none;}}#code-display{{font-size:28px;font-weight:bold;color:#c1a3a2;letter-spacing:0.1em;margin:8px 0;}}table{{width:100%;border-collapse:collapse;margin-top:30px;}}th{{background:#c1a3a2;color:#fff;padding:10px 14px;font-size:11px;text-align:left;}}td{{padding:10px 14px;font-size:13px;border-bottom:1px solid rgba(0,0,0,0.05);}}
+</style></head><body>
+<h1>✦ Premium Codes</h1><p>Generate a code for each customer who purchases Hair Advisor Premium.</p>
+<button onclick="generateCode()">Generate New Code</button>
+<div id="result"><div id="code-display"></div><button onclick="copyCode()" style="margin-top:8px;padding:8px 20px;font-size:11px;">Copy</button></div>
+<div id="codes-table"></div>
+<script>
+var ADMIN_KEY='{admin_key}';var lastCode='';
+function generateCode(){{var xhr=new XMLHttpRequest();xhr.open('POST','/api/admin/generate-code',true);xhr.setRequestHeader('X-Admin-Key',ADMIN_KEY);xhr.setRequestHeader('Content-Type','application/json');xhr.onload=function(){{var d=JSON.parse(xhr.responseText);if(d.ok){{lastCode=d.code;document.getElementById('code-display').textContent=d.code;document.getElementById('result').style.display='block';loadCodes();}}}};xhr.send('{{}}');}}
+function copyCode(){{navigator.clipboard.writeText(lastCode);}}
+function loadCodes(){{var xhr=new XMLHttpRequest();xhr.open('GET','/api/admin/list-codes',true);xhr.setRequestHeader('X-Admin-Key',ADMIN_KEY);xhr.onload=function(){{var d=JSON.parse(xhr.responseText);var codes=d.codes||[];var html='<table><tr><th>Code</th><th>Status</th><th>Used At</th></tr>';codes.forEach(function(c){{html+='<tr><td>'+(c.used?'<s>'+c.code+'</s>':c.code)+'</td><td>'+(c.used?'Used':'Available')+'</td><td>'+(c.used_at||'—')+'</td></tr>';}});html+='</table>';document.getElementById('codes-table').innerHTML=html;}};xhr.send();}}
+loadCodes();
+</script></body></html>"""
+
+
+# ── DEBUG ENDPOINTS ───────────────────────────────────────────────────────────
+@app.route("/api/debug-stripe")
+def debug_stripe():
+    return jsonify({"stripe_key_set":bool(STRIPE_SECRET_KEY),"price_id_set":bool(STRIPE_PRICE_ID),"webhook_set":bool(STRIPE_WEBHOOK_SECRET),"app_base_url":APP_BASE_URL})
+
+@app.route("/api/test-register")
+def test_register():
+    try:
+        con = get_db()
+        con.execute("SELECT count(*) FROM users").fetchone()
+        con.close()
+        return jsonify({"ok":True,"db":"connected","auth_db_path":AUTH_DB})
+    except Exception as e:
+        return jsonify({"ok":False,"error":str(e)})
+
+
+# ── CONTENT ENGINE SCHEDULER ──────────────────────────────────────────────────
+def _start_content_scheduler():
+    import time as _t
+    def _pick_todays_times():
+        import random as _r
+        today = datetime.datetime.utcnow().date()
+        seed = int(today.strftime("%Y%m%d"))
+        rng = _r.Random(seed)
+        windows = [(7,11),(12,17),(18,23)]
+        times = set()
+        for lo, hi in windows:
+            h = rng.randint(lo, hi); m = rng.randint(0, 59)
+            times.add((h, m))
+        return times
+    _fired = set()
+    _todays_times = _pick_todays_times()
+    def _run_engine_bg():
+        try:
+            from content_engine import run_engine
+            run_engine()
+        except Exception as e:
+            print(f"Scheduled engine error: {e}")
+    def scheduler():
+        nonlocal _fired, _todays_times
+        _t.sleep(90)
+        while True:
+            now = datetime.datetime.utcnow()
+            today = now.date()
+            key = (today, now.hour, now.minute)
+            if (now.hour, now.minute) in _todays_times and key not in _fired:
+                _fired.add(key)
+                threading.Thread(target=_run_engine_bg, daemon=True).start()
+            _t.sleep(30)
+    threading.Thread(target=scheduler, daemon=True).start()
+
+_start_content_scheduler()
+
+
+# ── KEEP-ALIVE ────────────────────────────────────────────────────────────────
+def _keep_alive():
+    import time, urllib.request as _urlreq
+    _url = os.environ.get("APP_BASE_URL","https://ai-hair-advisor.onrender.com") + "/api/ping"
+    time.sleep(60)
+    while True:
+        time.sleep(600)
+        try: _urlreq.urlopen(_url, timeout=10)
+        except: pass
+
+threading.Thread(target=_keep_alive, daemon=True).start()
+
+
+# ── RUNNER ────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
