@@ -1907,6 +1907,12 @@ body::before{content:'';position:fixed;inset:0;
 .sphere-input:focus{border-color:rgba(240,160,144,0.4);}
 .sphere-send{width:28px;height:28px;border-radius:5px;background:var(--rose);border:none;color:#000;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .sphere-send:hover{background:#ff9080;}
+.sphere-mic{width:28px;height:28px;border-radius:5px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;}
+.sphere-mic:hover{border-color:rgba(240,160,144,0.4);color:var(--rose);}
+.sphere-mic.recording{background:rgba(240,80,80,0.2);border-color:rgba(255,80,80,0.6);color:#ff5555;animation:micPulse 0.8s ease-in-out infinite;}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,80,80,0.4)}50%{box-shadow:0 0 0 6px rgba(255,80,80,0)}}
+.sphere-orb.listening::after{background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.3) 0%,transparent 60%),radial-gradient(circle,rgba(157,127,106,1) 0%,rgba(120,90,70,0.8) 60%,rgba(80,55,40,0.5) 100%);animation:orbListen 0.6s ease-in-out infinite;}
+@keyframes orbListen{0%,100%{transform:scale(1);box-shadow:0 0 28px rgba(157,127,106,0.7)}50%{transform:scale(1.06);box-shadow:0 0 50px rgba(157,127,106,1),0 0 80px rgba(157,127,106,0.4)}}
 /* Products panel */
 .products-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 .panel-mini-head{height:36px;padding:0 13px;display:flex;align-items:center;border-bottom:1px solid var(--border);}
@@ -2121,17 +2127,18 @@ body::before{content:'';position:fixed;inset:0;
           <div class="sphere-head-name">Aria</div>
           <div class="sphere-head-status" id="sphere-status-lbl">Online · AI Advisor</div>
         </div>
-        <button class="sphere-head-btn" onclick="window.location.href='/'">Voice Mode →</button>
+        <button class="sphere-head-btn" onclick="window.location.href='/'">Full Screen →</button>
       </div>
       <div class="sphere-orb-wrap">
-        <div class="sphere-orb" id="sphere-orb" onclick="focusSphereInput()" title="Click to ask Aria"></div>
+        <div class="sphere-orb" id="sphere-orb" onclick="sphereOrbTap()" title="Tap to speak"></div>
       </div>
-      <div class="sphere-label" id="sphere-hint">Tap sphere or type below</div>
+      <div class="sphere-label" id="sphere-hint">Tap sphere to speak · or type below</div>
       <div class="sphere-divider"></div>
       <div class="sphere-msgs" id="sphere-msgs">
         <div class="smsg smsg-aria"><div class="smsg-bubble">Hi! I'm Aria 🌿 What's your hair doing today?</div></div>
       </div>
       <div class="sphere-input-row">
+        <button class="sphere-mic" id="sphere-mic" onclick="sphereOrbTap()" title="Hold to speak">🎤</button>
         <input type="text" class="sphere-input" id="sphere-input" placeholder="Ask Aria…" onkeydown="if(event.key==='Enter')sphereSend()">
         <button class="sphere-send" onclick="sphereSend()">↑</button>
       </div>
@@ -2312,11 +2319,12 @@ function activateStat(el){
   el.classList.add('active');
 }
 
-// ── ARIA SPHERE CHAT ──
+// ── ARIA SPHERE CHAT + VOICE ──
 let sphereBusy=false;
-const sphereLang = localStorage.getItem('aria_lang')||'en-US';
-
-function focusSphereInput(){document.getElementById('sphere-input').focus();}
+let sphereRecording=false;
+let sphereMediaRec=null;
+let sphereChunks=[];
+const sphereLang=localStorage.getItem('aria_lang')||'en-US';
 
 function addSphereMsg(role,text){
   const wrap=document.getElementById('sphere-msgs');
@@ -2328,31 +2336,83 @@ function addSphereMsg(role,text){
   return div;
 }
 
+function sphereSetState(state){
+  const orb=document.getElementById('sphere-orb');
+  const mic=document.getElementById('sphere-mic');
+  const hint=document.getElementById('sphere-hint');
+  const lbl=document.getElementById('sphere-status-lbl');
+  orb.classList.remove('listening','speaking');
+  mic.classList.remove('recording');
+  if(state==='idle'){hint.textContent='Tap sphere to speak · or type below';lbl.textContent='Online · AI Advisor';}
+  else if(state==='listening'){orb.classList.add('listening');mic.classList.add('recording');hint.textContent='Listening… tap again to stop';lbl.textContent='Listening…';}
+  else if(state==='thinking'){orb.classList.add('speaking');hint.textContent='Aria is thinking…';lbl.textContent='Thinking…';}
+  else if(state==='speaking'){orb.classList.add('speaking');hint.textContent='Aria is speaking…';lbl.textContent='Responding…';}
+}
+
+async function sphereOrbTap(){
+  if(sphereBusy) return;
+  if(sphereRecording){ sphereStopRecording(); return; }
+  // Try mic first
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    sphereChunks=[];
+    sphereMediaRec=new MediaRecorder(stream,{mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
+    sphereMediaRec.ondataavailable=e=>{if(e.data.size>0) sphereChunks.push(e.data);};
+    sphereMediaRec.onstop=async()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      if(!sphereChunks.length){sphereSetState('idle');sphereBusy=false;return;}
+      sphereSetState('thinking');
+      const blob=new Blob(sphereChunks,{type:'audio/webm'});
+      const fd=new FormData(); fd.append('audio',blob,'audio.webm');
+      try{
+        const tr=await fetch('/api/transcribe',{method:'POST',body:fd});
+        const td=await tr.json();
+        const txt=(td.text||'').trim();
+        if(!txt){addSphereMsg('aria','I couldn\'t catch that — try again?');sphereSetState('idle');sphereBusy=false;return;}
+        document.getElementById('sphere-input').value=txt;
+        await sphereAskAria(txt);
+      }catch(e){addSphereMsg('aria','⚠ Transcription error.');sphereSetState('idle');sphereBusy=false;}
+    };
+    sphereMediaRec.start();
+    sphereRecording=true;
+    sphereSetState('listening');
+    // Auto-stop after 12s
+    setTimeout(()=>{if(sphereRecording) sphereStopRecording();},12000);
+  }catch(e){
+    // No mic — fall back to focus text input
+    document.getElementById('sphere-input').focus();
+    showToast('Microphone not available — type your question');
+  }
+}
+
+function sphereStopRecording(){
+  if(!sphereRecording||!sphereMediaRec) return;
+  sphereRecording=false;
+  sphereBusy=true;
+  sphereMediaRec.stop();
+}
+
+async function sphereAskAria(msg){
+  sphereSetState('thinking');
+  addSphereMsg('user',msg);
+  const typing=addSphereMsg('aria','…');
+  try{
+    const r=await fetch('/api/recommend',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({message:msg,text:msg,lang:sphereLang,history:[]})});
+    const d=await r.json();
+    typing.remove();
+    const reply=d.recommendation||d.reply||d.error||'⚠ Try again.';
+    addSphereMsg('aria',reply);
+    sphereSetState('idle');
+  }catch(e){typing.remove();addSphereMsg('aria','⚠ Connection error.');sphereSetState('idle');}
+  sphereBusy=false;
+}
+
 async function sphereSend(){
   const input=document.getElementById('sphere-input');
   const msg=input.value.trim();
   if(!msg||sphereBusy) return;
   sphereBusy=true; input.value='';
-  const orb=document.getElementById('sphere-orb');
-  addSphereMsg('user',msg);
-  const typing=addSphereMsg('aria','…');
-  orb.classList.add('speaking');
-  document.getElementById('sphere-hint').textContent='Aria is thinking…';
-  document.getElementById('sphere-status-lbl').textContent='Thinking…';
-  try{
-    const r=await fetch('/api/recommend',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({message:msg,text:msg,lang:sphereLang,history:[]})});
-    const d=await r.json();
-    typing.remove();
-    addSphereMsg('aria',d.recommendation||d.reply||d.error||'⚠ Try again.');
-    document.getElementById('sphere-hint').textContent='Tap sphere or type below';
-    document.getElementById('sphere-status-lbl').textContent='Online · AI Advisor';
-  }catch(e){
-    typing.remove();addSphereMsg('aria','⚠ Connection error.');
-    document.getElementById('sphere-hint').textContent='Tap sphere or type below';
-    document.getElementById('sphere-status-lbl').textContent='Online · AI Advisor';
-  }
-  orb.classList.remove('speaking');
-  sphereBusy=false;
+  await sphereAskAria(msg);
   input.focus();
 }
 
