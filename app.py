@@ -2047,7 +2047,7 @@ _start_content_scheduler()
 
 
 # ── BLOG DATABASE (SQLite — persists across restarts) ─────────────────────────
-BLOG_DB = "/tmp/srd_blog.db"
+BLOG_DB = "/data/srd_blog.db"
 
 def _init_blog_db():
     db = sqlite3.connect(BLOG_DB)
@@ -2803,7 +2803,7 @@ footer a{{color:#c1a3a2;text-decoration:none;}}
 @app.route("/sitemap.xml")
 def sitemap():
     import glob
-    BLOG_DIR = "/tmp/srd_blog"
+    BLOG_DIR = "/data/srd_blog"
     base_url = "https://auto-engine.onrender.com"
     
     urls = []
