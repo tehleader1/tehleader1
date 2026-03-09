@@ -842,19 +842,38 @@ function getBestVoice(lang){
   return byLang.find(v=>/Google/.test(v.name))||byLang.find(v=>/Natural|Online/.test(v.name))||byLang.find(v=>/Microsoft/.test(v.name))||byLang[0]||voices.find(v=>v.lang.startsWith(lang.split("-")[0]))||voices[0];
 }
 
+// Unlock speech synthesis on first user gesture (required by browsers)
+let _speechUnlocked=false;
+function unlockSpeech(){
+  if(_speechUnlocked) return;
+  _speechUnlocked=true;
+  const u=new SpeechSynthesisUtterance('');
+  u.volume=0;
+  speechSynthesis.speak(u);
+}
+
 function speak(text,showTip){
+  unlockSpeech();
   speechSynthesis.cancel();
   setTimeout(()=>{
     const utter=new SpeechSynthesisUtterance(text);
-    utter.lang=langSelect.value; utter.voice=getBestVoice(langSelect.value);
-    utter.rate=0.88; utter.pitch=1.05;
+    utter.lang=langSelect.value;
+    const voice=getBestVoice(langSelect.value);
+    if(voice) utter.voice=voice;
+    utter.rate=0.88; utter.pitch=1.05; utter.volume=1;
     setState("speaking"); setColor(...SPEAK); stateLabel.textContent="Speaking";
-    speechSynthesis.speak(utter);
     utter.onend=()=>{
       playAmbient("outro"); setState("idle"); setColor(...IDLE); stateLabel.textContent="Tap to begin";
       if(showTip) setTimeout(()=>openTipPanel(lastRecommendedProduct),1200);
     };
-  },80);
+    utter.onerror=(e)=>{
+      console.warn("TTS error:",e.error);
+      setState("idle"); setColor(...IDLE); stateLabel.textContent="Tap to begin";
+    };
+    speechSynthesis.speak(utter);
+    // Chrome bug: speech can stall silently
+    setTimeout(()=>{ if(speechSynthesis.paused) speechSynthesis.resume(); },300);
+  },100);
 }
 
 // ── LOCAL FALLBACK RESPONSES ──
@@ -978,6 +997,7 @@ async function sendToWhisper(){
 }
 
 halo.addEventListener("click",()=>{
+  unlockSpeech();
   if(isManual) return;
   if(appState==="listening"){ stopListening(); return; }
   if(appState==="speaking"){ speechSynthesis.cancel(); setState("idle");setColor(...IDLE);stateLabel.textContent="Tap to begin"; return; }
@@ -2352,7 +2372,12 @@ function sphereSetState(state){
 async function sphereOrbTap(){
   if(sphereBusy) return;
   if(sphereRecording){ sphereStopRecording(); return; }
-  // Try mic first
+  // Unlock TTS on first gesture
+  if(!window._sphereSpeechUnlocked){
+    window._sphereSpeechUnlocked=true;
+    const u=new SpeechSynthesisUtterance(''); u.volume=0;
+    window.speechSynthesis.speak(u);
+  }
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
     sphereChunks=[];
@@ -2402,9 +2427,57 @@ async function sphereAskAria(msg){
     typing.remove();
     const reply=d.recommendation||d.reply||d.error||'⚠ Try again.';
     addSphereMsg('aria',reply);
-    sphereSetState('idle');
+    await sphereSpeak(reply);
   }catch(e){typing.remove();addSphereMsg('aria','⚠ Connection error.');sphereSetState('idle');}
   sphereBusy=false;
+}
+
+function sphereSpeak(text){
+  return new Promise(resolve=>{
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    if(!text||text.startsWith('⚠')){sphereSetState('idle');resolve();return;}
+    sphereSetState('speaking');
+    const utt=new SpeechSynthesisUtterance(text);
+    // Match language
+    const langMap={'en-US':'en-US','es-ES':'es-ES','fr-FR':'fr-FR','pt-BR':'pt-BR','zh-CN':'zh-CN','ar-SA':'ar-SA','hi-IN':'hi-IN','de-DE':'de-DE'};
+    utt.lang=langMap[sphereLang]||'en-US';
+    utt.rate=0.92;
+    utt.pitch=1.05;
+    // Pick a female voice if available
+    const voices=window.speechSynthesis.getVoices();
+    const femaleVoice=voices.find(v=>v.lang.startsWith(utt.lang.slice(0,2))&&/female|woman|samantha|karen|moira|tessa|fiona|victoria|allison|ava|susan|zira|google uk english female/i.test(v.name))
+      ||voices.find(v=>v.lang.startsWith(utt.lang.slice(0,2)));
+    if(femaleVoice) utt.voice=femaleVoice;
+    // Orb pulses while speaking
+    const orb=document.getElementById('sphere-orb');
+    let pulseInterval=setInterval(()=>{
+      orb.style.transform=`scale(${1+Math.random()*0.06})`;
+    },120);
+    utt.onend=()=>{
+      clearInterval(pulseInterval);
+      orb.style.transform='';
+      sphereSetState('idle');
+      resolve();
+    };
+    utt.onerror=()=>{
+      clearInterval(pulseInterval);
+      orb.style.transform='';
+      sphereSetState('idle');
+      resolve();
+    };
+    // Voices may not be loaded yet on first call
+    if(voices.length===0){
+      window.speechSynthesis.onvoiceschanged=()=>{
+        const v2=window.speechSynthesis.getVoices();
+        const fv=v2.find(v=>v.lang.startsWith(utt.lang.slice(0,2))&&/female|woman|samantha|karen|moira|tessa|fiona|victoria|allison|ava|susan|zira|google uk english female/i.test(v.name))||v2.find(v=>v.lang.startsWith(utt.lang.slice(0,2)));
+        if(fv) utt.voice=fv;
+        window.speechSynthesis.speak(utt);
+      };
+    } else {
+      window.speechSynthesis.speak(utt);
+    }
+  });
 }
 
 async function sphereSend(){
