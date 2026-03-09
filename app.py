@@ -3501,54 +3501,56 @@ def debug_shopify_blog():
     store = os.environ.get("SHOPIFY_STORE", "")
     token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
     result = {
-        "store":       store,
-        "token_set":   bool(token),
+        "store":        store,
+        "token_set":    bool(token),
         "token_prefix": token[:8] + "..." if token else "NOT SET",
-        "blog_id":     None,
-        "blog_handle": None,
-        "test_post":   None,
-        "error":       None
+        "blog_id":      None,
+        "blog_handle":  None,
+        "test_post":    None,
+        "error":        None
     }
 
-    if not token:
-        result["error"] = "SHOPIFY_ADMIN_TOKEN not set in Render env vars"
+    if not token or not store:
+        result["error"] = "SHOPIFY_STORE or SHOPIFY_ADMIN_TOKEN not set"
         return jsonify(result)
 
     try:
         import urllib.request as urlreq
-        # Get blogs
+
+        # Step 1: get blogs
         url = f"https://{store}/admin/api/2019-04/blogs.json"
         req = urlreq.Request(url, headers={"X-Shopify-Access-Token": token})
-        with urlreq.urlopen(req, timeout=10) as resp:
+        with urlreq.urlopen(req, timeout=8) as resp:
             data  = json.loads(resp.read().decode("utf-8"))
             blogs = data.get("blogs", [])
             if blogs:
                 result["blog_id"]     = blogs[0]["id"]
                 result["blog_handle"] = blogs[0]["handle"]
                 result["blog_title"]  = blogs[0]["title"]
+                result["all_blogs"]   = [{"id": b["id"], "handle": b["handle"], "title": b["title"]} for b in blogs]
             else:
-                result["blog_id"] = "No blogs found — engine will create one"
+                result["blog_id"] = "none found"
+                return jsonify(result)
 
-        # Try posting a test article
-        if result["blog_id"] and isinstance(result["blog_id"], int):
+        # Step 2: post test article only if ?post=1 is passed
+        if request.args.get("post") == "1" and isinstance(result["blog_id"], int):
             test_payload = json.dumps({
                 "article": {
                     "title":     "SupportRD Hair Care Tips — Test Post",
-                    "body_html": "<h1>Hair Care Tips</h1><p>This is a test post from SupportRD content engine. You can delete this.</p>",
-                    "summary_html": "Test post from SupportRD content engine.",
+                    "body_html": "<p>This is a test post from SupportRD content engine. You can delete this.</p>",
                     "published": True,
                     "tags":      "hair care, SupportRD, test"
                 }
             }).encode("utf-8")
             url2 = f"https://{store}/admin/api/2019-04/blogs/{result['blog_id']}/articles.json"
             req2 = urlreq.Request(url2, data=test_payload, headers={
-                "Content-Type": "application/json",
+                "Content-Type":           "application/json",
                 "X-Shopify-Access-Token": token
             }, method="POST")
-            with urlreq.urlopen(req2, timeout=15) as resp2:
+            with urlreq.urlopen(req2, timeout=10) as resp2:
                 data2 = json.loads(resp2.read().decode("utf-8"))
                 art   = data2.get("article", {})
-                result["test_post"] = f"https://supportrd.com/blogs/{result['blog_handle']}/{art.get('handle','')}"
+                result["test_post"]  = f"https://supportrd.com/blogs/{result['blog_handle']}/{art.get('handle','')}"
                 result["article_id"] = art.get("id")
 
     except Exception as e:
