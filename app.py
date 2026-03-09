@@ -1,5 +1,5 @@
 import os, json, sqlite3, datetime, hashlib, secrets, threading, random, re
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, redirect
 
 app = Flask(__name__)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -266,1402 +266,13 @@ If the language code indicates non-English, respond entirely in that language.""
 # ── MAIN APP ──────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
-    return r"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hair Expert Advisor</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
-<style>
-:root {
-  --brand-idle-r:   193;
-  --brand-idle-g:   163;
-  --brand-idle-b:   162;
-  --brand-listen-r: 157;
-  --brand-listen-g: 127;
-  --brand-listen-b: 106;
-  --brand-speak-r:  208;
-  --brand-speak-g:  208;
-  --brand-speak-b:  208;
-  --brand-bg:       #f0ebe8;
-  --brand-text:     #0d0906;
-  --brand-accent:   rgba(193,163,162,1);
-  --brand-accent-lo: rgba(193,163,162,0.08);
-  --brand-accent-mid: rgba(193,163,162,0.22);
-  --brand-font-head: 'Cormorant Garamond', serif;
-  --brand-font-body: 'Jost', sans-serif;
-}
+    """Redirect root to dashboard — Aria is only accessible via dashboard, widget, or PWA."""
+    token = request.cookies.get("srd_token") or request.headers.get("X-Auth-Token")
+    # If they have a session token cookie redirect to dashboard, else to login
+    if token:
+        return redirect("/dashboard")
+    return redirect("/login")
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: radial-gradient(ellipse at 50% 60%, #e8e0da 0%, var(--brand-bg) 100%);
-  color: var(--brand-text);
-  font-family: var(--brand-font-body);
-  font-weight: 300;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  overflow: hidden;
-  user-select: none;
-}
-
-#topBar {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  z-index: 100;
-  background: rgba(250,246,243,0.60);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(193,163,162,0.12);
-}
-
-.top-btn {
-  background: rgba(0,0,0,0.05);
-  color: rgba(0,0,0,0.55);
-  border: 1px solid rgba(0,0,0,0.12);
-  padding: 8px 18px;
-  border-radius: 30px;
-  font-size: 11px;
-  font-family: var(--brand-font-body);
-  font-weight: 300;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.4s ease;
-  outline: none;
-}
-.top-btn:hover {
-  background: var(--brand-accent-lo);
-  color: var(--brand-accent);
-  border-color: var(--brand-accent-mid);
-}
-
-#langSelect {
-  background: rgba(0,0,0,0.05);
-  color: rgba(0,0,0,0.55);
-  border: 1px solid rgba(0,0,0,0.12);
-  padding: 8px 14px;
-  border-radius: 30px;
-  font-size: 11px;
-  font-family: var(--brand-font-body);
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.4s ease;
-}
-#langSelect option { background: #f0ebe8; color: #0d0906; }
-
-.sphere-wrap {
-  width: 300px; height: 300px;
-  display: flex; align-items: center; justify-content: center;
-}
-
-#halo {
-  width: 220px; height: 220px;
-  border-radius: 50%;
-  cursor: pointer;
-  background: radial-gradient(circle at 40% 38%,
-    rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.55) 0%,
-    rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.18) 42%,
-    rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.07) 70%,
-    rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.01) 100%);
-  box-shadow:
-    inset 0 0 40px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.10),
-    0 0  70px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.45),
-    0 0 150px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.28),
-    0 0 280px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.15),
-    0 0 420px rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.07);
-  transition:
-    background 2.4s cubic-bezier(0.4,0,0.2,1),
-    box-shadow  2.4s cubic-bezier(0.4,0,0.2,1);
-  animation: idlePulse 3.2s ease-in-out infinite;
-}
-@keyframes idlePulse {
-  0%,100% { transform: scale(1.00); }
-  50%     { transform: scale(1.10); }
-}
-#halo.speaking {
-  animation: speakPulse 0.9s ease-in-out infinite;
-}
-@keyframes speakPulse {
-  0%,100% { transform: scale(1.05); }
-  50%     { transform: scale(1.20); }
-}
-#halo.listening { animation: none; }
-
-#stateLabel {
-  margin-top: 12px;
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(0,0,0,0.30);
-  height: 16px;
-}
-
-/* ── CONVERSATION HISTORY ── */
-#history {
-  width: 420px;
-  max-width: 92vw;
-  max-height: 220px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 18px;
-  padding: 0 4px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0,0,0,0.12) transparent;
-}
-#history:empty { display: none; }
-
-.msg {
-  padding: 10px 16px;
-  border-radius: 18px;
-  font-size: 14px;
-  line-height: 1.55;
-  max-width: 88%;
-  animation: fadeIn 0.4s ease;
-}
-@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
-
-.msg.user {
-  background: rgba(0,0,0,0.07);
-  color: rgba(0,0,0,0.60);
-  align-self: flex-end;
-  border-bottom-right-radius: 4px;
-  font-family: var(--brand-font-body);
-}
-.msg.ai {
-  background: rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.10);
-  color: rgba(0,0,0,0.80);
-  align-self: flex-start;
-  border-bottom-left-radius: 4px;
-  font-family: var(--brand-font-head);
-  font-style: italic;
-  font-size: 15px;
-}
-
-#clearBtn {
-  margin-top: 8px;
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(0,0,0,0.25);
-  cursor: pointer;
-  background: none;
-  border: none;
-  font-family: var(--brand-font-body);
-  transition: color 0.3s;
-  display: none;
-}
-#clearBtn:hover { color: rgba(0,0,0,0.55); }
-#clearBtn.visible { display: block; }
-
-#response {
-  margin-top: 14px;
-  width: 420px;
-  max-width: 92vw;
-  text-align: center;
-  font-family: var(--brand-font-head);
-  font-size: 18px;
-  font-weight: 300;
-  line-height: 1.7;
-  color: rgba(0,0,0,0.65);
-  min-height: 28px;
-  font-style: italic;
-}
-
-#manualBox {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin-top: 16px;
-  width: 380px;
-  max-width: 90vw;
-}
-#manualInput {
-  width: 100%;
-  padding: 13px 20px;
-  background: rgba(0,0,0,0.04);
-  border: 1px solid rgba(0,0,0,0.14);
-  border-radius: 30px;
-  color: #0d0906;
-  font-family: var(--brand-font-body);
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.3s;
-}
-#manualInput:focus { border-color: var(--brand-accent-mid); }
-#manualInput::placeholder { color: rgba(0,0,0,0.30); }
-
-#manualSubmit {
-  padding: 10px 32px;
-  background: var(--brand-accent-lo);
-  border: 1px solid var(--brand-accent-mid);
-  border-radius: 30px;
-  color: var(--brand-accent);
-  font-family: var(--brand-font-body);
-  font-size: 11px;
-  font-weight: 300;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-#manualSubmit:hover { background: rgba(193,163,162,0.20); }
-
-/* ══════════════════════════════════════════
-   TIP PANEL
-══════════════════════════════════════════ */
-#tipPanel {
-  position: fixed;
-  bottom: -320px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 400px;
-  max-width: 94vw;
-  background: #faf6f3;
-  border: 1px solid rgba(193,163,162,0.35);
-  border-radius: 24px 24px 0 0;
-  padding: 28px 28px 36px;
-  box-shadow: 0 -12px 60px rgba(0,0,0,0.10);
-  transition: bottom 0.55s cubic-bezier(0.32,0.72,0,1);
-  z-index: 200;
-  text-align: center;
-}
-#tipPanel.open {
-  bottom: 0;
-}
-
-#tipTitle {
-  font-family: var(--brand-font-head);
-  font-size: 20px;
-  font-style: italic;
-  color: rgba(0,0,0,0.70);
-  margin-bottom: 4px;
-}
-#tipSubtitle {
-  font-family: var(--brand-font-body);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(0,0,0,0.30);
-  margin-bottom: 20px;
-}
-
-/* Stars */
-#starRow {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 22px;
-}
-.star {
-  font-size: 26px;
-  cursor: pointer;
-  color: rgba(0,0,0,0.15);
-  transition: color 0.2s, transform 0.15s;
-  line-height: 1;
-}
-.star.active { color: #c1a3a2; }
-.star:hover  { transform: scale(1.2); }
-
-/* Tip amounts */
-#tipAmounts {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-.tip-amt {
-  padding: 9px 20px;
-  border-radius: 30px;
-  border: 1px solid rgba(193,163,162,0.40);
-  background: rgba(193,163,162,0.07);
-  color: rgba(0,0,0,0.55);
-  font-family: var(--brand-font-body);
-  font-size: 13px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: all 0.25s;
-}
-.tip-amt:hover, .tip-amt.selected {
-  background: rgba(193,163,162,0.22);
-  border-color: rgba(193,163,162,0.70);
-  color: #0d0906;
-}
-
-/* Custom tip input (hidden until "Custom" selected) */
-#customTipWrap {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-#customTipWrap.show { display: flex; }
-#customTipInput {
-  width: 110px;
-  padding: 9px 14px;
-  border-radius: 30px;
-  border: 1px solid rgba(193,163,162,0.40);
-  background: rgba(193,163,162,0.07);
-  color: #0d0906;
-  font-family: var(--brand-font-body);
-  font-size: 14px;
-  text-align: center;
-  outline: none;
-}
-#customTipInput:focus { border-color: rgba(193,163,162,0.70); }
-
-/* Submit + skip */
-#tipSubmit {
-  display: block;
-  width: 100%;
-  padding: 13px;
-  border-radius: 30px;
-  border: none;
-  background: rgba(193,163,162,0.90);
-  color: #fff;
-  font-family: var(--brand-font-body);
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.3s;
-  margin-bottom: 12px;
-}
-#tipSubmit:hover { background: rgba(157,127,106,0.90); }
-
-#tipSkip {
-  font-family: var(--brand-font-body);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(0,0,0,0.25);
-  cursor: pointer;
-  transition: color 0.3s;
-  background: none;
-  border: none;
-}
-#tipSkip:hover { color: rgba(0,0,0,0.50); }
-
-/* Thank-you state */
-#tipThanks {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 0;
-}
-#tipThanks .thanks-icon {
-  font-size: 36px;
-  margin-bottom: 4px;
-}
-#tipThanks .thanks-title {
-  font-family: var(--brand-font-head);
-  font-size: 22px;
-  font-style: italic;
-  color: rgba(0,0,0,0.70);
-}
-#tipThanks .thanks-sub {
-  font-family: var(--brand-font-body);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(0,0,0,0.30);
-}
-
-#footer {
-  position: fixed;
-  bottom: 22px;
-  display: flex;
-  gap: 36px;
-  z-index: 10;
-}
-#footer span {
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: rgba(0,0,0,0.30);
-  cursor: pointer;
-  transition: color 0.4s;
-}
-#footer span:hover { color: var(--brand-accent); }
-
-/* ── AUTH BAR ── */
-
-
-/* ── WELCOME BACK BANNER ── */
-#welcomeBanner {
-  display: none;
-  position: fixed;
-  top: 56px;
-  right: 16px;
-  background: #fff;
-  border: 1px solid rgba(193,163,162,0.25);
-  border-radius: 14px;
-  padding: 14px 18px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.10);
-  z-index: 999;
-  max-width: 260px;
-  animation: wbIn 0.4s cubic-bezier(0.22,1,0.36,1);
-}
-@keyframes wbIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
-#welcomeBanner .wb-name { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-style: italic; color: #0d0906; margin-bottom: 4px; }
-#welcomeBanner .wb-score { font-size: 11px; color: rgba(0,0,0,0.40); letter-spacing: 0.06em; margin-bottom: 10px; }
-#welcomeBanner .wb-score span { color: #c1a3a2; font-weight: 600; }
-#welcomeBanner .wb-btns { display: flex; gap: 8px; }
-#welcomeBanner .wb-btn { flex: 1; padding: 8px; border-radius: 10px; font-size: 10px; letter-spacing: 0.10em; text-transform: uppercase; text-align: center; text-decoration: none; font-family: 'Jost', sans-serif; }
-.wb-btn-rose { background: #c1a3a2; color: #fff; }
-.wb-btn-outline { border: 1px solid rgba(193,163,162,0.40); color: #9d7f6a; }
-
-/* ── PAYWALL BANNER ── */
-#paywallBanner {
-  display: none;
-  position: fixed;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 92%;
-  max-width: 480px;
-  background: #fff;
-  border: 1px solid rgba(193,163,162,0.30);
-  border-radius: 20px;
-  padding: 20px 22px;
-  box-shadow: 0 12px 48px rgba(0,0,0,0.14);
-  z-index: 2000;
-  animation: pwIn 0.45s cubic-bezier(0.22,1,0.36,1);
-}
-@keyframes pwIn { from{opacity:0;transform:translateX(-50%) translateY(16px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
-#paywallBanner .pw-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
-#paywallBanner .pw-title { font-family:'Cormorant Garamond',serif; font-size:20px; font-style:italic; color:#0d0906; }
-#paywallBanner .pw-close { background:none; border:none; font-size:18px; cursor:pointer; color:rgba(0,0,0,0.25); padding:0; line-height:1; }
-#paywallBanner .pw-desc { font-size:12px; color:rgba(0,0,0,0.45); line-height:1.6; margin-bottom:14px; letter-spacing:0.03em; }
-#paywallBanner .pw-trial { background:linear-gradient(135deg,#c1a3a2,#9d7f6a); color:#fff; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; padding:5px 14px; border-radius:20px; display:inline-block; margin-bottom:14px; }
-#paywallBanner .pw-btns { display:flex; gap:10px; }
-#paywallBanner .pw-btn-upgrade { flex:2; padding:12px; background:#c1a3a2; color:#fff; border:none; border-radius:24px; font-family:'Jost',sans-serif; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; transition:background 0.2s; }
-#paywallBanner .pw-btn-upgrade:hover { background:#9d7f6a; }
-#paywallBanner .pw-btn-continue { flex:1; padding:12px; background:transparent; color:rgba(0,0,0,0.35); border:1px solid rgba(0,0,0,0.12); border-radius:24px; font-family:'Jost',sans-serif; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; }
-#paywallBanner .pw-features { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:14px; }
-#paywallBanner .pw-feature { font-size:11px; color:rgba(0,0,0,0.50); display:flex; align-items:center; gap:5px; }
-#paywallBanner .pw-feature::before { content:'✦'; color:#c1a3a2; font-size:9px; }
-#paywallCounter { display:none; position:fixed; top:58px; left:50%; transform:translateX(-50%); background:rgba(193,163,162,0.90); backdrop-filter:blur(8px); color:#fff; font-family:'Jost',sans-serif; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; padding:5px 16px; border-radius:20px; z-index:999; }
-</style>
-</head>
-<body>
-
-<!-- ── PAGE LOADER ── -->
-<style>
-  #srd-loader{position:fixed;inset:0;background:#0d0906;z-index:99999;display:flex;align-items:center;justify-content:center;}
-  #srd-loader-canvas{position:absolute;inset:0;width:100%;height:100%;}
-  .srd-logo-wrap{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:18px;opacity:0;animation:srdLogoReveal 1.2s cubic-bezier(0.22,1,0.36,1) 0.4s forwards;}
-  .srd-emblem{width:72px;height:72px;}
-  .srd-divider-line{width:48px;height:1px;background:linear-gradient(90deg,transparent,#c1a3a2,transparent);opacity:0;animation:srdFadeIn 0.8s ease 1.0s forwards;}
-  .srd-brand-script{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(13px,2vw,16px);letter-spacing:0.32em;text-transform:uppercase;color:#c1a3a2;opacity:0;animation:srdFadeUp 0.8s ease 1.1s forwards;}
-  .srd-dot-row{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:3;opacity:0;animation:srdFadeUp 0.6s ease 1.3s forwards;}
-  .srd-dot{width:4px;height:4px;border-radius:50%;background:rgba(193,163,162,0.15);transition:background 0.3s ease,transform 0.3s ease;}
-  .srd-dot.active{background:#c1a3a2;transform:scale(1.4);}
-  #srd-loader.srd-exit{animation:srdDissolve 0.9s cubic-bezier(0.4,0,0.2,1) forwards;}
-  @keyframes srdLogoReveal{0%{opacity:0;transform:scale(0.92)}100%{opacity:1;transform:scale(1)}}
-  @keyframes srdFadeIn{to{opacity:1}}
-  @keyframes srdFadeUp{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}
-  @keyframes srdDissolve{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
-</style>
-<div id="srd-loader">
-  <canvas id="srd-loader-canvas"></canvas>
-  <div class="srd-logo-wrap">
-    <svg class="srd-emblem" viewBox="0 0 72 72" fill="none">
-      <circle cx="36" cy="36" r="34" stroke="#c1a3a2" stroke-width="0.6" opacity="0.5"/>
-      <circle cx="36" cy="36" r="26" stroke="#c1a3a2" stroke-width="0.4" opacity="0.3"/>
-      <path d="M28 14 C26 22,32 28,30 36 C28 44,22 48,24 58" stroke="#c1a3a2" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.9"/>
-      <path d="M36 12 C35 20,39 26,37 36 C35 46,31 50,33 60" stroke="#9d7f6a" stroke-width="1.4" stroke-linecap="round" fill="none"/>
-      <path d="M44 14 C46 22,40 28,42 36 C44 44,50 48,48 58" stroke="#c1a3a2" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.9"/>
-      <path d="M31 13 C29 21,34 27,33 35 C32 43,27 47,28 57" stroke="#d4b8b4" stroke-width="0.5" stroke-linecap="round" fill="none" opacity="0.5"/>
-      <path d="M41 13 C43 21,38 27,39 35 C40 43,45 47,44 57" stroke="#d4b8b4" stroke-width="0.5" stroke-linecap="round" fill="none" opacity="0.5"/>
-      <circle cx="36" cy="8" r="1.2" fill="#c1a3a2" opacity="0.6"/>
-      <circle cx="36" cy="64" r="1.2" fill="#c1a3a2" opacity="0.6"/>
-      <circle cx="8" cy="36" r="0.8" fill="#c1a3a2" opacity="0.4"/>
-      <circle cx="64" cy="36" r="0.8" fill="#c1a3a2" opacity="0.4"/>
-    </svg>
-    <div class="srd-divider-line"></div>
-    <div class="srd-brand-script">Professional Hair Care</div>
-  </div>
-  <div class="srd-dot-row">
-    <div class="srd-dot" id="srd-d0"></div>
-    <div class="srd-dot" id="srd-d1"></div>
-    <div class="srd-dot" id="srd-d2"></div>
-    <div class="srd-dot" id="srd-d3"></div>
-    <div class="srd-dot" id="srd-d4"></div>
-  </div>
-</div>
-<script>
-(function(){
-  var cv=document.getElementById('srd-loader-canvas'),ctx=cv.getContext('2d');
-  function rsz(){cv.width=window.innerWidth;cv.height=window.innerHeight;}rsz();
-  window.addEventListener('resize',rsz);
-  function S(){this.i();}
-  S.prototype.i=function(){this.x=Math.random()*cv.width;this.y=-60-Math.random()*200;this.len=100+Math.random()*200;this.wave=(Math.random()-.5)*40;this.spd=.18+Math.random()*.35;this.w=.3+Math.random()*.8;this.a=.08+Math.random()*.18;this.off=Math.random()*Math.PI*2;this.dr=(Math.random()-.5)*.3;var c=[[193,163,162],[220,190,182],[157,127,106],[240,210,200]];this.rgb=c[Math.floor(Math.random()*c.length)];};
-  S.prototype.u=function(){this.y+=this.spd;this.x+=this.dr;if(this.y>cv.height+60)this.i();};
-  S.prototype.d=function(t){var n=20;ctx.beginPath();ctx.moveTo(this.x,this.y);for(var i=1;i<=n;i++){var p=i/n;ctx.lineTo(this.x+Math.sin(p*Math.PI*2+t*.008+this.off)*this.wave*p,this.y+p*this.len);}ctx.strokeStyle='rgba('+this.rgb[0]+','+this.rgb[1]+','+this.rgb[2]+','+this.a+')';ctx.lineWidth=this.w;ctx.lineCap='round';ctx.stroke();};
-  var ss=[];for(var i=0;i<55;i++){var s=new S();s.y=Math.random()*cv.height;ss.push(s);}
-  var t=0;function ani(){t++;ctx.clearRect(0,0,cv.width,cv.height);ss.forEach(function(s){s.u();s.d(t);});requestAnimationFrame(ani);}ani();
-  var ds=[0,1,2,3,4].map(function(i){return document.getElementById('srd-d'+i);});
-  var st=0;[600,1200,1900,2800,3800].forEach(function(ms){setTimeout(function(){ds.forEach(function(d){d.classList.remove('active');});if(ds[st])ds[st].classList.add('active');st++;},ms);});
-  var ex=false;
-  function doExit(){if(ex)return;ex=true;ds.forEach(function(d){d.classList.add('active');});setTimeout(function(){var el=document.getElementById('srd-loader');el.classList.add('srd-exit');setTimeout(function(){el.style.display='none';},900);},200);}
-  window.addEventListener('load',function(){setTimeout(doExit,1200);});
-  setTimeout(doExit,4500);
-})();
-</script>
-<!-- ── END PAGE LOADER ── -->
-
-
-<!-- ── WELCOME BACK BANNER ── -->
-<div id="welcomeBanner">
-  <div class="wb-name" id="wb-name">Welcome back!</div>
-  <div class="wb-score">Hair Score: <span id="wb-score">—</span></div>
-  <div class="wb-btns">
-    <a href="/dashboard" class="wb-btn wb-btn-rose">My Profile</a>
-    <a href="https://wa.me/18292332670" target="_blank" class="wb-btn wb-btn-outline">Live Advisor</a>
-  </div>
-</div>
-
-<div id="topBar">
-  <button id="modeToggle" class="top-btn">Manual Mode</button>
-  <select id="langSelect">
-    <option value="en-US">English</option>
-    <option value="es-ES">Español</option>
-    <option value="fr-FR">Français</option>
-    <option value="pt-BR">Português</option>
-    <option value="de-DE">Deutsch</option>
-    <option value="ar-SA">عربي</option>
-    <option value="zh-CN">中文</option>
-    <option value="hi-IN">हिن्दी</option>
-  </select>
-  <a href="https://supportrd.com/pages/hair-dashboard" style="padding:7px 16px;border:1px solid rgba(193,163,162,0.5);border-radius:20px;font-family:'Jost',sans-serif;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#c1a3a2;text-decoration:none;">My Dashboard</a>
-</div>
-
-<div class="sphere-wrap"><div id="halo"></div></div>
-<div id="stateLabel">Tap to begin</div>
-
-<div id="history"></div>
-<button id="clearBtn">Clear conversation</button>
-
-<div id="manualBox">
-  <input id="manualInput" placeholder="Describe your hair concern or ask a follow-up…" />
-  <button id="manualSubmit">Send</button>
-</div>
-
-<div id="response">Tap the sphere and describe your hair concern.</div>
-
-<!-- ══ TIP PANEL ══ -->
-<div id="tipPanel">
-  <!-- Form view -->
-  <div id="tipForm">
-    <div id="tipTitle">Did this help?</div>
-    <div id="tipSubtitle">Rate your experience &amp; leave a tip</div>
-
-    <div id="starRow">
-      <span class="star" data-v="1">★</span>
-      <span class="star" data-v="2">★</span>
-      <span class="star" data-v="3">★</span>
-      <span class="star" data-v="4">★</span>
-      <span class="star" data-v="5">★</span>
-    </div>
-
-    <div id="tipAmounts">
-      <button class="tip-amt" data-amt="1">$1</button>
-      <button class="tip-amt" data-amt="2">$2</button>
-      <button class="tip-amt" data-amt="5">$5</button>
-      <button class="tip-amt" data-amt="custom">Custom</button>
-      <button class="tip-amt" data-amt="0">No tip</button>
-    </div>
-
-    <div id="customTipWrap">
-      <span style="color:rgba(0,0,0,0.40);font-size:16px;">$</span>
-      <input id="customTipInput" type="number" min="1" max="100" placeholder="0.00" />
-    </div>
-
-    <button id="tipSubmit">Submit</button>
-    <button id="tipSkip">Skip</button>
-  </div>
-
-  <!-- Thank-you view -->
-  <div id="tipThanks">
-    <div class="thanks-icon">🌿</div>
-    <div class="thanks-title">Thank you!</div>
-    <div class="thanks-sub">Your feedback means everything</div>
-  </div>
-</div>
-
-<div id="footer">
-  <span id="faqBtn">FAQ</span>
-  <span id="contactBtn">Contact Us</span>
-</div>
-
-<!-- ── PAYWALL COUNTER ── -->
-<div id="paywallCounter" id="pw-counter">Free responses: <span id="pw-count">3</span> remaining</div>
-
-<!-- ── PAYWALL BANNER ── -->
-<div id="paywallBanner">
-  <div class="pw-top">
-    <div>
-      <div class="pw-trial">7-Day Free Trial · $80/mo after</div>
-      <div class="pw-title">Unlock Full Hair Analysis</div>
-    </div>
-    <button class="pw-close" onclick="closePaywall()">✕</button>
-  </div>
-  <div class="pw-desc">You've used your 3 free responses. Upgrade to Premium for unlimited expert hair advice, your personal Hair Health Score, and full consultation history.</div>
-  <div class="pw-features">
-    <div class="pw-feature">Unlimited Aria conversations</div>
-    <div class="pw-feature">Hair Health Score dashboard</div>
-    <div class="pw-feature">Full consultation history</div>
-    <div class="pw-feature">Salon recommendations</div>
-    <div class="pw-feature">Medical resource guidance</div>
-    <div class="pw-feature">Priority live advisor access</div>
-  </div>
-  <div class="pw-btns">
-    <button class="pw-btn-upgrade" onclick="goUpgrade()">Start Free Trial</button>
-    <button class="pw-btn-continue" onclick="closePaywall()">Continue Free</button>
-  </div>
-</div>
-
-<script>
-const halo         = document.getElementById("halo");
-const responseBox  = document.getElementById("response");
-const stateLabel   = document.getElementById("stateLabel");
-const langSelect   = document.getElementById("langSelect");
-const modeToggle   = document.getElementById("modeToggle");
-const manualBox    = document.getElementById("manualBox");
-const manualInput  = document.getElementById("manualInput");
-const manualSubmit = document.getElementById("manualSubmit");
-const historyEl    = document.getElementById("history");
-const clearBtn     = document.getElementById("clearBtn");
-
-/* ── TIP PANEL ELEMENTS ── */
-const tipPanel       = document.getElementById("tipPanel");
-const tipForm        = document.getElementById("tipForm");
-const tipThanks      = document.getElementById("tipThanks");
-const tipSubmitBtn   = document.getElementById("tipSubmit");
-const tipSkipBtn     = document.getElementById("tipSkip");
-const customTipWrap  = document.getElementById("customTipWrap");
-const customTipInput = document.getElementById("customTipInput");
-
-let tipRating    = 0;
-let tipAmount    = null;
-let tipProduct   = "";  // last recommended product
-
-/* ── STAR RATING ── */
-document.querySelectorAll(".star").forEach(star => {
-  star.addEventListener("click", () => {
-    tipRating = parseInt(star.dataset.v);
-    document.querySelectorAll(".star").forEach(s => {
-      s.classList.toggle("active", parseInt(s.dataset.v) <= tipRating);
-    });
-  });
-  star.addEventListener("mouseover", () => {
-    const v = parseInt(star.dataset.v);
-    document.querySelectorAll(".star").forEach(s => {
-      s.classList.toggle("active", parseInt(s.dataset.v) <= v);
-    });
-  });
-  star.addEventListener("mouseout", () => {
-    document.querySelectorAll(".star").forEach(s => {
-      s.classList.toggle("active", parseInt(s.dataset.v) <= tipRating);
-    });
-  });
-});
-
-/* ── TIP AMOUNT BUTTONS ── */
-document.querySelectorAll(".tip-amt").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tip-amt").forEach(b => b.classList.remove("selected"));
-    btn.classList.add("selected");
-    tipAmount = btn.dataset.amt;
-    customTipWrap.classList.toggle("show", tipAmount === "custom");
-    if (tipAmount !== "custom") customTipInput.value = "";
-  });
-});
-
-/* ── OPEN / CLOSE TIP PANEL ── */
-function openTipPanel(product) {
-  tipProduct = product || "";
-  tipRating  = 0;
-  tipAmount  = null;
-  document.querySelectorAll(".star").forEach(s => s.classList.remove("active"));
-  document.querySelectorAll(".tip-amt").forEach(b => b.classList.remove("selected"));
-  customTipWrap.classList.remove("show");
-  customTipInput.value = "";
-  tipForm.style.display   = "block";
-  tipThanks.style.display = "none";
-  tipPanel.classList.add("open");
-}
-
-function closeTipPanel() {
-  tipPanel.classList.remove("open");
-}
-
-/* ── SUBMIT TIP ── */
-tipSubmitBtn.addEventListener("click", async () => {
-  let finalAmt = tipAmount;
-  if (tipAmount === "custom") {
-    const v = parseFloat(customTipInput.value);
-    finalAmt = isNaN(v) || v <= 0 ? "0" : v.toFixed(2);
-  }
-  if (!finalAmt) finalAmt = "0";
-
-  // Log to backend
-  try {
-    await fetch("https://ai-hair-advisor.onrender.com/api/tip", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        lang:    langSelect.value,
-        rating:  tipRating,
-        amount:  finalAmt,
-        product: tipProduct
-      })
-    });
-  } catch(e) {}
-
-  // If real money tip (amount > 0), open Shopify checkout in new tab
-  if (finalAmt !== "0" && finalAmt !== "skip") {
-    const qty = Math.max(1, Math.round(parseFloat(finalAmt) || 1));
-    const shopifyUrl = "https://supportrd.com/cart/add?id=42109000908880&quantity=" + qty + "&return_to=/checkout";
-    window.open(shopifyUrl, "_blank");
-  }
-
-  // Show thank you
-  tipForm.style.display   = "none";
-  tipThanks.style.display = "flex";
-  setTimeout(closeTipPanel, 3000);
-});
-
-tipSkipBtn.addEventListener("click", () => {
-  // Log skip (rating only, no tip)
-  try {
-    fetch("https://ai-hair-advisor.onrender.com/api/tip", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        lang:    langSelect.value,
-        rating:  tipRating,
-        amount:  "skip",
-        product: tipProduct
-      })
-    });
-  } catch(e) {}
-  closeTipPanel();
-});
-
-/* ── STATE ── */
-let appState      = "idle";
-let recognition   = null;
-let silenceTimer  = null;
-let noSpeechTimer = null;
-let finalText     = "";
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-let isManual = false;
-let conversationHistory = [];
-let lastRecommendedProduct = "";
-
-function addToHistory(role, text) {
-  conversationHistory.push({ role, content: text });
-  if (role === "assistant") {
-    // Try to detect which product was mentioned
-    const t = text.toLowerCase();
-    if (t.includes("formula exclusiva")) lastRecommendedProduct = "Formula Exclusiva";
-    else if (t.includes("laciador")||t.includes("crece")) lastRecommendedProduct = "Laciador Crece";
-    else if (t.includes("gotero")||t.includes("rapido")) lastRecommendedProduct = "Gotero Rapido";
-    else if (t.includes("gotitas")||t.includes("brillantes")) lastRecommendedProduct = "Gotitas Brillantes";
-  }
-
-  const bubble = document.createElement("div");
-  bubble.className = "msg " + (role === "user" ? "user" : "ai");
-  bubble.textContent = text;
-  historyEl.appendChild(bubble);
-  historyEl.scrollTop = historyEl.scrollHeight;
-
-  clearBtn.classList.add("visible");
-  responseBox.textContent = "";
-}
-
-clearBtn.addEventListener("click", () => {
-  conversationHistory = [];
-  historyEl.innerHTML = "";
-  clearBtn.classList.remove("visible");
-  responseBox.textContent = "Tap the sphere and describe your hair concern.";
-  lastRecommendedProduct = "";
-});
-
-/* ── AUDIO ── */
-let audioCtx = null;
-let analyser = null;
-let micData  = null;
-function getCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
-}
-
-function playAmbient(type) {
-  try {
-    const ctx = getCtx(), master = ctx.createGain(), now = ctx.currentTime;
-    master.connect(ctx.destination);
-    if (type === "intro") {
-      [[220,0],[330,0.20],[440,0.40],[660,0.65]].forEach(([f,d]) => {
-        const o=ctx.createOscillator(),g=ctx.createGain();
-        o.connect(g);g.connect(master);o.type="sine";
-        o.frequency.setValueAtTime(f,now+d);
-        g.gain.setValueAtTime(0,now+d);
-        g.gain.linearRampToValueAtTime(0.06,now+d+0.5);
-        g.gain.exponentialRampToValueAtTime(0.001,now+d+3.5);
-        o.start(now+d);o.stop(now+d+4.0);
-      });
-      const s=ctx.createOscillator(),sg=ctx.createGain();
-      s.connect(sg);sg.connect(master);s.type="sine";
-      s.frequency.setValueAtTime(1320,now+0.8);
-      s.frequency.exponentialRampToValueAtTime(880,now+2.5);
-      sg.gain.setValueAtTime(0,now+0.8);
-      sg.gain.linearRampToValueAtTime(0.022,now+1.1);
-      sg.gain.exponentialRampToValueAtTime(0.001,now+3.8);
-      s.start(now+0.8);s.stop(now+4.0);
-      master.gain.setValueAtTime(1,now);
-    } else {
-      [[660,0],[440,0.25],[330,0.50],[220,0.75]].forEach(([f,d]) => {
-        const o=ctx.createOscillator(),g=ctx.createGain();
-        o.connect(g);g.connect(master);o.type="sine";
-        o.frequency.setValueAtTime(f,now+d);
-        o.frequency.exponentialRampToValueAtTime(f*0.90,now+d+2.5);
-        g.gain.setValueAtTime(0,now+d);
-        g.gain.linearRampToValueAtTime(0.050,now+d+0.35);
-        g.gain.exponentialRampToValueAtTime(0.001,now+d+3.2);
-        o.start(now+d);o.stop(now+d+3.5);
-      });
-      master.gain.setValueAtTime(1,now);
-    }
-  } catch(e) {}
-}
-
-function initMic() {
-  if (analyser) return Promise.resolve();
-  const ctx = getCtx();
-  return navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => {
-      const src = ctx.createMediaStreamSource(stream);
-      analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.6;
-      src.connect(analyser);
-      micData = new Uint8Array(analyser.frequencyBinCount);
-    })
-    .catch(e => console.warn("Mic blocked (iframe):", e));
-}
-
-/* ── COLOR ── */
-function setColor(r, g, b) {
-  halo.style.background = `radial-gradient(circle at 40% 38%,
-    rgba(${r},${g},${b},0.52) 0%, rgba(${r},${g},${b},0.18) 42%,
-    rgba(${r},${g},${b},0.07) 70%, rgba(${r},${g},${b},0.01) 100%)`;
-  halo.style.boxShadow = `
-    inset 0 0 40px rgba(${r},${g},${b},0.12),
-    0 0  70px rgba(${r},${g},${b},0.50),
-    0 0 155px rgba(${r},${g},${b},0.30),
-    0 0 290px rgba(${r},${g},${b},0.16),
-    0 0 440px rgba(${r},${g},${b},0.08)`;
-}
-const IDLE=[193,163,162], LISTEN=[157,127,106], SPEAK=[208,208,208];
-setColor(...IDLE);
-
-function setState(s) {
-  appState = s;
-  halo.classList.remove("listening","speaking");
-  if (s === "listening") halo.classList.add("listening");
-  if (s === "speaking")  { halo.classList.add("speaking"); halo.style.transform=""; }
-  if (s === "idle")      halo.style.transform = "";
-}
-
-/* ── MIC REACTIVE LOOP ── */
-let voiceActivityLevel = 0;
-let listenPhase = 0;
-function micReactiveLoop() {
-  if (appState !== "listening") return;
-  let scale;
-  if (analyser && micData) {
-    analyser.getByteFrequencyData(micData);
-    let sum = 0;
-    for (let i = 0; i < micData.length; i++) sum += micData[i];
-    scale = 1.05 + (sum / (micData.length * 255)) * 0.65;
-  } else {
-    voiceActivityLevel *= 0.92;
-    listenPhase += 0.04;
-    scale = 1.05 + 0.03 * Math.sin(listenPhase) + voiceActivityLevel * 0.45;
-  }
-  halo.style.transform = `scale(${Math.max(1.0, scale).toFixed(3)})`;
-  requestAnimationFrame(micReactiveLoop);
-}
-
-/* ── VOICE SELECTION ── */
-function getBestVoice(lang) {
-  const voices = speechSynthesis.getVoices();
-  if (!voices.length) return null;
-  if (lang === "en-US" || lang === "en-GB") {
-    for (const name of ["Google US English","Google UK English Female","Microsoft Aria Online (Natural) - English (United States)","Microsoft Jenny Online (Natural) - English (United States)","Samantha","Karen","Moira","Fiona"]) {
-      const v = voices.find(v => v.name === name);
-      if (v) return v;
-    }
-  }
-  const byLang = voices.filter(v => v.lang === lang);
-  return byLang.find(v=>/Google/.test(v.name)) || byLang.find(v=>/Natural|Online/.test(v.name)) ||
-         byLang.find(v=>/Microsoft/.test(v.name)) || byLang.find(v=>!v.localService) || byLang[0] ||
-         voices.find(v=>v.lang.startsWith(lang.split("-")[0])) || voices[0];
-}
-
-/* ── SPEAK ── */
-function speak(text, showTip) {
-  speechSynthesis.cancel();
-  setTimeout(() => {
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang  = langSelect.value;
-    utter.voice = getBestVoice(langSelect.value);
-    utter.rate  = 0.88; utter.pitch = 1.05;
-    setState("speaking"); setColor(...SPEAK);
-    stateLabel.textContent = "Speaking";
-    speechSynthesis.speak(utter);
-    utter.onend = () => {
-      playAmbient("outro");
-      setState("idle"); setColor(...IDLE);
-      stateLabel.textContent = "Tap to begin";
-      if (showTip) {
-        setTimeout(() => openTipPanel(lastRecommendedProduct), 1200);
-      }
-    };
-  }, 80);
-}
-
-/* ── LOCAL RESPONSES ── */
-const LOCAL_R = {
-  "en-US": {
-    damaged: "Formula Exclusiva is exactly what your hair needs. This professional all-in-one treatment rebuilds strength, restores moisture, and revives scalp health — safe for the whole family including children. At $55, it's your most complete solution.",
-    color:   "Gotitas Brillantes is perfect for you. It gives your hair incredible softness, shine, and beauty — just apply after styling and let it work. Price: $30.",
-    colorAf: "Gotitas Brillantes adds the perfect warmth, evenness, and shine to your hair. At $30, it's your best finishing touch.",
-    oily:    "Gotero Rapido works directly on your scalp to eliminate obstructions and parasites while stimulating growth. Use it every night. Price: $55.",
-    oilyHi: "Gotero Rapido is your solution — it targets dead scalp cells, removes obstructions, and regenerates hair. At $55, it's your nightly treatment.",
-    dry:     "Laciador Crece restructures your hair giving it softness, elasticity, and natural shine all day. It even stimulates growth. Price: $40.",
-    dryAs:  "Formula Exclusiva penetrates deeply to restore elasticity and hydration — perfect for the whole family. Price: $55.",
-    tangly:  "Laciador Crece is your answer — it restructures and gives your hair amazing softness and manageability. Price: $40.",
-    tanglyH:"Laciador Crece smooths, restructures, and leaves your hair with beautiful shine and elasticity. Price: $40.",
-    flat:    "Gotitas Brillantes gives your style the perfect fall, shine, and body it needs. Price: $30.",
-    loss:    "Gotero Rapido stimulates every dead cell on your scalp, eliminates parasites, removes obstructions, and regenerates the hair you've lost. Use every night. Price: $55.",
-    default: "Formula Exclusiva is your best all-around choice — moisture, strength, and scalp health in one, safe for the whole family. Price: $55."
-  },
-  "es-ES": {
-    damaged:"Formula Exclusiva es exactamente lo que tu cabello necesita. A $55.",
-    color:  "Gotika restaura la vitalidad y protege tu pigmento. Precio: $30.",
-    colorAf:"Gotero restaura el brillo natural. A $55.",
-    oily:   "Gotero regula la producción de sebo. Precio: $55.",
-    oilyHi:"Formula Exclusiva equilibra el aceite. A $55.",
-    dry:    "Laciador restaura suavidad y rebote. Precio: $40.",
-    dryAs: "Formula Exclusiva restaura elasticidad. Precio: $55.",
-    tangly: "Formula Exclusiva resuelve los enredos. Precio: $55.",
-    tanglyH:"Laciador suaviza y desenreda. Precio: $40.",
-    flat:   "Laciador da volumen. Precio: $40.",
-    default:"Formula Exclusiva es tu mejor opción. Precio: $55."
-  },
-  "fr-FR": {
-    damaged:"Formula Exclusiva est exactement ce dont vos cheveux ont besoin. À 65$.",
-    color:  "Gotika restaure l'éclat et protège votre pigment. Prix: $30.",
-    colorAf:"Gotero restaure l'éclat naturel. À 42$.",
-    oily:   "Gotero régule la production de sébum. Prix: $55.",
-    oilyHi:"Formula Exclusiva équilibre l'huile. À 65$.",
-    dry:    "Laciador transforme les cheveux secs. Prix: $40.",
-    dryAs: "Formula Exclusiva est idéale pour votre type. Prix: $55.",
-    tangly: "Formula Exclusiva s'attaque aux nœuds. Prix: $55.",
-    tanglyH:"Laciador lisse et démêle. Prix: $40.",
-    flat:   "Laciador donne du volume. Prix: $40.",
-    default:"Formula Exclusiva est votre meilleur choix. Prix: $55."
-  },
-  "pt-BR": {
-    damaged:"Formula Exclusiva é o que seu cabelo precisa. Por $55.",
-    color:  "Gotika restaura a vibração e protege seu pigmento. Preço: $30.",
-    colorAf:"Gotero restaura o brilho natural. Por $55.",
-    oily:   "Gotero regula a produção de sebo. Preço: $55.",
-    oilyHi:"Formula Exclusiva equilibra o óleo. Por $55.",
-    dry:    "Laciador transforma o cabelo seco. Preço: $40.",
-    dryAs: "Formula Exclusiva é ideal para seu tipo. Preço: $55.",
-    tangly: "Formula Exclusiva resolve os nós. Preço: $55.",
-    tanglyH:"Laciador alisa e desembaraça. Preço: $40.",
-    flat:   "Laciador dá volume. Preço: $40.",
-    default:"Formula Exclusiva é sua melhor escolha. Preço: $55."
-  },
-  "de-DE": {
-    damaged:"Formula Exclusiva ist genau das, was Ihr Haar braucht. Für $55.",
-    color:  "Gotika stellt Lebendigkeit wieder her. Preis: $30.",
-    colorAf:"Gotero stellt natürlichen Glanz wieder her. Für $55.",
-    oily:   "Gotero reguliert Talgproduktion. Preis: $55.",
-    oilyHi:"Formula Exclusiva bringt das Öl ins Gleichgewicht. Für $55.",
-    dry:    "Laciador transformiert trockenes Haar. Preis: $40.",
-    dryAs: "Formula Exclusiva ist ideal für Ihren Haartyp. Preis: $55.",
-    tangly: "Formula Exclusiva bekämpft Verfilzungen. Preis: $55.",
-    tanglyH:"Laciador glättet und entwirrt. Preis: $40.",
-    flat:   "Laciador gibt Volumen. Preis: $40.",
-    default:"Formula Exclusiva ist Ihre beste Lösung. Preis: $55."
-  },
-  "ar-SA": {
-    damaged:"فورمولا إكسكلوسيفا هو ما يحتاجه شعرك. بسعر $65.",
-    color:  "غوتيكا تستعيد النضارة وتحمي الصبغة. السعر: $54.",
-    colorAf:"غوتيرو يستعيد البريق الطبيعي. بسعر $42.",
-    oily:   "غوتيرو ينظم إنتاج الزيت. السعر: $42.",
-    oilyHi:"فورمولا يوازن زيت فروة الرأس. بسعر $65.",
-    dry:    "لاسيادور يحول الشعر الجاف. السعر: $48.",
-    dryAs: "فورمولا مثالي لنوع شعرك. السعر: $65.",
-    tangly: "فورمولا يعالج التشابك. السعر: $65.",
-    tanglyH:"لاسيادور يملس ويفك التشابك. السعر: $48.",
-    flat:   "لاسيادور يمنح الحجم. السعر: $48.",
-    default:"فورمولا هو أفضل خيار شامل. السعر: $65."
-  },
-  "zh-CN": {
-    damaged:"Formula Exclusiva 正是您需要的。售价 $55。",
-    color:  "Gotika 恢复色彩活力，保护色素。售价 $30。",
-    colorAf:"Gotero 恢复自然光泽。售价 $55。",
-    oily:   "Gotero 调节皮脂分泌。售价 $55。",
-    oilyHi:"Formula Exclusiva 平衡油脂。售价 $55。",
-    dry:    "Laciador 改善干燥发质。售价 $40。",
-    dryAs: "Formula Exclusiva 最适合您的发质。售价 $55。",
-    tangly: "Formula Exclusiva 解决打结。售价 $55。",
-    tanglyH:"Laciador 顺滑解结。售价 $40。",
-    flat:   "Laciador 增加蓬松感。售价 $40。",
-    default:"Formula Exclusiva 是您最全面的选择。售价 $55。"
-  },
-  "hi-IN": {
-    damaged:"Formula Exclusiva बिल्कुल वही है जो चाहिए। $65।",
-    color:  "Gotika रंग के लिए सही है। $54।",
-    colorAf:"Gotero प्राकृतिक चमक बहाल करता है। $42।",
-    oily:   "Gotero तैलीय बालों के लिए। $42।",
-    oilyHi:"Formula Exclusiva तेल संतुलित करता है। $65।",
-    dry:    "Laciador सूखे बालों को बदलता है। $48।",
-    dryAs: "Formula Exclusiva आपके बालों के लिए आदर्श। $65।",
-    tangly: "Formula Exclusiva उलझन दूर करता है। $65।",
-    tanglyH:"Laciador चिकना और उलझन-मुक्त। $48।",
-    flat:   "Laciador वॉल्यूम देता है। $48।",
-    default:"Formula Exclusiva सबसे अच्छा विकल्प। $65।"
-  }
-};
-
-function localRecommend(text) {
-  const t = text.toLowerCase();
-  const R = LOCAL_R[langSelect.value] || LOCAL_R["en-US"];
-  const damaged = /damag|break|broke|split end|weak|brittle|burnt|chemical|overprocess|heat damage|perm|relaxer|bleach|falling out|hair loss|bald|thinning|shed|alopecia|receding/.test(t);
-  const color   = /color|colour|fade|fading|brassy|discolor|grey|gray|graying|highlights|dye|tint|pigment|vibrancy|roots/.test(t);
-  const oily    = /oil|oily|greasy|grease|sebum|buildup|waxy|weighing down|dirty fast|gets dirty|shiny scalp|limp/.test(t);
-  const dry     = /dry|frizz|frizzy|rough|coarse|moisture|parched|thirsty|dehydrat|straw|fluffy|puff|no shine|hard to manage/.test(t);
-  const tangly  = /tangl|tangle|knot|knotty|matted|hard to brush|hard to comb|detangle|snag/.test(t);
-  const flat    = /flat|no bounce|no volume|lifeless|limp|fine hair|thin hair|lacks body|no lift|falls flat/.test(t);
-  const african   = /african|black hair|afro|natural hair|4[abc]|coily/.test(t);
-  const asian     = /asian|chinese|japanese|korean/.test(t);
-  const hispanic  = /hispanic|latin[ao]?|latin american/.test(t);
-  const n = [color,oily,dry,damaged,tangly,flat].filter(Boolean).length;
-  if (damaged || n >= 3)  return R.damaged;
-  if (color)              return african ? R.colorAf : R.color;
-  if (oily)               return hispanic ? R.oilyHi : R.oily;
-  if (dry)                return asian ? R.dryAs : R.dry;
-  if (tangly)             return (hispanic||african) ? R.tanglyH : R.tangly;
-  if (flat)               return R.flat;
-  return R.default;
-}
-
-/* ── AI RECOMMENDATION ── */
-async function getRecommendation(userText) {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
-    const authHeaders = {"Content-Type": "application/json", "X-Session-Id": SESSION_ID};
-    if(window._srd_token) authHeaders["X-Auth-Token"] = window._srd_token;
-    const resp = await fetch("https://ai-hair-advisor.onrender.com/api/recommend", {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({
-        text: userText,
-        lang: langSelect.value,
-        history: conversationHistory.slice(0, -1)
-      }),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) throw new Error("not ok");
-    const data = await resp.json();
-    // Handle subscription gating
-    handleSubscriptionResponse(data);
-    if (data.recommendation) return data.recommendation;
-    throw new Error("empty");
-  } catch(e) {
-    return localRecommend(userText);
-  }
-}
-
-/* ── PROCESS TEXT ── */
-async function processText(text) {
-  if (!text || text.trim().length < 3) {
-    responseBox.textContent = "Could you describe your hair a little more?";
-    setState("idle"); setColor(...IDLE);
-    stateLabel.textContent = "Tap to begin";
-    setTimeout(() => speak(responseBox.textContent, false), 800);
-    return;
-  }
-
-  addToHistory("user", text);
-
-  setState("idle"); setColor(...IDLE);
-  responseBox.textContent = "Thinking…";
-  stateLabel.textContent  = "Thinking";
-
-  const result = await getRecommendation(text);
-  const final  = result || localRecommend(text);
-
-  addToHistory("assistant", final);
-  // showTip=true → tip panel opens after AI finishes speaking
-  setTimeout(() => speak(final, true), 2500);
-}
-
-/* ── NO-HEAR ── */
-const NO_HEAR = {
-  "en-US":"I didn't hear anything. Please tap and describe your hair concern.",
-  "es-ES":"No escuché nada. Por favor toca y describe tu preocupación.",
-  "fr-FR":"Je n'ai rien entendu. Veuillez appuyer et décrire votre préoccupation.",
-  "pt-BR":"Não ouvi nada. Por favor toque e descreva sua preocupação.",
-  "de-DE":"Ich habe nichts gehört. Bitte tippen und Ihr Problem beschreiben.",
-  "ar-SA":"لم أسمع شيئاً. يرجى النقر ووصف قلقك.",
-  "zh-CN":"我没有听到。请点击并描述您的问题。",
-  "hi-IN":"मुझे कुछ सुनाई नहीं दिया। कृपया टैप करें।"
-};
-function noHear() {
-  const msg = NO_HEAR[langSelect.value] || NO_HEAR["en-US"];
-  responseBox.textContent = msg;
-  setState("idle"); setColor(...IDLE);
-  stateLabel.textContent = "Tap to begin";
-  speak(msg, false);
-}
-
-/* ── WHISPER VOICE RECORDING ── */
-let mediaRecorder = null;
-let audioChunks   = [];
-let recordingTimer = null;
-
-async function startListening() {
-  playAmbient("intro");
-  setState("listening"); setColor(...LISTEN);
-  stateLabel.textContent  = "Listening…";
-  responseBox.textContent = conversationHistory.length > 0 ? "Ask a follow-up…" : "Listening…";
-  requestAnimationFrame(micReactiveLoop);
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-    // Also use stream for visualizer
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = audioCtx.createMediaStreamSource(stream);
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 512;
-    analyser.smoothingTimeConstant = 0.6;
-    src.connect(analyser);
-    micData = new Uint8Array(analyser.frequencyBinCount);
-
-    audioChunks = [];
-    mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop());
-      if (audioChunks.length === 0) { noHear(); return; }
-      await sendToWhisper();
-    };
-    mediaRecorder.start();
-
-    // Auto-stop after 10 seconds
-    recordingTimer = setTimeout(() => stopListening(), 10000);
-
-  } catch(e) {
-    console.warn("Mic error:", e);
-    responseBox.textContent = "Microphone access denied. Please allow mic and try again.";
-    setState("idle"); setColor(...IDLE);
-    stateLabel.textContent = "Tap to begin";
-  }
-}
-
-function getSupportedMimeType() {
-  const types = ["audio/webm","audio/webm;codecs=opus","audio/ogg;codecs=opus","audio/mp4"];
-  for (const t of types) { if (MediaRecorder.isTypeSupported(t)) return t; }
-  return "";
-}
-
-function stopListening() {
-  clearTimeout(recordingTimer);
-  if (mediaRecorder && mediaRecorder.state === "recording") {
-    mediaRecorder.stop();
-  }
-}
-
-async function sendToWhisper() {
-  setState("idle"); setColor(...IDLE);
-  stateLabel.textContent  = "Thinking…";
-  responseBox.textContent = "Thinking…";
-
-  try {
-    const mimeType = getSupportedMimeType() || "audio/webm";
-    const blob = new Blob(audioChunks, { type: mimeType });
-    const formData = new FormData();
-    formData.append("audio", blob, "audio.webm");
-
-    const resp = await fetch("https://ai-hair-advisor.onrender.com/api/transcribe", {
-      method: "POST",
-      body: formData
-    });
-    const data = await resp.json();
-    const text = (data.text || "").trim();
-
-    if (text.length > 2) {
-      responseBox.textContent = text;
-      processText(text);
-    } else {
-      noHear();
-    }
-  } catch(e) {
-    console.error("Whisper error:", e);
-    noHear();
-  }
-}
-
-/* ── CLICK ── */
-halo.addEventListener("click", () => {
-  if (isManual) return;
-  if (appState === "listening") {
-    stopListening();
-    return;
-  }
-  if (appState === "speaking") {
-    speechSynthesis.cancel();
-    setState("idle"); setColor(...IDLE);
-    stateLabel.textContent = "Tap to begin";
-    return;
-  }
-  startListening();
-});
-
-/* ── MANUAL ── */
-modeToggle.addEventListener("click", () => {
-  isManual = !isManual;
-  manualBox.style.display = isManual ? "flex" : "none";
-  modeToggle.textContent  = isManual ? "Voice Mode" : "Manual Mode";
-});
-manualSubmit.addEventListener("click", () => {
-  const text = manualInput.value.trim();
-  if (text.length < 3) return;
-  manualInput.value = "";
-  processText(text);
-});
-manualInput.addEventListener("keydown", e => { if (e.key === "Enter") manualSubmit.click(); });
-
-/* ── LANGUAGE ── */
-speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
-setTimeout(() => speechSynthesis.getVoices(), 300);
-
-/* ── FAQ / CONTACT ── */
-const FAQ_MSGS = {
-  "en-US":"All four products are 100% natural, organic, and salon-professional — Caribbean formulated. Formula Exclusiva $65, Laciador $48, Gotero $42, Gotika $54.",
-  "es-ES":"Los cuatro son 100% naturales. Formula Exclusiva $65, Laciador $48, Gotero $42, Gotika $54.",
-  "fr-FR":"Les quatre sont 100% naturels. Formula Exclusiva $65, Laciador $48, Gotero $42, Gotika $54.",
-  "pt-BR":"Os quatro são 100% naturais. Formula Exclusiva $65, Laciador $48, Gotero $42, Gotika $54.",
-  "de-DE":"Alle vier sind 100% natürlich. Formula Exclusiva $65, Laciador $48, Gotero $42, Gotika $54.",
-  "ar-SA":"المنتجات الأربعة طبيعية 100%. فورمولا $65، لاسيادور $48، غوتيرو $42، غوتيكا $54.",
-  "zh-CN":"四款均为100%天然。Formula Exclusiva $65，Laciador $48，Gotero $42，Gotika $54。",
-  "hi-IN":"चारों 100% प्राकृतिक। Formula Exclusiva $65, Laciador $48, Gotero $42, Gotika $54।"
-};
-const CONTACT_MSGS = {
-  "en-US":"Email us at support at hairexpert dot com. We'd love to find your perfect product together.",
-  "es-ES":"Escríbenos a support arroba hairexpert punto com.",
-  "fr-FR":"Envoyez-nous un email à support chez hairexpert point com.",
-  "pt-BR":"Envie um e-mail para support em hairexpert ponto com.",
-  "de-DE":"Schreiben Sie uns an support bei hairexpert Punkt com.",
-  "ar-SA":"راسلنا على support في hairexpert نقطة com.",
-  "zh-CN":"发邮件至 support@hairexpert.com。",
-  "hi-IN":"support@hairexpert.com पर ईमेल करें।"
-};
-document.getElementById("faqBtn").addEventListener("click", () => {
-  const msg = FAQ_MSGS[langSelect.value]||FAQ_MSGS["en-US"];
-  responseBox.textContent = msg; speak(msg, false);
-});
-document.getElementById("contactBtn").addEventListener("click", () => {
-  const msg = CONTACT_MSGS[langSelect.value]||CONTACT_MSGS["en-US"];
-  responseBox.textContent = msg; speak(msg, false);
-});
-
-// ── PAYWALL + SUBSCRIPTION SYSTEM ────────────────────────────────────────────
-let _paywallDismissed = false;
-const SESSION_ID = 'srd_' + Math.random().toString(36).substr(2,9);
-
-function handleSubscriptionResponse(data){
-  if(!data) return;
-  const subbed = data.subscribed || false;
-
-  // Hide banner for active subscribers
-  if(subbed) {
-    document.getElementById('paywallCounter').style.display = 'none';
-    document.getElementById('paywallBanner').style.display  = 'none';
-    return;
-  }
-
-  // Show upgrade banner after every 3rd response (non-blocking — responses still work)
-  const count = data.response_count || 0;
-  if(count > 0 && count % 3 === 0 && !_paywallDismissed){
-    setTimeout(()=>{
-      document.getElementById('paywallBanner').style.display = 'block';
-    }, 800);
-  }
-}
-
-function closePaywall(){
-  _paywallDismissed = true;
-  document.getElementById('paywallBanner').style.display = 'none';
-}
-
-async function goUpgrade(){
-  const token = localStorage.getItem('srd_token');
-  if(!token){
-    // Not logged in — send to login first
-    window.location.href = '/login?next=subscribe';
-    return;
-  }
-  // Create Stripe checkout
-  const r = await fetch('/api/subscription/checkout', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','X-Auth-Token':token}
-  });
-  const d = await r.json();
-  if(d.checkout_url){
-    window.location.href = d.checkout_url;
-  } else if(d.setup_needed){
-    // Stripe not configured yet — send to Shopify subscription page
-    window.location.href = 'https://supportrd.com/products/hair-advisor-premium';
-  } else {
-    alert('Something went wrong. Please try again.');
-  }
-}
-</script>
-</body>
-</html>"""
-
-
-# ── API: RECOMMEND (WITH SUBSCRIPTION GATING) ────────────────────────────────
-FREE_SYSTEM_PROMPT = """You are Aria, a hair care advisor for SupportRD. Give ONE brief, helpful product recommendation in 2 sentences max. Mention the product name and price. End every response with: "For deeper hair analysis, personalized advice, and your full hair health score, upgrade to SupportRD Premium — start free for 7 days." Keep it warm and helpful."""
 
 @app.route("/api/recommend", methods=["POST","OPTIONS"])
 def recommend():
@@ -4049,6 +2660,33 @@ body::before{content:'';position:fixed;inset:0;
 .h-role{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--rose);margin-bottom:2px;text-shadow:0 0 6px var(--rose-glow);}
 .h-text{font-size:11px;color:var(--muted2);line-height:1.5;}
 .h-empty{padding:16px 13px;font-size:11px;color:var(--muted);}
+/* ARIA PANEL */
+.aria-panel{background:var(--bg2);border:1px solid rgba(240,160,144,0.2);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;animation:panelPulse 4s ease-in-out infinite;}
+.aria-panel-head{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(240,160,144,0.04);}
+.aria-panel-title{display:flex;align-items:center;gap:9px;}
+.aria-avi-sm{width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,var(--rose),#b05040);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;position:relative;box-shadow:0 0 12px rgba(240,160,144,0.3);}
+.aria-name-sm{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
+.aria-status-sm{font-size:9px;color:var(--green);font-family:'IBM Plex Mono',monospace;text-shadow:0 0 6px rgba(48,232,144,0.4);}
+.lang-selector select{background:var(--bg3);border:1px solid var(--border2);color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;outline:none;transition:all 0.15s;}
+.lang-selector select:hover,.lang-selector select:focus{border-color:rgba(240,160,144,0.4);color:var(--text);}
+.lang-selector select option{background:var(--bg3);}
+.aria-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:180px;max-height:260px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.aria-messages::-webkit-scrollbar{width:3px;}
+.aria-messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.aria-msg{display:flex;flex-direction:column;}
+.aria-msg-aria{align-items:flex-start;}
+.aria-msg-user{align-items:flex-end;}
+.aria-msg-bubble{max-width:88%;padding:8px 11px;border-radius:10px;font-size:11px;line-height:1.5;}
+.aria-msg-aria .aria-msg-bubble{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);border-radius:3px 10px 10px 10px;}
+.aria-msg-user .aria-msg-bubble{background:rgba(240,160,144,0.15);border:1px solid rgba(240,160,144,0.25);color:var(--text);border-radius:10px 3px 10px 10px;}
+.aria-msg-typing .aria-msg-bubble{color:var(--muted);}
+.aria-input-wrap{display:flex;gap:7px;padding:10px 12px;border-top:1px solid var(--border);}
+.aria-input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:11px;padding:7px 11px;border-radius:6px;outline:none;transition:all 0.15s;}
+.aria-input::placeholder{color:var(--muted);}
+.aria-input:focus{border-color:rgba(240,160,144,0.4);box-shadow:0 0 10px rgba(240,160,144,0.1);}
+.aria-send{width:32px;height:32px;border-radius:6px;background:var(--rose);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+.aria-send:hover{background:#ff9080;box-shadow:0 0 14px rgba(240,160,144,0.4);}
+.aria-send:disabled{opacity:0.4;cursor:not-allowed;}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg3);border:1px solid rgba(240,160,144,0.3);color:var(--text);padding:9px 18px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;transition:transform 0.3s cubic-bezier(0.25,1,0.5,1);z-index:999;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 20px rgba(240,160,144,0.1);}
 .toast.show{transform:translateX(-50%) translateY(0);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -4072,7 +2710,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab active">Overview</div>
     <div class="nav-tab" onclick="switchPTab('profile')">Hair Profile</div>
     <div class="nav-tab" onclick="switchPTab('routine')">Routine</div>
-    <div class="nav-tab" onclick="window.location.href='/'">Chat with Aria</div>
+
   </div>
   <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
@@ -4255,18 +2893,33 @@ body::before{content:'';position:fixed;inset:0;
   </div>
 
   <div class="side-col">
-    <div class="streak-panel fu fu4">
-      <div class="streak-fire">🔥</div>
-      <div class="streak-num" id="streak-num">7</div>
-      <div class="streak-lbl">Day Streak</div>
-      <div class="streak-dots" id="streak-dots"></div>
-    </div>
-    <div class="aria-card fu fu4" onclick="window.location.href='/'">
-      <div class="aria-avi">🌿<div class="aria-ping"></div></div>
-      <div>
-        <div class="aria-name">Aria</div>
-        <div class="aria-status">Your AI hair advisor · Always online</div>
-        <button class="aria-btn" onclick="window.location.href='/'">Consult Now →</button>
+    <div class="aria-panel fu fu4">
+      <div class="aria-panel-head">
+        <div class="aria-panel-title">
+          <div class="aria-avi-sm">🌿<div class="aria-ping"></div></div>
+          <div>
+            <div class="aria-name-sm">Aria</div>
+            <div class="aria-status-sm">Online · AI Hair Advisor</div>
+          </div>
+        </div>
+        <div class="lang-selector">
+          <select id="lang-select" onchange="setLang(this.value)">
+            <option value="en">🇺🇸 EN</option>
+            <option value="es">🇩🇴 ES</option>
+            <option value="fr">🇫🇷 FR</option>
+            <option value="pt">🇧🇷 PT</option>
+            <option value="zh">🇨🇳 ZH</option>
+          </select>
+        </div>
+      </div>
+      <div class="aria-messages" id="aria-messages">
+        <div class="aria-msg aria-msg-aria">
+          <div class="aria-msg-bubble">Hi! I'm Aria 🌿 Ask me anything about your hair.</div>
+        </div>
+      </div>
+      <div class="aria-input-wrap">
+        <input type="text" class="aria-input" id="aria-input" placeholder="Ask Aria…" onkeydown="if(event.key==='Enter')sendMsg()">
+        <button class="aria-send" onclick="sendMsg()">↑</button>
       </div>
     </div>
     <div class="products-panel fu fu5">
@@ -4581,6 +3234,67 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── EMBEDDED ARIA CHAT ──
+let ariaLang = localStorage.getItem('aria_lang') || 'en';
+let ariaBusy = false;
+
+function setLang(val) {
+  ariaLang = val;
+  localStorage.setItem('aria_lang', val);
+  showToast('Language set to ' + val.toUpperCase());
+}
+
+// Set saved lang on load
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('lang-select');
+  if (sel) sel.value = ariaLang;
+});
+
+function addMsg(role, text) {
+  const wrap = document.getElementById('aria-messages');
+  if (!wrap) return;
+  const div = document.createElement('div');
+  div.className = 'aria-msg aria-msg-' + role;
+  div.innerHTML = '<div class="aria-msg-bubble">' + text + '</div>';
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+  return div;
+}
+
+async function sendMsg() {
+  const input = document.getElementById('aria-input');
+  const send  = document.querySelector('.aria-send');
+  const msg   = input.value.trim();
+  if (!msg || ariaBusy) return;
+  ariaBusy = true;
+  input.value = '';
+  send.disabled = true;
+  addMsg('user', msg);
+  const typing = addMsg('aria aria-msg-typing', '…');
+  try {
+    const r = await fetch('/api/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
+      body: JSON.stringify({ message: msg, lang: ariaLang, history: [] })
+    });
+    const d = await r.json();
+    typing.remove();
+    if (d.reply) {
+      addMsg('aria', d.reply);
+    } else if (d.error) {
+      addMsg('aria', '⚠ ' + d.error);
+    } else if (r.status === 402) {
+      addMsg('aria', '✦ Upgrade to Premium for unlimited consultations.');
+    }
+  } catch(e) {
+    typing.remove();
+    addMsg('aria', '⚠ Connection error — try again.');
+  }
+  ariaBusy = false;
+  send.disabled = false;
+  input.focus();
 }
 
 buildWeekStrip();
