@@ -3021,6 +3021,53 @@ Customer email: {email}
     return jsonify({"ok": True})
 
 
+@app.route("/api/debug-smtp", methods=["GET"])
+def debug_smtp():
+    admin_key = request.args.get("key", "")
+    if admin_key != os.environ.get("ADMIN_KEY", "srd_admin_2024"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    smtp_user    = os.environ.get("SMTP_USER", "")
+    smtp_pass    = os.environ.get("SMTP_PASS", "")
+    notify_email = os.environ.get("NOTIFY_EMAIL", smtp_user)
+
+    result = {
+        "smtp_user_set":    bool(smtp_user),
+        "smtp_user":        smtp_user,
+        "smtp_pass_set":    bool(smtp_pass),
+        "smtp_pass_length": len(smtp_pass.replace(" ", "")),
+        "notify_email":     notify_email,
+        "test_result":      None,
+        "error":            None
+    }
+
+    if not smtp_user or not smtp_pass:
+        result["error"] = "SMTP_USER or SMTP_PASS not set in environment variables"
+        return jsonify(result)
+
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+
+        msg = MIMEMultipart()
+        msg["Subject"] = "SupportRD SMTP Test — it works!"
+        msg["From"]    = smtp_user
+        msg["To"]      = notify_email
+        msg.attach(MIMEText("Your custom order emails are working correctly.", "plain"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+
+        result["test_result"] = "SUCCESS — test email sent to " + notify_email
+    except Exception as e:
+        result["error"] = str(e)
+        result["test_result"] = "FAILED"
+
+    return jsonify(result)
+
+
 # ── CONTENT ENGINE API ENDPOINTS ──────────────────────────────────────────────
 ENGINE_LOG = []  # In-memory log of recent runs
 
