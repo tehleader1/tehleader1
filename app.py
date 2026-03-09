@@ -3923,6 +3923,46 @@ body::before{content:\'\';position:fixed;inset:0;background:radial-gradient(elli
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .fu{opacity:0;animation:fadeUp 0.4s forwards;}
 .fu1{animation-delay:0.05s}.fu2{animation-delay:0.1s}.fu3{animation-delay:0.15s}.fu4{animation-delay:0.2s}.fu5{animation-delay:0.25s}
+/* ── IMPACT STYLES ── */
+@keyframes scoreGlow{0%,100%{text-shadow:0 0 20px rgba(232,165,152,0.6),0 0 40px rgba(232,165,152,0.3),0 0 80px rgba(232,165,152,0.1)}50%{text-shadow:0 0 30px rgba(232,165,152,0.9),0 0 60px rgba(232,165,152,0.5),0 0 100px rgba(232,165,152,0.2)}}
+@keyframes numFlash{0%{color:var(--text)}40%{color:#fff;text-shadow:0 0 20px rgba(255,255,255,0.8)}100%{color:var(--text)}}
+@keyframes ringPulse{0%,100%{filter:drop-shadow(0 0 4px rgba(232,165,152,0.4))}50%{filter:drop-shadow(0 0 14px rgba(232,165,152,0.9))}}
+@keyframes borderFlare{0%{border-color:var(--border)}50%{border-color:rgba(232,165,152,0.6);box-shadow:0 0 20px rgba(232,165,152,0.15)}100%{border-color:var(--border)}}
+@keyframes tickerUrgent{0%,100%{background:transparent}50%{background:rgba(232,165,152,0.06)}}
+@keyframes statPop{0%{transform:scale(1)}30%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes insightShift{from{opacity:0.4;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
+.score-big{animation:scoreGlow 3s ease-in-out infinite;}
+.score-ring-wrap svg{animation:ringPulse 3s ease-in-out infinite;}
+.score-panel{animation:borderFlare 4s ease-in-out infinite;}
+.stat-card.active .sc-val{animation:numFlash 0.6s ease-out;}
+.stat-card:hover{animation:statPop 0.3s ease-out;}
+.live-badge{animation:tickerUrgent 2s ease-in-out infinite;}
+.plan-tag{animation:tickerUrgent 2.5s ease-in-out infinite;}
+.flash{animation:numFlash 0.5s ease-out !important;}
+/* Make the score number really POP */
+.score-big{font-size:52px !important;letter-spacing:-2px;}
+/* Glow on metric readings */
+#cr-m{text-shadow:0 0 12px rgba(232,165,152,0.7);}
+#cr-s{text-shadow:0 0 12px rgba(91,156,246,0.7);}
+#cr-sc{text-shadow:0 0 12px rgba(61,214,140,0.7);}
+#cr-g{text-shadow:0 0 12px rgba(212,168,67,0.7);}
+/* Streak number glow */
+.streak-num{text-shadow:0 0 20px rgba(212,168,67,0.8),0 0 40px rgba(212,168,67,0.4);}
+/* Active users counter glow */
+#active-count{text-shadow:0 0 16px rgba(232,165,152,0.6);}
+/* CTA button pulse */
+.action-btn.primary{box-shadow:0 0 0 0 rgba(232,165,152,0.4);animation:ctaPulse 2.5s ease-in-out infinite;}
+@keyframes ctaPulse{0%,100%{box-shadow:0 0 0 0 rgba(232,165,152,0)}50%{box-shadow:0 0 0 6px rgba(232,165,152,0.15),0 4px 20px rgba(232,165,152,0.3)}}
+/* Aria online indicator */
+.aria-ping{animation:ariaPing 1.2s ease-in-out infinite;}
+@keyframes ariaPing{0%,100%{box-shadow:0 0 0 0 rgba(61,214,140,0.6),0 0 8px rgba(61,214,140,0.4)}50%{box-shadow:0 0 0 5px rgba(61,214,140,0),0 0 16px rgba(61,214,140,0.7)}}
+/* Score panel top accent line pulse */
+.score-panel::after{animation:accentPulse 3s ease-in-out infinite;}
+@keyframes accentPulse{0%,100%{opacity:0.5;width:200px}50%{opacity:1;width:280px}}
+/* Insights bars shimmer */
+.ins-bar-a,.ins-bar-b{position:relative;overflow:hidden;}
+.ins-bar-a::after,.ins-bar-b::after{content:\'\';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);animation:shimmer 2.5s ease-in-out infinite;}
+@keyframes shimmer{0%{left:-100%}100%{left:200%}}
 @media(max-width:1300px){.top-row{grid-template-columns:240px 1fr 240px;}.mid-row{grid-template-columns:1fr 1fr 1fr;}.mid-row .action-panel{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;}}
 @media(max-width:900px){.top-row{grid-template-columns:1fr;}.mid-row{grid-template-columns:1fr 1fr;}.bot-row{grid-template-columns:1fr;}}
 </style></head><body>
@@ -4162,7 +4202,7 @@ function renderScore(sc){
   animNum(document.getElementById(\'score-num\'),sc.overall,1800);
   const st=document.getElementById(\'score-status\');st.textContent=z.status;st.style.color=z.color;
   document.getElementById(\'score-delta\').textContent=\'Index updated · live session\';
-  [[\'mf-m\',\'mv-m\',sc.moisture],[\'mf-s\',\'mv-s\',sc.strength],[\'mf-sc\',\'mv-sc\',sc.scalp],[\'mf-g\',\'mv-g\',sc.growth]].forEach(([fb,fv,val],i)=>{setTimeout(()=>{document.getElementById(fb).style.transform=\'scaleX(1)\';document.getElementById(fv).textContent=val+\'%\';},300+i*100);});
+  [[\'mf-m\',\'mv-m\',sc.moisture],[\'mf-s\',\'mv-s\',sc.strength],[\'mf-sc\',\'mv-sc\',sc.scalp],[\'mf-g\',\'mv-g\',sc.growth]].forEach(([fb,fv,val],i)=>{setTimeout(()=>{document.getElementById(fb).style.transform=\'scaleX(1)\';const vEl=document.getElementById(fv);vEl.textContent=val+\'%\';vEl.classList.add(\'flash\');setTimeout(()=>vEl.classList.remove(\'flash\'),600);},300+i*100);});
   renderSparklines(sc,currentRange);
   buildTicker(sc);
 }
@@ -4189,7 +4229,7 @@ async function loadData(){
     if(d.subscribed)document.getElementById(\'plan-badge\').textContent=\'PREMIUM\';
     document.getElementById(\'st-chats\').textContent=d.chat_count||0;
     document.getElementById(\'st-chats-trend\').textContent=\'↑ \'+(d.chat_count||0)+\' all time\';
-    const concerns=(d.profile?.hair_concerns||\'\')\'.split(\',\').filter(c=>c.trim()).length;
+    const concerns=(d.profile?.hair_concerns||\'\').split(\',\').filter(c=>c.trim()).length;
     document.getElementById(\'st-concerns\').textContent=concerns||0;
     document.getElementById(\'st-recs\').textContent=Math.floor((d.chat_count||0)/2)||0;
     if(d.profile){setTagsFromString(\'tags-type\',d.profile.hair_type);setTagsFromString(\'tags-concerns\',d.profile.hair_concerns);setTagsFromString(\'tags-treatments\',d.profile.treatments);setTagsFromString(\'tags-products\',d.profile.products_tried);}
