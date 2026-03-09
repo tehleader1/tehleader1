@@ -20,8 +20,8 @@ REDDIT_CLIENT_SECRET= os.environ.get("REDDIT_CLIENT_SECRET", "")
 REDDIT_USERNAME     = os.environ.get("REDDIT_USERNAME", "")
 REDDIT_PASSWORD     = os.environ.get("REDDIT_PASSWORD", "")
 REDDIT_SUBREDDIT    = os.environ.get("REDDIT_SUBREDDIT", "Hair")
-BLOG_DB             = "/tmp/srd_blog.db"
-LOG_PATH            = "/tmp/content_engine_log.json"
+BLOG_DB             = "/data/srd_blog.db"
+LOG_PATH            = "/data/content_engine_log.json"
 BLOG_BASE_URL       = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor.onrender.com")
 
 # ── TOPIC POOL ────────────────────────────────────────────────────────────────
