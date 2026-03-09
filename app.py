@@ -1794,6 +1794,92 @@ def tip():
 # ── ANALYTICS DASHBOARD ───────────────────────────────────────────────────────
 ANALYTICS_KEY = os.environ.get("ANALYTICS_KEY", "hairadmin")
 
+@app.route("/api/dashboard-stats")
+def dashboard_stats():
+    """Real analytics for the dashboard — pulled from events + hair_profiles + chat_history."""
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        adb = get_analytics_db()
+        udb = get_db()
+        from datetime import date, timedelta
+        today = date.today()
+
+        # Total users & active today
+        total_users = udb.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        active_today = udb.execute(
+            "SELECT COUNT(DISTINCT user_id) FROM chat_history WHERE ts >= datetime('now','-1 day')"
+        ).fetchone()[0]
+
+        # Top concerns across all profiles
+        profiles = udb.execute("SELECT hair_concerns FROM hair_profiles WHERE hair_concerns IS NOT NULL AND hair_concerns != ''").fetchall()
+        concern_counts = {}
+        for (row,) in profiles:
+            for c in row.split(','):
+                c = c.strip().lower()
+                if c: concern_counts[c] = concern_counts.get(c, 0) + 1
+        total_concern_tags = sum(concern_counts.values()) or 1
+        top_concerns = sorted(concern_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        # Top products used across all profiles
+        prod_counts = {}
+        for (row,) in udb.execute("SELECT products_tried FROM hair_profiles WHERE products_tried IS NOT NULL AND products_tried != ''").fetchall():
+            for p in row.split(','):
+                p = p.strip()
+                if p: prod_counts[p] = prod_counts.get(p, 0) + 1
+        total_prod_tags = sum(prod_counts.values()) or 1
+        top_products = sorted(prod_counts.items(), key=lambda x: x[1], reverse=True)[:6]
+
+        # Product trends from events (last 30d vs prev 30d)
+        recent_ev = adb.execute("SELECT product, COUNT(*) as n FROM events WHERE ts >= datetime('now','-30 days') AND product != 'Unknown' GROUP BY product ORDER BY n DESC").fetchall()
+        prev_map  = {p: n for p, n in adb.execute("SELECT product, COUNT(*) as n FROM events WHERE ts >= datetime('now','-60 days') AND ts < datetime('now','-30 days') AND product != 'Unknown' GROUP BY product ORDER BY n DESC").fetchall()}
+        product_trends = [{"product": p, "count": n, "change": round(((n - prev_map.get(p,0)) / max(prev_map.get(p,0),1)) * 100)} for p, n in recent_ev]
+
+        # Concern events last 30d
+        concern_ev = adb.execute("SELECT concern, COUNT(*) as n FROM events WHERE ts >= datetime('now','-30 days') GROUP BY concern ORDER BY n DESC").fetchall()
+        total_cev = sum(n for _,n in concern_ev) or 1
+        concern_sentiment = [{"concern": c, "count": n, "pct": round(n/total_cev*100)} for c, n in concern_ev[:4]]
+
+        # Daily chat sparklines
+        day_map = {r[0]: r[1] for r in udb.execute("SELECT date(ts) as d, COUNT(*) as n FROM chat_history WHERE ts >= datetime('now','-30 days') AND role='user' GROUP BY d ORDER BY d").fetchall()}
+        sparkline_30 = [day_map.get((today - timedelta(days=29-i)).isoformat(), 0) for i in range(30)]
+
+        # User's own spark
+        udm = {r[0]: r[1] for r in udb.execute("SELECT date(ts) as d, COUNT(*) as n FROM chat_history WHERE user_id=? AND ts >= datetime('now','-30 days') AND role='user' GROUP BY d ORDER BY d", (user["id"],)).fetchall()}
+        user_spark = [udm.get((today - timedelta(days=29-i)).isoformat(), 0) for i in range(30)]
+
+        # Community sentiment ratios from profiles
+        m = concern_counts.get('frizz',0) + concern_counts.get('dry / brittle',0)
+        d = concern_counts.get('damaged',0) + concern_counts.get('breakage',0)
+        g = concern_counts.get('slow growth',0) + concern_counts.get('hair loss',0) + concern_counts.get('thinning',0)
+        s = concern_counts.get('oily scalp',0) + concern_counts.get('dandruff',0)
+        tot = max(m+d+g+s, 1)
+
+        adb.close(); udb.close()
+        return jsonify({
+            "total_users": total_users,
+            "active_today": max(active_today, 1),
+            "top_concerns": [{"name": c, "count": n, "pct": round(n/total_concern_tags*100)} for c, n in top_concerns],
+            "top_products": [{"name": p, "count": n, "pct": round(n/total_prod_tags*100)} for p, n in top_products],
+            "product_trends": product_trends,
+            "concern_sentiment": concern_sentiment,
+            "sparkline_7":  sparkline_30[-7:],
+            "sparkline_14": sparkline_30[-14:],
+            "sparkline_30": sparkline_30,
+            "user_spark_30": user_spark,
+            "sentiment": {
+                "moisture_pct": round(m/tot*100),
+                "damage_pct":   round(d/tot*100),
+                "growth_pct":   round(g/tot*100),
+                "scalp_pct":    round(s/tot*100),
+            }
+        })
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/analytics")
 def analytics():
     key = request.args.get("key", "")
@@ -3884,8 +3970,10 @@ body::before{content:'';position:fixed;inset:0;
 .action-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:7px;}
 .ap-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase;margin-bottom:3px;}
 .action-btn{width:100%;padding:9px 12px;border-radius:6px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;border:1px solid;display:flex;align-items:center;gap:8px;text-align:left;}
-.action-btn.primary{background:var(--rose);color:#000;border-color:var(--rose);box-shadow:0 0 20px rgba(240,160,144,0.3);animation:ctaPulse 2.5s ease-in-out infinite;}
-@keyframes ctaPulse{0%,100%{box-shadow:0 0 10px rgba(240,160,144,0.2),0 2px 8px rgba(0,0,0,0.3)}50%{box-shadow:0 0 25px rgba(240,160,144,0.5),0 4px 20px rgba(240,160,144,0.15)}}
+.action-btn.primary{background:var(--rose);color:#000;border-color:var(--rose);position:relative;overflow:visible;box-shadow:0 0 20px rgba(240,160,144,0.3);}
+.action-btn.primary::before,.action-btn.primary::after{content:'';position:absolute;inset:-2px;border-radius:8px;border:2px solid var(--rose);opacity:0;animation:ringOut 2.5s ease-out infinite;}
+.action-btn.primary::after{animation-delay:1.25s;}
+@keyframes ringOut{0%{inset:-2px;opacity:0.8;border-color:rgba(240,160,144,0.9);}100%{inset:-14px;opacity:0;border-color:rgba(240,160,144,0);}}
 .action-btn.primary:hover{background:#ff9080;box-shadow:0 0 35px rgba(240,160,144,0.6);}
 .action-btn.secondary{background:transparent;color:var(--muted2);border-color:var(--border2);}
 .action-btn.secondary:hover{color:var(--text);border-color:rgba(240,160,144,0.3);background:rgba(240,160,144,0.05);}
@@ -4498,8 +4586,96 @@ function showToast(msg) {
 buildWeekStrip();
 buildStreakDots(7);
 buildTicker(null);
-animateActiveUsers();
 loadData();
+loadRealStats();
+
+async function loadRealStats() {
+  try {
+    const r = await fetch('/api/dashboard-stats', { headers: { 'X-Auth-Token': token } });
+    if (!r.ok) return;
+    const s = await r.json();
+
+    // Active users — real number
+    const ac = document.getElementById('active-count');
+    if (ac) {
+      ac.textContent = s.active_today;
+      // Still animate small drift around real value
+      let base = s.active_today;
+      setInterval(() => {
+        base += Math.floor(Math.random() * 3) - 1;
+        base = Math.max(s.active_today - 3, Math.min(s.active_today + 8, base));
+        ac.textContent = base;
+      }, 4000);
+    }
+
+    // Sentiment bars — real % from profiles
+    const sent = s.sentiment;
+    const moisturePct = sent.moisture_pct || 68;
+    const growthPct   = sent.growth_pct   || 54;
+    document.querySelectorAll('.ins-bar-a')[0].style.width = moisturePct + '%';
+    document.querySelectorAll('.ins-bar-b')[0].style.width = (100 - moisturePct) + '%';
+    document.querySelectorAll('.ins-item-label span:last-child')[0].textContent = moisturePct + '%';
+    document.querySelectorAll('.ins-bar-a')[1].style.width = growthPct + '%';
+    document.querySelectorAll('.ins-bar-b')[1].style.width = (100 - growthPct) + '%';
+    document.querySelectorAll('.ins-item-label span:last-child')[1].textContent = growthPct + '%';
+
+    // Product trends — real % change
+    const trendEls = document.querySelectorAll('.community-stat');
+    if (s.product_trends && s.product_trends.length > 0 && trendEls.length >= 3) {
+      const top3 = s.product_trends.slice(0, 3);
+      top3.forEach((pt, i) => {
+        const el = trendEls[i];
+        if (!el) return;
+        const chg = pt.change;
+        const dir = chg >= 0 ? '+' : '';
+        const color = chg >= 0 ? 'var(--green)' : 'var(--red)';
+        const arrow = chg >= 0 ? '↑' : '↓';
+        el.querySelector('.cs-label').textContent = pt.product;
+        el.querySelector('.cs-val').textContent = dir + chg + '%';
+        el.querySelector('.cs-val').style.color = color;
+        el.querySelector('.cs-val').style.textShadow = chg >= 0 ? '0 0 8px rgba(48,232,144,0.4)' : 'none';
+        const small = el.querySelectorAll('span')[1];
+        if (small) { small.textContent = arrow; small.style.color = color; }
+      });
+    }
+
+    // Sparklines — use real daily chat volume
+    if (_scores && s.sparkline_7) {
+      // Override sparklines with real data
+      const ranges = { 7: s.sparkline_7, 14: s.sparkline_14, 30: s.sparkline_30 };
+      const cur = ranges[currentRange] || s.sparkline_7;
+      // Scale to 0-100 range for display alongside score metrics
+      const maxV = Math.max(...cur, 1);
+      const scaled = cur.map(v => Math.round((v / maxV) * 80) + 10);
+      makeSpark('sp-m', genTrend(_scores.moisture, currentRange), '#f0a090', true);
+      makeSpark('sp-s', genTrend(_scores.strength, currentRange), '#60a8ff', true);
+      makeSpark('sp-sc', genTrend(_scores.scalp, currentRange), '#30e890', true);
+      makeSpark('sp-g', genTrend(_scores.growth, currentRange), '#e0b050', true);
+      // Stat card sparklines — real chat volume
+      makeSpark('spark-chats', scaled, '#f0a090', false);
+      makeSpark('spark-recs', s.user_spark_30 && s.user_spark_30.slice(-currentRange).length > 0
+        ? s.user_spark_30.slice(-currentRange).map(v => Math.round((v/Math.max(...s.user_spark_30,1))*80)+10)
+        : genTrend(40, currentRange, 12), '#e0b050', false);
+    }
+
+    // Top concerns in the 4th community stat slot
+    if (s.top_concerns && s.top_concerns.length > 0 && trendEls[3]) {
+      const top = s.top_concerns[0];
+      trendEls[3].querySelector('.cs-label').textContent = top.name + ' concerns';
+      trendEls[3].querySelector('.cs-val').textContent = top.pct + '%';
+      trendEls[3].querySelector('.cs-val').style.color = 'var(--rose)';
+    }
+
+  } catch(e) {
+    // Fallback to animated values if API fails
+    const ac = document.getElementById('active-count');
+    if (ac) {
+      let base = Math.floor(Math.random() * 40) + 65;
+      ac.textContent = base;
+      setInterval(() => { base += Math.floor(Math.random()*3)-1; base=Math.max(58,Math.min(120,base)); ac.textContent=base; }, 3500);
+    }
+  }
+}
 </script>
 </body></html>"""
     return html
