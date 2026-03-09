@@ -2016,27 +2016,32 @@ def _start_content_scheduler():
 
     _fired = set()
     _todays_times = _pick_todays_times()
-    print(f"✅ Content engine scheduler started — today\'s run times (UTC): {sorted(_todays_times)}")
+    print(f"Content engine scheduler started — today's run times (UTC): {sorted(_todays_times)}")
+
+    def _run_engine_bg():
+        try:
+            from content_engine import run_engine
+            run_engine()
+        except Exception as e:
+            print(f"Scheduled engine error: {e}")
 
     def scheduler():
         nonlocal _fired, _todays_times
+        # Wait 90s after module load — lets gunicorn fully bind port first
+        _t.sleep(90)
         while True:
             now = datetime.datetime.utcnow()
             today = now.date()
-            # Refresh times at midnight
             if not any(k[0] == today for k in _fired | {(today, 0)}):
                 _todays_times = _pick_todays_times()
                 _fired = set()
-                print(f"⏰ New day — today\'s run times (UTC): {sorted(_todays_times)}")
+                print(f"New day — today's run times (UTC): {sorted(_todays_times)}")
             key = (today, now.hour, now.minute)
             if (now.hour, now.minute) in _todays_times and key not in _fired:
                 _fired.add(key)
-                print(f"⏰ Content engine trigger at {now.hour}:{now.minute:02d} UTC...")
-                try:
-                    from content_engine import run_engine
-                    run_engine()
-                except Exception as e:
-                    print(f"Scheduled engine error: {e}")
+                print(f"Content engine trigger at {now.hour}:{now.minute:02d} UTC...")
+                # Always run in its own thread — never blocks gunicorn
+                threading.Thread(target=_run_engine_bg, daemon=True).start()
             _t.sleep(30)
 
     t = threading.Thread(target=scheduler, daemon=True)
