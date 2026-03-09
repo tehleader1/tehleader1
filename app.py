@@ -2983,7 +2983,7 @@ def _create_shopify_draft_order(name, email, phone, address, items, notes, deliv
     try:
         import urllib.request as urlreq
         payload = json.dumps(draft).encode("utf-8")
-        url = f"https://{store}/admin/api/2024-01/draft_orders.json"
+        url = f"https://{store}/admin/api/2021-07/draft_orders.json"
         req = urlreq.Request(url, data=payload, headers={
             "Content-Type":           "application/json",
             "X-Shopify-Access-Token": token
@@ -3428,7 +3428,7 @@ def debug_shopify2():
     import requests
     store = os.environ.get("SHOPIFY_STORE","")
     token = os.environ.get("SHOPIFY_ADMIN_TOKEN","")
-    url = f"https://{store}/admin/api/2024-01/blogs.json"
+    url = f"https://{store}/admin/api/2021-07/blogs.json"
     headers = {"X-Shopify-Access-Token": token}
     try:
         resp = requests.get(url, headers=headers, timeout=10)
@@ -3517,7 +3517,7 @@ def debug_shopify_blog():
     try:
         import urllib.request as urlreq
         # Get blogs
-        url = f"https://{store}/admin/api/2024-01/blogs.json"
+        url = f"https://{store}/admin/api/2021-07/blogs.json"
         req = urlreq.Request(url, headers={"X-Shopify-Access-Token": token})
         with urlreq.urlopen(req, timeout=10) as resp:
             data  = json.loads(resp.read().decode("utf-8"))
@@ -3540,7 +3540,7 @@ def debug_shopify_blog():
                     "tags":      "hair care, SupportRD, test"
                 }
             }).encode("utf-8")
-            url2 = f"https://{store}/admin/api/2024-01/blogs/{result['blog_id']}/articles.json"
+            url2 = f"https://{store}/admin/api/2021-07/blogs/{result['blog_id']}/articles.json"
             req2 = urlreq.Request(url2, data=test_payload, headers={
                 "Content-Type": "application/json",
                 "X-Shopify-Access-Token": token
