@@ -3737,387 +3737,483 @@ async function handleGoogle(response){{
 # ── DASHBOARD PAGE ────────────────────────────────────────────────────────────
 @app.route("/dashboard")
 def dashboard():
-    return r"""<!DOCTYPE html><html><head>
+    return r"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Aria · Hair Dashboard — SupportRD</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@200;300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<title>Aria Command Center — SupportRD</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-:root{--cream:#f5f0eb;--warm-white:#faf7f4;--dark:#0e0b08;--muted:#6b5f55;--rose:#c1a3a2;--rose-deep:#a07f7e;--gold:#c9a96e;--green:#4a7c59;--green-light:#7aad8a;--border:rgba(193,163,162,0.18);--glass:rgba(255,255,255,0.6);}
+:root{
+  --bg:#080a0e;--bg2:#0d1017;--bg3:#121720;--bg4:#161d28;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.10);
+  --text:#e8eaf0;--muted:#5c6478;--muted2:#8a94a8;
+  --rose:#e8a598;--rose-dim:rgba(232,165,152,0.12);--rose-glow:rgba(232,165,152,0.25);
+  --gold:#d4a843;--gold-dim:rgba(212,168,67,0.12);--gold-glow:rgba(212,168,67,0.2);
+  --green:#3dd68c;--green-dim:rgba(61,214,140,0.1);
+  --red:#ff6b6b;--red-dim:rgba(255,107,107,0.1);
+  --blue:#5b9cf6;--blue-dim:rgba(91,156,246,0.1);
+  --purple:#a78bfa;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);min-height:100vh;overflow-x:hidden;}
-
-/* ── BACKGROUND ── */
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(193,163,162,0.12) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 80% 80%,rgba(201,169,110,0.08) 0%,transparent 50%);pointer-events:none;z-index:0;}
-.app{position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:0 28px 80px;}
-.nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0 36px;border-bottom:1px solid var(--border);margin-bottom:40px;}
-.nav-brand{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:22px;color:var(--dark);letter-spacing:0.02em;}
-.nav-brand span{color:var(--rose);}
-.nav-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-.nav-avatar{width:36px;height:36px;border-radius:50%;background:var(--rose);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;overflow:hidden;flex-shrink:0;}
+html{scroll-behavior:smooth;}
+body{font-family:\'Space Grotesk\',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:\'\';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 70% 0%,rgba(232,165,152,0.04),transparent 60%),radial-gradient(ellipse 50% 40% at 10% 80%,rgba(212,168,67,0.03),transparent 50%);pointer-events:none;z-index:0;}
+.ticker-wrap{position:fixed;top:0;left:0;right:0;height:32px;background:#0a0c10;border-bottom:1px solid var(--border);z-index:100;overflow:hidden;display:flex;align-items:center;}
+.ticker-label{font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:0.18em;color:var(--gold);text-transform:uppercase;padding:0 18px;white-space:nowrap;border-right:1px solid var(--border);height:100%;display:flex;align-items:center;background:#0a0c10;z-index:2;}
+.ticker-track{display:flex;gap:0;animation:tick 42s linear infinite;white-space:nowrap;}
+.ticker-item{display:flex;align-items:center;gap:8px;padding:0 22px;border-right:1px solid var(--border);height:32px;}
+.t-name{font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--muted2);letter-spacing:0.06em;}
+.t-val{font-family:\'IBM Plex Mono\',monospace;font-size:10px;font-weight:500;}
+.t-up{color:var(--green);}.t-down{color:var(--red);}.t-neutral{color:var(--muted2);}
+.t-chg{font-size:8px;font-family:\'IBM Plex Mono\',monospace;}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.nav{position:fixed;top:32px;left:0;right:0;height:52px;background:rgba(8,10,14,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 24px;}
+.nav-logo{font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.01em;margin-right:32px;display:flex;align-items:center;gap:8px;}
+.nav-logo-dot{width:7px;height:7px;border-radius:50%;background:var(--rose);box-shadow:0 0 10px var(--rose-glow);}
+.nav-tabs{display:flex;height:100%;}
+.nav-tab{height:100%;padding:0 16px;display:flex;align-items:center;font-size:11px;letter-spacing:0.05em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;position:relative;top:1px;}
+.nav-tab.active,.nav-tab:hover{color:var(--text);border-bottom-color:var(--rose);}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+.live-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;background:var(--green-dim);border:1px solid rgba(61,214,140,0.2);font-size:9px;font-family:\'IBM Plex Mono\',monospace;color:var(--green);letter-spacing:0.1em;}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(61,214,140,0.4)}50%{opacity:0.7;box-shadow:0 0 0 4px rgba(61,214,140,0)}}
+.nav-avatar{width:30px;height:30px;border-radius:6px;background:linear-gradient(135deg,var(--rose),#c47a6e);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;overflow:hidden;}
 .nav-avatar img{width:100%;height:100%;object-fit:cover;}
-.nav-name{font-size:13px;color:var(--dark);font-weight:300;}
-.nav-pill{display:flex;align-items:center;gap:7px;padding:7px 15px;border-radius:30px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid var(--border);background:var(--glass);backdrop-filter:blur(10px);}
-.nav-pill:hover{background:rgba(193,163,162,0.2);}
-.nav-pill.primary{background:var(--dark);color:var(--cream);border-color:var(--dark);}
-.nav-pill.primary:hover{background:var(--rose-deep);border-color:var(--rose-deep);}
-.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--green-light);animation:dp 2s infinite;}
-@keyframes dp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.4)}}
-.hero{display:grid;grid-template-columns:350px 1fr;gap:26px;margin-bottom:26px;align-items:stretch;}
-.score-card{background:var(--dark);border-radius:28px;padding:38px 34px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;min-height:360px;}
-.score-card::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(193,163,162,0.12),transparent 70%);}
-.score-eyebrow{font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:26px;position:relative;z-index:1;}
-.score-ring-wrap{position:relative;width:168px;height:168px;margin-bottom:22px;z-index:1;}
-.score-svg{width:168px;height:168px;transform:rotate(-90deg);}
-.score-bg{fill:none;stroke:rgba(255,255,255,0.07);stroke-width:7;}
-.score-fill{fill:none;stroke:url(#sg);stroke-width:7;stroke-linecap:round;stroke-dasharray:484;stroke-dashoffset:484;transition:stroke-dashoffset 1.8s cubic-bezier(0.34,1.56,0.64,1);}
-.score-center-wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.score-big{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:54px;color:#fff;line-height:1;font-weight:300;}
-.score-of{font-size:11px;color:rgba(255,255,255,0.28);font-family:'DM Mono',monospace;}
-.score-status{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;color:var(--rose);margin-bottom:5px;z-index:1;}
-.score-desc{font-size:11px;color:rgba(255,255,255,0.36);text-align:center;line-height:1.6;z-index:1;max-width:210px;margin-bottom:20px;}
-.score-metrics{width:100%;display:flex;flex-direction:column;gap:10px;z-index:1;}
-.m-row{display:flex;align-items:center;gap:8px;}
-.m-lbl{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.27);width:84px;flex-shrink:0;}
-.m-track{flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
-.m-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--rose),var(--gold));transform-origin:left;transform:scaleX(0);transition:transform 1.2s cubic-bezier(0.34,1.56,0.64,1);}
-.m-val{font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,0.38);width:30px;text-align:right;}
-.hero-right{display:grid;grid-template-rows:auto 1fr;gap:18px;}
-.hero-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
-.stat-card{background:var(--warm-white);border-radius:20px;padding:22px 18px;border:1px solid var(--border);cursor:pointer;transition:all 0.22s;position:relative;overflow:hidden;}
-.stat-card:hover{transform:translateY(-3px);box-shadow:0 10px 34px rgba(0,0,0,0.07);}
-.stat-card.active{background:var(--dark);border-color:transparent;}
-.stat-icon{font-size:18px;margin-bottom:12px;}
-.stat-val{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:42px;color:var(--dark);font-weight:300;line-height:1;margin-bottom:2px;}
-.stat-card.active .stat-val{color:#fff;}
-.stat-name{font-size:9px;letter-spacing:0.17em;text-transform:uppercase;color:var(--muted);}
-.stat-card.active .stat-name{color:rgba(255,255,255,0.36);}
-.stat-trend{font-size:10px;color:var(--green);margin-top:5px;font-family:'DM Mono',monospace;}
-.journey-card{background:linear-gradient(135deg,var(--rose),var(--rose-deep));border-radius:20px;padding:24px 26px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.22s;position:relative;overflow:hidden;}
-.journey-card::before{content:'';position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.07);}
-.journey-card:hover{transform:translateY(-2px);box-shadow:0 13px 40px rgba(193,163,162,0.35);}
-.journey-eyebrow{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:5px;}
-.journey-title{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;color:#fff;margin-bottom:4px;}
-.journey-sub{font-size:11px;color:rgba(255,255,255,0.58);}
-.journey-btn{background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.28);color:#fff;padding:10px 20px;border-radius:30px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;white-space:nowrap;font-family:'DM Sans',sans-serif;}
-.journey-btn:hover{background:rgba(255,255,255,0.24);}
-.main-grid{display:grid;grid-template-columns:1fr 1fr 310px;gap:20px;margin-bottom:20px;}
-.section-card{background:var(--warm-white);border-radius:24px;border:1px solid var(--border);overflow:hidden;}
-.sec-head{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.sec-title{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px;}
-.sec-title::before{content:'';width:13px;height:1px;background:var(--rose);}
-.sec-action{font-size:10px;color:var(--rose);cursor:pointer;letter-spacing:0.05em;background:none;border:none;font-family:'DM Sans',sans-serif;transition:color 0.2s;}
-.sec-action:hover{color:var(--rose-deep);}
-.profile-body{padding:0 24px 24px;}
-.p-group{margin-bottom:16px;}
-.p-group-label{font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(107,95,85,0.44);margin-bottom:7px;}
+.nav-name{font-size:12px;color:var(--muted2);}
+.plan-tag{font-size:9px;padding:3px 8px;border-radius:3px;background:var(--gold-dim);border:1px solid rgba(212,168,67,0.25);color:var(--gold);font-family:\'IBM Plex Mono\',monospace;letter-spacing:0.08em;}
+.logout-btn{font-size:10px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:4px;background:none;border:none;font-family:\'Space Grotesk\',sans-serif;transition:color 0.15s;}
+.logout-btn:hover{color:var(--text);}
+.app{padding:88px 20px 40px;max-width:1600px;margin:0 auto;position:relative;z-index:1;}
+.top-row{display:grid;grid-template-columns:265px 1fr 265px;gap:12px;margin-bottom:12px;align-items:stretch;}
+.score-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:22px 18px;display:flex;flex-direction:column;align-items:center;position:relative;overflow:hidden;}
+.score-panel::after{content:\'\';position:absolute;top:0;left:50%;transform:translateX(-50%);width:200px;height:1px;background:linear-gradient(90deg,transparent,var(--rose),transparent);}
+.sp-label{font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;margin-bottom:14px;}
+.score-ring-wrap{position:relative;width:140px;height:140px;margin-bottom:12px;}
+.score-svg{width:140px;height:140px;transform:rotate(-90deg);}
+.score-bg-c{fill:none;stroke:rgba(255,255,255,0.04);stroke-width:8;}
+.score-fill-c{fill:none;stroke-width:8;stroke-linecap:round;stroke-dasharray:440;stroke-dashoffset:440;transition:stroke-dashoffset 2s cubic-bezier(0.25,1,0.5,1);}
+.score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-big{font-family:\'Syne\',sans-serif;font-size:44px;font-weight:700;line-height:1;color:var(--text);}
+.score-unit{font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
+.score-status{font-family:\'Syne\',sans-serif;font-size:14px;font-weight:600;margin-bottom:3px;}
+.score-delta{font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--muted2);margin-bottom:14px;}
+.metric-rows{width:100%;display:flex;flex-direction:column;gap:7px;}
+.mr{display:flex;align-items:center;gap:8px;}
+.mr-lbl{font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.1em;color:var(--muted);width:60px;flex-shrink:0;text-transform:uppercase;}
+.mr-track{flex:1;height:2px;background:rgba(255,255,255,0.05);border-radius:1px;overflow:hidden;}
+.mr-fill{height:100%;border-radius:1px;transform-origin:left;transform:scaleX(0);transition:transform 1.4s cubic-bezier(0.25,1,0.5,1);}
+.mr-val{font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--muted2);width:28px;text-align:right;}
+.main-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+.panel-head{display:flex;align-items:center;border-bottom:1px solid var(--border);height:40px;padding:0 16px;gap:12px;}
+.ph-title{font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:0.12em;color:var(--muted2);text-transform:uppercase;}
+.time-tabs{display:flex;gap:2px;margin-left:auto;}
+.tt{font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:3px 8px;border-radius:3px;cursor:pointer;color:var(--muted);border:1px solid transparent;transition:all 0.12s;}
+.tt.on{background:rgba(232,165,152,0.15);border-color:rgba(232,165,152,0.3);color:var(--rose);}
+.chart-area{flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+.chart-row{display:flex;flex-direction:column;gap:3px;}
+.chart-meta{display:flex;align-items:center;justify-content:space-between;}
+.chart-name{font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.1em;color:var(--muted);}
+.chart-reading{font-family:\'IBM Plex Mono\',monospace;font-size:12px;font-weight:500;}
+.sparkline-wrap{height:34px;}
+.sparkline-svg{width:100%;height:100%;}
+.insights-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.ins-head{border-bottom:1px solid var(--border);height:40px;padding:0 16px;display:flex;align-items:center;gap:8px;}
+.ins-title{font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:0.12em;color:var(--muted2);}
+.ins-live{margin-left:auto;display:flex;align-items:center;gap:4px;font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--green);}
+.ins-body{padding:12px;}
+.ins-item{margin-bottom:11px;}
+.ins-item-label{font-size:10px;color:var(--muted2);margin-bottom:5px;display:flex;justify-content:space-between;}
+.ins-item-label span{font-family:\'IBM Plex Mono\',monospace;}
+.ins-bar-wrap{height:6px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden;position:relative;}
+.ins-bar-a{height:100%;border-radius:3px 0 0 3px;background:var(--rose);transition:width 1.2s cubic-bezier(0.25,1,0.5,1);}
+.ins-bar-b{position:absolute;top:0;right:0;height:100%;border-radius:0 3px 3px 0;background:var(--blue);transition:width 1.2s cubic-bezier(0.25,1,0.5,1);}
+.ins-legend{display:flex;justify-content:space-between;margin-top:3px;}
+.ins-l-item{display:flex;align-items:center;gap:4px;font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--muted);}
+.ins-dot{width:5px;height:5px;border-radius:50%;}
+.ins-divider{height:1px;background:var(--border);margin:9px 0;}
+.community-stat{display:flex;align-items:center;justify-content:space-between;padding:4px 0;}
+.cs-label{font-size:10px;color:var(--muted2);}
+.cs-val{font-family:\'IBM Plex Mono\',monospace;font-size:11px;font-weight:500;}
+.cs-chg{font-family:\'IBM Plex Mono\',monospace;font-size:9px;}
+.mid-row{display:grid;grid-template-columns:1fr 1fr 1fr 230px;gap:12px;margin-bottom:12px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;}
+.stat-card::before{content:\'\';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.05),transparent);}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-1px);}
+.stat-card.active{border-color:rgba(232,165,152,0.3);background:rgba(232,165,152,0.04);}
+.sc-eye{font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;}
+.sc-val{font-family:\'Syne\',sans-serif;font-size:34px;font-weight:700;color:var(--text);line-height:1;margin-bottom:2px;}
+.sc-name{font-size:11px;color:var(--muted2);}
+.sc-trend{font-family:\'IBM Plex Mono\',monospace;font-size:9px;margin-top:5px;}
+.sc-spark{margin-top:7px;height:26px;}
+.action-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:7px;}
+.ap-title{font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:3px;}
+.action-btn{width:100%;padding:8px 12px;border-radius:6px;font-family:\'Space Grotesk\',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:all 0.15s;border:1px solid;display:flex;align-items:center;gap:8px;text-align:left;}
+.action-btn.primary{background:var(--rose);color:#fff;border-color:var(--rose);}
+.action-btn.primary:hover{background:#d4877a;border-color:#d4877a;}
+.action-btn.secondary{background:transparent;color:var(--muted2);border-color:var(--border2);}
+.action-btn.secondary:hover{color:var(--text);border-color:rgba(255,255,255,0.15);}
+.ab-icon{font-size:13px;flex-shrink:0;}
+.bot-row{display:grid;grid-template-columns:1fr 300px;gap:12px;}
+.profile-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.profile-tabs{display:flex;border-bottom:1px solid var(--border);}
+.ptab{padding:0 18px;height:40px;display:flex;align-items:center;font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:0.07em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;position:relative;top:1px;}
+.ptab.on{color:var(--text);border-bottom-color:var(--rose);}
+.ptab-content{display:none;padding:16px 20px 20px;}
+.ptab-content.on{display:block;}
+.tag-group{margin-bottom:13px;}
+.tg-label{font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
 .tags{display:flex;flex-wrap:wrap;gap:5px;}
-.tag{padding:6px 12px;border-radius:30px;font-size:11px;font-weight:300;border:1px solid var(--border);background:var(--cream);color:var(--muted);cursor:pointer;transition:all 0.16s;user-select:none;}
-.tag:hover{border-color:var(--rose);color:var(--dark);}
-.tag.on{background:var(--dark);color:#fff;border-color:var(--dark);}
-.tag.on:hover{background:var(--rose-deep);border-color:var(--rose-deep);}
-.save-btn{width:100%;padding:11px;background:var(--dark);color:var(--cream);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:6px;}
-.save-btn:hover{background:var(--rose-deep);}
-.routine-body{padding:0 24px 24px;}
-.week-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:18px;}
-.wday{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
-.wday-lbl{font-size:9px;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);}
-.wday-circle{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.16s;}
-.wday.done .wday-circle{background:var(--dark);border-color:var(--dark);color:#fff;}
-.wday.today .wday-circle{border-color:var(--rose);background:rgba(193,163,162,0.1);}
-.wday:hover .wday-circle{border-color:var(--rose);transform:scale(1.08);}
-.task{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:all 0.16s;margin-bottom:4px;border:1px solid transparent;}
-.task:hover{background:var(--cream);border-color:var(--border);}
-.task.done{opacity:0.46;}
-.task-chk{width:19px;height:19px;border-radius:5px;border:1.5px solid var(--border);background:var(--cream);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;transition:all 0.16s;}
-.task.done .task-chk{background:var(--dark);border-color:var(--dark);color:#fff;}
-.task-name{font-size:12px;font-weight:300;color:var(--dark);margin-bottom:1px;}
-.task-sub{font-size:10px;color:var(--muted);}
-.task-badge{font-size:9px;padding:3px 8px;border-radius:16px;background:rgba(193,163,162,0.1);color:var(--rose-deep);flex-shrink:0;}
-.sidebar{display:flex;flex-direction:column;gap:16px;}
-.streak-card{background:linear-gradient(135deg,#1a1208,#0e0b08);border-radius:24px;padding:24px 20px;text-align:center;position:relative;overflow:hidden;}
-.streak-card::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:170px;height:80px;background:radial-gradient(ellipse,rgba(201,169,110,0.13),transparent 70%);}
-.streak-fire{font-size:30px;margin-bottom:5px;}
-.streak-num{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:52px;color:var(--gold);line-height:1;}
-.streak-lbl{font-size:9px;letter-spacing:0.17em;text-transform:uppercase;color:rgba(255,255,255,0.27);margin-top:3px;margin-bottom:13px;}
-.streak-dots{display:flex;justify-content:center;gap:5px;}
-.sdot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.08);}
-.sdot.lit{background:var(--gold);box-shadow:0 0 6px var(--gold);}
-.mini-card{background:var(--warm-white);border-radius:22px;border:1px solid var(--border);padding:18px;}
-.mini-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
-.product-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
-.product-item:last-child{border-bottom:none;}
-.product-item:hover{padding-left:3px;}
-.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.pname{flex:1;font-size:11px;font-weight:300;color:var(--dark);}
-.pstatus{font-size:9px;padding:2px 7px;border-radius:16px;}
-.pstatus.using{background:rgba(74,124,89,0.1);color:var(--green);}
-.pstatus.try{background:rgba(193,163,162,0.1);color:var(--rose-deep);}
-.tip-item{padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
-.tip-item:last-child{border-bottom:none;padding-bottom:0;}
-.tip-item:hover{padding-left:3px;}
-.tip-date{font-size:9px;color:var(--rose);font-family:'DM Mono',monospace;margin-bottom:2px;}
-.tip-text{font-size:11px;font-weight:300;color:var(--dark);line-height:1.5;}
-.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-.aria-card{background:var(--dark);border-radius:24px;padding:28px;display:flex;align-items:center;gap:22px;cursor:pointer;transition:all 0.22s;position:relative;overflow:hidden;}
-.aria-card::before{content:'';position:absolute;right:-40px;top:-40px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(193,163,162,0.07),transparent 70%);}
-.aria-card:hover{transform:translateY(-2px);box-shadow:0 16px 50px rgba(0,0,0,0.17);}
-.aria-avi{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose-deep));display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;position:relative;}
-.aria-online{position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:50%;background:var(--green-light);border:2px solid var(--dark);}
-.aria-name{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:20px;color:#fff;margin-bottom:3px;}
-.aria-status{font-size:11px;color:rgba(255,255,255,0.36);margin-bottom:11px;}
-.aria-btn{display:inline-flex;align-items:center;gap:6px;background:var(--rose);color:#fff;padding:9px 17px;border-radius:30px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;transition:all 0.2s;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;}
-.aria-btn:hover{background:var(--rose-deep);}
-.history-card{background:var(--warm-white);border-radius:24px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;}
-.h-item{padding:11px 22px;border-bottom:1px solid var(--border);}
+.tag{padding:5px 11px;border-radius:4px;font-size:11px;border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;transition:all 0.12s;font-family:\'Space Grotesk\',sans-serif;}
+.tag:hover{border-color:rgba(232,165,152,0.4);color:var(--rose);}
+.tag.on{background:rgba(232,165,152,0.12);border-color:rgba(232,165,152,0.4);color:var(--rose);}
+.save-btn{margin-top:12px;padding:9px 20px;background:var(--rose);color:#fff;border:none;border-radius:6px;font-family:\'Space Grotesk\',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:6px;}
+.save-btn:hover{background:#d4877a;}
+.week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
+.wd{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
+.wd-l{font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--muted);}
+.wd-c{width:30px;height:30px;border-radius:5px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;transition:all 0.12s;}
+.wd.done .wd-c{background:var(--rose-dim);border-color:rgba(232,165,152,0.35);color:var(--rose);}
+.wd.today .wd-c{border-color:rgba(212,168,67,0.4);}
+.wd:hover .wd-c{border-color:rgba(232,165,152,0.35);}
+.task-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;transition:all 0.12s;margin-bottom:2px;}
+.task-row:hover{background:rgba(255,255,255,0.03);}
+.task-row.done{opacity:0.4;}
+.task-chk{width:16px;height:16px;border-radius:3px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:all 0.12s;}
+.task-row.done .task-chk{background:var(--rose-dim);border-color:rgba(232,165,152,0.35);color:var(--rose);}
+.task-info{flex:1;}
+.task-name{font-size:12px;color:var(--text);}
+.task-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+.task-badge{font-family:\'IBM Plex Mono\',monospace;font-size:8px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,0.05);color:var(--muted2);}
+.side-col{display:flex;flex-direction:column;gap:10px;}
+.streak-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;text-align:center;position:relative;overflow:hidden;}
+.streak-panel::before{content:\'\';position:absolute;top:0;left:50%;transform:translateX(-50%);width:160px;height:60px;background:radial-gradient(ellipse,rgba(212,168,67,0.1),transparent 70%);}
+.streak-fire{font-size:22px;margin-bottom:3px;position:relative;z-index:1;}
+.streak-num{font-family:\'Syne\',sans-serif;font-size:42px;font-weight:800;color:var(--gold);line-height:1;position:relative;z-index:1;}
+.streak-lbl{font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;margin-top:2px;margin-bottom:8px;}
+.streak-dots{display:flex;justify-content:center;gap:4px;}
+.sdot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.06);}
+.sdot.lit{background:var(--gold);box-shadow:0 0 6px var(--gold-glow);}
+.aria-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;}
+.aria-card::before{content:\'\';position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,rgba(232,165,152,0.06),transparent 70%);}
+.aria-card:hover{border-color:rgba(232,165,152,0.25);}
+.aria-avi{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,var(--rose),#c47a6e);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;position:relative;}
+.aria-ping{position:absolute;bottom:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--green);border:2px solid var(--bg2);box-shadow:0 0 8px var(--green);}
+.aria-name{font-family:\'Syne\',sans-serif;font-size:13px;font-weight:600;color:var(--text);margin-bottom:1px;}
+.aria-status{font-size:10px;color:var(--muted);}
+.aria-btn{margin-top:7px;display:inline-flex;align-items:center;gap:5px;background:var(--rose);color:#fff;padding:5px 12px;border-radius:5px;font-size:10px;font-weight:500;border:none;cursor:pointer;font-family:\'Space Grotesk\',sans-serif;transition:all 0.15s;}
+.aria-btn:hover{background:#d4877a;}
+.products-panel,.history-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.panel-mini-head{height:36px;padding:0 14px;display:flex;align-items:center;border-bottom:1px solid var(--border);}
+.pmh-title{font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase;flex:1;}
+.pmh-action{font-size:10px;color:var(--rose);cursor:pointer;background:none;border:none;font-family:\'Space Grotesk\',sans-serif;}
+.product-row{display:flex;align-items:center;gap:9px;padding:7px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.12s;}
+.product-row:last-child{border-bottom:none;}
+.product-row:hover{background:rgba(255,255,255,0.02);}
+.pr-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.pr-name{flex:1;font-size:11px;color:var(--muted2);}
+.pr-tag{font-family:\'IBM Plex Mono\',monospace;font-size:8px;padding:2px 6px;border-radius:3px;}
+.pr-tag.using{background:var(--green-dim);color:var(--green);}
+.pr-tag.try{background:var(--gold-dim);color:var(--gold);}
+.h-item{padding:8px 14px;border-bottom:1px solid var(--border);}
 .h-item:last-child{border-bottom:none;}
-.h-role{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--rose);margin-bottom:2px;}
-.h-text{font-size:12px;color:rgba(0,0,0,0.56);line-height:1.5;font-weight:300;}
-.h-empty{padding:26px 22px;color:rgba(0,0,0,0.27);font-size:13px;}
-.clear-hist{background:none;border:none;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(0,0,0,0.24);cursor:pointer;font-family:'DM Sans',sans-serif;padding:10px 22px;transition:color 0.2s;}
-.clear-hist:hover{color:var(--rose);}
-.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(68px);background:var(--dark);color:#fff;padding:11px 20px;border-radius:30px;font-size:11px;letter-spacing:0.05em;transition:transform 0.36s cubic-bezier(0.34,1.56,0.64,1);z-index:999;box-shadow:0 6px 26px rgba(0,0,0,0.17);}
+.h-role{font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--rose);margin-bottom:2px;}
+.h-text{font-size:11px;color:var(--muted2);line-height:1.5;}
+.h-empty{padding:16px 14px;font-size:11px;color:var(--muted);}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 18px;border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;transition:transform 0.3s cubic-bezier(0.25,1,0.5,1);z-index:999;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
 .toast.show{transform:translateX(-50%) translateY(0);}
-.fade-up{opacity:0;transform:translateY(16px);animation:fu 0.5s forwards;}
-@keyframes fu{to{opacity:1;transform:translateY(0);}}
-.fade-up:nth-child(1){animation-delay:0.04s;}
-.fade-up:nth-child(2){animation-delay:0.09s;}
-.fade-up:nth-child(3){animation-delay:0.13s;}
-.fade-up:nth-child(4){animation-delay:0.17s;}
-@media(max-width:1100px){.hero{grid-template-columns:1fr;}.main-grid{grid-template-columns:1fr 1fr;}.sidebar{display:grid;grid-template-columns:1fr 1fr;}}
-@media(max-width:720px){.main-grid{grid-template-columns:1fr;}.bottom-grid{grid-template-columns:1fr;}.hero-stats{grid-template-columns:1fr 1fr;}.app{padding:0 14px 56px;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fu{opacity:0;animation:fadeUp 0.4s forwards;}
+.fu1{animation-delay:0.05s}.fu2{animation-delay:0.1s}.fu3{animation-delay:0.15s}.fu4{animation-delay:0.2s}.fu5{animation-delay:0.25s}
+@media(max-width:1300px){.top-row{grid-template-columns:240px 1fr 240px;}.mid-row{grid-template-columns:1fr 1fr 1fr;}.mid-row .action-panel{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;}}
+@media(max-width:900px){.top-row{grid-template-columns:1fr;}.mid-row{grid-template-columns:1fr 1fr;}.bot-row{grid-template-columns:1fr;}}
 </style></head><body>
-<div class="app">
-<nav class="nav fade-up">
-  <div class="nav-brand">Aria <span>·</span> Dashboard</div>
+<div class="ticker-wrap">
+  <div class="ticker-label">ARIA LIVE</div>
+  <div style="overflow:hidden;flex:1;"><div class="ticker-track" id="ticker"></div></div>
+</div>
+<nav class="nav">
+  <div class="nav-logo"><div class="nav-logo-dot"></div>SupportRD</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active">Overview</div>
+    <div class="nav-tab" onclick="switchPTab(\'profile\')">Hair Profile</div>
+    <div class="nav-tab" onclick="switchPTab(\'routine\')">Routine</div>
+    <div class="nav-tab" onclick="window.location.href=\'/\'">Chat with Aria</div>
+  </div>
   <div class="nav-right">
-    <div class="nav-avatar" id="nav-av"></div>
-    <span class="nav-name" id="nav-name">Loading…</span>
-    <div class="nav-pill"><div class="nav-dot"></div> Aria Online</div>
-    <div class="nav-pill primary" id="plan-badge">Free</div>
-    <div class="nav-pill" onclick="doLogout()">Sign Out</div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <span class="nav-name" id="nav-name">—</span>
+    <div class="plan-tag" id="plan-badge">FREE</div>
+    <div class="nav-avatar" id="nav-av">?</div>
+    <button class="logout-btn" onclick="doLogout()">Sign out</button>
   </div>
 </nav>
-
-<div class="hero">
-  <div class="score-card fade-up">
-    <div class="score-eyebrow">Hair Health Score</div>
+<div class="app">
+<div class="top-row">
+  <div class="score-panel fu fu1">
+    <div class="sp-label">Hair Health Index</div>
     <div class="score-ring-wrap">
-      <svg class="score-svg" viewBox="0 0 168 168">
-        <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#c1a3a2"/><stop offset="100%" stop-color="#c9a96e"/></linearGradient></defs>
-        <circle class="score-bg" cx="84" cy="84" r="77"/>
-        <circle class="score-fill" id="score-ring" cx="84" cy="84" r="77"/>
+      <svg class="score-svg" viewBox="0 0 140 140">
+        <defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#e8a598"/><stop offset="100%" stop-color="#d4a843"/></linearGradient></defs>
+        <circle class="score-bg-c" cx="70" cy="70" r="62"/>
+        <circle class="score-fill-c" id="score-ring" cx="70" cy="70" r="62" stroke="url(#rg)"/>
       </svg>
-      <div class="score-center-wrap">
+      <div class="score-center">
         <div class="score-big" id="score-num">0</div>
-        <div class="score-of">/ 100</div>
+        <div class="score-unit">/ 100</div>
       </div>
     </div>
-    <div class="score-status" id="score-status">—</div>
-    <div class="score-desc" id="score-desc">Complete your profile to calculate your score</div>
-    <div class="score-metrics">
-      <div class="m-row"><div class="m-lbl">Moisture</div><div class="m-track"><div class="m-fill" id="mb-moisture"></div></div><div class="m-val" id="mv-moisture">—</div></div>
-      <div class="m-row"><div class="m-lbl">Strength</div><div class="m-track"><div class="m-fill" id="mb-strength"></div></div><div class="m-val" id="mv-strength">—</div></div>
-      <div class="m-row"><div class="m-lbl">Scalp Health</div><div class="m-track"><div class="m-fill" id="mb-scalp"></div></div><div class="m-val" id="mv-scalp">—</div></div>
-      <div class="m-row"><div class="m-lbl">Growth</div><div class="m-track"><div class="m-fill" id="mb-growth"></div></div><div class="m-val" id="mv-growth">—</div></div>
+    <div class="score-status" id="score-status" style="color:var(--muted2)">—</div>
+    <div class="score-delta" id="score-delta">Complete profile to score</div>
+    <div class="metric-rows">
+      <div class="mr"><div class="mr-lbl">Moisture</div><div class="mr-track"><div class="mr-fill" id="mf-m" style="background:var(--rose)"></div></div><div class="mr-val" id="mv-m">—</div></div>
+      <div class="mr"><div class="mr-lbl">Strength</div><div class="mr-track"><div class="mr-fill" id="mf-s" style="background:var(--blue)"></div></div><div class="mr-val" id="mv-s">—</div></div>
+      <div class="mr"><div class="mr-lbl">Scalp</div><div class="mr-track"><div class="mr-fill" id="mf-sc" style="background:var(--green)"></div></div><div class="mr-val" id="mv-sc">—</div></div>
+      <div class="mr"><div class="mr-lbl">Growth</div><div class="mr-track"><div class="mr-fill" id="mf-g" style="background:var(--gold)"></div></div><div class="mr-val" id="mv-g">—</div></div>
     </div>
   </div>
-  <div class="hero-right fade-up" style="animation-delay:0.09s">
-    <div class="hero-stats">
-      <div class="stat-card" onclick="this.closest('.hero-stats').querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));this.classList.add('active')">
-        <div class="stat-icon">💬</div>
-        <div class="stat-val" id="st-chats">0</div>
-        <div class="stat-name">Consultations</div>
-        <div class="stat-trend">↑ with Aria</div>
-      </div>
-      <div class="stat-card active" onclick="this.closest('.hero-stats').querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));this.classList.add('active')">
-        <div class="stat-icon">✨</div>
-        <div class="stat-val" id="st-recs">0</div>
-        <div class="stat-name">Recommendations</div>
-        <div class="stat-trend" style="color:var(--gold)">↑ this week</div>
-      </div>
-      <div class="stat-card" onclick="this.closest('.hero-stats').querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));this.classList.add('active')">
-        <div class="stat-icon">📋</div>
-        <div class="stat-val" id="st-concerns">0</div>
-        <div class="stat-name">Concerns Logged</div>
-        <div class="stat-trend">↑ improving</div>
+  <div class="main-panel fu fu2">
+    <div class="panel-head">
+      <div class="ph-title">Health Trend</div>
+      <div class="time-tabs">
+        <div class="tt on" onclick="setRange(this,7)">7D</div>
+        <div class="tt" onclick="setRange(this,14)">14D</div>
+        <div class="tt" onclick="setRange(this,30)">30D</div>
       </div>
     </div>
-    <div class="journey-card" onclick="showToast('🌿 Check-in feature coming soon!')">
-      <div>
-        <div class="journey-eyebrow">Your Journey</div>
-        <div class="journey-title">Track your transformation</div>
-        <div class="journey-sub">Log weekly check-ins · Compare progress · See what\'s working</div>
+    <div class="chart-area">
+      <div class="chart-row"><div class="chart-meta"><div class="chart-name">MOISTURE INDEX</div><div class="chart-reading" id="cr-m" style="color:var(--rose)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-m" viewBox="0 0 400 34" preserveAspectRatio="none"></svg></div></div>
+      <div class="chart-row"><div class="chart-meta"><div class="chart-name">STRENGTH INDEX</div><div class="chart-reading" id="cr-s" style="color:var(--blue)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-s" viewBox="0 0 400 34" preserveAspectRatio="none"></svg></div></div>
+      <div class="chart-row"><div class="chart-meta"><div class="chart-name">SCALP HEALTH</div><div class="chart-reading" id="cr-sc" style="color:var(--green)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-sc" viewBox="0 0 400 34" preserveAspectRatio="none"></svg></div></div>
+      <div class="chart-row"><div class="chart-meta"><div class="chart-name">GROWTH RATE</div><div class="chart-reading" id="cr-g" style="color:var(--gold)">—</div></div><div class="sparkline-wrap"><svg class="sparkline-svg" id="sp-g" viewBox="0 0 400 34" preserveAspectRatio="none"></svg></div></div>
+    </div>
+  </div>
+  <div class="insights-panel fu fu3">
+    <div class="ins-head"><div class="ins-title">+INSIGHTS</div><div class="ins-live"><div class="live-dot" style="width:4px;height:4px;margin:0;"></div>COMMUNITY</div></div>
+    <div class="ins-body">
+      <div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--muted);letter-spacing:0.12em;margin-bottom:8px;">SENTIMENT INDEX</div>
+      <div class="ins-item">
+        <div class="ins-item-label"><span>Moisture focus</span><span style="color:var(--rose)">68%</span></div>
+        <div class="ins-bar-wrap"><div class="ins-bar-a" style="width:68%"></div><div class="ins-bar-b" style="width:32%"></div></div>
+        <div class="ins-legend"><div class="ins-l-item"><div class="ins-dot" style="background:var(--rose)"></div>Treating</div><div class="ins-l-item"><div class="ins-dot" style="background:var(--blue)"></div>Monitoring</div></div>
       </div>
-      <button class="journey-btn">Start Check-in →</button>
+      <div class="ins-item">
+        <div class="ins-item-label"><span>Growth focus</span><span style="color:var(--gold)">54%</span></div>
+        <div class="ins-bar-wrap"><div class="ins-bar-a" style="width:54%;background:var(--gold)"></div><div class="ins-bar-b" style="width:46%;background:var(--purple)"></div></div>
+        <div class="ins-legend"><div class="ins-l-item"><div class="ins-dot" style="background:var(--gold)"></div>Active</div><div class="ins-l-item"><div class="ins-dot" style="background:var(--purple)"></div>Maintenance</div></div>
+      </div>
+      <div class="ins-divider"></div>
+      <div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--muted);letter-spacing:0.12em;margin-bottom:6px;">TRENDING THIS WEEK</div>
+      <div class="community-stat"><div class="cs-label">Gotero Rapido</div><div><span class="cs-val" style="color:var(--text)">+34%</span> <span class="cs-chg" style="color:var(--green)">usage ↑</span></div></div>
+      <div class="community-stat"><div class="cs-label">Mascarilla Capilar</div><div><span class="cs-val" style="color:var(--text)">+21%</span> <span class="cs-chg" style="color:var(--green)">reorder ↑</span></div></div>
+      <div class="community-stat"><div class="cs-label">Scalp concerns</div><div><span class="cs-val" style="color:var(--text)">-18%</span> <span class="cs-chg" style="color:var(--rose)">improving</span></div></div>
+      <div class="ins-divider"></div>
+      <div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--muted);letter-spacing:0.12em;margin-bottom:4px;">ACTIVE NOW</div>
+      <div id="active-count" style="font-family:\'Syne\',sans-serif;font-size:26px;font-weight:700;color:var(--text)">—</div>
+      <div style="font-size:10px;color:var(--muted);">consulting with Aria</div>
     </div>
   </div>
 </div>
-
-<div class="main-grid">
-  <div class="section-card fade-up">
-    <div class="sec-head"><div class="sec-title">Hair Profile</div><button class="sec-action" onclick="saveProfile()">Save & Score →</button></div>
-    <div class="profile-body">
-      <div class="p-group"><div class="p-group-label">Hair Type</div>
-        <div class="tags" id="tags-type">
-          <div class="tag" onclick="toggleTag(this,\'type\')">Straight</div><div class="tag" onclick="toggleTag(this,\'type\')">Wavy</div><div class="tag" onclick="toggleTag(this,\'type\')">Curly</div><div class="tag" onclick="toggleTag(this,\'type\')">Coily</div><div class="tag" onclick="toggleTag(this,\'type\')">Fine</div><div class="tag" onclick="toggleTag(this,\'type\')">Thick</div><div class="tag" onclick="toggleTag(this,\'type\')">Dry / Brittle</div>
-        </div>
+<div class="mid-row">
+  <div class="stat-card fu fu2" onclick="activateStat(this)">
+    <div class="sc-eye">Consultations</div>
+    <div class="sc-val" id="st-chats">0</div>
+    <div class="sc-name">Sessions with Aria</div>
+    <div class="sc-trend" id="st-chats-trend" style="color:var(--green)">— all time</div>
+    <div class="sc-spark"><svg width="100%" height="26" viewBox="0 0 120 26" preserveAspectRatio="none" id="spark-chats"></svg></div>
+  </div>
+  <div class="stat-card active fu fu2" onclick="activateStat(this)">
+    <div class="sc-eye">Recommendations</div>
+    <div class="sc-val" id="st-recs">0</div>
+    <div class="sc-name">Product suggestions</div>
+    <div class="sc-trend" style="color:var(--gold)">↑ this week</div>
+    <div class="sc-spark"><svg width="100%" height="26" viewBox="0 0 120 26" preserveAspectRatio="none" id="spark-recs"></svg></div>
+  </div>
+  <div class="stat-card fu fu3" onclick="activateStat(this)">
+    <div class="sc-eye">Concerns Logged</div>
+    <div class="sc-val" id="st-concerns">0</div>
+    <div class="sc-name">Tracked conditions</div>
+    <div class="sc-trend" style="color:var(--rose)">↑ improving</div>
+    <div class="sc-spark"><svg width="100%" height="26" viewBox="0 0 120 26" preserveAspectRatio="none" id="spark-concerns"></svg></div>
+  </div>
+  <div class="action-panel fu fu4">
+    <div class="ap-title">Quick Actions</div>
+    <button class="action-btn primary" onclick="window.location.href=\'/\'"><span class="ab-icon">💬</span>Ask Aria Now</button>
+    <button class="action-btn secondary" onclick="switchPTab(\'profile\')"><span class="ab-icon">✦</span>Update Profile</button>
+    <button class="action-btn secondary" onclick="window.open(\'https://supportrd.com/collections/all\',\'_blank\')"><span class="ab-icon">🛍</span>Shop Products</button>
+    <button class="action-btn secondary" onclick="window.open(\'https://supportrd.com/blogs/news\',\'_blank\')"><span class="ab-icon">📖</span>Hair Tips Blog</button>
+  </div>
+</div>
+<div class="bot-row">
+  <div class="profile-panel fu fu3">
+    <div class="profile-tabs">
+      <div class="ptab on" id="pt-profile" onclick="switchPTab(\'profile\')">Hair Profile</div>
+      <div class="ptab" id="pt-routine" onclick="switchPTab(\'routine\')">Routine</div>
+      <div class="ptab" id="pt-history" onclick="switchPTab(\'history\')">Chat History</div>
+      <div class="ptab" id="pt-aria" onclick="window.location.href=\'/\'" style="margin-left:auto;">→ Chat with Aria</div>
+    </div>
+    <div class="ptab-content on" id="pc-profile">
+      <div class="tag-group"><div class="tg-label">Hair Type</div><div class="tags" id="tags-type"><div class="tag" onclick="toggleTag(this,\'type\')">Straight</div><div class="tag" onclick="toggleTag(this,\'type\')">Wavy</div><div class="tag" onclick="toggleTag(this,\'type\')">Curly</div><div class="tag" onclick="toggleTag(this,\'type\')">Coily</div><div class="tag" onclick="toggleTag(this,\'type\')">Fine</div><div class="tag" onclick="toggleTag(this,\'type\')">Thick</div><div class="tag" onclick="toggleTag(this,\'type\')">Dry / Brittle</div></div></div>
+      <div class="tag-group"><div class="tg-label">Main Concerns</div><div class="tags" id="tags-concerns"><div class="tag" onclick="toggleTag(this,\'concerns\')">Frizz</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Damaged</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Breakage</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Hair Loss</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Thinning</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Oily Scalp</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Dandruff</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Split Ends</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Slow Growth</div></div></div>
+      <div class="tag-group"><div class="tg-label">Chemical Treatments</div><div class="tags" id="tags-treatments"><div class="tag" onclick="toggleTag(this,\'treatments\')">None / Natural</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Relaxer</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Bleach</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Hair Color</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Keratin</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Perm / Wave</div></div></div>
+      <div class="tag-group"><div class="tg-label">Products I Use</div><div class="tags" id="tags-products"><div class="tag" onclick="toggleTag(this,\'products\')">Formula Exclusiva</div><div class="tag" onclick="toggleTag(this,\'products\')">Laciador Crece</div><div class="tag" onclick="toggleTag(this,\'products\')">Gotero Rapido</div><div class="tag" onclick="toggleTag(this,\'products\')">Gotitas Brillantes</div><div class="tag" onclick="toggleTag(this,\'products\')">Mascarilla Capilar</div><div class="tag" onclick="toggleTag(this,\'products\')">Shampoo Aloe Vera</div></div></div>
+      <button class="save-btn" onclick="saveProfile()">✦ Save & Update Score</button>
+    </div>
+    <div class="ptab-content" id="pc-routine">
+      <div class="week-strip" id="week-strip"></div>
+      <div id="task-list">
+        <div class="task-row" onclick="toggleTask(this)"><div class="task-chk"></div><div class="task-info"><div class="task-name">Scalp Oil Massage</div><div class="task-sub">Gotero Rapido · 5 min</div></div><div class="task-badge">Today</div></div>
+        <div class="task-row done" onclick="toggleTask(this)"><div class="task-chk">✓</div><div class="task-info"><div class="task-name">Deep Conditioning</div><div class="task-sub">Mascarilla Capilar · 20 min</div></div><div class="task-badge">Done</div></div>
+        <div class="task-row" onclick="toggleTask(this)"><div class="task-chk"></div><div class="task-info"><div class="task-name">Wash & Condition</div><div class="task-sub">Shampoo + Formula Exclusiva</div></div><div class="task-badge">Tomorrow</div></div>
+        <div class="task-row" onclick="toggleTask(this)"><div class="task-chk"></div><div class="task-info"><div class="task-name">Protective Style</div><div class="task-sub">Reduce heat & manipulation</div></div><div class="task-badge">This Week</div></div>
+        <div class="task-row done" onclick="toggleTask(this)"><div class="task-chk">✓</div><div class="task-info"><div class="task-name">Trim Split Ends</div><div class="task-sub">Monthly maintenance</div></div><div class="task-badge">Done</div></div>
       </div>
-      <div class="p-group"><div class="p-group-label">Main Concerns</div>
-        <div class="tags" id="tags-concerns">
-          <div class="tag" onclick="toggleTag(this,\'concerns\')">Frizz</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Damaged</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Breakage</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Hair Loss</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Thinning</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Oily Scalp</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Dandruff</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Split Ends</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Slow Growth</div>
-        </div>
-      </div>
-      <div class="p-group"><div class="p-group-label">Chemical Treatments</div>
-        <div class="tags" id="tags-treatments">
-          <div class="tag" onclick="toggleTag(this,\'treatments\')">None / Natural</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Relaxer</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Bleach</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Hair Color</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Keratin</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Perm / Wave</div>
-        </div>
-      </div>
-      <div class="p-group"><div class="p-group-label">Products I Use</div>
-        <div class="tags" id="tags-products">
-          <div class="tag" onclick="toggleTag(this,\'products\')">Formula Exclusiva</div><div class="tag" onclick="toggleTag(this,\'products\')">Laciador Crece</div><div class="tag" onclick="toggleTag(this,\'products\')">Gotero Rapido</div><div class="tag" onclick="toggleTag(this,\'products\')">Gotitas Brillantes</div><div class="tag" onclick="toggleTag(this,\'products\')">Mascarilla Capilar</div><div class="tag" onclick="toggleTag(this,\'products\')">Shampoo Aloe Vera</div>
-        </div>
-      </div>
-      <button class="save-btn" onclick="saveProfile()"><span>✦</span> Save & Update Score</button>
+    </div>
+    <div class="ptab-content" id="pc-history">
+      <div id="history-list"><div class="h-empty">Loading…</div></div>
+      <button onclick="clearHistory()" style="margin-top:8px;background:none;border:none;font-size:10px;color:var(--muted);cursor:pointer;font-family:Space Grotesk,sans-serif;">Clear history →</button>
     </div>
   </div>
-
-  <div class="section-card fade-up" style="animation-delay:0.09s">
-    <div class="sec-head"><div class="sec-title">Weekly Routine</div><button class="sec-action" onclick="showToast(\'🌿 Full routine coming soon!\')">View All →</button></div>
-    <div class="routine-body">
-      <div class="week-row" id="week-row"></div>
-      <div id="tasks">
-        <div class="task" onclick="toggleTask(this)"><div class="task-chk"></div><div><div class="task-name">Scalp Oil Massage</div><div class="task-sub">Gotero Rapido · 5 min</div></div><div class="task-badge">Today</div></div>
-        <div class="task done" onclick="toggleTask(this)"><div class="task-chk">✓</div><div><div class="task-name">Deep Conditioning</div><div class="task-sub">Mascarilla Capilar · 20 min</div></div><div class="task-badge">Done</div></div>
-        <div class="task" onclick="toggleTask(this)"><div class="task-chk"></div><div><div class="task-name">Wash & Condition</div><div class="task-sub">Shampoo Aloe Vera + Formula Exclusiva</div></div><div class="task-badge">Tomorrow</div></div>
-        <div class="task" onclick="toggleTask(this)"><div class="task-chk"></div><div><div class="task-name">Protective Style</div><div class="task-sub">Reduce heat & manipulation</div></div><div class="task-badge">This Week</div></div>
-        <div class="task done" onclick="toggleTask(this)"><div class="task-chk">✓</div><div><div class="task-name">Trim Split Ends</div><div class="task-sub">Monthly maintenance</div></div><div class="task-badge">Done</div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="sidebar fade-up" style="animation-delay:0.13s">
-    <div class="streak-card">
+  <div class="side-col">
+    <div class="streak-panel fu fu4">
       <div class="streak-fire">🔥</div>
       <div class="streak-num" id="streak-num">7</div>
       <div class="streak-lbl">Day Streak</div>
       <div class="streak-dots" id="streak-dots"></div>
     </div>
-    <div class="mini-card">
-      <div class="mini-head"><div class="sec-title">My Products</div><button class="sec-action" onclick="window.open(\'https://supportrd.com/collections/all\',\'_blank\')">Shop →</button></div>
-      <div class="product-item" onclick="showToast(\'✨ Formula Exclusiva — $55\')"><div class="pdot" style="background:#c1a3a2"></div><div class="pname">Formula Exclusiva</div><div class="pstatus using">Using</div></div>
-      <div class="product-item" onclick="showToast(\'✨ Gotero Rapido — $55\')"><div class="pdot" style="background:#c9a96e"></div><div class="pname">Gotero Rapido</div><div class="pstatus using">Using</div></div>
-      <div class="product-item" onclick="showToast(\'✨ Laciador Crece — $40\')"><div class="pdot" style="background:#4a7c59"></div><div class="pname">Laciador Crece</div><div class="pstatus try">Try Next</div></div>
-      <div class="product-item" onclick="showToast(\'✨ Mascarilla Capilar — $25\')"><div class="pdot" style="background:#a07f7e"></div><div class="pname">Mascarilla Capilar</div><div class="pstatus try">Recommended</div></div>
+    <div class="aria-card fu fu4" onclick="window.location.href=\'/\'">
+      <div class="aria-avi">🌿<div class="aria-ping"></div></div>
+      <div>
+        <div class="aria-name">Aria</div>
+        <div class="aria-status">Your personal AI hair advisor</div>
+        <button class="aria-btn">Consult Now →</button>
+      </div>
     </div>
-    <div class="mini-card">
-      <div class="mini-head"><div class="sec-title">Aria\'s Tips</div></div>
-      <div class="tip-item" onclick="window.location.href=\'/\'"><div class="tip-date">Today</div><div class="tip-text">Sleep on a silk pillowcase to reduce overnight friction and frizz.</div></div>
-      <div class="tip-item" onclick="window.location.href=\'/\'"><div class="tip-date">Yesterday</div><div class="tip-text">Your scalp type benefits from Gotero Rapido 3x per week.</div></div>
-      <div class="tip-item" onclick="window.location.href=\'/\'"><div class="tip-date">2 days ago</div><div class="tip-text">Deep condition after every wash for 2 weeks to restore moisture.</div></div>
+    <div class="products-panel fu fu5">
+      <div class="panel-mini-head"><div class="pmh-title">My Products</div><button class="pmh-action" onclick="window.open(\'https://supportrd.com/collections/all\',\'_blank\')">Shop →</button></div>
+      <div class="product-row"><div class="pr-dot" style="background:var(--rose)"></div><div class="pr-name">Formula Exclusiva</div><div class="pr-tag using">Using</div></div>
+      <div class="product-row"><div class="pr-dot" style="background:var(--gold)"></div><div class="pr-name">Gotero Rapido</div><div class="pr-tag using">Using</div></div>
+      <div class="product-row"><div class="pr-dot" style="background:var(--green)"></div><div class="pr-name">Mascarilla Capilar</div><div class="pr-tag try">Try Next</div></div>
+      <div class="product-row"><div class="pr-dot" style="background:var(--blue)"></div><div class="pr-name">Laciador Crece</div><div class="pr-tag try">Recommended</div></div>
     </div>
   </div>
 </div>
-
-<div class="bottom-grid fade-up" style="animation-delay:0.17s">
-  <div class="aria-card" onclick="window.location.href=\'/\'">
-    <div class="aria-avi">🌿<div class="aria-online"></div></div>
-    <div>
-      <div class="aria-name">Chat with Aria</div>
-      <div class="aria-status">Your personal AI hair advisor · Always available</div>
-      <button class="aria-btn">Start Conversation →</button>
-    </div>
-  </div>
-  <div class="history-card">
-    <div class="sec-head"><div class="sec-title">Recent Chat</div><button class="sec-action" onclick="clearHistory()">Clear →</button></div>
-    <div id="history-list"><div class="h-empty">Loading…</div></div>
-  </div>
-</div>
-
 </div>
 <div class="toast" id="toast"></div>
 <script>
-const token=localStorage.getItem('srd_token');
-if(!token){window.location.href='/login';}
+const token=localStorage.getItem(\'srd_token\');
+if(!token){window.location.href=\'/login\';}
+const TDATA=[{n:\'MOISTURE\',c:\'var(--rose)\'},{n:\'STRENGTH\',c:\'var(--blue)\'},{n:\'SCALP\',c:\'var(--green)\'},{n:\'GROWTH\',c:\'var(--gold)\'},{n:\'ARIA STATUS\',v:\'ONLINE\',c:\'var(--green)\',s:1},{n:\'STREAK\',v:\'7D 🔥\',c:\'var(--gold)\',s:1},{n:\'FORMULA EXCLUSIVA\',v:\'$55\',c:\'var(--rose)\',s:1},{n:\'GOTERO RAPIDO\',v:\'$55\',c:\'var(--gold)\',s:1},{n:\'MASCARILLA\',v:\'$25\',c:\'var(--rose)\',s:1},{n:\'LACIADOR CRECE\',v:\'$40\',c:\'var(--blue)\',s:1},{n:\'GOTITAS\',v:\'$30\',c:\'var(--purple)\',s:1}];
+let _scores=null;
+function buildTicker(sc){
+  const wrap=document.getElementById(\'ticker\');wrap.innerHTML=\'\';
+  const items=[...TDATA,...TDATA];
+  items.forEach(item=>{
+    const d=document.createElement(\'div\');d.className=\'ticker-item\';
+    let v=item.v;let chg=\'\';
+    if(!item.s&&sc){if(item.n===\'MOISTURE\')v=sc.moisture+\'%\';if(item.n===\'STRENGTH\')v=sc.strength+\'%\';if(item.n===\'SCALP\')v=sc.scalp+\'%\';if(item.n===\'GROWTH\')v=sc.growth+\'%\';}
+    if(!item.s&&v){const delta=Math.round((Math.random()-0.4)*6);chg=\'<span class="t-chg \'+(delta>=0?\'t-up\':\'t-down\')+\'"\'+(delta>=0?\'+\':\'\')+delta+\'</span>\';}
+    d.innerHTML=\'<span class="t-name">\'+item.n+\'</span> <span class="t-val" style="color:\'+item.c+\'">\'+( v||\'—\')+\'</span>\'+chg;
+    wrap.appendChild(d);
+  });
+}
+function makeSpark(id,data,color,fill){
+  const svg=document.getElementById(id);if(!svg)return;
+  const w=400,h=34,mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1;
+  const xs=data.map((_,i)=>(i/(data.length-1))*w);
+  const ys=data.map(v=>h-3-((v-mn)/rng)*(h-6));
+  const pts=xs.map((x,i)=>x+\',\'+ys[i]).join(\' \');
+  let html=\'\';
+  if(fill){html+=\'<defs><linearGradient id="g\'+id+\'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="\'+color+\'" stop-opacity="0.22"/><stop offset="100%" stop-color="\'+color+\'" stop-opacity="0"/></linearGradient></defs>\';html+=\'<polygon points="0,\'+h+\' \'+pts+\' \'+w+\',\'+h+\'" fill="url(#g\'+id+\')" />\';};
+  html+=\'<polyline points="\'+pts+\'" fill="none" stroke="\'+color+\'" stroke-width="1.5" stroke-linejoin="round"/>\';
+  html+=\'<circle cx="\'+xs[xs.length-1]+\'" cy="\'+ys[ys.length-1]+\'" r="3" fill="\'+color+\'"/>\';
+  svg.innerHTML=html;
+}
+function genTrend(base,days,noise){const arr=[];let v=base;noise=noise||8;for(let i=0;i<days;i++){v=Math.max(0,Math.min(100,v+(Math.random()-0.42)*noise));arr.push(Math.round(v));}return arr;}
+function renderSparklines(sc,days){
+  makeSpark(\'sp-m\',genTrend(sc.moisture,days),\'#e8a598\',true);
+  makeSpark(\'sp-s\',genTrend(sc.strength,days),\'#5b9cf6\',true);
+  makeSpark(\'sp-sc\',genTrend(sc.scalp,days),\'#3dd68c\',true);
+  makeSpark(\'sp-g\',genTrend(sc.growth,days),\'#d4a843\',true);
+  makeSpark(\'spark-chats\',genTrend(50,days,15),\'#e8a598\',false);
+  makeSpark(\'spark-recs\',genTrend(40,days,12),\'#d4a843\',false);
+  makeSpark(\'spark-concerns\',genTrend(30,days,8),\'#5b9cf6\',false);
+  document.getElementById(\'cr-m\').textContent=sc.moisture+\'%\';
+  document.getElementById(\'cr-s\').textContent=sc.strength+\'%\';
+  document.getElementById(\'cr-sc\').textContent=sc.scalp+\'%\';
+  document.getElementById(\'cr-g\').textContent=sc.growth+\'%\';
+}
+let currentRange=7;
+function setRange(el,days){document.querySelectorAll(\'.tt\').forEach(t=>t.classList.remove(\'on\'));el.classList.add(\'on\');currentRange=days;if(_scores)renderSparklines(_scores,days);}
 function calcScore(){
-  const gs=(id)=>[...document.querySelectorAll('#'+id+' .tag.on')].map(t=>t.textContent.trim().toLowerCase()).join(' ');
-  const concerns=gs('tags-concerns'),treatments=gs('tags-treatments'),products=gs('tags-products'),type=gs('tags-type');
+  const gs=(id)=>[...document.querySelectorAll(\'#\'+id+\' .tag.on\')].map(t=>t.textContent.trim().toLowerCase()).join(\' \');
+  const concerns=gs(\'tags-concerns\'),treatments=gs(\'tags-treatments\'),products=gs(\'tags-products\'),type=gs(\'tags-type\');
   let moisture=75,strength=75,scalp=75,growth=75;
-  const map={'frizz':[-10,0,0,0],'damaged':[-5,-25,0,-10],'breakage':[0,-30,0,-15],'hair loss':[0,-10,0,-30],'thinning':[0,-15,0,-25],'oily scalp':[0,0,-20,0],'dandruff':[0,0,-25,-5],'split ends':[-5,-10,0,0],'slow growth':[0,0,0,-20],'dry / brittle':[-15,-5,0,0],'relaxer':[-5,-15,0,0],'bleach':[-5,-20,0,-5],'hair color':[0,-10,0,0],'keratin':[0,-5,0,0],'perm / wave':[-5,-10,0,0],'formula exclusiva':[15,12,5,8],'laciador crece':[12,8,0,5],'gotero rapido':[0,0,18,10],'gotitas brillantes':[8,0,0,0],'mascarilla capilar':[12,5,0,0],'shampoo aloe vera':[5,0,8,5]};
+  const map={\'frizz\':[-10,0,0,0],\'damaged\':[-5,-25,0,-10],\'breakage\':[0,-30,0,-15],\'hair loss\':[0,-10,0,-30],\'thinning\':[0,-15,0,-25],\'oily scalp\':[0,0,-20,0],\'dandruff\':[0,0,-25,-5],\'split ends\':[-5,-10,0,0],\'slow growth\':[0,0,0,-20],\'dry / brittle\':[-15,-5,0,0],\'relaxer\':[-5,-15,0,0],\'bleach\':[-5,-20,0,-5],\'hair color\':[0,-10,0,0],\'keratin\':[0,-5,0,0],\'perm / wave\':[-5,-10,0,0],\'formula exclusiva\':[15,12,5,8],\'laciador crece\':[12,8,0,5],\'gotero rapido\':[0,0,18,10],\'gotitas brillantes\':[8,0,0,0],\'mascarilla capilar\':[12,5,0,0],\'shampoo aloe vera\':[5,0,8,5]};
   for(const[k,v] of Object.entries(map)){if(concerns.includes(k)||treatments.includes(k)||products.includes(k)||type.includes(k)){moisture+=v[0];strength+=v[1];scalp+=v[2];growth+=v[3];}}
-  const cl=(n)=>Math.max(0,Math.min(100,n));
+  const cl=n=>Math.max(0,Math.min(100,n));
   return{overall:Math.round((cl(moisture)+cl(strength)+cl(scalp)+cl(growth))/4),moisture:cl(moisture),strength:cl(strength),scalp:cl(scalp),growth:cl(growth)};
 }
-function getZone(s){
-  if(s>=85)return{status:'Excellent',desc:'Your hair is thriving — keep up your routine!',color:'#7aad8a'};
-  if(s>=70)return{status:'Very Good',desc:'Your hair is in great shape with room to optimize.',color:'#8ec63f'};
-  if(s>=50)return{status:'Good',desc:'Consistent care will push you higher.',color:'#c1a3a2'};
-  if(s>=30)return{status:'Needs Care',desc:'Start a focused treatment routine soon.',color:'#d4956a'};
-  return{status:'Critical',desc:'Your hair needs urgent attention. Talk to our live advisor.',color:'#e07070'};
+function getZone(s){if(s>=85)return{status:\'EXCELLENT\',color:\'var(--green)\'};if(s>=70)return{status:\'VERY GOOD\',color:\'#8ec63f\'};if(s>=50)return{status:\'GOOD\',color:\'var(--rose)\'};if(s>=30)return{status:\'NEEDS CARE\',color:\'var(--gold)\'};return{status:\'CRITICAL\',color:\'var(--red)\'};}
+function animNum(el,to,ms){const start=Date.now(),from=parseInt(el.textContent)||0;(function s(){const p=Math.min(1,(Date.now()-start)/ms),e=1-Math.pow(1-p,4);el.textContent=Math.round(from+(to-from)*e);if(p<1)requestAnimationFrame(s);})();}
+function renderScore(sc){
+  _scores=sc;
+  const z=getZone(sc.overall);
+  const circ=390,ring=document.getElementById(\'score-ring\');
+  ring.style.strokeDasharray=circ;ring.style.strokeDashoffset=circ-(circ*(sc.overall/100));
+  animNum(document.getElementById(\'score-num\'),sc.overall,1800);
+  const st=document.getElementById(\'score-status\');st.textContent=z.status;st.style.color=z.color;
+  document.getElementById(\'score-delta\').textContent=\'Index updated · live session\';
+  [[\'mf-m\',\'mv-m\',sc.moisture],[\'mf-s\',\'mv-s\',sc.strength],[\'mf-sc\',\'mv-sc\',sc.scalp],[\'mf-g\',\'mv-g\',sc.growth]].forEach(([fb,fv,val],i)=>{setTimeout(()=>{document.getElementById(fb).style.transform=\'scaleX(1)\';document.getElementById(fv).textContent=val+\'%\';},300+i*100);});
+  renderSparklines(sc,currentRange);
+  buildTicker(sc);
 }
-function animNum(el,to,ms){const start=Date.now(),from=parseInt(el.textContent)||0;(function s(){const p=Math.min(1,(Date.now()-start)/ms),e=1-Math.pow(1-p,3);el.textContent=Math.round(from+(to-from)*e);if(p<1)requestAnimationFrame(s);})();}
-function renderScore(s){
-  const z=getZone(s.overall);
-  const ring=document.getElementById('score-ring'),circ=484;
-  ring.style.strokeDashoffset=circ-(circ*(s.overall/100));
-  animNum(document.getElementById('score-num'),s.overall,1600);
-  document.getElementById('score-status').textContent=z.status;
-  document.getElementById('score-desc').textContent=z.desc;
-  [['moisture',s.moisture],['strength',s.strength],['scalp',s.scalp],['growth',s.growth]].forEach(([k,v],i)=>{
-    setTimeout(()=>{const b=document.getElementById('mb-'+k);b.style.transform='scaleX(1)';b.style.background=z.color;document.getElementById('mv-'+k).textContent=v+'%';},200+i*80);
-  });
+function buildWeekStrip(){
+  const days=[\'S\',\'M\',\'T\',\'W\',\'T\',\'F\',\'S\'],done=[0,1,2,3,4],today=new Date().getDay(),wrap=document.getElementById(\'week-strip\');
+  days.forEach((d,i)=>{const div=document.createElement(\'div\');div.className=\'wd\'+(done.includes(i)?\' done\':\'\')+(i===today?\' today\':\'\');div.innerHTML=\'<div class="wd-l">\'+d+\'</div><div class="wd-c">\'+(done.includes(i)?\'✓\':\'\')+ \'</div>\';div.onclick=()=>{div.classList.toggle(\'done\');div.querySelector(\'.wd-c\').textContent=div.classList.contains(\'done\')?\'✓\':\'\';if(div.classList.contains(\'done\')){const n=parseInt(document.getElementById(\'streak-num\').textContent);document.getElementById(\'streak-num\').textContent=n+1;buildStreakDots(n+1);showToast(\'✅ Day complete! Streak extended 🔥\');}};wrap.appendChild(div);});
 }
-function buildWeek(){
-  const days=['S','M','T','W','T','F','S'],done=[0,1,2,3,4],today=5,wrap=document.getElementById('week-row');
-  days.forEach((d,i)=>{
-    const div=document.createElement('div');
-    div.className='wday'+(done.includes(i)?' done':'')+(i===today?' today':'');
-    div.innerHTML='<div class="wday-lbl">'+d+'</div><div class="wday-circle">'+(done.includes(i)?'✓':'')+'</div>';
-    div.onclick=()=>{div.classList.toggle('done');div.querySelector('.wday-circle').textContent=div.classList.contains('done')?'✓':'';if(div.classList.contains('done')){const n=parseInt(document.getElementById('streak-num').textContent);document.getElementById('streak-num').textContent=n+1;buildStreakDots(n+1);showToast('✅ Day complete! 🔥');}};
-    wrap.appendChild(div);
-  });
-}
-function buildStreakDots(n){const wrap=document.getElementById('streak-dots');wrap.innerHTML='';for(let i=0;i<7;i++){const d=document.createElement('div');d.className='sdot'+(i<n?' lit':'');wrap.appendChild(d);}}
-function toggleTag(el,group){if(group==='type'){document.querySelectorAll('#tags-type .tag').forEach(t=>t.classList.remove('on'));}el.classList.toggle('on');}
-function tagsToString(id){return[...document.querySelectorAll('#'+id+' .tag.on')].map(t=>t.textContent.trim()).join(', ');}
-function setTagsFromString(id,val){if(!val)return;const sel=val.split(',').map(s=>s.trim().toLowerCase());document.querySelectorAll('#'+id+' .tag').forEach(t=>{if(sel.includes(t.textContent.trim().toLowerCase()))t.classList.add('on');});}
-function toggleTask(el){el.classList.toggle('done');const chk=el.querySelector('.task-chk'),badge=el.querySelector('.task-badge');if(el.classList.contains('done')){chk.textContent='✓';badge.textContent='Done';const n=parseInt(document.getElementById('streak-num').textContent);document.getElementById('streak-num').textContent=n+1;buildStreakDots(n+1);showToast('✅ Task complete! 🔥');}else{chk.textContent='';badge.textContent='Pending';showToast('↩ Task unmarked');}}
+function buildStreakDots(n){const w=document.getElementById(\'streak-dots\');w.innerHTML=\'\';for(let i=0;i<7;i++){const d=document.createElement(\'div\');d.className=\'sdot\'+(i<n?\' lit\':\'\');w.appendChild(d);}}
+function toggleTag(el,group){if(group===\'type\'){document.querySelectorAll(\'#tags-type .tag\').forEach(t=>t.classList.remove(\'on\'));}el.classList.toggle(\'on\');setTimeout(()=>renderScore(calcScore()),50);}
+function tagsToString(id){return[...document.querySelectorAll(\'#\'+id+\' .tag.on\')].map(t=>t.textContent.trim()).join(\', \');}
+function setTagsFromString(id,val){if(!val)return;const sel=val.split(\',\').map(s=>s.trim().toLowerCase());document.querySelectorAll(\'#\'+id+\' .tag\').forEach(t=>{if(sel.includes(t.textContent.trim().toLowerCase()))t.classList.add(\'on\');});}
+function toggleTask(el){el.classList.toggle(\'done\');const chk=el.querySelector(\'.task-chk\');if(el.classList.contains(\'done\')){chk.textContent=\'✓\';const n=parseInt(document.getElementById(\'streak-num\').textContent);document.getElementById(\'streak-num\').textContent=n+1;buildStreakDots(n+1);showToast(\'✅ Task complete!\');}else{chk.textContent=\'\';showToast(\'↩ Task unmarked\');}}
+function switchPTab(name){[\'profile\',\'routine\',\'history\'].forEach(t=>{document.getElementById(\'pt-\'+t).classList.toggle(\'on\',t===name);document.getElementById(\'pc-\'+t).classList.toggle(\'on\',t===name);});if(name===\'history\')loadHistory();}
+function activateStat(el){document.querySelectorAll(\'.stat-card\').forEach(c=>c.classList.remove(\'active\'));el.classList.add(\'active\');}
+function animateActiveUsers(){const el=document.getElementById(\'active-count\');let base=Math.floor(Math.random()*40)+60;el.textContent=base;setInterval(()=>{base+=Math.floor(Math.random()*3)-1;base=Math.max(55,Math.min(120,base));el.textContent=base;},4000);}
 async function loadData(){
   try{
-    const r=await fetch('/api/auth/me',{headers:{'X-Auth-Token':token}});
-    if(r.status===401){window.location.href='/login';return;}
+    const r=await fetch(\'/api/auth/me\',{headers:{\'X-Auth-Token\':token}});
+    if(r.status===401){window.location.href=\'/login\';return;}
     const d=await r.json();
-    document.getElementById('nav-name').textContent=d.name||d.email;
-    const av=document.getElementById('nav-av');
-    if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
-    if(d.subscribed)document.getElementById('plan-badge').textContent='✦ Premium';
-    document.getElementById('st-chats').textContent=d.chat_count||0;
-    const concerns=(d.profile?.hair_concerns||'').split(',').filter(c=>c.trim()).length;
-    document.getElementById('st-concerns').textContent=concerns||0;
-    document.getElementById('st-recs').textContent=Math.floor((d.chat_count||0)/2)||0;
-    if(d.profile){setTagsFromString('tags-type',d.profile.hair_type);setTagsFromString('tags-concerns',d.profile.hair_concerns);setTagsFromString('tags-treatments',d.profile.treatments);setTagsFromString('tags-products',d.profile.products_tried);}
-    setTimeout(()=>renderScore(calcScore()),350);
-  }catch(e){console.error(e);}
+    document.getElementById(\'nav-name\').textContent=d.name||d.email;
+    const av=document.getElementById(\'nav-av\');
+    if(d.avatar){av.innerHTML=\'<img src="\'+d.avatar+\'" alt="">\';}else{av.textContent=(d.name||\'?\')[0].toUpperCase();}
+    if(d.subscribed)document.getElementById(\'plan-badge\').textContent=\'PREMIUM\';
+    document.getElementById(\'st-chats\').textContent=d.chat_count||0;
+    document.getElementById(\'st-chats-trend\').textContent=\'↑ \'+(d.chat_count||0)+\' all time\';
+    const concerns=(d.profile?.hair_concerns||\'\')\'.split(\',\').filter(c=>c.trim()).length;
+    document.getElementById(\'st-concerns\').textContent=concerns||0;
+    document.getElementById(\'st-recs\').textContent=Math.floor((d.chat_count||0)/2)||0;
+    if(d.profile){setTagsFromString(\'tags-type\',d.profile.hair_type);setTagsFromString(\'tags-concerns\',d.profile.hair_concerns);setTagsFromString(\'tags-treatments\',d.profile.treatments);setTagsFromString(\'tags-products\',d.profile.products_tried);}
+    setTimeout(()=>renderScore(calcScore()),400);
+  }catch(e){console.error(e);setTimeout(()=>renderScore(calcScore()),400);}
 }
 async function loadHistory(){
   try{
-    const r=await fetch('/api/history',{headers:{'X-Auth-Token':token}});
-    const d=await r.json();
-    const list=document.getElementById('history-list');
-    if(!d.history||!d.history.length){list.innerHTML='<div class="h-empty">No conversations yet — start chatting with Aria!</div>';return;}
-    list.innerHTML=d.history.slice(-8).reverse().map(h=>'<div class="h-item"><div class="h-role">'+(h.role==='user'?'You':'Aria')+'</div><div class="h-text">'+h.content.slice(0,160)+(h.content.length>160?'…':'')+'</div></div>').join('');
+    const r=await fetch(\'/api/history\',{headers:{\'X-Auth-Token\':token}});const d=await r.json();
+    const list=document.getElementById(\'history-list\');
+    if(!d.history||!d.history.length){list.innerHTML=\'<div class="h-empty">No conversations yet.</div>\';return;}
+    list.innerHTML=d.history.slice(-8).reverse().map(h=>\'<div class="h-item"><div class="h-role">\'+(h.role===\'user\'?\'YOU\':\'ARIA\')+\'</div><div class="h-text">\'+h.content.slice(0,160)+(h.content.length>160?\'…\':\'\')+\'</div></div>\').join(\'\');
   }catch(e){}
 }
 async function saveProfile(){
-  const data={hair_type:tagsToString('tags-type'),hair_concerns:tagsToString('tags-concerns'),treatments:tagsToString('tags-treatments'),products_tried:tagsToString('tags-products')};
-  try{await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});renderScore(calcScore());showToast('✦ Profile saved — score updated!');}catch(e){showToast('⚠️ Save failed — try again');}
+  const data={hair_type:tagsToString(\'tags-type\'),hair_concerns:tagsToString(\'tags-concerns\'),treatments:tagsToString(\'tags-treatments\'),products_tried:tagsToString(\'tags-products\')};
+  try{await fetch(\'/api/profile\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\',\'X-Auth-Token\':token},body:JSON.stringify(data)});renderScore(calcScore());showToast(\'✦ Profile saved — score updated\');}catch(e){showToast(\'⚠ Save failed\');}
 }
-async function clearHistory(){if(!confirm('Clear all chat history?'))return;await fetch('/api/history/clear',{method:'POST',headers:{'X-Auth-Token':token}});loadHistory();showToast('✓ History cleared');}
-async function doLogout(){await fetch('/api/auth/logout',{method:'POST',headers:{'X-Auth-Token':token}});localStorage.removeItem('srd_token');localStorage.removeItem('srd_user');window.location.href='/';}
+async function clearHistory(){if(!confirm(\'Clear all chat history?\'))return;await fetch(\'/api/history/clear\',{method:\'POST\',headers:{\'X-Auth-Token\':token}});loadHistory();showToast(\'✓ History cleared\');}
+async function doLogout(){await fetch(\'/api/auth/logout\',{method:\'POST\',headers:{\'X-Auth-Token\':token}});localStorage.removeItem(\'srd_token\');localStorage.removeItem(\'srd_user\');window.location.href=\'/\';}
 let toastT;
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
-buildWeek();buildStreakDots(7);loadData();loadHistory();
-</script>
-</body></html>"""
+function showToast(msg){const t=document.getElementById(\'toast\');t.textContent=msg;t.classList.add(\'show\');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove(\'show\'),2800);}
+buildWeekStrip();buildStreakDots(7);buildTicker(null);animateActiveUsers();loadData();
+</script></body></html>"""
 
 
 
