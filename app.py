@@ -2908,6 +2908,98 @@ def ping():
 
 
 # ── CUSTOM ORDER ──────────────────────────────────────────────────────────────
+
+# Map form product names to Shopify variant IDs
+# Fill these in from your Shopify admin: Products → click product → copy variant ID from URL
+SHOPIFY_VARIANT_IDS = {
+    "Formula Exclusiva":  os.environ.get("VAR_FORMULA",    ""),
+    "Laciador Crece":     os.environ.get("VAR_LACIADOR",   ""),
+    "Gotero Rapido":      os.environ.get("VAR_GOTERO",     ""),
+    "Gotitas Brillantes": os.environ.get("VAR_GOTITAS",    ""),
+    "Mascarilla Capilar": os.environ.get("VAR_MASCARILLA", ""),
+    "Shampoo Aloe Vera":  os.environ.get("VAR_SHAMPOO",    ""),
+}
+
+def _create_shopify_draft_order(name, email, phone, address, items, notes, delivery):
+    """Create a Shopify draft order and return the invoice URL."""
+    store = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
+    token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
+    if not token:
+        return None, "SHOPIFY_ADMIN_TOKEN not set"
+
+    # Parse address: "123 Street, City, State ZIP, Country"
+    parts = [p.strip() for p in address.split(",")]
+    street  = parts[0] if len(parts) > 0 else address
+    city    = parts[1] if len(parts) > 1 else ""
+    state   = parts[2].split(" ")[0] if len(parts) > 2 else ""
+    zip_    = parts[2].split(" ")[1] if len(parts) > 2 and len(parts[2].split(" ")) > 1 else ""
+    country = parts[3] if len(parts) > 3 else "US"
+
+    name_parts = name.strip().split(" ", 1)
+    first = name_parts[0]
+    last  = name_parts[1] if len(name_parts) > 1 else ""
+
+    # Build line items — use variant IDs if available, else custom items
+    line_items = []
+    for item in items:
+        variant_id = SHOPIFY_VARIANT_IDS.get(item["name"], "")
+        if variant_id:
+            line_items.append({
+                "variant_id": int(variant_id),
+                "quantity":   item["qty"]
+            })
+        else:
+            # Custom line item (no variant ID needed)
+            line_items.append({
+                "title":    item["name"],
+                "price":    str(item["price"]),
+                "quantity": item["qty"]
+            })
+
+    draft = {
+        "draft_order": {
+            "line_items": line_items,
+            "customer": {
+                "first_name": first,
+                "last_name":  last,
+                "email":      email,
+                "phone":      phone
+            },
+            "shipping_address": {
+                "first_name": first,
+                "last_name":  last,
+                "address1":   street,
+                "city":       city,
+                "province":   state,
+                "zip":        zip_,
+                "country":    country,
+                "phone":      phone
+            },
+            "note": f"Delivery: {delivery}\n{notes}",
+            "use_customer_default_address": False
+        }
+    }
+
+    try:
+        import urllib.request as urlreq
+        payload = json.dumps(draft).encode("utf-8")
+        url = f"https://{store}/admin/api/2024-01/draft_orders.json"
+        req = urlreq.Request(url, data=payload, headers={
+            "Content-Type":           "application/json",
+            "X-Shopify-Access-Token": token
+        }, method="POST")
+        with urlreq.urlopen(req, timeout=15) as resp:
+            data       = json.loads(resp.read().decode("utf-8"))
+            draft_data = data.get("draft_order", {})
+            invoice_url = draft_data.get("invoice_url", "")
+            draft_id    = draft_data.get("id", "")
+            print(f"[order] Shopify draft order created: {draft_id}")
+            return invoice_url, None
+    except Exception as e:
+        print(f"[order] Shopify draft order error: {e}")
+        return None, str(e)
+
+
 @app.route("/api/custom-order", methods=["POST", "OPTIONS"])
 def custom_order():
     if request.method == "OPTIONS":
@@ -2933,6 +3025,27 @@ def custom_order():
         for i in items
     ])
 
+    # Try to create Shopify draft order for instant payment link
+    payment_link, draft_err = _create_shopify_draft_order(
+        name, email, phone, address, items, notes, delivery
+    )
+
+    if payment_link:
+        payment_section = f"""
+PAYMENT LINK (send this to the customer):
+  {payment_link}
+
+  ↑ Click the link above, review the order, then click
+    "Send invoice" in Shopify to email it to the customer.
+    Or copy the link and send it manually.
+"""
+    else:
+        payment_section = f"""
+PAYMENT LINK: Could not auto-generate ({draft_err})
+  → Go to Shopify Admin → Orders → Create order manually
+  → Or reply to this email and send a manual invoice
+"""
+
     body = f"""
 ═══════════════════════════════════════
   NEW CUSTOM ORDER REQUEST — SupportRD
@@ -2942,7 +3055,7 @@ PRODUCTS:
 {items_text}
 
 Estimated Total: ${total}
-
+{payment_section}
 CUSTOMER:
   Name:    {name}
   Email:   {email}
@@ -2958,15 +3071,14 @@ NOTES:
   {notes or 'None'}
 
 ═══════════════════════════════════════
-Reply to this email to send the customer their payment link.
-Customer email: {email}
+Reply-To is set to the customer: {email}
 ═══════════════════════════════════════
 """
 
-    # Send via SMTP (Gmail)
-    smtp_user = os.environ.get("SMTP_USER", "")
-    smtp_pass = os.environ.get("SMTP_PASS", "")
-    notify_email = os.environ.get("NOTIFY_EMAIL", smtp_user)  # where YOU receive orders
+    # Send notification email
+    smtp_user    = os.environ.get("SMTP_USER", "")
+    smtp_pass    = os.environ.get("SMTP_PASS", "")
+    notify_email = os.environ.get("NOTIFY_EMAIL", smtp_user)
 
     if smtp_user and smtp_pass:
         try:
@@ -2975,10 +3087,10 @@ Customer email: {email}
             from email.mime.text import MIMEText
 
             msg = MIMEMultipart()
-            msg["Subject"] = f"🛍️ New Order Request — {name} — ${total}"
+            msg["Subject"] = f"New Order — {name} — ${total}" + (" ✅ Payment link ready" if payment_link else " ⚠️ Manual invoice needed")
             msg["From"]    = smtp_user
             msg["To"]      = notify_email
-            msg["Reply-To"] = email  # reply goes straight to the customer
+            msg["Reply-To"] = email
 
             msg.attach(MIMEText(body, "plain"))
 
@@ -2986,32 +3098,32 @@ Customer email: {email}
                 server.login(smtp_user, smtp_pass)
                 server.send_message(msg)
 
-            print(f"[order] Email sent for {name} ({email})")
+            print(f"[order] Email sent for {name} ({email}), payment_link={bool(payment_link)}")
         except Exception as e:
             print(f"[order] SMTP error: {e}")
-            # Fall through — still log it, don't fail the user
     else:
-        print(f"[order] SMTP not configured — order from {name} ({email}): {items_text}")
+        print(f"[order] SMTP not configured — {name} ({email})")
 
-    # Always log to analytics DB as a backup record
+    # Log to DB
     try:
         con = get_analytics_db()
         con.execute("""CREATE TABLE IF NOT EXISTS custom_orders (
-            id       INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts       TEXT,
-            name     TEXT,
-            email    TEXT,
-            phone    TEXT,
-            address  TEXT,
-            items    TEXT,
-            total    INTEGER,
-            delivery TEXT,
-            notes    TEXT
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts           TEXT,
+            name         TEXT,
+            email        TEXT,
+            phone        TEXT,
+            address      TEXT,
+            items        TEXT,
+            total        INTEGER,
+            delivery     TEXT,
+            notes        TEXT,
+            payment_link TEXT
         )""")
         con.execute(
-            "INSERT INTO custom_orders (ts,name,email,phone,address,items,total,delivery,notes) VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO custom_orders (ts,name,email,phone,address,items,total,delivery,notes,payment_link) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (datetime.datetime.utcnow().isoformat(), name, email, phone,
-             address, json.dumps(items), total, delivery, notes)
+             address, json.dumps(items), total, delivery, notes, payment_link or "")
         )
         con.commit()
         con.close()
