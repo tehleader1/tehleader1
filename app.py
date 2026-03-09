@@ -268,7 +268,8 @@ STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID        = os.environ.get("STRIPE_PRICE_ID", "")
 STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_TRIAL_DAYS      = 7
-FREE_RESPONSE_LIMIT    = 3
+FREE_RESPONSE_LIMIT    = 50
+FREE_RESPONSE_PERIOD   = "weekly"   # reset every 7 days
 SUBSCRIPTION_PRICE_USD = 80
 APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor.onrender.com")
 SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
@@ -297,7 +298,37 @@ def init_subscription_db():
         session_id TEXT NOT NULL,
         user_id    INTEGER,
         count      INTEGER DEFAULT 0,
+        week_start TEXT DEFAULT (date('now','weekday 0','-6 days')),
         created_at TEXT DEFAULT (datetime('now'))
+    )""")
+    # ── PREMIUM TABLES ──
+    con.execute("""CREATE TABLE IF NOT EXISTS hair_score_history (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL,
+        score      INTEGER NOT NULL,
+        moisture   INTEGER, strength INTEGER, scalp INTEGER, growth INTEGER,
+        ts         TEXT DEFAULT (datetime('now'))
+    )""")
+    con.execute("""CREATE TABLE IF NOT EXISTS treatment_log (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL,
+        product    TEXT NOT NULL,
+        notes      TEXT,
+        rating     INTEGER DEFAULT 0,
+        ts         TEXT DEFAULT (datetime('now'))
+    )""")
+    con.execute("""CREATE TABLE IF NOT EXISTS routines (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER UNIQUE NOT NULL,
+        routine_json TEXT NOT NULL,
+        generated_at TEXT DEFAULT (datetime('now'))
+    )""")
+    con.execute("""CREATE TABLE IF NOT EXISTS photo_analyses (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER NOT NULL,
+        analysis    TEXT NOT NULL,
+        porosity    TEXT, damage_level TEXT, density TEXT,
+        ts          TEXT DEFAULT (datetime('now'))
     )""")
     con.commit()
     con.close()
@@ -325,29 +356,36 @@ def is_subscribed(user_id):
         except: pass
     return False
 
+def _week_start():
+    """Monday of the current week (ISO)."""
+    today = datetime.date.today()
+    return (today - datetime.timedelta(days=today.weekday())).isoformat()
+
 def get_session_count(session_id, user_id=None):
     con = get_db()
+    ws = _week_start()
     if user_id:
-        row = con.execute("SELECT count FROM session_usage WHERE user_id=?", (user_id,)).fetchone()
+        row = con.execute("SELECT count FROM session_usage WHERE user_id=? AND week_start=?", (user_id, ws)).fetchone()
     else:
-        row = con.execute("SELECT count FROM session_usage WHERE session_id=? AND user_id IS NULL", (session_id,)).fetchone()
+        row = con.execute("SELECT count FROM session_usage WHERE session_id=? AND user_id IS NULL AND week_start=?", (session_id, ws)).fetchone()
     con.close()
     return row[0] if row else 0
 
 def increment_session_count(session_id, user_id=None):
     con = get_db()
+    ws = _week_start()
     if user_id:
-        row = con.execute("SELECT id FROM session_usage WHERE user_id=?", (user_id,)).fetchone()
+        row = con.execute("SELECT id FROM session_usage WHERE user_id=? AND week_start=?", (user_id, ws)).fetchone()
         if row:
-            con.execute("UPDATE session_usage SET count=count+1 WHERE user_id=?", (user_id,))
+            con.execute("UPDATE session_usage SET count=count+1 WHERE user_id=? AND week_start=?", (user_id, ws))
         else:
-            con.execute("INSERT INTO session_usage (session_id,user_id,count) VALUES (?,?,1)", (session_id, user_id))
+            con.execute("INSERT INTO session_usage (session_id,user_id,count,week_start) VALUES (?,?,1,?)", (session_id, user_id, ws))
     else:
-        row = con.execute("SELECT id FROM session_usage WHERE session_id=? AND user_id IS NULL", (session_id,)).fetchone()
+        row = con.execute("SELECT id FROM session_usage WHERE session_id=? AND user_id IS NULL AND week_start=?", (session_id, ws)).fetchone()
         if row:
-            con.execute("UPDATE session_usage SET count=count+1 WHERE session_id=?", (session_id,))
+            con.execute("UPDATE session_usage SET count=count+1 WHERE session_id=? AND week_start=?", (session_id, ws))
         else:
-            con.execute("INSERT INTO session_usage (session_id,user_id,count) VALUES (?,NULL,1)", (session_id,))
+            con.execute("INSERT INTO session_usage (session_id,user_id,count,week_start) VALUES (?,NULL,1,?)", (session_id, ws))
     con.commit()
     con.close()
 
@@ -1225,6 +1263,141 @@ def dashboard_stats():
         return jsonify({"error": str(e)}), 500
 
 
+# ── PREMIUM: SCORE HISTORY ────────────────────────────────────────────────────
+@app.route("/api/score-history", methods=["GET","POST"])
+def score_history():
+    user = get_current_user()
+    if not user: return jsonify({"error":"unauthorized"}), 401
+    if not is_subscribed(user["id"]): return jsonify({"error":"premium_required"}), 403
+    if request.method == "POST":
+        d = request.get_json()
+        db_execute("INSERT INTO hair_score_history (user_id,score,moisture,strength,scalp,growth) VALUES (?,?,?,?,?,?)",
+            (user["id"], d.get("score",0), d.get("moisture",0), d.get("strength",0), d.get("scalp",0), d.get("growth",0)))
+        return jsonify({"ok": True})
+    con = get_db()
+    rows = con.execute("SELECT score,moisture,strength,scalp,growth,ts FROM hair_score_history WHERE user_id=? ORDER BY ts DESC LIMIT 90", (user["id"],)).fetchall()
+    con.close()
+    return jsonify({"history": [{"score":r[0],"moisture":r[1],"strength":r[2],"scalp":r[3],"growth":r[4],"ts":r[5]} for r in reversed(rows)]})
+
+
+# ── PREMIUM: TREATMENT LOG ────────────────────────────────────────────────────
+@app.route("/api/treatment-log", methods=["GET","POST","DELETE"])
+def treatment_log():
+    user = get_current_user()
+    if not user: return jsonify({"error":"unauthorized"}), 401
+    if not is_subscribed(user["id"]): return jsonify({"error":"premium_required"}), 403
+    if request.method == "POST":
+        d = request.get_json()
+        db_execute("INSERT INTO treatment_log (user_id,product,notes,rating) VALUES (?,?,?,?)",
+            (user["id"], d.get("product",""), d.get("notes",""), d.get("rating",0)))
+        return jsonify({"ok": True})
+    if request.method == "DELETE":
+        eid = request.args.get("id")
+        if eid: db_execute("DELETE FROM treatment_log WHERE id=? AND user_id=?", (eid, user["id"]))
+        return jsonify({"ok": True})
+    con = get_db()
+    rows = con.execute("SELECT id,product,notes,rating,ts FROM treatment_log WHERE user_id=? ORDER BY ts DESC LIMIT 50", (user["id"],)).fetchall()
+    con.close()
+    return jsonify({"log": [{"id":r[0],"product":r[1],"notes":r[2],"rating":r[3],"ts":r[4]} for r in rows]})
+
+
+# ── PREMIUM: SMART ROUTINE BUILDER ───────────────────────────────────────────
+@app.route("/api/routine", methods=["GET","POST"])
+def routine():
+    user = get_current_user()
+    if not user: return jsonify({"error":"unauthorized"}), 401
+    if not is_subscribed(user["id"]): return jsonify({"error":"premium_required"}), 403
+    if request.method == "GET":
+        con = get_db()
+        row = con.execute("SELECT routine_json,generated_at FROM routines WHERE user_id=?", (user["id"],)).fetchone()
+        con.close()
+        if row: return jsonify({"routine": json.loads(row[0]), "generated_at": row[1]})
+        return jsonify({"routine": None})
+    # POST = regenerate
+    profile = get_hair_profile(user["id"])
+    if not profile.get("hair_type") and not profile.get("hair_concerns"):
+        return jsonify({"error": "Please fill in your hair profile first."}), 400
+    prompt = f"""You are Aria, a professional hair advisor for SupportRD. Generate a personalized weekly hair care routine.
+
+CLIENT PROFILE:
+- Name: {user.get("name","Client")}
+- Hair type: {profile.get("hair_type","not specified")}
+- Hair concerns: {profile.get("hair_concerns","not specified")}
+- Chemical treatments: {profile.get("treatments","none")}
+- Products they use: {profile.get("products_tried","not specified")}
+
+SupportRD PRODUCTS (use these specifically):
+- Formula Exclusiva ($55) — all-in-one treatment, moisture + strength + scalp
+- Laciador Crece ($40) — softness, elasticity, shine, growth stimulation
+- Gotero Rapido ($55) — scalp treatment, eliminates parasites/obstructions, growth
+- Gotitas Brillantes ($30) — shine serum, apply after styling
+- Mascarilla Capilar ($25) — deep conditioning mask
+- Shampoo Aloe Vera ($20) — gentle daily/weekly cleanse
+
+Respond ONLY with valid JSON (no markdown, no backticks) in this exact structure:
+{{"days":{{"monday":{{"title":"Wash Day","morning":["step1","step2"],"evening":["step1"],"products":["product name"]}},"tuesday":{{"title":"Rest Day","morning":["step1"],"evening":["step1"],"products":[]}},"wednesday":{{"title":"Treatment Day","morning":["step1","step2"],"evening":["step1","step2"],"products":["product name"]}},"thursday":{{"title":"Rest Day","morning":["step1"],"evening":["step1"],"products":[]}},"friday":{{"title":"Style Day","morning":["step1","step2"],"evening":["step1"],"products":["product name"]}},"saturday":{{"title":"Deep Condition","morning":["step1","step2","step3"],"evening":["step1"],"products":["product name","product name"]}},"sunday":{{"title":"Scalp Care","morning":["step1","step2"],"evening":["step1","step2"],"products":["product name"]}}}},"tips":["personalized tip 1","tip 2","tip 3"],"focus_concern":"{profile.get('hair_concerns','general health')}","recommended_products":["most important product","second product"]}}"""
+    try:
+        import urllib.request as urlreq
+        payload = json.dumps({"model":"claude-sonnet-4-20250514","max_tokens":1200,"messages":[{"role":"user","content":prompt}]}).encode()
+        req = urlreq.Request("https://api.anthropic.com/v1/messages", data=payload,
+            headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"}, method="POST")
+        with urlreq.urlopen(req, timeout=20) as resp:
+            result = json.loads(resp.read().decode())
+            raw = result["content"][0]["text"].strip()
+            raw = raw.replace("```json","").replace("```","").strip()
+            routine_data = json.loads(raw)
+        db_execute("INSERT INTO routines (user_id,routine_json) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET routine_json=excluded.routine_json,generated_at=datetime('now')",
+            (user["id"], json.dumps(routine_data)))
+        return jsonify({"routine": routine_data, "generated_at": datetime.datetime.utcnow().isoformat()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── PREMIUM: PHOTO HAIR ANALYSIS ─────────────────────────────────────────────
+@app.route("/api/photo-analysis", methods=["POST","GET"])
+def photo_analysis():
+    user = get_current_user()
+    if not user: return jsonify({"error":"unauthorized"}), 401
+    if not is_subscribed(user["id"]): return jsonify({"error":"premium_required"}), 403
+    if request.method == "GET":
+        con = get_db()
+        rows = con.execute("SELECT analysis,porosity,damage_level,density,ts FROM photo_analyses WHERE user_id=? ORDER BY ts DESC LIMIT 5", (user["id"],)).fetchall()
+        con.close()
+        return jsonify({"analyses": [{"analysis":r[0],"porosity":r[1],"damage_level":r[2],"density":r[3],"ts":r[4]} for r in rows]})
+    data = request.get_json()
+    image_b64 = data.get("image_b64","")
+    if not image_b64: return jsonify({"error":"No image provided"}), 400
+    # Strip data URL prefix if present
+    if "," in image_b64: image_b64 = image_b64.split(",",1)[1]
+    prompt = """You are Aria, an expert hair analyst for SupportRD. Analyze this hair photo carefully.
+
+Provide a detailed JSON analysis (no markdown, no backticks) with this structure:
+{"porosity":"low/medium/high","damage_level":"none/mild/moderate/severe","density":"fine/medium/thick","texture":"straight/wavy/curly/coily","observations":["observation 1","observation 2","observation 3"],"recommended_products":["product1","product2"],"personalized_advice":"2-3 sentence personal recommendation referencing specific SupportRD products","overall_health_score":75}
+
+SupportRD products to reference: Formula Exclusiva ($55), Laciador Crece ($40), Gotero Rapido ($55), Gotitas Brillantes ($30), Mascarilla Capilar ($25), Shampoo Aloe Vera ($20)."""
+    try:
+        import urllib.request as urlreq
+        payload = json.dumps({
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 600,
+            "messages": [{"role":"user","content":[
+                {"type":"image","source":{"type":"base64","media_type":"image/jpeg","data":image_b64}},
+                {"type":"text","text":prompt}
+            ]}]
+        }).encode()
+        req = urlreq.Request("https://api.anthropic.com/v1/messages", data=payload,
+            headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"}, method="POST")
+        with urlreq.urlopen(req, timeout=25) as resp:
+            result = json.loads(resp.read().decode())
+            raw = result["content"][0]["text"].strip().replace("```json","").replace("```","").strip()
+            analysis_data = json.loads(raw)
+        db_execute("INSERT INTO photo_analyses (user_id,analysis,porosity,damage_level,density) VALUES (?,?,?,?,?)",
+            (user["id"], json.dumps(analysis_data), analysis_data.get("porosity",""), analysis_data.get("damage_level",""), analysis_data.get("density","")))
+        return jsonify({"ok": True, "analysis": analysis_data})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/analytics")
 def analytics():
     key = request.args.get("key","")
@@ -1947,6 +2120,101 @@ body::before{content:'';position:fixed;inset:0;
 .pr-tag{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 7px;border-radius:3px;}
 .pr-tag.using{background:rgba(48,232,144,0.1);color:var(--green);}
 .pr-tag.try{background:var(--gold-dim);color:var(--gold);}
+/* ── PREMIUM PAGES ── */
+.ppage{display:none;padding:90px 22px 32px;min-height:100vh;}
+.ppage.active{display:block;}
+.ppage-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.ppage-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px;}
+.premium-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.15em;background:linear-gradient(135deg,var(--rose),var(--gold));color:#000;padding:3px 8px;border-radius:3px;font-weight:600;}
+.ppage-regen{background:rgba(240,160,144,0.12);border:1px solid rgba(240,160,144,0.3);color:var(--rose);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:7px 16px;border-radius:6px;cursor:pointer;transition:all 0.2s;}
+.ppage-regen:hover{background:rgba(240,160,144,0.22);border-color:var(--rose);}
+.ppage-loading{display:flex;align-items:center;gap:12px;color:var(--muted2);font-size:13px;padding:40px 0;}
+.ppage-spinner{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--rose);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ppage-empty{color:var(--muted2);font-size:13px;padding:40px 0;text-align:center;line-height:1.6;}
+/* Premium gate */
+.premium-gate{text-align:center;padding:60px 20px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;max-width:460px;margin:40px auto;}
+.gate-icon{font-size:40px;margin-bottom:16px;}
+.gate-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:10px;}
+.gate-desc{color:var(--muted2);font-size:13px;line-height:1.6;margin-bottom:24px;}
+.gate-btn{background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:12px 28px;border-radius:8px;cursor:pointer;letter-spacing:0.04em;}
+/* Routine */
+.routine-tips{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:16px 18px;margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;}
+.routine-tip{font-size:12px;color:var(--muted2);background:var(--bg3);border-radius:6px;padding:5px 10px;line-height:1.4;}
+.routine-tip::before{content:'✦ ';color:var(--rose);}
+.routine-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px;}
+.rd-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;}
+.rd-day{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.rd-title{font-size:13px;font-weight:600;color:var(--rose);margin-bottom:10px;}
+.rd-section{font-size:10px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin:8px 0 4px;}
+.rd-step{font-size:12px;color:var(--muted2);line-height:1.5;padding-left:10px;position:relative;}
+.rd-step::before{content:'·';position:absolute;left:0;color:var(--rose);}
+.rd-products{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.rd-prod-tag{font-size:10px;background:rgba(240,160,144,0.08);border:1px solid rgba(240,160,144,0.18);color:var(--rose);border-radius:4px;padding:2px 7px;}
+.routine-products{background:var(--bg2);border:1px solid rgba(224,176,80,0.2);border-radius:12px;padding:16px 18px;}
+.routine-products-title{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;}
+.rp-item{font-size:13px;color:var(--text);padding:5px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.rp-item:last-child{border:none;}
+.rp-item::before{content:'★';color:var(--gold);font-size:10px;}
+/* Progress */
+.prog-layout{display:grid;grid-template-columns:1fr 320px;gap:16px;}
+@media(max-width:900px){.prog-layout{grid-template-columns:1fr;}}
+.prog-chart-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:20px;}
+.prog-chart-head{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted2);margin-bottom:14px;}
+.prog-chart-wrap{position:relative;margin-bottom:16px;}
+.prog-chart-labels{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;}
+.prog-metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.prog-metric{text-align:center;}
+.pm-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;}
+.pm-lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+.treatment-log-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:20px;}
+.tl-head{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted2);margin-bottom:14px;}
+.tl-entry{padding:10px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px;}
+.tl-entry:last-child{border:none;}
+.tl-product{font-size:13px;font-weight:600;color:var(--rose);}
+.tl-notes{font-size:11px;color:var(--muted2);line-height:1.4;}
+.tl-meta{display:flex;justify-content:space-between;align-items:center;}
+.tl-stars{color:var(--gold);font-size:11px;letter-spacing:1px;}
+.tl-date{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);}
+.tl-del{background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:0;}
+.tl-del:hover{color:var(--red);}
+/* Photo */
+.photo-layout{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start;}
+@media(max-width:900px){.photo-layout{grid-template-columns:1fr;}}
+.photo-upload-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:20px;}
+.photo-drop{border:2px dashed var(--border2);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color 0.2s;}
+.photo-drop:hover{border-color:rgba(240,160,144,0.4);}
+.photo-drop-icon{font-size:32px;margin-bottom:10px;}
+.photo-drop-label{font-size:13px;color:var(--text);margin-bottom:4px;}
+.photo-drop-sub{font-size:11px;color:var(--muted);}
+.photo-result-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:20px;}
+.photo-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.photo-metric{background:var(--bg3);border-radius:8px;padding:12px;text-align:center;}
+.phm-label{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.phm-val{font-size:13px;font-weight:600;color:var(--rose);text-transform:capitalize;}
+.photo-score-wrap{margin-bottom:18px;}
+.photo-score-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;}
+.photo-score-bar{background:var(--bg3);border-radius:4px;height:8px;overflow:hidden;margin-bottom:4px;}
+.photo-score-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--rose),var(--gold));transition:width 1s;}
+.photo-score-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted2);}
+.photo-advice{background:rgba(240,160,144,0.06);border-left:2px solid var(--rose);border-radius:0 8px 8px 0;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;margin-bottom:14px;}
+.photo-obs-title,.photo-recs-title,.photo-history-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;}
+.photo-obs-item{font-size:12px;color:var(--muted2);padding:3px 0 3px 12px;position:relative;}
+.photo-obs-item::before{content:'·';position:absolute;left:0;color:var(--gold);}
+.photo-rec-tag{display:inline-block;background:rgba(96,168,255,0.1);border:1px solid rgba(96,168,255,0.2);color:var(--blue);font-size:11px;border-radius:5px;padding:3px 9px;margin:2px;}
+.photo-hist-item{font-size:11px;color:var(--muted2);padding:4px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;width:min(420px,90vw);}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px;}
+.modal-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;padding:9px 12px;margin-bottom:10px;resize:vertical;}
+.modal-input:focus{outline:none;border-color:rgba(240,160,144,0.4);}
+.modal-rating{margin-bottom:4px;}
+.modal-rating-label{font-size:11px;color:var(--muted2);margin-bottom:6px;}
+.modal-stars span{font-size:22px;cursor:pointer;color:var(--border2);transition:color 0.15s;}
+.modal-stars span.lit{color:var(--gold);}
+.modal-save{flex:1;background:var(--rose);border:none;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:10px;border-radius:8px;cursor:pointer;}
+.modal-cancel{background:var(--bg3);border:1px solid var(--border2);color:var(--muted2);font-family:'Space Grotesk',sans-serif;font-size:13px;padding:10px 16px;border-radius:8px;cursor:pointer;}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg3);border:1px solid rgba(240,160,144,0.3);color:var(--text);padding:9px 18px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;transition:transform 0.3s;z-index:999;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -1967,9 +2235,11 @@ body::before{content:'';position:fixed;inset:0;
 <nav class="nav">
   <div class="nav-logo"><div class="nav-logo-dot"></div>SupportRD</div>
   <div class="nav-tabs">
-    <div class="nav-tab active">Overview</div>
+    <div class="nav-tab active" onclick="switchPTab('overview')">Overview</div>
     <div class="nav-tab" onclick="switchPTab('profile')">Hair Profile</div>
-    <div class="nav-tab" onclick="switchPTab('routine')">Routine</div>
+    <div class="nav-tab" onclick="switchPTab('routine')">✦ Routine</div>
+    <div class="nav-tab" onclick="switchPTab('progress')">✦ Progress</div>
+    <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
   </div>
   <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
@@ -2176,6 +2446,141 @@ body::before{content:'';position:fixed;inset:0;
 </div>
 </div>
 
+<!-- ═══════════════ PREMIUM FULL-PAGE PANELS ═══════════════ -->
+
+<!-- ✦ SMART ROUTINE BUILDER -->
+<div class="ppage" id="pp-routine">
+  <div class="ppage-head">
+    <div class="ppage-title">✦ Smart Routine Builder <span class="premium-badge">PREMIUM</span></div>
+    <button class="ppage-regen" id="routine-regen-btn" onclick="generateRoutine()">⟳ Generate My Routine</button>
+  </div>
+  <div id="routine-gate" class="premium-gate" style="display:none">
+    <div class="gate-icon">✦</div>
+    <div class="gate-title">Smart Routine Builder</div>
+    <div class="gate-desc">Aria builds your personalized 7-day hair care schedule based on your hair type, concerns, and products. Tap to unlock.</div>
+    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
+  </div>
+  <div id="routine-loading" class="ppage-loading" style="display:none">
+    <div class="ppage-spinner"></div><div>Aria is crafting your routine…</div>
+  </div>
+  <div id="routine-content" style="display:none">
+    <div class="routine-tips" id="routine-tips"></div>
+    <div class="routine-grid" id="routine-grid"></div>
+    <div class="routine-products" id="routine-products"></div>
+  </div>
+  <div id="routine-empty" class="ppage-empty">
+    <div>Fill in your <strong>Hair Profile</strong> first, then tap <em>Generate My Routine</em> above.</div>
+  </div>
+</div>
+
+<!-- ✦ PROGRESS TRACKER (Score History + Treatment Log) -->
+<div class="ppage" id="pp-progress">
+  <div class="ppage-head">
+    <div class="ppage-title">✦ Progress Tracker <span class="premium-badge">PREMIUM</span></div>
+    <button class="ppage-regen" onclick="openLogModal()">+ Log Treatment</button>
+  </div>
+  <div id="progress-gate" class="premium-gate" style="display:none">
+    <div class="gate-icon">📈</div>
+    <div class="gate-title">Hair Health Timeline</div>
+    <div class="gate-desc">Track your score over 30, 60, 90 days. Log treatments and see what products are actually working for your hair.</div>
+    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
+  </div>
+  <div id="progress-content" style="display:none">
+    <div class="prog-layout">
+      <div class="prog-chart-panel">
+        <div class="prog-chart-head">Hair Health Score — Last 90 Days</div>
+        <div class="prog-chart-wrap">
+          <svg id="score-history-svg" width="100%" height="160" viewBox="0 0 600 160" preserveAspectRatio="none"></svg>
+          <div class="prog-chart-labels" id="prog-chart-labels"></div>
+        </div>
+        <div class="prog-metric-row">
+          <div class="prog-metric"><div class="pm-val" id="ph-avg" style="color:var(--rose)">—</div><div class="pm-lbl">Avg Score</div></div>
+          <div class="prog-metric"><div class="pm-val" id="ph-best" style="color:var(--green)">—</div><div class="pm-lbl">Best Score</div></div>
+          <div class="prog-metric"><div class="pm-val" id="ph-trend" style="color:var(--gold)">—</div><div class="pm-lbl">30-Day Trend</div></div>
+          <div class="prog-metric"><div class="pm-val" id="ph-entries" style="color:var(--blue)">—</div><div class="pm-lbl">Entries</div></div>
+        </div>
+      </div>
+      <div class="treatment-log-panel">
+        <div class="tl-head">Treatment Log</div>
+        <div class="tl-list" id="treatment-list"><div class="h-empty">No treatments logged yet.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✦ PHOTO HAIR ANALYSIS -->
+<div class="ppage" id="pp-photo">
+  <div class="ppage-head">
+    <div class="ppage-title">✦ Photo Hair Analysis <span class="premium-badge">PREMIUM</span></div>
+  </div>
+  <div id="photo-gate" class="premium-gate" style="display:none">
+    <div class="gate-icon">📸</div>
+    <div class="gate-title">AI Photo Analysis</div>
+    <div class="gate-desc">Upload a selfie and Aria diagnoses your hair's porosity, damage level, density, and texture — then recommends the perfect products.</div>
+    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
+  </div>
+  <div id="photo-content" style="display:none">
+    <div class="photo-layout">
+      <div class="photo-upload-panel">
+        <div class="photo-drop" id="photo-drop" onclick="document.getElementById('photo-file').click()">
+          <div class="photo-drop-icon">📸</div>
+          <div class="photo-drop-label">Tap to upload a hair photo</div>
+          <div class="photo-drop-sub">JPG or PNG · max 5MB</div>
+          <img id="photo-preview" style="display:none;max-width:100%;max-height:220px;border-radius:12px;margin-top:12px;object-fit:cover;">
+        </div>
+        <input type="file" id="photo-file" accept="image/*" style="display:none" onchange="onPhotoSelected(event)">
+        <button class="ppage-regen" id="photo-analyze-btn" style="width:100%;margin-top:12px;display:none" onclick="analyzePhoto()">🔍 Analyze My Hair</button>
+        <div id="photo-loading" class="ppage-loading" style="display:none">
+          <div class="ppage-spinner"></div><div>Aria is analyzing your hair…</div>
+        </div>
+      </div>
+      <div class="photo-result-panel" id="photo-result" style="display:none">
+        <div class="photo-metrics">
+          <div class="photo-metric"><div class="phm-label">Porosity</div><div class="phm-val" id="pa-porosity">—</div></div>
+          <div class="photo-metric"><div class="phm-label">Damage</div><div class="phm-val" id="pa-damage">—</div></div>
+          <div class="photo-metric"><div class="phm-label">Density</div><div class="phm-val" id="pa-density">—</div></div>
+          <div class="photo-metric"><div class="phm-label">Texture</div><div class="phm-val" id="pa-texture">—</div></div>
+        </div>
+        <div class="photo-score-wrap">
+          <div class="photo-score-label">Overall Hair Health</div>
+          <div class="photo-score-bar"><div class="photo-score-fill" id="pa-score-fill"></div></div>
+          <div class="photo-score-num" id="pa-score-num">—</div>
+        </div>
+        <div class="photo-advice" id="pa-advice"></div>
+        <div class="photo-obs" id="pa-obs"></div>
+        <div class="photo-recs" id="pa-recs"></div>
+        <div class="photo-history-label">Past Analyses</div>
+        <div class="photo-history-list" id="photo-history-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOG TREATMENT MODAL -->
+<div class="modal-bg" id="log-modal" style="display:none" onclick="if(event.target===this)closeLogModal()">
+  <div class="modal-box">
+    <div class="modal-title">Log a Treatment</div>
+    <select class="modal-input" id="log-product">
+      <option value="">Select product…</option>
+      <option>Formula Exclusiva</option><option>Laciador Crece</option>
+      <option>Gotero Rapido</option><option>Gotitas Brillantes</option>
+      <option>Mascarilla Capilar</option><option>Shampoo Aloe Vera</option>
+    </select>
+    <textarea class="modal-input" id="log-notes" rows="3" placeholder="Notes — how did your hair feel? Any changes?"></textarea>
+    <div class="modal-rating">
+      <div class="modal-rating-label">How did it work?</div>
+      <div class="modal-stars" id="modal-stars">
+        <span onclick="setLogRating(1)">★</span><span onclick="setLogRating(2)">★</span>
+        <span onclick="setLogRating(3)">★</span><span onclick="setLogRating(4)">★</span><span onclick="setLogRating(5)">★</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="modal-save" onclick="saveLog()">Save Entry</button>
+      <button class="modal-cancel" onclick="closeLogModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -2325,19 +2730,246 @@ function setTagsFromString(id,val){
   document.querySelectorAll('#'+id+' .tag').forEach(t=>{if(sel.includes(t.textContent.trim().toLowerCase())) t.classList.add('on');});
 }
 
+let _isPremium = false;
+
 function switchPTab(name){
-  ['profile','history'].forEach(t=>{
-    document.getElementById('pt-'+t).classList.toggle('on',t===name);
-    document.getElementById('pc-'+t).classList.toggle('on',t===name);
+  // Hide main app panels
+  const mainPanels = ['top-row','mid-row','bot-row'];
+  mainPanels.forEach(id=>{
+    const el=document.querySelector('.'+id);
+    if(el) el.style.display=(name==='overview')?'':'none';
   });
-  document.querySelector('.bot-row').scrollIntoView({behavior:'smooth',block:'nearest'});
-  if(name==='history') loadHistory();
+  // Hide all premium pages
+  document.querySelectorAll('.ppage').forEach(p=>p.classList.remove('active'));
+  // Show premium page if needed
+  if(name!=='overview'&&name!=='profile'&&name!=='history'){
+    const pp=document.getElementById('pp-'+name);
+    if(pp){ pp.classList.add('active'); onPremiumPageOpen(name); }
+  }
+  // Nav tabs
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4};
+  const idx=tabs[name]??0;
+  document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
+  // Profile/history sub-tabs
+  if(name==='overview'||name==='profile'||name==='history'){
+    ['profile','history'].forEach(t=>{
+      const pt=document.getElementById('pt-'+t);
+      const pc=document.getElementById('pc-'+t);
+      if(pt) pt.classList.toggle('on',t===name);
+      if(pc) pc.classList.toggle('on',t===name);
+    });
+    if(name!=='overview') document.querySelector('.bot-row')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+    if(name==='history') loadHistory();
+  }
+}
+
+function onPremiumPageOpen(name){
+  if(!_isPremium){
+    // Show gates on premium pages
+    ['routine-gate','progress-gate','photo-gate'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.display='';
+    });
+    ['routine-content','routine-empty','progress-content','photo-content'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.display='none';
+    });
+    return;
+  }
+  if(name==='routine') openRoutinePage();
+  if(name==='progress') openProgressPage();
+  if(name==='photo') openPhotoPage();
+}
+
+// ── ROUTINE BUILDER ──────────────────────────────────────────────────────────
+async function openRoutinePage(){
+  document.getElementById('routine-gate').style.display='none';
+  document.getElementById('routine-loading').style.display='none';
+  document.getElementById('routine-empty').style.display='none';
+  const r=await fetch('/api/routine',{headers:{'X-Auth-Token':token}});
+  const d=await r.json();
+  if(d.routine) renderRoutine(d.routine);
+  else { document.getElementById('routine-empty').style.display='block'; }
+}
+
+async function generateRoutine(){
+  document.getElementById('routine-empty').style.display='none';
+  document.getElementById('routine-content').style.display='none';
+  document.getElementById('routine-loading').style.display='flex';
+  document.getElementById('routine-regen-btn').disabled=true;
+  try{
+    const r=await fetch('/api/routine',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token}});
+    const d=await r.json();
+    if(d.routine) renderRoutine(d.routine);
+    else { showToast(d.error||'Could not generate — fill in your profile first'); document.getElementById('routine-empty').style.display='block'; }
+  }catch(e){ showToast('Error generating routine'); }
+  document.getElementById('routine-loading').style.display='none';
+  document.getElementById('routine-regen-btn').disabled=false;
+}
+
+function renderRoutine(rt){
+  document.getElementById('routine-content').style.display='block';
+  // Tips
+  const tips=document.getElementById('routine-tips');
+  tips.innerHTML=(rt.tips||[]).map(t=>'<div class="routine-tip">'+t+'</div>').join('');
+  // Days grid
+  const grid=document.getElementById('routine-grid');
+  const DAY_ORDER=['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  grid.innerHTML=DAY_ORDER.map(day=>{
+    const info=rt.days?.[day];
+    if(!info) return '';
+    const steps=s=>(s||[]).map(x=>'<div class="rd-step">'+x+'</div>').join('');
+    const prods=(info.products||[]).map(p=>'<span class="rd-prod-tag">'+p+'</span>').join('');
+    return '<div class="rd-card"><div class="rd-day">'+day+'</div><div class="rd-title">'+info.title+'</div>'
+      +(info.morning?.length?'<div class="rd-section">Morning</div>'+steps(info.morning):'')
+      +(info.evening?.length?'<div class="rd-section">Evening</div>'+steps(info.evening):'')
+      +(prods?'<div class="rd-products">'+prods+'</div>':'')
+      +'</div>';
+  }).join('');
+  // Recommended products
+  const rp=document.getElementById('routine-products');
+  rp.innerHTML='<div class="routine-products-title">★ Aria\'s Top Picks For You</div>'
+    +(rt.recommended_products||[]).map(p=>'<div class="rp-item">'+p+'</div>').join('');
+}
+
+// ── PROGRESS TRACKER ─────────────────────────────────────────────────────────
+async function openProgressPage(){
+  document.getElementById('progress-gate').style.display='none';
+  document.getElementById('progress-content').style.display='block';
+  // Auto-save today's score
+  const sc=calcScore();
+  fetch('/api/score-history',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},
+    body:JSON.stringify({score:sc.total,moisture:sc.moisture,strength:sc.strength,scalp:sc.scalp,growth:sc.growth})});
+  // Load history
+  const r=await fetch('/api/score-history',{headers:{'X-Auth-Token':token}});
+  const d=await r.json();
+  renderScoreHistory(d.history||[]);
+  loadTreatmentLog();
+}
+
+function renderScoreHistory(history){
+  const svg=document.getElementById('score-history-svg');
+  if(!history.length){ svg.innerHTML='<text x="50%" y="50%" fill="#505870" text-anchor="middle" font-size="12">No score history yet — visit daily to build your timeline.</text>'; return; }
+  const w=600,h=160,pad=30;
+  const scores=history.map(h=>h.score);
+  const mn=Math.min(...scores)-5,mx=Math.max(...scores)+5;
+  const rng=mx-mn||1;
+  const xs=scores.map((_,i)=>pad+(i/(Math.max(scores.length-1,1)))*(w-2*pad));
+  const ys=scores.map(v=>h-pad-((v-mn)/rng)*(h-2*pad));
+  const pts=xs.map((x,i)=>x+','+ys[i]).join(' ');
+  const apts=xs.map((x,i)=>x+','+ys[i]).join(' ')+' '+xs[xs.length-1]+','+(h-pad)+' '+pad+','+(h-pad);
+  svg.innerHTML='<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(240,160,144,0.35)"/><stop offset="100%" stop-color="rgba(240,160,144,0)"/></linearGradient></defs>'
+    +'<polygon points="'+apts+'" fill="url(#sg)"/>'
+    +'<polyline points="'+pts+'" fill="none" stroke="#f0a090" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+    +scores.map((s,i)=>'<circle cx="'+xs[i]+'" cy="'+ys[i]+'" r="4" fill="#f0a090"/><title>'+s+'</title>').join('');
+  // Labels
+  const lbls=document.getElementById('prog-chart-labels');
+  const step=Math.max(1,Math.floor(history.length/4));
+  lbls.innerHTML=history.filter((_,i)=>i%step===0||i===history.length-1)
+    .map(h=>'<span>'+h.ts.slice(5,10)+'</span>').join('');
+  // Metrics
+  const avg=Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+  const best=Math.max(...scores);
+  const trend=scores.length>=2?scores[scores.length-1]-scores[scores.length-2]:0;
+  document.getElementById('ph-avg').textContent=avg;
+  document.getElementById('ph-best').textContent=best;
+  document.getElementById('ph-trend').textContent=(trend>=0?'+':'')+trend;
+  document.getElementById('ph-entries').textContent=scores.length;
+}
+
+async function loadTreatmentLog(){
+  const r=await fetch('/api/treatment-log',{headers:{'X-Auth-Token':token}});
+  const d=await r.json();
+  const list=document.getElementById('treatment-list');
+  if(!d.log?.length){ list.innerHTML='<div class="h-empty">No treatments logged yet.</div>'; return; }
+  list.innerHTML=d.log.map(e=>'<div class="tl-entry">'
+    +'<div class="tl-product">'+e.product+'</div>'
+    +(e.notes?'<div class="tl-notes">'+e.notes+'</div>':'')
+    +'<div class="tl-meta"><div class="tl-stars">'+'★'.repeat(e.rating||0)+'☆'.repeat(5-(e.rating||0))+'</div>'
+    +'<span class="tl-date">'+e.ts.slice(0,10)+'</span>'
+    +'<button class="tl-del" onclick="deleteTreatment('+e.id+')">✕</button></div>'
+    +'</div>').join('');
+}
+
+let _logRating=0;
+function openLogModal(){ _logRating=0; document.getElementById('log-product').value=''; document.getElementById('log-notes').value=''; setLogRating(0); document.getElementById('log-modal').style.display='flex'; }
+function closeLogModal(){ document.getElementById('log-modal').style.display='none'; }
+function setLogRating(n){ _logRating=n; document.querySelectorAll('#modal-stars span').forEach((s,i)=>s.classList.toggle('lit',i<n)); }
+async function saveLog(){
+  const product=document.getElementById('log-product').value;
+  const notes=document.getElementById('log-notes').value;
+  if(!product){ showToast('Please select a product'); return; }
+  await fetch('/api/treatment-log',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({product,notes,rating:_logRating})});
+  closeLogModal(); loadTreatmentLog(); showToast('Treatment logged ✓');
+}
+async function deleteTreatment(id){
+  await fetch('/api/treatment-log?id='+id,{method:'DELETE',headers:{'X-Auth-Token':token}});
+  loadTreatmentLog();
+}
+
+// ── PHOTO ANALYSIS ───────────────────────────────────────────────────────────
+function openPhotoPage(){
+  document.getElementById('photo-gate').style.display='none';
+  document.getElementById('photo-content').style.display='block';
+  loadPhotoHistory();
+}
+
+let _photoB64=null;
+function onPhotoSelected(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    _photoB64=ev.target.result;
+    const img=document.getElementById('photo-preview');
+    img.src=_photoB64; img.style.display='block';
+    document.getElementById('photo-analyze-btn').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+async function analyzePhoto(){
+  if(!_photoB64){ showToast('Please select a photo first'); return; }
+  document.getElementById('photo-analyze-btn').style.display='none';
+  document.getElementById('photo-loading').style.display='flex';
+  document.getElementById('photo-result').style.display='none';
+  try{
+    const r=await fetch('/api/photo-analysis',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({image_b64:_photoB64})});
+    const d=await r.json();
+    if(d.analysis) renderPhotoResult(d.analysis);
+    else showToast(d.error||'Analysis failed');
+  }catch(e){ showToast('Analysis error'); }
+  document.getElementById('photo-loading').style.display='none';
+  document.getElementById('photo-analyze-btn').style.display='block';
+}
+function renderPhotoResult(a){
+  const el=id=>document.getElementById(id);
+  el('pa-porosity').textContent=a.porosity||'—';
+  el('pa-damage').textContent=a.damage_level||'—';
+  el('pa-density').textContent=a.density||'—';
+  el('pa-texture').textContent=a.texture||'—';
+  const score=a.overall_health_score||0;
+  el('pa-score-fill').style.width=score+'%';
+  el('pa-score-num').textContent=score+' / 100';
+  el('pa-advice').textContent=a.personalized_advice||'';
+  el('pa-obs').innerHTML='<div class="photo-obs-title">Observations</div>'+(a.observations||[]).map(o=>'<div class="photo-obs-item">'+o+'</div>').join('');
+  el('pa-recs').innerHTML='<div class="photo-recs-title">Recommended Products</div>'+(a.recommended_products||[]).map(p=>'<span class="photo-rec-tag">'+p+'</span>').join('');
+  el('photo-result').style.display='block';
+  loadPhotoHistory();
+}
+async function loadPhotoHistory(){
+  const r=await fetch('/api/photo-analysis',{headers:{'X-Auth-Token':token}});
+  const d=await r.json();
+  const list=document.getElementById('photo-history-list');
+  if(!d.analyses?.length){ list.innerHTML='<div class="photo-hist-item" style="color:var(--muted)">No past analyses.</div>'; return; }
+  list.innerHTML='<div class="photo-history-label">Past Analyses</div>'+d.analyses.map(a=>'<div class="photo-hist-item"><span>'+JSON.parse(a.analysis).damage_level+' damage · '+JSON.parse(a.analysis).overall_health_score+'/100</span><span>'+a.ts.slice(0,10)+'</span></div>').join('');
 }
 
 function activateStat(el){
   document.querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
 }
+
 
 // ── ARIA SPHERE CHAT + VOICE ──
 let sphereBusy=false;
@@ -2497,7 +3129,9 @@ async function loadData(){
     document.getElementById('nav-name').textContent=d.name||d.email;
     const av=document.getElementById('nav-av');
     if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
-    if(d.subscribed) document.getElementById('plan-badge').textContent='PREMIUM';
+    if(d.subscribed){ document.getElementById('plan-badge').textContent='PREMIUM'; _isPremium=true; }
+    // Style premium nav tabs
+    if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('✦')) t.style.color='var(--gold)'; });
     document.getElementById('st-chats').textContent=d.chat_count||0;
     document.getElementById('st-chats-trend').textContent='↑ '+(d.chat_count||0)+' all time';
     const concerns=(d.profile?.hair_concerns||'').split(',').filter(c=>c.trim()).length;
