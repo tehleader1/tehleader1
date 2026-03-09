@@ -2907,6 +2907,120 @@ def ping():
     return jsonify({"ok": True, "status": "awake"})
 
 
+# ── CUSTOM ORDER ──────────────────────────────────────────────────────────────
+@app.route("/api/custom-order", methods=["POST", "OPTIONS"])
+def custom_order():
+    if request.method == "OPTIONS":
+        return jsonify({"ok": True})
+
+    data     = request.get_json(silent=True) or {}
+    name     = data.get("name", "")
+    email    = data.get("email", "")
+    phone    = data.get("phone", "")
+    address  = data.get("address", "")
+    delivery = data.get("delivery", "")
+    source   = data.get("source", "")
+    notes    = data.get("notes", "")
+    items    = data.get("items", [])
+    total    = data.get("total", 0)
+
+    if not email or not name or not items:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # Build order summary text
+    items_text = "\n".join([
+        f"  • {i['name']} x{i['qty']} — ${i['subtotal']}"
+        for i in items
+    ])
+
+    body = f"""
+═══════════════════════════════════════
+  NEW CUSTOM ORDER REQUEST — SupportRD
+═══════════════════════════════════════
+
+PRODUCTS:
+{items_text}
+
+Estimated Total: ${total}
+
+CUSTOMER:
+  Name:    {name}
+  Email:   {email}
+  Phone:   {phone}
+
+SHIPPING:
+  {address}
+
+DELIVERY: {delivery}
+SOURCE:   {source or 'Not specified'}
+
+NOTES:
+  {notes or 'None'}
+
+═══════════════════════════════════════
+Reply to this email to send the customer their payment link.
+Customer email: {email}
+═══════════════════════════════════════
+"""
+
+    # Send via SMTP (Gmail)
+    smtp_user = os.environ.get("SMTP_USER", "")
+    smtp_pass = os.environ.get("SMTP_PASS", "")
+    notify_email = os.environ.get("NOTIFY_EMAIL", smtp_user)  # where YOU receive orders
+
+    if smtp_user and smtp_pass:
+        try:
+            import smtplib
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+
+            msg = MIMEMultipart()
+            msg["Subject"] = f"🛍️ New Order Request — {name} — ${total}"
+            msg["From"]    = smtp_user
+            msg["To"]      = notify_email
+            msg["Reply-To"] = email  # reply goes straight to the customer
+
+            msg.attach(MIMEText(body, "plain"))
+
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+
+            print(f"[order] Email sent for {name} ({email})")
+        except Exception as e:
+            print(f"[order] SMTP error: {e}")
+            # Fall through — still log it, don't fail the user
+    else:
+        print(f"[order] SMTP not configured — order from {name} ({email}): {items_text}")
+
+    # Always log to analytics DB as a backup record
+    try:
+        con = get_analytics_db()
+        con.execute("""CREATE TABLE IF NOT EXISTS custom_orders (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts       TEXT,
+            name     TEXT,
+            email    TEXT,
+            phone    TEXT,
+            address  TEXT,
+            items    TEXT,
+            total    INTEGER,
+            delivery TEXT,
+            notes    TEXT
+        )""")
+        con.execute(
+            "INSERT INTO custom_orders (ts,name,email,phone,address,items,total,delivery,notes) VALUES (?,?,?,?,?,?,?,?,?)",
+            (datetime.datetime.utcnow().isoformat(), name, email, phone,
+             address, json.dumps(items), total, delivery, notes)
+        )
+        con.commit()
+        con.close()
+    except Exception as e:
+        print(f"[order] DB log error: {e}")
+
+    return jsonify({"ok": True})
+
+
 # ── CONTENT ENGINE API ENDPOINTS ──────────────────────────────────────────────
 ENGINE_LOG = []  # In-memory log of recent runs
 
