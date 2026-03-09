@@ -2983,7 +2983,7 @@ def _create_shopify_draft_order(name, email, phone, address, items, notes, deliv
     try:
         import urllib.request as urlreq
         payload = json.dumps(draft).encode("utf-8")
-        url = f"https://{store}/admin/api/2021-07/draft_orders.json"
+        url = f"https://{store}/admin/api/2019-04/draft_orders.json"
         req = urlreq.Request(url, data=payload, headers={
             "Content-Type":           "application/json",
             "X-Shopify-Access-Token": token
@@ -3428,7 +3428,7 @@ def debug_shopify2():
     import requests
     store = os.environ.get("SHOPIFY_STORE","")
     token = os.environ.get("SHOPIFY_ADMIN_TOKEN","")
-    url = f"https://{store}/admin/api/2021-07/blogs.json"
+    url = f"https://{store}/admin/api/2019-04/blogs.json"
     headers = {"X-Shopify-Access-Token": token}
     try:
         resp = requests.get(url, headers=headers, timeout=10)
@@ -3517,7 +3517,7 @@ def debug_shopify_blog():
     try:
         import urllib.request as urlreq
         # Get blogs
-        url = f"https://{store}/admin/api/2021-07/blogs.json"
+        url = f"https://{store}/admin/api/2019-04/blogs.json"
         req = urlreq.Request(url, headers={"X-Shopify-Access-Token": token})
         with urlreq.urlopen(req, timeout=10) as resp:
             data  = json.loads(resp.read().decode("utf-8"))
@@ -3540,7 +3540,7 @@ def debug_shopify_blog():
                     "tags":      "hair care, SupportRD, test"
                 }
             }).encode("utf-8")
-            url2 = f"https://{store}/admin/api/2021-07/blogs/{result['blog_id']}/articles.json"
+            url2 = f"https://{store}/admin/api/2019-04/blogs/{result['blog_id']}/articles.json"
             req2 = urlreq.Request(url2, data=test_payload, headers={
                 "Content-Type": "application/json",
                 "X-Shopify-Access-Token": token
@@ -3555,6 +3555,48 @@ def debug_shopify_blog():
         result["error"] = str(e)
 
     return jsonify(result)
+
+@app.route("/shopify/callback", methods=["GET"])
+def shopify_callback():
+    code = request.args.get("code", "")
+    shop = request.args.get("shop", "")
+    return jsonify({"code": code, "shop": shop})
+
+
+@app.route("/shopify/token", methods=["GET"])
+def shopify_token():
+    """Exchange OAuth code for permanent access token"""
+    admin_key = request.args.get("key", "")
+    if admin_key != os.environ.get("ADMIN_KEY", "srd_admin_2024"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    code  = request.args.get("code", "")
+    shop  = request.args.get("shop", "")
+    if not code or not shop:
+        return jsonify({"error": "Missing code or shop parameter"}), 400
+
+    client_id     = os.environ.get("SHOPIFY_CLIENT_ID", "")
+    client_secret = os.environ.get("SHOPIFY_CLIENT_SECRET", "")
+
+    try:
+        import urllib.request as urlreq
+        payload = json.dumps({
+            "client_id":     client_id,
+            "client_secret": client_secret,
+            "code":          code
+        }).encode("utf-8")
+        req = urlreq.Request(
+            f"https://{shop}/admin/oauth/access_token",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urlreq.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return jsonify({"access_token": data.get("access_token"), "scope": data.get("scope")})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 
 # ── KEEP-ALIVE SELF PING (prevents Render free tier sleep) ───────────────────
 
