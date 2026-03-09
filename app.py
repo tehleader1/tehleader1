@@ -2047,7 +2047,7 @@ _start_content_scheduler()
 
 
 # ── BLOG DATABASE (SQLite — persists across restarts) ─────────────────────────
-BLOG_DB = "/data/srd_blog.db"
+BLOG_DB = "/tmp/srd_blog.db"
 
 def _init_blog_db():
     db = sqlite3.connect(BLOG_DB)
@@ -4665,4 +4665,3 @@ body{background:#f0ebe8;min-height:100vh;display:flex;align-items:center;justify
   <a href="/login" class="btn btn-outline">Sign In to Subscribe Later</a>
 </div>
 </body></html>"""
-
