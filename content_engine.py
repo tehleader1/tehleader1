@@ -217,7 +217,7 @@ def _post_to_shopify(title, html, meta, handle):
         }
     }).encode("utf-8")
 
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/blogs/{blog_id}/articles.json"
+    url = f"https://{SHOPIFY_STORE}/admin/api/2021-07/blogs/{blog_id}/articles.json"
     req = urlreq.Request(
         url,
         data=article_payload,
@@ -243,7 +243,7 @@ def _post_to_shopify(title, html, meta, handle):
 
 def _get_or_create_shopify_blog():
     """Return the first blog ID from Shopify, or create one."""
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/blogs.json"
+    url = f"https://{SHOPIFY_STORE}/admin/api/2021-07/blogs.json"
     req = urlreq.Request(url, headers={"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN})
     try:
         with urlreq.urlopen(req, timeout=10) as resp:
@@ -265,7 +265,7 @@ def _get_or_create_shopify_blog():
         return None
 
 def _get_shopify_blog_handle(blog_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/blogs/{blog_id}.json"
+    url = f"https://{SHOPIFY_STORE}/admin/api/2021-07/blogs/{blog_id}.json"
     req = urlreq.Request(url, headers={"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN})
     try:
         with urlreq.urlopen(req, timeout=10) as resp:
