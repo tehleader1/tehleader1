@@ -2803,7 +2803,7 @@ footer a{{color:#c1a3a2;text-decoration:none;}}
 @app.route("/sitemap.xml")
 def sitemap():
     import glob
-    BLOG_DIR = "/data/srd_blog"
+    BLOG_DIR = "/tmp/srd_blog"
     base_url = "https://auto-engine.onrender.com"
     
     urls = []
@@ -2905,279 +2905,6 @@ def transcribe():
 @app.route("/api/ping", methods=["GET"])
 def ping():
     return jsonify({"ok": True, "status": "awake"})
-
-
-# ── CUSTOM ORDER ──────────────────────────────────────────────────────────────
-
-# Map form product names to Shopify variant IDs
-# Fill these in from your Shopify admin: Products → click product → copy variant ID from URL
-SHOPIFY_VARIANT_IDS = {
-    "Formula Exclusiva":  os.environ.get("VAR_FORMULA",    ""),
-    "Laciador Crece":     os.environ.get("VAR_LACIADOR",   ""),
-    "Gotero Rapido":      os.environ.get("VAR_GOTERO",     ""),
-    "Gotitas Brillantes": os.environ.get("VAR_GOTITAS",    ""),
-    "Mascarilla Capilar": os.environ.get("VAR_MASCARILLA", ""),
-    "Shampoo Aloe Vera":  os.environ.get("VAR_SHAMPOO",    ""),
-}
-
-def _create_shopify_draft_order(name, email, phone, address, items, notes, delivery):
-    """Create a Shopify draft order and return the invoice URL."""
-    store = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
-    token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
-    if not token:
-        return None, "SHOPIFY_ADMIN_TOKEN not set"
-
-    # Parse address: "123 Street, City, State ZIP, Country"
-    parts = [p.strip() for p in address.split(",")]
-    street  = parts[0] if len(parts) > 0 else address
-    city    = parts[1] if len(parts) > 1 else ""
-    state   = parts[2].split(" ")[0] if len(parts) > 2 else ""
-    zip_    = parts[2].split(" ")[1] if len(parts) > 2 and len(parts[2].split(" ")) > 1 else ""
-    country = parts[3] if len(parts) > 3 else "US"
-
-    name_parts = name.strip().split(" ", 1)
-    first = name_parts[0]
-    last  = name_parts[1] if len(name_parts) > 1 else ""
-
-    # Build line items — use variant IDs if available, else custom items
-    line_items = []
-    for item in items:
-        variant_id = SHOPIFY_VARIANT_IDS.get(item["name"], "")
-        if variant_id:
-            line_items.append({
-                "variant_id": int(variant_id),
-                "quantity":   item["qty"]
-            })
-        else:
-            # Custom line item (no variant ID needed)
-            line_items.append({
-                "title":    item["name"],
-                "price":    str(item["price"]),
-                "quantity": item["qty"]
-            })
-
-    draft = {
-        "draft_order": {
-            "line_items": line_items,
-            "customer": {
-                "first_name": first,
-                "last_name":  last,
-                "email":      email,
-                "phone":      phone
-            },
-            "shipping_address": {
-                "first_name": first,
-                "last_name":  last,
-                "address1":   street,
-                "city":       city,
-                "province":   state,
-                "zip":        zip_,
-                "country":    country,
-                "phone":      phone
-            },
-            "note": f"Delivery: {delivery}\n{notes}",
-            "use_customer_default_address": False
-        }
-    }
-
-    try:
-        import urllib.request as urlreq
-        payload = json.dumps(draft).encode("utf-8")
-        url = f"https://{store}/admin/api/2019-04/draft_orders.json"
-        req = urlreq.Request(url, data=payload, headers={
-            "Content-Type":           "application/json",
-            "X-Shopify-Access-Token": token
-        }, method="POST")
-        with urlreq.urlopen(req, timeout=15) as resp:
-            data       = json.loads(resp.read().decode("utf-8"))
-            draft_data = data.get("draft_order", {})
-            invoice_url = draft_data.get("invoice_url", "")
-            draft_id    = draft_data.get("id", "")
-            print(f"[order] Shopify draft order created: {draft_id}")
-            return invoice_url, None
-    except Exception as e:
-        print(f"[order] Shopify draft order error: {e}")
-        return None, str(e)
-
-
-@app.route("/api/custom-order", methods=["POST", "OPTIONS"])
-def custom_order():
-    if request.method == "OPTIONS":
-        return jsonify({"ok": True})
-
-    data     = request.get_json(silent=True) or {}
-    name     = data.get("name", "")
-    email    = data.get("email", "")
-    phone    = data.get("phone", "")
-    address  = data.get("address", "")
-    delivery = data.get("delivery", "")
-    source   = data.get("source", "")
-    notes    = data.get("notes", "")
-    items    = data.get("items", [])
-    total    = data.get("total", 0)
-
-    if not email or not name or not items:
-        return jsonify({"error": "Missing required fields"}), 400
-
-    # Build order summary text
-    items_text = "\n".join([
-        f"  • {i['name']} x{i['qty']} — ${i['subtotal']}"
-        for i in items
-    ])
-
-    # Try to create Shopify draft order for instant payment link
-    payment_link, draft_err = _create_shopify_draft_order(
-        name, email, phone, address, items, notes, delivery
-    )
-
-    if payment_link:
-        payment_section = f"""
-PAYMENT LINK (send this to the customer):
-  {payment_link}
-
-  ↑ Click the link above, review the order, then click
-    "Send invoice" in Shopify to email it to the customer.
-    Or copy the link and send it manually.
-"""
-    else:
-        payment_section = f"""
-PAYMENT LINK: Could not auto-generate ({draft_err})
-  → Go to Shopify Admin → Orders → Create order manually
-  → Or reply to this email and send a manual invoice
-"""
-
-    body = f"""
-═══════════════════════════════════════
-  NEW CUSTOM ORDER REQUEST — SupportRD
-═══════════════════════════════════════
-
-PRODUCTS:
-{items_text}
-
-Estimated Total: ${total}
-{payment_section}
-CUSTOMER:
-  Name:    {name}
-  Email:   {email}
-  Phone:   {phone}
-
-SHIPPING:
-  {address}
-
-DELIVERY: {delivery}
-SOURCE:   {source or 'Not specified'}
-
-NOTES:
-  {notes or 'None'}
-
-═══════════════════════════════════════
-Reply-To is set to the customer: {email}
-═══════════════════════════════════════
-"""
-
-    # Send notification email
-    smtp_user    = os.environ.get("SMTP_USER", "")
-    smtp_pass    = os.environ.get("SMTP_PASS", "")
-    notify_email = os.environ.get("NOTIFY_EMAIL", smtp_user)
-
-    if smtp_user and smtp_pass:
-        try:
-            import smtplib
-            from email.mime.multipart import MIMEMultipart
-            from email.mime.text import MIMEText
-
-            msg = MIMEMultipart()
-            msg["Subject"] = f"New Order — {name} — ${total}" + (" ✅ Payment link ready" if payment_link else " ⚠️ Manual invoice needed")
-            msg["From"]    = smtp_user
-            msg["To"]      = notify_email
-            msg["Reply-To"] = email
-
-            msg.attach(MIMEText(body, "plain"))
-
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
-
-            print(f"[order] Email sent for {name} ({email}), payment_link={bool(payment_link)}")
-        except Exception as e:
-            print(f"[order] SMTP error: {e}")
-    else:
-        print(f"[order] SMTP not configured — {name} ({email})")
-
-    # Log to DB
-    try:
-        con = get_analytics_db()
-        con.execute("""CREATE TABLE IF NOT EXISTS custom_orders (
-            id           INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts           TEXT,
-            name         TEXT,
-            email        TEXT,
-            phone        TEXT,
-            address      TEXT,
-            items        TEXT,
-            total        INTEGER,
-            delivery     TEXT,
-            notes        TEXT,
-            payment_link TEXT
-        )""")
-        con.execute(
-            "INSERT INTO custom_orders (ts,name,email,phone,address,items,total,delivery,notes,payment_link) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (datetime.datetime.utcnow().isoformat(), name, email, phone,
-             address, json.dumps(items), total, delivery, notes, payment_link or "")
-        )
-        con.commit()
-        con.close()
-    except Exception as e:
-        print(f"[order] DB log error: {e}")
-
-    return jsonify({"ok": True})
-
-
-@app.route("/api/debug-smtp", methods=["GET"])
-def debug_smtp():
-    admin_key = request.args.get("key", "")
-    if admin_key != os.environ.get("ADMIN_KEY", "srd_admin_2024"):
-        return jsonify({"error": "Unauthorized"}), 401
-
-    smtp_user    = os.environ.get("SMTP_USER", "")
-    smtp_pass    = os.environ.get("SMTP_PASS", "")
-    notify_email = os.environ.get("NOTIFY_EMAIL", smtp_user)
-
-    result = {
-        "smtp_user_set":    bool(smtp_user),
-        "smtp_user":        smtp_user,
-        "smtp_pass_set":    bool(smtp_pass),
-        "smtp_pass_length": len(smtp_pass.replace(" ", "")),
-        "notify_email":     notify_email,
-        "test_result":      None,
-        "error":            None
-    }
-
-    if not smtp_user or not smtp_pass:
-        result["error"] = "SMTP_USER or SMTP_PASS not set in environment variables"
-        return jsonify(result)
-
-    try:
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-
-        msg = MIMEMultipart()
-        msg["Subject"] = "SupportRD SMTP Test — it works!"
-        msg["From"]    = smtp_user
-        msg["To"]      = notify_email
-        msg.attach(MIMEText("Your custom order emails are working correctly.", "plain"))
-
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(smtp_user, smtp_pass)
-            server.send_message(msg)
-
-        result["test_result"] = "SUCCESS — test email sent to " + notify_email
-    except Exception as e:
-        result["error"] = str(e)
-        result["test_result"] = "FAILED"
-
-    return jsonify(result)
 
 
 # ── CONTENT ENGINE API ENDPOINTS ──────────────────────────────────────────────
@@ -3428,7 +3155,7 @@ def debug_shopify2():
     import requests
     store = os.environ.get("SHOPIFY_STORE","")
     token = os.environ.get("SHOPIFY_ADMIN_TOKEN","")
-    url = f"https://{store}/admin/api/2019-04/blogs.json"
+    url = f"https://{store}/admin/api/2024-01/blogs.json"
     headers = {"X-Shopify-Access-Token": token}
     try:
         resp = requests.get(url, headers=headers, timeout=10)
@@ -3488,116 +3215,6 @@ def test_register():
             "trace": traceback.format_exc()
         })
 
-
-
-
-@app.route("/api/debug-shopify-blog", methods=["GET"])
-def debug_shopify_blog():
-    """Test Shopify blog posting — visit with ?key=YOUR_ADMIN_KEY"""
-    admin_key = request.args.get("key", "")
-    if admin_key != os.environ.get("ADMIN_KEY", "srd_admin_2024"):
-        return jsonify({"error": "Unauthorized"}), 401
-
-    store = os.environ.get("SHOPIFY_STORE", "")
-    token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
-    result = {
-        "store":        store,
-        "token_set":    bool(token),
-        "token_prefix": token[:8] + "..." if token else "NOT SET",
-        "blog_id":      None,
-        "blog_handle":  None,
-        "test_post":    None,
-        "error":        None
-    }
-
-    if not token or not store:
-        result["error"] = "SHOPIFY_STORE or SHOPIFY_ADMIN_TOKEN not set"
-        return jsonify(result)
-
-    try:
-        import urllib.request as urlreq
-
-        # Step 1: get blogs
-        url = f"https://{store}/admin/api/2019-04/blogs.json"
-        req = urlreq.Request(url, headers={"X-Shopify-Access-Token": token})
-        with urlreq.urlopen(req, timeout=8) as resp:
-            data  = json.loads(resp.read().decode("utf-8"))
-            blogs = data.get("blogs", [])
-            if blogs:
-                result["blog_id"]     = blogs[0]["id"]
-                result["blog_handle"] = blogs[0]["handle"]
-                result["blog_title"]  = blogs[0]["title"]
-                result["all_blogs"]   = [{"id": b["id"], "handle": b["handle"], "title": b["title"]} for b in blogs]
-            else:
-                result["blog_id"] = "none found"
-                return jsonify(result)
-
-        # Step 2: post test article only if ?post=1 is passed
-        if request.args.get("post") == "1" and isinstance(result["blog_id"], int):
-            test_payload = json.dumps({
-                "article": {
-                    "title":     "SupportRD Hair Care Tips — Test Post",
-                    "body_html": "<p>This is a test post from SupportRD content engine. You can delete this.</p>",
-                    "published": True,
-                    "tags":      "hair care, SupportRD, test"
-                }
-            }).encode("utf-8")
-            url2 = f"https://{store}/admin/api/2019-04/blogs/{result['blog_id']}/articles.json"
-            req2 = urlreq.Request(url2, data=test_payload, headers={
-                "Content-Type":           "application/json",
-                "X-Shopify-Access-Token": token
-            }, method="POST")
-            with urlreq.urlopen(req2, timeout=10) as resp2:
-                data2 = json.loads(resp2.read().decode("utf-8"))
-                art   = data2.get("article", {})
-                result["test_post"]  = f"https://supportrd.com/blogs/{result['blog_handle']}/{art.get('handle','')}"
-                result["article_id"] = art.get("id")
-
-    except Exception as e:
-        result["error"] = str(e)
-
-    return jsonify(result)
-
-@app.route("/shopify/callback", methods=["GET"])
-def shopify_callback():
-    code = request.args.get("code", "")
-    shop = request.args.get("shop", "")
-    return jsonify({"code": code, "shop": shop})
-
-
-@app.route("/shopify/token", methods=["GET"])
-def shopify_token():
-    """Exchange OAuth code for permanent access token"""
-    admin_key = request.args.get("key", "")
-    if admin_key != os.environ.get("ADMIN_KEY", "srd_admin_2024"):
-        return jsonify({"error": "Unauthorized"}), 401
-
-    code  = request.args.get("code", "")
-    shop  = request.args.get("shop", "")
-    if not code or not shop:
-        return jsonify({"error": "Missing code or shop parameter"}), 400
-
-    client_id     = os.environ.get("SHOPIFY_CLIENT_ID", "")
-    client_secret = os.environ.get("SHOPIFY_CLIENT_SECRET", "")
-
-    try:
-        import urllib.request as urlreq
-        payload = json.dumps({
-            "client_id":     client_id,
-            "client_secret": client_secret,
-            "code":          code
-        }).encode("utf-8")
-        req = urlreq.Request(
-            f"https://{shop}/admin/oauth/access_token",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urlreq.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return jsonify({"access_token": data.get("access_token"), "scope": data.get("scope")})
-    except Exception as e:
-        return jsonify({"error": str(e)})
 
 
 # ── KEEP-ALIVE SELF PING (prevents Render free tier sleep) ───────────────────
@@ -4115,396 +3732,389 @@ async function handleGoogle(response){{
 # ── DASHBOARD PAGE ────────────────────────────────────────────────────────────
 @app.route("/dashboard")
 def dashboard():
-    return """<!DOCTYPE html><html><head>
+    return r"""<!DOCTYPE html><html><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SupportRD — Hair Health Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+<title>Aria · Hair Dashboard — SupportRD</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@200;300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
+:root{--cream:#f5f0eb;--warm-white:#faf7f4;--dark:#0e0b08;--muted:#6b5f55;--rose:#c1a3a2;--rose-deep:#a07f7e;--gold:#c9a96e;--green:#4a7c59;--green-light:#7aad8a;--border:rgba(193,163,162,0.18);--glass:rgba(255,255,255,0.6);}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:#f0ebe8;font-family:'Jost',sans-serif;font-weight:300;min-height:100vh;padding:24px 20px;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);min-height:100vh;overflow-x:hidden;}
 
-/* HEADER */
-.hdr{max-width:1000px;margin:0 auto 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
-.hdr-logo{font-family:'Cormorant Garamond',serif;font-size:26px;font-style:italic;color:#0d0906;}
-.hdr-right{display:flex;align-items:center;gap:14px;}
-.avatar{width:38px;height:38px;border-radius:50%;background:#c1a3a2;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;overflow:hidden;flex-shrink:0;}
-.avatar img{width:100%;height:100%;object-fit:cover;}
-.uname{font-size:13px;color:#0d0906;}
-.btn-xs{padding:7px 16px;border:1px solid rgba(193,163,162,0.45);border-radius:20px;background:transparent;font-family:'Jost',sans-serif;font-size:10px;letter-spacing:0.10em;text-transform:uppercase;cursor:pointer;color:#9d7f6a;transition:all 0.2s;}
-.btn-xs:hover{background:#c1a3a2;color:#fff;border-color:#c1a3a2;}
-
-/* LAYOUT */
-.wrap{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-@media(max-width:680px){.wrap{grid-template-columns:1fr;}}
-.full{grid-column:1/-1;}
-.card{background:#fff;border-radius:20px;padding:28px;border:1px solid rgba(193,163,162,0.18);box-shadow:0 4px 20px rgba(0,0,0,0.05);}
-.card-label{font-size:10px;letter-spacing:0.26em;text-transform:uppercase;color:#c1a3a2;margin-bottom:10px;}
-.card-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-style:italic;color:#0d0906;margin-bottom:20px;}
-
-/* HAIR HEALTH SCORE — MAIN FEATURE */
-.score-card{background:linear-gradient(135deg,#0d0906 0%,#1e1410 100%);border:none;padding:36px 32px;text-align:center;position:relative;overflow:hidden;}
-.score-card::after{content:'';position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(193,163,162,0.12),transparent 70%);pointer-events:none;}
-.score-label{font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:rgba(193,163,162,0.60);margin-bottom:16px;}
-.score-ring-wrap{position:relative;width:200px;height:200px;margin:0 auto 20px;}
-.score-ring-svg{transform:rotate(-90deg);}
-.score-ring-bg{fill:none;stroke:rgba(193,163,162,0.12);stroke-width:12;}
-.score-ring-fill{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 2s cubic-bezier(0.22,1,0.36,1),stroke 1s ease;}
-.score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.score-number{font-family:'Cormorant Garamond',serif;font-size:64px;font-style:italic;color:#fff;line-height:1;}
-.score-pct{font-size:16px;color:rgba(193,163,162,0.70);font-weight:300;}
-.score-status{font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:#c1a3a2;margin-bottom:8px;}
-.score-desc{font-size:12px;color:rgba(255,255,255,0.40);letter-spacing:0.06em;line-height:1.6;max-width:320px;margin:0 auto 24px;}
-.score-bars{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;}
-.score-bar-item{text-align:left;}
-.score-bar-label{font-size:10px;letter-spacing:0.10em;text-transform:uppercase;color:rgba(193,163,162,0.50);margin-bottom:6px;}
-.score-bar-track{height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
-.score-bar-fill{height:100%;border-radius:2px;transition:width 1.5s cubic-bezier(0.22,1,0.36,1);}
-.score-bar-val{font-size:11px;color:rgba(255,255,255,0.50);margin-top:4px;}
-
-/* PROFILE FORM */
-.form-group{margin-bottom:14px;}
-.form-group label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.38);display:block;margin-bottom:6px;}
-input,select,textarea{width:100%;padding:11px 14px;border:1px solid rgba(193,163,162,0.30);border-radius:10px;font-family:'Jost',sans-serif;font-size:13px;color:#0d0906;background:#faf6f3;outline:none;transition:border 0.2s;}
-input:focus,select:focus{border-color:#c1a3a2;}
-.btn-save{width:100%;padding:12px;border:none;border-radius:24px;background:#c1a3a2;color:#fff;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background 0.3s;margin-top:6px;}
-.btn-save:hover{background:#9d7f6a;}
-
-/* STATS ROW */
-.stats-row{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:20px;}
-.stat{text-align:center;}
-.stat-n{font-family:'Cormorant Garamond',serif;font-size:40px;font-style:italic;color:#c1a3a2;line-height:1;}
-.stat-l{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.30);margin-top:3px;}
-
-/* CTA BUTTONS */
-.cta-btn{display:block;padding:14px 20px;border-radius:14px;text-decoration:none;text-align:center;margin-bottom:10px;transition:opacity 0.2s;}
-.cta-btn:hover{opacity:0.88;}
-.cta-rose{background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;}
-.cta-wa{background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;}
-.cta-title{font-family:'Cormorant Garamond',serif;font-size:17px;font-style:italic;}
-.cta-sub{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;opacity:0.85;margin-top:2px;}
-
-/* HISTORY */
-.h-item{padding:13px 0;border-bottom:1px solid rgba(193,163,162,0.12);}
+/* ── BACKGROUND ── */
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(193,163,162,0.12) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 80% 80%,rgba(201,169,110,0.08) 0%,transparent 50%);pointer-events:none;z-index:0;}
+.app{position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:0 28px 80px;}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0 36px;border-bottom:1px solid var(--border);margin-bottom:40px;}
+.nav-brand{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:22px;color:var(--dark);letter-spacing:0.02em;}
+.nav-brand span{color:var(--rose);}
+.nav-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.nav-avatar{width:36px;height:36px;border-radius:50%;background:var(--rose);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;overflow:hidden;flex-shrink:0;}
+.nav-avatar img{width:100%;height:100%;object-fit:cover;}
+.nav-name{font-size:13px;color:var(--dark);font-weight:300;}
+.nav-pill{display:flex;align-items:center;gap:7px;padding:7px 15px;border-radius:30px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid var(--border);background:var(--glass);backdrop-filter:blur(10px);}
+.nav-pill:hover{background:rgba(193,163,162,0.2);}
+.nav-pill.primary{background:var(--dark);color:var(--cream);border-color:var(--dark);}
+.nav-pill.primary:hover{background:var(--rose-deep);border-color:var(--rose-deep);}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--green-light);animation:dp 2s infinite;}
+@keyframes dp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.4)}}
+.hero{display:grid;grid-template-columns:350px 1fr;gap:26px;margin-bottom:26px;align-items:stretch;}
+.score-card{background:var(--dark);border-radius:28px;padding:38px 34px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;min-height:360px;}
+.score-card::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(193,163,162,0.12),transparent 70%);}
+.score-eyebrow{font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:26px;position:relative;z-index:1;}
+.score-ring-wrap{position:relative;width:168px;height:168px;margin-bottom:22px;z-index:1;}
+.score-svg{width:168px;height:168px;transform:rotate(-90deg);}
+.score-bg{fill:none;stroke:rgba(255,255,255,0.07);stroke-width:7;}
+.score-fill{fill:none;stroke:url(#sg);stroke-width:7;stroke-linecap:round;stroke-dasharray:484;stroke-dashoffset:484;transition:stroke-dashoffset 1.8s cubic-bezier(0.34,1.56,0.64,1);}
+.score-center-wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-big{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:54px;color:#fff;line-height:1;font-weight:300;}
+.score-of{font-size:11px;color:rgba(255,255,255,0.28);font-family:'DM Mono',monospace;}
+.score-status{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;color:var(--rose);margin-bottom:5px;z-index:1;}
+.score-desc{font-size:11px;color:rgba(255,255,255,0.36);text-align:center;line-height:1.6;z-index:1;max-width:210px;margin-bottom:20px;}
+.score-metrics{width:100%;display:flex;flex-direction:column;gap:10px;z-index:1;}
+.m-row{display:flex;align-items:center;gap:8px;}
+.m-lbl{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.27);width:84px;flex-shrink:0;}
+.m-track{flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
+.m-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--rose),var(--gold));transform-origin:left;transform:scaleX(0);transition:transform 1.2s cubic-bezier(0.34,1.56,0.64,1);}
+.m-val{font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,0.38);width:30px;text-align:right;}
+.hero-right{display:grid;grid-template-rows:auto 1fr;gap:18px;}
+.hero-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.stat-card{background:var(--warm-white);border-radius:20px;padding:22px 18px;border:1px solid var(--border);cursor:pointer;transition:all 0.22s;position:relative;overflow:hidden;}
+.stat-card:hover{transform:translateY(-3px);box-shadow:0 10px 34px rgba(0,0,0,0.07);}
+.stat-card.active{background:var(--dark);border-color:transparent;}
+.stat-icon{font-size:18px;margin-bottom:12px;}
+.stat-val{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:42px;color:var(--dark);font-weight:300;line-height:1;margin-bottom:2px;}
+.stat-card.active .stat-val{color:#fff;}
+.stat-name{font-size:9px;letter-spacing:0.17em;text-transform:uppercase;color:var(--muted);}
+.stat-card.active .stat-name{color:rgba(255,255,255,0.36);}
+.stat-trend{font-size:10px;color:var(--green);margin-top:5px;font-family:'DM Mono',monospace;}
+.journey-card{background:linear-gradient(135deg,var(--rose),var(--rose-deep));border-radius:20px;padding:24px 26px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.22s;position:relative;overflow:hidden;}
+.journey-card::before{content:'';position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.07);}
+.journey-card:hover{transform:translateY(-2px);box-shadow:0 13px 40px rgba(193,163,162,0.35);}
+.journey-eyebrow{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:5px;}
+.journey-title{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;color:#fff;margin-bottom:4px;}
+.journey-sub{font-size:11px;color:rgba(255,255,255,0.58);}
+.journey-btn{background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.28);color:#fff;padding:10px 20px;border-radius:30px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;white-space:nowrap;font-family:'DM Sans',sans-serif;}
+.journey-btn:hover{background:rgba(255,255,255,0.24);}
+.main-grid{display:grid;grid-template-columns:1fr 1fr 310px;gap:20px;margin-bottom:20px;}
+.section-card{background:var(--warm-white);border-radius:24px;border:1px solid var(--border);overflow:hidden;}
+.sec-head{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.sec-title{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px;}
+.sec-title::before{content:'';width:13px;height:1px;background:var(--rose);}
+.sec-action{font-size:10px;color:var(--rose);cursor:pointer;letter-spacing:0.05em;background:none;border:none;font-family:'DM Sans',sans-serif;transition:color 0.2s;}
+.sec-action:hover{color:var(--rose-deep);}
+.profile-body{padding:0 24px 24px;}
+.p-group{margin-bottom:16px;}
+.p-group-label{font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(107,95,85,0.44);margin-bottom:7px;}
+.tags{display:flex;flex-wrap:wrap;gap:5px;}
+.tag{padding:6px 12px;border-radius:30px;font-size:11px;font-weight:300;border:1px solid var(--border);background:var(--cream);color:var(--muted);cursor:pointer;transition:all 0.16s;user-select:none;}
+.tag:hover{border-color:var(--rose);color:var(--dark);}
+.tag.on{background:var(--dark);color:#fff;border-color:var(--dark);}
+.tag.on:hover{background:var(--rose-deep);border-color:var(--rose-deep);}
+.save-btn{width:100%;padding:11px;background:var(--dark);color:var(--cream);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:6px;}
+.save-btn:hover{background:var(--rose-deep);}
+.routine-body{padding:0 24px 24px;}
+.week-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:18px;}
+.wday{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+.wday-lbl{font-size:9px;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);}
+.wday-circle{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.16s;}
+.wday.done .wday-circle{background:var(--dark);border-color:var(--dark);color:#fff;}
+.wday.today .wday-circle{border-color:var(--rose);background:rgba(193,163,162,0.1);}
+.wday:hover .wday-circle{border-color:var(--rose);transform:scale(1.08);}
+.task{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:all 0.16s;margin-bottom:4px;border:1px solid transparent;}
+.task:hover{background:var(--cream);border-color:var(--border);}
+.task.done{opacity:0.46;}
+.task-chk{width:19px;height:19px;border-radius:5px;border:1.5px solid var(--border);background:var(--cream);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;transition:all 0.16s;}
+.task.done .task-chk{background:var(--dark);border-color:var(--dark);color:#fff;}
+.task-name{font-size:12px;font-weight:300;color:var(--dark);margin-bottom:1px;}
+.task-sub{font-size:10px;color:var(--muted);}
+.task-badge{font-size:9px;padding:3px 8px;border-radius:16px;background:rgba(193,163,162,0.1);color:var(--rose-deep);flex-shrink:0;}
+.sidebar{display:flex;flex-direction:column;gap:16px;}
+.streak-card{background:linear-gradient(135deg,#1a1208,#0e0b08);border-radius:24px;padding:24px 20px;text-align:center;position:relative;overflow:hidden;}
+.streak-card::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:170px;height:80px;background:radial-gradient(ellipse,rgba(201,169,110,0.13),transparent 70%);}
+.streak-fire{font-size:30px;margin-bottom:5px;}
+.streak-num{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:52px;color:var(--gold);line-height:1;}
+.streak-lbl{font-size:9px;letter-spacing:0.17em;text-transform:uppercase;color:rgba(255,255,255,0.27);margin-top:3px;margin-bottom:13px;}
+.streak-dots{display:flex;justify-content:center;gap:5px;}
+.sdot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.08);}
+.sdot.lit{background:var(--gold);box-shadow:0 0 6px var(--gold);}
+.mini-card{background:var(--warm-white);border-radius:22px;border:1px solid var(--border);padding:18px;}
+.mini-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+.product-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
+.product-item:last-child{border-bottom:none;}
+.product-item:hover{padding-left:3px;}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pname{flex:1;font-size:11px;font-weight:300;color:var(--dark);}
+.pstatus{font-size:9px;padding:2px 7px;border-radius:16px;}
+.pstatus.using{background:rgba(74,124,89,0.1);color:var(--green);}
+.pstatus.try{background:rgba(193,163,162,0.1);color:var(--rose-deep);}
+.tip-item{padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
+.tip-item:last-child{border-bottom:none;padding-bottom:0;}
+.tip-item:hover{padding-left:3px;}
+.tip-date{font-size:9px;color:var(--rose);font-family:'DM Mono',monospace;margin-bottom:2px;}
+.tip-text{font-size:11px;font-weight:300;color:var(--dark);line-height:1.5;}
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.aria-card{background:var(--dark);border-radius:24px;padding:28px;display:flex;align-items:center;gap:22px;cursor:pointer;transition:all 0.22s;position:relative;overflow:hidden;}
+.aria-card::before{content:'';position:absolute;right:-40px;top:-40px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(193,163,162,0.07),transparent 70%);}
+.aria-card:hover{transform:translateY(-2px);box-shadow:0 16px 50px rgba(0,0,0,0.17);}
+.aria-avi{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose-deep));display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;position:relative;}
+.aria-online{position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:50%;background:var(--green-light);border:2px solid var(--dark);}
+.aria-name{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:20px;color:#fff;margin-bottom:3px;}
+.aria-status{font-size:11px;color:rgba(255,255,255,0.36);margin-bottom:11px;}
+.aria-btn{display:inline-flex;align-items:center;gap:6px;background:var(--rose);color:#fff;padding:9px 17px;border-radius:30px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;transition:all 0.2s;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.aria-btn:hover{background:var(--rose-deep);}
+.history-card{background:var(--warm-white);border-radius:24px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;}
+.h-item{padding:11px 22px;border-bottom:1px solid var(--border);}
 .h-item:last-child{border-bottom:none;}
-.h-role{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:#c1a3a2;margin-bottom:3px;}
-.h-text{font-size:13px;color:rgba(0,0,0,0.60);line-height:1.5;}
-.clear-btn{font-size:10px;color:rgba(0,0,0,0.28);background:none;border:none;cursor:pointer;letter-spacing:0.08em;text-transform:uppercase;margin-top:14px;display:block;}
-.clear-btn:hover{color:#c1a3a2;}
-
-/* SCORE COLOR ZONES */
-.zone-critical{stroke:#e07070;}
-.zone-poor{stroke:#d4956a;}
-.zone-fair{stroke:#c1a3a2;}
-.zone-good{stroke:#8ec63f;}
-.zone-excellent{stroke:#25D366;}
-</style>
-</head><body>
-
-<div class="hdr">
-  <div class="hdr-logo">SupportRD Hair Advisor</div>
-  <div class="hdr-right">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div class="avatar" id="av"></div>
-      <span class="uname" id="un">Loading...</span>
-    </div>
-    <button class="btn-xs" onclick="doLogout()">Sign Out</button>
+.h-role{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--rose);margin-bottom:2px;}
+.h-text{font-size:12px;color:rgba(0,0,0,0.56);line-height:1.5;font-weight:300;}
+.h-empty{padding:26px 22px;color:rgba(0,0,0,0.27);font-size:13px;}
+.clear-hist{background:none;border:none;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(0,0,0,0.24);cursor:pointer;font-family:'DM Sans',sans-serif;padding:10px 22px;transition:color 0.2s;}
+.clear-hist:hover{color:var(--rose);}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(68px);background:var(--dark);color:#fff;padding:11px 20px;border-radius:30px;font-size:11px;letter-spacing:0.05em;transition:transform 0.36s cubic-bezier(0.34,1.56,0.64,1);z-index:999;box-shadow:0 6px 26px rgba(0,0,0,0.17);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.fade-up{opacity:0;transform:translateY(16px);animation:fu 0.5s forwards;}
+@keyframes fu{to{opacity:1;transform:translateY(0);}}
+.fade-up:nth-child(1){animation-delay:0.04s;}
+.fade-up:nth-child(2){animation-delay:0.09s;}
+.fade-up:nth-child(3){animation-delay:0.13s;}
+.fade-up:nth-child(4){animation-delay:0.17s;}
+@media(max-width:1100px){.hero{grid-template-columns:1fr;}.main-grid{grid-template-columns:1fr 1fr;}.sidebar{display:grid;grid-template-columns:1fr 1fr;}}
+@media(max-width:720px){.main-grid{grid-template-columns:1fr;}.bottom-grid{grid-template-columns:1fr;}.hero-stats{grid-template-columns:1fr 1fr;}.app{padding:0 14px 56px;}}
+</style></head><body>
+<div class="app">
+<nav class="nav fade-up">
+  <div class="nav-brand">Aria <span>·</span> Dashboard</div>
+  <div class="nav-right">
+    <div class="nav-avatar" id="nav-av"></div>
+    <span class="nav-name" id="nav-name">Loading…</span>
+    <div class="nav-pill"><div class="nav-dot"></div> Aria Online</div>
+    <div class="nav-pill primary" id="plan-badge">Free</div>
+    <div class="nav-pill" onclick="doLogout()">Sign Out</div>
   </div>
-</div>
+</nav>
 
-<div class="wrap">
-
-  <!-- HAIR HEALTH SCORE — FULL WIDTH HERO -->
-  <div class="card score-card full">
-    <div class="score-label">Your Hair Health Score</div>
+<div class="hero">
+  <div class="score-card fade-up">
+    <div class="score-eyebrow">Hair Health Score</div>
     <div class="score-ring-wrap">
-      <svg class="score-ring-svg" width="200" height="200" viewBox="0 0 200 200">
-        <circle class="score-ring-bg" cx="100" cy="100" r="88"/>
-        <circle class="score-ring-fill" id="score-ring" cx="100" cy="100" r="88"
-          stroke-dasharray="553" stroke-dashoffset="553"/>
+      <svg class="score-svg" viewBox="0 0 168 168">
+        <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#c1a3a2"/><stop offset="100%" stop-color="#c9a96e"/></linearGradient></defs>
+        <circle class="score-bg" cx="84" cy="84" r="77"/>
+        <circle class="score-fill" id="score-ring" cx="84" cy="84" r="77"/>
       </svg>
-      <div class="score-center">
-        <div class="score-number" id="score-num">0</div>
-        <div class="score-pct">/ 100</div>
+      <div class="score-center-wrap">
+        <div class="score-big" id="score-num">0</div>
+        <div class="score-of">/ 100</div>
       </div>
     </div>
-    <div class="score-status" id="score-status">Calculating...</div>
-    <div class="score-desc" id="score-desc">Complete your hair profile to get your personalized score</div>
-    <div class="score-bars">
-      <div class="score-bar-item">
-        <div class="score-bar-label">Moisture</div>
-        <div class="score-bar-track"><div class="score-bar-fill" id="bar-moisture" style="width:0%;background:#c1a3a2;"></div></div>
-        <div class="score-bar-val" id="val-moisture">—</div>
-      </div>
-      <div class="score-bar-item">
-        <div class="score-bar-label">Strength</div>
-        <div class="score-bar-track"><div class="score-bar-fill" id="bar-strength" style="width:0%;background:#9d7f6a;"></div></div>
-        <div class="score-bar-val" id="val-strength">—</div>
-      </div>
-      <div class="score-bar-item">
-        <div class="score-bar-label">Scalp Health</div>
-        <div class="score-bar-track"><div class="score-bar-fill" id="bar-scalp" style="width:0%;background:#c1a3a2;"></div></div>
-        <div class="score-bar-val" id="val-scalp">—</div>
-      </div>
-      <div class="score-bar-item">
-        <div class="score-bar-label">Growth</div>
-        <div class="score-bar-track"><div class="score-bar-fill" id="bar-growth" style="width:0%;background:#9d7f6a;"></div></div>
-        <div class="score-bar-val" id="val-growth">—</div>
-      </div>
+    <div class="score-status" id="score-status">—</div>
+    <div class="score-desc" id="score-desc">Complete your profile to calculate your score</div>
+    <div class="score-metrics">
+      <div class="m-row"><div class="m-lbl">Moisture</div><div class="m-track"><div class="m-fill" id="mb-moisture"></div></div><div class="m-val" id="mv-moisture">—</div></div>
+      <div class="m-row"><div class="m-lbl">Strength</div><div class="m-track"><div class="m-fill" id="mb-strength"></div></div><div class="m-val" id="mv-strength">—</div></div>
+      <div class="m-row"><div class="m-lbl">Scalp Health</div><div class="m-track"><div class="m-fill" id="mb-scalp"></div></div><div class="m-val" id="mv-scalp">—</div></div>
+      <div class="m-row"><div class="m-lbl">Growth</div><div class="m-track"><div class="m-fill" id="mb-growth"></div></div><div class="m-val" id="mv-growth">—</div></div>
     </div>
   </div>
-
-  <!-- PROFILE FORM -->
-  <div class="card">
-    <div class="card-label">Build Your Score</div>
-    <div class="card-title">Hair Profile</div>
-    <div class="form-group"><label>Hair Type</label>
-      <select id="p-type" onchange="recalcScore()">
-        <option value="">Select...</option>
-        <option>Straight</option><option>Wavy</option><option>Curly</option>
-        <option>Coily / 4C</option><option>Fine</option><option>Thick</option>
-      </select>
+  <div class="hero-right fade-up" style="animation-delay:0.09s">
+    <div class="hero-stats">
+      <div class="stat-card" onclick="this.closest('.hero-stats').querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));this.classList.add('active')">
+        <div class="stat-icon">💬</div>
+        <div class="stat-val" id="st-chats">0</div>
+        <div class="stat-name">Consultations</div>
+        <div class="stat-trend">↑ with Aria</div>
+      </div>
+      <div class="stat-card active" onclick="this.closest('.hero-stats').querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));this.classList.add('active')">
+        <div class="stat-icon">✨</div>
+        <div class="stat-val" id="st-recs">0</div>
+        <div class="stat-name">Recommendations</div>
+        <div class="stat-trend" style="color:var(--gold)">↑ this week</div>
+      </div>
+      <div class="stat-card" onclick="this.closest('.hero-stats').querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));this.classList.add('active')">
+        <div class="stat-icon">📋</div>
+        <div class="stat-val" id="st-concerns">0</div>
+        <div class="stat-name">Concerns Logged</div>
+        <div class="stat-trend">↑ improving</div>
+      </div>
     </div>
-    <div class="form-group"><label>Main Concerns</label>
-      <input type="text" id="p-concerns" placeholder="e.g. dry, frizzy, thinning..." oninput="recalcScore()">
+    <div class="journey-card" onclick="showToast('🌿 Check-in feature coming soon!')">
+      <div>
+        <div class="journey-eyebrow">Your Journey</div>
+        <div class="journey-title">Track your transformation</div>
+        <div class="journey-sub">Log weekly check-ins · Compare progress · See what\'s working</div>
+      </div>
+      <button class="journey-btn">Start Check-in →</button>
     </div>
-    <div class="form-group"><label>Chemical Treatments</label>
-      <input type="text" id="p-treatments" placeholder="e.g. relaxer, bleach, keratin..." oninput="recalcScore()">
-    </div>
-    <div class="form-group"><label>Products Currently Using</label>
-      <input type="text" id="p-products" placeholder="e.g. Formula Exclusiva..." oninput="recalcScore()">
-    </div>
-    <div class="form-group"><label>Heat Tool Usage</label>
-      <select id="p-heat" onchange="recalcScore()">
-        <option value="">Select frequency...</option>
-        <option value="never">Never</option>
-        <option value="rarely">Rarely (monthly)</option>
-        <option value="sometimes">Sometimes (weekly)</option>
-        <option value="daily">Daily</option>
-      </select>
-    </div>
-    <div class="form-group"><label>Water Type at Home</label>
-      <select id="p-water" onchange="recalcScore()">
-        <option value="">Select...</option>
-        <option value="soft">Soft water</option>
-        <option value="hard">Hard water</option>
-        <option value="unknown">Not sure</option>
-      </select>
-    </div>
-    <button class="btn-save" onclick="saveProfile()">Save & Update Score</button>
   </div>
-
-  <!-- STATS + CTA -->
-  <div class="card">
-    <div class="card-label">Overview</div>
-    <div class="card-title">My Journey</div>
-    <div class="stats-row">
-      <div class="stat"><div class="stat-n" id="s-chats">—</div><div class="stat-l">Consultations</div></div>
-      <div class="stat"><div class="stat-n" id="s-concern">—</div><div class="stat-l">Concerns Logged</div></div>
-      <div class="stat"><div class="stat-n" id="s-score-mini">—</div><div class="stat-l">Hair Score</div></div>
-    </div>
-    <a href="/" class="cta-btn cta-rose">
-      <div class="cta-title">Talk to Aria</div>
-      <div class="cta-sub">AI Hair Advisor · Free</div>
-    </a>
-    <a href="https://wa.me/18292332670" target="_blank" class="cta-btn cta-wa">
-      <div class="cta-title">Live Human Advisor</div>
-      <div class="cta-sub">WhatsApp · 829-233-2670</div>
-    </a>
-  </div>
-
-  <!-- CHAT HISTORY -->
-  <div class="card full">
-    <div class="card-label">Conversation Memory</div>
-    <div class="card-title">Recent Chat with Aria</div>
-    <div id="history-list"><div style="color:rgba(0,0,0,0.28);font-size:13px;">Loading...</div></div>
-    <button class="clear-btn" onclick="clearHistory()">Clear chat history</button>
-  </div>
-
 </div>
 
+<div class="main-grid">
+  <div class="section-card fade-up">
+    <div class="sec-head"><div class="sec-title">Hair Profile</div><button class="sec-action" onclick="saveProfile()">Save & Score →</button></div>
+    <div class="profile-body">
+      <div class="p-group"><div class="p-group-label">Hair Type</div>
+        <div class="tags" id="tags-type">
+          <div class="tag" onclick="toggleTag(this,\'type\')">Straight</div><div class="tag" onclick="toggleTag(this,\'type\')">Wavy</div><div class="tag" onclick="toggleTag(this,\'type\')">Curly</div><div class="tag" onclick="toggleTag(this,\'type\')">Coily</div><div class="tag" onclick="toggleTag(this,\'type\')">Fine</div><div class="tag" onclick="toggleTag(this,\'type\')">Thick</div><div class="tag" onclick="toggleTag(this,\'type\')">Dry / Brittle</div>
+        </div>
+      </div>
+      <div class="p-group"><div class="p-group-label">Main Concerns</div>
+        <div class="tags" id="tags-concerns">
+          <div class="tag" onclick="toggleTag(this,\'concerns\')">Frizz</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Damaged</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Breakage</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Hair Loss</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Thinning</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Oily Scalp</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Dandruff</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Split Ends</div><div class="tag" onclick="toggleTag(this,\'concerns\')">Slow Growth</div>
+        </div>
+      </div>
+      <div class="p-group"><div class="p-group-label">Chemical Treatments</div>
+        <div class="tags" id="tags-treatments">
+          <div class="tag" onclick="toggleTag(this,\'treatments\')">None / Natural</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Relaxer</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Bleach</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Hair Color</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Keratin</div><div class="tag" onclick="toggleTag(this,\'treatments\')">Perm / Wave</div>
+        </div>
+      </div>
+      <div class="p-group"><div class="p-group-label">Products I Use</div>
+        <div class="tags" id="tags-products">
+          <div class="tag" onclick="toggleTag(this,\'products\')">Formula Exclusiva</div><div class="tag" onclick="toggleTag(this,\'products\')">Laciador Crece</div><div class="tag" onclick="toggleTag(this,\'products\')">Gotero Rapido</div><div class="tag" onclick="toggleTag(this,\'products\')">Gotitas Brillantes</div><div class="tag" onclick="toggleTag(this,\'products\')">Mascarilla Capilar</div><div class="tag" onclick="toggleTag(this,\'products\')">Shampoo Aloe Vera</div>
+        </div>
+      </div>
+      <button class="save-btn" onclick="saveProfile()"><span>✦</span> Save & Update Score</button>
+    </div>
+  </div>
+
+  <div class="section-card fade-up" style="animation-delay:0.09s">
+    <div class="sec-head"><div class="sec-title">Weekly Routine</div><button class="sec-action" onclick="showToast(\'🌿 Full routine coming soon!\')">View All →</button></div>
+    <div class="routine-body">
+      <div class="week-row" id="week-row"></div>
+      <div id="tasks">
+        <div class="task" onclick="toggleTask(this)"><div class="task-chk"></div><div><div class="task-name">Scalp Oil Massage</div><div class="task-sub">Gotero Rapido · 5 min</div></div><div class="task-badge">Today</div></div>
+        <div class="task done" onclick="toggleTask(this)"><div class="task-chk">✓</div><div><div class="task-name">Deep Conditioning</div><div class="task-sub">Mascarilla Capilar · 20 min</div></div><div class="task-badge">Done</div></div>
+        <div class="task" onclick="toggleTask(this)"><div class="task-chk"></div><div><div class="task-name">Wash & Condition</div><div class="task-sub">Shampoo Aloe Vera + Formula Exclusiva</div></div><div class="task-badge">Tomorrow</div></div>
+        <div class="task" onclick="toggleTask(this)"><div class="task-chk"></div><div><div class="task-name">Protective Style</div><div class="task-sub">Reduce heat & manipulation</div></div><div class="task-badge">This Week</div></div>
+        <div class="task done" onclick="toggleTask(this)"><div class="task-chk">✓</div><div><div class="task-name">Trim Split Ends</div><div class="task-sub">Monthly maintenance</div></div><div class="task-badge">Done</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar fade-up" style="animation-delay:0.13s">
+    <div class="streak-card">
+      <div class="streak-fire">🔥</div>
+      <div class="streak-num" id="streak-num">7</div>
+      <div class="streak-lbl">Day Streak</div>
+      <div class="streak-dots" id="streak-dots"></div>
+    </div>
+    <div class="mini-card">
+      <div class="mini-head"><div class="sec-title">My Products</div><button class="sec-action" onclick="window.open(\'https://supportrd.com/collections/all\',\'_blank\')">Shop →</button></div>
+      <div class="product-item" onclick="showToast(\'✨ Formula Exclusiva — $55\')"><div class="pdot" style="background:#c1a3a2"></div><div class="pname">Formula Exclusiva</div><div class="pstatus using">Using</div></div>
+      <div class="product-item" onclick="showToast(\'✨ Gotero Rapido — $55\')"><div class="pdot" style="background:#c9a96e"></div><div class="pname">Gotero Rapido</div><div class="pstatus using">Using</div></div>
+      <div class="product-item" onclick="showToast(\'✨ Laciador Crece — $40\')"><div class="pdot" style="background:#4a7c59"></div><div class="pname">Laciador Crece</div><div class="pstatus try">Try Next</div></div>
+      <div class="product-item" onclick="showToast(\'✨ Mascarilla Capilar — $25\')"><div class="pdot" style="background:#a07f7e"></div><div class="pname">Mascarilla Capilar</div><div class="pstatus try">Recommended</div></div>
+    </div>
+    <div class="mini-card">
+      <div class="mini-head"><div class="sec-title">Aria\'s Tips</div></div>
+      <div class="tip-item" onclick="window.location.href=\'/\'"><div class="tip-date">Today</div><div class="tip-text">Sleep on a silk pillowcase to reduce overnight friction and frizz.</div></div>
+      <div class="tip-item" onclick="window.location.href=\'/\'"><div class="tip-date">Yesterday</div><div class="tip-text">Your scalp type benefits from Gotero Rapido 3x per week.</div></div>
+      <div class="tip-item" onclick="window.location.href=\'/\'"><div class="tip-date">2 days ago</div><div class="tip-text">Deep condition after every wash for 2 weeks to restore moisture.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-grid fade-up" style="animation-delay:0.17s">
+  <div class="aria-card" onclick="window.location.href=\'/\'">
+    <div class="aria-avi">🌿<div class="aria-online"></div></div>
+    <div>
+      <div class="aria-name">Chat with Aria</div>
+      <div class="aria-status">Your personal AI hair advisor · Always available</div>
+      <button class="aria-btn">Start Conversation →</button>
+    </div>
+  </div>
+  <div class="history-card">
+    <div class="sec-head"><div class="sec-title">Recent Chat</div><button class="sec-action" onclick="clearHistory()">Clear →</button></div>
+    <div id="history-list"><div class="h-empty">Loading…</div></div>
+  </div>
+</div>
+
+</div>
+<div class="toast" id="toast"></div>
 <script>
-const token = localStorage.getItem('srd_token');
-if(!token){ window.location.href='/login'; }
-
-// ── SCORE ENGINE ──────────────────────────────────────────────────────────────
+const token=localStorage.getItem('srd_token');
+if(!token){window.location.href='/login';}
 function calcScore(){
-  const concerns  = (document.getElementById('p-concerns').value||'').toLowerCase();
-  const treatments= (document.getElementById('p-treatments').value||'').toLowerCase();
-  const products  = (document.getElementById('p-products').value||'').toLowerCase();
-  const heat      = document.getElementById('p-heat').value;
-  const water     = document.getElementById('p-water').value;
-  const type      = document.getElementById('p-type').value;
-
-  // Base score per category (0-100 each)
-  let moisture=75, strength=75, scalp=75, growth=75;
-
-  // Concerns deductions
-  const concernMap={
-    'dry':[-20,0,0,0],'frizz':[-10,0,0,0],'damage':[-5,-25,0,-10],
-    'breakage':[0,-30,0,-15],'thinning':[0,-15,0,-25],'falling':[0,-10,0,-30],
-    'oily':[0,0,-20,0],'dandruff':[0,0,-25,-5],'itchy':[0,0,-20,0],
-    'color':[0,-10,0,0],'bleach':[-5,-20,0,-5],'relaxer':[-5,-15,0,0]
-  };
-  for(const [k,v] of Object.entries(concernMap)){
-    if(concerns.includes(k)||treatments.includes(k)){
-      moisture+=v[0]; strength+=v[1]; scalp+=v[2]; growth+=v[3];
-    }
-  }
-
-  // Heat damage
-  if(heat==='daily'){strength-=20;moisture-=15;}
-  else if(heat==='sometimes'){strength-=8;moisture-=5;}
-  else if(heat==='rarely'){strength-=2;}
-  else if(heat==='never'){strength+=5;moisture+=5;}
-
-  // Hard water
-  if(water==='hard'){scalp-=10;moisture-=8;}
-  else if(water==='soft'){scalp+=5;moisture+=5;}
-
-  // SupportRD products boost
-  if(products.includes('formula exclusiva')){strength+=15;moisture+=12;}
-  if(products.includes('laciador crece')||products.includes('laciador')){moisture+=12;strength+=8;growth+=5;}
-  if(products.includes('gotero rapido')||products.includes('gotero')){scalp+=18;growth+=10;}
-  if(products.includes('gotitas brillantes')||products.includes('gotika')){moisture+=8;}
-
-  // Hair type base adjustment
-  if(type==='Coily / 4C'){moisture-=5;}
-  if(type==='Fine'){strength-=5;}
-
-  // Clamp 0-100
-  moisture=Math.max(0,Math.min(100,moisture));
-  strength=Math.max(0,Math.min(100,strength));
-  scalp   =Math.max(0,Math.min(100,scalp));
-  growth  =Math.max(0,Math.min(100,growth));
-
-  const overall = Math.round((moisture+strength+scalp+growth)/4);
-  return {overall, moisture, strength, scalp, growth};
+  const gs=(id)=>[...document.querySelectorAll('#'+id+' .tag.on')].map(t=>t.textContent.trim().toLowerCase()).join(' ');
+  const concerns=gs('tags-concerns'),treatments=gs('tags-treatments'),products=gs('tags-products'),type=gs('tags-type');
+  let moisture=75,strength=75,scalp=75,growth=75;
+  const map={'frizz':[-10,0,0,0],'damaged':[-5,-25,0,-10],'breakage':[0,-30,0,-15],'hair loss':[0,-10,0,-30],'thinning':[0,-15,0,-25],'oily scalp':[0,0,-20,0],'dandruff':[0,0,-25,-5],'split ends':[-5,-10,0,0],'slow growth':[0,0,0,-20],'dry / brittle':[-15,-5,0,0],'relaxer':[-5,-15,0,0],'bleach':[-5,-20,0,-5],'hair color':[0,-10,0,0],'keratin':[0,-5,0,0],'perm / wave':[-5,-10,0,0],'formula exclusiva':[15,12,5,8],'laciador crece':[12,8,0,5],'gotero rapido':[0,0,18,10],'gotitas brillantes':[8,0,0,0],'mascarilla capilar':[12,5,0,0],'shampoo aloe vera':[5,0,8,5]};
+  for(const[k,v] of Object.entries(map)){if(concerns.includes(k)||treatments.includes(k)||products.includes(k)||type.includes(k)){moisture+=v[0];strength+=v[1];scalp+=v[2];growth+=v[3];}}
+  const cl=(n)=>Math.max(0,Math.min(100,n));
+  return{overall:Math.round((cl(moisture)+cl(strength)+cl(scalp)+cl(growth))/4),moisture:cl(moisture),strength:cl(strength),scalp:cl(scalp),growth:cl(growth)};
 }
-
-function getZone(score){
-  if(score>=85) return {status:'Excellent',desc:'Your hair is thriving! Keep up your routine and maintain this level of care.',cls:'zone-excellent',color:'#25D366'};
-  if(score>=70) return {status:'Good',desc:'Your hair is in good shape with room to optimize. A few targeted treatments can push you higher.',cls:'zone-good',color:'#8ec63f'};
-  if(score>=50) return {status:'Fair',desc:'Your hair needs some attention. Consistent care with the right products will make a real difference.',cls:'zone-fair',color:'#c1a3a2'};
-  if(score>=30) return {status:'Needs Care',desc:'Your hair is showing signs of stress. Start a focused treatment routine as soon as possible.',cls:'zone-poor',color:'#d4956a'};
-  return {status:'Critical',desc:'Your hair needs urgent attention. We strongly recommend consulting with our live advisor.',cls:'zone-critical',color:'#e07070'};
+function getZone(s){
+  if(s>=85)return{status:'Excellent',desc:'Your hair is thriving — keep up your routine!',color:'#7aad8a'};
+  if(s>=70)return{status:'Very Good',desc:'Your hair is in great shape with room to optimize.',color:'#8ec63f'};
+  if(s>=50)return{status:'Good',desc:'Consistent care will push you higher.',color:'#c1a3a2'};
+  if(s>=30)return{status:'Needs Care',desc:'Start a focused treatment routine soon.',color:'#d4956a'};
+  return{status:'Critical',desc:'Your hair needs urgent attention. Talk to our live advisor.',color:'#e07070'};
 }
-
-function animateNumber(el, target, duration){
-  const start=Date.now(); const from=parseInt(el.textContent)||0;
-  function step(){
-    const p=Math.min(1,(Date.now()-start)/duration);
-    const ease=1-Math.pow(1-p,3);
-    el.textContent=Math.round(from+(target-from)*ease);
-    if(p<1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-
-function recalcScore(){
-  const s=calcScore();
-  const zone=getZone(s.overall);
-
-  // Ring
-  const ring=document.getElementById('score-ring');
-  const circumference=553;
-  const offset=circumference-(circumference*(s.overall/100));
-  ring.style.strokeDashoffset=offset;
-  ring.className='score-ring-fill '+zone.cls;
-
-  // Number
-  animateNumber(document.getElementById('score-num'), s.overall, 1500);
-  document.getElementById('s-score-mini').textContent=s.overall+'%';
-
-  // Status
-  document.getElementById('score-status').textContent=zone.status;
-  document.getElementById('score-desc').textContent=zone.desc;
-
-  // Sub-bars
-  const bars=[
-    {id:'bar-moisture',val:s.moisture,valId:'val-moisture',color:zone.color},
-    {id:'bar-strength',val:s.strength,valId:'val-strength',color:zone.color},
-    {id:'bar-scalp',val:s.scalp,valId:'val-scalp',color:zone.color},
-    {id:'bar-growth',val:s.growth,valId:'val-growth',color:zone.color},
-  ];
-  bars.forEach(b=>{
-    setTimeout(()=>{
-      document.getElementById(b.id).style.width=b.val+'%';
-      document.getElementById(b.id).style.background=b.color;
-      document.getElementById(b.valId).textContent=b.val+'%';
-    },200);
+function animNum(el,to,ms){const start=Date.now(),from=parseInt(el.textContent)||0;(function s(){const p=Math.min(1,(Date.now()-start)/ms),e=1-Math.pow(1-p,3);el.textContent=Math.round(from+(to-from)*e);if(p<1)requestAnimationFrame(s);})();}
+function renderScore(s){
+  const z=getZone(s.overall);
+  const ring=document.getElementById('score-ring'),circ=484;
+  ring.style.strokeDashoffset=circ-(circ*(s.overall/100));
+  animNum(document.getElementById('score-num'),s.overall,1600);
+  document.getElementById('score-status').textContent=z.status;
+  document.getElementById('score-desc').textContent=z.desc;
+  [['moisture',s.moisture],['strength',s.strength],['scalp',s.scalp],['growth',s.growth]].forEach(([k,v],i)=>{
+    setTimeout(()=>{const b=document.getElementById('mb-'+k);b.style.transform='scaleX(1)';b.style.background=z.color;document.getElementById('mv-'+k).textContent=v+'%';},200+i*80);
   });
 }
-
-// ── DATA LOADING ─────────────────────────────────────────────────────────────
+function buildWeek(){
+  const days=['S','M','T','W','T','F','S'],done=[0,1,2,3,4],today=5,wrap=document.getElementById('week-row');
+  days.forEach((d,i)=>{
+    const div=document.createElement('div');
+    div.className='wday'+(done.includes(i)?' done':'')+(i===today?' today':'');
+    div.innerHTML='<div class="wday-lbl">'+d+'</div><div class="wday-circle">'+(done.includes(i)?'✓':'')+'</div>';
+    div.onclick=()=>{div.classList.toggle('done');div.querySelector('.wday-circle').textContent=div.classList.contains('done')?'✓':'';if(div.classList.contains('done')){const n=parseInt(document.getElementById('streak-num').textContent);document.getElementById('streak-num').textContent=n+1;buildStreakDots(n+1);showToast('✅ Day complete! 🔥');}};
+    wrap.appendChild(div);
+  });
+}
+function buildStreakDots(n){const wrap=document.getElementById('streak-dots');wrap.innerHTML='';for(let i=0;i<7;i++){const d=document.createElement('div');d.className='sdot'+(i<n?' lit':'');wrap.appendChild(d);}}
+function toggleTag(el,group){if(group==='type'){document.querySelectorAll('#tags-type .tag').forEach(t=>t.classList.remove('on'));}el.classList.toggle('on');}
+function tagsToString(id){return[...document.querySelectorAll('#'+id+' .tag.on')].map(t=>t.textContent.trim()).join(', ');}
+function setTagsFromString(id,val){if(!val)return;const sel=val.split(',').map(s=>s.trim().toLowerCase());document.querySelectorAll('#'+id+' .tag').forEach(t=>{if(sel.includes(t.textContent.trim().toLowerCase()))t.classList.add('on');});}
+function toggleTask(el){el.classList.toggle('done');const chk=el.querySelector('.task-chk'),badge=el.querySelector('.task-badge');if(el.classList.contains('done')){chk.textContent='✓';badge.textContent='Done';const n=parseInt(document.getElementById('streak-num').textContent);document.getElementById('streak-num').textContent=n+1;buildStreakDots(n+1);showToast('✅ Task complete! 🔥');}else{chk.textContent='';badge.textContent='Pending';showToast('↩ Task unmarked');}}
 async function loadData(){
-  const r=await fetch('/api/auth/me',{headers:{'X-Auth-Token':token}});
-  if(r.status===401){window.location.href='/login';return;}
-  const d=await r.json();
-
-  document.getElementById('un').textContent=d.name||d.email;
-  const av=document.getElementById('av');
-  if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}
-  else{av.textContent=(d.name||'?')[0].toUpperCase();}
-
-  document.getElementById('s-chats').textContent=d.chat_count||0;
-  const concerns=(d.profile?.hair_concerns||'').split(',').filter(c=>c.trim()).length;
-  document.getElementById('s-concern').textContent=concerns||0;
-
-  if(d.profile){
-    document.getElementById('p-type').value=d.profile.hair_type||'';
-    document.getElementById('p-concerns').value=d.profile.hair_concerns||'';
-    document.getElementById('p-treatments').value=d.profile.treatments||'';
-    document.getElementById('p-products').value=d.profile.products_tried||'';
-  }
-  setTimeout(recalcScore, 300);
+  try{
+    const r=await fetch('/api/auth/me',{headers:{'X-Auth-Token':token}});
+    if(r.status===401){window.location.href='/login';return;}
+    const d=await r.json();
+    document.getElementById('nav-name').textContent=d.name||d.email;
+    const av=document.getElementById('nav-av');
+    if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
+    if(d.subscribed)document.getElementById('plan-badge').textContent='✦ Premium';
+    document.getElementById('st-chats').textContent=d.chat_count||0;
+    const concerns=(d.profile?.hair_concerns||'').split(',').filter(c=>c.trim()).length;
+    document.getElementById('st-concerns').textContent=concerns||0;
+    document.getElementById('st-recs').textContent=Math.floor((d.chat_count||0)/2)||0;
+    if(d.profile){setTagsFromString('tags-type',d.profile.hair_type);setTagsFromString('tags-concerns',d.profile.hair_concerns);setTagsFromString('tags-treatments',d.profile.treatments);setTagsFromString('tags-products',d.profile.products_tried);}
+    setTimeout(()=>renderScore(calcScore()),350);
+  }catch(e){console.error(e);}
 }
-
 async function loadHistory(){
-  const r=await fetch('/api/history',{headers:{'X-Auth-Token':token}});
-  const d=await r.json();
-  const list=document.getElementById('history-list');
-  if(!d.history||!d.history.length){
-    list.innerHTML='<div style="color:rgba(0,0,0,0.28);font-size:13px;">No conversations yet — start chatting with Aria!</div>';
-    return;
-  }
-  list.innerHTML=d.history.slice(-20).reverse().map(h=>`
-    <div class="h-item">
-      <div class="h-role">${h.role==='user'?'You':'Aria'}</div>
-      <div class="h-text">${h.content}</div>
-    </div>`).join('');
+  try{
+    const r=await fetch('/api/history',{headers:{'X-Auth-Token':token}});
+    const d=await r.json();
+    const list=document.getElementById('history-list');
+    if(!d.history||!d.history.length){list.innerHTML='<div class="h-empty">No conversations yet — start chatting with Aria!</div>';return;}
+    list.innerHTML=d.history.slice(-8).reverse().map(h=>'<div class="h-item"><div class="h-role">'+(h.role==='user'?'You':'Aria')+'</div><div class="h-text">'+h.content.slice(0,160)+(h.content.length>160?'…':'')+'</div></div>').join('');
+  }catch(e){}
 }
-
 async function saveProfile(){
-  const data={
-    hair_type:document.getElementById('p-type').value,
-    hair_concerns:document.getElementById('p-concerns').value,
-    treatments:document.getElementById('p-treatments').value,
-    products_tried:document.getElementById('p-products').value
-  };
-  await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});
-  recalcScore();
-  const btn=document.querySelector('.btn-save');
-  btn.textContent='Saved ✓';
-  setTimeout(()=>btn.textContent='Save & Update Score',2000);
+  const data={hair_type:tagsToString('tags-type'),hair_concerns:tagsToString('tags-concerns'),treatments:tagsToString('tags-treatments'),products_tried:tagsToString('tags-products')};
+  try{await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});renderScore(calcScore());showToast('✦ Profile saved — score updated!');}catch(e){showToast('⚠️ Save failed — try again');}
 }
-
-async function clearHistory(){
-  if(!confirm('Clear all chat history?'))return;
-  await fetch('/api/history/clear',{method:'POST',headers:{'X-Auth-Token':token}});
-  loadHistory();
-}
-
-async function doLogout(){
-  await fetch('/api/auth/logout',{method:'POST',headers:{'X-Auth-Token':token}});
-  localStorage.removeItem('srd_token');
-  localStorage.removeItem('srd_user');
-  window.location.href='/';
-}
-
-loadData();
-loadHistory();
+async function clearHistory(){if(!confirm('Clear all chat history?'))return;await fetch('/api/history/clear',{method:'POST',headers:{'X-Auth-Token':token}});loadHistory();showToast('✓ History cleared');}
+async function doLogout(){await fetch('/api/auth/logout',{method:'POST',headers:{'X-Auth-Token':token}});localStorage.removeItem('srd_token');localStorage.removeItem('srd_user');window.location.href='/';}
+let toastT;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
+buildWeek();buildStreakDots(7);loadData();loadHistory();
 </script>
 </body></html>"""
+
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
