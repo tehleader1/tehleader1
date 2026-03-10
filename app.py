@@ -1961,6 +1961,51 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
 .back{{text-align:center;margin-top:20px;font-size:11px;color:rgba(0,0,0,0.35);letter-spacing:0.08em;}}
 .back a{{color:#9d7f6a;text-decoration:none;}}
 </style></head><body>
+
+<!-- PWA Install Banner on Login Page -->
+<div id="pwa-login-banner" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:linear-gradient(135deg,#c1a3a2,#d4a85a);border-radius:14px;padding:14px 20px;width:min(360px,90vw);box-shadow:0 10px 40px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+  <div>
+    <div style="font-family:sans-serif;font-weight:700;font-size:13px;color:#fff;">Install the Aria App</div>
+    <div id="pwa-login-sub" style="font-family:sans-serif;font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px;">Add to your home screen for quick access</div>
+  </div>
+  <button id="pwa-login-btn" style="background:#fff;border:none;color:#0d0906;font-family:sans-serif;font-weight:700;font-size:12px;padding:8px 16px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Install →</button>
+</div>
+
+<script>
+(function(){{
+  var banner = document.getElementById('pwa-login-banner');
+  var btn    = document.getElementById('pwa-login-btn');
+  var sub    = document.getElementById('pwa-login-sub');
+  var deferredPrompt = null;
+  var ua = navigator.userAgent || '';
+  var isIOS     = /iPhone|iPad|iPod/i.test(ua);
+  var isAndroid = /Android/i.test(ua);
+
+  if(isIOS){{
+    banner.style.display = 'flex';
+    sub.textContent = 'Tap Share then Add to Home Screen in Safari';
+    btn.addEventListener('click', function(){{
+      alert('To install Aria on iPhone:\n\n1. Tap the Share button in Safari\n2. Tap "Add to Home Screen"\n3. Tap "Add"');
+    }});
+  }} else if(isAndroid){{
+    window.addEventListener('beforeinstallprompt', function(e){{
+      e.preventDefault();
+      deferredPrompt = e;
+      banner.style.display = 'flex';
+      btn.addEventListener('click', function(){{
+        if(deferredPrompt){{
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then(function(r){{
+            deferredPrompt = null;
+            if(r.outcome === 'accepted') banner.style.display = 'none';
+          }});
+        }}
+      }});
+    }});
+  }}
+}})();
+</script>
+
 <div class="card">
   <div class="logo"><div class="logo-text">SupportRD</div><div class="logo-sub">Hair Advisor</div></div>
   <h2>Welcome back</h2>
@@ -2346,7 +2391,7 @@ body::before{content:'';position:fixed;inset:0;
   </div>
   <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
-    <button id="pwa-install-btn" onclick="triggerPWAInstall()" style="display:none;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">⬇ Install App</button>
+    <button id="pwa-install-btn" onclick="triggerPWAInstall()" style="display:block;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">⬇ Install App</button>
     <span class="nav-name" id="nav-name">—</span>
     <div class="plan-tag" id="plan-badge">FREE</div>
     <div class="nav-avatar" id="nav-av">?</div>
