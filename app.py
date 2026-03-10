@@ -4166,18 +4166,34 @@ def pwa_manifest():
             }
         ],
         "categories": ["health", "beauty", "lifestyle"],
+        "screenshots": [
+            {
+                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
+                "sizes": "512x512",
+                "type": "image/png",
+                "form_factor": "narrow",
+                "label": "Aria Hair Advisor Mobile"
+            },
+            {
+                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
+                "sizes": "512x512",
+                "type": "image/png",
+                "form_factor": "wide",
+                "label": "Aria Hair Advisor Desktop"
+            }
+        ],
         "shortcuts": [
             {
                 "name": "Chat with Aria",
                 "url": "/",
                 "description": "Start a hair consultation",
-                "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838", "sizes": "96x96", "type": "image/png"}]
+                "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512", "type": "image/png"}]
             },
             {
                 "name": "My Dashboard",
                 "url": "/dashboard",
                 "description": "View your hair health dashboard",
-                "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838", "sizes": "96x96", "type": "image/png"}]
+                "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512", "type": "image/png"}]
             }
         ]
     }
