@@ -268,8 +268,8 @@ STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID        = os.environ.get("STRIPE_PRICE_ID", "")
 STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_TRIAL_DAYS      = 7
-FREE_RESPONSE_LIMIT    = 50
-FREE_RESPONSE_PERIOD   = "weekly"   # reset every 7 days
+FREE_RESPONSE_LIMIT    = 999999  # unlimited — no cap on free users
+FREE_RESPONSE_PERIOD   = "weekly"
 SUBSCRIPTION_PRICE_USD = 80
 APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor.onrender.com")
 SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
@@ -1152,7 +1152,7 @@ Reference this naturally in your response."""
         save_chat_message(user["id"], "user", user_text)
 
     active_prompt = SYSTEM_PROMPT + profile_context + lang_instr
-    max_tokens    = 350
+    max_tokens    = 500 if subscribed else 130  # premium gets full response, free gets brief
 
     if not ANTHROPIC_API_KEY:
         return jsonify({"recommendation": None, "error": "No API key"}), 500
@@ -1689,10 +1689,10 @@ def subscription_status():
         sub        = get_subscription(user["id"])
         count      = get_session_count(session_id, user["id"])
         subscribed = is_subscribed(user["id"])
-        return jsonify({"subscribed":subscribed,"plan":sub["plan"] if sub else "free","status":sub["status"] if sub else "inactive","trial_end":sub["trial_end"] if sub else None,"current_period_end":sub["current_period_end"] if sub else None,"response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":not subscribed and count>=FREE_RESPONSE_LIMIT})
+        return jsonify({"subscribed":subscribed,"plan":sub["plan"] if sub else "free","status":sub["status"] if sub else "inactive","trial_end":sub["trial_end"] if sub else None,"current_period_end":sub["current_period_end"] if sub else None,"response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":False})
     else:
         count = get_session_count(session_id)
-        return jsonify({"subscribed":False,"plan":"free","status":"inactive","response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":count>=FREE_RESPONSE_LIMIT})
+        return jsonify({"subscribed":False,"plan":"free","status":"inactive","response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":False})
 
 @app.route("/api/subscription/checkout", methods=["POST","OPTIONS"])
 def create_checkout():
@@ -2655,7 +2655,7 @@ body::before{content:'';position:fixed;inset:0;
           <span style="color:var(--rose);font-size:14px;">📸</span>AI Photo Analysis
         </div>
         <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;">
-          <span style="color:var(--rose);font-size:14px;">💬</span>50 Aria Sessions/wk
+          <span style="color:var(--rose);font-size:14px;">💬</span>Unlimited Aria Sessions
         </div>
         <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;grid-column:span 2;">
           <span style="color:var(--gold);font-size:14px;">📋</span>Treatment Log &amp; Product Tracking
