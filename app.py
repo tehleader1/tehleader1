@@ -393,6 +393,8 @@ def increment_session_count(session_id, user_id=None):
 # ── MAIN ROUTE: ARIA SPHERE UI ────────────────────────────────────────────────
 @app.route("/")
 def index():
+    # Always redirect to dashboard - old sphere is retired
+    return redirect("/dashboard")
     return r"""<!DOCTYPE html>
 <html>
 <head>
@@ -4097,7 +4099,7 @@ def pwa_manifest():
 @app.route("/sw.js")
 def service_worker():
     sw = """
-const CACHE = 'aria-v3';
+const CACHE = 'aria-v4';
 const OFFLINE = ['/dashboard'];
 
 self.addEventListener('install', e => {
@@ -4114,14 +4116,28 @@ self.addEventListener('activate', e => {
     )
   );
   self.clients.claim();
+  // Force all open clients to reload so they pick up new start_url
+  self.clients.matchAll({type: 'window'}).then(clients => {
+    clients.forEach(client => {
+      if(client.url.endsWith('/') || client.url === self.registration.scope) {
+        client.navigate('/dashboard');
+      }
+    });
+  });
 });
 
 self.addEventListener('fetch', e => {
   if(e.request.method !== 'GET') return;
   if(e.request.url.includes('/api/')) return;
+  // Redirect bare / to /dashboard
+  const url = new URL(e.request.url);
+  if(url.pathname === '/') {
+    e.respondWith(Response.redirect('/dashboard', 302));
+    return;
+  }
   e.respondWith(
     fetch(e.request).catch(() =>
-      caches.match(e.request).then(r => r || caches.match('/'))
+      caches.match(e.request).then(r => r || caches.match('/dashboard'))
     )
   );
 });
