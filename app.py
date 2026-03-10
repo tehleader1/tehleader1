@@ -2872,14 +2872,19 @@ function switchPTab(name){
 
 function onPremiumPageOpen(name){
   if(!_isPremium){
-    // Show gates on premium pages
+    // Only show the gate for THIS tab, hide its content
+    const gateMap={routine:'routine-gate',progress:'progress-gate',photo:'photo-gate'};
+    const contentMap={routine:['routine-content','routine-empty'],progress:['progress-content'],photo:['photo-content']};
+    // Hide all gates first
     ['routine-gate','progress-gate','photo-gate'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.style.display='';
+      const el=document.getElementById(id); if(el) el.style.display='none';
     });
-    ['routine-content','routine-empty','progress-content','photo-content'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.style.display='none';
+    // Show only the gate for this page
+    const gate=document.getElementById(gateMap[name]);
+    if(gate) gate.style.display='';
+    // Hide content for this page
+    (contentMap[name]||[]).forEach(id=>{
+      const el=document.getElementById(id); if(el) el.style.display='none';
     });
     return;
   }
@@ -3237,7 +3242,17 @@ async function loadData(){
     if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
     if(d.subscribed){ document.getElementById('plan-badge').textContent='PREMIUM'; _isPremium=true; }
     // Style premium nav tabs
-    if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('✦')) t.style.color='var(--gold)'; });
+    if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('\u2746')) t.style.color='var(--gold)'; });
+    // If already on a premium tab when data loaded, re-open it now we know premium status
+    const activeTab=document.querySelector('.nav-tab.active');
+    if(activeTab){
+      const tabNames=['overview','profile','routine','progress','photo'];
+      const tabIdx=[...document.querySelectorAll('.nav-tab')].indexOf(activeTab);
+      const tabName=tabNames[tabIdx];
+      if(tabName&&['routine','progress','photo'].includes(tabName)){
+        onPremiumPageOpen(tabName);
+      }
+    }
     document.getElementById('st-chats').textContent=d.chat_count||0;
     document.getElementById('st-chats-trend').textContent='↑ '+(d.chat_count||0)+' all time';
     const concerns=(d.profile?.hair_concerns||'').split(',').filter(c=>c.trim()).length;
