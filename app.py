@@ -4183,7 +4183,10 @@ def pwa_manifest():
     }
     from flask import Response as _Resp
     import json as _json
-    return _Resp(_json.dumps(manifest), mimetype="application/manifest+json")
+    resp = _Resp(_json.dumps(manifest), mimetype="application/manifest+json")
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
 
 @app.route("/sw.js")
 def service_worker():
@@ -4232,7 +4235,10 @@ self.addEventListener('fetch', e => {
 });
 """.strip()
     from flask import Response as _Resp
-    return _Resp(sw, mimetype="application/javascript", headers={"Service-Worker-Allowed": "/"})
+    return _Resp(sw, mimetype="application/javascript", headers={
+        "Service-Worker-Allowed": "/",
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+    })
 
 # ── KEEP-ALIVE ────────────────────────────────────────────────────────────────
 def _keep_alive():
