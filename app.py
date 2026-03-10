@@ -2105,7 +2105,7 @@ body::before{content:'';position:fixed;inset:0;
 .logout-btn{font-size:10px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:4px;background:none;border:1px solid var(--border);font-family:'Space Grotesk',sans-serif;transition:all 0.15s;}
 .logout-btn:hover{color:var(--text);}
 /* APP */
-.app{padding:84px 18px 40px;max-width:1640px;margin:0 auto;position:relative;z-index:1;}
+.app{padding:84px 18px 40px;max-width:100%;width:100%;margin:0 auto;position:relative;z-index:1;box-sizing:border-box;}
 /* TOP ROW */
 .top-row{display:grid;grid-template-columns:260px 1fr 260px;gap:10px;margin-bottom:10px;align-items:stretch;}
 /* SCORE PANEL */
@@ -4207,13 +4207,10 @@ def pwa_manifest():
 @app.route("/sw.js")
 def service_worker():
     sw = """
-const CACHE = 'aria-v4';
-const OFFLINE = ['/dashboard'];
+const CACHE = 'aria-v5';
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(OFFLINE))
-  );
+  // Skip precaching - /dashboard requires auth so we can't cache it
   self.skipWaiting();
 });
 
