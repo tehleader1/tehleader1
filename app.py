@@ -271,7 +271,7 @@ STRIPE_TRIAL_DAYS      = 7
 FREE_RESPONSE_LIMIT    = 999999  # unlimited — no cap on free users
 FREE_RESPONSE_PERIOD   = "weekly"
 SUBSCRIPTION_PRICE_USD = 80
-APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor.onrender.com")
+APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://aria.supportrd.com")
 SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
 SHOPIFY_ADMIN_TOKEN    = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
 SHOPIFY_PRODUCT_HANDLE = "hair-advisor-premium"
@@ -3555,7 +3555,7 @@ def blog_post(handle):
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{post['title']} — SupportRD</title>
 <meta name="description" content="{post.get('meta','')}">
-<link rel="canonical" href="https://ai-hair-advisor.onrender.com/blog/{handle}">
+<link rel="canonical" href="{APP_BASE_URL}/blog/{handle}">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 {SRD_PAGE_LOADER}
 <style>
@@ -3585,7 +3585,7 @@ footer a{{color:#c1a3a2;text-decoration:none;}}
 # ── SITEMAP / ROBOTS ──────────────────────────────────────────────────────────
 @app.route("/sitemap.xml")
 def sitemap():
-    base_url = "https://ai-hair-advisor.onrender.com"
+    base_url = os.environ.get("APP_BASE_URL","https://aria.supportrd.com")
     urls = [f"""  <url><loc>{base_url}/blog</loc><changefreq>daily</changefreq><priority>0.8</priority></url>"""]
     try:
         for p in blog_get_index():
@@ -3597,7 +3597,7 @@ def sitemap():
 
 @app.route("/robots.txt")
 def robots():
-    return Response("User-agent: *\nAllow: /blog\nDisallow: /api\nDisallow: /admin\n\nSitemap: https://ai-hair-advisor.onrender.com/sitemap.xml\n", mimetype="text/plain")
+    base=os.environ.get("APP_BASE_URL","https://aria.supportrd.com"); return Response(f"User-agent: *\nAllow: /blog\nDisallow: /api\nDisallow: /admin\n\nSitemap: {base}/sitemap.xml\n", mimetype="text/plain")
 
 @app.route("/apps/hair-advisor")
 def shopify_proxy():
@@ -3765,7 +3765,7 @@ _start_content_scheduler()
 # ── KEEP-ALIVE ────────────────────────────────────────────────────────────────
 def _keep_alive():
     import time, urllib.request as _urlreq
-    _url = os.environ.get("APP_BASE_URL","https://ai-hair-advisor.onrender.com") + "/api/ping"
+    _url = os.environ.get("APP_BASE_URL","https://aria.supportrd.com") + "/api/ping"
     time.sleep(60)
     while True:
         time.sleep(600)
