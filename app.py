@@ -1963,46 +1963,53 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
 </style></head><body>
 
 <!-- PWA Install Banner on Login Page -->
-<div id="pwa-login-banner" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:linear-gradient(135deg,#c1a3a2,#d4a85a);border-radius:14px;padding:14px 20px;width:min(360px,90vw);box-shadow:0 10px 40px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+<script>
+// Capture install prompt ASAP before anything else
+window._pwaPromptLogin = null;
+window.addEventListener('beforeinstallprompt', function(e){{
+  e.preventDefault();
+  window._pwaPromptLogin = e;
+  var banner = document.getElementById('pwa-login-banner');
+  if(banner) banner.style.display = 'flex';
+}});
+</script>
+
+<div id="pwa-login-banner" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:linear-gradient(135deg,#c1a3a2,#d4a85a);border-radius:14px;padding:14px 20px;width:min(360px,90vw);box-shadow:0 10px 40px rgba(0,0,0,0.2);flex-direction:row;align-items:center;justify-content:space-between;gap:12px;">
   <div>
     <div style="font-family:sans-serif;font-weight:700;font-size:13px;color:#fff;">Install the Aria App</div>
     <div id="pwa-login-sub" style="font-family:sans-serif;font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px;">Add to your home screen for quick access</div>
   </div>
-  <button id="pwa-login-btn" style="background:#fff;border:none;color:#0d0906;font-family:sans-serif;font-weight:700;font-size:12px;padding:8px 16px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Install →</button>
+  <button id="pwa-login-btn" onclick="installPWALogin()" style="background:#fff;border:none;color:#0d0906;font-family:sans-serif;font-weight:700;font-size:12px;padding:8px 16px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Install →</button>
 </div>
 
 <script>
 (function(){{
-  var banner = document.getElementById('pwa-login-banner');
-  var btn    = document.getElementById('pwa-login-btn');
-  var sub    = document.getElementById('pwa-login-sub');
-  var deferredPrompt = null;
   var ua = navigator.userAgent || '';
-  var isIOS     = /iPhone|iPad|iPod/i.test(ua);
-  var isAndroid = /Android/i.test(ua);
+  var isIOS = /iPhone|iPad|iPod/i.test(ua);
 
   if(isIOS){{
-    banner.style.display = 'flex';
-    sub.textContent = 'Tap Share then Add to Home Screen in Safari';
-    btn.addEventListener('click', function(){{
+    document.getElementById('pwa-login-sub').textContent = 'Tap Share then Add to Home Screen in Safari';
+    document.getElementById('pwa-login-banner').style.display = 'flex';
+  }}
+
+  window.installPWALogin = function(){{
+    if(isIOS){{
       alert('To install Aria on iPhone:\n\n1. Tap the Share button in Safari\n2. Tap "Add to Home Screen"\n3. Tap "Add"');
-    }});
-  }} else if(isAndroid){{
-    window.addEventListener('beforeinstallprompt', function(e){{
-      e.preventDefault();
-      deferredPrompt = e;
-      banner.style.display = 'flex';
-      btn.addEventListener('click', function(){{
-        if(deferredPrompt){{
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then(function(r){{
-            deferredPrompt = null;
-            if(r.outcome === 'accepted') banner.style.display = 'none';
-          }});
+      return;
+    }}
+    if(window._pwaPromptLogin){{
+      window._pwaPromptLogin.prompt();
+      window._pwaPromptLogin.userChoice.then(function(r){{
+        window._pwaPromptLogin = null;
+        if(r.outcome === 'accepted'){{
+          document.getElementById('pwa-login-banner').style.display = 'none';
         }}
       }});
-    }});
-  }}
+    }} else {{
+      // Prompt not available - guide them manually
+      document.getElementById('pwa-login-sub').textContent = 'Tap Chrome menu (3 dots) then "Add to Home Screen"';
+    }}
+  }};
 }})();
 </script>
 
@@ -2087,12 +2094,12 @@ body::before{content:'';position:fixed;inset:0;
 .t-chg{font-size:8px;font-family:'IBM Plex Mono',monospace;}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 /* NAV */
-.nav{position:fixed;top:30px;left:0;right:0;height:50px;background:rgba(7,9,13,0.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 22px;}
+.nav{position:fixed;top:30px;left:0;right:0;height:50px;background:rgba(7,9,13,0.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 12px;overflow:hidden;gap:8px;}
 .nav-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text);margin-right:28px;display:flex;align-items:center;gap:8px;letter-spacing:-0.02em;}
 .nav-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--rose);box-shadow:0 0 12px var(--rose-glow),0 0 24px rgba(240,160,144,0.3);animation:logoPulse 2s ease-in-out infinite;}
 @keyframes logoPulse{0%,100%{box-shadow:0 0 8px var(--rose-glow)}50%{box-shadow:0 0 20px var(--rose-glow),0 0 40px rgba(240,160,144,0.2)}}
-.nav-tabs{display:flex;height:100%;}
-.nav-tab{height:100%;padding:0 15px;display:flex;align-items:center;font-size:11px;letter-spacing:0.04em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;position:relative;top:1px;text-decoration:none;}
+.nav-tabs{display:flex;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:1;min-width:0;}.nav-tabs::-webkit-scrollbar{display:none;}
+.nav-tab{height:100%;padding:0 15px;display:flex;align-items:center;font-size:11px;letter-spacing:0.04em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;position:relative;top:1px;text-decoration:none;white-space:nowrap;flex-shrink:0;}
 .nav-tab:hover,.nav-tab.active{color:var(--text);border-bottom-color:var(--rose);}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
 .live-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;background:rgba(48,232,144,0.08);border:1px solid rgba(48,232,144,0.25);font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--green);letter-spacing:0.1em;}
