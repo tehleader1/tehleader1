@@ -1968,6 +1968,12 @@ def dashboard():
 <html lang="en"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#c1a3a2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Aria">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838">
 <title>Aria Command Center — SupportRD</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
