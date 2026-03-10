@@ -1068,6 +1068,43 @@ function handleSubscriptionResponse(data){
   }
 }
 function closePaywall(){ _paywallDismissed=true; document.getElementById('paywallBanner').style.display='none'; }
+function showUpgradeModal(featureName){
+  const titles = {
+    'Smart Routine Builder': 'Unlock Your Personal Routine',
+    'Hair Health Timeline': 'Track Your Hair Journey',
+    'AI Photo Analysis': 'Unlock AI Photo Analysis'
+  };
+  document.getElementById('upgrade-modal-title').textContent = titles[featureName] || 'Hair Advisor Premium';
+  document.getElementById('activate-modal-msg').textContent = '';
+  document.getElementById('activate-email-modal').value = '';
+  // Pre-fill email if logged in
+  try{const u=JSON.parse(localStorage.getItem('srd_user')||'{}'); if(u.email) document.getElementById('activate-email-modal').value=u.email;}catch(e){}
+  document.getElementById('upgrade-modal').style.display='flex';
+}
+function closeUpgradeModal(){
+  document.getElementById('upgrade-modal').style.display='none';
+}
+async function activateFromModal(){
+  const email = document.getElementById('activate-email-modal').value.trim();
+  const btn = document.getElementById('activate-modal-btn');
+  const msg = document.getElementById('activate-modal-msg');
+  if(!email){ msg.style.color='#e08080'; msg.textContent='Please enter your email.'; return; }
+  btn.disabled=true; btn.textContent='Checking…'; msg.textContent='';
+  try{
+    const r=await fetch('/api/subscription/activate-shopify',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({email})});
+    const d=await r.json();
+    if(d.ok){
+      msg.style.color='#80e0a0'; msg.textContent='✓ Premium activated! Reloading…';
+      try{const u=JSON.parse(localStorage.getItem('srd_user')||'{}');u.plan='premium';localStorage.setItem('srd_user',JSON.stringify(u));}catch(e){}
+      setTimeout(()=>{ closeUpgradeModal(); location.reload(); }, 1200);
+    } else {
+      msg.style.color='#e08080';
+      msg.textContent = d.error || 'No purchase found. Please buy at supportrd.com first.';
+      btn.disabled=false; btn.textContent='Activate';
+    }
+  }catch(e){ msg.style.color='#e08080'; msg.textContent='Network error. Try again.'; btn.disabled=false; btn.textContent='Activate'; }
+}
+
 async function goUpgrade(){
   const token=localStorage.getItem('srd_token');
   if(!token){ window.location.href='/login?next=subscribe'; return; }
@@ -2458,7 +2495,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">✦</div>
     <div class="gate-title">Smart Routine Builder</div>
     <div class="gate-desc">Aria builds your personalized 7-day hair care schedule based on your hair type, concerns, and products. Tap to unlock.</div>
-    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
+    <button class="gate-btn" onclick="showUpgradeModal('Smart Routine Builder')">Unlock Premium →</button>
   </div>
   <div id="routine-loading" class="ppage-loading" style="display:none">
     <div class="ppage-spinner"></div><div>Aria is crafting your routine…</div>
@@ -2483,7 +2520,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">📈</div>
     <div class="gate-title">Hair Health Timeline</div>
     <div class="gate-desc">Track your score over 30, 60, 90 days. Log treatments and see what products are actually working for your hair.</div>
-    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
+    <button class="gate-btn" onclick="showUpgradeModal('Hair Health Timeline')">Unlock Premium →</button>
   </div>
   <div id="progress-content" style="display:none">
     <div class="prog-layout">
@@ -2517,7 +2554,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">📸</div>
     <div class="gate-title">AI Photo Analysis</div>
     <div class="gate-desc">Upload a selfie and Aria diagnoses your hair's porosity, damage level, density, and texture — then recommends the perfect products.</div>
-    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
+    <button class="gate-btn" onclick="showUpgradeModal('AI Photo Analysis')">Unlock Premium →</button>
   </div>
   <div id="photo-content" style="display:none">
     <div class="photo-layout">
@@ -2577,6 +2614,72 @@ body::before{content:'';position:fixed;inset:0;
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="modal-save" onclick="saveLog()">Save Entry</button>
       <button class="modal-cancel" onclick="closeLogModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPGRADE MODAL — Shopify Checkout -->
+<div class="modal-bg" id="upgrade-modal" style="display:none" onclick="if(event.target===this)closeUpgradeModal()">
+  <div class="modal-box" style="padding:0;overflow:hidden;max-width:460px;width:min(460px,94vw);">
+
+    <!-- Header band -->
+    <div style="background:linear-gradient(135deg,#c1a3a2,#d4a85a);padding:20px 24px 16px;text-align:center;position:relative;">
+      <button onclick="closeUpgradeModal()" style="position:absolute;top:12px;right:14px;background:rgba(0,0,0,0.2);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:14px;line-height:26px;">✕</button>
+      <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.8);margin-bottom:4px;">SupportRD</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#fff;" id="upgrade-modal-title">Hair Advisor Premium</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:4px;">Powered by Aria · Your AI Hair Expert</div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:20px 24px;">
+
+      <!-- Price row -->
+      <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
+        <span style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--rose);">$35</span>
+        <span style="font-size:13px;color:var(--muted2);">/ month</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">Billed monthly · Cancel anytime from your account</div>
+
+      <!-- Feature list -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;">
+          <span style="color:var(--rose);font-size:14px;">✦</span>Smart Routine Builder
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;">
+          <span style="color:var(--rose);font-size:14px;">📈</span>Score Timeline
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;">
+          <span style="color:var(--rose);font-size:14px;">📸</span>AI Photo Analysis
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;">
+          <span style="color:var(--rose);font-size:14px;">💬</span>50 Aria Sessions/wk
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;grid-column:span 2;">
+          <span style="color:var(--gold);font-size:14px;">📋</span>Treatment Log &amp; Product Tracking
+        </div>
+      </div>
+
+      <!-- Shopify Buy Button -->
+      <a href="https://supportrd.com/products/hair-advisor-premium" target="_blank"
+         onclick="closeUpgradeModal()"
+         style="display:block;width:100%;padding:14px;background:linear-gradient(135deg,#c1a3a2,#d4a85a);border:none;border-radius:10px;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;letter-spacing:0.05em;text-align:center;text-decoration:none;margin-bottom:10px;box-sizing:border-box;">
+        Buy on SupportRD.com →
+      </a>
+
+      <!-- Already purchased? activate -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
+        <div style="font-size:11px;color:var(--muted2);text-align:center;margin-bottom:8px;">Already purchased? Activate your account below.</div>
+        <div style="display:flex;gap:8px;">
+          <input id="activate-email-modal" type="email" placeholder="Email used at checkout"
+            style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:9px 12px;outline:none;">
+          <button onclick="activateFromModal()" id="activate-modal-btn"
+            style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Syne',sans-serif;font-size:12px;font-weight:600;padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;">
+            Activate
+          </button>
+        </div>
+        <div id="activate-modal-msg" style="font-size:11px;margin-top:7px;text-align:center;min-height:14px;"></div>
+      </div>
+
     </div>
   </div>
 </div>
