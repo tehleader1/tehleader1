@@ -2693,6 +2693,43 @@ body::before{content:'';position:fixed;inset:0;
 const token = localStorage.getItem('srd_token');
 if (!token) { window.location.href = '/login'; }
 
+// ── UPGRADE MODAL ──
+function showUpgradeModal(featureName){
+  const titles={
+    'Smart Routine Builder':'Unlock Your Personal Routine',
+    'Hair Health Timeline':'Track Your Hair Journey',
+    'AI Photo Analysis':'Unlock AI Photo Analysis'
+  };
+  document.getElementById('upgrade-modal-title').textContent=titles[featureName]||'Hair Advisor Premium';
+  document.getElementById('activate-modal-msg').textContent='';
+  document.getElementById('activate-email-modal').value='';
+  try{const u=JSON.parse(localStorage.getItem('srd_user')||'{}');if(u.email)document.getElementById('activate-email-modal').value=u.email;}catch(e){}
+  document.getElementById('upgrade-modal').style.display='flex';
+}
+function closeUpgradeModal(){
+  document.getElementById('upgrade-modal').style.display='none';
+}
+async function activateFromModal(){
+  const email=document.getElementById('activate-email-modal').value.trim();
+  const btn=document.getElementById('activate-modal-btn');
+  const msg=document.getElementById('activate-modal-msg');
+  if(!email){msg.style.color='#e08080';msg.textContent='Please enter your email.';return;}
+  btn.disabled=true;btn.textContent='Checking…';msg.textContent='';
+  try{
+    const r=await fetch('/api/subscription/activate-shopify',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({email})});
+    const d=await r.json();
+    if(d.ok){
+      msg.style.color='#80e0a0';msg.textContent='✓ Premium activated! Reloading…';
+      try{const u=JSON.parse(localStorage.getItem('srd_user')||'{}');u.plan='premium';localStorage.setItem('srd_user',JSON.stringify(u));}catch(e){}
+      setTimeout(()=>{closeUpgradeModal();location.reload();},1200);
+    }else{
+      msg.style.color='#e08080';
+      msg.textContent=d.error||'No purchase found. Please buy at supportrd.com first.';
+      btn.disabled=false;btn.textContent='Activate';
+    }
+  }catch(e){msg.style.color='#e08080';msg.textContent='Network error. Try again.';btn.disabled=false;btn.textContent='Activate';}
+}
+
 // ── TICKER ──
 const TDATA = [
   {n:'MOISTURE',c:'var(--rose)'},{n:'STRENGTH',c:'var(--blue)'},
