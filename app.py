@@ -1124,6 +1124,43 @@ if('serviceWorker' in navigator){
   });
 }
 
+// ── PWA INSTALL ──────────────────────────────────────────────────────────────
+let _pwaPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  _pwaPrompt = e;
+  var btn = document.getElementById('pwa-install-btn');
+  if(btn) btn.style.display = 'block';
+});
+
+window.addEventListener('appinstalled', function(){
+  var btn = document.getElementById('pwa-install-btn');
+  if(btn) btn.style.display = 'none';
+  _pwaPrompt = null;
+});
+
+function triggerPWAInstall(){
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPhone|iPad|iPod/i.test(ua);
+  if(isIOS){
+    alert('To install Aria on iPhone:\n\n1. Tap the Share button in Safari\n2. Tap "Add to Home Screen"\n3. Tap "Add"');
+    return;
+  }
+  if(_pwaPrompt){
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.then(function(r){
+      _pwaPrompt = null;
+      if(r.outcome === 'accepted'){
+        var btn = document.getElementById('pwa-install-btn');
+        if(btn) btn.style.display = 'none';
+      }
+    });
+  } else {
+    alert('To install: tap the 3-dot menu in Chrome and select "Add to Home Screen"');
+  }
+}
+
 async function goUpgrade(){
   const token=localStorage.getItem('srd_token');
   if(!token){ window.location.href='/login?next=subscribe'; return; }
@@ -2309,6 +2346,7 @@ body::before{content:'';position:fixed;inset:0;
   </div>
   <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <button id="pwa-install-btn" onclick="triggerPWAInstall()" style="display:none;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">⬇ Install App</button>
     <span class="nav-name" id="nav-name">—</span>
     <div class="plan-tag" id="plan-badge">FREE</div>
     <div class="nav-avatar" id="nav-av">?</div>
