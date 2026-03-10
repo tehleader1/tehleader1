@@ -1496,6 +1496,9 @@ def add_cors_headers(response):
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Auth-Token, X-Session-Id"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE"
     response.headers["Access-Control-Max-Age"]       = "3600"
+    # Allow embedding in Shopify iframe
+    response.headers["X-Frame-Options"]              = "ALLOW-FROM https://supportrd.com"
+    response.headers["Content-Security-Policy"]      = "frame-ancestors https://supportrd.com https://*.myshopify.com *"
     return response
 
 
