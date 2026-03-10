@@ -4048,32 +4048,30 @@ def pwa_manifest():
         "name": "Aria — SupportRD Hair Advisor",
         "short_name": "Aria",
         "description": "Your personal AI hair advisor from SupportRD",
-        "start_url": "/",
+        "start_url": "/dashboard",
         "display": "standalone",
         "background_color": "#f0ebe8",
         "theme_color": "#c1a3a2",
         "orientation": "portrait",
+        "id": "/dashboard",
         "icons": [
             {
-                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
+                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838",
                 "sizes": "192x192",
                 "type": "image/png",
-                "purpose": "any maskable"
+                "purpose": "any"
             },
             {
-                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838",
+                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
                 "sizes": "512x512",
                 "type": "image/png",
-                "purpose": "any maskable"
-            }
-        ],
-        "screenshots": [
+                "purpose": "any"
+            },
             {
-                "src": "https://aria.supportrd.com/",
-                "sizes": "390x844",
+                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
+                "sizes": "512x512",
                 "type": "image/png",
-                "form_factor": "narrow",
-                "label": "Aria Hair Advisor"
+                "purpose": "maskable"
             }
         ],
         "categories": ["health", "beauty", "lifestyle"],
@@ -4081,12 +4079,14 @@ def pwa_manifest():
             {
                 "name": "Chat with Aria",
                 "url": "/",
-                "description": "Start a hair consultation"
+                "description": "Start a hair consultation",
+                "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838", "sizes": "96x96", "type": "image/png"}]
             },
             {
                 "name": "My Dashboard",
                 "url": "/dashboard",
-                "description": "View your hair health dashboard"
+                "description": "View your hair health dashboard",
+                "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838", "sizes": "96x96", "type": "image/png"}]
             }
         ]
     }
