@@ -4097,8 +4097,8 @@ def pwa_manifest():
 @app.route("/sw.js")
 def service_worker():
     sw = """
-const CACHE = 'aria-v1';
-const OFFLINE = ['/'];
+const CACHE = 'aria-v3';
+const OFFLINE = ['/dashboard'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
