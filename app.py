@@ -398,6 +398,12 @@ def index():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#c1a3a2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Aria">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
 <title>Aria — SupportRD Hair Advisor</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
 <style>
@@ -1103,6 +1109,17 @@ async function activateFromModal(){
       btn.disabled=false; btn.textContent='Activate';
     }
   }catch(e){ msg.style.color='#e08080'; msg.textContent='Network error. Try again.'; btn.disabled=false; btn.textContent='Activate'; }
+}
+
+// ── PWA SERVICE WORKER ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+      console.log('SW registered');
+    }).catch(function(err){
+      console.log('SW failed:', err);
+    });
+  });
 }
 
 async function goUpgrade(){
@@ -2280,6 +2297,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab" onclick="switchPTab('routine')">✦ Routine</div>
     <div class="nav-tab" onclick="switchPTab('progress')">✦ Progress</div>
     <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
+    <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
   </div>
   <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
@@ -2596,6 +2614,68 @@ body::before{content:'';position:fixed;inset:0;
   </div>
 </div>
 
+<!-- ✦ WHATSAPP / SMS ARIA -->
+<div class="ppage" id="pp-whatsapp">
+  <div class="ppage-head">
+    <div class="ppage-title">✦ Aria on WhatsApp &amp; SMS <span class="premium-badge">PREMIUM</span></div>
+  </div>
+  <div id="whatsapp-gate" class="premium-gate" style="display:none">
+    <div class="gate-icon">💬</div>
+    <div class="gate-title">Text Aria Directly</div>
+    <div class="gate-desc">Premium members can text Aria on WhatsApp or SMS and get personalized hair advice anytime, anywhere.</div>
+    <button class="gate-btn" onclick="showUpgradeModal('Aria on WhatsApp & SMS')">Unlock Premium →</button>
+  </div>
+  <div id="whatsapp-content" style="display:none">
+    <div style="max-width:500px;margin:0 auto;">
+
+      <!-- WhatsApp card -->
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="width:44px;height:44px;background:#25d366;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">💬</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">WhatsApp Aria</div>
+            <div style="font-size:12px;color:var(--muted2);">Chat directly on WhatsApp</div>
+          </div>
+        </div>
+        <a href="https://wa.me/18005551234" target="_blank"
+           style="display:block;text-align:center;padding:12px;background:#25d366;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;border-radius:10px;text-decoration:none;margin-bottom:10px;">
+          Open WhatsApp Chat →
+        </a>
+        <div style="font-size:11px;color:var(--muted);text-align:center;">Send any message to start your session with Aria</div>
+      </div>
+
+      <!-- SMS card -->
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="width:44px;height:44px;background:var(--rose);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">📱</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">SMS Aria</div>
+            <div style="font-size:12px;color:var(--muted2);">Text Aria from any phone</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--text);text-align:center;background:var(--bg3);border-radius:10px;padding:14px;letter-spacing:0.05em;font-family:'IBM Plex Mono',monospace;" id="sms-number-display">Loading…</div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">Text any hair question to this number</div>
+      </div>
+
+      <!-- Link phone number -->
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:6px;">🔗 Link Your Phone Number</div>
+        <div style="font-size:12px;color:var(--muted2);margin-bottom:14px;line-height:1.6;">Link your number so Aria remembers your hair profile and history when you text her.</div>
+        <div style="display:flex;gap:8px;">
+          <input id="phone-link-input" type="tel" placeholder="+1 (829) 233-2670"
+            style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;padding:10px 12px;outline:none;">
+          <button onclick="linkPhone()" id="link-phone-btn"
+            style="background:var(--rose);border:none;color:#000;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;padding:10px 16px;border-radius:8px;cursor:pointer;white-space:nowrap;">
+            Link
+          </button>
+        </div>
+        <div id="phone-link-msg" style="font-size:11px;margin-top:8px;min-height:14px;"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- LOG TREATMENT MODAL -->
 <div class="modal-bg" id="log-modal" style="display:none" onclick="if(event.target===this)closeLogModal()">
   <div class="modal-box">
@@ -2891,7 +2971,7 @@ function switchPTab(name){
   }
   // Nav tabs
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4};
+  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4,whatsapp:5};
   const idx=tabs[name]??0;
   document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
   // Profile/history sub-tabs
@@ -2910,10 +2990,10 @@ function switchPTab(name){
 function onPremiumPageOpen(name){
   if(!_isPremium){
     // Only show the gate for THIS tab, hide its content
-    const gateMap={routine:'routine-gate',progress:'progress-gate',photo:'photo-gate'};
-    const contentMap={routine:['routine-content','routine-empty'],progress:['progress-content'],photo:['photo-content']};
+    const gateMap={routine:'routine-gate',progress:'progress-gate',photo:'photo-gate',whatsapp:'whatsapp-gate'};
+    const contentMap={routine:['routine-content','routine-empty'],progress:['progress-content'],photo:['photo-content'],whatsapp:['whatsapp-content']};
     // Hide all gates first
-    ['routine-gate','progress-gate','photo-gate'].forEach(id=>{
+    ['routine-gate','progress-gate','photo-gate','whatsapp-gate'].forEach(id=>{
       const el=document.getElementById(id); if(el) el.style.display='none';
     });
     // Show only the gate for this page
@@ -2928,6 +3008,7 @@ function onPremiumPageOpen(name){
   if(name==='routine') openRoutinePage();
   if(name==='progress') openProgressPage();
   if(name==='photo') openPhotoPage();
+  if(name==='whatsapp') openWhatsappPage();
 }
 
 // ── ROUTINE BUILDER ──────────────────────────────────────────────────────────
@@ -3267,6 +3348,31 @@ async function sphereSend(){
   sphereBusy=true; input.value='';
   await sphereAskAria(msg);
   input.focus();
+}
+
+// ── WHATSAPP / SMS ──
+function openWhatsappPage(){
+  document.getElementById('whatsapp-gate').style.display='none';
+  document.getElementById('whatsapp-content').style.display='block';
+  // Set SMS number from env (loaded via dashboard-stats)
+  const smsEl=document.getElementById('sms-number-display');
+  if(smsEl && window._smsNumber) smsEl.textContent=window._smsNumber;
+  else if(smsEl) smsEl.textContent='Text us to get your dedicated number';
+}
+
+async function linkPhone(){
+  const phone=document.getElementById('phone-link-input').value.trim();
+  const btn=document.getElementById('link-phone-btn');
+  const msg=document.getElementById('phone-link-msg');
+  if(!phone){msg.style.color='#e08080';msg.textContent='Enter your phone number first.';return;}
+  btn.disabled=true;btn.textContent='Linking…';
+  try{
+    const r=await fetch('/api/twilio/link-phone',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({phone})});
+    const d=await r.json();
+    if(d.ok){msg.style.color='#80e0a0';msg.textContent='✓ Phone linked! Aria will now remember you when you text.';}
+    else{msg.style.color='#e08080';msg.textContent=d.error||'Something went wrong.';}
+  }catch(e){msg.style.color='#e08080';msg.textContent='Network error.';}
+  btn.disabled=false;btn.textContent='Link';
 }
 
 async function loadData(){
@@ -3761,6 +3867,267 @@ def _start_content_scheduler():
 
 _start_content_scheduler()
 
+
+
+# ── TWILIO WHATSAPP + SMS (ARIA) ──────────────────────────────────────────────
+TWILIO_ACCOUNT_SID  = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN   = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_WHATSAPP_NUM = os.environ.get("TWILIO_WHATSAPP_NUM", "")   # e.g. whatsapp:+14155238886
+TWILIO_SMS_NUM      = os.environ.get("TWILIO_SMS_NUM", "")        # e.g. +18005551234
+
+def _twilio_reply(to_number, body):
+    """Send a reply via Twilio REST API (no SDK needed)."""
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        print("Twilio not configured"); return
+    from_num = TWILIO_WHATSAPP_NUM if to_number.startswith("whatsapp:") else TWILIO_SMS_NUM
+    if not from_num:
+        print("No Twilio number configured for channel"); return
+    import urllib.request as _ur, urllib.parse as _up, base64
+    url  = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
+    data = _up.urlencode({"From": from_num, "To": to_number, "Body": body}).encode()
+    creds = base64.b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode()).decode()
+    req  = _ur.Request(url, data=data, headers={"Authorization": f"Basic {creds}", "Content-Type": "application/x-www-form-urlencoded"}, method="POST")
+    try:
+        with _ur.urlopen(req, timeout=10) as r: r.read()
+    except Exception as e:
+        print(f"Twilio send error: {e}")
+
+def _aria_twilio_response(user_text, phone, is_premium, user=None):
+    """Call Claude as Aria and return the reply text."""
+    profile_context = ""
+    if user and is_premium:
+        profile = get_hair_profile(user["id"])
+        if profile.get("hair_type") or profile.get("hair_concerns"):
+            profile_context = f"""
+
+RETURNING CLIENT PROFILE:
+- Name: {user.get("name","this client")}
+- Hair type: {profile.get("hair_type","unknown")}
+- Known concerns: {profile.get("hair_concerns","none saved")}
+- Treatments history: {profile.get("treatments","none saved")}
+- Products tried: {profile.get("products_tried","none saved")}
+Reference this naturally in your response."""
+
+    sms_instruction = """
+
+SMS/WHATSAPP RULES:
+- Keep replies under 300 characters — this is a text message.
+- Be warm, direct, no bullet points.
+- End with a product name when relevant."""
+
+    prompt = SYSTEM_PROMPT + profile_context + sms_instruction
+    max_tok = 200 if is_premium else 80
+
+    # Build message history for premium users
+    messages = []
+    if user and is_premium:
+        history = get_chat_history(user["id"], limit=10)
+        for h in history[:-1]:
+            if h.get("role") in ("user","assistant") and h.get("content"):
+                messages.append({"role": h["role"], "content": h["content"]})
+    messages.append({"role": "user", "content": user_text})
+
+    import urllib.request as _ur
+    payload = json.dumps({
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": max_tok,
+        "system": prompt,
+        "messages": messages
+    }).encode()
+    req = _ur.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
+        method="POST"
+    )
+    with _ur.urlopen(req, timeout=25) as r:
+        result = json.loads(r.read())
+    return result["content"][0]["text"].strip()
+
+def _lookup_user_by_phone(phone):
+    """Look up a user by their phone number (stripped of whatsapp: prefix)."""
+    clean = phone.replace("whatsapp:","").strip()
+    con = get_db()
+    row = con.execute("SELECT id,email,name FROM users WHERE phone=?", (clean,)).fetchone()
+    con.close()
+    if row: return {"id": row[0], "email": row[1], "name": row[2]}
+    return None
+
+def _ensure_phone_column():
+    """Add phone column to users table if not exists."""
+    try:
+        db_execute("ALTER TABLE users ADD COLUMN phone TEXT")
+    except: pass  # already exists
+
+_ensure_phone_column()
+
+@app.route("/api/twilio/whatsapp", methods=["POST"])
+def twilio_whatsapp():
+    """Twilio webhook for incoming WhatsApp messages."""
+    from_num  = request.form.get("From","")   # e.g. whatsapp:+1234567890
+    body      = (request.form.get("Body","") or "").strip()
+    if not from_num or not body:
+        return Response("<Response></Response>", mimetype="text/xml")
+
+    def handle():
+        try:
+            # Look up user by phone
+            user       = _lookup_user_by_phone(from_num)
+            is_premium = is_subscribed(user["id"]) if user else False
+
+            if not is_premium:
+                # Short reply + upgrade link for free/unregistered users
+                try:
+                    reply = _aria_twilio_response(body, from_num, False, user)
+                except Exception as e:
+                    reply = "Hi! I'm Aria, your SupportRD hair advisor. I can help with all your hair concerns!"
+                reply += f"\n\n✦ Unlock full Aria sessions at aria.supportrd.com/dashboard"
+            else:
+                reply = _aria_twilio_response(body, from_num, True, user)
+                if user: save_chat_message(user["id"], "user", body)
+                if user: save_chat_message(user["id"], "assistant", reply)
+
+            _twilio_reply(from_num, reply)
+        except Exception as e:
+            print(f"WhatsApp handler error: {e}")
+            _twilio_reply(from_num, "Hi! I'm Aria from SupportRD. Visit aria.supportrd.com/dashboard to chat with me!")
+
+    threading.Thread(target=handle, daemon=True).start()
+    # Twilio needs an immediate 200 response
+    return Response("<Response></Response>", mimetype="text/xml")
+
+@app.route("/api/twilio/sms", methods=["POST"])
+def twilio_sms():
+    """Twilio webhook for incoming SMS messages."""
+    from_num  = request.form.get("From","")   # e.g. +1234567890
+    body      = (request.form.get("Body","") or "").strip()
+    if not from_num or not body:
+        return Response("<Response></Response>", mimetype="text/xml")
+
+    def handle():
+        try:
+            user       = _lookup_user_by_phone(from_num)
+            is_premium = is_subscribed(user["id"]) if user else False
+
+            if not is_premium:
+                try:
+                    reply = _aria_twilio_response(body, from_num, False, user)
+                except:
+                    reply = "Hi! I'm Aria, SupportRD's hair advisor. I can help with all your hair concerns!"
+                reply += f"\nUnlock full sessions: aria.supportrd.com/dashboard"
+            else:
+                reply = _aria_twilio_response(body, from_num, True, user)
+                if user: save_chat_message(user["id"], "user", body)
+                if user: save_chat_message(user["id"], "assistant", reply)
+
+            _twilio_reply(from_num, reply)
+        except Exception as e:
+            print(f"SMS handler error: {e}")
+            _twilio_reply(from_num, "Hi! I'm Aria from SupportRD. Visit aria.supportrd.com/dashboard to chat!")
+
+    threading.Thread(target=handle, daemon=True).start()
+    return Response("<Response></Response>", mimetype="text/xml")
+
+@app.route("/api/twilio/link-phone", methods=["POST","OPTIONS"])
+def link_phone():
+    """Let a logged-in premium user link their phone number to their account."""
+    user = get_current_user()
+    if not user: return jsonify({"error":"Not logged in"}), 401
+    if not is_subscribed(user["id"]): return jsonify({"error":"premium_required"}), 403
+    data  = request.get_json(silent=True) or {}
+    phone = (data.get("phone","") or "").strip().replace(" ","").replace("-","").replace("(","").replace(")","")
+    if not phone or not phone.startswith("+"): return jsonify({"error":"Please enter phone in format +1234567890"}), 400
+    db_execute("UPDATE users SET phone=? WHERE id=?", (phone, user["id"]))
+    return jsonify({"ok": True, "phone": phone})
+
+
+# ── PWA MANIFEST + SERVICE WORKER ────────────────────────────────────────────
+@app.route("/manifest.json")
+def pwa_manifest():
+    manifest = {
+        "name": "Aria — SupportRD Hair Advisor",
+        "short_name": "Aria",
+        "description": "Your personal AI hair advisor from SupportRD",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#f0ebe8",
+        "theme_color": "#c1a3a2",
+        "orientation": "portrait",
+        "icons": [
+            {
+                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable"
+            },
+            {
+                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable"
+            }
+        ],
+        "screenshots": [
+            {
+                "src": "https://aria.supportrd.com/",
+                "sizes": "390x844",
+                "type": "image/png",
+                "form_factor": "narrow",
+                "label": "Aria Hair Advisor"
+            }
+        ],
+        "categories": ["health", "beauty", "lifestyle"],
+        "shortcuts": [
+            {
+                "name": "Chat with Aria",
+                "url": "/",
+                "description": "Start a hair consultation"
+            },
+            {
+                "name": "My Dashboard",
+                "url": "/dashboard",
+                "description": "View your hair health dashboard"
+            }
+        ]
+    }
+    from flask import Response as _Resp
+    import json as _json
+    return _Resp(_json.dumps(manifest), mimetype="application/manifest+json")
+
+@app.route("/sw.js")
+def service_worker():
+    sw = """
+const CACHE = 'aria-v1';
+const OFFLINE = ['/'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.addAll(OFFLINE))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  if(e.request.method !== 'GET') return;
+  if(e.request.url.includes('/api/')) return;
+  e.respondWith(
+    fetch(e.request).catch(() =>
+      caches.match(e.request).then(r => r || caches.match('/'))
+    )
+  );
+});
+""".strip()
+    from flask import Response as _Resp
+    return _Resp(sw, mimetype="application/javascript", headers={"Service-Worker-Allowed": "/"})
 
 # ── KEEP-ALIVE ────────────────────────────────────────────────────────────────
 def _keep_alive():
