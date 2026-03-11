@@ -275,6 +275,10 @@ RULE #3 — ORDERING: When you recommend a product, always add: "You can request
 
 RULE #4 — ONLY SupportRD: Never mention outside brands (Olaplex, Redken, Pantene, etc.). Redirect warmly.
 
+RULE #5 — PRODUCT TAG (CRITICAL): At the very end of EVERY response where you recommend a product, append this exact tag on a new line with NO spaces:
+[PRODUCT:Formula Exclusiva] or [PRODUCT:Laciador Crece] or [PRODUCT:Gotero Rapido] or [PRODUCT:Gotitas Brillantes] or [PRODUCT:Mascarilla Natural] or [PRODUCT:Shampoo Aloe & Romero]
+If no specific product applies, do NOT include the tag. The user will NOT see this tag.
+
 YOUR 6 PRODUCTS (use these EXACT names):
 - Formula Exclusiva ($55): All-in-one treatment. Best for: damaged, weak, breaking, thinning, severely dry hair.
 - Laciador Crece ($40): Restructurer for softness, shine, growth. Best for: dry, frizzy hair, lack of shine, growth.
@@ -297,8 +301,8 @@ STYLE:
 - Never say "I recommend" — say "For your hair, [Product] is exactly what you need."
 - Occasionally mention: "For a 1-on-1 chat with a live advisor, WhatsApp us at 829-233-2670"
 
-Respond ONLY with your answer. No preamble. No "Sure!" or "Of course!".
-If the language code indicates non-English, respond entirely in that language."""
+Respond ONLY with your answer + optional product tag. No preamble. No "Sure!" or "Of course!".
+If the language code indicates non-English, respond entirely in that language (but keep the [PRODUCT:...] tag in English)."""
 
 
 # ── SUBSCRIPTION CONSTANTS (needed before index route) ────────────────────────
@@ -1268,12 +1272,20 @@ Reference this naturally in your response."""
         increment_session_count(session_id, user["id"] if user else None)
         new_count = get_session_count(session_id, user["id"] if user else None)
 
-        product = extract_product(recommendation)
+        # Parse [PRODUCT:...] tag Aria appends, then strip it from visible text
+        import re as _re
+        product_tag_match = _re.search(r'\[PRODUCT:([^\]]+)\]', recommendation)
+        if product_tag_match:
+            product = product_tag_match.group(1).strip()
+            recommendation = _re.sub(r'\s*\[PRODUCT:[^\]]+\]', '', recommendation).strip()
+        else:
+            product = extract_product(recommendation)  # fallback
+
         concern = extract_concern(user_text)
         log_event(lang, user_text, product, concern)
 
-        # Build product card if a specific product was mentioned
-        product_card = PRODUCT_CARDS.get(product) if product != "Unknown" else None
+        # Build product card
+        product_card = PRODUCT_CARDS.get(product)
 
         return jsonify({
             "recommendation":  recommendation,
