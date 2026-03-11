@@ -306,10 +306,7 @@ If the language code indicates non-English, respond entirely in that language (b
 
 
 # ── SUBSCRIPTION CONSTANTS (needed before index route) ────────────────────────
-STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_PRICE_ID        = os.environ.get("STRIPE_PRICE_ID", "")
-STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-STRIPE_TRIAL_DAYS      = 7
+# Stripe removed — payments via Shopify only
 FREE_RESPONSE_LIMIT    = 50
 FREE_RESPONSE_PERIOD   = "weekly"   # reset every 7 days
 SUBSCRIPTION_PRICE_USD = 80
@@ -1174,13 +1171,7 @@ function handleSubscriptionResponse(data){
 }
 function closePaywall(){ _paywallDismissed=true; document.getElementById('paywallBanner').style.display='none'; }
 async function goUpgrade(){
-  const token=localStorage.getItem('srd_token');
-  if(!token){ window.location.href='/login?next=subscribe'; return; }
-  const r=await fetch('/api/subscription/checkout',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token}});
-  const d=await r.json();
-  if(d.checkout_url){ window.location.href=d.checkout_url; }
-  else if(d.setup_needed){ window.location.href='https://supportrd.com/products/hair-advisor-premium'; }
-  else { alert('Something went wrong. Please try again.'); }
+  window.location.href='https://supportrd.com/products/hair-advisor-premium';
 }
 </script>
 </body>
@@ -1773,59 +1764,11 @@ def subscription_status():
 
 @app.route("/api/subscription/checkout", methods=["POST","OPTIONS"])
 def create_checkout():
-    user = get_current_user()
-    if not user: return jsonify({"error":"Must be logged in to subscribe"}), 401
-    if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID: return jsonify({"error":"Stripe not configured","setup_needed":True}), 503
-    try:
-        import urllib.request as urlreq, urllib.parse as urlparse
-        sub = get_subscription(user["id"])
-        stripe_customer = sub["stripe_customer"] if sub else None
-        if not stripe_customer:
-            cust_data = urlparse.urlencode({"email":user["email"],"name":user["name"] or user["email"],"metadata[user_id]":str(user["id"])}).encode()
-            req = urlreq.Request("https://api.stripe.com/v1/customers",data=cust_data,headers={"Authorization":f"Bearer {STRIPE_SECRET_KEY}","Content-Type":"application/x-www-form-urlencoded"},method="POST")
-            with urlreq.urlopen(req) as r: cust=json.loads(r.read())
-            stripe_customer = cust["id"]
-        params = urlparse.urlencode({"customer":stripe_customer,"mode":"subscription","line_items[0][price]":STRIPE_PRICE_ID,"line_items[0][quantity]":"1","subscription_data[trial_period_days]":str(STRIPE_TRIAL_DAYS),"success_url":f"{APP_BASE_URL}/subscription/success?session_id={{CHECKOUT_SESSION_ID}}","cancel_url":f"{APP_BASE_URL}/subscription/cancel","metadata[user_id]":str(user["id"])}).encode()
-        req = urlreq.Request("https://api.stripe.com/v1/checkout/sessions",data=params,headers={"Authorization":f"Bearer {STRIPE_SECRET_KEY}","Content-Type":"application/x-www-form-urlencoded"},method="POST")
-        with urlreq.urlopen(req) as r: session=json.loads(r.read())
-        con = get_db()
-        row = con.execute("SELECT id FROM subscriptions WHERE user_id=?", (user["id"],)).fetchone()
-        if row: con.execute("UPDATE subscriptions SET stripe_customer=?,updated_at=? WHERE user_id=?",(stripe_customer,datetime.datetime.utcnow().isoformat(),user["id"]))
-        else: con.execute("INSERT INTO subscriptions (user_id,stripe_customer,status,plan) VALUES (?,?,'inactive','free')",(user["id"],stripe_customer))
-        con.commit(); con.close()
-        return jsonify({"checkout_url":session["url"],"session_id":session["id"]})
-    except Exception as e:
-        return jsonify({"error":str(e)}), 500
+    if request.method=="OPTIONS":
+        r=jsonify({}); r.headers.update({"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"*","Access-Control-Allow-Methods":"POST"}); return r
+    # All payments through Shopify
+    return jsonify({"setup_needed":True,"checkout_url":"https://supportrd.com/products/hair-advisor-premium"})
 
-@app.route("/api/subscription/webhook", methods=["POST"])
-def stripe_webhook():
-    payload = request.get_data(); sig=request.headers.get("Stripe-Signature","")
-    try:
-        if STRIPE_WEBHOOK_SECRET:
-            import hmac,hashlib
-            ts=sig.split(",")[0].split("=")[1]; v1=sig.split("v1=")[1].split(",")[0]
-            signed=f"{ts}.{payload.decode()}"
-            expected=hmac.new(STRIPE_WEBHOOK_SECRET.encode(),signed.encode(),hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(v1,expected): return jsonify({"error":"Invalid signature"}),400
-        event=json.loads(payload); event_type=event["type"]; obj=event["data"]["object"]
-        user_id=None
-        if obj.get("metadata",{}).get("user_id"): user_id=int(obj["metadata"]["user_id"])
-        elif obj.get("customer"):
-            con=get_db(); row=con.execute("SELECT user_id FROM subscriptions WHERE stripe_customer=?",(obj["customer"],)).fetchone(); con.close()
-            if row: user_id=row[0]
-        if not user_id: return jsonify({"ok":True})
-        con=get_db()
-        if event_type in ("customer.subscription.created","customer.subscription.updated"):
-            status=obj.get("status","inactive"); trial_end=datetime.datetime.utcfromtimestamp(obj["trial_end"]).isoformat() if obj.get("trial_end") else None; period_end=datetime.datetime.utcfromtimestamp(obj["current_period_end"]).isoformat() if obj.get("current_period_end") else None; sub_id=obj.get("id","")
-            row=con.execute("SELECT id FROM subscriptions WHERE user_id=?",(user_id,)).fetchone()
-            if row: con.execute("UPDATE subscriptions SET stripe_sub_id=?,status=?,plan='premium',trial_end=?,current_period_end=?,updated_at=? WHERE user_id=?",(sub_id,status,trial_end,period_end,datetime.datetime.utcnow().isoformat(),user_id))
-            else: con.execute("INSERT INTO subscriptions (user_id,stripe_sub_id,status,plan,trial_end,current_period_end) VALUES (?,?,'trialing','premium',?,?)",(user_id,sub_id,trial_end,period_end))
-        elif event_type=="customer.subscription.deleted": con.execute("UPDATE subscriptions SET status='canceled',plan='free',updated_at=? WHERE user_id=?",(datetime.datetime.utcnow().isoformat(),user_id))
-        elif event_type in ("invoice.payment_failed",): con.execute("UPDATE subscriptions SET status='past_due',updated_at=? WHERE user_id=?",(datetime.datetime.utcnow().isoformat(),user_id))
-        con.commit(); con.close()
-    except Exception as e:
-        print(f"Webhook error: {e}")
-    return jsonify({"ok":True})
 
 @app.route("/api/shopify-order-webhook", methods=["POST"])
 def shopify_order_webhook():
@@ -2603,7 +2546,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">✦</div>
     <div class="gate-title">Smart Routine Builder</div>
     <div class="gate-desc">Aria builds your personalized 7-day hair care schedule based on your hair type, concerns, and products. Tap to unlock.</div>
-    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
+    <button class="gate-btn" onclick="dashboardUpgrade()">Unlock Premium — $35/mo →</button>
   </div>
   <div id="routine-loading" class="ppage-loading" style="display:none">
     <div class="ppage-spinner"></div><div>Aria is crafting your routine…</div>
@@ -2628,7 +2571,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">📈</div>
     <div class="gate-title">Hair Health Timeline</div>
     <div class="gate-desc">Track your score over 30, 60, 90 days. Log treatments and see what products are actually working for your hair.</div>
-    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
+    <button class="gate-btn" onclick="dashboardUpgrade()">Unlock Premium — $35/mo →</button>
   </div>
   <div id="progress-content" style="display:none">
     <div class="prog-layout">
@@ -2662,7 +2605,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">📸</div>
     <div class="gate-title">AI Photo Analysis</div>
     <div class="gate-desc">Upload a selfie and Aria diagnoses your hair's porosity, damage level, density, and texture — then recommends the perfect products.</div>
-    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
+    <button class="gate-btn" onclick="dashboardUpgrade()">Unlock Premium — $35/mo →</button>
   </div>
   <div id="photo-content" style="display:none">
     <div class="photo-layout">
@@ -2711,7 +2654,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">📓</div>
     <div class="gate-title">Hair Journal</div>
     <div class="gate-desc">Log daily observations about your hair. Aria reads your entries over time and spots patterns — what's working, what isn't, and when your hair is at its best.</div>
-    <button class="gate-btn" onclick="showUpgradeModal('Hair Journal')">Unlock Premium →</button>
+    <button class="gate-btn" onclick="dashboardUpgrade()">Unlock Premium — $35/mo →</button>
   </div>
   <div id="journal-content" style="display:none">
     <div class="journal-layout">
@@ -2759,7 +2702,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">💬</div>
     <div class="gate-title">Text Aria Directly</div>
     <div class="gate-desc">Premium members can text Aria on WhatsApp or SMS and get personalized hair advice anytime, anywhere.</div>
-    <button class="gate-btn" onclick="showUpgradeModal('Aria on WhatsApp & SMS')">Unlock Premium →</button>
+    <button class="gate-btn" onclick="dashboardUpgrade()">Unlock Premium — $35/mo →</button>
   </div>
   <div id="whatsapp-content" style="display:none">
     <div style="max-width:500px;margin:0 auto;">
@@ -2973,6 +2916,17 @@ function setTagsFromString(id,val){
 }
 
 let _isPremium = false;
+
+function showUpgradeModal(feature){
+  // Always push to the Shopify product page — works even if Stripe is down
+  if(confirm('✦ ' + (feature||'This feature') + ' requires Premium ($35/month).\n\nTap OK to subscribe at supportrd.com')){
+    window.open('https://supportrd.com/products/hair-advisor-premium','_blank');
+  }
+}
+
+async function dashboardUpgrade(){
+  window.open('https://supportrd.com/products/hair-advisor-premium','_blank');
+}
 
 function switchPTab(name){
   // Hide main app panels
@@ -4006,6 +3960,147 @@ def content_engine_log():
     return jsonify({"runs": ENGINE_LOG})
 
 
+
+# ═══════════════════════════════════════════════════════════
+# PHASE 5B — REFLEXIVE KEYWORD INJECTION
+# The moment you click, the post is live. No lag.
+# ═══════════════════════════════════════════════════════════
+
+import hashlib as _hashlib
+
+def _kw_slug(phrase):
+    """Convert keyword phrase to a clean URL handle"""
+    slug = phrase.lower().strip()
+    slug = _re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = _re.sub(r"\s+", "-", slug).strip("-")
+    slug = slug[:60]
+    # Add short hash to avoid collisions
+    h = _hashlib.md5(phrase.encode()).hexdigest()[:6]
+    return f"{slug}-{h}"
+
+def _kw_generate_post(phrase, lang="en"):
+    """Call Claude directly and return post the instant it's done"""
+    lang_instructions = {
+        "en":    "Write in English.",
+        "en-ca": "Write in Canadian English.",
+        "es":    "Escribe en español.",
+        "fr":    "Écris en français.",
+        "ar":    "اكتب باللغة العربية.",
+        "de":    "Schreibe auf Deutsch.",
+        "sw":    "Andika kwa Kiswahili.",
+        "ru":    "Пиши на русском языке.",
+        "pt":    "Escreva em português.",
+        "zh-CN": "用中文写。",
+        "ja":    "日本語で書いてください。",
+        "it":    "Scrivi in italiano.",
+        "nl":    "Schrijf in het Nederlands.",
+        "pl":    "Pisz po polsku.",
+        "tr":    "Türkçe yaz.",
+        "ko":    "한국어로 쓰세요.",
+        "sv":    "Skriv på svenska.",
+        "no":    "Skriv på norsk.",
+        "da":    "Skriv på dansk.",
+        "ro":    "Scrie în română.",
+        "uk":    "Пиши українською.",
+        "cs":    "Piš česky.",
+        "hu":    "Írj magyarul.",
+    }
+    lang_instr = lang_instructions.get(lang, "Write in English.")
+
+    prompt = f"""You are a hair care expert writing for SupportRD, a premium hair care brand.
+Write a helpful, friendly blog post targeting the exact search phrase: "{phrase}"
+
+{lang_instr}
+
+Rules:
+- Title must contain the exact phrase "{phrase}" naturally
+- Write like a real person talking to a friend — everyday language, no jargon
+- 350-500 words
+- Naturally mention 1-2 SupportRD products where relevant (Formula Exclusiva, Laciador Crece, Gotero Rapido, Gotitas Brillantes, Mascarilla Natural, or Shampoo Aloe & Romero)
+- End with a soft call to action mentioning supportrd.com/pages/custom-order
+- Return ONLY valid HTML: <h1>title</h1> followed by <p> paragraphs. No markdown, no preamble, no explanation."""
+
+    try:
+        import urllib.request as _ur
+        import json as _j
+        payload = _j.dumps({
+            "model": "claude-opus-4-6",
+            "max_tokens": 1200,
+            "messages": [{"role": "user", "content": prompt}]
+        }).encode()
+        req = _ur.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": os.environ.get("ANTHROPIC_API_KEY",""),
+                "anthropic-version": "2023-06-01"
+            }
+        )
+        with _ur.urlopen(req, timeout=30) as resp:
+            result = _j.loads(resp.read().decode())
+            html = result["content"][0]["text"].strip()
+            # Extract title from <h1>
+            title_match = _re.search(r"<h1[^>]*>(.*?)</h1>", html, _re.DOTALL)
+            title = _re.sub(r"<[^>]+>", "", title_match.group(1)).strip() if title_match else phrase.title()
+            # Build meta description — first <p> text, stripped
+            meta_match = _re.search(r"<p[^>]*>(.*?)</p>", html, _re.DOTALL)
+            meta = _re.sub(r"<[^>]+>", "", meta_match.group(1)).strip()[:160] if meta_match else phrase
+            return {"title": title, "html": html, "meta": meta}
+    except Exception as e:
+        print(f"[reflexive] generate error: {e}")
+        return None
+
+
+@app.route("/api/keywords/fire", methods=["POST","OPTIONS"])
+def keyword_fire():
+    """Reflexive injection — keyword in, live blog post out. Instant."""
+    if request.method=="OPTIONS":
+        r=jsonify({}); r.headers.update({"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"*","Access-Control-Allow-Methods":"POST"}); return r
+    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
+    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"):
+        return jsonify({"error":"Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    phrase = data.get("phrase","").strip()
+    lang   = data.get("lang","en")
+    if not phrase:
+        return jsonify({"error":"phrase required"}), 400
+
+    # Generate post NOW — no background thread, we wait and return result
+    post_data = _kw_generate_post(phrase, lang)
+    if not post_data:
+        return jsonify({"error":"Generation failed — check API key"}), 500
+
+    handle = _kw_slug(phrase)
+    post = {
+        "handle":         handle,
+        "title":          post_data["title"],
+        "html":           post_data["html"],
+        "meta":           post_data["meta"],
+        "date":           datetime.datetime.utcnow().strftime("%Y-%m-%d"),
+        "chinese_title":  "",
+        "chinese_summary":""
+    }
+
+    # Save directly to blog DB — live the instant this function returns
+    blog_save_post(post)
+
+    # Mark keyword as fired in keywords DB
+    try:
+        db = get_keyword_db()
+        db.execute("UPDATE keywords SET score=score+10 WHERE phrase=? AND lang=?", (phrase, lang))
+        db.commit(); db.close()
+    except: pass
+
+    return jsonify({
+        "ok":     True,
+        "handle": handle,
+        "title":  post_data["title"],
+        "url":    f"/blog/{handle}"
+    })
+
+
 # ── MOVEMENT FEED ─────────────────────────────────────────────────────────────
 import time as _time
 
@@ -4077,9 +4172,512 @@ loadCodes();
 
 
 # ── DEBUG ENDPOINTS ───────────────────────────────────────────────────────────
-@app.route("/api/debug-stripe")
-def debug_stripe():
-    return jsonify({"stripe_key_set":bool(STRIPE_SECRET_KEY),"price_id_set":bool(STRIPE_PRICE_ID),"webhook_set":bool(STRIPE_WEBHOOK_SECRET),"app_base_url":APP_BASE_URL})
+
+
+# ═══════════════════════════════════════════════════════════
+# PHASE 5 — KEYWORD INTELLIGENCE ENGINE
+# ═══════════════════════════════════════════════════════════
+
+import threading as _kw_thread
+from urllib import request as _kw_req
+from urllib.parse import quote as _kw_quote
+import json as _kw_json
+import time as _kw_time
+
+KEYWORD_DB = os.path.join(os.path.dirname(__file__), "keywords.db")
+
+def get_keyword_db():
+    con = sqlite3.connect(KEYWORD_DB, timeout=30, check_same_thread=False)
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("""CREATE TABLE IF NOT EXISTS keywords (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        phrase TEXT NOT NULL,
+        lang TEXT NOT NULL,
+        lang_name TEXT NOT NULL,
+        score INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(phrase, lang)
+    )""")
+    con.commit()
+    return con
+
+# Every major language + everyday hair slang seeds
+KW_LANGUAGES = {
+    "en":    ("English",          "us"),
+    "en-ca": ("Canadian English", "ca"),
+    "es":    ("Spanish",          "es"),
+    "fr":    ("French",           "fr"),
+    "ar":    ("Arabic",           "sa"),
+    "de":    ("German",           "de"),
+    "sw":    ("Swahili",          "ke"),
+    "ru":    ("Russian",          "ru"),
+    "pt":    ("Portuguese",       "br"),
+    "zh-CN": ("Chinese",          "cn"),
+    "ja":    ("Japanese",         "jp"),
+    "it":    ("Italian",          "it"),
+    "nl":    ("Dutch",            "nl"),
+    "pl":    ("Polish",           "pl"),
+    "tr":    ("Turkish",          "tr"),
+    "ko":    ("Korean",           "kr"),
+    "sv":    ("Swedish",          "se"),
+    "no":    ("Norwegian",        "no"),
+    "da":    ("Danish",           "dk"),
+    "ro":    ("Romanian",         "ro"),
+    "uk":    ("Ukrainian",        "ua"),
+    "cs":    ("Czech",            "cz"),
+    "hu":    ("Hungarian",        "hu"),
+}
+
+# Seed phrases per language — everyday language people actually type
+KW_SEEDS = {
+    "en":    [
+        # Everyday hair problems — exactly how people type it
+        "why is my hair so dry","hair won't grow","edges won't lay flat","hair falling out",
+        "frizzy hair fix","hair breakage","4c hair routine","low porosity hair",
+        "high porosity hair","scalp itchy","hair loss woman","heat damage repair",
+        "bleached hair care","postpartum hair loss","oily scalp dry ends",
+        "my curls are undefined","hair feels like straw","how to moisturize natural hair",
+        "protein overload hair","hair thinning crown",
+        # 2011 freelancer search language — the people who escaped the 9-5
+        # typing from internet cafés in Thailand, Philippines, Latin America
+        # Raw, honest, broke-but-determined search queries
+        "how to make money online from home","work from home jobs no experience",
+        "how to start freelancing with no money","make money blogging 2011",
+        "how to escape the 9 to 5","passive income ideas","make money online fast",
+        "how to get clients online","freelance writing jobs","online jobs for beginners",
+        "how to make money from a blog","affiliate marketing for beginners",
+        "how to build a website and make money","social media jobs from home",
+        "virtual assistant jobs","how to quit your job and work online",
+        "digital nomad how to start","location independent income",
+        "how to make money while traveling","work from anywhere jobs",
+        # The intersection — beauty/hair entrepreneurs searching for both
+        "how to start a hair business online","sell hair products online",
+        "hair care affiliate marketing","start a beauty blog and make money",
+        "hair influencer how to start","natural hair business ideas",
+        "how to grow a hair brand online","hair care content creator income",
+    ],
+    "en-ca": ["why is my hair so dry","hair loss canada","frizzy hair humidity","natural hair routine","hair breakage fix","scalp care","postpartum hair loss","hair won't grow","dry hair treatment","best hair mask"],
+    "es":    [
+        "por qué se me cae el cabello","cabello muy seco","cómo crecer el cabello",
+        "caída del cabello","cabello frizz","puntas abiertas","cabello sin vida",
+        "cabello rizado cuidado","hidratación del cabello","cabello se rompe",
+        "cuero cabelludo picazón","cabello quemado por plancha","mascarilla para cabello seco",
+        "rizos definidos","cabello encrespado solución",
+        # Freelancer escape — Latin American 2011 search language
+        "cómo ganar dinero por internet","trabajar desde casa sin experiencia",
+        "cómo empezar a trabajar freelance","ganar dinero con un blog",
+        "escapar del trabajo de oficina","ingresos pasivos desde casa",
+        "negocios de cabello en línea","vender productos de cabello online",
+        "cómo ser influencer de cabello","negocio de belleza desde casa",
+    ],
+    "fr":    [
+        "pourquoi mes cheveux tombent","cheveux très secs","faire pousser les cheveux",
+        "cheveux cassants","frisottis cheveux","pointes abîmées","hydratation cheveux naturels",
+        "cuir chevelu qui gratte","cheveux fins","chute de cheveux femme",
+        "routine cheveux bouclés","cheveux abîmés par la chaleur","masque cheveux maison",
+        "cheveux gras","cheveux sans vie",
+        # Freelancer escape — French-speaking African + European communities 2011
+        "comment gagner de l'argent sur internet","travailler depuis chez soi",
+        "devenir freelance sans expérience","gagner de l'argent avec un blog beauté",
+        "business cheveux en ligne","vendre des produits capillaires en ligne",
+        "influenceuse cheveux comment démarrer","revenu passif depuis la maison",
+    ],
+    "ar":    ["لماذا يتساقط شعري","الشعر الجاف جداً","كيف يطول الشعر","تساقط الشعر","شعر مجعد","أطراف الشعر التالفة","علاج الشعر التالف","قشرة الشعر","الشعر الخفيف","ترطيب الشعر","شعر محترق من الفرد","ماسك للشعر الجاف","تكسر الشعر","روتين العناية بالشعر","الشعر الدهني"],
+    "de":    ["warum fallen meine Haare aus","sehr trockenes Haar","Haare wachsen lassen","Haarausfall Frau","krauses Haar","gespaltene Spitzen","Haarpflege Routine","Kopfhaut juckt","dünnes Haar","Haare nach Schwangerschaft","Hitzeschäden Haare","Haarmaske selbst machen","fettige Kopfhaut trockene Spitzen","lockige Haare pflegen","Haare brechen ab"],
+    "sw":    ["kwa nini nywele zangu zinaanguka","nywele kavu sana","jinsi ya kukua nywele","kupoteza nywele","nywele zenye maumivu","ncha za nywele zilizoharibiwa","utunzaji wa nywele za asili","ngozi ya kichwa inawasha","nywele nyembamba","nywele zimeungua","dawa ya nywele kavu","kujipiga nywele"],
+    "ru":    ["почему выпадают волосы","очень сухие волосы","как отрастить волосы","выпадение волос у женщин","вьющиеся волосы уход","секущиеся кончики","уход за натуральными волосами","зуд кожи головы","тонкие волосы","волосы после родов","повреждённые волосы восстановление","маска для сухих волос","жирная кожа сухие концы","ломкие волосы"],
+    "pt":    [
+        "por que meu cabelo cai","cabelo muito seco","como fazer o cabelo crescer",
+        "queda de cabelo","frizz no cabelo","pontas duplas","hidratação para cabelo seco",
+        "cronograma capilar","cabelo danificado","couro cabeludo com coceira",
+        "cabelo fino e fraco","cachos definidos","transição capilar",
+        "cabelo ressecado o que fazer","cabelo oleoso",
+        # Freelancer escape — Brazilian 2011
+        "como ganhar dinheiro na internet","trabalhar em casa sem experiência",
+        "como começar a trabalhar freelance","ganhar dinheiro com blog de beleza",
+        "negócio de cabelo online","vender produtos capilares pela internet",
+        "como ser influencer de cabelo","renda extra em casa",
+    ],
+    "zh-CN": ["为什么我的头发这么干燥","头发不长","头发脱落","卷发护理","头发毛躁","头发断裂","头皮痒","产后脱发","头发烫伤修复","低孔隙度头发","高孔隙度头发","如何滋润自然卷发","蛋白质过量头发","头发稀疏","头发像稻草一样"],
+    "ja":    ["なぜ髪がこんなに乾燥するの","髪が伸びない","髪が抜ける","くせ毛のケア","髪のパサパサ","切れ毛","頭皮がかゆい","産後の抜け毛","熱ダメージ修復","細い髪のケア","天然パーマのルーティン","頭皮のケア","髪にツヤがない","枝毛の直し方","乾燥した頭皮"],
+    "it":    ["perché i capelli cadono","capelli molto secchi","far crescere i capelli","caduta dei capelli","capelli crespi","doppie punte","idratazione capelli naturali","cuoio capelluto che pizzica","capelli sottili","capelli dopo il parto","capelli danneggiati dal calore","maschera fatta in casa","capelli grassi","routine capelli ricci"],
+    "nl":    ["waarom valt mijn haar uit","zeer droog haar","haar laten groeien","haaruitval vrouw","krullend haar verzorging","gespleten punten","hoofdhuid jeuk","dun haar","haar na zwangerschap","hitteschade haar","zelf haarmasker maken","vet haar droge punten","haar breekt af"],
+    "pl":    ["dlaczego wypadają włosy","bardzo suche włosy","jak rosnąć włosy","wypadanie włosów kobieta","kręcone włosy pielęgnacja","rozdwojone końcówki","swędząca skóra głowy","cienkie włosy","włosy po porodzie","zniszczone włosy regeneracja","maska do suchych włosów","przetłuszczająca się skóra głowy"],
+    "tr":    ["saçlar neden dökülüyor","çok kuru saç","saç uzatma","saç dökülmesi kadın","kıvırcık saç bakımı","kırık uçlar","kafa derisi kaşıntısı","ince saç","doğum sonrası saç dökülmesi","ısı hasarı onarımı","kuru saç maskesi","yağlı kafa derisi kuru uçlar"],
+    "ko":    ["머리카락이 왜 이렇게 건조해","머리가 안 자라","탈모","곱슬머리 관리","머리카락 끊어짐","두피 가려움","산후 탈모","열손상 복구","저다공성 모발","고다공성 모발","자연 모발 보습","두피 케어","머리카락 푸석","가는 머리","윤기 없는 머리"],
+    "sv":    ["varför faller håret av","mycket torrt hår","få håret att växa","håravfall kvinna","lockigt hår vård","nariga spetsar","klåda i hårbotten","tunt hår","hår efter förlossning","värmeskador hår","hårmaske hemma","fett hår torra spetsar"],
+    "no":    ["hvorfor faller håret av","veldig tørt hår","få håret til å vokse","hårtap kvinne","krøllete hår stell","splittede tupper","kløende hodebunm","tynt hår","hår etter fødsel","varmeskade reparasjon","hårmaske hjemmelaget"],
+    "da":    ["hvorfor falder mit hår af","meget tørt hår","få håret til at vokse","hårtab kvinde","krøllet hår pleje","splittede spidser","kløende hovedbund","tyndt hår","hår efter fødsel","varmeskade hår","hårmaske hjemmelavet"],
+    "ro":    ["de ce îmi cade părul","păr foarte uscat","cum să crești părul","căderea părului","păr creț îngrijire","vârfuri despicate","scalp mâncărime","păr subțire","păr după naștere","reparare deteriorare termică","mască de păr","păr gras"],
+    "uk":    ["чому випадає волосся","дуже сухе волосся","як відростити волосся","випадіння волосся","кучеряве волосся догляд","посічені кінці","свербіж шкіри голови","тонке волосся","волосся після пологів","маска для сухого волосся","ламке волосся"],
+    "cs":    ["proč mi padají vlasy","velmi suché vlasy","jak nechat vlasy růst","vypadávání vlasů","kudrnaté vlasy péče","roztřepené konečky","svědění pokožky hlavy","tenké vlasy","vlasy po porodu","poškozené vlasy obnova","maska na suché vlasy"],
+    "hu":    ["miért hullik a hajam","nagyon száraz haj","hogyan növesztjük a hajat","hajhullás nőknek","göndör haj ápolása","kettős hajvégek","viszketős fejbőr","vékony haj","haj szülés után","hőkárosodás javítása","hajmaszk házilag"],
+}
+
+def _kw_google_suggest(query, lang, country):
+    """Pull real search phrases from Google autocomplete"""
+    results = []
+    try:
+        url = f"https://suggestqueries.google.com/complete/search?client=firefox&q={_kw_quote(query)}&hl={lang}&gl={country}"
+        req = _kw_req.Request(url, headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        with _kw_req.urlopen(req, timeout=8) as resp:
+            data = _kw_json.loads(resp.read().decode("utf-8"))
+            for s in (data[1] if len(data)>1 else []):
+                s = s.strip()
+                if 5 < len(s) < 80:
+                    results.append(s)
+    except:
+        pass
+    return results
+
+def run_keyword_sweep():
+    db = get_keyword_db()
+    total = 0
+    for lang, (lang_name, country) in KW_LANGUAGES.items():
+        seeds = KW_SEEDS.get(lang, KW_SEEDS.get("en", []))
+        for seed in seeds:
+            phrases = _kw_google_suggest(seed, lang.split("-")[0], country)
+            # Always include the seed itself
+            all_phrases = [seed] + phrases
+            for phrase in all_phrases:
+                phrase = phrase.strip()
+                if not phrase or len(phrase) < 4:
+                    continue
+                try:
+                    db.execute("""INSERT INTO keywords (phrase, lang, lang_name, score)
+                        VALUES (?,?,?,1)
+                        ON CONFLICT(phrase,lang) DO UPDATE SET score=score+1""",
+                        (phrase, lang, lang_name))
+                    total += 1
+                except:
+                    pass
+            _kw_time.sleep(0.25)
+        db.commit()
+    db.close()
+    return total
+
+_kw_sweep_status = {"running": False, "count": 0, "done": False}
+
+@app.route("/api/keywords/sweep", methods=["POST","OPTIONS"])
+def keyword_sweep():
+    if request.method=="OPTIONS":
+        r=jsonify({}); r.headers.update({"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"*","Access-Control-Allow-Methods":"POST"}); return r
+    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
+    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
+    if _kw_sweep_status["running"]: return jsonify({"ok":True,"message":"Already running…"})
+    _kw_sweep_status["running"]=True
+    _kw_sweep_status["done"]=False
+    def _run():
+        try:
+            n = run_keyword_sweep()
+            _kw_sweep_status["count"] = n
+        except Exception as e:
+            print(f"KW sweep error: {e}")
+        finally:
+            _kw_sweep_status["running"]=False
+            _kw_sweep_status["done"]=True
+    _kw_thread.Thread(target=_run, daemon=True).start()
+    return jsonify({"ok":True,"message":"Sweep started — takes ~2 minutes for all 24 languages"})
+
+@app.route("/api/keywords/status", methods=["GET"])
+def keyword_status():
+    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
+    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
+    db=get_keyword_db()
+    count=db.execute("SELECT COUNT(*) FROM keywords").fetchone()[0]
+    db.close()
+    return jsonify({**_kw_sweep_status,"total":count})
+
+@app.route("/api/keywords/list", methods=["GET"])
+def keyword_list():
+    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
+    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
+    lang=request.args.get("lang","")
+    db=get_keyword_db()
+    if lang:
+        rows=db.execute("SELECT phrase,lang,lang_name,score FROM keywords WHERE lang=? ORDER BY score DESC,phrase ASC",(lang,)).fetchall()
+    else:
+        rows=db.execute("SELECT phrase,lang,lang_name,score FROM keywords ORDER BY lang ASC,score DESC,phrase ASC").fetchall()
+    db.close()
+    return jsonify({"keywords":[{"phrase":r[0],"lang":r[1],"lang_name":r[2],"score":r[3]} for r in rows]})
+
+@app.route("/api/keywords/export", methods=["GET"])
+def keyword_export():
+    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
+    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return "<h2>Unauthorized</h2>",401
+    lang=request.args.get("lang","")
+    fmt=request.args.get("fmt","csv")
+    db=get_keyword_db()
+    if lang:
+        rows=db.execute("SELECT phrase,lang,lang_name,score FROM keywords WHERE lang=? ORDER BY score DESC,phrase ASC",(lang,)).fetchall()
+    else:
+        rows=db.execute("SELECT phrase,lang,lang_name,score FROM keywords ORDER BY lang ASC,score DESC").fetchall()
+    db.close()
+    if fmt=="csv":
+        lines=["Keyword,Language,Language Name,Frequency"]
+        for r in rows:
+            lines.append(f'"{r[0]}",{r[1]},"{r[2]}",{r[3]}')
+        from flask import Response
+        return Response("\n".join(lines), mimetype="text/csv",
+            headers={"Content-Disposition":"attachment;filename=srd_keywords.csv"})
+    # Plain text - one keyword per line, for direct paste into any SEO tool
+    lines=[r[0] for r in rows]
+    from flask import Response
+    return Response("\n".join(lines), mimetype="text/plain",
+        headers={"Content-Disposition":"attachment;filename=srd_keywords.txt"})
+
+@app.route("/api/keywords/delete", methods=["POST"])
+def keyword_delete():
+    admin_key=request.headers.get("X-Admin-Key","") or request.json.get("key","")
+    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
+    phrase=request.json.get("phrase",""); lang=request.json.get("lang","")
+    db=get_keyword_db()
+    if lang: db.execute("DELETE FROM keywords WHERE phrase=? AND lang=?",(phrase,lang))
+    else: db.execute("DELETE FROM keywords WHERE phrase=?",(phrase,))
+    db.commit(); db.close()
+    return jsonify({"ok":True})
+
+@app.route("/keyword-intelligence")
+def keyword_intelligence_page():
+    admin_key=request.args.get("key","")
+    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return "<h2>Unauthorized</h2>",401
+    return f"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Keyword Intelligence — SupportRD</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:ital,wght@1,400&display=swap" rel="stylesheet">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:'Jost',sans-serif;font-weight:300;background:#f0ebe8;color:#0d0906;min-height:100vh}}
+header{{background:#fff;border-bottom:1px solid rgba(193,163,162,0.2);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}}
+.h-title{{font-family:'Cormorant Garamond',serif;font-size:24px;font-style:italic}}
+.h-sub{{font-size:11px;color:rgba(0,0,0,0.38);letter-spacing:0.12em;text-transform:uppercase;margin-top:3px}}
+.h-right{{display:flex;gap:10px;align-items:center;flex-wrap:wrap}}
+.btn{{padding:9px 22px;border-radius:22px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border:none;transition:all 0.2s;white-space:nowrap}}
+.btn-rose{{background:#c1a3a2;color:#fff}} .btn-rose:hover{{background:#9d7f6a}}
+.btn-outline{{background:transparent;border:1px solid rgba(193,163,162,0.4);color:#0d0906}} .btn-outline:hover,.btn-outline.on{{background:rgba(193,163,162,0.12);border-color:#c1a3a2;color:#8B5E52}}
+.status{{padding:9px 32px;background:rgba(193,163,162,0.07);border-bottom:1px solid rgba(193,163,162,0.12);font-size:12px;color:rgba(0,0,0,0.45);display:none;align-items:center;gap:8px}}
+.dot{{width:7px;height:7px;border-radius:50%;background:#c1a3a2;animation:p 1.4s ease-in-out infinite;flex-shrink:0}}
+@keyframes p{{0%,100%{{opacity:1}}50%{{opacity:0.3}}}}
+.main{{max-width:1060px;margin:0 auto;padding:28px 24px}}
+.toolbar{{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center}}
+.search{{padding:8px 16px;border:1px solid rgba(193,163,162,0.3);border-radius:20px;font-family:'Jost',sans-serif;font-size:13px;outline:none;background:#fff;width:200px}} .search:focus{{border-color:#c1a3a2}}
+.lang-tabs{{display:flex;gap:6px;flex-wrap:wrap}}
+.lt{{padding:5px 13px;border-radius:14px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border:1px solid rgba(193,163,162,0.3);background:transparent;color:rgba(0,0,0,0.5);transition:all 0.15s}} .lt:hover,.lt.on{{background:rgba(193,163,162,0.15);border-color:#c1a3a2;color:#8B5E52;font-weight:500}}
+.export-row{{display:flex;gap:8px;margin-left:auto}}
+.table-box{{background:#fff;border-radius:14px;border:1px solid rgba(193,163,162,0.15);overflow:hidden}}
+table{{width:100%;border-collapse:collapse}}
+thead th{{background:rgba(193,163,162,0.07);padding:11px 16px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.45);text-align:left;border-bottom:1px solid rgba(193,163,162,0.12);cursor:pointer;white-space:nowrap;user-select:none}} thead th:hover{{color:#8B5E52}}
+tbody tr{{border-bottom:1px solid rgba(0,0,0,0.04);transition:background 0.12s}} tbody tr:last-child{{border:none}} tbody tr:hover{{background:rgba(193,163,162,0.04)}}
+td{{padding:10px 16px;font-size:13px}}
+.lang-badge{{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:500}}
+.l-en,.l-en-ca{{background:rgba(80,160,255,0.1);color:#2a6fc0}}
+.l-es{{background:rgba(255,160,50,0.12);color:#b06010}}
+.l-fr{{background:rgba(200,80,200,0.1);color:#802080}}
+.l-ar{{background:rgba(50,180,100,0.1);color:#207040}}
+.l-de{{background:rgba(40,40,200,0.08);color:#202090}}
+.l-sw{{background:rgba(220,60,60,0.1);color:#902020}}
+.l-ru{{background:rgba(200,40,40,0.1);color:#901010}}
+.l-pt{{background:rgba(40,200,120,0.1);color:#107050}}
+.l-zh-CN{{background:rgba(255,50,50,0.1);color:#c01010}}
+.l-ja{{background:rgba(220,100,160,0.1);color:#901050}}
+.l-it{{background:rgba(100,160,255,0.1);color:#2040b0}}
+.l-nl{{background:rgba(255,140,40,0.1);color:#a05010}}
+.l-pl{{background:rgba(180,30,80,0.1);color:#901040}}
+.l-tr{{background:rgba(220,60,30,0.1);color:#902010}}
+.l-ko{{background:rgba(80,80,200,0.1);color:#303090}}
+.l-sv,.l-no,.l-da{{background:rgba(40,100,200,0.08);color:#104080}}
+.l-ro,.l-uk,.l-cs,.l-hu{{background:rgba(120,80,180,0.1);color:#502080}}
+.del{{background:none;border:none;color:rgba(0,0,0,0.2);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:6px;transition:all 0.15s}} .del:hover{{background:rgba(255,80,80,0.12);color:#c02020}}
+.empty{{text-align:center;padding:56px;color:rgba(0,0,0,0.3);font-size:14px}}
+.toast{{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0d0906;color:#fff;padding:9px 20px;border-radius:20px;font-size:12px;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:999;white-space:nowrap}}
+.count{{font-size:12px;color:rgba(0,0,0,0.35);padding:10px 16px;border-top:1px solid rgba(193,163,162,0.1)}}
+</style></head><body>
+<header>
+  <div><div class="h-title">Keyword Intelligence</div><div class="h-sub">Real search phrases · 24 languages · Phase 5</div></div>
+  <div class="h-right">
+    <button class="btn btn-rose" id="sweep-btn" onclick="runSweep()">⟳ Run Keyword Sweep</button>
+  </div>
+</header>
+<div class="status" id="status-bar"><div class="dot"></div><span id="status-txt">Sweeping all 24 languages from Google…</span></div>
+<div class="main">
+  <div class="toolbar">
+    <input class="search" id="search" placeholder="Search keywords…" oninput="render()">
+    <div class="lang-tabs" id="lang-tabs">
+      <button class="lt on" onclick="setLang('')" data-lang="">All</button>
+    </div>
+    <div class="export-row">
+      <button class="btn btn-outline" onclick="exportList('txt')">↓ Export .txt</button>
+      <button class="btn btn-outline" onclick="exportList('csv')">↓ Export .csv</button>
+    </div>
+  </div>
+  <div class="table-box">
+    <table id="kw-table">
+      <thead><tr>
+        <th onclick="sort('phrase')"># &nbsp; Keyword Phrase ↕</th>
+        <th onclick="sort('lang_name')">Language ↕</th>
+        <th onclick="sort('score')">Frequency ↕</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="empty">No keywords yet — click <strong>Run Keyword Sweep</strong> to pull from Google across all 24 languages</div>
+    <div class="count" id="count" style="display:none"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const KEY='{admin_key}';
+let all=[],cur='',scol='lang_name',sdir=1;
+
+async function load(){{
+  try{{
+    const r=await fetch('/api/keywords/list?key='+KEY+(cur?'&lang='+cur:''));
+    const d=await r.json();
+    all=d.keywords||[];
+    buildLangTabs();
+    render();
+  }}catch(e){{toast('Failed to load')}}
+}}
+
+function buildLangTabs(){{
+  const seen=new Map();
+  all.forEach(k=>{{if(!seen.has(k.lang)) seen.set(k.lang,k.lang_name);}});
+  const tabs=document.getElementById('lang-tabs');
+  // Keep "All" button, rebuild the rest
+  const allBtn=tabs.querySelector('[data-lang=""]');
+  tabs.innerHTML='';
+  tabs.appendChild(allBtn);
+  [...seen.entries()].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([lang,name])=>{{
+    const b=document.createElement('button');
+    b.className='lt'+(cur===lang?' on':'');
+    b.dataset.lang=lang;
+    b.textContent=name;
+    b.onclick=()=>setLang(lang);
+    tabs.appendChild(b);
+  }});
+}}
+
+function setLang(lang){{
+  cur=lang;
+  document.querySelectorAll('.lt').forEach(b=>b.classList.toggle('on',b.dataset.lang===lang));
+  render();
+}}
+
+function sort(col){{
+  if(scol===col)sdir*=-1; else{{scol=col;sdir=1;}}
+  render();
+}}
+
+function render(){{
+  const q=document.getElementById('search').value.toLowerCase();
+  let kws=all.filter(k=>!q||k.phrase.toLowerCase().includes(q));
+  kws.sort((a,b)=>{{
+    let av=a[scol],bv=b[scol];
+    if(typeof av==='string'){{av=av.toLowerCase();bv=bv.toLowerCase();}}
+    return sdir*(av>bv?1:av<bv?-1:0);
+  }});
+  const tbody=document.getElementById('tbody');
+  const empty=document.getElementById('empty');
+  const count=document.getElementById('count');
+  if(!kws.length){{tbody.innerHTML='';empty.style.display='block';count.style.display='none';return;}}
+  empty.style.display='none';
+  count.style.display='block';
+  count.textContent=kws.length+' keyword'+(kws.length===1?'':'s')+' shown';
+  tbody.innerHTML=kws.map((k,i)=>`<tr>
+    <td><span style="color:rgba(0,0,0,0.25);font-size:11px;margin-right:10px;">${{i+1}}</span>${{k.phrase}}</td>
+    <td><span class="lang-badge l-${{k.lang}}">${{k.lang_name}}</span></td>
+    <td style="color:rgba(0,0,0,0.45);font-size:12px;">${{k.score}}</td>
+    <td style="display:flex;gap:6px;align-items:center;">
+      <button class="fire-btn" id="fire-${{i}}" onclick="fireBlog(${{JSON.stringify(k.phrase)}},${{JSON.stringify(k.lang)}},'fire-${{i}}')" style="padding:4px 12px;border-radius:12px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border:none;background:rgba(193,163,162,0.15);color:#8B5E52;transition:all 0.2s;">⚡ Fire</button>
+      <button class="del" onclick="del(${{JSON.stringify(k.phrase)}},${{JSON.stringify(k.lang)}})" title="Remove">✕</button>
+    </td>
+  </tr>`).join('');
+}}
+
+async function fireBlog(phrase, lang, btnId){{
+  const btn = document.getElementById(btnId);
+  if(!btn) return;
+  btn.textContent='…writing';
+  btn.disabled=true;
+  btn.style.background='rgba(255,200,50,0.15)';
+  btn.style.color='#9a7010';
+  toast('⚡ Firing: ' + phrase);
+  try{{
+    const r=await fetch('/api/keywords/fire',{{
+      method:'POST',
+      headers:{{'X-Admin-Key':KEY,'Content-Type':'application/json'}},
+      body:JSON.stringify({{phrase,lang}})
+    }});
+    const d=await r.json();
+    if(d.ok){{
+      btn.textContent='✓ Live';
+      btn.style.background='rgba(50,180,80,0.15)';
+      btn.style.color='#1a7a30';
+      btn.disabled=false;
+      btn.onclick=()=>window.open('/blog/'+d.handle,'_blank');
+      toast('✓ Live → /blog/'+d.handle);
+    }} else {{
+      btn.textContent='⚡ Fire';
+      btn.disabled=false;
+      btn.style.background='rgba(193,163,162,0.15)';
+      btn.style.color='#8B5E52';
+      toast('Error: '+(d.error||'failed'));
+    }}
+  }}catch(e){{
+    btn.textContent='⚡ Fire';
+    btn.disabled=false;
+    btn.style.background='rgba(193,163,162,0.15)';
+    btn.style.color='#8B5E52';
+    toast('Network error');
+  }}
+}}
+
+async function runSweep(){{
+  const btn=document.getElementById('sweep-btn');
+  btn.textContent='⟳ Sweeping…';btn.disabled=true;
+  document.getElementById('status-bar').style.display='flex';
+  const r=await fetch('/api/keywords/sweep',{{method:'POST',headers:{{'X-Admin-Key':KEY,'Content-Type':'application/json'}}}});
+  const d=await r.json();
+  toast(d.message||'Sweep started');
+  poll();
+}}
+
+let polls=0;
+async function poll(){{
+  polls++;
+  const r=await fetch('/api/keywords/status?key='+KEY);
+  const d=await r.json();
+  document.getElementById('status-txt').textContent='Sweeping… '+d.total+' keywords found so far';
+  if(d.done||polls>40){{
+    document.getElementById('sweep-btn').textContent='⟳ Run Keyword Sweep';
+    document.getElementById('sweep-btn').disabled=false;
+    document.getElementById('status-bar').style.display='none';
+    polls=0; load(); toast('✓ Sweep complete — '+d.total+' keywords');
+  }} else {{ setTimeout(poll,4000); }}
+}}
+
+function exportList(fmt){{
+  const lang=cur?'&lang='+cur:'';
+  window.open('/api/keywords/export?key='+KEY+lang+'&fmt='+fmt,'_blank');
+}}
+
+async function del(phrase,lang){{
+  await fetch('/api/keywords/delete',{{method:'POST',headers:{{'X-Admin-Key':KEY,'Content-Type':'application/json'}},body:JSON.stringify({{phrase,lang}})}});
+  all=all.filter(k=>!(k.phrase===phrase&&k.lang===lang));
+  render(); buildLangTabs();
+}}
+
+function toast(msg){{
+  const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0',3000);
+}}
+
+load();
+</script>
+</body></html>"""
+
+
 
 @app.route("/api/test-register")
 def test_register():
