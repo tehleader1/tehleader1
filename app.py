@@ -3577,7 +3577,8 @@ async function sphereAskAria(msg){
     }
     await sphereSpeak(reply);
   }catch(e){typing.remove();addSphereMsg('aria','⚠ Connection error.');sphereSetState('idle');}
-  sphereBusy=false;
+  // sphereBusy cleared inside sphereSpeak onend for hands-free timing
+  if(!sphereHandsFree) sphereBusy=false;
 }
 
 function sphereSpeak(text){
@@ -3606,9 +3607,10 @@ function sphereSpeak(text){
       clearInterval(pulseInterval);
       orb.style.transform='';
       sphereSetState('idle');
+      sphereBusy=false;
       resolve();
       // Hands-free: auto-restart listening after Aria finishes
-      if(sphereHandsFree&&!sphereBusy){
+      if(sphereHandsFree){
         setTimeout(()=>{ if(sphereHandsFree&&!sphereBusy&&!sphereRecording) sphereOrbTap(); },600);
       }
     };
@@ -3616,8 +3618,9 @@ function sphereSpeak(text){
       clearInterval(pulseInterval);
       orb.style.transform='';
       sphereSetState('idle');
+      sphereBusy=false;
       resolve();
-      if(sphereHandsFree&&!sphereBusy){
+      if(sphereHandsFree){
         setTimeout(()=>{ if(sphereHandsFree&&!sphereBusy&&!sphereRecording) sphereOrbTap(); },600);
       }
     };
