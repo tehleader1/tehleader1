@@ -3907,19 +3907,48 @@ footer a{{color:#c1a3a2;text-decoration:none;}}
 # ── SITEMAP / ROBOTS ──────────────────────────────────────────────────────────
 @app.route("/sitemap.xml")
 def sitemap():
-    base_url = "https://ai-hair-advisor.onrender.com"
-    urls = [f"""  <url><loc>{base_url}/blog</loc><changefreq>daily</changefreq><priority>0.8</priority></url>"""]
+    base_url = APP_BASE_URL.rstrip("/")
+    urls = [
+        f"""  <url><loc>{base_url}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>""",
+        f"""  <url><loc>{base_url}/blog</loc><changefreq>daily</changefreq><priority>0.9</priority></url>""",
+    ]
     try:
-        for p in blog_get_index():
+        for p in blog_get_index(limit=500):
             date = p.get("date","")[:10]
-            urls.append(f"""  <url><loc>{base_url}/blog/{p["handle"]}</loc><lastmod>{date}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>""")
+            urls.append(f"""  <url><loc>{base_url}/blog/{p["handle"]}</loc><lastmod>{date}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>""")
     except: pass
-    xml = f"""<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{chr(10).join(urls)}\n</urlset>"""
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
     return Response(xml, mimetype="application/xml")
 
 @app.route("/robots.txt")
 def robots():
-    return Response("User-agent: *\nAllow: /blog\nDisallow: /api\nDisallow: /admin\n\nSitemap: https://ai-hair-advisor.onrender.com/sitemap.xml\n", mimetype="text/plain")
+    base_url = APP_BASE_URL.rstrip("/")
+    return Response(
+        f"User-agent: *\nAllow: /\nAllow: /blog\nDisallow: /api\nDisallow: /dashboard\nDisallow: /admin\n\nSitemap: {base_url}/sitemap.xml\n",
+        mimetype="text/plain"
+    )
+
+def ping_search_engines():
+    """Tell every search engine about updated sitemap — called after every new blog post."""
+    import urllib.request as _pr
+    from urllib.parse import quote as _pq
+    base_url = APP_BASE_URL.rstrip("/")
+    sitemap_url = f"{base_url}/sitemap.xml"
+    engines = [
+        f"https://www.google.com/ping?sitemap={_pq(sitemap_url)}",
+        f"https://www.bing.com/ping?sitemap={_pq(sitemap_url)}",
+        f"https://search.yahoo.com/mrss/ping?sitemap={_pq(sitemap_url)}",
+    ]
+    for url in engines:
+        try:
+            req = _pr.Request(url, headers={"User-Agent":"SupportRD-Bot/1.0"})
+            with _pr.urlopen(req, timeout=8) as r:
+                print(f"[SEO Ping] {url[:60]}… {r.status}", flush=True)
+        except Exception as e:
+            print(f"[SEO Ping] Failed {url[:60]}: {e}", flush=True)
 
 @app.route("/apps/hair-advisor")
 def shopify_proxy():
@@ -4085,6 +4114,9 @@ def keyword_fire():
 
     # Save directly to blog DB — live the instant this function returns
     blog_save_post(post)
+
+    # Ping every search engine immediately — they know about this post within seconds
+    threading.Thread(target=ping_search_engines, daemon=True).start()
 
     # Mark keyword as fired in keywords DB
     try:
