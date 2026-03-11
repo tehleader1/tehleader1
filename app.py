@@ -1056,7 +1056,7 @@ function localRecommend(text){
 async function getRecommendation(userText){
   try{
     const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),10000);
+    const timeout=setTimeout(()=>controller.abort(),25000);
     const headers={"Content-Type":"application/json","X-Session-Id":SESSION_ID};
     if(window._srd_token) headers["X-Auth-Token"]=window._srd_token;
     const resp=await fetch("/api/recommend",{
@@ -1068,11 +1068,14 @@ async function getRecommendation(userText){
     clearTimeout(timeout);
     if(!resp.ok) throw new Error("not ok");
     const data=await resp.json();
+    console.log("[Aria debug] raw response:", JSON.stringify(data).slice(0,400));
+    console.log("[Aria debug] suggested_product:", data.suggested_product);
     handleSubscriptionResponse(data);
     if(data.recommendation) return {text: data.recommendation, product: data.suggested_product||null};
     if(data.reply) return {text: data.reply, product: null};
     throw new Error("empty");
   }catch(e){
+    console.log("[Aria debug] fetch error/timeout:", e.message);
     return {text: localRecommend(userText), product: null};
   }
 }
@@ -1254,7 +1257,7 @@ Reference this naturally in your response."""
             headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
             method="POST"
         )
-        with urlreq.urlopen(req, timeout=12) as resp:
+        with urlreq.urlopen(req, timeout=20) as resp:
             result         = json.loads(resp.read().decode("utf-8"))
             recommendation = result["content"][0]["text"].strip()
 
