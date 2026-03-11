@@ -876,6 +876,7 @@ function addToHistory(role,text,productCard){
 
   // Render product recommendation card after Aria's message
   if(role==="assistant" && productCard){
+    console.log("[Aria debug] Rendering card for:", productCard.name);
     const card=document.createElement("div");
     card.className="srd-product-card";
     card.innerHTML=`
@@ -1163,8 +1164,8 @@ setTimeout(()=>speechSynthesis.getVoices(),300);
 
 const FAQ_MSGS={"en-US":"All SupportRD products are 100% natural and salon-professional. Formula Exclusiva $55, Laciador Crece $40, Gotero Rapido $55, Gotitas Brillantes $30, Mascarilla $25, Shampoo $20.","es-ES":"Todos los productos son 100% naturales. Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20.","fr-FR":"Tous nos produits sont 100% naturels. Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20.","pt-BR":"Todos os produtos são 100% naturais. Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20.","de-DE":"Alle Produkte sind 100% natürlich. Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20.","ar-SA":"جميع المنتجات طبيعية 100%. فورمولا $55، لاسيادور $40، غوتيرو $55، غوتيتاس $30، ماسكاريا $25، شامبو $20.","zh-CN":"所有产品均为100%天然。Formula Exclusiva $55，Laciador $40，Gotero $55，Gotitas $30，Mascarilla $25，Shampoo $20。","hi-IN":"सभी उत्पाद 100% प्राकृतिक। Formula Exclusiva $55, Laciador $40, Gotero $55, Gotitas $30, Mascarilla $25, Shampoo $20।"};
 const CONTACT_MSGS={"en-US":"You can reach us at SupportRD.com or message us on WhatsApp at 829-233-2670. We'd love to help you find your perfect product!","es-ES":"Contáctanos en SupportRD.com o por WhatsApp al 829-233-2670.","fr-FR":"Contactez-nous sur SupportRD.com ou WhatsApp au 829-233-2670.","pt-BR":"Entre em contato pelo SupportRD.com ou WhatsApp: 829-233-2670.","de-DE":"Kontaktieren Sie uns auf SupportRD.com oder WhatsApp: 829-233-2670.","ar-SA":"تواصل معنا عبر SupportRD.com أو واتساب: 829-233-2670.","zh-CN":"请访问 SupportRD.com 或 WhatsApp: 829-233-2670 联系我们。","hi-IN":"SupportRD.com या WhatsApp 829-233-2670 पर संपर्क करें।"};
-document.getElementById("faqBtn").addEventListener("click",()=>{ const msg=FAQ_MSGS[langSelect.value]||FAQ_MSGS["en-US"]; responseBox.textContent=msg; speak(msg,false); });
-document.getElementById("contactBtn").addEventListener("click",()=>{ const msg=CONTACT_MSGS[langSelect.value]||CONTACT_MSGS["en-US"]; responseBox.textContent=msg; speak(msg,false); });
+const _faqBtn=document.getElementById("faqBtn"); if(_faqBtn)_faqBtn.addEventListener("click",()=>{ const msg=FAQ_MSGS[langSelect.value]||FAQ_MSGS["en-US"]; responseBox.textContent=msg; speak(msg,false); });
+const _contactBtn=document.getElementById("contactBtn"); if(_contactBtn)_contactBtn.addEventListener("click",()=>{ const msg=CONTACT_MSGS[langSelect.value]||CONTACT_MSGS["en-US"]; responseBox.textContent=msg; speak(msg,false); });
 
 // ── PAYWALL ──
 function handleSubscriptionResponse(data){
