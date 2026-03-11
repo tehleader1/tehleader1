@@ -460,6 +460,8 @@ def index():
 <meta name="theme-color" content="#c1a3a2">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="msvalidate.01" content="3F286CDF7ADFCEB2065F8D5EA5DE84F3">
+<meta name="google-site-verification" content="google65f6d985572e55c5">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Aria">
 <link rel="manifest" href="/manifest.json">
