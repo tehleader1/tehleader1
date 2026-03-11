@@ -4728,6 +4728,26 @@ def _start_content_scheduler():
 _start_content_scheduler()
 
 
+def _start_keyword_scheduler():
+    """Keyword sweep runs continuously — finishes one sweep, immediately starts the next.
+    Always pulling fresh data from Google in real time. Never stops."""
+    import time as _kw_t
+    def _run():
+        # Short boot delay so DB initialises
+        _kw_t.sleep(30)
+        while True:
+            try:
+                print("[Keyword Scheduler] Sweep starting…", flush=True)
+                run_keyword_sweep()
+                print("[Keyword Scheduler] Sweep done — restarting immediately.", flush=True)
+            except Exception as e:
+                print(f"[Keyword Scheduler] Error: {e} — retrying in 10s", flush=True)
+                _kw_t.sleep(10)
+    threading.Thread(target=_run, daemon=True).start()
+
+_start_keyword_scheduler()
+
+
 # ── KEEP-ALIVE ────────────────────────────────────────────────────────────────
 def _keep_alive():
     import time, urllib.request as _urlreq
@@ -4956,6 +4976,27 @@ def _start_push_scheduler():
     threading.Thread(target=_scheduler, daemon=True).start()
 
 _start_push_scheduler()
+
+
+# ── KEYWORD SCHEDULER — auto-sweeps every 7 days, runs forever ──────────────
+def _start_keyword_scheduler():
+    import time as _kt
+
+    def _scheduler():
+        _kt.sleep(180)  # wait 3 min after app starts, then run first sweep
+        while True:
+            try:
+                print("[Keyword Scheduler] Starting auto-sweep...")
+                n = run_keyword_sweep()
+                print(f"[Keyword Scheduler] Sweep complete — {n} keywords indexed")
+            except Exception as e:
+                print(f"[Keyword Scheduler] Error: {e}")
+            # Sleep 7 days before next sweep
+            _kt.sleep(60 * 60 * 24 * 7)
+
+    threading.Thread(target=_scheduler, daemon=True).start()
+
+_start_keyword_scheduler()
 
 
 # ── HAIR JOURNAL ROUTES ────────────────────────────────────────────────────────
