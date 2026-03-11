@@ -877,6 +877,7 @@ function addToHistory(role,text,productCard){
   // Render product recommendation card after Aria's message
   if(role==="assistant" && productCard){
     console.log("[Aria debug] Rendering card for:", productCard.name);
+    alert("CARD: " + productCard.name);
     const card=document.createElement("div");
     card.className="srd-product-card";
     card.innerHTML=`
@@ -1082,6 +1083,7 @@ async function getRecommendation(userText){
 }
 
 async function processText(text){
+  console.log("[Aria debug] processText called:", text.slice(0,40));
   if(!text||text.trim().length<3){
     responseBox.textContent="Could you describe your hair a little more?";
     setState("idle");setColor(...IDLE);stateLabel.textContent="Tap to begin";
