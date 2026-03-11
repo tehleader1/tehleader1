@@ -2101,15 +2101,20 @@ body::before{content:'';position:fixed;inset:0;
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 /* NAV */
 .nav{position:fixed;top:30px;left:0;right:0;background:rgba(7,9,13,0.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);z-index:99;display:flex;flex-direction:column;padding:0;}
-.nav-row1{display:flex;align-items:center;height:50px;padding:0 12px;gap:8px;width:100%;}
-.nav-tabs{display:flex;height:40px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;width:100%;padding:0 12px;}
+.nav-row1{display:flex;align-items:center;height:50px;padding:0 12px;gap:8px;width:100%;flex-shrink:0;}
+.nav-tabs{display:flex;height:40px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;width:100%;border-top:1px solid var(--border);}
 .nav-tabs::-webkit-scrollbar{display:none;}
-@media(min-width:900px){.nav{flex-direction:row;height:50px;padding:0 12px;align-items:center;gap:8px;}.nav-row1{height:100%;padding:0;flex:0 0 auto;}.nav-tabs{height:100%;width:auto;flex:1;padding:0;}.app{padding:84px 18px 40px;}}
+@media(min-width:768px){
+  .nav{flex-direction:row;height:50px;padding:0 12px;align-items:center;gap:0;}
+  .nav-row1{height:100%;padding:0;width:auto;flex-shrink:0;border-bottom:none;}
+  .nav-tabs{height:100%;width:auto;flex:1;border-top:none;padding:0 8px;}
+  .app{padding:84px 18px 40px;}
+}
 .nav-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text);margin-right:28px;display:flex;align-items:center;gap:8px;letter-spacing:-0.02em;}
 .nav-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--rose);box-shadow:0 0 12px var(--rose-glow),0 0 24px rgba(240,160,144,0.3);animation:logoPulse 2s ease-in-out infinite;}
 @keyframes logoPulse{0%,100%{box-shadow:0 0 8px var(--rose-glow)}50%{box-shadow:0 0 20px var(--rose-glow),0 0 40px rgba(240,160,144,0.2)}}
 .nav-tabs{display:flex;height:100%;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:1;min-width:0;flex:1;}.nav-tabs::-webkit-scrollbar{display:none;}
-.nav-tab{height:100%;padding:0 15px;display:flex;align-items:center;font-size:11px;letter-spacing:0.04em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;position:relative;top:1px;text-decoration:none;white-space:nowrap;flex-shrink:0;}
+.nav-tab{height:100%;padding:0 14px;display:flex;align-items:center;font-size:11px;letter-spacing:0.04em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;text-decoration:none;white-space:nowrap;flex-shrink:0;user-select:none;}
 .nav-tab:hover,.nav-tab.active{color:var(--text);border-bottom-color:var(--rose);}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
 .live-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;background:rgba(48,232,144,0.08);border:1px solid rgba(48,232,144,0.25);font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--green);letter-spacing:0.1em;}
@@ -2401,7 +2406,8 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-logo"><div class="nav-logo-dot"></div>SupportRD</div>
     <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
-    <button id="pwa-install-btn" onclick="triggerPWAInstall()" style="display:block;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">⬇ Install App</button>
+    <button id="pwa-install-btn" onclick="triggerPWAInstall()" style="display:block;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">⬇ Install</button>
+    <button id="nav-upgrade-btn" onclick="goUpgrade()" style="display:none;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">✦ Upgrade</button>
     <span class="nav-name" id="nav-name">—</span>
     <div class="plan-tag" id="plan-badge">FREE</div>
     <div class="nav-avatar" id="nav-av">?</div>
@@ -3493,7 +3499,15 @@ async function loadData(){
     document.getElementById('nav-name').textContent=d.name||d.email;
     const av=document.getElementById('nav-av');
     if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
-    if(d.subscribed){ document.getElementById('plan-badge').textContent='PREMIUM'; _isPremium=true; }
+    if(d.subscribed){
+      document.getElementById('plan-badge').textContent='PREMIUM';
+      _isPremium=true;
+      var ub = document.getElementById('nav-upgrade-btn');
+      if(ub) ub.style.display='none';
+    } else {
+      var ub = document.getElementById('nav-upgrade-btn');
+      if(ub) ub.style.display='block';
+    }
     // Style premium nav tabs
     if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('\u2746')) t.style.color='var(--gold)'; });
     // If already on a premium tab when data loaded, re-open it now we know premium status
