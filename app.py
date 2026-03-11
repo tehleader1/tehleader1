@@ -877,7 +877,6 @@ function addToHistory(role,text,productCard){
   // Render product recommendation card after Aria's message
   if(role==="assistant" && productCard){
     console.log("[Aria debug] Rendering card for:", productCard.name);
-    alert("CARD: " + productCard.name);
     const card=document.createElement("div");
     card.className="srd-product-card";
     card.innerHTML=`
@@ -1293,7 +1292,6 @@ Reference this naturally in your response."""
 
         # Build product card
         product_card = PRODUCT_CARDS.get(product)
-        print(f"[CARD DEBUG] product='{product}' card={product_card is not None} keys={list(PRODUCT_CARDS.keys())}", flush=True)
 
         return jsonify({
             "recommendation":  recommendation,
@@ -3528,6 +3526,29 @@ async function sphereAskAria(msg){
     typing.remove();
     const reply=d.recommendation||d.reply||d.error||'⚠ Try again.';
     addSphereMsg('aria',reply);
+    if(d.suggested_product){
+      const pc=d.suggested_product;
+      const wrap=document.getElementById('sphere-msgs');
+      const cardDiv=document.createElement('div');
+      cardDiv.className='smsg smsg-card';
+      cardDiv.innerHTML=`<div class="srd-product-card" style="margin:6px 0 2px 0;max-width:100%;">
+        <div class="srd-card-inner">
+          <div class="srd-card-top">
+            <span class="srd-card-emoji">${pc.emoji}</span>
+            <div class="srd-card-info">
+              <div class="srd-card-name">${pc.name}</div>
+              <div class="srd-card-tagline">${pc.tagline}</div>
+            </div>
+            <div class="srd-card-price">${pc.price}</div>
+          </div>
+          <div class="srd-card-best">✦ Best for: ${pc.best_for}</div>
+          <a class="srd-card-btn" href="${pc.order_url}" target="_blank">Order Now →</a>
+        </div>
+      </div>`;
+      wrap.appendChild(cardDiv);
+      wrap.scrollTop=wrap.scrollHeight;
+    }
+    handleSubscriptionResponse(d);
     await sphereSpeak(reply);
   }catch(e){typing.remove();addSphereMsg('aria','⚠ Connection error.');sphereSetState('idle');}
   sphereBusy=false;
