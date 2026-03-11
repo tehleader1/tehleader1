@@ -4110,7 +4110,7 @@ def pwa_manifest():
 @app.route("/sw.js")
 def service_worker():
     sw = """
-const CACHE = 'aria-v6';
+const CACHE = 'aria-v7';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
