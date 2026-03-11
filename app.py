@@ -3548,7 +3548,6 @@ async function sphereAskAria(msg){
       wrap.appendChild(cardDiv);
       wrap.scrollTop=wrap.scrollHeight;
     }
-    handleSubscriptionResponse(d);
     await sphereSpeak(reply);
   }catch(e){typing.remove();addSphereMsg('aria','⚠ Connection error.');sphereSetState('idle');}
   sphereBusy=false;
