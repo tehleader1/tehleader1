@@ -2562,12 +2562,12 @@ body::before{content:'';position:fixed;inset:0;
           <div class="sphere-head-status" id="sphere-status-lbl">Online · AI Advisor</div>
         </div>
         <button class="sphere-head-btn" onclick="window.location.href='/'">Full Screen →</button>
+        <button id="sphere-handsfree-btn" onclick="toggleHandsFree()" title="Hands-free mode" style="background:transparent;border:1px solid rgba(193,163,162,0.3);border-radius:12px;padding:3px 10px;font-size:10px;letter-spacing:0.08em;color:rgba(13,9,6,0.5);cursor:pointer;white-space:nowrap;">🤲 Off</button>
       </div>
       <div class="sphere-orb-wrap">
         <div class="sphere-orb" id="sphere-orb" onclick="sphereOrbTap()" title="Tap to speak"></div>
       </div>
       <div class="sphere-label" id="sphere-hint">Tap sphere to speak · or type below</div>
-      <button id="sphere-handsfree-btn" onclick="toggleHandsFree()" title="Hands-free mode" style="display:block;margin:4px auto 0;background:transparent;border:1px solid rgba(193,163,162,0.3);border-radius:20px;padding:4px 14px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(13,9,6,0.45);cursor:pointer;transition:all 0.2s;">🤲 Hands-Free Off</button>
       <div class="sphere-divider"></div>
       <div class="sphere-msgs" id="sphere-msgs">
         <div class="smsg smsg-aria"><div class="smsg-bubble">Hi! I'm Aria 🌿 What's your hair doing today?</div></div>
@@ -3445,7 +3445,7 @@ function toggleHandsFree(){
   sphereHandsFree=!sphereHandsFree;
   const btn=document.getElementById('sphere-handsfree-btn');
   if(sphereHandsFree){
-    btn.textContent='🤲 Hands-Free ON';
+    btn.textContent='🤲 On';
     btn.style.background='rgba(193,163,162,0.18)';
     btn.style.color='var(--brand-accent,#8B5E52)';
     btn.style.borderColor='rgba(193,163,162,0.6)';
@@ -3453,7 +3453,7 @@ function toggleHandsFree(){
     // Start listening immediately
     if(!sphereBusy&&!sphereRecording) sphereOrbTap();
   } else {
-    btn.textContent='🤲 Hands-Free Off';
+    btn.textContent='🤲 Off';
     btn.style.background='transparent';
     btn.style.color='rgba(13,9,6,0.45)';
     btn.style.borderColor='rgba(193,163,162,0.3)';
