@@ -754,6 +754,382 @@ body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 10
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════
+     PREMIUM FEATURES SHOWCASE — scrolls under the hero
+     ═══════════════════════════════════════════════════════ -->
+<section id="featuresShowcase">
+
+  <div class="fs-eyebrow">Everything inside Premium</div>
+  <h2 class="fs-headline">Your hair. Understood.</h2>
+  <p class="fs-sub">One subscription. Every tool your hair has been waiting for.</p>
+
+  <div class="fs-track" id="fsTrack">
+
+    <div class="fs-card" data-index="0">
+      <div class="fs-card-glow"></div>
+      <div class="fs-icon">🧬</div>
+      <div class="fs-tag">AI-Powered</div>
+      <h3 class="fs-card-title">Unlimited Aria Conversations</h3>
+      <p class="fs-card-desc">Ask Aria anything about your hair — any time, any language. She remembers your profile, your products, your history. No limits, no resets.</p>
+      <div class="fs-detail">Available in 24 languages · Hands-free voice mode · Instant product recommendations</div>
+    </div>
+
+    <div class="fs-card" data-index="1">
+      <div class="fs-card-glow"></div>
+      <div class="fs-icon">📊</div>
+      <div class="fs-tag">Health Tracking</div>
+      <h3 class="fs-card-title">Hair Health Score</h3>
+      <p class="fs-card-desc">Your personal hair health number, tracked over time. Watch it climb as your routine improves. See exactly what's working and what isn't.</p>
+      <div class="fs-detail">Weekly scoring · Progress graph · Aria insight summaries</div>
+    </div>
+
+    <div class="fs-card" data-index="2">
+      <div class="fs-card-glow"></div>
+      <div class="fs-icon">📅</div>
+      <div class="fs-tag">Personalized</div>
+      <h3 class="fs-card-title">7-Day Hair Routine</h3>
+      <p class="fs-card-desc">A full week of care built specifically for your hair type, damage level, and lifestyle. Not generic. Not copy-paste. Yours.</p>
+      <div class="fs-detail">Built from your profile · SupportRD product integration · Refresh anytime</div>
+    </div>
+
+    <div class="fs-card" data-index="3">
+      <div class="fs-card-glow"></div>
+      <div class="fs-icon">📸</div>
+      <div class="fs-tag">Visual AI</div>
+      <h3 class="fs-card-title">Photo Hair Analysis</h3>
+      <p class="fs-card-desc">Upload a photo of your hair and get an instant AI read — damage, porosity, breakage, scalp health. See what your mirror can't tell you.</p>
+      <div class="fs-detail">Damage detection · Porosity assessment · Before/after comparison</div>
+    </div>
+
+    <div class="fs-card" data-index="4">
+      <div class="fs-card-glow"></div>
+      <div class="fs-icon">📓</div>
+      <div class="fs-tag">Progress Journal</div>
+      <h3 class="fs-card-title">Hair Journal</h3>
+      <p class="fs-card-desc">Log your treatments, wash days, and observations. Aria reads your entries and spots patterns you'd never catch on your own.</p>
+      <div class="fs-detail">Daily logging · AI pattern detection · Treatment tracking</div>
+    </div>
+
+    <div class="fs-card" data-index="5">
+      <div class="fs-card-glow"></div>
+      <div class="fs-icon">💬</div>
+      <div class="fs-tag">Always On</div>
+      <h3 class="fs-card-title">Aria via SMS & WhatsApp</h3>
+      <p class="fs-card-desc">Text Aria from anywhere. At the salon, in the shower, at 2am when your edges are acting up. She's there. No app needed.</p>
+      <div class="fs-detail">SMS + WhatsApp · Same AI, anywhere · Instant responses</div>
+    </div>
+
+    <div class="fs-card" data-index="6">
+      <div class="fs-card-glow"></div>
+      <div class="fs-icon">🌿</div>
+      <div class="fs-tag">Dominican Formula</div>
+      <h3 class="fs-card-title">Personalized Product Matching</h3>
+      <p class="fs-card-desc">Every recommendation is matched to your specific concerns. Formula Exclusiva for damage. Gotero Rapido for growth. Never guessing again.</p>
+      <div class="fs-detail">6 professional formulas · Custom-order direct · Free consultation with every order</div>
+    </div>
+
+  </div>
+
+  <div class="fs-dots" id="fsDots">
+    <span class="fs-dot active" data-i="0"></span>
+    <span class="fs-dot" data-i="1"></span>
+    <span class="fs-dot" data-i="2"></span>
+    <span class="fs-dot" data-i="3"></span>
+    <span class="fs-dot" data-i="4"></span>
+    <span class="fs-dot" data-i="5"></span>
+    <span class="fs-dot" data-i="6"></span>
+  </div>
+
+  <div class="fs-cta-wrap">
+    <div class="fs-price">$35 <span>/month</span></div>
+    <div class="fs-price-note">Cancel anytime · Instant access · All 7 features included</div>
+    <button class="fs-cta-btn" onclick="goUpgrade()">Unlock Premium →</button>
+  </div>
+
+</section>
+
+<style>
+/* ── FEATURES SHOWCASE ── */
+#featuresShowcase {
+  width: 100%;
+  padding: 64px 0 72px;
+  background: linear-gradient(180deg, #fff9f8 0%, #ffffff 100%);
+  overflow: hidden;
+  font-family: 'Jost', sans-serif;
+}
+
+.fs-eyebrow {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #c1a3a2;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.fs-headline {
+  text-align: center;
+  font-size: clamp(28px, 6vw, 42px);
+  font-weight: 300;
+  color: #1a1a1a;
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+}
+
+.fs-sub {
+  text-align: center;
+  font-size: 14px;
+  color: #888;
+  margin: 0 auto 48px;
+  max-width: 320px;
+  line-height: 1.6;
+}
+
+/* ── SCROLLING TRACK ── */
+.fs-track {
+  display: flex;
+  gap: 16px;
+  padding: 0 24px 24px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  cursor: grab;
+}
+.fs-track::-webkit-scrollbar { display: none; }
+.fs-track.is-dragging { cursor: grabbing; }
+
+/* ── CARDS ── */
+.fs-card {
+  min-width: calc(100vw - 64px);
+  max-width: 360px;
+  background: #fff;
+  border: 1px solid rgba(193,163,162,0.18);
+  border-radius: 24px;
+  padding: 32px 28px 28px;
+  scroll-snap-align: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 4px 32px rgba(193,163,162,0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fsCardIn 0.5s ease forwards;
+}
+.fs-card:nth-child(1) { animation-delay: 0.1s; }
+.fs-card:nth-child(2) { animation-delay: 0.15s; }
+.fs-card:nth-child(3) { animation-delay: 0.2s; }
+.fs-card:nth-child(4) { animation-delay: 0.25s; }
+.fs-card:nth-child(5) { animation-delay: 0.3s; }
+.fs-card:nth-child(6) { animation-delay: 0.35s; }
+.fs-card:nth-child(7) { animation-delay: 0.4s; }
+
+@keyframes fsCardIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fs-card-glow {
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  background: radial-gradient(circle, rgba(193,163,162,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.fs-icon {
+  font-size: 36px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.fs-tag {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #c1a3a2;
+  background: rgba(193,163,162,0.10);
+  padding: 4px 10px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.fs-card-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: #1a1a1a;
+  margin: 0 0 12px;
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.fs-card-desc {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.65;
+  margin: 0 0 20px;
+}
+
+.fs-detail {
+  font-size: 11px;
+  color: #c1a3a2;
+  letter-spacing: 0.04em;
+  border-top: 1px solid rgba(193,163,162,0.15);
+  padding-top: 16px;
+  line-height: 1.8;
+}
+
+/* ── DOTS ── */
+.fs-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px 0 0;
+}
+.fs-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(193,163,162,0.25);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.fs-dot.active {
+  width: 22px;
+  border-radius: 3px;
+  background: #c1a3a2;
+}
+
+/* ── CTA ── */
+.fs-cta-wrap {
+  text-align: center;
+  margin-top: 48px;
+  padding: 0 24px;
+}
+.fs-price {
+  font-size: 42px;
+  font-weight: 300;
+  color: #1a1a1a;
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.fs-price span {
+  font-size: 16px;
+  color: #888;
+  font-family: 'Jost', sans-serif;
+}
+.fs-price-note {
+  font-size: 12px;
+  color: #aaa;
+  letter-spacing: 0.04em;
+  margin-bottom: 24px;
+}
+.fs-cta-btn {
+  display: inline-block;
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  padding: 16px 40px;
+  border-radius: 50px;
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+.fs-cta-btn:hover {
+  background: #c1a3a2;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(193,163,162,0.4);
+}
+
+/* ── DESKTOP ── */
+@media(min-width: 640px) {
+  .fs-track {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    overflow-x: visible;
+    padding: 0 32px 0;
+    gap: 20px;
+    scroll-snap-type: none;
+  }
+  .fs-card {
+    min-width: unset;
+    max-width: unset;
+  }
+  .fs-dots { display: none; }
+}
+</style>
+
+<script>
+// ── FEATURES CAROUSEL ──
+(function(){
+  const track = document.getElementById('fsTrack');
+  const dots  = document.querySelectorAll('.fs-dot');
+  if(!track) return;
+
+  // Dot click navigation
+  dots.forEach(d => {
+    d.addEventListener('click', () => {
+      const i     = parseInt(d.dataset.i);
+      const cards = track.querySelectorAll('.fs-card');
+      if(cards[i]) cards[i].scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+    });
+  });
+
+  // Update active dot on scroll
+  track.addEventListener('scroll', () => {
+    const cards = track.querySelectorAll('.fs-card');
+    let closest = 0;
+    let minDist  = Infinity;
+    const center = track.scrollLeft + track.offsetWidth / 2;
+    cards.forEach((c, i) => {
+      const dist = Math.abs(c.offsetLeft + c.offsetWidth / 2 - center);
+      if(dist < minDist){ minDist = dist; closest = i; }
+    });
+    dots.forEach((d, i) => d.classList.toggle('active', i === closest));
+  }, {passive:true});
+
+  // Drag to scroll
+  let isDragging = false, startX = 0, scrollStart = 0;
+  track.addEventListener('mousedown', e => {
+    isDragging = true; startX = e.pageX; scrollStart = track.scrollLeft;
+    track.classList.add('is-dragging');
+  });
+  document.addEventListener('mousemove', e => {
+    if(!isDragging) return;
+    track.scrollLeft = scrollStart - (e.pageX - startX);
+  });
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
+    track.classList.remove('is-dragging');
+  });
+
+  // Auto-scroll — pauses when user interacts
+  let autoTimer, paused = false;
+  function autoScroll(){
+    if(paused) return;
+    const cards = track.querySelectorAll('.fs-card');
+    const dots2 = document.querySelectorAll('.fs-dot');
+    let active  = 0;
+    dots2.forEach((d,i) => { if(d.classList.contains('active')) active = i; });
+    const next  = (active + 1) % cards.length;
+    if(cards[next]) cards[next].scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+  }
+  autoTimer = setInterval(autoScroll, 3200);
+  track.addEventListener('touchstart', () => { paused = true; clearInterval(autoTimer); }, {passive:true});
+  track.addEventListener('mousedown',  () => { paused = true; clearInterval(autoTimer); });
+})();
+</script>
+
 <script>
 // ── AUTH STATE ──
 (function(){
