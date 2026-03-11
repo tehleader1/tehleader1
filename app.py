@@ -1070,8 +1070,7 @@ async function getRecommendation(userText){
     clearTimeout(timeout);
     if(!resp.ok) throw new Error("not ok");
     const data=await resp.json();
-    console.log("[Aria debug] raw response:", JSON.stringify(data).slice(0,400));
-    console.log("[Aria debug] suggested_product:", data.suggested_product);
+    console.log("[Aria debug] FULL response:", JSON.stringify(data));
     handleSubscriptionResponse(data);
     if(data.recommendation) return {text: data.recommendation, product: data.suggested_product||null};
     if(data.reply) return {text: data.reply, product: null};
@@ -1094,8 +1093,10 @@ async function processText(text){
   setState("idle");setColor(...IDLE);
   responseBox.textContent="Thinking…";stateLabel.textContent="Thinking";
   const result=await getRecommendation(text);
+  console.log("[Aria debug] result from API:", JSON.stringify(result).slice(0,300));
   const finalText=result.text||localRecommend(text);
   const finalProduct=result.product||null;
+  console.log("[Aria debug] finalProduct:", JSON.stringify(finalProduct));
   addToHistory("assistant",finalText,finalProduct);
   setTimeout(()=>speak(finalText,true),400);
 }
@@ -1292,6 +1293,7 @@ Reference this naturally in your response."""
 
         # Build product card
         product_card = PRODUCT_CARDS.get(product)
+        print(f"[CARD DEBUG] product='{product}' card={product_card is not None} keys={list(PRODUCT_CARDS.keys())}", flush=True)
 
         return jsonify({
             "recommendation":  recommendation,
