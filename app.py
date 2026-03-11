@@ -4722,39 +4722,116 @@ def test_register():
         return jsonify({"ok":False,"error":str(e)})
 
 
-# ── CONTENT ENGINE SCHEDULER ──────────────────────────────────────────────────
+# ── UNIFIED CONTENT SCHEDULER — 4 posts/day ──────────────────────────────────
+# 2 from content engine (brand topics) + 2 from keyword list (SEO phrases)
+# Fires at 4 random times spread across morning, afternoon, evening, night
 def _start_content_scheduler():
     import time as _t
+    import random as _r
+
     def _pick_todays_times():
-        import random as _r
         today = datetime.datetime.utcnow().date()
         seed = int(today.strftime("%Y%m%d"))
         rng = _r.Random(seed)
-        windows = [(7,11),(12,17),(18,23)]
-        times = set()
+        # 4 windows across the day — one post each
+        windows = [(6,9),(10,13),(15,18),(20,23)]
+        times = []
         for lo, hi in windows:
-            h = rng.randint(lo, hi); m = rng.randint(0, 59)
-            times.add((h, m))
-        return times
-    _fired = set()
-    _todays_times = _pick_todays_times()
-    def _run_engine_bg():
+            h = rng.randint(lo, hi)
+            m = rng.randint(0, 59)
+            times.append((h, m))
+        return times  # [engine, keyword, engine, keyword] alternating
+
+    def _run_content_engine():
         try:
             from content_engine import run_engine
-            run_engine()
+            result = run_engine()
+            print(f"[Scheduler] Content engine post done: {result}", flush=True)
+            threading.Thread(target=ping_search_engines, daemon=True).start()
         except Exception as e:
-            print(f"Scheduled engine error: {e}")
+            print(f"[Scheduler] Content engine error: {e}", flush=True)
+
+    def _run_keyword_post():
+        """Pick highest-scoring uncovered keyword, write post targeting it exactly."""
+        try:
+            db = get_keyword_db()
+            # Get existing blog handles to check coverage
+            try:
+                bdb = sqlite3.connect(BLOG_DB, timeout=10, check_same_thread=False)
+                existing_handles = set(r[0] for r in bdb.execute("SELECT handle FROM posts").fetchall())
+                bdb.close()
+            except:
+                existing_handles = set()
+
+            # Pick top uncovered keyword — highest score not yet posted
+            rows = db.execute(
+                "SELECT phrase, lang FROM keywords ORDER BY score DESC LIMIT 200"
+            ).fetchall()
+            db.close()
+
+            target = None
+            for phrase, lang in rows:
+                handle = _kw_slug(phrase)
+                if handle not in existing_handles:
+                    target = (phrase, lang)
+                    break
+
+            if not target:
+                print("[Scheduler] No uncovered keywords found — all covered!", flush=True)
+                return
+
+            phrase, lang = target
+            print(f"[Scheduler] Writing keyword post: '{phrase}' ({lang})", flush=True)
+            post_data = _kw_generate_post(phrase, lang)
+            if not post_data:
+                print(f"[Scheduler] Keyword post generation failed for: {phrase}", flush=True)
+                return
+
+            handle = _kw_slug(phrase)
+            blog_save_post({
+                "handle":          handle,
+                "title":           post_data["title"],
+                "html":            post_data["html"],
+                "meta":            post_data["meta"],
+                "date":            datetime.datetime.utcnow().strftime("%Y-%m-%d"),
+                "chinese_title":   "",
+                "chinese_summary": ""
+            })
+            threading.Thread(target=ping_search_engines, daemon=True).start()
+            print(f"[Scheduler] Keyword post live: /blog/{handle}", flush=True)
+
+        except Exception as e:
+            print(f"[Scheduler] Keyword post error: {e}", flush=True)
+
+    _fired = set()
+    _todays_times = _pick_todays_times()
+    # Alternate: slot 0=engine, 1=keyword, 2=engine, 3=keyword
+    _slot_types = ["engine", "keyword", "engine", "keyword"]
+
     def scheduler():
         nonlocal _fired, _todays_times
         _t.sleep(90)
         while True:
             now = datetime.datetime.utcnow()
             today = now.date()
-            key = (today, now.hour, now.minute)
-            if (now.hour, now.minute) in _todays_times and key not in _fired:
-                _fired.add(key)
-                threading.Thread(target=_run_engine_bg, daemon=True).start()
+            # Reset daily
+            if today != getattr(scheduler, "_last_date", None):
+                scheduler._last_date = today
+                _fired.clear()
+                _todays_times[:] = _pick_todays_times()
+
+            for i, (h, m) in enumerate(_todays_times):
+                key = (today, h, m)
+                if (now.hour, now.minute) == (h, m) and key not in _fired:
+                    _fired.add(key)
+                    slot = _slot_types[i]
+                    print(f"[Scheduler] Firing slot {i} ({slot}) at {h:02d}:{m:02d} UTC", flush=True)
+                    if slot == "engine":
+                        threading.Thread(target=_run_content_engine, daemon=True).start()
+                    else:
+                        threading.Thread(target=_run_keyword_post, daemon=True).start()
             _t.sleep(30)
+
     threading.Thread(target=scheduler, daemon=True).start()
 
 _start_content_scheduler()
