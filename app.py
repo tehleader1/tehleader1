@@ -2567,6 +2567,7 @@ body::before{content:'';position:fixed;inset:0;
         <div class="sphere-orb" id="sphere-orb" onclick="sphereOrbTap()" title="Tap to speak"></div>
       </div>
       <div class="sphere-label" id="sphere-hint">Tap sphere to speak · or type below</div>
+      <button id="sphere-handsfree-btn" onclick="toggleHandsFree()" title="Hands-free mode" style="display:block;margin:4px auto 0;background:transparent;border:1px solid rgba(193,163,162,0.3);border-radius:20px;padding:4px 14px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(13,9,6,0.45);cursor:pointer;transition:all 0.2s;">🤲 Hands-Free Off</button>
       <div class="sphere-divider"></div>
       <div class="sphere-msgs" id="sphere-msgs">
         <div class="smsg smsg-aria"><div class="smsg-bubble">Hi! I'm Aria 🌿 What's your hair doing today?</div></div>
@@ -3437,7 +3438,30 @@ let sphereBusy=false;
 let sphereRecording=false;
 let sphereMediaRec=null;
 let sphereChunks=[];
+let sphereHandsFree=false;
 const sphereLang=localStorage.getItem('aria_lang')||'en-US';
+
+function toggleHandsFree(){
+  sphereHandsFree=!sphereHandsFree;
+  const btn=document.getElementById('sphere-handsfree-btn');
+  if(sphereHandsFree){
+    btn.textContent='🤲 Hands-Free ON';
+    btn.style.background='rgba(193,163,162,0.18)';
+    btn.style.color='var(--brand-accent,#8B5E52)';
+    btn.style.borderColor='rgba(193,163,162,0.6)';
+    document.getElementById('sphere-hint').textContent='Hands-free active — Aria listens automatically';
+    // Start listening immediately
+    if(!sphereBusy&&!sphereRecording) sphereOrbTap();
+  } else {
+    btn.textContent='🤲 Hands-Free Off';
+    btn.style.background='transparent';
+    btn.style.color='rgba(13,9,6,0.45)';
+    btn.style.borderColor='rgba(193,163,162,0.3)';
+    document.getElementById('sphere-hint').textContent='Tap sphere to speak · or type below';
+    // Stop recording if active
+    if(sphereRecording&&sphereMediaRec) sphereMediaRec.stop();
+  }
+}
 
 function addSphereMsg(role,text){
   const wrap=document.getElementById('sphere-msgs');
@@ -3486,12 +3510,21 @@ async function sphereOrbTap(){
         const tr=await fetch('/api/transcribe',{method:'POST',body:fd});
         const td=await tr.json();
         const txt=(td.text||'').trim();
-        if(!txt){addSphereMsg('aria','I couldn\'t catch that — try again?');sphereSetState('idle');sphereBusy=false;return;}
+        if(!txt){
+        sphereSetState('idle');sphereBusy=false;
+        if(sphereHandsFree){ setTimeout(()=>{ if(sphereHandsFree&&!sphereBusy&&!sphereRecording) sphereOrbTap(); },800); }
+        else { addSphereMsg('aria',"I couldn't catch that — try again?"); }
+        return;
+      }
         document.getElementById('sphere-input').value=txt;
         await sphereAskAria(txt);
       }catch(e){addSphereMsg('aria','⚠ Transcription error.');sphereSetState('idle');sphereBusy=false;}
     };
     sphereMediaRec.start();
+    // Hands-free: auto-stop after 6s of recording so conversation keeps flowing
+    if(sphereHandsFree){
+      setTimeout(()=>{ if(sphereRecording&&sphereMediaRec&&sphereHandsFree){ sphereRecording=false; sphereBusy=true; sphereMediaRec.stop(); }},6000);
+    }
     sphereRecording=true;
     sphereSetState('listening');
     // Auto-stop after 12s
@@ -3574,12 +3607,19 @@ function sphereSpeak(text){
       orb.style.transform='';
       sphereSetState('idle');
       resolve();
+      // Hands-free: auto-restart listening after Aria finishes
+      if(sphereHandsFree&&!sphereBusy){
+        setTimeout(()=>{ if(sphereHandsFree&&!sphereBusy&&!sphereRecording) sphereOrbTap(); },600);
+      }
     };
     utt.onerror=()=>{
       clearInterval(pulseInterval);
       orb.style.transform='';
       sphereSetState('idle');
       resolve();
+      if(sphereHandsFree&&!sphereBusy){
+        setTimeout(()=>{ if(sphereHandsFree&&!sphereBusy&&!sphereRecording) sphereOrbTap(); },600);
+      }
     };
     // Voices may not be loaded yet on first call
     if(voices.length===0){
