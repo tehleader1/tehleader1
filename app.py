@@ -196,10 +196,10 @@ def extract_product(text):
     t = text.lower()
     if "formula exclusiva" in t: return "Formula Exclusiva"
     if "laciador" in t or "crece" in t: return "Laciador Crece"
-    if "gotero" in t or "rapido" in t: return "Gotero Rapido"
+    if "gotero" in t or "rapido" in t or "rápido" in t: return "Gotero Rapido"
     if "gotitas" in t or "brillantes" in t or "gotika" in t: return "Gotitas Brillantes"
-    if "mascarilla" in t: return "Mascarilla"
-    if "shampoo" in t or "aloe" in t: return "Shampoo Aloe Vera"
+    if "mascarilla" in t: return "Mascarilla Natural"
+    if "shampoo" in t or "aloe" in t or "romero" in t: return "Shampoo Aloe & Romero"
     return "Unknown"
 
 # Product metadata for recommendation cards shown in chat
@@ -236,7 +236,7 @@ PRODUCT_CARDS = {
         "price": "$30",
         "order_url": "https://supportrd.com/pages/custom-order?product=gotitas-brillantes"
     },
-    "Mascarilla": {
+    "Mascarilla Natural": {
         "name": "Mascarilla Natural",
         "emoji": "🥑",
         "tagline": "Deep conditioning avocado mask",
@@ -244,7 +244,7 @@ PRODUCT_CARDS = {
         "price": "$25",
         "order_url": "https://supportrd.com/pages/custom-order?product=mascarilla"
     },
-    "Shampoo Aloe Vera": {
+    "Shampoo Aloe & Romero": {
         "name": "Shampoo Aloe & Romero",
         "emoji": "🌱",
         "tagline": "Cleansing shampoo with aloe & rosemary",
@@ -265,51 +265,37 @@ def extract_concern(text):
     return "general"
 
 # ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
-SYSTEM_PROMPT = """You are Aria — a warm, knowledgeable, luxury hair care advisor for SupportRD, a professional Dominican hair care brand. You have deep expertise in hair science, scalp health, and hair culture across all ethnicities.
+SYSTEM_PROMPT = """You are Aria — a warm, confident hair advisor for SupportRD, a professional Dominican hair care brand.
 
-CRITICAL RULE: You may ONLY recommend SupportRD's 6 products listed below. NEVER mention, suggest, or reference any outside brands, competitor products, or third-party products (e.g. Olaplex, Redken, Pantene, Dove, SheaMoisture, etc.). If asked about other brands, redirect warmly to the SupportRD product that solves the same concern.
+RULE #1 — RECOMMEND FAST: In your FIRST or SECOND response, always name the specific SupportRD product that fits the user's concern. Do NOT ask multiple questions before recommending. Give your recommendation, then ask ONE follow-up question if needed.
 
-YOUR PRODUCTS:
-- Formula Exclusiva ($55): Professional all-in-one treatment. Apply on dry or damp hair; for wash use 1oz for 5 min in dryer then rinse. Safe for whole family including children. Best for: damaged, weak, breaking, thinning, severely dry, multi-problem hair.
-- Laciador Crece ($40): Hair restructurer that gives softness, elasticity, natural styling, shine, and stimulates growth by activating dead cells. Best for: dry hair, frizz, lack of shine, growth, strengthening, styling.
-- Gotero Rapido ($55): Fast dropper that stimulates dead scalp cells, promotes hair growth, eliminates scalp parasites, removes obstructions, and regenerates lost hair. Use on scalp every night then remove. Best for: hair loss, scalp issues, slow growth, thinning, parasites.
-- Gotitas Brillantes ($30): Gives softness, better fall to hairstyle, shine and beauty. Use after any hairstyle or anytime. Adds warmth and evenness. Best for: finishing, shine, frizz control, styling touch-up.
-- Mascarilla - Deep Natural Blender & Avocado ($25): Conditions, gives shine and strength to dry or damaged hair. Keeps hair beautiful and healthy. Best for: deep conditioning, dry/damaged hair, shine boost.
-- Shampoo with Aloe Vera & Rosemary ($20): Cleanses, conditions, stimulates dead cells, strengthens and increases hair. Massage 2-3 min with fingertips into scalp. Best for: scalp stimulation, strengthening, growth, daily cleanse.
+RULE #2 — PRODUCT NAMES: Always use the EXACT product names below. Never abbreviate or paraphrase product names.
 
-HAIR TYPE RULES:
-- African/Black hair + dry: Laciador Crece | oily: Gotero Rapido | damaged: Formula Exclusiva
-- Asian hair + dry: Formula Exclusiva | oily: Gotero Rapido
-- Hispanic/Latino hair + styling/shine: Laciador Crece | loss/growth: Gotero Rapido
-- Caucasian hair + damaged: Formula Exclusiva | oily scalp: Gotero Rapido
-- Any hair + severe damage/breakage/falling out: Formula Exclusiva (overrides all)
-- Any hair + scalp issues/parasites/growth: Gotero Rapido
-- Any hair + needs shine/finish: Gotitas Brillantes
-- Any hair + deep conditioning: Mascarilla
-- Daily cleanse: Shampoo with Aloe Vera & Rosemary
+RULE #3 — ORDERING: When you recommend a product, always add: "You can request it at supportrd.com/pages/custom-order" — the customer fills out the form and the team contacts them. This is how SupportRD takes orders. Do NOT say there is no order page or that you cannot place orders.
 
-CONSULTATION STYLE:
-- You are a knowledgeable friend, not a chatbot. Be warm, confident, conversational.
-- Ask diagnostic questions about their full hair history: products used, heat tools, chemical treatments, diet, stress, water type.
-- Build on conversation history. Reference what they told you before.
-- Keep responses to 2-4 sentences. Never use "I recommend" — say "For your hair, [Product] is exactly what you need."
-- Naturally mention your products every 3-4 exchanges even in casual conversation.
-- Occasionally say: "If you want a 1-on-1 with a live advisor, message us on WhatsApp at 829-233-2670"
+RULE #4 — ONLY SupportRD: Never mention outside brands (Olaplex, Redken, Pantene, etc.). Redirect warmly.
 
-PROFESSIONAL RESOURCES:
-- Medical: suggest dermatologist for severe hair loss, scalp conditions, alopecia
-- Professional: offer to help find a salon — ask for their city
-- Trusted sites: AAD (American Academy of Dermatology), Naturally Curly, NAHA
+YOUR 6 PRODUCTS (use these EXACT names):
+- Formula Exclusiva ($55): All-in-one treatment. Best for: damaged, weak, breaking, thinning, severely dry hair.
+- Laciador Crece ($40): Restructurer for softness, shine, growth. Best for: dry, frizzy hair, lack of shine, growth.
+- Gotero Rapido ($55): Scalp dropper, nightly use. Best for: hair loss, slow growth, scalp issues, thinning.
+- Gotitas Brillantes ($30): Finishing drops for shine. Best for: shine, frizz control, styling finish.
+- Mascarilla Natural ($25): Deep conditioning mask. Best for: deep conditioning, dry or damaged hair.
+- Shampoo Aloe & Romero ($20): Cleansing + growth shampoo. Best for: scalp stimulation, daily cleanse, growth.
 
-OFF-TOPIC REDIRECT:
-- If they bring up unrelated topics (sports, gaming, travel, food, movies), acknowledge warmly and redirect:
-  "Ha, love that! But let's get back to what matters — your hair. You mentioned [last hair topic] — any updates?"
-- After 2 off-topic messages: "I want to give you the best hair advice — let's refocus on your hair journey!"
-- Connect topics back to hair when possible: "Stress from [activity] can actually affect hair health..."
+QUICK MATCH GUIDE:
+- Breaking / damaged / weak → Formula Exclusiva
+- Dry / frizzy / no shine → Laciador Crece
+- Hair loss / scalp / slow growth → Gotero Rapido
+- Shine / finishing touch → Gotitas Brillantes
+- Deep conditioning → Mascarilla Natural
+- Cleanse / scalp / daily → Shampoo Aloe & Romero
 
-PROFILE AWARENESS:
-- If profile shows saved concerns, reference them: "Based on your [concern], this is especially important..."
-- Reference past conversations naturally to build a relationship over time.
+STYLE:
+- Warm and confident, like a knowledgeable friend. 2-4 sentences max.
+- Lead with the solution, not with questions.
+- Never say "I recommend" — say "For your hair, [Product] is exactly what you need."
+- Occasionally mention: "For a 1-on-1 chat with a live advisor, WhatsApp us at 829-233-2670"
 
 Respond ONLY with your answer. No preamble. No "Sure!" or "Of course!".
 If the language code indicates non-English, respond entirely in that language."""
@@ -382,6 +368,26 @@ def init_subscription_db():
         porosity    TEXT, damage_level TEXT, density TEXT,
         ts          TEXT DEFAULT (datetime('now'))
     )""")
+    # Push notification subscriptions
+    con.execute("""CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL,
+        endpoint   TEXT NOT NULL,
+        p256dh     TEXT NOT NULL,
+        auth       TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(user_id, endpoint)
+    )""")
+    # Hair journal entries
+    con.execute("""CREATE TABLE IF NOT EXISTS hair_journal (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL,
+        note       TEXT NOT NULL,
+        image_b64  TEXT,
+        hair_rating INTEGER DEFAULT 3,
+        aria_insight TEXT,
+        ts         TEXT DEFAULT (datetime('now'))
+    )""")
     con.commit()
     con.close()
 
@@ -450,6 +456,13 @@ def index():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#c1a3a2">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aria">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845">
 <title>Aria — SupportRD Hair Advisor</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
 <style>
@@ -465,7 +478,7 @@ def index():
   --brand-font-body:'Jost',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 100%);color:var(--brand-text);font-family:var(--brand-font-body);font-weight:300;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;user-select:none;}
+body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 100%);color:var(--brand-text);font-family:var(--brand-font-body);font-weight:300;display:flex;flex-direction:column;align-items:center;min-height:100vh;overflow-x:hidden;overflow-y:auto;user-select:none;padding-bottom:24px;}
 
 #topBar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:14px 20px;z-index:100;background:rgba(250,246,243,0.70);backdrop-filter:blur(14px);border-bottom:1px solid rgba(193,163,162,0.12);}
 .top-btn{background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.55);border:1px solid rgba(0,0,0,0.12);padding:7px 16px;border-radius:30px;font-size:11px;font-family:var(--brand-font-body);font-weight:300;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:all 0.4s;outline:none;}
@@ -488,12 +501,12 @@ body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 10
 
 #stateLabel{margin-top:12px;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(0,0,0,0.30);height:16px;}
 
-#history{width:420px;max-width:92vw;max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-top:18px;padding:0 4px;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,0.12) transparent;}
+#history{width:420px;max-width:92vw;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-top:18px;padding:0 4px 10px;scrollbar-width:thin;scrollbar-color:rgba(193,163,162,0.3) transparent;}
 #history:empty{display:none;}
 .msg{padding:10px 16px;border-radius:18px;font-size:14px;line-height:1.55;max-width:88%;animation:fadeIn 0.4s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
-.msg.user{background:rgba(0,0,0,0.07);color:rgba(0,0,0,0.60);align-self:flex-end;border-bottom-right-radius:4px;font-family:var(--brand-font-body);}
-.msg.ai{background:rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.10);color:rgba(0,0,0,0.80);align-self:flex-start;border-bottom-left-radius:4px;font-family:var(--brand-font-head);font-style:italic;font-size:15px;}
+.msg.user{background:rgba(0,0,0,0.10);color:rgba(0,0,0,0.75);align-self:flex-end;border-bottom-right-radius:4px;font-family:var(--brand-font-body);}
+.msg.ai{background:rgba(193,163,162,0.20);color:rgba(0,0,0,0.85);align-self:flex-start;border-bottom-left-radius:4px;font-family:var(--brand-font-head);font-style:italic;font-size:15px;border:1px solid rgba(193,163,162,0.25);}
 /* ── Product Recommendation Card ── */
 .srd-product-card{align-self:flex-start;width:100%;max-width:320px;animation:fadeIn 0.5s ease 0.2s both;}
 .srd-card-inner{background:linear-gradient(135deg,rgba(193,163,162,0.15),rgba(212,168,90,0.10));border:1px solid rgba(193,163,162,0.35);border-radius:16px;padding:14px 16px;backdrop-filter:blur(8px);}
@@ -849,8 +862,8 @@ function addToHistory(role,text,productCard){
     else if(t.includes("laciador")||t.includes("crece")) lastRecommendedProduct="Laciador Crece";
     else if(t.includes("gotero")||t.includes("rapido")) lastRecommendedProduct="Gotero Rapido";
     else if(t.includes("gotitas")||t.includes("brillantes")) lastRecommendedProduct="Gotitas Brillantes";
-    else if(t.includes("mascarilla")) lastRecommendedProduct="Mascarilla";
-    else if(t.includes("shampoo")||t.includes("aloe")) lastRecommendedProduct="Shampoo Aloe Vera";
+    else if(t.includes("mascarilla")) lastRecommendedProduct="Mascarilla Natural";
+    else if(t.includes("shampoo")||t.includes("aloe")||t.includes("romero")) lastRecommendedProduct="Shampoo Aloe & Romero";
   }
   const bubble=document.createElement("div");
   bubble.className="msg "+(role==="user"?"user":"ai");
@@ -2307,6 +2320,30 @@ body::before{content:'';position:fixed;inset:0;
 .modal-stars span.lit{color:var(--gold);}
 .modal-save{flex:1;background:var(--rose);border:none;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:10px;border-radius:8px;cursor:pointer;}
 .modal-cancel{background:var(--bg3);border:1px solid var(--border2);color:var(--muted2);font-family:'Space Grotesk',sans-serif;font-size:13px;padding:10px 16px;border-radius:8px;cursor:pointer;}
+.journal-layout{display:flex;flex-direction:column;gap:16px;}
+.journal-form-panel{background:var(--bg2);border:1px solid rgba(240,160,144,0.2);border-radius:14px;padding:20px;}
+.jf-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:14px;color:var(--text);}
+.jf-rating-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.jf-label{font-size:12px;color:var(--muted2);}
+.jf-stars span{font-size:22px;color:var(--border2);cursor:pointer;transition:color 0.15s;}
+.jf-stars span.active{color:var(--gold);}
+.jf-textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;padding:12px;resize:none;outline:none;line-height:1.6;box-sizing:border-box;}
+.jf-photo-row{display:flex;align-items:center;margin-top:10px;}
+.jf-photo-btn{font-size:12px;color:var(--muted2);cursor:pointer;border:1px dashed var(--border2);padding:7px 14px;border-radius:8px;transition:border-color 0.2s;}
+.jf-photo-btn:hover{border-color:var(--rose);}
+.journal-entries{display:flex;flex-direction:column;gap:12px;}
+.je-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:18px;position:relative;animation:fadeUp 0.3s forwards;}
+.je-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.je-date{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+.je-stars{font-size:14px;color:var(--gold);}
+.je-note{font-size:13px;color:var(--text);line-height:1.65;margin-bottom:10px;}
+.je-insight{background:rgba(193,163,162,0.08);border-left:2px solid var(--rose);padding:8px 12px;border-radius:0 8px 8px 0;font-size:12px;color:var(--muted2);line-height:1.6;}
+.je-insight::before{content:'✦ Aria: ';color:var(--rose);font-weight:600;}
+.je-del{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;opacity:0.5;}
+.je-del:hover{opacity:1;color:#e07070;}
+.je-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+.save-btn{background:linear-gradient(135deg,#c1a3a2,#d4a85a);border:none;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;padding:10px 20px;border-radius:8px;cursor:pointer;transition:opacity 0.2s;}
+.save-btn:hover{opacity:0.88;}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg3);border:1px solid rgba(240,160,144,0.3);color:var(--text);padding:9px 18px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;transition:transform 0.3s;z-index:999;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -2332,6 +2369,8 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab" onclick="switchPTab('routine')">✦ Routine</div>
     <div class="nav-tab" onclick="switchPTab('progress')">✦ Progress</div>
     <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
+    <div class="nav-tab" onclick="switchPTab('journal')">✦ Journal</div>
+    <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
   </div>
   <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
@@ -2648,6 +2687,103 @@ body::before{content:'';position:fixed;inset:0;
   </div>
 </div>
 
+<!-- ✦ HAIR JOURNAL -->
+<div class="ppage" id="pp-journal">
+  <div class="ppage-head">
+    <div class="ppage-title">✦ Hair Journal <span class="premium-badge">PREMIUM</span></div>
+    <button class="ppage-regen" onclick="openJournalEntry()">+ New Entry</button>
+  </div>
+  <div id="journal-gate" class="premium-gate" style="display:none">
+    <div class="gate-icon">📓</div>
+    <div class="gate-title">Hair Journal</div>
+    <div class="gate-desc">Log daily observations about your hair. Aria reads your entries over time and spots patterns — what's working, what isn't, and when your hair is at its best.</div>
+    <button class="gate-btn" onclick="showUpgradeModal('Hair Journal')">Unlock Premium →</button>
+  </div>
+  <div id="journal-content" style="display:none">
+    <div class="journal-layout">
+      <!-- New entry form -->
+      <div class="journal-form-panel" id="journal-form-panel" style="display:none">
+        <div class="jf-title">Today's Entry</div>
+        <div class="jf-rating-row">
+          <span class="jf-label">How's your hair today?</span>
+          <div class="jf-stars" id="jf-stars">
+            <span onclick="setJournalRating(1)">★</span>
+            <span onclick="setJournalRating(2)">★</span>
+            <span onclick="setJournalRating(3)">★</span>
+            <span onclick="setJournalRating(4)">★</span>
+            <span onclick="setJournalRating(5)">★</span>
+          </div>
+        </div>
+        <textarea id="jf-note" class="jf-textarea" placeholder="What did you notice about your hair today? Any treatments, changes, environment? The more detail the better for Aria to spot patterns…" rows="4"></textarea>
+        <div class="jf-photo-row">
+          <div class="jf-photo-btn" onclick="document.getElementById('jf-photo-input').click()">📸 Add Photo (optional)</div>
+          <input type="file" id="jf-photo-input" accept="image/*" style="display:none" onchange="onJournalPhoto(event)">
+          <img id="jf-photo-preview" style="display:none;max-height:80px;border-radius:8px;margin-left:10px;object-fit:cover;">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="save-btn" onclick="saveJournalEntry()">✦ Save Entry</button>
+          <button onclick="closeJournalEntry()" style="background:none;border:1px solid var(--border2);color:var(--muted2);padding:10px 16px;border-radius:6px;cursor:pointer;font-family:var(--brand-font-body);font-size:12px;">Cancel</button>
+        </div>
+        <div id="jf-saving" style="display:none;font-size:11px;color:var(--muted2);margin-top:6px;display:flex;align-items:center;gap:8px;">
+          <div class="ppage-spinner" style="width:14px;height:14px;"></div> Saving & asking Aria for insights…
+        </div>
+      </div>
+      <!-- Entries list -->
+      <div class="journal-entries" id="journal-entries">
+        <div class="h-empty">Loading journal…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✦ WHATSAPP / SMS ARIA -->
+<div class="ppage" id="pp-whatsapp">
+  <div class="ppage-head">
+    <div class="ppage-title">✦ Aria on WhatsApp &amp; SMS <span class="premium-badge">PREMIUM</span></div>
+  </div>
+  <div id="whatsapp-gate" class="premium-gate" style="display:none">
+    <div class="gate-icon">💬</div>
+    <div class="gate-title">Text Aria Directly</div>
+    <div class="gate-desc">Premium members can text Aria on WhatsApp or SMS and get personalized hair advice anytime, anywhere.</div>
+    <button class="gate-btn" onclick="showUpgradeModal('Aria on WhatsApp & SMS')">Unlock Premium →</button>
+  </div>
+  <div id="whatsapp-content" style="display:none">
+    <div style="max-width:500px;margin:0 auto;">
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="width:44px;height:44px;background:#25d366;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">💬</div>
+          <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">WhatsApp Aria</div><div style="font-size:12px;color:var(--muted2);">Chat directly on WhatsApp</div></div>
+        </div>
+        <a href="https://wa.me/18292332670" target="_blank" style="display:block;text-align:center;padding:12px;background:#25d366;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;border-radius:10px;text-decoration:none;margin-bottom:10px;">Open WhatsApp Chat →</a>
+        <div style="font-size:11px;color:var(--muted);text-align:center;">Text any hair question to start your session with Aria</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="width:44px;height:44px;background:var(--rose);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">📱</div>
+          <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Link Your Phone for Aria SMS</div><div style="font-size:12px;color:var(--muted2);">Aria remembers your hair profile when you text</div></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input id="phone-link-input" type="tel" placeholder="+1 (829) 233-2670" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;padding:10px 12px;outline:none;">
+          <button onclick="linkPhone()" id="link-phone-btn" style="background:var(--rose);border:none;color:#000;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;padding:10px 16px;border-radius:8px;cursor:pointer;white-space:nowrap;">Link</button>
+        </div>
+        <div id="phone-link-msg" style="font-size:11px;margin-top:8px;min-height:14px;"></div>
+      </div>
+      <!-- Push Notifications card -->
+      <div style="background:var(--bg2);border:1px solid rgba(240,160,144,0.25);border-radius:16px;padding:24px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+          <div style="width:44px;height:44px;background:linear-gradient(135deg,#c1a3a2,#d4a85a);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">🔔</div>
+          <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Wash Day Reminders</div><div style="font-size:12px;color:var(--muted2);">Aria notifies you based on your routine</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:14px;">Enable push notifications and Aria will remind you every morning when it's wash day, deep conditioning day, or scalp care day — based on the routine she built for you.</div>
+        <div id="push-btn-wrap">
+          <button onclick="enablePushNotifications()" id="push-enable-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#c1a3a2,#d4a85a);border:none;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;border-radius:10px;cursor:pointer;">🔔 Enable Reminders</button>
+        </div>
+        <div id="push-status" style="font-size:11px;color:var(--muted2);text-align:center;margin-top:8px;min-height:14px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- LOG TREATMENT MODAL -->
 <div class="modal-bg" id="log-modal" style="display:none" onclick="if(event.target===this)closeLogModal()">
   <div class="modal-box">
@@ -2840,7 +2976,7 @@ function switchPTab(name){
   }
   // Nav tabs
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4};
+  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4,journal:5,whatsapp:6};
   const idx=tabs[name]??0;
   document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
   // Profile/history sub-tabs
@@ -2859,11 +2995,11 @@ function switchPTab(name){
 function onPremiumPageOpen(name){
   if(!_isPremium){
     // Show gates on premium pages
-    ['routine-gate','progress-gate','photo-gate'].forEach(id=>{
+    ['routine-gate','progress-gate','photo-gate','journal-gate','whatsapp-gate'].forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.style.display='';
     });
-    ['routine-content','routine-empty','progress-content','photo-content'].forEach(id=>{
+    ['routine-content','routine-empty','progress-content','photo-content','journal-content','whatsapp-content'].forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.style.display='none';
     });
@@ -2872,6 +3008,8 @@ function onPremiumPageOpen(name){
   if(name==='routine') openRoutinePage();
   if(name==='progress') openProgressPage();
   if(name==='photo') openPhotoPage();
+  if(name==='journal') openJournalPage();
+  if(name==='whatsapp') openWhatsappPage();
 }
 
 // ── ROUTINE BUILDER ──────────────────────────────────────────────────────────
@@ -3062,6 +3200,221 @@ function activateStat(el){
   el.classList.add('active');
 }
 
+
+// ── HAIR JOURNAL ─────────────────────────────────────────────────────────────
+let _journalRating = 3;
+let _journalPhotoB64 = null;
+
+function openJournalPage(){
+  document.getElementById('journal-gate').style.display='none';
+  document.getElementById('journal-content').style.display='block';
+  loadJournalEntries();
+}
+
+function openJournalEntry(){
+  if(!_isPremium){ showUpgradeModal('Hair Journal'); return; }
+  _journalRating=3; _journalPhotoB64=null;
+  document.getElementById('jf-note').value='';
+  document.getElementById('jf-photo-preview').style.display='none';
+  document.getElementById('jf-saving').style.display='none';
+  document.getElementById('journal-form-panel').style.display='block';
+  renderJournalStars(3);
+  document.getElementById('jf-note').focus();
+}
+
+function closeJournalEntry(){
+  document.getElementById('journal-form-panel').style.display='none';
+}
+
+function setJournalRating(n){
+  _journalRating=n;
+  renderJournalStars(n);
+}
+
+function renderJournalStars(n){
+  document.querySelectorAll('#jf-stars span').forEach((s,i)=>{
+    s.classList.toggle('active', i<n);
+  });
+}
+
+function onJournalPhoto(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    _journalPhotoB64=ev.target.result;
+    const img=document.getElementById('jf-photo-preview');
+    img.src=_journalPhotoB64; img.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveJournalEntry(){
+  const note=document.getElementById('jf-note').value.trim();
+  if(!note){ showToast('Write something about your hair first'); return; }
+  document.getElementById('jf-saving').style.display='flex';
+  document.querySelector('.save-btn').disabled=true;
+  try{
+    const body={note, hair_rating:_journalRating};
+    if(_journalPhotoB64) body.image_b64=_journalPhotoB64;
+    const r=await fetch('/api/journal',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.ok){
+      closeJournalEntry();
+      showToast('Entry saved ✓');
+      if(d.aria_insight) showToast('✦ '+d.aria_insight, 4000);
+      loadJournalEntries();
+    } else { showToast(d.error||'Save failed'); }
+  }catch(e){ showToast('Save error'); }
+  document.getElementById('jf-saving').style.display='none';
+  document.querySelector('.save-btn').disabled=false;
+}
+
+async function loadJournalEntries(){
+  const container=document.getElementById('journal-entries');
+  container.innerHTML='<div class="je-empty">Loading…</div>';
+  try{
+    const r=await fetch('/api/journal',{headers:{'X-Auth-Token':token}});
+    const d=await r.json();
+    if(!d.entries?.length){
+      container.innerHTML='<div class="je-empty">No journal entries yet.<br>Tap <b>+ New Entry</b> to start logging your hair journey.</div>';
+      return;
+    }
+    container.innerHTML=d.entries.map(e=>`
+      <div class="je-card" id="je-${e.id}">
+        <button class="je-del" onclick="deleteJournalEntry(${e.id})" title="Delete">✕</button>
+        <div class="je-top">
+          <span class="je-date">${e.ts.slice(0,10)}</span>
+          <span class="je-stars">${'★'.repeat(e.hair_rating||3)}${'☆'.repeat(5-(e.hair_rating||3))}</span>
+        </div>
+        <div class="je-note">${e.note}</div>
+        ${e.aria_insight?`<div class="je-insight">${e.aria_insight}</div>`:''}
+      </div>`).join('');
+  }catch(e){ container.innerHTML='<div class="je-empty">Could not load entries.</div>'; }
+}
+
+async function deleteJournalEntry(id){
+  await fetch('/api/journal?id='+id,{method:'DELETE',headers:{'X-Auth-Token':token}});
+  const el=document.getElementById('je-'+id);
+  if(el) el.remove();
+}
+
+
+// ── WHATSAPP PAGE ─────────────────────────────────────────────────────────────
+function openWhatsappPage(){
+  document.getElementById('whatsapp-gate').style.display='none';
+  document.getElementById('whatsapp-content').style.display='block';
+  checkPushStatus();
+}
+
+async function linkPhone(){
+  const phone=document.getElementById('phone-link-input').value.trim();
+  if(!phone){ document.getElementById('phone-link-msg').textContent='Enter your phone number'; return; }
+  document.getElementById('link-phone-btn').disabled=true;
+  try{
+    const r=await fetch('/api/twilio/link-phone',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({phone})});
+    const d=await r.json();
+    document.getElementById('phone-link-msg').textContent=d.ok?'✓ Phone linked! Text Aria anytime.':(d.error||'Failed to link');
+    document.getElementById('phone-link-msg').style.color=d.ok?'var(--rose)':'#e07070';
+  }catch(e){ document.getElementById('phone-link-msg').textContent='Error linking phone'; }
+  document.getElementById('link-phone-btn').disabled=false;
+}
+
+
+// ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
+let _vapidKey = null;
+
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const rawData=window.atob(base64);
+  return Uint8Array.from([...rawData].map(c=>c.charCodeAt(0)));
+}
+
+async function checkPushStatus(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    document.getElementById('push-status').textContent='Push not supported on this browser.';
+    document.getElementById('push-enable-btn').disabled=true;
+    return;
+  }
+  const perm=Notification.permission;
+  if(perm==='granted'){
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    if(sub){
+      document.getElementById('push-enable-btn').textContent='✓ Reminders Active';
+      document.getElementById('push-enable-btn').style.background='rgba(100,200,100,0.15)';
+      document.getElementById('push-enable-btn').style.color='#7ecf7e';
+      document.getElementById('push-enable-btn').onclick=disablePushNotifications;
+      document.getElementById('push-status').textContent='You will get daily routine reminders at 8 AM.';
+    }
+  } else if(perm==='denied'){
+    document.getElementById('push-status').textContent='Notifications blocked — enable in browser settings.';
+    document.getElementById('push-enable-btn').disabled=true;
+  }
+}
+
+async function enablePushNotifications(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+    showToast('Push not supported on this browser'); return;
+  }
+  try{
+    // Get VAPID key
+    if(!_vapidKey){
+      const kr=await fetch('/api/push/vapid-public-key');
+      const kd=await kr.json();
+      _vapidKey=kd.key;
+    }
+    if(!_vapidKey){ showToast('Push not configured — contact support'); return; }
+
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ showToast('Permission denied'); return; }
+
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:urlBase64ToUint8Array(_vapidKey)
+    });
+    const subJson=sub.toJSON();
+    await fetch('/api/push/subscribe',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body:JSON.stringify({
+        endpoint:subJson.endpoint,
+        p256dh:subJson.keys.p256dh,
+        auth:subJson.keys.auth
+      })
+    });
+    showToast('🔔 Reminders enabled! Aria will notify you on wash days.');
+    checkPushStatus();
+  }catch(e){ showToast('Could not enable notifications: '+e.message); }
+}
+
+async function disablePushNotifications(){
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    if(sub){
+      await fetch('/api/push/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({endpoint:sub.endpoint})});
+      await sub.unsubscribe();
+    }
+    showToast('Reminders disabled');
+    document.getElementById('push-enable-btn').textContent='🔔 Enable Reminders';
+    document.getElementById('push-enable-btn').style.background='linear-gradient(135deg,#c1a3a2,#d4a85a)';
+    document.getElementById('push-enable-btn').style.color='#000';
+    document.getElementById('push-enable-btn').onclick=enablePushNotifications;
+    document.getElementById('push-status').textContent='';
+  }catch(e){ showToast('Error: '+e.message); }
+}
+
+// Register service worker + auto-check push on load
+(async()=>{
+  if('serviceWorker' in navigator){
+    try{
+      await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+    }catch(e){ console.warn('SW register failed',e); }
+  }
+})();
 
 // ── ARIA SPHERE CHAT + VOICE ──
 let sphereBusy=false;
@@ -3707,6 +4060,300 @@ def _keep_alive():
         except: pass
 
 threading.Thread(target=_keep_alive, daemon=True).start()
+
+
+# ── PWA MANIFEST + SERVICE WORKER ─────────────────────────────────────────────
+@app.route("/manifest.json")
+def pwa_manifest():
+    manifest = {
+        "name": "Aria — SupportRD Hair Advisor",
+        "short_name": "Aria",
+        "description": "Your personal AI hair advisor from SupportRD",
+        "start_url": "/dashboard",
+        "display": "standalone",
+        "background_color": "#f0ebe8",
+        "theme_color": "#c1a3a2",
+        "orientation": "portrait",
+        "id": "/dashboard",
+        "icons": [
+            {"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+        ],
+        "shortcuts": [
+            {"name": "Chat with Aria", "url": "/", "description": "Start a hair consultation", "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512"}]},
+            {"name": "My Dashboard", "url": "/dashboard", "description": "View your hair health dashboard", "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512"}]}
+        ]
+    }
+    resp = Response(json.dumps(manifest), mimetype="application/manifest+json")
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+@app.route("/sw.js")
+def service_worker():
+    sw = """
+const CACHE = 'aria-v6';
+
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  if(e.request.method !== 'GET' || e.request.url.includes('/api/')) return;
+  const url = new URL(e.request.url);
+  if(url.pathname === '/') { e.respondWith(Response.redirect('/dashboard', 302)); return; }
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+});
+
+// ── PUSH NOTIFICATIONS ──
+self.addEventListener('push', e => {
+  const data = e.data ? e.data.json() : {};
+  const title = data.title || 'Aria Hair Advisor';
+  const options = {
+    body: data.body || 'Time to care for your hair!',
+    icon: 'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838',
+    badge: 'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838',
+    data: { url: data.url || '/dashboard' },
+    vibrate: [200, 100, 200],
+    actions: [
+      { action: 'open', title: 'Open Aria' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ]
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  if(e.action !== 'dismiss'){
+    const url = e.notification.data?.url || '/dashboard';
+    e.waitUntil(clients.openWindow(url));
+  }
+});
+""".strip()
+    return Response(sw, mimetype="application/javascript", headers={
+        "Service-Worker-Allowed": "/",
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+    })
+
+
+# ── PUSH NOTIFICATION ROUTES ───────────────────────────────────────────────────
+@app.route("/api/push/subscribe", methods=["POST", "OPTIONS"])
+def push_subscribe():
+    user = get_current_user()
+    if not user: return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    endpoint = data.get("endpoint", "")
+    p256dh   = data.get("p256dh", "")
+    auth     = data.get("auth", "")
+    if not endpoint or not p256dh or not auth:
+        return jsonify({"error": "Missing subscription fields"}), 400
+    db_execute(
+        "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth) VALUES (?,?,?,?) "
+        "ON CONFLICT(user_id, endpoint) DO UPDATE SET p256dh=excluded.p256dh, auth=excluded.auth",
+        (user["id"], endpoint, p256dh, auth)
+    )
+    return jsonify({"ok": True})
+
+@app.route("/api/push/unsubscribe", methods=["POST", "OPTIONS"])
+def push_unsubscribe():
+    user = get_current_user()
+    if not user: return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    endpoint = data.get("endpoint", "")
+    if endpoint:
+        db_execute("DELETE FROM push_subscriptions WHERE user_id=? AND endpoint=?", (user["id"], endpoint))
+    return jsonify({"ok": True})
+
+@app.route("/api/push/vapid-public-key", methods=["GET"])
+def vapid_public_key():
+    key = os.environ.get("VAPID_PUBLIC_KEY", "")
+    return jsonify({"key": key})
+
+def _send_push_notification(user_id, title, body, url="/dashboard"):
+    """Send a Web Push notification to all of a user's subscriptions."""
+    vapid_private = os.environ.get("VAPID_PRIVATE_KEY", "")
+    vapid_public  = os.environ.get("VAPID_PUBLIC_KEY", "")
+    vapid_email   = os.environ.get("VAPID_EMAIL", "mailto:hello@supportrd.com")
+    if not vapid_private or not vapid_public:
+        print("VAPID keys not configured — push not sent")
+        return
+    try:
+        from pywebpush import webpush, WebPushException
+    except ImportError:
+        print("pywebpush not installed — run: pip install pywebpush")
+        return
+    rows = db_execute(
+        "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id=?",
+        (user_id,), fetchall=True
+    ) or []
+    payload = json.dumps({"title": title, "body": body, "url": url})
+    for (endpoint, p256dh, auth) in rows:
+        try:
+            webpush(
+                subscription_info={"endpoint": endpoint, "keys": {"p256dh": p256dh, "auth": auth}},
+                data=payload,
+                vapid_private_key=vapid_private,
+                vapid_claims={"sub": vapid_email}
+            )
+        except WebPushException as e:
+            if "410" in str(e) or "404" in str(e):
+                db_execute("DELETE FROM push_subscriptions WHERE endpoint=?", (endpoint,))
+        except Exception as e:
+            print(f"Push send error: {e}")
+
+# ── PUSH SCHEDULER — sends routine reminders daily ─────────────────────────────
+def _start_push_scheduler():
+    import time as _t
+
+    WASH_DAY_KEYWORDS  = ["wash day", "shampoo", "cleanse"]
+    DEEP_COND_KEYWORDS = ["deep condition", "mascarilla", "conditioning"]
+    SCALP_KEYWORDS     = ["scalp", "gotero", "dropper"]
+    TREATMENT_KEYWORDS = ["treatment", "formula exclusiva", "laciador"]
+
+    def _get_todays_routine_events():
+        """Return list of (user_id, notification_title, notification_body) for today."""
+        day_name = datetime.datetime.utcnow().strftime("%A").lower()
+        con = get_db()
+        rows = con.execute(
+            "SELECT u.id, u.name, r.routine_json FROM users u "
+            "JOIN routines r ON r.user_id = u.id "
+            "JOIN push_subscriptions ps ON ps.user_id = u.id "
+            "WHERE r.routine_json IS NOT NULL"
+        ).fetchall()
+        con.close()
+        events = []
+        for (uid, name, routine_json) in rows:
+            try:
+                rt    = json.loads(routine_json)
+                today = rt.get("days", {}).get(day_name, {})
+                title_tag  = today.get("title", "")
+                products   = " ".join(today.get("products", [])).lower()
+                morning    = " ".join(today.get("morning", [])).lower()
+                all_text   = (title_tag + " " + products + " " + morning).lower()
+                fname = (name or "").split()[0] if name else "Hey"
+                if any(k in all_text for k in WASH_DAY_KEYWORDS):
+                    events.append((uid, f"🚿 Wash Day — {fname}!", f"Today is your wash day. {title_tag} — Aria is ready to guide you.", "/dashboard"))
+                elif any(k in all_text for k in DEEP_COND_KEYWORDS):
+                    events.append((uid, f"🥑 Deep Condition Day — {fname}!", f"Today: {title_tag}. Don't skip your deep conditioning treatment!", "/dashboard"))
+                elif any(k in all_text for k in SCALP_KEYWORDS):
+                    events.append((uid, f"💧 Scalp Care Day — {fname}!", f"Tonight apply your Gotero Rapido before bed. Your scalp will thank you.", "/dashboard"))
+                elif any(k in all_text for k in TREATMENT_KEYWORDS):
+                    events.append((uid, f"✦ Treatment Day — {fname}!", f"Today: {title_tag}. Your SupportRD products are ready.", "/dashboard"))
+                elif title_tag:
+                    events.append((uid, f"🌿 Hair Routine — {fname}!", f"Today is your {title_tag}. Aria built your routine — check it out.", "/dashboard"))
+            except Exception as e:
+                print(f"Push scheduler routine parse error: {e}")
+        return events
+
+    def _scheduler():
+        _t.sleep(120)  # wait for app to start
+        fired_today = set()
+        while True:
+            now = datetime.datetime.utcnow()
+            # Send reminders at 8:00 AM UTC daily
+            if now.hour == 8 and now.minute == 0:
+                day_key = now.strftime("%Y-%m-%d")
+                if day_key not in fired_today:
+                    fired_today.add(day_key)
+                    if len(fired_today) > 7:
+                        fired_today.pop()
+                    try:
+                        events = _get_todays_routine_events()
+                        for (uid, title, body, url) in events:
+                            threading.Thread(
+                                target=_send_push_notification,
+                                args=(uid, title, body, url),
+                                daemon=True
+                            ).start()
+                        print(f"Push scheduler: sent {len(events)} reminders for {day_key}")
+                    except Exception as e:
+                        print(f"Push scheduler error: {e}")
+            _t.sleep(55)  # check every ~minute
+
+    threading.Thread(target=_scheduler, daemon=True).start()
+
+_start_push_scheduler()
+
+
+# ── HAIR JOURNAL ROUTES ────────────────────────────────────────────────────────
+@app.route("/api/journal", methods=["GET", "POST", "DELETE"])
+def hair_journal():
+    user = get_current_user()
+    if not user: return jsonify({"error": "unauthorized"}), 401
+
+    if request.method == "DELETE":
+        eid = request.args.get("id")
+        if eid:
+            db_execute("DELETE FROM hair_journal WHERE id=? AND user_id=?", (eid, user["id"]))
+        return jsonify({"ok": True})
+
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        note        = data.get("note", "").strip()
+        image_b64   = data.get("image_b64", "")
+        hair_rating = int(data.get("hair_rating", 3))
+        if not note: return jsonify({"error": "Note required"}), 400
+
+        # Strip data URL prefix
+        if image_b64 and "," in image_b64:
+            image_b64 = image_b64.split(",", 1)[1]
+
+        # Ask Aria for a pattern insight after 3+ entries
+        aria_insight = ""
+        try:
+            recent = db_execute(
+                "SELECT note, hair_rating, ts FROM hair_journal WHERE user_id=? ORDER BY ts DESC LIMIT 7",
+                (user["id"],), fetchall=True
+            ) or []
+            if len(recent) >= 2:
+                history_text = "\n".join([f"- {r[2][:10]} (rating {r[1]}/5): {r[0]}" for r in recent])
+                insight_prompt = f"""You are Aria. Based on this user's last {len(recent)} hair journal entries, give ONE short pattern observation (1-2 sentences max, warm and specific). Focus on trends you notice.
+
+Journal entries:
+{history_text}
+
+New entry today (rating {hair_rating}/5): {note}
+
+Respond with just the insight, no preamble."""
+                import urllib.request as _ur
+                payload = json.dumps({
+                    "model": "claude-sonnet-4-20250514",
+                    "max_tokens": 80,
+                    "messages": [{"role": "user", "content": insight_prompt}]
+                }).encode()
+                req = _ur.Request(
+                    "https://api.anthropic.com/v1/messages",
+                    data=payload,
+                    headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
+                    method="POST"
+                )
+                with _ur.urlopen(req, timeout=10) as resp:
+                    result = json.loads(resp.read())
+                    aria_insight = result["content"][0]["text"].strip()
+        except Exception as e:
+            print(f"Journal insight error: {e}")
+
+        db_execute(
+            "INSERT INTO hair_journal (user_id, note, image_b64, hair_rating, aria_insight) VALUES (?,?,?,?,?)",
+            (user["id"], note, image_b64, hair_rating, aria_insight)
+        )
+        return jsonify({"ok": True, "aria_insight": aria_insight})
+
+    # GET — return last 30 entries
+    con = get_db()
+    rows = con.execute(
+        "SELECT id, note, hair_rating, aria_insight, ts FROM hair_journal WHERE user_id=? ORDER BY ts DESC LIMIT 30",
+        (user["id"],)
+    ).fetchall()
+    con.close()
+    return jsonify({"entries": [
+        {"id": r[0], "note": r[1], "hair_rating": r[2], "aria_insight": r[3], "ts": r[4]}
+        for r in rows
+    ]})
 
 
 # ── RUNNER ────────────────────────────────────────────────────────────────────
