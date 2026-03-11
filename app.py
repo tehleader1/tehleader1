@@ -202,6 +202,58 @@ def extract_product(text):
     if "shampoo" in t or "aloe" in t: return "Shampoo Aloe Vera"
     return "Unknown"
 
+# Product metadata for recommendation cards shown in chat
+PRODUCT_CARDS = {
+    "Formula Exclusiva": {
+        "name": "Formula Exclusiva",
+        "emoji": "🌿",
+        "tagline": "Professional all-in-one repair treatment",
+        "best_for": "Damaged, weak, breaking or thinning hair",
+        "price": "$55",
+        "order_url": "https://supportrd.com/pages/custom-order?product=formula-exclusiva"
+    },
+    "Laciador Crece": {
+        "name": "Laciador Crece",
+        "emoji": "✨",
+        "tagline": "Restructurer for softness, shine & growth",
+        "best_for": "Dry hair, frizz, lack of shine, styling",
+        "price": "$40",
+        "order_url": "https://supportrd.com/pages/custom-order?product=laciador-crece"
+    },
+    "Gotero Rapido": {
+        "name": "Gotero Rápido",
+        "emoji": "💧",
+        "tagline": "Fast-acting scalp & growth serum",
+        "best_for": "Hair loss, slow growth, scalp issues",
+        "price": "$55",
+        "order_url": "https://supportrd.com/pages/custom-order?product=gotero-rapido"
+    },
+    "Gotitas Brillantes": {
+        "name": "Gotitas Brillantes",
+        "emoji": "🎨",
+        "tagline": "Finishing drops for shine & softness",
+        "best_for": "Shine, frizz control, styling finish",
+        "price": "$30",
+        "order_url": "https://supportrd.com/pages/custom-order?product=gotitas-brillantes"
+    },
+    "Mascarilla": {
+        "name": "Mascarilla Natural",
+        "emoji": "🥑",
+        "tagline": "Deep conditioning avocado mask",
+        "best_for": "Deep conditioning, dry or damaged hair",
+        "price": "$25",
+        "order_url": "https://supportrd.com/pages/custom-order?product=mascarilla"
+    },
+    "Shampoo Aloe Vera": {
+        "name": "Shampoo Aloe & Romero",
+        "emoji": "🌱",
+        "tagline": "Cleansing shampoo with aloe & rosemary",
+        "best_for": "Scalp stimulation, daily cleanse, growth",
+        "price": "$20",
+        "order_url": "https://supportrd.com/pages/custom-order?product=shampoo-aloe"
+    }
+}
+
 def extract_concern(text):
     t = text.lower()
     if any(w in t for w in ["damag","break","weak","fall","shed","bald","thin"]): return "damaged/falling"
@@ -268,10 +320,10 @@ STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID        = os.environ.get("STRIPE_PRICE_ID", "")
 STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_TRIAL_DAYS      = 7
-FREE_RESPONSE_LIMIT    = 999999  # unlimited — no cap on free users
-FREE_RESPONSE_PERIOD   = "weekly"
+FREE_RESPONSE_LIMIT    = 50
+FREE_RESPONSE_PERIOD   = "weekly"   # reset every 7 days
 SUBSCRIPTION_PRICE_USD = 80
-APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://aria.supportrd.com")
+APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor.onrender.com")
 SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
 SHOPIFY_ADMIN_TOKEN    = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
 SHOPIFY_PRODUCT_HANDLE = "hair-advisor-premium"
@@ -393,19 +445,11 @@ def increment_session_count(session_id, user_id=None):
 # ── MAIN ROUTE: ARIA SPHERE UI ────────────────────────────────────────────────
 @app.route("/")
 def index():
-    # Always redirect to dashboard - old sphere is retired
-    return redirect("/dashboard")
     return r"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#c1a3a2">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Aria">
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/static/icon-192.png">
 <title>Aria — SupportRD Hair Advisor</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
 <style>
@@ -450,6 +494,18 @@ body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 10
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 .msg.user{background:rgba(0,0,0,0.07);color:rgba(0,0,0,0.60);align-self:flex-end;border-bottom-right-radius:4px;font-family:var(--brand-font-body);}
 .msg.ai{background:rgba(var(--brand-idle-r),var(--brand-idle-g),var(--brand-idle-b),0.10);color:rgba(0,0,0,0.80);align-self:flex-start;border-bottom-left-radius:4px;font-family:var(--brand-font-head);font-style:italic;font-size:15px;}
+/* ── Product Recommendation Card ── */
+.srd-product-card{align-self:flex-start;width:100%;max-width:320px;animation:fadeIn 0.5s ease 0.2s both;}
+.srd-card-inner{background:linear-gradient(135deg,rgba(193,163,162,0.15),rgba(212,168,90,0.10));border:1px solid rgba(193,163,162,0.35);border-radius:16px;padding:14px 16px;backdrop-filter:blur(8px);}
+.srd-card-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.srd-card-emoji{font-size:28px;line-height:1;flex-shrink:0;}
+.srd-card-info{flex:1;}
+.srd-card-name{font-family:var(--brand-font-head);font-size:15px;font-weight:600;color:#3a2a1a;letter-spacing:0.01em;}
+.srd-card-tagline{font-size:12px;color:rgba(0,0,0,0.50);font-style:italic;margin-top:1px;}
+.srd-card-price{font-family:var(--brand-font-head);font-size:16px;font-weight:700;color:#c1a3a2;flex-shrink:0;}
+.srd-card-best{font-size:11px;color:rgba(0,0,0,0.45);letter-spacing:0.04em;margin-bottom:10px;padding-left:2px;}
+.srd-card-btn{display:block;text-align:center;background:linear-gradient(135deg,#c1a3a2,#d4a85a);color:#fff;font-family:var(--brand-font-body);font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none;padding:10px 16px;border-radius:10px;transition:opacity 0.2s,transform 0.2s;}
+.srd-card-btn:hover{opacity:0.88;transform:translateY(-1px);}
 
 #clearBtn{margin-top:8px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.25);cursor:pointer;background:none;border:none;font-family:var(--brand-font-body);transition:color 0.3s;display:none;}
 #clearBtn:hover{color:rgba(0,0,0,0.55);}
@@ -785,7 +841,7 @@ let mediaRecorder=null, audioChunks=[], recordingTimer=null;
 let _paywallDismissed=false;
 const SESSION_ID='srd_'+Math.random().toString(36).substr(2,9);
 
-function addToHistory(role,text){
+function addToHistory(role,text,productCard){
   conversationHistory.push({role,content:text});
   if(role==="assistant"){
     const t=text.toLowerCase();
@@ -800,6 +856,29 @@ function addToHistory(role,text){
   bubble.className="msg "+(role==="user"?"user":"ai");
   bubble.textContent=text;
   historyEl.appendChild(bubble);
+
+  // Render product recommendation card after Aria's message
+  if(role==="assistant" && productCard){
+    const card=document.createElement("div");
+    card.className="srd-product-card";
+    card.innerHTML=`
+      <div class="srd-card-inner">
+        <div class="srd-card-top">
+          <span class="srd-card-emoji">${productCard.emoji}</span>
+          <div class="srd-card-info">
+            <div class="srd-card-name">${productCard.name}</div>
+            <div class="srd-card-tagline">${productCard.tagline}</div>
+          </div>
+          <div class="srd-card-price">${productCard.price}</div>
+        </div>
+        <div class="srd-card-best">✦ Best for: ${productCard.best_for}</div>
+        <a class="srd-card-btn" href="${productCard.order_url}" target="_blank" rel="noopener">
+          Request This Product →
+        </a>
+      </div>`;
+    historyEl.appendChild(card);
+  }
+
   historyEl.scrollTop=historyEl.scrollHeight;
   clearBtn.classList.add("visible");
   responseBox.textContent="";
@@ -973,11 +1052,11 @@ async function getRecommendation(userText){
     if(!resp.ok) throw new Error("not ok");
     const data=await resp.json();
     handleSubscriptionResponse(data);
-    if(data.recommendation) return data.recommendation;
-    if(data.reply) return data.reply;
+    if(data.recommendation) return {text: data.recommendation, product: data.suggested_product||null};
+    if(data.reply) return {text: data.reply, product: null};
     throw new Error("empty");
   }catch(e){
-    return localRecommend(userText);
+    return {text: localRecommend(userText), product: null};
   }
 }
 
@@ -992,9 +1071,10 @@ async function processText(text){
   setState("idle");setColor(...IDLE);
   responseBox.textContent="Thinking…";stateLabel.textContent="Thinking";
   const result=await getRecommendation(text);
-  const final=result||localRecommend(text);
-  addToHistory("assistant",final);
-  setTimeout(()=>speak(final,true),400);
+  const finalText=result.text||localRecommend(text);
+  const finalProduct=result.product||null;
+  addToHistory("assistant",finalText,finalProduct);
+  setTimeout(()=>speak(finalText,true),400);
 }
 
 const NO_HEAR={"en-US":"I didn't hear anything. Please tap and describe your hair concern.","es-ES":"No escuché nada. Por favor toca y describe tu preocupación.","fr-FR":"Je n'ai rien entendu. Veuillez appuyer et décrire votre préoccupation.","pt-BR":"Não ouvi nada. Por favor toque e descreva sua preocupação.","de-DE":"Ich habe nichts gehört. Bitte tippen und Ihr Problem beschreiben.","ar-SA":"لم أسمع شيئاً. يرجى النقر ووصف قلقك.","zh-CN":"我没有听到。请点击并描述您的问题。","hi-IN":"मुझे कुछ सुनाई नहीं दिया। कृपया टैप करें।"};
@@ -1076,90 +1156,6 @@ function handleSubscriptionResponse(data){
   }
 }
 function closePaywall(){ _paywallDismissed=true; document.getElementById('paywallBanner').style.display='none'; }
-function showUpgradeModal(featureName){
-  const titles = {
-    'Smart Routine Builder': 'Unlock Your Personal Routine',
-    'Hair Health Timeline': 'Track Your Hair Journey',
-    'AI Photo Analysis': 'Unlock AI Photo Analysis'
-  };
-  document.getElementById('upgrade-modal-title').textContent = titles[featureName] || 'Hair Advisor Premium';
-  document.getElementById('activate-modal-msg').textContent = '';
-  document.getElementById('activate-email-modal').value = '';
-  // Pre-fill email if logged in
-  try{const u=JSON.parse(localStorage.getItem('srd_user')||'{}'); if(u.email) document.getElementById('activate-email-modal').value=u.email;}catch(e){}
-  document.getElementById('upgrade-modal').style.display='flex';
-}
-function closeUpgradeModal(){
-  document.getElementById('upgrade-modal').style.display='none';
-}
-async function activateFromModal(){
-  const email = document.getElementById('activate-email-modal').value.trim();
-  const btn = document.getElementById('activate-modal-btn');
-  const msg = document.getElementById('activate-modal-msg');
-  if(!email){ msg.style.color='#e08080'; msg.textContent='Please enter your email.'; return; }
-  btn.disabled=true; btn.textContent='Checking…'; msg.textContent='';
-  try{
-    const r=await fetch('/api/subscription/activate-shopify',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({email})});
-    const d=await r.json();
-    if(d.ok){
-      msg.style.color='#80e0a0'; msg.textContent='✓ Premium activated! Reloading…';
-      try{const u=JSON.parse(localStorage.getItem('srd_user')||'{}');u.plan='premium';localStorage.setItem('srd_user',JSON.stringify(u));}catch(e){}
-      setTimeout(()=>{ closeUpgradeModal(); location.reload(); }, 1200);
-    } else {
-      msg.style.color='#e08080';
-      msg.textContent = d.error || 'No purchase found. Please buy at supportrd.com first.';
-      btn.disabled=false; btn.textContent='Activate';
-    }
-  }catch(e){ msg.style.color='#e08080'; msg.textContent='Network error. Try again.'; btn.disabled=false; btn.textContent='Activate'; }
-}
-
-// ── PWA SERVICE WORKER ──
-if('serviceWorker' in navigator){
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('/sw.js').then(function(reg){
-      console.log('SW registered');
-    }).catch(function(err){
-      console.log('SW failed:', err);
-    });
-  });
-}
-
-// ── PWA INSTALL ──────────────────────────────────────────────────────────────
-let _pwaPrompt = null;
-
-window.addEventListener('beforeinstallprompt', function(e){
-  e.preventDefault();
-  _pwaPrompt = e;
-  // Store prompt but don't show button - install via address bar or 3-dot menu
-});
-
-window.addEventListener('appinstalled', function(){
-  var btn = document.getElementById('pwa-install-btn');
-  if(btn) btn.style.display = 'none';
-  _pwaPrompt = null;
-});
-
-function triggerPWAInstall(){
-  var ua = navigator.userAgent || '';
-  var isIOS = /iPhone|iPad|iPod/i.test(ua);
-  if(isIOS){
-    alert('To install Aria on iPhone:\n\n1. Tap the Share button in Safari\n2. Tap "Add to Home Screen"\n3. Tap "Add"');
-    return;
-  }
-  if(_pwaPrompt){
-    _pwaPrompt.prompt();
-    _pwaPrompt.userChoice.then(function(r){
-      _pwaPrompt = null;
-      if(r.outcome === 'accepted'){
-        var btn = document.getElementById('pwa-install-btn');
-        if(btn) btn.style.display = 'none';
-      }
-    });
-  } else {
-    alert('To install: tap the 3-dot menu in Chrome and select "Add to Home Screen"');
-  }
-}
-
 async function goUpgrade(){
   const token=localStorage.getItem('srd_token');
   if(!token){ window.location.href='/login?next=subscribe'; return; }
@@ -1207,7 +1203,7 @@ Reference this naturally in your response."""
         save_chat_message(user["id"], "user", user_text)
 
     active_prompt = SYSTEM_PROMPT + profile_context + lang_instr
-    max_tokens    = 500 if subscribed else 130  # premium gets full response, free gets brief
+    max_tokens    = 350
 
     if not ANTHROPIC_API_KEY:
         return jsonify({"recommendation": None, "error": "No API key"}), 500
@@ -1263,6 +1259,9 @@ Reference this naturally in your response."""
         concern = extract_concern(user_text)
         log_event(lang, user_text, product, concern)
 
+        # Build product card if a specific product was mentioned
+        product_card = PRODUCT_CARDS.get(product) if product != "Unknown" else None
+
         return jsonify({
             "recommendation":  recommendation,
             "reply":           recommendation,
@@ -1272,7 +1271,8 @@ Reference this naturally in your response."""
             "response_count":  new_count,
             "free_limit":      FREE_RESPONSE_LIMIT,
             "show_paywall":    False,
-            "paywall_soft":    True
+            "paywall_soft":    True,
+            "suggested_product": product_card
         })
 
     except Exception as e:
@@ -1551,9 +1551,6 @@ def add_cors_headers(response):
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Auth-Token, X-Session-Id"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE"
     response.headers["Access-Control-Max-Age"]       = "3600"
-    # Allow embedding in Shopify iframe
-    response.headers["X-Frame-Options"]              = "ALLOW-FROM https://supportrd.com"
-    response.headers["Content-Security-Policy"]      = "frame-ancestors https://supportrd.com https://*.myshopify.com *"
     return response
 
 
@@ -1744,10 +1741,10 @@ def subscription_status():
         sub        = get_subscription(user["id"])
         count      = get_session_count(session_id, user["id"])
         subscribed = is_subscribed(user["id"])
-        return jsonify({"subscribed":subscribed,"plan":sub["plan"] if sub else "free","status":sub["status"] if sub else "inactive","trial_end":sub["trial_end"] if sub else None,"current_period_end":sub["current_period_end"] if sub else None,"response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":False})
+        return jsonify({"subscribed":subscribed,"plan":sub["plan"] if sub else "free","status":sub["status"] if sub else "inactive","trial_end":sub["trial_end"] if sub else None,"current_period_end":sub["current_period_end"] if sub else None,"response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":not subscribed and count>=FREE_RESPONSE_LIMIT})
     else:
         count = get_session_count(session_id)
-        return jsonify({"subscribed":False,"plan":"free","status":"inactive","response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":False})
+        return jsonify({"subscribed":False,"plan":"free","status":"inactive","response_count":count,"free_limit":FREE_RESPONSE_LIMIT,"show_paywall":count>=FREE_RESPONSE_LIMIT})
 
 @app.route("/api/subscription/checkout", methods=["POST","OPTIONS"])
 def create_checkout():
@@ -1932,18 +1929,6 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 def login_page():
     return f"""<!DOCTYPE html><html><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#c1a3a2">
-<link rel="manifest" href="/manifest.json">
-<script>
-// Capture install prompt as early as possible
-window._pwaPrompt = null;
-window.addEventListener('beforeinstallprompt', function(e) {{
-  e.preventDefault();
-  window._pwaPrompt = e;
-  var b = document.getElementById('pwa-install-bar');
-  if(b) b.style.display = 'flex';
-}});
-</script>
 <title>SupportRD — Sign In</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1972,52 +1957,6 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
 .back{{text-align:center;margin-top:20px;font-size:11px;color:rgba(0,0,0,0.35);letter-spacing:0.08em;}}
 .back a{{color:#9d7f6a;text-decoration:none;}}
 </style></head><body>
-
-<!-- PWA Install Bar -->
-<div id="pwa-install-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#c1a3a2,#d4a85a);padding:14px 20px;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,0.15);">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <div style="width:36px;height:36px;background:rgba(255,255,255,0.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✦</div>
-    <div>
-      <div style="font-family:sans-serif;font-weight:700;font-size:13px;color:#fff;">Install the Aria App</div>
-      <div id="pwa-bar-sub" style="font-family:sans-serif;font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px;">Free — add to your home screen</div>
-    </div>
-  </div>
-  <button onclick="doPWAInstall()" style="background:#fff;border:none;color:#0d0906;font-family:sans-serif;font-weight:700;font-size:12px;padding:9px 18px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Install</button>
-</div>
-
-<script>
-(function(){{
-  var ua  = navigator.userAgent || '';
-  var isIOS     = /iPhone|iPad|iPod/i.test(ua);
-  var isAndroid = /Android/i.test(ua);
-  var isMobile  = isIOS || isAndroid;
-  var bar = document.getElementById('pwa-install-bar');
-  var sub = document.getElementById('pwa-bar-sub');
-
-  if(isIOS && isMobile){{
-    sub.textContent = 'Tap Share then "Add to Home Screen" in Safari';
-    bar.style.display = 'flex';
-  }}
-
-  window.doPWAInstall = function(){{
-    if(isIOS){{
-      alert('Install Aria on iPhone:\n\n1. Tap the Share button (Safari bottom bar)\n2. Tap "Add to Home Screen"\n3. Tap "Add"');
-      return;
-    }}
-    if(window._pwaPrompt){{
-      window._pwaPrompt.prompt();
-      window._pwaPrompt.userChoice.then(function(r){{
-        window._pwaPrompt = null;
-        if(r.outcome === 'accepted') bar.style.display = 'none';
-      }});
-    }} else {{
-      sub.textContent = 'Tap the 3-dot Chrome menu then "Add to Home Screen"';
-      bar.style.display = 'flex';
-    }}
-  }};
-}})();
-</script>
-
 <div class="card">
   <div class="logo"><div class="logo-text">SupportRD</div><div class="logo-sub">Hair Advisor</div></div>
   <h2>Welcome back</h2>
@@ -2062,12 +2001,6 @@ def dashboard():
 <html lang="en"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#c1a3a2">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Aria">
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838">
 <title>Aria Command Center — SupportRD</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -2099,26 +2032,14 @@ body::before{content:'';position:fixed;inset:0;
 .t-chg{font-size:8px;font-family:'IBM Plex Mono',monospace;}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 /* NAV */
-.nav{position:fixed;top:30px;left:0;right:0;background:rgba(7,9,13,0.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);z-index:99;display:flex;flex-direction:column;padding:0;}
-.nav-row1{display:flex;align-items:center;height:50px;padding:0 12px;gap:8px;width:100%;flex-shrink:0;}
-.nav-tabs{display:flex;height:40px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;width:100%;border-top:1px solid var(--border);}
-.nav-tabs::-webkit-scrollbar{display:none;}
-@media(min-width:768px){
-  .nav{flex-direction:row;height:50px;padding:0 12px;align-items:center;gap:0;}
-  .nav-row1{height:100%;padding:0;width:auto;flex-shrink:0;border-bottom:none;}
-  .nav-tabs{height:100%;width:auto;flex:1;border-top:none;padding:0 8px;}
-  .app{padding:84px 18px 40px;}
-}
+.nav{position:fixed;top:30px;left:0;right:0;height:50px;background:rgba(7,9,13,0.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 22px;}
 .nav-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text);margin-right:28px;display:flex;align-items:center;gap:8px;letter-spacing:-0.02em;}
 .nav-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--rose);box-shadow:0 0 12px var(--rose-glow),0 0 24px rgba(240,160,144,0.3);animation:logoPulse 2s ease-in-out infinite;}
 @keyframes logoPulse{0%,100%{box-shadow:0 0 8px var(--rose-glow)}50%{box-shadow:0 0 20px var(--rose-glow),0 0 40px rgba(240,160,144,0.2)}}
-.nav-tabs{display:flex;height:100%;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:1;min-width:0;flex:1;}.nav-tabs::-webkit-scrollbar{display:none;}
-.nav-tab{height:100%;padding:0 14px;display:flex;align-items:center;font-size:11px;letter-spacing:0.04em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;text-decoration:none;white-space:nowrap;flex-shrink:0;user-select:none;}
+.nav-tabs{display:flex;height:100%;}
+.nav-tab{height:100%;padding:0 15px;display:flex;align-items:center;font-size:11px;letter-spacing:0.04em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;position:relative;top:1px;text-decoration:none;}
 .nav-tab:hover,.nav-tab.active{color:var(--text);border-bottom-color:var(--rose);}
-.nav-right{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.nav-name{display:none;}
-.plan-tag{display:none;}
-@media(min-width:768px){.nav-name{display:block;}.plan-tag{display:flex;}}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
 .live-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;background:rgba(48,232,144,0.08);border:1px solid rgba(48,232,144,0.25);font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--green);letter-spacing:0.1em;}
 .live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:liveDot 1.4s ease-in-out infinite;}
 @keyframes liveDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(48,232,144,0.5)}50%{opacity:0.6;box-shadow:0 0 0 4px rgba(48,232,144,0)}}
@@ -2129,7 +2050,7 @@ body::before{content:'';position:fixed;inset:0;
 .logout-btn{font-size:10px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:4px;background:none;border:1px solid var(--border);font-family:'Space Grotesk',sans-serif;transition:all 0.15s;}
 .logout-btn:hover{color:var(--text);}
 /* APP */
-.app{padding:124px 12px 40px;max-width:100%;width:100%;margin:0;position:relative;z-index:1;box-sizing:border-box;overflow-x:hidden;}
+.app{padding:84px 18px 40px;max-width:1640px;margin:0 auto;position:relative;z-index:1;}
 /* TOP ROW */
 .top-row{display:grid;grid-template-columns:260px 1fr 260px;gap:10px;margin-bottom:10px;align-items:stretch;}
 /* SCORE PANEL */
@@ -2404,24 +2325,20 @@ body::before{content:'';position:fixed;inset:0;
 </div>
 
 <nav class="nav">
-  <div class="nav-row1">
-    <div class="nav-logo"><div class="nav-logo-dot"></div>SupportRD</div>
-    <div class="nav-right">
-    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
-    <button id="nav-upgrade-btn" onclick="goUpgrade()" style="display:none;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;letter-spacing:0.03em;white-space:nowrap;">✦ Upgrade</button>
-    <span class="nav-name" id="nav-name">—</span>
-    <div class="plan-tag" id="plan-badge">FREE</div>
-    <div class="nav-avatar" id="nav-av">?</div>
-    <button class="logout-btn" onclick="doLogout()">Sign out</button>
-  </div>
-  </div>
+  <div class="nav-logo"><div class="nav-logo-dot"></div>SupportRD</div>
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchPTab('overview')">Overview</div>
     <div class="nav-tab" onclick="switchPTab('profile')">Hair Profile</div>
     <div class="nav-tab" onclick="switchPTab('routine')">✦ Routine</div>
     <div class="nav-tab" onclick="switchPTab('progress')">✦ Progress</div>
     <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
-    <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
+  </div>
+  <div class="nav-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <span class="nav-name" id="nav-name">—</span>
+    <div class="plan-tag" id="plan-badge">FREE</div>
+    <div class="nav-avatar" id="nav-av">?</div>
+    <button class="logout-btn" onclick="doLogout()">Sign out</button>
   </div>
 </nav>
 
@@ -2633,7 +2550,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">✦</div>
     <div class="gate-title">Smart Routine Builder</div>
     <div class="gate-desc">Aria builds your personalized 7-day hair care schedule based on your hair type, concerns, and products. Tap to unlock.</div>
-    <button class="gate-btn" onclick="showUpgradeModal('Smart Routine Builder')">Unlock Premium →</button>
+    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
   </div>
   <div id="routine-loading" class="ppage-loading" style="display:none">
     <div class="ppage-spinner"></div><div>Aria is crafting your routine…</div>
@@ -2658,7 +2575,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">📈</div>
     <div class="gate-title">Hair Health Timeline</div>
     <div class="gate-desc">Track your score over 30, 60, 90 days. Log treatments and see what products are actually working for your hair.</div>
-    <button class="gate-btn" onclick="showUpgradeModal('Hair Health Timeline')">Unlock Premium →</button>
+    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
   </div>
   <div id="progress-content" style="display:none">
     <div class="prog-layout">
@@ -2692,7 +2609,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="gate-icon">📸</div>
     <div class="gate-title">AI Photo Analysis</div>
     <div class="gate-desc">Upload a selfie and Aria diagnoses your hair's porosity, damage level, density, and texture — then recommends the perfect products.</div>
-    <button class="gate-btn" onclick="showUpgradeModal('AI Photo Analysis')">Unlock Premium →</button>
+    <button class="gate-btn" onclick="window.location.href='/subscription/checkout'">Unlock Premium →</button>
   </div>
   <div id="photo-content" style="display:none">
     <div class="photo-layout">
@@ -2731,68 +2648,6 @@ body::before{content:'';position:fixed;inset:0;
   </div>
 </div>
 
-<!-- ✦ WHATSAPP / SMS ARIA -->
-<div class="ppage" id="pp-whatsapp">
-  <div class="ppage-head">
-    <div class="ppage-title">✦ Aria on WhatsApp &amp; SMS <span class="premium-badge">PREMIUM</span></div>
-  </div>
-  <div id="whatsapp-gate" class="premium-gate" style="display:none">
-    <div class="gate-icon">💬</div>
-    <div class="gate-title">Text Aria Directly</div>
-    <div class="gate-desc">Premium members can text Aria on WhatsApp or SMS and get personalized hair advice anytime, anywhere.</div>
-    <button class="gate-btn" onclick="showUpgradeModal('Aria on WhatsApp & SMS')">Unlock Premium →</button>
-  </div>
-  <div id="whatsapp-content" style="display:none">
-    <div style="max-width:500px;margin:0 auto;">
-
-      <!-- WhatsApp card -->
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-          <div style="width:44px;height:44px;background:#25d366;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">💬</div>
-          <div>
-            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">WhatsApp Aria</div>
-            <div style="font-size:12px;color:var(--muted2);">Chat directly on WhatsApp</div>
-          </div>
-        </div>
-        <a href="https://wa.me/18005551234" target="_blank"
-           style="display:block;text-align:center;padding:12px;background:#25d366;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;border-radius:10px;text-decoration:none;margin-bottom:10px;">
-          Open WhatsApp Chat →
-        </a>
-        <div style="font-size:11px;color:var(--muted);text-align:center;">Send any message to start your session with Aria</div>
-      </div>
-
-      <!-- SMS card -->
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;margin-bottom:20px;">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-          <div style="width:44px;height:44px;background:var(--rose);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">📱</div>
-          <div>
-            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">SMS Aria</div>
-            <div style="font-size:12px;color:var(--muted2);">Text Aria from any phone</div>
-          </div>
-        </div>
-        <div style="font-size:13px;color:var(--text);text-align:center;background:var(--bg3);border-radius:10px;padding:14px;letter-spacing:0.05em;font-family:'IBM Plex Mono',monospace;" id="sms-number-display">Loading…</div>
-        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">Text any hair question to this number</div>
-      </div>
-
-      <!-- Link phone number -->
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:6px;">🔗 Link Your Phone Number</div>
-        <div style="font-size:12px;color:var(--muted2);margin-bottom:14px;line-height:1.6;">Link your number so Aria remembers your hair profile and history when you text her.</div>
-        <div style="display:flex;gap:8px;">
-          <input id="phone-link-input" type="tel" placeholder="+1 (829) 233-2670"
-            style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;padding:10px 12px;outline:none;">
-          <button onclick="linkPhone()" id="link-phone-btn"
-            style="background:var(--rose);border:none;color:#000;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;padding:10px 16px;border-radius:8px;cursor:pointer;white-space:nowrap;">
-            Link
-          </button>
-        </div>
-        <div id="phone-link-msg" style="font-size:11px;margin-top:8px;min-height:14px;"></div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
 <!-- LOG TREATMENT MODAL -->
 <div class="modal-bg" id="log-modal" style="display:none" onclick="if(event.target===this)closeLogModal()">
   <div class="modal-box">
@@ -2818,114 +2673,11 @@ body::before{content:'';position:fixed;inset:0;
   </div>
 </div>
 
-<!-- UPGRADE MODAL — Shopify Checkout -->
-<div class="modal-bg" id="upgrade-modal" style="display:none" onclick="if(event.target===this)closeUpgradeModal()">
-  <div class="modal-box" style="padding:0;overflow:hidden;max-width:460px;width:min(460px,94vw);">
-
-    <!-- Header band -->
-    <div style="background:linear-gradient(135deg,#c1a3a2,#d4a85a);padding:20px 24px 16px;text-align:center;position:relative;">
-      <button onclick="closeUpgradeModal()" style="position:absolute;top:12px;right:14px;background:rgba(0,0,0,0.2);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:14px;line-height:26px;">✕</button>
-      <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.8);margin-bottom:4px;">SupportRD</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#fff;" id="upgrade-modal-title">Hair Advisor Premium</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:4px;">Powered by Aria · Your AI Hair Expert</div>
-    </div>
-
-    <!-- Body -->
-    <div style="padding:20px 24px;">
-
-      <!-- Price row -->
-      <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
-        <span style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--rose);">$35</span>
-        <span style="font-size:13px;color:var(--muted2);">/ month</span>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">Billed monthly · Cancel anytime from your account</div>
-
-      <!-- Feature list -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:20px;">
-        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;">
-          <span style="color:var(--rose);font-size:14px;">✦</span>Smart Routine Builder
-        </div>
-        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;">
-          <span style="color:var(--rose);font-size:14px;">📈</span>Score Timeline
-        </div>
-        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;">
-          <span style="color:var(--rose);font-size:14px;">📸</span>AI Photo Analysis
-        </div>
-        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;">
-          <span style="color:var(--rose);font-size:14px;">💬</span>Unlimited Aria Sessions
-        </div>
-        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);background:var(--bg3);border-radius:8px;padding:8px 10px;grid-column:span 2;">
-          <span style="color:var(--gold);font-size:14px;">📋</span>Treatment Log &amp; Product Tracking
-        </div>
-      </div>
-
-      <!-- Shopify Buy Button -->
-      <a href="https://supportrd.com/products/hair-advisor-premium" target="_blank"
-         onclick="closeUpgradeModal()"
-         style="display:block;width:100%;padding:14px;background:linear-gradient(135deg,#c1a3a2,#d4a85a);border:none;border-radius:10px;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;letter-spacing:0.05em;text-align:center;text-decoration:none;margin-bottom:10px;box-sizing:border-box;">
-        Buy on SupportRD.com →
-      </a>
-
-      <!-- Already purchased? activate -->
-      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
-        <div style="font-size:11px;color:var(--muted2);text-align:center;margin-bottom:8px;">Already purchased? Activate your account below.</div>
-        <div style="display:flex;gap:8px;">
-          <input id="activate-email-modal" type="email" placeholder="Email used at checkout"
-            style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:9px 12px;outline:none;">
-          <button onclick="activateFromModal()" id="activate-modal-btn"
-            style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Syne',sans-serif;font-size:12px;font-weight:600;padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;">
-            Activate
-          </button>
-        </div>
-        <div id="activate-modal-msg" style="font-size:11px;margin-top:7px;text-align:center;min-height:14px;"></div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
 const token = localStorage.getItem('srd_token');
 if (!token) { window.location.href = '/login'; }
-
-// ── UPGRADE MODAL ──
-function showUpgradeModal(featureName){
-  const titles={
-    'Smart Routine Builder':'Unlock Your Personal Routine',
-    'Hair Health Timeline':'Track Your Hair Journey',
-    'AI Photo Analysis':'Unlock AI Photo Analysis'
-  };
-  document.getElementById('upgrade-modal-title').textContent=titles[featureName]||'Hair Advisor Premium';
-  document.getElementById('activate-modal-msg').textContent='';
-  document.getElementById('activate-email-modal').value='';
-  try{const u=JSON.parse(localStorage.getItem('srd_user')||'{}');if(u.email)document.getElementById('activate-email-modal').value=u.email;}catch(e){}
-  document.getElementById('upgrade-modal').style.display='flex';
-}
-function closeUpgradeModal(){
-  document.getElementById('upgrade-modal').style.display='none';
-}
-async function activateFromModal(){
-  const email=document.getElementById('activate-email-modal').value.trim();
-  const btn=document.getElementById('activate-modal-btn');
-  const msg=document.getElementById('activate-modal-msg');
-  if(!email){msg.style.color='#e08080';msg.textContent='Please enter your email.';return;}
-  btn.disabled=true;btn.textContent='Checking…';msg.textContent='';
-  try{
-    const r=await fetch('/api/subscription/activate-shopify',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({email})});
-    const d=await r.json();
-    if(d.ok){
-      msg.style.color='#80e0a0';msg.textContent='✓ Premium activated! Reloading…';
-      try{const u=JSON.parse(localStorage.getItem('srd_user')||'{}');u.plan='premium';localStorage.setItem('srd_user',JSON.stringify(u));}catch(e){}
-      setTimeout(()=>{closeUpgradeModal();location.reload();},1200);
-    }else{
-      msg.style.color='#e08080';
-      msg.textContent=d.error||'No purchase found. Please buy at supportrd.com first.';
-      btn.disabled=false;btn.textContent='Activate';
-    }
-  }catch(e){msg.style.color='#e08080';msg.textContent='Network error. Try again.';btn.disabled=false;btn.textContent='Activate';}
-}
 
 // ── TICKER ──
 const TDATA = [
@@ -3088,7 +2840,7 @@ function switchPTab(name){
   }
   // Nav tabs
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4,whatsapp:5};
+  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4};
   const idx=tabs[name]??0;
   document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
   // Profile/history sub-tabs
@@ -3106,26 +2858,20 @@ function switchPTab(name){
 
 function onPremiumPageOpen(name){
   if(!_isPremium){
-    // Only show the gate for THIS tab, hide its content
-    const gateMap={routine:'routine-gate',progress:'progress-gate',photo:'photo-gate',whatsapp:'whatsapp-gate'};
-    const contentMap={routine:['routine-content','routine-empty'],progress:['progress-content'],photo:['photo-content'],whatsapp:['whatsapp-content']};
-    // Hide all gates first
-    ['routine-gate','progress-gate','photo-gate','whatsapp-gate'].forEach(id=>{
-      const el=document.getElementById(id); if(el) el.style.display='none';
+    // Show gates on premium pages
+    ['routine-gate','progress-gate','photo-gate'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.display='';
     });
-    // Show only the gate for this page
-    const gate=document.getElementById(gateMap[name]);
-    if(gate) gate.style.display='';
-    // Hide content for this page
-    (contentMap[name]||[]).forEach(id=>{
-      const el=document.getElementById(id); if(el) el.style.display='none';
+    ['routine-content','routine-empty','progress-content','photo-content'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.display='none';
     });
     return;
   }
   if(name==='routine') openRoutinePage();
   if(name==='progress') openProgressPage();
   if(name==='photo') openPhotoPage();
-  if(name==='whatsapp') openWhatsappPage();
 }
 
 // ── ROUTINE BUILDER ──────────────────────────────────────────────────────────
@@ -3467,31 +3213,6 @@ async function sphereSend(){
   input.focus();
 }
 
-// ── WHATSAPP / SMS ──
-function openWhatsappPage(){
-  document.getElementById('whatsapp-gate').style.display='none';
-  document.getElementById('whatsapp-content').style.display='block';
-  // Set SMS number from env (loaded via dashboard-stats)
-  const smsEl=document.getElementById('sms-number-display');
-  if(smsEl && window._smsNumber) smsEl.textContent=window._smsNumber;
-  else if(smsEl) smsEl.textContent='Text us to get your dedicated number';
-}
-
-async function linkPhone(){
-  const phone=document.getElementById('phone-link-input').value.trim();
-  const btn=document.getElementById('link-phone-btn');
-  const msg=document.getElementById('phone-link-msg');
-  if(!phone){msg.style.color='#e08080';msg.textContent='Enter your phone number first.';return;}
-  btn.disabled=true;btn.textContent='Linking…';
-  try{
-    const r=await fetch('/api/twilio/link-phone',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({phone})});
-    const d=await r.json();
-    if(d.ok){msg.style.color='#80e0a0';msg.textContent='✓ Phone linked! Aria will now remember you when you text.';}
-    else{msg.style.color='#e08080';msg.textContent=d.error||'Something went wrong.';}
-  }catch(e){msg.style.color='#e08080';msg.textContent='Network error.';}
-  btn.disabled=false;btn.textContent='Link';
-}
-
 async function loadData(){
   try{
     const r=await fetch('/api/auth/me',{headers:{'X-Auth-Token':token}});
@@ -3500,27 +3221,9 @@ async function loadData(){
     document.getElementById('nav-name').textContent=d.name||d.email;
     const av=document.getElementById('nav-av');
     if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
-    if(d.subscribed){
-      document.getElementById('plan-badge').textContent='PREMIUM';
-      _isPremium=true;
-      var ub = document.getElementById('nav-upgrade-btn');
-      if(ub) ub.style.display='none';
-    } else {
-      var ub = document.getElementById('nav-upgrade-btn');
-      if(ub) ub.style.display='block';
-    }
+    if(d.subscribed){ document.getElementById('plan-badge').textContent='PREMIUM'; _isPremium=true; }
     // Style premium nav tabs
-    if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('\u2746')) t.style.color='var(--gold)'; });
-    // If already on a premium tab when data loaded, re-open it now we know premium status
-    const activeTab=document.querySelector('.nav-tab.active');
-    if(activeTab){
-      const tabNames=['overview','profile','routine','progress','photo'];
-      const tabIdx=[...document.querySelectorAll('.nav-tab')].indexOf(activeTab);
-      const tabName=tabNames[tabIdx];
-      if(tabName&&['routine','progress','photo'].includes(tabName)){
-        onPremiumPageOpen(tabName);
-      }
-    }
+    if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('✦')) t.style.color='var(--gold)'; });
     document.getElementById('st-chats').textContent=d.chat_count||0;
     document.getElementById('st-chats-trend').textContent='↑ '+(d.chat_count||0)+' all time';
     const concerns=(d.profile?.hair_concerns||'').split(',').filter(c=>c.trim()).length;
@@ -3786,7 +3489,7 @@ def blog_post(handle):
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{post['title']} — SupportRD</title>
 <meta name="description" content="{post.get('meta','')}">
-<link rel="canonical" href="{APP_BASE_URL}/blog/{handle}">
+<link rel="canonical" href="https://ai-hair-advisor.onrender.com/blog/{handle}">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 {SRD_PAGE_LOADER}
 <style>
@@ -3816,7 +3519,7 @@ footer a{{color:#c1a3a2;text-decoration:none;}}
 # ── SITEMAP / ROBOTS ──────────────────────────────────────────────────────────
 @app.route("/sitemap.xml")
 def sitemap():
-    base_url = os.environ.get("APP_BASE_URL","https://aria.supportrd.com")
+    base_url = "https://ai-hair-advisor.onrender.com"
     urls = [f"""  <url><loc>{base_url}/blog</loc><changefreq>daily</changefreq><priority>0.8</priority></url>"""]
     try:
         for p in blog_get_index():
@@ -3828,7 +3531,7 @@ def sitemap():
 
 @app.route("/robots.txt")
 def robots():
-    base=os.environ.get("APP_BASE_URL","https://aria.supportrd.com"); return Response(f"User-agent: *\nAllow: /blog\nDisallow: /api\nDisallow: /admin\n\nSitemap: {base}/sitemap.xml\n", mimetype="text/plain")
+    return Response("User-agent: *\nAllow: /blog\nDisallow: /api\nDisallow: /admin\n\nSitemap: https://ai-hair-advisor.onrender.com/sitemap.xml\n", mimetype="text/plain")
 
 @app.route("/apps/hair-advisor")
 def shopify_proxy():
@@ -3993,304 +3696,10 @@ def _start_content_scheduler():
 _start_content_scheduler()
 
 
-
-# ── TWILIO WHATSAPP + SMS (ARIA) ──────────────────────────────────────────────
-TWILIO_ACCOUNT_SID  = os.environ.get("TWILIO_ACCOUNT_SID", "")
-TWILIO_AUTH_TOKEN   = os.environ.get("TWILIO_AUTH_TOKEN", "")
-TWILIO_WHATSAPP_NUM = os.environ.get("TWILIO_WHATSAPP_NUM", "")   # e.g. whatsapp:+14155238886
-TWILIO_SMS_NUM      = os.environ.get("TWILIO_SMS_NUM", "")        # e.g. +18005551234
-
-def _twilio_reply(to_number, body):
-    """Send a reply via Twilio REST API (no SDK needed)."""
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
-        print("Twilio not configured"); return
-    from_num = TWILIO_WHATSAPP_NUM if to_number.startswith("whatsapp:") else TWILIO_SMS_NUM
-    if not from_num:
-        print("No Twilio number configured for channel"); return
-    import urllib.request as _ur, urllib.parse as _up, base64
-    url  = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
-    data = _up.urlencode({"From": from_num, "To": to_number, "Body": body}).encode()
-    creds = base64.b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode()).decode()
-    req  = _ur.Request(url, data=data, headers={"Authorization": f"Basic {creds}", "Content-Type": "application/x-www-form-urlencoded"}, method="POST")
-    try:
-        with _ur.urlopen(req, timeout=10) as r: r.read()
-    except Exception as e:
-        print(f"Twilio send error: {e}")
-
-def _aria_twilio_response(user_text, phone, is_premium, user=None):
-    """Call Claude as Aria and return the reply text."""
-    profile_context = ""
-    if user and is_premium:
-        profile = get_hair_profile(user["id"])
-        if profile.get("hair_type") or profile.get("hair_concerns"):
-            profile_context = f"""
-
-RETURNING CLIENT PROFILE:
-- Name: {user.get("name","this client")}
-- Hair type: {profile.get("hair_type","unknown")}
-- Known concerns: {profile.get("hair_concerns","none saved")}
-- Treatments history: {profile.get("treatments","none saved")}
-- Products tried: {profile.get("products_tried","none saved")}
-Reference this naturally in your response."""
-
-    sms_instruction = """
-
-SMS/WHATSAPP RULES:
-- Keep replies under 300 characters — this is a text message.
-- Be warm, direct, no bullet points.
-- End with a product name when relevant."""
-
-    prompt = SYSTEM_PROMPT + profile_context + sms_instruction
-    max_tok = 200 if is_premium else 80
-
-    # Build message history for premium users
-    messages = []
-    if user and is_premium:
-        history = get_chat_history(user["id"], limit=10)
-        for h in history[:-1]:
-            if h.get("role") in ("user","assistant") and h.get("content"):
-                messages.append({"role": h["role"], "content": h["content"]})
-    messages.append({"role": "user", "content": user_text})
-
-    import urllib.request as _ur
-    payload = json.dumps({
-        "model": "claude-sonnet-4-20250514",
-        "max_tokens": max_tok,
-        "system": prompt,
-        "messages": messages
-    }).encode()
-    req = _ur.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=payload,
-        headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
-        method="POST"
-    )
-    with _ur.urlopen(req, timeout=25) as r:
-        result = json.loads(r.read())
-    return result["content"][0]["text"].strip()
-
-def _lookup_user_by_phone(phone):
-    """Look up a user by their phone number (stripped of whatsapp: prefix)."""
-    clean = phone.replace("whatsapp:","").strip()
-    con = get_db()
-    row = con.execute("SELECT id,email,name FROM users WHERE phone=?", (clean,)).fetchone()
-    con.close()
-    if row: return {"id": row[0], "email": row[1], "name": row[2]}
-    return None
-
-def _ensure_phone_column():
-    """Add phone column to users table if not exists."""
-    try:
-        db_execute("ALTER TABLE users ADD COLUMN phone TEXT")
-    except: pass  # already exists
-
-_ensure_phone_column()
-
-@app.route("/api/twilio/whatsapp", methods=["POST"])
-def twilio_whatsapp():
-    """Twilio webhook for incoming WhatsApp messages."""
-    from_num  = request.form.get("From","")   # e.g. whatsapp:+1234567890
-    body      = (request.form.get("Body","") or "").strip()
-    if not from_num or not body:
-        return Response("<Response></Response>", mimetype="text/xml")
-
-    def handle():
-        try:
-            # Look up user by phone
-            user       = _lookup_user_by_phone(from_num)
-            is_premium = is_subscribed(user["id"]) if user else False
-
-            if not is_premium:
-                # Short reply + upgrade link for free/unregistered users
-                try:
-                    reply = _aria_twilio_response(body, from_num, False, user)
-                except Exception as e:
-                    reply = "Hi! I'm Aria, your SupportRD hair advisor. I can help with all your hair concerns!"
-                reply += f"\n\n✦ Unlock full Aria sessions at aria.supportrd.com/dashboard"
-            else:
-                reply = _aria_twilio_response(body, from_num, True, user)
-                if user: save_chat_message(user["id"], "user", body)
-                if user: save_chat_message(user["id"], "assistant", reply)
-
-            _twilio_reply(from_num, reply)
-        except Exception as e:
-            print(f"WhatsApp handler error: {e}")
-            _twilio_reply(from_num, "Hi! I'm Aria from SupportRD. Visit aria.supportrd.com/dashboard to chat with me!")
-
-    threading.Thread(target=handle, daemon=True).start()
-    # Twilio needs an immediate 200 response
-    return Response("<Response></Response>", mimetype="text/xml")
-
-@app.route("/api/twilio/sms", methods=["POST"])
-def twilio_sms():
-    """Twilio webhook for incoming SMS messages."""
-    from_num  = request.form.get("From","")   # e.g. +1234567890
-    body      = (request.form.get("Body","") or "").strip()
-    if not from_num or not body:
-        return Response("<Response></Response>", mimetype="text/xml")
-
-    def handle():
-        try:
-            user       = _lookup_user_by_phone(from_num)
-            is_premium = is_subscribed(user["id"]) if user else False
-
-            if not is_premium:
-                try:
-                    reply = _aria_twilio_response(body, from_num, False, user)
-                except:
-                    reply = "Hi! I'm Aria, SupportRD's hair advisor. I can help with all your hair concerns!"
-                reply += f"\nUnlock full sessions: aria.supportrd.com/dashboard"
-            else:
-                reply = _aria_twilio_response(body, from_num, True, user)
-                if user: save_chat_message(user["id"], "user", body)
-                if user: save_chat_message(user["id"], "assistant", reply)
-
-            _twilio_reply(from_num, reply)
-        except Exception as e:
-            print(f"SMS handler error: {e}")
-            _twilio_reply(from_num, "Hi! I'm Aria from SupportRD. Visit aria.supportrd.com/dashboard to chat!")
-
-    threading.Thread(target=handle, daemon=True).start()
-    return Response("<Response></Response>", mimetype="text/xml")
-
-@app.route("/api/twilio/link-phone", methods=["POST","OPTIONS"])
-def link_phone():
-    """Let a logged-in premium user link their phone number to their account."""
-    user = get_current_user()
-    if not user: return jsonify({"error":"Not logged in"}), 401
-    if not is_subscribed(user["id"]): return jsonify({"error":"premium_required"}), 403
-    data  = request.get_json(silent=True) or {}
-    phone = (data.get("phone","") or "").strip().replace(" ","").replace("-","").replace("(","").replace(")","")
-    if not phone or not phone.startswith("+"): return jsonify({"error":"Please enter phone in format +1234567890"}), 400
-    db_execute("UPDATE users SET phone=? WHERE id=?", (phone, user["id"]))
-    return jsonify({"ok": True, "phone": phone})
-
-
-# ── PWA MANIFEST + SERVICE WORKER ────────────────────────────────────────────
-@app.route("/manifest.json")
-def pwa_manifest():
-    manifest = {
-        "name": "Aria — SupportRD Hair Advisor",
-        "short_name": "Aria",
-        "description": "Your personal AI hair advisor from SupportRD",
-        "start_url": "/dashboard",
-        "display": "standalone",
-        "background_color": "#f0ebe8",
-        "theme_color": "#c1a3a2",
-        "orientation": "portrait",
-        "id": "/dashboard",
-        "icons": [
-            {
-                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838",
-                "sizes": "192x192",
-                "type": "image/png",
-                "purpose": "any"
-            },
-            {
-                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
-                "sizes": "512x512",
-                "type": "image/png",
-                "purpose": "any"
-            },
-            {
-                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
-                "sizes": "512x512",
-                "type": "image/png",
-                "purpose": "maskable"
-            }
-        ],
-        "categories": ["health", "beauty", "lifestyle"],
-        "screenshots": [
-            {
-                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
-                "sizes": "512x512",
-                "type": "image/png",
-                "form_factor": "narrow",
-                "label": "Aria Hair Advisor Mobile"
-            },
-            {
-                "src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845",
-                "sizes": "512x512",
-                "type": "image/png",
-                "form_factor": "wide",
-                "label": "Aria Hair Advisor Desktop"
-            }
-        ],
-        "shortcuts": [
-            {
-                "name": "Chat with Aria",
-                "url": "/",
-                "description": "Start a hair consultation",
-                "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512", "type": "image/png"}]
-            },
-            {
-                "name": "My Dashboard",
-                "url": "/dashboard",
-                "description": "View your hair health dashboard",
-                "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512", "type": "image/png"}]
-            }
-        ]
-    }
-    from flask import Response as _Resp
-    import json as _json
-    resp = _Resp(_json.dumps(manifest), mimetype="application/manifest+json")
-    resp.headers['Access-Control-Allow-Origin'] = '*'
-    resp.headers['Cache-Control'] = 'no-cache'
-    return resp
-
-@app.route("/sw.js")
-def service_worker():
-    sw = """
-const CACHE = 'aria-v5';
-
-self.addEventListener('install', e => {
-  // Skip precaching - /dashboard requires auth so we can't cache it
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-  // Force all open clients to reload so they pick up new start_url
-  self.clients.matchAll({type: 'window'}).then(clients => {
-    clients.forEach(client => {
-      if(client.url.endsWith('/') || client.url === self.registration.scope) {
-        client.navigate('/dashboard');
-      }
-    });
-  });
-});
-
-self.addEventListener('fetch', e => {
-  if(e.request.method !== 'GET') return;
-  if(e.request.url.includes('/api/')) return;
-  // Redirect bare / to /dashboard
-  const url = new URL(e.request.url);
-  if(url.pathname === '/') {
-    e.respondWith(Response.redirect('/dashboard', 302));
-    return;
-  }
-  e.respondWith(
-    fetch(e.request).catch(() =>
-      caches.match(e.request).then(r => r || caches.match('/dashboard'))
-    )
-  );
-});
-""".strip()
-    from flask import Response as _Resp
-    return _Resp(sw, mimetype="application/javascript", headers={
-        "Service-Worker-Allowed": "/",
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-    })
-
 # ── KEEP-ALIVE ────────────────────────────────────────────────────────────────
 def _keep_alive():
     import time, urllib.request as _urlreq
-    _url = os.environ.get("APP_BASE_URL","https://aria.supportrd.com") + "/api/ping"
+    _url = os.environ.get("APP_BASE_URL","https://ai-hair-advisor.onrender.com") + "/api/ping"
     time.sleep(60)
     while True:
         time.sleep(600)
