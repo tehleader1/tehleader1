@@ -876,7 +876,6 @@ function addToHistory(role,text,productCard){
 
   // Render product recommendation card after Aria's message
   if(role==="assistant" && productCard){
-    console.log("[Aria debug] Rendering card for:", productCard.name);
     const card=document.createElement("div");
     card.className="srd-product-card";
     card.innerHTML=`
@@ -1069,19 +1068,16 @@ async function getRecommendation(userText){
     clearTimeout(timeout);
     if(!resp.ok) throw new Error("not ok");
     const data=await resp.json();
-    console.log("[Aria debug] FULL response:", JSON.stringify(data));
     handleSubscriptionResponse(data);
     if(data.recommendation) return {text: data.recommendation, product: data.suggested_product||null};
     if(data.reply) return {text: data.reply, product: null};
     throw new Error("empty");
   }catch(e){
-    console.log("[Aria debug] fetch error/timeout:", e.message);
     return {text: localRecommend(userText), product: null};
   }
 }
 
 async function processText(text){
-  console.log("[Aria debug] processText called:", text.slice(0,40));
   if(!text||text.trim().length<3){
     responseBox.textContent="Could you describe your hair a little more?";
     setState("idle");setColor(...IDLE);stateLabel.textContent="Tap to begin";
@@ -1092,10 +1088,8 @@ async function processText(text){
   setState("idle");setColor(...IDLE);
   responseBox.textContent="Thinking…";stateLabel.textContent="Thinking";
   const result=await getRecommendation(text);
-  console.log("[Aria debug] result from API:", JSON.stringify(result).slice(0,300));
   const finalText=result.text||localRecommend(text);
   const finalProduct=result.product||null;
-  console.log("[Aria debug] finalProduct:", JSON.stringify(finalProduct));
   addToHistory("assistant",finalText,finalProduct);
   setTimeout(()=>speak(finalText,true),400);
 }
