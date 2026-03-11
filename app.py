@@ -2100,7 +2100,11 @@ body::before{content:'';position:fixed;inset:0;
 .t-chg{font-size:8px;font-family:'IBM Plex Mono',monospace;}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 /* NAV */
-.nav{position:fixed;top:30px;left:0;right:0;height:50px;background:rgba(7,9,13,0.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 12px;overflow:visible;gap:8px;}
+.nav{position:fixed;top:30px;left:0;right:0;background:rgba(7,9,13,0.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);z-index:99;display:flex;flex-direction:column;padding:0;}
+.nav-row1{display:flex;align-items:center;height:50px;padding:0 12px;gap:8px;width:100%;}
+.nav-tabs{display:flex;height:40px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;width:100%;padding:0 12px;}
+.nav-tabs::-webkit-scrollbar{display:none;}
+@media(min-width:900px){.nav{flex-direction:row;height:50px;padding:0 12px;align-items:center;gap:8px;}.nav-row1{height:100%;padding:0;flex:0 0 auto;}.nav-tabs{height:100%;width:auto;flex:1;padding:0;}.app{padding:84px 18px 40px;}}
 .nav-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text);margin-right:28px;display:flex;align-items:center;gap:8px;letter-spacing:-0.02em;}
 .nav-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--rose);box-shadow:0 0 12px var(--rose-glow),0 0 24px rgba(240,160,144,0.3);animation:logoPulse 2s ease-in-out infinite;}
 @keyframes logoPulse{0%,100%{box-shadow:0 0 8px var(--rose-glow)}50%{box-shadow:0 0 20px var(--rose-glow),0 0 40px rgba(240,160,144,0.2)}}
@@ -2118,7 +2122,7 @@ body::before{content:'';position:fixed;inset:0;
 .logout-btn{font-size:10px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:4px;background:none;border:1px solid var(--border);font-family:'Space Grotesk',sans-serif;transition:all 0.15s;}
 .logout-btn:hover{color:var(--text);}
 /* APP */
-.app{padding:84px 18px 40px;max-width:100%;width:100%;margin:0 auto;position:relative;z-index:1;box-sizing:border-box;}
+.app{padding:124px 18px 40px;max-width:100%;width:100%;margin:0 auto;position:relative;z-index:1;box-sizing:border-box;}
 /* TOP ROW */
 .top-row{display:grid;grid-template-columns:260px 1fr 260px;gap:10px;margin-bottom:10px;align-items:stretch;}
 /* SCORE PANEL */
@@ -2393,7 +2397,17 @@ body::before{content:'';position:fixed;inset:0;
 </div>
 
 <nav class="nav">
-  <div class="nav-logo"><div class="nav-logo-dot"></div>SupportRD</div>
+  <div class="nav-row1">
+    <div class="nav-logo"><div class="nav-logo-dot"></div>SupportRD</div>
+    <div class="nav-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <button id="pwa-install-btn" onclick="triggerPWAInstall()" style="display:block;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">⬇ Install App</button>
+    <span class="nav-name" id="nav-name">—</span>
+    <div class="plan-tag" id="plan-badge">FREE</div>
+    <div class="nav-avatar" id="nav-av">?</div>
+    <button class="logout-btn" onclick="doLogout()">Sign out</button>
+  </div>
+  </div>
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchPTab('overview')">Overview</div>
     <div class="nav-tab" onclick="switchPTab('profile')">Hair Profile</div>
@@ -2401,14 +2415,6 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab" onclick="switchPTab('progress')">✦ Progress</div>
     <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
     <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
-  </div>
-  <div class="nav-right">
-    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
-    <button id="pwa-install-btn" onclick="triggerPWAInstall()" style="display:block;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">⬇ Install App</button>
-    <span class="nav-name" id="nav-name">—</span>
-    <div class="plan-tag" id="plan-badge">FREE</div>
-    <div class="nav-avatar" id="nav-av">?</div>
-    <button class="logout-btn" onclick="doLogout()">Sign out</button>
   </div>
 </nav>
 
