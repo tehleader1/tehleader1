@@ -1,0 +1,93 @@
+name: Daily Content — 4 Posts Per Day
+
+on:
+  schedule:
+    # 2 content engine posts — 7am and 4pm UTC
+    - cron: '0 7 * * *'
+    - cron: '0 16 * * *'
+    # 2 keyword posts — 11am and 9pm UTC
+    - cron: '0 11 * * *'
+    - cron: '0 21 * * *'
+  workflow_dispatch: # allow manual trigger from GitHub UI
+    inputs:
+      post_type:
+        description: 'Post type: engine or keyword'
+        required: false
+        default: 'keyword'
+
+jobs:
+  content-engine-post:
+    # Runs at 7am and 4pm UTC
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && (github.event.schedule == '0 7 * * *' || github.event.schedule == '0 16 * * *'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake Render first
+        run: |
+          echo "Waking Render..."
+          curl -s https://aria.supportrd.com/api/ping
+          sleep 10
+
+      - name: Fire Content Engine
+        run: |
+          echo "Firing content engine post..."
+          RESPONSE=$(curl -s -X POST https://aria.supportrd.com/api/content-engine/run \
+            -H "X-Admin-Key: ${{ secrets.ADMIN_KEY }}" \
+            -H "Content-Type: application/json")
+          echo "Response: $RESPONSE"
+
+  keyword-post:
+    # Runs at 11am and 9pm UTC
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && (github.event.schedule == '0 11 * * *' || github.event.schedule == '0 21 * * *'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake Render first
+        run: |
+          echo "Waking Render..."
+          curl -s https://aria.supportrd.com/api/ping
+          sleep 10
+
+      - name: Get top uncovered keyword
+        id: get_keyword
+        run: |
+          echo "Fetching top keyword from list..."
+          RESPONSE=$(curl -s "https://aria.supportrd.com/api/keywords/list?key=${{ secrets.ADMIN_KEY }}&limit=50")
+          # Extract first keyword phrase using python
+          PHRASE=$(echo $RESPONSE | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          keywords = data.get('keywords', [])
+          if keywords:
+              print(keywords[0]['phrase'])
+              import sys; sys.exit(0)
+          print('')
+          ")
+          LANG=$(echo $RESPONSE | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          keywords = data.get('keywords', [])
+          if keywords:
+              print(keywords[0]['lang'])
+              import sys; sys.exit(0)
+          print('en')
+          ")
+          echo "phrase=$PHRASE" >> $GITHUB_OUTPUT
+          echo "lang=$LANG" >> $GITHUB_OUTPUT
+          echo "Top keyword: $PHRASE ($LANG)"
+
+      - name: Fire keyword post
+        if: steps.get_keyword.outputs.phrase != ''
+        run: |
+          PHRASE="${{ steps.get_keyword.outputs.phrase }}"
+          LANG="${{ steps.get_keyword.outputs.lang }}"
+          echo "Writing post for: $PHRASE ($LANG)"
+          RESPONSE=$(curl -s -X POST https://aria.supportrd.com/api/keywords/fire \
+            -H "X-Admin-Key: ${{ secrets.ADMIN_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"phrase\": \"$PHRASE\", \"lang\": \"$LANG\"}")
+          echo "Response: $RESPONSE"
+
+      - name: Confirm post is live
+        run: |
+          echo "Pinging search engines..."
+          curl -s https://aria.supportrd.com/api/ping
+          echo "Done. Post should be live at aria.supportrd.com/blog"
