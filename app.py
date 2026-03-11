@@ -3296,16 +3296,19 @@ async function loadJournalEntries(){
       container.innerHTML='<div class="je-empty">No journal entries yet.<br>Tap <b>+ New Entry</b> to start logging your hair journey.</div>';
       return;
     }
-    container.innerHTML=d.entries.map(e=>`
-      <div class="je-card" id="je-${e.id}">
-        <button class="je-del" onclick="deleteJournalEntry(${e.id})" title="Delete">✕</button>
-        <div class="je-top">
-          <span class="je-date">${e.ts.slice(0,10)}</span>
-          <span class="je-stars">${'★'.repeat(e.hair_rating||3)}${'☆'.repeat(5-(e.hair_rating||3))}</span>
-        </div>
-        <div class="je-note">${e.note}</div>
-        ${e.aria_insight?`<div class="je-insight">${e.aria_insight}</div>`:''}
-      </div>`).join('');
+    container.innerHTML=d.entries.map(e=>{
+      const stars='★'.repeat(e.hair_rating||3)+'☆'.repeat(5-(e.hair_rating||3));
+      const insight=e.aria_insight?'<div class="je-insight">'+e.aria_insight+'</div>':'';
+      return '<div class="je-card" id="je-'+e.id+'">'
+        +'<button class="je-del" onclick="deleteJournalEntry('+e.id+')" title="Delete">✕</button>'
+        +'<div class="je-top">'
+        +'<span class="je-date">'+e.ts.slice(0,10)+'</span>'
+        +'<span class="je-stars">'+stars+'</span>'
+        +'</div>'
+        +'<div class="je-note">'+e.note+'</div>'
+        +insight
+        +'</div>';
+    }).join('');
   }catch(e){ container.innerHTML='<div class="je-empty">Could not load entries.</div>'; }
 }
 
