@@ -1130,8 +1130,7 @@ let _pwaPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){
   e.preventDefault();
   _pwaPrompt = e;
-  var btn = document.getElementById('pwa-install-btn');
-  if(btn) btn.style.display = 'block';
+  // Store prompt but don't show button - install via address bar or 3-dot menu
 });
 
 window.addEventListener('appinstalled', function(){
@@ -2116,7 +2115,10 @@ body::before{content:'';position:fixed;inset:0;
 .nav-tabs{display:flex;height:100%;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:1;min-width:0;flex:1;}.nav-tabs::-webkit-scrollbar{display:none;}
 .nav-tab{height:100%;padding:0 14px;display:flex;align-items:center;font-size:11px;letter-spacing:0.04em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;text-decoration:none;white-space:nowrap;flex-shrink:0;user-select:none;}
 .nav-tab:hover,.nav-tab.active{color:var(--text);border-bottom-color:var(--rose);}
-.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.nav-name{display:none;}
+.plan-tag{display:none;}
+@media(min-width:768px){.nav-name{display:block;}.plan-tag{display:flex;}}
 .live-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;background:rgba(48,232,144,0.08);border:1px solid rgba(48,232,144,0.25);font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--green);letter-spacing:0.1em;}
 .live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:liveDot 1.4s ease-in-out infinite;}
 @keyframes liveDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(48,232,144,0.5)}50%{opacity:0.6;box-shadow:0 0 0 4px rgba(48,232,144,0)}}
@@ -2127,7 +2129,7 @@ body::before{content:'';position:fixed;inset:0;
 .logout-btn{font-size:10px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:4px;background:none;border:1px solid var(--border);font-family:'Space Grotesk',sans-serif;transition:all 0.15s;}
 .logout-btn:hover{color:var(--text);}
 /* APP */
-.app{padding:124px 18px 40px;max-width:100%;width:100%;margin:0 auto;position:relative;z-index:1;box-sizing:border-box;}
+.app{padding:124px 12px 40px;max-width:100%;width:100%;margin:0;position:relative;z-index:1;box-sizing:border-box;overflow-x:hidden;}
 /* TOP ROW */
 .top-row{display:grid;grid-template-columns:260px 1fr 260px;gap:10px;margin-bottom:10px;align-items:stretch;}
 /* SCORE PANEL */
@@ -2406,8 +2408,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-logo"><div class="nav-logo-dot"></div>SupportRD</div>
     <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
-    <button id="pwa-install-btn" onclick="triggerPWAInstall()" style="display:block;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">⬇ Install</button>
-    <button id="nav-upgrade-btn" onclick="goUpgrade()" style="display:none;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;">✦ Upgrade</button>
+    <button id="nav-upgrade-btn" onclick="goUpgrade()" style="display:none;background:linear-gradient(135deg,var(--rose),var(--gold));border:none;color:#0d0906;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;letter-spacing:0.03em;white-space:nowrap;">✦ Upgrade</button>
     <span class="nav-name" id="nav-name">—</span>
     <div class="plan-tag" id="plan-badge">FREE</div>
     <div class="nav-avatar" id="nav-av">?</div>
