@@ -3907,20 +3907,33 @@ footer a{{color:#c1a3a2;text-decoration:none;}}
 # ── SITEMAP / ROBOTS ──────────────────────────────────────────────────────────
 @app.route("/sitemap.xml")
 def sitemap():
+    import urllib.parse as _up
     base_url = APP_BASE_URL.rstrip("/")
+    def _safe_loc(path):
+        # Encode any non-ASCII or XML-unsafe characters in the path
+        encoded = _up.quote(path, safe="/-_.")
+        return f"{base_url}{encoded}"
+    def _escape_xml(s):
+        return (s.replace("&","&amp;")
+                 .replace("<","&lt;")
+                 .replace(">","&gt;")
+                 .replace('"',"&quot;")
+                 .replace("'","&apos;"))
     urls = [
-        f"""  <url><loc>{base_url}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>""",
-        f"""  <url><loc>{base_url}/blog</loc><changefreq>daily</changefreq><priority>0.9</priority></url>""",
+        f"""  <url><loc>{_safe_loc("/")}</loc><changefreq>daily</changefreq><priority>1.0</priority></url>""",
+        f"""  <url><loc>{_safe_loc("/blog")}</loc><changefreq>daily</changefreq><priority>0.9</priority></url>""",
     ]
     try:
         for p in blog_get_index(limit=500):
-            date = p.get("date","")[:10]
-            urls.append(f"""  <url><loc>{base_url}/blog/{p["handle"]}</loc><lastmod>{date}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>""")
+            handle = p.get("handle","").strip()
+            date   = p.get("date","")[:10]
+            if not handle: continue
+            # Skip handles with characters that break XML even after encoding
+            loc = _safe_loc(f"/blog/{handle}")
+            urls.append(f"""  <url><loc>{loc}</loc><lastmod>{date}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>""")
     except: pass
-    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{chr(10).join(urls)}
-</urlset>"""
+    body = "\n".join(urls)
+    xml  = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + body + '\n</urlset>'
     return Response(xml, mimetype="application/xml")
 
 @app.route("/robots.txt")
