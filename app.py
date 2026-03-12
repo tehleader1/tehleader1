@@ -3721,6 +3721,18 @@ body::before{content:'';position:fixed;inset:0;
 const token = localStorage.getItem('srd_token');
 if (!token) { window.location.href = '/login'; }
 
+// Verify token is still valid server-side (catches stale tokens after redeployment)
+(async () => {
+  try {
+    const r = await fetch('/api/auth/me', { headers: { 'X-Auth-Token': token } });
+    if (r.status === 401) {
+      localStorage.removeItem('srd_token');
+      localStorage.removeItem('srd_user');
+      window.location.href = '/login';
+    }
+  } catch(e) { /* network error — let dashboard load and individual calls will handle it */ }
+})();
+
 // ── TICKER ──
 const TDATA = [
   {n:'MOISTURE',c:'var(--rose)'},{n:'STRENGTH',c:'var(--blue)'},
@@ -5383,9 +5395,11 @@ async function clearHistory(){
 }
 
 async function doLogout(){
-  await fetch('/api/auth/logout',{method:'POST',headers:{'X-Auth-Token':token}});
-  localStorage.removeItem('srd_token');localStorage.removeItem('srd_user');
-  window.location.href='/';
+  try{ await fetch('/api/auth/logout',{method:'POST',headers:{'X-Auth-Token':token}}); }catch(e){}
+  localStorage.removeItem('srd_token');
+  localStorage.removeItem('srd_user');
+  localStorage.removeItem('srd_profile');
+  window.location.href='/login';
 }
 
 let toastT;
