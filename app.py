@@ -3022,6 +3022,14 @@ body::before{content:'';position:fixed;inset:0;
 .cl-result-badge.hair{background:rgba(255,110,180,0.15);color:#ff6eb4;border:1px solid rgba(255,110,180,0.3);}
 .cl-result-badge.park{background:rgba(80,220,120,0.15);color:#50dc78;border:1px solid rgba(80,220,120,0.3);}
 .cl-result-dist{font-size:11px;color:rgba(255,255,255,0.4);}
+.cl-ask-row{display:flex;align-items:center;gap:8px;margin-top:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:6px 8px;}
+.cl-ask-mic{width:44px;height:44px;border-radius:50%;background:rgba(240,160,144,0.12);border:1.5px solid var(--rose);color:var(--rose);font-size:20px;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
+.cl-ask-mic.listening{background:var(--rose);color:#fff;animation:micPulse 1s ease-in-out infinite;}
+.cl-ask-input{flex:1;background:none;border:none;color:#fff;font-size:15px;font-family:'Space Grotesk',sans-serif;outline:none;padding:4px 6px;}
+.cl-ask-input::placeholder{color:rgba(255,255,255,0.25);}
+.cl-ask-send{width:40px;height:40px;border-radius:50%;background:var(--rose);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
+.cl-ask-send:hover{background:#c06050;}
+.cl-ask-status{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:0.1em;text-align:center;min-height:14px;margin-top:2px;}
 .cl-results-close{display:block;margin:16px auto 0;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;border-radius:20px;padding:10px 28px;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:12px;}
 /* Candy path tiles (drawn on canvas) - also need candy land tile animation */
 @keyframes clTilePulse{0%,100%{opacity:0.7;}50%{opacity:1;}}
@@ -4353,11 +4361,21 @@ body::before{content:'';position:fixed;inset:0;
         <!-- landmark chips injected here -->
       </div>
       <!-- Aria narration bar -->
+      <!-- Aria narration + inline ask bar -->
       <div class="cl-aria-bar">
         <div class="cl-aria-face">A</div>
         <div class="cl-aria-narration" id="cl-aria-narration">Aria is your co-pilot 🌿 Pick a destination to begin.</div>
-        <button class="cl-aria-speak-btn" onclick="clSpeakNarration()" title="Read aloud">🔊</button>
+        <button class="cl-aria-speak-btn" onclick="clSpeakNarration()" title="Replay">🔊</button>
       </div>
+      <!-- GPS Ask Aria row -->
+      <div class="cl-ask-row" id="cl-ask-row">
+        <button class="cl-ask-mic" id="cl-ask-mic" onclick="clGpsMicTap()" title="Hold to ask Aria">🎤</button>
+        <input type="text" class="cl-ask-input" id="cl-ask-input"
+          placeholder="Ask Aria anything hands-free…"
+          onkeydown="if(event.key==='Enter')clGpsAsk()">
+        <button class="cl-ask-send" onclick="clGpsAsk()">↑</button>
+      </div>
+      <div class="cl-ask-status" id="cl-ask-status"></div>
     </div>
 
     <!-- Results list -->
@@ -7060,6 +7078,73 @@ function clSetNarration(text){
 function clSpeakNarration(){
   driveSpeak(_clCurrentNarration);
 }
+
+// ── GPS inline Aria ask ──────────────────────────────────────────
+let _clAskRecog = null;
+let _clAskBusy  = false;
+
+function clGpsMicTap(){
+  const btn    = document.getElementById('cl-ask-mic');
+  const status = document.getElementById('cl-ask-status');
+  if(_clAskRecog){ _clAskRecog.stop(); _clAskRecog=null; btn.classList.remove('listening'); if(status) status.textContent=''; return; }
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ clSetNarration('Speech not supported — type your question below.'); return; }
+  _clAskRecog = new SR();
+  _clAskRecog.lang='en-US'; _clAskRecog.interimResults=false; _clAskRecog.maxAlternatives=1;
+  btn.classList.add('listening');
+  if(status) status.textContent='🎤 Listening…';
+  _clAskRecog.onresult = e => {
+    const txt = e.results[0][0].transcript;
+    const inp = document.getElementById('cl-ask-input');
+    if(inp) inp.value=txt;
+    if(status) status.textContent='';
+    clGpsAsk(txt);
+  };
+  _clAskRecog.onerror = () => { btn.classList.remove('listening'); if(status) status.textContent='Mic error — try again'; _clAskRecog=null; };
+  _clAskRecog.onend   = () => { btn.classList.remove('listening'); _clAskRecog=null; };
+  _clAskRecog.start();
+}
+
+async function clGpsAsk(forcedText){
+  const inp = document.getElementById('cl-ask-input');
+  const msg = forcedText||(inp?.value||'').trim();
+  if(!msg||_clAskBusy) return;
+  if(inp) inp.value='';
+  _clAskBusy=true;
+  const status = document.getElementById('cl-ask-status');
+  if(status) status.textContent='Aria is thinking…';
+
+  // Build context: current destination + type + dist
+  let ctx='';
+  if(_clDestName) ctx=` The user is currently navigating to "${_clDestName}" (${_clDestType}).`;
+  if(_clUserLat&&_clDestLat){
+    const d=clHaversine(_clUserLat,_clUserLng,_clDestLat,_clDestLng);
+    ctx+=` They are ${clDistLabel(d)} away from the destination.`;
+  }
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:200,
+        system:`You are Aria, a warm helpful AI co-pilot from Support (a hair care and tech company). The user is DRIVING — keep ALL answers SHORT, max 2-3 sentences. Be upbeat and natural.${ctx}`,
+        messages:[{role:'user',content:msg}]
+      })
+    });
+    const d = await r.json();
+    const reply = d.content?.[0]?.text||'Sorry, try again!';
+    clSetNarration(reply);
+    driveSpeak(reply);
+    if(status) status.textContent='';
+  }catch(e){
+    clSetNarration('Connection issue — try again.');
+    if(status) status.textContent='';
+  }
+  _clAskBusy=false;
+}
+
 
 // Animate the candy path
 function clAnimate(){
