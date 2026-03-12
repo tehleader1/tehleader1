@@ -2741,7 +2741,7 @@ body::before{content:'';position:fixed;inset:0;
 .pr-tag.try{background:var(--gold-dim);color:var(--gold);}
 /* ── PREMIUM PAGES ── */
 .ppage{display:none;padding:90px 22px 32px;min-height:100vh;}
-.ppage.active{display:block;}
+.ppage.active{display:block;}#pp-overview{padding:0;}
 .ppage-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .ppage-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px;}
 .premium-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.15em;background:linear-gradient(135deg,var(--rose),var(--gold));color:#000;padding:3px 8px;border-radius:3px;font-weight:600;}
@@ -3155,6 +3155,7 @@ body::before{content:'';position:fixed;inset:0;
 
 <div class="app">
 
+<div class="ppage active" id="pp-overview" style="padding:0;min-height:unset;">
 <!-- TOP ROW -->
 <div class="top-row">
   <div class="score-panel fu fu1">
@@ -3348,6 +3349,7 @@ body::before{content:'';position:fixed;inset:0;
   </div>
 </div>
 </div>
+</div><!-- /pp-overview -->
 
 <!-- ═══════════════ PREMIUM FULL-PAGE PANELS ═══════════════ -->
 
@@ -5534,47 +5536,59 @@ buildTicker(null);
 // ═══════════════════════════════════════════════════════════════
 const _PAGE_MAP = {
   overview: {page:'pp-overview',   open: openOverviewPage},
-  profile:  {page:'pp-profile-page', open: openProfilePage},
+  profile:  {page:'pp-profile-page',open: openProfilePage},
   journey:  {page:'pp-journey',    open: openJourneyPage},
   progress: {page:'pp-progress',   open: openProgressPage},
   photo:    {page:'pp-photo',      open: openPhotoPage},
   journal:  {page:'pp-journal',    open: openJournalPage},
   whatsapp: {page:'pp-whatsapp',   open: openWhatsappPage},
   settings: {page:'pp-settings',   open: openSettingsPage},
-  history:  {page:'pp-history',    open: ()=>{}},
+  history:  {page:'pp-overview',   open: ()=>{}},
 };
 
 let _currentTab = 'overview';
 
 function switchPTab(name){
-  if(_currentTab === name) return;
   _currentTab = name;
 
-  // Hide all ppages
+  // Hide ALL ppages
   document.querySelectorAll('.ppage').forEach(p => p.classList.remove('active'));
 
-  // Show target
+  // Show the right one
   const cfg = _PAGE_MAP[name];
-  if(cfg){
-    const el = document.getElementById(cfg.page);
-    if(el) el.classList.add('active');
-    try{ cfg.open(); }catch(e){ console.warn('Page open error:', e); }
+  const pageId = cfg ? cfg.page : ('pp-'+name);
+  const el = document.getElementById(pageId);
+  if(el){
+    el.classList.add('active');
+  } else {
+    console.warn('switchPTab: no element for', name, '(looked for #'+pageId+')');
   }
 
-  // Update desktop nav tabs
+  // Run the page-open callback
+  if(cfg){ try{ cfg.open(); }catch(e){ console.warn('Page open error ('+name+'):', e); } }
+
+  // Sync desktop nav tabs
   document.querySelectorAll('.nav-tab').forEach(t => {
-    const txt = t.textContent.replace('✦','').replace('⚙','').trim().toLowerCase();
-    const match = name === 'journey' ? txt.includes('journey') : txt.startsWith(name.slice(0,4));
+    const label = t.textContent.replace(/✦|⚙/g,'').trim().toLowerCase();
+    let match = false;
+    if(name==='overview')  match = label==='overview';
+    else if(name==='profile') match = label==='hair profile' || label==='profile';
+    else if(name==='journey') match = label.includes('journey') || label.includes('aria');
+    else if(name==='progress') match = label.includes('progress');
+    else if(name==='photo')   match = label.includes('photo');
+    else if(name==='journal') match = label.includes('journal');
+    else if(name==='whatsapp') match = label.includes('sms') || label.includes('whatsapp');
+    else if(name==='settings') match = label.includes('setting');
+    else match = label.startsWith(name.slice(0,4));
     t.classList.toggle('active', match);
   });
 
-  // Update mobile bottom tabs
+  // Sync mobile bottom tabs
   ['overview','profile','journey','photo'].forEach(n => {
     const btn = document.getElementById('mobt-'+n);
-    if(btn) btn.classList.toggle('active', n === name);
+    if(btn) btn.classList.toggle('active', n===name);
   });
 
-  // Scroll to top
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
