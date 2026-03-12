@@ -2634,16 +2634,88 @@ body::before{content:'';position:fixed;inset:0;
 .tl-date{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);}
 .tl-del{background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:0;}
 .tl-del:hover{color:var(--red);}
-/* Photo */
-.photo-layout{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start;}
-@media(max-width:900px){.photo-layout{grid-template-columns:1fr;}}
-.photo-upload-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:20px;}
-.photo-drop{border:2px dashed var(--border2);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color 0.2s;}
-.photo-drop:hover{border-color:rgba(240,160,144,0.4);}
-.photo-drop-icon{font-size:32px;margin-bottom:10px;}
-.photo-drop-label{font-size:13px;color:var(--text);margin-bottom:4px;}
-.photo-drop-sub{font-size:11px;color:var(--muted);}
-.photo-result-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:20px;}
+/* ── PHOTO ANALYSIS ── */
+.pa-page{max-width:760px;margin:0 auto;padding:0 0 40px;}
+.pa-intro{text-align:center;padding:28px 24px 20px;}
+.pa-intro-title{font-family:var(--brand-font);font-size:22px;font-style:italic;font-weight:400;color:var(--text);margin-bottom:6px;}
+.pa-intro-sub{font-size:12px;color:var(--muted);line-height:1.6;max-width:420px;margin:0 auto;}
+/* Mode selector */
+.pa-mode-tabs{display:flex;gap:10px;justify-content:center;margin-bottom:24px;}
+.pa-tab{padding:9px 22px;border-radius:30px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border:1px solid var(--border2);color:var(--muted2);background:transparent;transition:all 0.2s;font-family:var(--brand-font-body);}
+.pa-tab.active{background:var(--rose);color:#fff;border-color:var(--rose);}
+/* Scanner stage */
+.pa-scanner-wrap{position:relative;width:100%;max-width:520px;margin:0 auto 24px;border-radius:20px;overflow:hidden;background:#000;aspect-ratio:4/3;}
+.pa-video{width:100%;height:100%;object-fit:cover;display:block;}
+.pa-scanner-overlay{position:absolute;inset:0;pointer-events:none;}
+/* Corner brackets */
+.pa-bracket{position:absolute;width:48px;height:48px;border-color:var(--rose);border-style:solid;opacity:0.85;}
+.pa-bracket--tl{top:18px;left:18px;border-width:2px 0 0 2px;border-radius:4px 0 0 0;}
+.pa-bracket--tr{top:18px;right:18px;border-width:2px 2px 0 0;border-radius:0 4px 0 0;}
+.pa-bracket--bl{bottom:18px;left:18px;border-width:0 0 2px 2px;border-radius:0 0 0 4px;}
+.pa-bracket--br{bottom:18px;right:18px;border-width:0 2px 2px 0;border-radius:0 0 4px 0;}
+/* Face oval guide */
+.pa-oval-guide{position:absolute;left:50%;top:50%;transform:translate(-50%,-54%);width:52%;aspect-ratio:3/4;border:2px dashed rgba(240,160,144,0.45);border-radius:50%;animation:pa-oval-pulse 2.5s ease-in-out infinite;}
+@keyframes pa-oval-pulse{0%,100%{border-color:rgba(240,160,144,0.35);}50%{border-color:rgba(240,160,144,0.75);}}
+/* Scan line */
+.pa-scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 0%,rgba(240,160,144,0.0) 5%,rgba(240,160,144,0.9) 30%,#f0a090 50%,rgba(240,160,144,0.9) 70%,rgba(240,160,144,0.0) 95%,transparent 100%);box-shadow:0 0 12px 2px rgba(240,160,144,0.5);display:none;}
+.pa-scan-line.active{display:block;animation:pa-scan-move 2.2s ease-in-out infinite;}
+@keyframes pa-scan-move{0%{top:10%;opacity:0;}8%{opacity:1;}92%{opacity:1;}100%{top:90%;opacity:0;}}
+/* Scan glow corners when active */
+.pa-scanner-wrap.scanning .pa-bracket{animation:pa-bracket-glow 1.1s ease-in-out infinite alternate;}
+@keyframes pa-bracket-glow{from{opacity:0.6;}to{opacity:1;box-shadow:0 0 8px var(--rose);}}
+/* Instruction bar */
+.pa-instruction{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.82));padding:28px 20px 16px;text-align:center;}
+.pa-instruction-text{font-size:13px;color:#fff;letter-spacing:0.04em;line-height:1.5;}
+.pa-instruction-sub{font-size:10px;color:rgba(255,255,255,0.5);margin-top:3px;letter-spacing:0.08em;text-transform:uppercase;}
+/* Head turn progress */
+.pa-turn-track{display:flex;justify-content:center;gap:6px;margin-top:8px;}
+.pa-turn-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.25);transition:background 0.4s;}
+.pa-turn-dot.done{background:var(--rose);}
+/* Upload zone */
+.pa-upload-zone{max-width:520px;margin:0 auto 20px;border:2px dashed var(--border2);border-radius:20px;padding:44px 24px;text-align:center;cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;}
+.pa-upload-zone:hover{border-color:rgba(240,160,144,0.5);background:rgba(240,160,144,0.03);}
+.pa-upload-icon{font-size:38px;margin-bottom:12px;}
+.pa-upload-label{font-size:14px;color:var(--text);margin-bottom:5px;font-family:var(--brand-font);font-style:italic;}
+.pa-upload-sub{font-size:11px;color:var(--muted);}
+.pa-upload-preview{max-width:100%;max-height:260px;border-radius:14px;margin-top:16px;object-fit:cover;display:none;}
+/* Controls */
+.pa-controls{display:flex;flex-direction:column;align-items:center;gap:10px;margin:0 auto 24px;max-width:520px;}
+.pa-btn-primary{width:100%;padding:14px;background:var(--rose);color:#fff;border:none;border-radius:30px;font-family:var(--brand-font-body);font-size:12px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+.pa-btn-primary:hover{background:#d4806c;transform:translateY(-1px);}
+.pa-btn-primary:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+.pa-btn-secondary{font-size:11px;color:var(--muted2);cursor:pointer;background:none;border:1px solid var(--border2);padding:8px 20px;border-radius:20px;letter-spacing:0.08em;font-family:var(--brand-font-body);}
+/* Scanning state overlay */
+.pa-scanning-status{text-align:center;padding:16px;max-width:520px;margin:0 auto;}
+.pa-scanning-dots{display:flex;justify-content:center;gap:6px;margin-bottom:10px;}
+.pa-scanning-dot{width:8px;height:8px;border-radius:50%;background:var(--rose);animation:pa-dot-bounce 1.1s ease-in-out infinite;}
+.pa-scanning-dot:nth-child(2){animation-delay:0.18s;}
+.pa-scanning-dot:nth-child(3){animation-delay:0.36s;}
+@keyframes pa-dot-bounce{0%,80%,100%{transform:scale(0.7);opacity:0.4;}40%{transform:scale(1);opacity:1;}}
+.pa-scanning-msg{font-size:12px;color:var(--muted2);letter-spacing:0.06em;}
+/* Results */
+.pa-result{max-width:760px;margin:0 auto;}
+.pa-result-header{text-align:center;margin-bottom:24px;}
+.pa-result-score-ring{position:relative;width:110px;height:110px;margin:0 auto 12px;}
+.pa-result-score-svg{width:110px;height:110px;}
+.pa-result-score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.pa-result-score-num{font-family:var(--brand-font);font-size:36px;font-weight:400;line-height:1;color:var(--text);}
+.pa-result-score-lbl{font-size:9px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;}
+.pa-result-title{font-family:var(--brand-font);font-size:18px;font-style:italic;color:var(--text);margin-bottom:4px;}
+.pa-result-sub{font-size:12px;color:var(--muted);line-height:1.5;}
+.pa-metrics-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px;}
+@media(min-width:520px){.pa-metrics-grid{grid-template-columns:repeat(4,1fr);}}
+.pa-metric-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 10px;text-align:center;}
+.pa-metric-label{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.pa-metric-val{font-size:15px;font-weight:500;color:var(--text);}
+.pa-advice-block{background:rgba(240,160,144,0.07);border-left:2px solid var(--rose);border-radius:0 12px 12px 0;padding:14px 16px;font-size:13px;color:var(--text);line-height:1.7;margin-bottom:16px;}
+.pa-section-label{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin:14px 0 7px;}
+.pa-obs-item{font-size:12px;color:var(--muted2);padding:3px 0 3px 14px;position:relative;line-height:1.5;}
+.pa-obs-item::before{content:'✦';position:absolute;left:0;color:var(--rose);font-size:8px;top:5px;}
+.pa-rec-tag{display:inline-block;background:rgba(96,168,255,0.08);border:1px solid rgba(96,168,255,0.2);color:var(--blue);font-size:11px;border-radius:6px;padding:4px 10px;margin:3px;}
+.pa-rescan-btn{display:block;width:100%;margin-top:20px;padding:12px;border:1px solid var(--border2);background:transparent;color:var(--muted2);border-radius:30px;font-family:var(--brand-font-body);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+.pa-rescan-btn:hover{border-color:var(--rose);color:var(--rose);}
+.pa-history-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted2);}
+/* Keep old metric style for fallback */
 .photo-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
 .photo-metric{background:var(--bg3);border-radius:8px;padding:12px;text-align:center;}
 .phm-label{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
@@ -2999,42 +3071,130 @@ body::before{content:'';position:fixed;inset:0;
   <div id="photo-gate" class="premium-gate" style="display:none">
     <div class="gate-icon">📸</div>
     <div class="gate-title">AI Photo Analysis</div>
-    <div class="gate-desc">Upload a selfie and Aria diagnoses your hair's porosity, damage level, density, and texture — then recommends the perfect products.</div>
+    <div class="gate-desc">Aria scans your hair in real time — detecting porosity, damage, density, and texture — then builds your personalized treatment plan.</div>
     <button class="gate-btn" onclick="dashboardUpgrade()">Unlock Premium — $35/mo →</button>
   </div>
+
   <div id="photo-content" style="display:none">
-    <div class="photo-layout">
-      <div class="photo-upload-panel">
-        <div class="photo-drop" id="photo-drop" onclick="document.getElementById('photo-file').click()">
-          <div class="photo-drop-icon">📸</div>
-          <div class="photo-drop-label">Tap to upload a hair photo</div>
-          <div class="photo-drop-sub">JPG or PNG · max 5MB</div>
-          <img id="photo-preview" style="display:none;max-width:100%;max-height:220px;border-radius:12px;margin-top:12px;object-fit:cover;">
+    <div class="pa-page">
+
+      <!-- Intro -->
+      <div class="pa-intro">
+        <div class="pa-intro-title">Let Aria read your hair</div>
+        <div class="pa-intro-sub">Use your camera for a live scan or upload a photo. Aria will detect your hair's porosity, damage level, density, and texture — then build your personalized treatment plan.</div>
+      </div>
+
+      <!-- Mode tabs -->
+      <div class="pa-mode-tabs">
+        <button class="pa-tab active" id="pa-tab-camera" onclick="paSetMode('camera')">📷 Live Camera Scan</button>
+        <button class="pa-tab" id="pa-tab-upload" onclick="paSetMode('upload')">📁 Upload Photo</button>
+      </div>
+
+      <!-- CAMERA MODE -->
+      <div id="pa-camera-mode">
+        <div class="pa-scanner-wrap" id="pa-scanner-wrap">
+          <video id="pa-video" class="pa-video" autoplay playsinline muted></video>
+          <canvas id="pa-capture-canvas" style="display:none"></canvas>
+          <div class="pa-scanner-overlay">
+            <div class="pa-oval-guide"></div>
+            <div class="pa-bracket pa-bracket--tl"></div>
+            <div class="pa-bracket pa-bracket--tr"></div>
+            <div class="pa-bracket pa-bracket--bl"></div>
+            <div class="pa-bracket pa-bracket--br"></div>
+            <div class="pa-scan-line" id="pa-scan-line"></div>
+            <div class="pa-instruction">
+              <div class="pa-instruction-text" id="pa-instruction-text">Position your hair in the oval guide</div>
+              <div class="pa-instruction-sub" id="pa-instruction-sub">Keep hair visible · Good lighting helps</div>
+              <div class="pa-turn-track" id="pa-turn-track" style="display:none">
+                <div class="pa-turn-dot" id="pa-dot-0"></div>
+                <div class="pa-turn-dot" id="pa-dot-1"></div>
+                <div class="pa-turn-dot" id="pa-dot-2"></div>
+                <div class="pa-turn-dot" id="pa-dot-3"></div>
+                <div class="pa-turn-dot" id="pa-dot-4"></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <input type="file" id="photo-file" accept="image/*" style="display:none" onchange="onPhotoSelected(event)">
-        <button class="ppage-regen" id="photo-analyze-btn" style="width:100%;margin-top:12px;display:none" onclick="analyzePhoto()">🔍 Analyze My Hair</button>
-        <div id="photo-loading" class="ppage-loading" style="display:none">
-          <div class="ppage-spinner"></div><div>Aria is analyzing your hair…</div>
+        <div class="pa-controls" id="pa-cam-controls">
+          <button class="pa-btn-primary" id="pa-start-scan-btn" onclick="paStartScan()">✦ Start Hair Scan</button>
+          <button class="pa-btn-secondary" onclick="paSetMode('upload')">No camera? Upload instead</button>
+        </div>
+        <div id="pa-cam-no-access" style="display:none;text-align:center;padding:16px;">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Camera not available on this device.</div>
+          <button class="pa-btn-secondary" onclick="paSetMode('upload')">Upload a photo instead →</button>
         </div>
       </div>
-      <div class="photo-result-panel" id="photo-result" style="display:none">
-        <div class="photo-metrics">
-          <div class="photo-metric"><div class="phm-label">Porosity</div><div class="phm-val" id="pa-porosity">—</div></div>
-          <div class="photo-metric"><div class="phm-label">Damage</div><div class="phm-val" id="pa-damage">—</div></div>
-          <div class="photo-metric"><div class="phm-label">Density</div><div class="phm-val" id="pa-density">—</div></div>
-          <div class="photo-metric"><div class="phm-label">Texture</div><div class="phm-val" id="pa-texture">—</div></div>
+
+      <!-- UPLOAD MODE -->
+      <div id="pa-upload-mode" style="display:none">
+        <div class="pa-upload-zone" id="pa-upload-zone" onclick="document.getElementById('pa-file-input').click()">
+          <div class="pa-upload-icon">🌿</div>
+          <div class="pa-upload-label">Tap to choose a hair photo</div>
+          <div class="pa-upload-sub">JPG or PNG · max 5MB · clear photo works best</div>
+          <img id="pa-upload-preview" class="pa-upload-preview">
         </div>
-        <div class="photo-score-wrap">
-          <div class="photo-score-label">Overall Hair Health</div>
-          <div class="photo-score-bar"><div class="photo-score-fill" id="pa-score-fill"></div></div>
-          <div class="photo-score-num" id="pa-score-num">—</div>
+        <input type="file" id="pa-file-input" accept="image/*" style="display:none" onchange="paOnUpload(event)">
+        <div class="pa-controls">
+          <button class="pa-btn-primary" id="pa-upload-analyze-btn" style="display:none" onclick="paAnalyze()">✦ Analyze My Hair</button>
         </div>
-        <div class="photo-advice" id="pa-advice"></div>
-        <div class="photo-obs" id="pa-obs"></div>
-        <div class="photo-recs" id="pa-recs"></div>
-        <div class="photo-history-label">Past Analyses</div>
-        <div class="photo-history-list" id="photo-history-list"></div>
       </div>
+
+      <!-- Scanning status (shown during API call) -->
+      <div id="pa-scanning-status" class="pa-scanning-status" style="display:none">
+        <div class="pa-scanning-dots">
+          <div class="pa-scanning-dot"></div>
+          <div class="pa-scanning-dot"></div>
+          <div class="pa-scanning-dot"></div>
+        </div>
+        <div class="pa-scanning-msg" id="pa-scanning-msg">Aria is reading your hair…</div>
+      </div>
+
+      <!-- RESULTS (dead center) -->
+      <div id="pa-result" class="pa-result" style="display:none">
+        <div class="pa-result-header">
+          <div class="pa-result-score-ring">
+            <svg class="pa-result-score-svg" viewBox="0 0 110 110">
+              <defs>
+                <linearGradient id="pa-rg" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--rose)"/>
+                  <stop offset="100%" stop-color="var(--gold)"/>
+                </linearGradient>
+              </defs>
+              <circle cx="55" cy="55" r="46" fill="none" stroke="var(--border2)" stroke-width="7"/>
+              <circle id="pa-score-arc" cx="55" cy="55" r="46" fill="none" stroke="url(#pa-rg)" stroke-width="7"
+                stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289"
+                transform="rotate(-90 55 55)" style="transition:stroke-dashoffset 1.4s cubic-bezier(0.25,1,0.5,1);filter:drop-shadow(0 0 5px rgba(240,160,144,0.5));"/>
+            </svg>
+            <div class="pa-result-score-center">
+              <div class="pa-result-score-num" id="pa-score-num">—</div>
+              <div class="pa-result-score-lbl">/ 100</div>
+            </div>
+          </div>
+          <div class="pa-result-title" id="pa-result-title">Hair Health Score</div>
+          <div class="pa-result-sub" id="pa-result-sub"></div>
+        </div>
+
+        <div class="pa-metrics-grid">
+          <div class="pa-metric-card"><div class="pa-metric-label">Porosity</div><div class="pa-metric-val" id="pa-porosity">—</div></div>
+          <div class="pa-metric-card"><div class="pa-metric-label">Damage</div><div class="pa-metric-val" id="pa-damage">—</div></div>
+          <div class="pa-metric-card"><div class="pa-metric-label">Density</div><div class="pa-metric-val" id="pa-density">—</div></div>
+          <div class="pa-metric-card"><div class="pa-metric-label">Texture</div><div class="pa-metric-val" id="pa-texture">—</div></div>
+        </div>
+
+        <div class="pa-advice-block" id="pa-advice"></div>
+
+        <div class="pa-section-label">What Aria observed</div>
+        <div id="pa-obs"></div>
+
+        <div class="pa-section-label">Recommended products</div>
+        <div id="pa-recs"></div>
+
+        <div class="pa-section-label">Past analyses</div>
+        <div id="pa-history-list"></div>
+
+        <button class="pa-rescan-btn" onclick="paReset()">✦ Scan Again</button>
+      </div>
+
     </div>
   </div>
 </div>
@@ -3509,54 +3669,219 @@ function openPhotoPage(){
 }
 
 let _photoB64=null;
-function onPhotoSelected(e){
-  const file=e.target.files[0];
+// ── PHOTO ANALYSIS — SCANNER UI ──────────────────────────────────────────────
+let _paMode = 'camera';
+let _paStream = null;
+let _paPhotoB64 = null;
+let _paScanStep = 0;
+let _paScanTimer = null;
+
+const PA_STEPS = [
+  { text: 'Face the camera straight on',       sub: 'Keep your hair relaxed and visible' },
+  { text: 'Good — now tilt slightly left',      sub: 'Aria is reading your hair texture' },
+  { text: 'Perfect — tilt slightly right',      sub: 'Capturing density and damage patterns' },
+  { text: 'Look up just a little',              sub: 'Reading scalp and root condition' },
+  { text: 'Hold still — capturing final frame', sub: 'Almost done…' },
+];
+
+function paSetMode(mode){
+  _paMode = mode;
+  document.getElementById('pa-tab-camera').classList.toggle('active', mode==='camera');
+  document.getElementById('pa-tab-upload').classList.toggle('active', mode==='upload');
+  document.getElementById('pa-camera-mode').style.display = mode==='camera' ? '' : 'none';
+  document.getElementById('pa-upload-mode').style.display = mode==='upload' ? '' : 'none';
+  if(mode==='camera') paInitCamera();
+  else paStopCamera();
+}
+
+async function paInitCamera(){
+  const wrap = document.getElementById('pa-scanner-wrap');
+  const noAccess = document.getElementById('pa-cam-no-access');
+  const controls = document.getElementById('pa-cam-controls');
+  try{
+    _paStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:960}}});
+    document.getElementById('pa-video').srcObject = _paStream;
+    wrap.style.display = '';
+    controls.style.display = '';
+    noAccess.style.display = 'none';
+  }catch(err){
+    wrap.style.display = 'none';
+    controls.style.display = 'none';
+    noAccess.style.display = 'block';
+    // Auto-switch to upload
+    setTimeout(()=>paSetMode('upload'), 1200);
+  }
+}
+
+function paStopCamera(){
+  if(_paStream){ _paStream.getTracks().forEach(t=>t.stop()); _paStream=null; }
+  clearTimeout(_paScanTimer);
+}
+
+function paStartScan(){
+  _paScanStep = 0;
+  _paPhotoB64 = null;
+  document.getElementById('pa-start-scan-btn').style.display = 'none';
+  document.getElementById('pa-scanner-wrap').classList.add('scanning');
+  document.getElementById('pa-scan-line').classList.add('active');
+  document.getElementById('pa-turn-track').style.display = 'flex';
+  paAdvanceScanStep();
+}
+
+function paAdvanceScanStep(){
+  const step = PA_STEPS[_paScanStep] || PA_STEPS[PA_STEPS.length-1];
+  document.getElementById('pa-instruction-text').textContent = step.text;
+  document.getElementById('pa-instruction-sub').textContent = step.sub;
+  // Light up dot
+  for(let i=0;i<5;i++){
+    const d=document.getElementById('pa-dot-'+i);
+    if(d) d.classList.toggle('done', i<=_paScanStep);
+  }
+  if(_paScanStep < PA_STEPS.length-1){
+    _paScanTimer = setTimeout(()=>{ _paScanStep++; paAdvanceScanStep(); }, 1800);
+  } else {
+    // Final step — capture and analyze
+    _paScanTimer = setTimeout(()=>{ paCaptureAndAnalyze(); }, 1600);
+  }
+}
+
+function paCaptureAndAnalyze(){
+  const video = document.getElementById('pa-video');
+  const canvas = document.getElementById('pa-capture-canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  _paPhotoB64 = canvas.toDataURL('image/jpeg', 0.88);
+  // Stop scan animation
+  document.getElementById('pa-scanner-wrap').classList.remove('scanning');
+  document.getElementById('pa-scan-line').classList.remove('active');
+  document.getElementById('pa-instruction-text').textContent = 'Capture complete ✦';
+  document.getElementById('pa-instruction-sub').textContent = 'Sending to Aria…';
+  paAnalyze();
+}
+
+function paOnUpload(e){
+  const file = e.target.files[0];
   if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    _photoB64=ev.target.result;
-    const img=document.getElementById('photo-preview');
-    img.src=_photoB64; img.style.display='block';
-    document.getElementById('photo-analyze-btn').style.display='block';
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    _paPhotoB64 = ev.target.result;
+    const prev = document.getElementById('pa-upload-preview');
+    prev.src = _paPhotoB64;
+    prev.style.display = 'block';
+    document.getElementById('pa-upload-analyze-btn').style.display = 'block';
   };
   reader.readAsDataURL(file);
 }
-async function analyzePhoto(){
-  if(!_photoB64){ showToast('Please select a photo first'); return; }
-  document.getElementById('photo-analyze-btn').style.display='none';
-  document.getElementById('photo-loading').style.display='flex';
-  document.getElementById('photo-result').style.display='none';
+
+async function paAnalyze(){
+  if(!_paPhotoB64){ showToast('No photo captured yet'); return; }
+  // Stop camera to save resources
+  paStopCamera();
+  // Show scanning status
+  document.getElementById('pa-camera-mode').style.display='none';
+  document.getElementById('pa-upload-mode').style.display='none';
+  document.getElementById('pa-mode-tabs') && (document.getElementById('pa-mode-tabs').style.display='none');
+  document.querySelector('.pa-mode-tabs') && (document.querySelector('.pa-mode-tabs').style.display='none');
+  document.getElementById('pa-scanning-status').style.display='block';
+  document.getElementById('pa-result').style.display='none';
+
+  const msgs = [
+    'Aria is reading your hair…',
+    'Detecting porosity and texture…',
+    'Measuring damage patterns…',
+    'Analyzing scalp health…',
+    'Building your treatment plan…'
+  ];
+  let mi=0;
+  const msgEl=document.getElementById('pa-scanning-msg');
+  const msgTimer=setInterval(()=>{ mi=(mi+1)%msgs.length; msgEl.textContent=msgs[mi]; },1400);
+
   try{
-    const r=await fetch('/api/photo-analysis',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({image_b64:_photoB64})});
+    const r=await fetch('/api/photo-analysis',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body:JSON.stringify({image_b64:_paPhotoB64})
+    });
     const d=await r.json();
-    if(d.analysis) renderPhotoResult(d.analysis);
-    else showToast(d.error||'Analysis failed');
-  }catch(e){ showToast('Analysis error'); }
-  document.getElementById('photo-loading').style.display='none';
-  document.getElementById('photo-analyze-btn').style.display='block';
+    clearInterval(msgTimer);
+    document.getElementById('pa-scanning-status').style.display='none';
+    if(d.analysis) paRenderResult(d.analysis);
+    else { showToast(d.error||'Analysis failed'); paReset(); }
+  }catch(e){
+    clearInterval(msgTimer);
+    document.getElementById('pa-scanning-status').style.display='none';
+    showToast('Connection error — try again');
+    paReset();
+  }
 }
-function renderPhotoResult(a){
+
+function paRenderResult(a){
   const el=id=>document.getElementById(id);
+  const score=parseInt(a.overall_health_score)||0;
+  // Animate score ring
+  const arc=el('pa-score-arc');
+  const circ=289;
+  el('pa-score-num').textContent=score;
+  setTimeout(()=>{ arc.style.strokeDashoffset=circ-(circ*(score/100)); },80);
+
+  // Score label
+  let label='Good condition';
+  if(score>=85) label='Excellent health';
+  else if(score>=70) label='Good condition';
+  else if(score>=50) label='Needs attention';
+  else label='Significant repair needed';
+  el('pa-result-title').textContent=label;
+  el('pa-result-sub').textContent='Based on your hair scan · '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric'});
+
   el('pa-porosity').textContent=a.porosity||'—';
   el('pa-damage').textContent=a.damage_level||'—';
   el('pa-density').textContent=a.density||'—';
   el('pa-texture').textContent=a.texture||'—';
-  const score=a.overall_health_score||0;
-  el('pa-score-fill').style.width=score+'%';
-  el('pa-score-num').textContent=score+' / 100';
   el('pa-advice').textContent=a.personalized_advice||'';
-  el('pa-obs').innerHTML='<div class="photo-obs-title">Observations</div>'+(a.observations||[]).map(o=>'<div class="photo-obs-item">'+o+'</div>').join('');
-  el('pa-recs').innerHTML='<div class="photo-recs-title">Recommended Products</div>'+(a.recommended_products||[]).map(p=>'<span class="photo-rec-tag">'+p+'</span>').join('');
-  el('photo-result').style.display='block';
-  loadPhotoHistory();
+  el('pa-obs').innerHTML=(a.observations||[]).map(o=>'<div class="pa-obs-item">'+o+'</div>').join('');
+  el('pa-recs').innerHTML=(a.recommended_products||[]).map(p=>'<span class="pa-rec-tag">'+p+'</span>').join('');
+  el('pa-result').style.display='block';
+  paLoadHistory();
 }
-async function loadPhotoHistory(){
-  const r=await fetch('/api/photo-analysis',{headers:{'X-Auth-Token':token}});
-  const d=await r.json();
-  const list=document.getElementById('photo-history-list');
-  if(!d.analyses?.length){ list.innerHTML='<div class="photo-hist-item" style="color:var(--muted)">No past analyses.</div>'; return; }
-  list.innerHTML='<div class="photo-history-label">Past Analyses</div>'+d.analyses.map(a=>'<div class="photo-hist-item"><span>'+JSON.parse(a.analysis).damage_level+' damage · '+JSON.parse(a.analysis).overall_health_score+'/100</span><span>'+a.ts.slice(0,10)+'</span></div>').join('');
+
+async function paLoadHistory(){
+  try{
+    const r=await fetch('/api/photo-analysis',{headers:{'X-Auth-Token':token}});
+    const d=await r.json();
+    const list=document.getElementById('pa-history-list');
+    if(!d.analyses?.length){ list.innerHTML='<div class="pa-history-item" style="color:var(--muted)">No past analyses yet.</div>'; return; }
+    list.innerHTML=d.analyses.map(a=>{
+      try{
+        const p=JSON.parse(a.analysis);
+        return '<div class="pa-history-item"><span>'+p.damage_level+' damage · '+p.overall_health_score+'/100</span><span>'+a.ts.slice(0,10)+'</span></div>';
+      }catch(e){ return ''; }
+    }).join('');
+  }catch(e){}
 }
+
+function paReset(){
+  _paPhotoB64=null; _paScanStep=0;
+  document.getElementById('pa-result').style.display='none';
+  document.getElementById('pa-scanning-status').style.display='none';
+  document.querySelector('.pa-mode-tabs').style.display='flex';
+  document.getElementById('pa-upload-preview').style.display='none';
+  document.getElementById('pa-upload-analyze-btn').style.display='none';
+  document.getElementById('pa-start-scan-btn').style.display='block';
+  document.getElementById('pa-turn-track').style.display='none';
+  document.getElementById('pa-scan-line').classList.remove('active');
+  document.getElementById('pa-scanner-wrap').classList.remove('scanning');
+  document.getElementById('pa-instruction-text').textContent='Position your hair in the oval guide';
+  document.getElementById('pa-instruction-sub').textContent='Keep hair visible · Good lighting helps';
+  for(let i=0;i<5;i++){ const d=document.getElementById('pa-dot-'+i); if(d) d.classList.remove('done'); }
+  paSetMode('camera');
+}
+
+// Legacy aliases kept for safety
+function onPhotoSelected(e){ paOnUpload(e); }
+async function analyzePhoto(){ paAnalyze(); }
+function renderPhotoResult(a){ paRenderResult(a); }
+async function loadPhotoHistory(){ paLoadHistory(); }
 
 function activateStat(el){
   document.querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));
