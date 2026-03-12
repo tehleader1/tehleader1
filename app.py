@@ -2055,6 +2055,62 @@ def shopify_auth():
     history_count = len(get_chat_history(user_id, limit=100))
     return jsonify({"ok":True,"token":token,"name":name,"email":email,"user_id":user_id,"profile":profile,"chat_count":history_count})
 
+@app.route("/api/auth/update-profile", methods=["POST","OPTIONS"])
+def update_profile():
+    if request.method=="OPTIONS": return "",204
+    user = get_current_user()
+    if not user: return jsonify({"error":"Not authenticated"}),401
+    data = request.get_json(force=True) or {}
+    name    = data.get("name","").strip()
+    email   = data.get("email","").strip().lower()
+    phone   = data.get("phone","").strip()
+    address = data.get("address","").strip()
+    city    = data.get("city","").strip()
+    if not name or not email:
+        return jsonify({"error":"Name and email required"}),400
+    # Check email not taken by another user
+    existing = db_execute("SELECT id FROM users WHERE email=? AND id!=?", (email, user["id"]), fetchone=True)
+    if existing:
+        return jsonify({"error":"That email is already in use"}),400
+    db_execute("UPDATE users SET name=?, email=? WHERE id=?", (name, email, user["id"]))
+    # Store extra fields in hair_profiles as metadata (phone/address)
+    # We store them in a simple settings table if available, else ignore gracefully
+    try:
+        db_execute("CREATE TABLE IF NOT EXISTS user_settings (user_id INTEGER PRIMARY KEY, phone TEXT, address TEXT, city TEXT)")
+        existing_s = db_execute("SELECT user_id FROM user_settings WHERE user_id=?", (user["id"],), fetchone=True)
+        if existing_s:
+            db_execute("UPDATE user_settings SET phone=?,address=?,city=? WHERE user_id=?", (phone,address,city,user["id"]))
+        else:
+            db_execute("INSERT INTO user_settings (user_id,phone,address,city) VALUES (?,?,?,?)", (user["id"],phone,address,city))
+    except: pass
+    return jsonify({"ok":True})
+
+@app.route("/api/auth/change-password", methods=["POST","OPTIONS"])
+def change_password():
+    if request.method=="OPTIONS": return "",204
+    user = get_current_user()
+    if not user: return jsonify({"error":"Not authenticated"}),401
+    data = request.get_json(force=True) or {}
+    new_pass = data.get("new_password","")
+    if not new_pass or len(new_pass)<6:
+        return jsonify({"error":"Password must be at least 6 characters"}),400
+    pw_hash = hashlib.sha256(new_pass.encode()).hexdigest()
+    db_execute("UPDATE users SET password_hash=? WHERE id=?", (pw_hash, user["id"]))
+    return jsonify({"ok":True})
+
+@app.route("/api/auth/delete-account", methods=["DELETE","OPTIONS"])
+def delete_account():
+    if request.method=="OPTIONS": return "",204
+    user = get_current_user()
+    if not user: return jsonify({"error":"Not authenticated"}),401
+    uid = user["id"]
+    # Delete all user data
+    for table in ["sessions","subscriptions","hair_profiles","photo_analyses","hair_journal","treatment_log","score_history","user_settings"]:
+        try: db_execute(f"DELETE FROM {table} WHERE user_id=?", (uid,))
+        except: pass
+    db_execute("DELETE FROM users WHERE id=?", (uid,))
+    return jsonify({"ok":True})
+
 @app.route("/api/auth/forgot-password", methods=["POST","OPTIONS"])
 def forgot_password():
     data  = request.get_json(silent=True) or {}
@@ -2333,6 +2389,18 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
     <input type="email" id="l-email" placeholder="Email address">
     <input type="password" id="l-pass" placeholder="Password">
     <button class="btn" onclick="doLogin()">Sign In</button>
+    <div style="text-align:right;margin-top:8px;">
+      <a href="#" onclick="showForgotForm();return false;" style="font-size:11px;color:#9d7f6a;text-decoration:none;letter-spacing:0.06em;">Forgot password?</a>
+    </div>
+  </div>
+  <!-- Forgot Password Form -->
+  <div id="forgot-form" style="display:none">
+    <div style="font-size:13px;color:rgba(0,0,0,0.55);margin-bottom:16px;line-height:1.6;">Enter your email and we'll send a reset link.</div>
+    <input type="email" id="fp-email" placeholder="Email address">
+    <button class="btn" onclick="doForgotPassword()">Send Reset Link</button>
+    <div style="text-align:center;margin-top:12px;">
+      <a href="#" onclick="hideForgotForm();return false;" style="font-size:11px;color:#9d7f6a;text-decoration:none;">← Back to Sign In</a>
+    </div>
   </div>
   <div id="register-form" style="display:none;">
     <input type="text" id="r-name" placeholder="Your name">
@@ -2348,6 +2416,15 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
   <div class="back"><a href="/">← Back to Hair Advisor</a></div>
 </div>
 <script>
+function showForgotForm(){{document.getElementById('login-form').style.display='none';document.getElementById('forgot-form').style.display='block';document.querySelector('h2').textContent='Reset Password';hideMsg();}}
+function hideForgotForm(){{document.getElementById('forgot-form').style.display='none';document.getElementById('login-form').style.display='block';document.querySelector('h2').textContent='Welcome back';hideMsg();}}
+async function doForgotPassword(){{
+  var email=document.getElementById('fp-email').value.trim();
+  if(!email){{showErr('Please enter your email address.');return;}}
+  var r=await fetch('/api/auth/forgot-password',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email}})}});
+  var d=await r.json();
+  if(d.error){{showErr(d.error);}}else{{showOk('Reset link sent! Check your email.');}}
+}}
 function switchTab(t){{document.getElementById('login-form').style.display=t==='login'?'block':'none';document.getElementById('register-form').style.display=t==='register'?'block':'none';document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',(t==='login'&&i===0)||(t==='register'&&i===1)));hideMsg();}}
 function showErr(m){{var e=document.getElementById('err');e.textContent=m;e.style.display='block';document.getElementById('success').style.display='none';}}
 function showOk(m){{var e=document.getElementById('success');e.textContent=m;e.style.display='block';document.getElementById('err').style.display='none';}}
@@ -2776,6 +2853,97 @@ body::before{content:'';position:fixed;inset:0;
 .flash{animation:numFlash 0.5s ease-out !important;}
 @media(max-width:1280px){.top-row{grid-template-columns:230px 1fr 230px}.mid-row{grid-template-columns:1fr 1fr 1fr}.mid-row .action-panel{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:8px}}
 @media(max-width:900px){.top-row{grid-template-columns:1fr}.mid-row{grid-template-columns:1fr 1fr}.bot-row{grid-template-columns:1fr}}
+
+/* ── MOBILE NAV ── */
+@media(max-width:768px){
+  .ticker-wrap{display:none;}
+  .nav{top:0;height:52px;padding:0 14px;}
+  .nav-logo{font-size:14px;margin-right:10px;}
+  .nav-tabs{display:none;}
+  .nav-right{gap:7px;}
+  .nav-name{display:none;}
+  .live-badge{display:none;}
+  .plan-tag{font-size:8px;padding:2px 6px;}
+  .app{padding:60px 10px 100px;}
+  /* Mobile bottom tab bar */
+  .mobile-tab-bar{display:flex !important;}
+  /* Stack overview cards */
+  .top-row{grid-template-columns:1fr !important;}
+  .mid-row{grid-template-columns:1fr !important;}
+  .bot-row{grid-template-columns:1fr !important;}
+  /* Premium pages full width */
+  .ppage{padding:16px 12px;}
+  .pa-page{padding:0;}
+  .prog-layout{grid-template-columns:1fr !important;}
+}
+@media(min-width:769px){
+  .mobile-tab-bar{display:none !important;}
+  .mobile-menu-overlay{display:none !important;}
+}
+
+/* ── MOBILE BOTTOM TAB BAR ── */
+.mobile-tab-bar{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  height:60px;
+  background:rgba(7,9,13,0.97);
+  border-top:1px solid var(--border2);
+  z-index:200;
+  align-items:stretch;
+  justify-content:space-around;
+}
+.mob-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;
+  font-size:8px;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--muted);transition:color 0.15s;
+  border:none;background:none;font-family:'Space Grotesk',sans-serif;
+}
+.mob-tab.active{color:var(--rose);}
+.mob-tab-icon{font-size:17px;line-height:1;}
+/* Hamburger for more tabs */
+.mob-more-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;
+  align-items:flex-end;
+}
+.mob-more-overlay.open{display:flex !important;}
+.mob-more-sheet{
+  width:100%;background:var(--bg2);border-radius:20px 20px 0 0;
+  padding:20px 16px 32px;
+  border-top:1px solid var(--border2);
+}
+.mob-more-title{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;text-align:center;}
+.mob-more-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mob-more-item{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:12px;
+  padding:14px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;
+  font-size:12px;color:var(--muted2);transition:all 0.15s;
+}
+.mob-more-item:hover,.mob-more-item.active{color:var(--text);border-color:var(--rose);}
+.mob-more-item-icon{font-size:20px;}
+
+/* ── SETTINGS PAGE ── */
+.settings-page{max-width:600px;margin:0 auto;padding:0 0 40px;}
+.settings-section{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:20px;margin-bottom:14px;}
+.settings-section-title{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.settings-row:last-child{border:none;padding-bottom:0;}
+.settings-label{font-size:12px;color:var(--muted2);}
+.settings-val{font-size:12px;color:var(--text);text-align:right;}
+.settings-input{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:'Space Grotesk',sans-serif;width:100%;outline:none;transition:border 0.2s;margin-top:6px;}
+.settings-input:focus{border-color:var(--rose);}
+.settings-save-btn{margin-top:12px;padding:10px 24px;background:var(--rose);color:#fff;border:none;border-radius:20px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:background 0.2s;}
+.settings-save-btn:hover{background:#d4806c;}
+.settings-danger-btn{padding:10px 24px;background:transparent;color:var(--red);border:1px solid rgba(255,85,85,0.3);border-radius:20px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.2s;}
+.settings-danger-btn:hover{background:rgba(255,85,85,0.08);}
+.billing-card{background:linear-gradient(135deg,rgba(240,160,144,0.08),rgba(224,176,80,0.06));border:1px solid rgba(240,160,144,0.2);border-radius:12px;padding:16px;}
+.billing-plan-name{font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.billing-next{font-size:12px;color:var(--muted2);margin-bottom:12px;}
+.billing-next strong{color:var(--gold);}
+.billing-manage-btn{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--rose);text-decoration:none;border:1px solid rgba(240,160,144,0.3);padding:8px 16px;border-radius:16px;display:inline-block;transition:all 0.2s;}
+.billing-manage-btn:hover{background:rgba(240,160,144,0.08);}
+.settings-msg{font-size:12px;color:var(--green);margin-top:8px;display:none;}
+.settings-err{font-size:12px;color:var(--red);margin-top:8px;display:none;}
 </style>
 </head><body>
 
@@ -2794,6 +2962,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
     <div class="nav-tab" onclick="switchPTab('journal')">✦ Journal</div>
     <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
+    <div class="nav-tab" onclick="switchPTab('settings')">⚙ Settings</div>
   </div>
   <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
@@ -2803,6 +2972,41 @@ body::before{content:'';position:fixed;inset:0;
     <button class="logout-btn" onclick="doLogout()">Sign out</button>
   </div>
 </nav>
+
+<!-- MOBILE BOTTOM TAB BAR -->
+<div class="mobile-tab-bar" id="mobile-tab-bar">
+  <button class="mob-tab active" id="mobt-overview" onclick="switchPTab('overview')">
+    <span class="mob-tab-icon">⬡</span>Overview
+  </button>
+  <button class="mob-tab" id="mobt-profile" onclick="switchPTab('profile')">
+    <span class="mob-tab-icon">✦</span>Profile
+  </button>
+  <button class="mob-tab" id="mobt-routine" onclick="switchPTab('routine')">
+    <span class="mob-tab-icon">📋</span>Routine
+  </button>
+  <button class="mob-tab" id="mobt-photo" onclick="switchPTab('photo')">
+    <span class="mob-tab-icon">📸</span>Scan
+  </button>
+  <button class="mob-tab" id="mobt-more" onclick="openMobMore()">
+    <span class="mob-tab-icon">⋯</span>More
+  </button>
+</div>
+
+<!-- MOBILE MORE SHEET -->
+<div class="mob-more-overlay" id="mob-more-overlay" onclick="closeMobMore()">
+  <div class="mob-more-sheet" onclick="event.stopPropagation()">
+    <div class="mob-more-title">All Features</div>
+    <div class="mob-more-grid">
+      <div class="mob-more-item" onclick="switchPTab('progress');closeMobMore()"><span class="mob-more-item-icon">📈</span>Progress</div>
+      <div class="mob-more-item" onclick="switchPTab('journal');closeMobMore()"><span class="mob-more-item-icon">📓</span>Journal</div>
+      <div class="mob-more-item" onclick="switchPTab('whatsapp');closeMobMore()"><span class="mob-more-item-icon">💬</span>Aria SMS</div>
+      <div class="mob-more-item" onclick="switchPTab('settings');closeMobMore()"><span class="mob-more-item-icon">⚙</span>Settings</div>
+    </div>
+    <div style="text-align:center;margin-top:16px;">
+      <button onclick="doLogout()" style="font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);padding:8px 20px;border-radius:16px;cursor:pointer;font-family:'Space Grotesk',sans-serif;letter-spacing:0.08em;">Sign out</button>
+    </div>
+  </div>
+</div>
 
 <div class="app">
 
@@ -3199,6 +3403,76 @@ body::before{content:'';position:fixed;inset:0;
   </div>
 </div>
 
+<!-- ✦ SETTINGS -->
+<div class="ppage" id="pp-settings" style="display:none">
+  <div class="ppage-head">
+    <div class="ppage-title">⚙ Settings</div>
+  </div>
+  <div class="settings-page">
+
+    <!-- Billing -->
+    <div class="settings-section">
+      <div class="settings-section-title">Subscription & Billing</div>
+      <div class="billing-card">
+        <div class="billing-plan-name" id="st-plan-name">Free Plan</div>
+        <div class="billing-next" id="st-next-payment">—</div>
+        <a href="https://supportrd.com/products/hair-advisor-premium" class="billing-manage-btn" id="st-manage-btn">Upgrade to Premium →</a>
+      </div>
+    </div>
+
+    <!-- Profile -->
+    <div class="settings-section">
+      <div class="settings-section-title">Profile Information</div>
+      <label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;">Full Name</label>
+      <input class="settings-input" id="st-name" placeholder="Your name" type="text">
+      <label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;margin-top:10px;display:block;">Email Address</label>
+      <input class="settings-input" id="st-email" placeholder="your@email.com" type="email">
+      <label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;margin-top:10px;display:block;">Phone / WhatsApp</label>
+      <input class="settings-input" id="st-phone" placeholder="+1 (555) 000-0000" type="tel">
+      <label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;margin-top:10px;display:block;">Shipping Address</label>
+      <input class="settings-input" id="st-address" placeholder="Street address" type="text" style="margin-bottom:6px;">
+      <input class="settings-input" id="st-city" placeholder="City, State, ZIP" type="text">
+      <button class="settings-save-btn" onclick="saveProfileSettings()">Save Changes</button>
+      <div class="settings-msg" id="st-profile-msg">✓ Profile updated</div>
+      <div class="settings-err" id="st-profile-err"></div>
+    </div>
+
+    <!-- Password -->
+    <div class="settings-section">
+      <div class="settings-section-title">Change Password</div>
+      <label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;">New Password</label>
+      <input class="settings-input" id="st-new-pass" placeholder="New password (min 6 chars)" type="password">
+      <label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;margin-top:10px;display:block;">Confirm Password</label>
+      <input class="settings-input" id="st-confirm-pass" placeholder="Confirm new password" type="password">
+      <button class="settings-save-btn" onclick="savePasswordSettings()">Update Password</button>
+      <div class="settings-msg" id="st-pass-msg">✓ Password updated</div>
+      <div class="settings-err" id="st-pass-err"></div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="settings-section">
+      <div class="settings-section-title">Notifications</div>
+      <div class="settings-row">
+        <span class="settings-label">Routine reminders</span>
+        <span class="settings-val" id="st-notif-val">—</span>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="settings-save-btn" onclick="requestPushPermission()">Enable Push Notifications</button>
+      </div>
+    </div>
+
+    <!-- Account -->
+    <div class="settings-section">
+      <div class="settings-section-title">Account</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="settings-danger-btn" onclick="confirmDeleteAccount()">Delete Account</button>
+        <button class="logout-btn" style="font-size:11px;padding:10px 20px;" onclick="doLogout()">Sign Out</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- ✦ HAIR JOURNAL -->
 <div class="ppage" id="pp-journal">
   <div class="ppage-head">
@@ -3483,7 +3757,134 @@ async function dashboardUpgrade(){
   window.open('https://supportrd.com/products/hair-advisor-premium','_blank');
 }
 
+// ── SETTINGS ────────────────────────────────────────────────────────────────
+function openSettingsPage(){
+  // Load current user data into fields
+  const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
+  if(u.name) document.getElementById('st-name').value = u.name;
+  if(u.email) document.getElementById('st-email').value = u.email;
+  // Load billing info
+  fetch('/api/subscription/status',{headers:{'X-Auth-Token':token}}).then(r=>r.json()).then(d=>{
+    const planEl = document.getElementById('st-plan-name');
+    const nextEl = document.getElementById('st-next-payment');
+    const manageBtn = document.getElementById('st-manage-btn');
+    if(d.plan==='premium' || d.subscribed){
+      planEl.textContent = 'Premium · $35/month';
+      planEl.style.color = 'var(--gold)';
+      if(d.current_period_end){
+        const dt = new Date(d.current_period_end);
+        nextEl.innerHTML = 'Next payment: <strong>'+dt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+'</strong>';
+      } else if(d.admin_bypass){
+        nextEl.innerHTML = '<strong style="color:var(--rose)">Admin Access — No billing</strong>';
+      } else {
+        nextEl.textContent = 'Active subscription';
+      }
+      manageBtn.textContent = 'Manage Subscription →';
+      manageBtn.href = 'https://supportrd.com/account';
+    } else {
+      planEl.textContent = 'Free Plan';
+      nextEl.textContent = 'Upgrade to unlock all 7 premium features';
+      manageBtn.textContent = 'Upgrade to Premium — $35/mo →';
+      manageBtn.href = 'https://supportrd.com/products/hair-advisor-premium';
+    }
+  }).catch(()=>{});
+  // Check push
+  if(Notification && Notification.permission==='granted'){
+    document.getElementById('st-notif-val').textContent = 'Enabled ✓';
+  } else {
+    document.getElementById('st-notif-val').textContent = 'Not enabled';
+  }
+}
+
+async function saveProfileSettings(){
+  const name = document.getElementById('st-name').value.trim();
+  const email = document.getElementById('st-email').value.trim();
+  const phone = document.getElementById('st-phone').value.trim();
+  const address = document.getElementById('st-address').value.trim();
+  const city = document.getElementById('st-city').value.trim();
+  const msgEl = document.getElementById('st-profile-msg');
+  const errEl = document.getElementById('st-profile-err');
+  msgEl.style.display='none'; errEl.style.display='none';
+  if(!name||!email){errEl.textContent='Name and email required.';errEl.style.display='block';return;}
+  try{
+    const r = await fetch('/api/auth/update-profile',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body:JSON.stringify({name,email,phone,address,city})
+    });
+    const d = await r.json();
+    if(d.ok){
+      // Update localStorage
+      const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
+      u.name=name; u.email=email;
+      localStorage.setItem('srd_user',JSON.stringify(u));
+      document.getElementById('nav-name').textContent=name;
+      msgEl.style.display='block';
+      setTimeout(()=>msgEl.style.display='none',3000);
+    } else {
+      errEl.textContent=d.error||'Update failed';errEl.style.display='block';
+    }
+  }catch(e){errEl.textContent='Connection error';errEl.style.display='block';}
+}
+
+async function savePasswordSettings(){
+  const np = document.getElementById('st-new-pass').value;
+  const cp = document.getElementById('st-confirm-pass').value;
+  const msgEl = document.getElementById('st-pass-msg');
+  const errEl = document.getElementById('st-pass-err');
+  msgEl.style.display='none'; errEl.style.display='none';
+  if(!np){errEl.textContent='Enter a new password.';errEl.style.display='block';return;}
+  if(np.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
+  if(np!==cp){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
+  try{
+    const r = await fetch('/api/auth/change-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body:JSON.stringify({new_password:np})
+    });
+    const d = await r.json();
+    if(d.ok){
+      document.getElementById('st-new-pass').value='';
+      document.getElementById('st-confirm-pass').value='';
+      msgEl.style.display='block';
+      setTimeout(()=>msgEl.style.display='none',3000);
+    } else {
+      errEl.textContent=d.error||'Update failed';errEl.style.display='block';
+    }
+  }catch(e){errEl.textContent='Connection error';errEl.style.display='block';}
+}
+
+function confirmDeleteAccount(){
+  if(confirm('Are you sure? This will permanently delete your account and all your data. This cannot be undone.')){
+    fetch('/api/auth/delete-account',{method:'DELETE',headers:{'X-Auth-Token':token}})
+      .then(()=>{ localStorage.clear(); window.location.href='/login'; })
+      .catch(()=>showToast('Error — try again'));
+  }
+}
+
+function openMobMore(){ document.getElementById('mob-more-overlay').classList.add('open'); }
+function closeMobMore(){ document.getElementById('mob-more-overlay').classList.remove('open'); }
+
+function updateMobileTabBar(name){
+  const map = {overview:'mobt-overview',profile:'mobt-profile',routine:'mobt-routine',photo:'mobt-photo'};
+  document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
+  if(map[name]) document.getElementById(map[name])?.classList.add('active');
+}
+
 function switchPTab(name){
+  updateMobileTabBar(name);
+  // Settings is a standalone page
+  if(name==='settings'){
+    const mainPanels=['top-row','mid-row','bot-row'];
+    mainPanels.forEach(id=>{ const el=document.querySelector('.'+id); if(el) el.style.display='none'; });
+    document.querySelectorAll('.ppage').forEach(p=>p.classList.remove('active'));
+    const sp=document.getElementById('pp-settings');
+    if(sp) sp.classList.add('active');
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.nav-tab')[7]?.classList.add('active');
+    openSettingsPage();
+    return;
+  }
   // Hide main app panels
   const mainPanels = ['top-row','mid-row','bot-row'];
   mainPanels.forEach(id=>{
@@ -3499,7 +3900,7 @@ function switchPTab(name){
   }
   // Nav tabs
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4,journal:5,whatsapp:6};
+  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4,journal:5,whatsapp:6,settings:7};
   const idx=tabs[name]??0;
   document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
   // Profile/history sub-tabs
