@@ -2968,6 +2968,63 @@ body::before{content:'';position:fixed;inset:0;
 .drive-mic-status{text-align:center;padding:10px;font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:0.1em;flex-shrink:0;}
 @media(max-width:600px){.drive-msg-bubble{font-size:19px;}.drive-text-input{font-size:16px;}}
 /* ── GLOBAL FOOTER IN DASHBOARD ────────────────────────── */
+/* ── DRIVE MODE TOGGLE ─────────────────────────────────── */
+.drive-mode-toggle{background:linear-gradient(135deg,#ff6eb4,#ff9f43);color:#fff;border:none;border-radius:16px;padding:7px 14px;font-size:11px;font-weight:700;letter-spacing:0.06em;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.2s;margin-right:8px;}
+.drive-mode-toggle:hover{transform:scale(1.05);}
+#drive-chat-mode{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+/* ── CANDY LAND GPS ─────────────────────────────────────── */
+#drive-gps-mode{flex:1;overflow:hidden;}
+.cl-dest-bar{padding:12px 16px;background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;}
+.cl-dest-label{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:8px;}
+.cl-dest-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.cl-dest-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:20px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:600;transition:all 0.2s;white-space:nowrap;}
+.cl-dest-btn:hover{background:rgba(255,110,180,0.25);border-color:#ff6eb4;color:#ff6eb4;}
+/* Map area */
+.cl-map-wrap{position:relative;flex:1;overflow:hidden;background:linear-gradient(160deg,#1a0a2e 0%,#0d1b2a 100%);}
+.cl-canvas{width:100%;height:100%;display:block;}
+.cl-player{position:absolute;font-size:28px;transition:left 1.2s cubic-bezier(.4,0,.2,1),top 1.2s cubic-bezier(.4,0,.2,1);z-index:10;transform:translate(-50%,-50%);filter:drop-shadow(0 0 8px rgba(255,110,180,0.7));pointer-events:none;}
+.cl-dest-marker{position:absolute;font-size:32px;z-index:9;transform:translate(-50%,-50%);animation:clBounce 1.2s ease-in-out infinite;pointer-events:none;}
+@keyframes clBounce{0%,100%{transform:translate(-50%,-60%);}50%{transform:translate(-50%,-40%);}}
+/* Landmark bubbles */
+.cl-landmark-bubble{position:absolute;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);backdrop-filter:blur(8px);border-radius:12px;padding:5px 10px;font-size:11px;color:#fff;white-space:nowrap;cursor:pointer;transform:translate(-50%,-50%);z-index:8;transition:all 0.2s;}
+.cl-landmark-bubble:hover{background:rgba(255,110,180,0.2);border-color:#ff6eb4;}
+.cl-landmark-bubble.coding{border-color:rgba(100,200,255,0.4);background:rgba(100,200,255,0.08);}
+.cl-landmark-bubble.hair{border-color:rgba(255,110,180,0.4);background:rgba(255,110,180,0.08);}
+.cl-landmark-bubble.park{border-color:rgba(80,220,120,0.4);background:rgba(80,220,120,0.08);}
+/* Nav card */
+.cl-nav-card{background:#0d1220;border-top:1px solid rgba(255,255,255,0.08);padding:12px 16px;flex-shrink:0;}
+.cl-nav-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.cl-nav-dest{font-size:13px;font-weight:700;color:#fff;font-family:'Space Grotesk',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65%;}
+.cl-nav-dist{font-size:12px;color:rgba(255,255,255,0.45);white-space:nowrap;}
+.cl-direction-banner{display:flex;align-items:center;gap:10px;background:rgba(255,110,180,0.1);border:1px solid rgba(255,110,180,0.2);border-radius:12px;padding:10px 14px;margin-bottom:8px;}
+.cl-dir-arrow{font-size:24px;color:#ff6eb4;font-weight:900;transition:transform 0.4s;min-width:28px;text-align:center;}
+.cl-dir-text{font-size:16px;font-weight:700;color:#fff;font-family:'Space Grotesk',sans-serif;line-height:1.3;}
+.cl-landmarks-strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none;}
+.cl-landmarks-strip::-webkit-scrollbar{display:none;}
+.cl-lm-chip{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 12px;font-size:10px;color:rgba(255,255,255,0.6);white-space:nowrap;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
+.cl-lm-chip:hover{background:rgba(255,110,180,0.15);border-color:#ff6eb4;color:#ff6eb4;}
+/* Aria narration */
+.cl-aria-bar{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border-radius:10px;padding:8px 12px;}
+.cl-aria-face{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+.cl-aria-narration{flex:1;font-size:13px;color:rgba(255,255,255,0.75);line-height:1.4;font-family:'Space Grotesk',sans-serif;}
+.cl-aria-speak-btn{background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;flex-shrink:0;transition:all 0.2s;}
+.cl-aria-speak-btn:hover{border-color:var(--rose);color:var(--rose);}
+/* Results panel */
+.cl-results{position:absolute;inset:0;background:rgba(10,10,20,0.96);z-index:50;padding:20px;overflow-y:auto;}
+.cl-results-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:14px;}
+.cl-result-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all 0.2s;}
+.cl-result-card:hover{border-color:#ff6eb4;background:rgba(255,110,180,0.08);}
+.cl-result-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:3px;}
+.cl-result-addr{font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:5px;}
+.cl-result-meta{display:flex;gap:10px;align-items:center;}
+.cl-result-badge{font-size:9px;letter-spacing:0.1em;padding:3px 8px;border-radius:10px;font-weight:700;}
+.cl-result-badge.coding{background:rgba(100,200,255,0.15);color:#64c8ff;border:1px solid rgba(100,200,255,0.3);}
+.cl-result-badge.hair{background:rgba(255,110,180,0.15);color:#ff6eb4;border:1px solid rgba(255,110,180,0.3);}
+.cl-result-badge.park{background:rgba(80,220,120,0.15);color:#50dc78;border:1px solid rgba(80,220,120,0.3);}
+.cl-result-dist{font-size:11px;color:rgba(255,255,255,0.4);}
+.cl-results-close{display:block;margin:16px auto 0;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;border-radius:20px;padding:10px 28px;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:12px;}
+/* Candy path tiles (drawn on canvas) - also need candy land tile animation */
+@keyframes clTilePulse{0%,100%{opacity:0.7;}50%{opacity:1;}}
 .dashboard-footer{background:var(--bg);border-top:1px solid var(--border);padding:16px 28px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:center;}
 .dashboard-footer a{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;cursor:pointer;}
 .dashboard-footer a:hover{color:var(--rose);}
@@ -4206,52 +4263,110 @@ body::before{content:'';position:fixed;inset:0;
 
 <!-- ✦ SETTINGS -->
 
-<!-- ✦ HANDS-FREE DRIVE -->
+<!-- ✦ HANDS-FREE DRIVE + CANDY LAND GPS -->
 <div class="ppage" id="pp-drive">
 <div class="drive-fullscreen" id="drive-fullscreen">
 
-  <!-- Header bar -->
+  <!-- ── HEADER ───────────────────────────────────────────── -->
   <div class="drive-header">
     <div class="drive-header-left">
       <div class="drive-status-dot" id="drive-dot"></div>
-      <div class="drive-title-text">Hands-Free Drive</div>
+      <div class="drive-title-text">🚗 Hands-Free Drive</div>
       <div class="drive-engine-badge">Powered by Claude claude-sonnet-4-20250514</div>
     </div>
     <div class="drive-header-right">
-      <button class="drive-close-btn" onclick="switchPTab('overview')">✕ Exit Drive Mode</button>
+      <button class="drive-mode-toggle" id="drive-mode-toggle" onclick="driveToggleMode()">🍬 Adventure GPS</button>
+      <button class="drive-close-btn" onclick="switchPTab('overview')">✕ Exit</button>
     </div>
   </div>
 
-  <!-- Aria avatar + status -->
-  <div class="drive-aria-row">
-    <div class="drive-aria-orb" id="drive-aria-orb">
-      <div class="drive-aria-letter">A</div>
-      <div class="drive-aria-pulse"></div>
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- MODE A: ARIA CHAT (default)                           -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div id="drive-chat-mode">
+    <div class="drive-aria-row">
+      <div class="drive-aria-orb" id="drive-aria-orb">
+        <div class="drive-aria-letter">A</div>
+        <div class="drive-aria-pulse"></div>
+      </div>
+      <div>
+        <div class="drive-aria-name">Aria</div>
+        <div class="drive-aria-status" id="drive-aria-status">Ready. Tap mic or type.</div>
+      </div>
     </div>
-    <div>
-      <div class="drive-aria-name">Aria</div>
-      <div class="drive-aria-status" id="drive-aria-status">Ready. Tap the mic or type below.</div>
+    <div class="drive-msgs" id="drive-msgs">
+      <div class="drive-msg drive-msg-aria">
+        <div class="drive-msg-bubble">Hey! I'm Aria 🌿 Drive safe. Tap 🍬 Adventure GPS to find coding stores, hair shops, and parks near you!</div>
+      </div>
     </div>
+    <div class="drive-input-row">
+      <button class="drive-mic-btn" id="drive-mic-btn" onclick="driveMicTap()">🎤</button>
+      <input type="text" class="drive-text-input" id="drive-text-input"
+        placeholder="Speak or type to Aria…"
+        onkeydown="if(event.key==='Enter')driveSend()">
+      <button class="drive-send-btn" onclick="driveSend()">↑</button>
+    </div>
+    <div class="drive-mic-status" id="drive-mic-status">Tap mic to speak hands-free</div>
   </div>
 
-  <!-- Conversation area — big and bold for reading while driving -->
-  <div class="drive-msgs" id="drive-msgs">
-    <div class="drive-msg drive-msg-aria">
-      <div class="drive-msg-bubble">Hey! I'm Aria. I'm in hands-free mode — speak or type and I'll respond. Drive safe. 🚗</div>
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- MODE B: CANDY LAND GPS                               -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div id="drive-gps-mode" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden;">
+
+    <!-- Destination picker -->
+    <div class="cl-dest-bar" id="cl-dest-bar">
+      <div class="cl-dest-label">✦ Where are we adventuring?</div>
+      <div class="cl-dest-btns">
+        <button class="cl-dest-btn" onclick="clStartSearch('coding')">💻 Coding Stores</button>
+        <button class="cl-dest-btn" onclick="clStartSearch('hair')">💆 Hair Shops</button>
+        <button class="cl-dest-btn" onclick="clStartSearch('park')">🌳 Parks</button>
+        <button class="cl-dest-btn" onclick="clStartSearch('all')">🗺 All Nearby</button>
+      </div>
+    </div>
+
+    <!-- Candy Land MAP canvas -->
+    <div class="cl-map-wrap" id="cl-map-wrap">
+      <canvas id="cl-canvas" class="cl-canvas"></canvas>
+
+      <!-- Player token (positioned by JS) -->
+      <div class="cl-player" id="cl-player">🚗</div>
+
+      <!-- Destination marker -->
+      <div class="cl-dest-marker" id="cl-dest-marker" style="display:none">🏁</div>
+
+      <!-- Floating landmark bubbles (created dynamically) -->
+      <div id="cl-landmarks"></div>
+    </div>
+
+    <!-- Bottom nav card -->
+    <div class="cl-nav-card" id="cl-nav-card">
+      <div class="cl-nav-top">
+        <div class="cl-nav-dest" id="cl-nav-dest">Pick a destination above ↑</div>
+        <div class="cl-nav-dist" id="cl-nav-dist"></div>
+      </div>
+      <div class="cl-direction-banner" id="cl-direction-banner">
+        <div class="cl-dir-arrow" id="cl-dir-arrow">↑</div>
+        <div class="cl-dir-text" id="cl-dir-text">Start your adventure!</div>
+      </div>
+      <div class="cl-landmarks-strip" id="cl-landmarks-strip">
+        <!-- landmark chips injected here -->
+      </div>
+      <!-- Aria narration bar -->
+      <div class="cl-aria-bar">
+        <div class="cl-aria-face">A</div>
+        <div class="cl-aria-narration" id="cl-aria-narration">Aria is your co-pilot 🌿 Pick a destination to begin.</div>
+        <button class="cl-aria-speak-btn" onclick="clSpeakNarration()" title="Read aloud">🔊</button>
+      </div>
+    </div>
+
+    <!-- Results list -->
+    <div class="cl-results" id="cl-results" style="display:none">
+      <div class="cl-results-title" id="cl-results-title">Nearby</div>
+      <div class="cl-results-list" id="cl-results-list"></div>
+      <button class="cl-results-close" onclick="clCloseResults()">✕ Close</button>
     </div>
   </div>
-
-  <!-- Input row -->
-  <div class="drive-input-row">
-    <button class="drive-mic-btn" id="drive-mic-btn" onclick="driveMicTap()">🎤</button>
-    <input type="text" class="drive-text-input" id="drive-text-input"
-      placeholder="Type or speak to Aria…"
-      onkeydown="if(event.key==='Enter')driveSend()">
-    <button class="drive-send-btn" onclick="driveSend()">↑</button>
-  </div>
-
-  <!-- Mic status -->
-  <div class="drive-mic-status" id="drive-mic-status">Tap mic to speak hands-free</div>
 
 </div>
 </div>
@@ -6333,17 +6448,50 @@ function ajRenderTimeline(sessions, depthIdx){
 
 
 // ═══════════════════════════════════════════════════════════════
-// ✦ HANDS-FREE DRIVE MODE
+// ✦ HANDS-FREE DRIVE MODE + CANDY LAND GPS
 // ═══════════════════════════════════════════════════════════════
-let _driveBusy = false;
-let _driveRecog = null;
+
+// ── Drive chat state ────────────────────────────────────────────
+let _driveBusy   = false;
+let _driveRecog  = null;
 let _driveMsgHistory = [];
+let _driveGpsMode = false;
 
 function openDrivePage(){
-  const orb = document.getElementById('drive-aria-orb');
-  if(orb) orb.querySelector('.drive-aria-pulse').style.animationPlayState='running';
+  // make sure we're in chat mode by default
+  if(!_driveGpsMode) _showDriveChatMode();
 }
 
+function driveToggleMode(){
+  _driveGpsMode = !_driveGpsMode;
+  const btn = document.getElementById('drive-mode-toggle');
+  if(_driveGpsMode){
+    _showDriveGpsMode();
+    if(btn){ btn.textContent='💬 Chat Mode'; btn.style.background='linear-gradient(135deg,#667eea,#764ba2)'; }
+  } else {
+    _showDriveChatMode();
+    if(btn){ btn.textContent='🍬 Adventure GPS'; btn.style.background='linear-gradient(135deg,#ff6eb4,#ff9f43)'; }
+  }
+}
+
+function _showDriveChatMode(){
+  document.getElementById('drive-chat-mode').style.display='flex';
+  const gps = document.getElementById('drive-gps-mode');
+  gps.style.display='none';
+}
+
+function _showDriveGpsMode(){
+  document.getElementById('drive-chat-mode').style.display='none';
+  const gps = document.getElementById('drive-gps-mode');
+  gps.style.display='flex';
+  gps.style.flexDirection='column';
+  gps.style.flex='1';
+  gps.style.overflow='hidden';
+  // Init map if first time
+  if(!_clMapReady) clInitMap();
+}
+
+// ── Chat functions ───────────────────────────────────────────────
 async function driveSend(){
   const inp = document.getElementById('drive-text-input');
   const msg = (inp?.value||'').trim();
@@ -6353,23 +6501,22 @@ async function driveSend(){
 }
 
 async function driveMicTap(){
-  const btn = document.getElementById('drive-mic-btn');
+  const btn    = document.getElementById('drive-mic-btn');
   const status = document.getElementById('drive-mic-status');
   if(_driveRecog){ _driveRecog.stop(); _driveRecog=null; btn.classList.remove('listening'); status.textContent='Tap mic to speak hands-free'; return; }
   const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){ showToast('Speech recognition not supported in this browser'); return; }
+  if(!SR){ showToast('Speech not supported in this browser'); return; }
   _driveRecog = new SR();
   _driveRecog.lang='en-US'; _driveRecog.interimResults=false; _driveRecog.maxAlternatives=1;
   btn.classList.add('listening');
   status.textContent='🎤 Listening…';
   _driveRecog.onresult = e => {
     const txt = e.results[0][0].transcript;
-    const inp = document.getElementById('drive-text-input');
-    if(inp) inp.value=txt;
+    document.getElementById('drive-text-input').value = txt;
     driveAsk(txt);
   };
   _driveRecog.onerror = () => { btn.classList.remove('listening'); status.textContent='Mic error — try again'; _driveRecog=null; };
-  _driveRecog.onend   = () => { btn.classList.remove('listening'); status.textContent='Tap mic to speak hands-free'; _driveRecog=null; };
+  _driveRecog.onend   = () => { btn.classList.remove('listening'); status.textContent='Tap mic to speak'; _driveRecog=null; };
   _driveRecog.start();
 }
 
@@ -6377,13 +6524,9 @@ async function driveAsk(msg){
   if(_driveBusy) return;
   _driveBusy = true;
   const status = document.getElementById('drive-aria-status');
-
-  // Add user message
-  driveAddMsg(msg, 'user');
-  _driveMsgHistory.push({role:'user', content:msg});
-
+  driveAddMsg(msg,'user');
+  _driveMsgHistory.push({role:'user',content:msg});
   if(status) status.textContent='Aria is thinking…';
-
   try{
     const r = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -6391,32 +6534,31 @@ async function driveAsk(msg){
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:400,
-        system:'You are Aria, a warm and helpful AI assistant for Support (the company). The user is driving. Keep responses SHORT — 1 to 3 sentences max. Be conversational, clear, and reassuring. Never give long lists. The person may be using voice — write naturally as you would speak.',
-        messages: _driveMsgHistory
+        system:'You are Aria, warm AI assistant for Support. The user is driving. Keep ALL responses SHORT — 1 to 3 sentences max. Be upbeat, clear, direct. Sound natural when spoken aloud.',
+        messages:_driveMsgHistory
       })
     });
     const d = await r.json();
-    const reply = d.content?.[0]?.text || 'Sorry, I didn\'t catch that. Try again.';
-    _driveMsgHistory.push({role:'assistant', content:reply});
+    const reply = d.content?.[0]?.text || 'Sorry, try again.';
+    _driveMsgHistory.push({role:'assistant',content:reply});
     driveAddMsg(reply,'aria');
-    if(status) status.textContent='Ready. Speak or type.';
-    // Auto-speak response
+    if(status) status.textContent='Ready.';
     driveSpeak(reply);
   }catch(e){
-    driveAddMsg('Aria had a connection issue. Try again.','aria');
-    if(status) status.textContent='Connection error — try again';
+    driveAddMsg('Connection issue. Try again.','aria');
+    if(status) status.textContent='Error — try again';
   }
   _driveBusy=false;
 }
 
-function driveAddMsg(text, role){
+function driveAddMsg(text,role){
   const msgs = document.getElementById('drive-msgs');
   if(!msgs) return;
   const div = document.createElement('div');
-  div.className = 'drive-msg drive-msg-'+role;
-  div.innerHTML = '<div class="drive-msg-bubble">'+text+'</div>';
+  div.className='drive-msg drive-msg-'+role;
+  div.innerHTML='<div class="drive-msg-bubble">'+text+'</div>';
   msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  msgs.scrollTop=msgs.scrollHeight;
 }
 
 function driveSpeak(text){
@@ -6426,6 +6568,505 @@ function driveSpeak(text){
   u.rate=0.95; u.pitch=1.05; u.volume=1;
   window.speechSynthesis.speak(u);
 }
+
+// ═══════════════════════════════════════════════════════════════
+// ✦ CANDY LAND GPS
+// ═══════════════════════════════════════════════════════════════
+
+let _clMapReady   = false;
+let _clUserLat    = null;
+let _clUserLng    = null;
+let _clDestLat    = null;
+let _clDestLng    = null;
+let _clDestName   = '';
+let _clDestType   = '';
+let _clPlaces     = [];
+let _clLandmarks  = [];
+let _clWatchId    = null;
+let _clAnimFrame  = null;
+let _clTiles      = [];   // candy path tiles
+let _clCurrentNarration = '';
+
+// Candy tile colors — warm candy palette
+const CL_TILE_COLORS = [
+  '#ff6eb4','#ff9f43','#ffd32a','#0be881',
+  '#64c8ff','#c56cf0','#ff5e57','#05c46b',
+  '#ffdd59','#ff4d4b','#17c0eb','#ef5777'
+];
+
+// Place search queries by type
+const CL_SEARCH_TYPES = {
+  coding: ['Best Buy','Micro Center','Apple Store','computer store','electronics store','coding bootcamp','tech store'],
+  hair:   ['Sally Beauty','hair salon','beauty supply','hair care store','natural hair salon','Dominican hair salon'],
+  park:   ['park','botanical garden','nature trail','playground','recreation area'],
+  all:    ['Best Buy','hair salon','Sally Beauty','park','beauty supply','electronics store','Apple Store']
+};
+
+// Landmark emoji by category
+const CL_LANDMARK_EMOJI = {
+  coding: '💻', hair: '💆', park: '🌳',
+  restaurant:'🍕', coffee:'☕', school:'🏫',
+  library:'📚', hospital:'🏥', gas:'⛽',
+  shopping:'🛍', church:'⛪', museum:'🏛'
+};
+
+async function clInitMap(){
+  _clMapReady = true;
+  const canvas = document.getElementById('cl-canvas');
+  if(!canvas) return;
+
+  // Fit canvas to container
+  const wrap = document.getElementById('cl-map-wrap');
+  const resize = ()=>{
+    canvas.width  = wrap.offsetWidth  * window.devicePixelRatio;
+    canvas.height = wrap.offsetHeight * window.devicePixelRatio;
+    canvas.style.width  = wrap.offsetWidth+'px';
+    canvas.style.height = wrap.offsetHeight+'px';
+    clDrawMap();
+  };
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Start watching user position
+  clStartGPS();
+  clSetNarration('Welcome to Adventure GPS! 🍬 I\'m Aria, your co-pilot. Pick a destination and let\'s go!');
+}
+
+function clStartGPS(){
+  if(!navigator.geolocation){ clSetNarration('GPS not available on this device.'); return; }
+  // Get immediate position
+  navigator.geolocation.getCurrentPosition(
+    pos=>{ _clUserLat=pos.coords.latitude; _clUserLng=pos.coords.longitude; clUpdatePlayerPos(); clDrawMap(); },
+    err=>{ clSetNarration('Location access needed for the GPS! Please allow it.'); }
+  );
+  // Then watch continuously
+  _clWatchId = navigator.geolocation.watchPosition(
+    pos=>{ _clUserLat=pos.coords.latitude; _clUserLng=pos.coords.longitude; clUpdatePlayerPos(); clCheckProximity(); clUpdateDirections(); },
+    err=>{},
+    {enableHighAccuracy:true, maximumAge:5000, timeout:10000}
+  );
+}
+
+// ── Candy Land map drawing ───────────────────────────────────────
+function clDrawMap(){
+  const canvas = document.getElementById('cl-canvas');
+  if(!canvas) return;
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const dpr = window.devicePixelRatio||1;
+  ctx.clearRect(0,0,W,H);
+
+  // Background gradient — night sky
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#1a0a2e'); bg.addColorStop(1,'#0d1b2a');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // Draw stars
+  if(!_clStars){ _clStars=[]; for(let i=0;i<80;i++) _clStars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.2+0.3,a:Math.random()}); }
+  _clStars.forEach(s=>{ ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r*dpr,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${s.a})`; ctx.fill(); });
+
+  // Draw candy path tiles
+  clDrawPath(ctx,W,H,dpr);
+
+  // Draw destination zone if set
+  if(_clDestLat!==null && _clUserLat!==null){
+    const dp = clLatLngToCanvas(_clDestLat,_clDestLng,W,H);
+    // Glow ring around destination
+    const grd = ctx.createRadialGradient(dp.x,dp.y,0,dp.x,dp.y,40*dpr);
+    grd.addColorStop(0,'rgba(255,110,180,0.3)'); grd.addColorStop(1,'rgba(255,110,180,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(dp.x,dp.y,40*dpr,0,Math.PI*2); ctx.fill();
+  }
+}
+
+let _clStars = null;
+let _clPathAnim = 0;
+
+function clDrawPath(ctx,W,H,dpr){
+  if(!_clUserLat) return;
+
+  // Generate a winding candy path from user position toward destination (or just ahead)
+  const center = {x:W/2, y:H*0.55};
+  const tileSize = 22*dpr;
+  const spacing  = 28*dpr;
+
+  // Path: spiral outward in a playful S-curve
+  const pts = [];
+  for(let i=0;i<28;i++){
+    const t = i/27;
+    const wave = Math.sin(t*Math.PI*3)*0.18;
+    pts.push({
+      x: center.x + (wave + t*0.5 - 0.25)*W,
+      y: center.y - (t*0.7)*H*0.6 + Math.cos(t*Math.PI*2)*30*dpr
+    });
+  }
+
+  // Draw connecting dotted line
+  ctx.beginPath(); ctx.setLineDash([6*dpr,6*dpr]);
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=2*dpr;
+  pts.forEach((p,i)=>{ if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); });
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Draw candy tiles
+  _clPathAnim = (_clPathAnim+0.5)%360;
+  pts.forEach((p,i)=>{
+    const col = CL_TILE_COLORS[i % CL_TILE_COLORS.length];
+    const pulse = 1 + Math.sin((_clPathAnim+i*15)*Math.PI/180)*0.12;
+    const r = (tileSize/2)*pulse;
+    // Tile circle
+    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle = col+'cc'; ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth=1.5*dpr; ctx.stroke();
+    // Shine dot
+    ctx.beginPath(); ctx.arc(p.x-r*0.3,p.y-r*0.3,r*0.22,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fill();
+  });
+
+  // Store tiles for player positioning
+  _clTiles = pts;
+}
+
+// ── Map coordinate math ─────────────────────────────────────────
+function clLatLngToCanvas(lat,lng,W,H){
+  if(!_clUserLat) return {x:W/2,y:H/2};
+  const scale = 180000; // pixels per degree at canvas size
+  const dx = (lng - _clUserLng) * scale * (W/600);
+  const dy = (lat - _clUserLat) * scale * (H/600) * -1;
+  return { x: W/2 + dx, y: H*0.55 + dy };
+}
+
+function clUpdatePlayerPos(){
+  const player = document.getElementById('cl-player');
+  const canvas = document.getElementById('cl-canvas');
+  if(!player||!canvas) return;
+  // Player always at center-ish
+  const wrap = document.getElementById('cl-map-wrap');
+  player.style.left = (wrap.offsetWidth/2)+'px';
+  player.style.top  = (wrap.offsetHeight*0.55)+'px';
+}
+
+// ── Place search ────────────────────────────────────────────────
+async function clStartSearch(type){
+  _clDestType = type;
+  const bar = document.getElementById('cl-dest-bar');
+
+  if(!_clUserLat){
+    clSetNarration('I need your location first! Please allow GPS access.');
+    return;
+  }
+
+  clSetNarration('Searching nearby… hang on! 🔍');
+
+  // Use browser Geolocation + Overpass API (OSM) for real POI data
+  const results = await clFetchPlaces(type, _clUserLat, _clUserLng);
+  _clPlaces = results;
+
+  if(!results.length){
+    clSetNarration('Hmm, I didn\'t find any '+type+' places nearby. Try a different type!');
+    return;
+  }
+
+  // Show results list
+  clShowResults(results, type);
+  clDrawLandmarkBubbles(results);
+  clSetNarration('Found '+results.length+' places nearby! Tap one to set it as your destination. 🎯');
+}
+
+async function clFetchPlaces(type, lat, lng){
+  // Build Overpass API query
+  const radius = 8000; // 8km radius
+  let osmTags = '';
+  if(type==='coding'||type==='all'){
+    osmTags += `node["shop"="electronics"](around:${radius},${lat},${lng});
+node["shop"="computer"](around:${radius},${lat},${lng});
+node["amenity"="internet_cafe"](around:${radius},${lat},${lng});`;
+  }
+  if(type==='hair'||type==='all'){
+    osmTags += `node["shop"="hairdresser"](around:${radius},${lat},${lng});
+node["shop"="beauty"](around:${radius},${lat},${lng});
+node["shop"="cosmetics"](around:${radius},${lat},${lng});`;
+  }
+  if(type==='park'||type==='all'){
+    osmTags += `node["leisure"="park"](around:${radius},${lat},${lng});
+way["leisure"="park"](around:${radius},${lat},${lng});`;
+  }
+
+  // Always include landmarks for map flavor
+  const landmarkQ = `
+node["historic"](around:${radius},${lat},${lng});
+node["tourism"="attraction"](around:${radius},${lat},${lng});
+node["amenity"="restaurant"](around:2000,${lat},${lng});
+node["amenity"="cafe"](around:2000,${lat},${lng});`;
+
+  const query = `[out:json][timeout:10];(${osmTags}${landmarkQ});out body 40;`;
+
+  try{
+    const r = await fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(query));
+    const d = await r.json();
+    return clParseOverpass(d.elements||[], lat, lng, type);
+  }catch(e){
+    console.warn('Overpass error', e);
+    return clFallbackPlaces(type, lat, lng);
+  }
+}
+
+function clParseOverpass(elements, userLat, userLng, searchType){
+  const places = [];
+  elements.forEach(el=>{
+    const tags = el.tags||{};
+    const name = tags.name||tags['name:en']||'Unnamed Place';
+    const elLat = el.lat || (el.center&&el.center.lat) || null;
+    const elLng = el.lon || (el.center&&el.center.lon) || null;
+    if(!elLat||!elLng) return;
+    const dist = clHaversine(userLat,userLng,elLat,elLng);
+
+    let ptype = 'park';
+    if(tags.shop==='electronics'||tags.shop==='computer'||tags.amenity==='internet_cafe') ptype='coding';
+    else if(tags.shop==='hairdresser'||tags.shop==='beauty'||tags.shop==='cosmetics') ptype='hair';
+    else if(tags.leisure==='park') ptype='park';
+    else if(tags.amenity==='restaurant') ptype='restaurant';
+    else if(tags.amenity==='cafe') ptype='coffee';
+    else if(tags.tourism||tags.historic) ptype='landmark';
+
+    // Filter to requested type
+    if(searchType!=='all' && ptype!==searchType && ptype!=='restaurant'&&ptype!=='coffee'&&ptype!=='landmark') return;
+
+    places.push({name, lat:elLat, lng:elLng, type:ptype,
+      addr: tags['addr:street']?`${tags['addr:housenumber']||''} ${tags['addr:street']}`.trim():'',
+      dist });
+  });
+
+  // Sort by distance
+  places.sort((a,b)=>a.dist-b.dist);
+
+  // Separate destinations vs landmarks
+  _clLandmarks = places.filter(p=>p.type==='restaurant'||p.type==='coffee'||p.type==='landmark').slice(0,12);
+  return places.filter(p=>p.type!=='restaurant'&&p.type!=='coffee'&&p.type!=='landmark').slice(0,15);
+}
+
+function clFallbackPlaces(type, lat, lng){
+  // Graceful fallback if Overpass fails
+  return [{
+    name: 'No places found nearby',
+    lat, lng, type: type==='all'?'park':type,
+    addr:'Try zooming out or different category', dist:0
+  }];
+}
+
+function clHaversine(lat1,lon1,lat2,lon2){
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function clDistLabel(km){
+  if(km<1) return Math.round(km*1000)+'m away';
+  return km.toFixed(1)+'km away';
+}
+
+// ── Results panel ────────────────────────────────────────────────
+function clShowResults(places, type){
+  const panel = document.getElementById('cl-results');
+  const list  = document.getElementById('cl-results-list');
+  const title = document.getElementById('cl-results-title');
+  if(!panel||!list) return;
+  const labels={coding:'💻 Coding & Tech Stores',hair:'💆 Hair & Beauty Shops',park:'🌳 Parks & Nature',all:'🗺 All Nearby'};
+  title.textContent = labels[type]||'Nearby';
+  list.innerHTML = places.map((p,i)=>`
+    <div class="cl-result-card" onclick="clSelectDest(${i})">
+      <div class="cl-result-name">${clEmoji(p.type)} ${p.name}</div>
+      ${p.addr?`<div class="cl-result-addr">${p.addr}</div>`:''}
+      <div class="cl-result-meta">
+        <span class="cl-result-badge ${p.type==='coding'?'coding':p.type==='hair'?'hair':'park'}">${p.type.toUpperCase()}</span>
+        <span class="cl-result-dist">${clDistLabel(p.dist)}</span>
+      </div>
+    </div>`).join('');
+  panel.style.display='block';
+}
+
+function clCloseResults(){
+  const p=document.getElementById('cl-results');
+  if(p) p.style.display='none';
+}
+
+function clEmoji(type){
+  return CL_LANDMARK_EMOJI[type]||'📍';
+}
+
+// ── Select destination ──────────────────────────────────────────
+async function clSelectDest(idx){
+  const place = _clPlaces[idx];
+  if(!place) return;
+  _clDestLat  = place.lat;
+  _clDestLng  = place.lng;
+  _clDestName = place.name;
+  clCloseResults();
+
+  // Update nav card
+  const navDest = document.getElementById('cl-nav-dest');
+  const navDist = document.getElementById('cl-nav-dist');
+  if(navDest) navDest.textContent = clEmoji(place.type)+' '+place.name;
+  if(navDist) navDist.textContent = clDistLabel(place.dist);
+
+  // Position destination marker
+  const wrap   = document.getElementById('cl-map-wrap');
+  const marker = document.getElementById('cl-dest-marker');
+  if(marker&&wrap){
+    const dp = clLatLngToCanvas(_clDestLat,_clDestLng,wrap.offsetWidth*window.devicePixelRatio,wrap.offsetHeight*window.devicePixelRatio);
+    marker.style.left = (dp.x/window.devicePixelRatio)+'px';
+    marker.style.top  = (dp.y/window.devicePixelRatio)+'px';
+    marker.style.display='block';
+  }
+
+  // Update landmarks strip
+  clUpdateLandmarkStrip();
+  clUpdateDirections();
+  clDrawMap();
+
+  // Aria narration via AI
+  await clAriaNavigate(place);
+}
+
+async function clAriaNavigate(place){
+  const dist = clDistLabel(place.dist);
+  const prompt = `You are Aria, a warm upbeat GPS companion with a Candy Land adventure personality. The user just selected "${place.name}" (${place.type}, ${dist}) as their destination. Give a SHORT 2-sentence navigation intro: one fun encouraging line about the journey, and one practical note about the destination type. Keep it under 40 words. Sound natural when spoken.`;
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:120,messages:[{role:'user',content:prompt}]})
+    });
+    const d = await r.json();
+    const text = d.content?.[0]?.text||`Adventure to ${place.name} begins! ${dist} — let's go! 🚗✨`;
+    clSetNarration(text);
+    driveSpeak(text);
+  }catch(e){
+    const fb=`Adventure begins! Heading to ${place.name} — ${dist}. 🚗✨`;
+    clSetNarration(fb); driveSpeak(fb);
+  }
+}
+
+// ── Landmark bubbles on map ──────────────────────────────────────
+function clDrawLandmarkBubbles(places){
+  const container = document.getElementById('cl-landmarks');
+  const wrap      = document.getElementById('cl-map-wrap');
+  if(!container||!wrap) return;
+  container.innerHTML='';
+  const W=wrap.offsetWidth, H=wrap.offsetHeight;
+
+  // Show first 8 places as bubbles on map
+  places.slice(0,8).forEach((p,i)=>{
+    if(!p.lat) return;
+    const dp = clLatLngToCanvas(p.lat,p.lng,W,H);
+    const div = document.createElement('div');
+    div.className='cl-landmark-bubble '+p.type;
+    div.textContent = clEmoji(p.type)+' '+p.name.slice(0,18)+(p.name.length>18?'…':'');
+    div.style.left=dp.x+'px'; div.style.top=dp.y+'px';
+    div.onclick=()=>clSelectDest(i);
+    container.appendChild(div);
+  });
+
+  // Also show passing landmarks
+  _clLandmarks.slice(0,5).forEach(lm=>{
+    const dp = clLatLngToCanvas(lm.lat,lm.lng,W,H);
+    const div=document.createElement('div');
+    div.className='cl-landmark-bubble';
+    div.textContent = clEmoji(lm.type)+' '+lm.name.slice(0,16)+(lm.name.length>16?'…':'');
+    div.style.left=dp.x+'px'; div.style.top=dp.y+'px';
+    div.style.opacity='0.6';
+    container.appendChild(div);
+  });
+}
+
+function clUpdateLandmarkStrip(){
+  const strip = document.getElementById('cl-landmarks-strip');
+  if(!strip) return;
+  const all = [..._clPlaces.slice(0,5),..._clLandmarks.slice(0,4)];
+  strip.innerHTML = all.map(lm=>
+    `<div class="cl-lm-chip">${clEmoji(lm.type)} ${lm.name.slice(0,20)}</div>`
+  ).join('');
+}
+
+// ── Live directions ──────────────────────────────────────────────
+function clUpdateDirections(){
+  if(!_clDestLat||!_clUserLat) return;
+  const arrow   = document.getElementById('cl-dir-arrow');
+  const dirText = document.getElementById('cl-dir-text');
+  const navDist = document.getElementById('cl-nav-dist');
+
+  const dist = clHaversine(_clUserLat,_clUserLng,_clDestLat,_clDestLng);
+  const bearing = clBearing(_clUserLat,_clUserLng,_clDestLat,_clDestLng);
+
+  if(navDist) navDist.textContent = clDistLabel(dist);
+  if(arrow)   arrow.style.transform = `rotate(${bearing}deg)`;
+
+  let dir='Head ';
+  if(bearing<22.5||bearing>337.5)      dir+='North';
+  else if(bearing<67.5)                dir+='Northeast';
+  else if(bearing<112.5)               dir+='East';
+  else if(bearing<157.5)               dir+='Southeast';
+  else if(bearing<202.5)               dir+='South';
+  else if(bearing<247.5)               dir+='Southwest';
+  else if(bearing<292.5)               dir+='West';
+  else                                 dir+='Northwest';
+  dir += ` toward ${_clDestName}`;
+
+  if(dirText) dirText.textContent = dist<0.05?'🎉 You\'ve arrived!':dir;
+  if(dist<0.05) clOnArrive();
+}
+
+function clBearing(lat1,lon1,lat2,lon2){
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const y=Math.sin(dLon)*Math.cos(lat2*Math.PI/180);
+  const x=Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180)-Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos(dLon);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+
+// ── Proximity check — Aria narrates landmarks ────────────────────
+let _clLastLandmarkIdx = -1;
+function clCheckProximity(){
+  if(!_clUserLat) return;
+  _clLandmarks.forEach((lm,i)=>{
+    if(i===_clLastLandmarkIdx) return;
+    const d = clHaversine(_clUserLat,_clUserLng,lm.lat,lm.lng);
+    if(d<0.3){
+      _clLastLandmarkIdx=i;
+      clNarreLandmark(lm);
+    }
+  });
+}
+
+async function clNarreLandmark(lm){
+  const prompt=`You are Aria, a fun candy-land adventure GPS. The user is driving and just passed near "${lm.name}" (a ${lm.type}). Give ONE short sentence (max 20 words) narrating this landmark in an exciting upbeat way. Sound like a fun tour guide.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:60,messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();
+    const txt=d.content?.[0]?.text||`Passing by ${lm.name}! 🌟`;
+    clSetNarration(txt);
+    driveSpeak(txt);
+  }catch(e){}
+}
+
+async function clOnArrive(){
+  const txt=`You made it to ${_clDestName}! Amazing adventure! 🎉🍬`;
+  clSetNarration(txt);
+  driveSpeak(txt);
+}
+
+function clSetNarration(text){
+  _clCurrentNarration=text;
+  const el=document.getElementById('cl-aria-narration');
+  if(el) el.textContent=text;
+}
+
+function clSpeakNarration(){
+  driveSpeak(_clCurrentNarration);
+}
+
+// Animate the candy path
+function clAnimate(){
+  if(_driveGpsMode&&_clMapReady){ clDrawMap(); }
+  _clAnimFrame=requestAnimationFrame(clAnimate);
+}
+clAnimate();
 
 
 loadData();
