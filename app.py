@@ -3205,7 +3205,6 @@ body::before{content:'';position:fixed;inset:0;
           <div class="sphere-head-name">Aria</div>
           <div class="sphere-head-status" id="sphere-status-lbl">Online · AI Advisor</div>
         </div>
-        <button class="sphere-head-btn" onclick="window.location.href='/'">Full Screen →</button>
         <button id="sphere-handsfree-btn" onclick="toggleHandsFree()" title="Hands-free mode" style="background:transparent;border:1px solid rgba(193,163,162,0.3);border-radius:12px;padding:3px 10px;font-size:10px;letter-spacing:0.08em;color:rgba(13,9,6,0.5);cursor:pointer;white-space:nowrap;">🤲 Off</button>
       </div>
       <div class="sphere-orb-wrap">
@@ -3972,6 +3971,51 @@ async function saveProfileFull(){
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────────────────────
+async function stRefreshPushStatus(){
+  const btn = document.getElementById('st-push-btn');
+  if(!btn) return;
+  if(!('Notification' in window)){ btn.textContent='🔔 Not supported'; btn.disabled=true; return; }
+  if(Notification.permission==='denied'){ btn.textContent='🚫 Blocked in browser settings'; btn.disabled=true; return; }
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){ btn.textContent='🔔 Not supported'; btn.disabled=true; return; }
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub){ btn.textContent='🔕 Disable Notifications'; btn.style.background='rgba(48,232,144,0.15)'; btn.style.color='#30e890'; btn.style.border='1px solid #30e890'; }
+    else { btn.textContent='🔔 Enable Push Notifications'; btn.style.background=''; btn.style.color=''; btn.style.border=''; }
+  }catch(e){ btn.textContent='🔔 Enable Push Notifications'; }
+}
+
+async function stTogglePush(){
+  const btn = document.getElementById('st-push-btn');
+  if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){
+    showToast('Push notifications not supported on this browser'); return;
+  }
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub){
+      // Disable
+      await fetch('/api/push/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({endpoint:sub.endpoint})});
+      await sub.unsubscribe();
+      showToast('Notifications disabled');
+      stRefreshPushStatus();
+      return;
+    }
+    // Enable — request permission first
+    const perm = await Notification.requestPermission();
+    if(perm!=='granted'){ showToast('Permission denied — enable in browser settings'); return; }
+    // Get VAPID key
+    const kr = await fetch('/api/push/vapid-public-key');
+    const kd = await kr.json();
+    if(!kd.key){ showToast('Push not configured on server'); return; }
+    const newSub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array(kd.key)});
+    const j = newSub.toJSON();
+    await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth})});
+    showToast('🔔 Notifications enabled!');
+    stRefreshPushStatus();
+  }catch(e){ showToast('Error: '+e.message); }
+}
+
 function openSettingsPage(){
   // Load current user data into fields
   const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
@@ -4398,6 +4442,85 @@ function paCaptureAndAnalyze(){
 }
 
 
+
+// ── PHOTO ANALYSIS ───────────────────────────────────────────────
+async function paAnalyze(){
+  if(!_paPhotoB64){ showToast('No photo yet'); return; }
+
+  // Show loading, hide everything else
+  document.querySelector('.pa-mode-tabs').style.display = 'none';
+  document.getElementById('pa-camera-mode').style.display = 'none';
+  document.getElementById('pa-upload-mode').style.display = 'none';
+  document.getElementById('pa-scanning-status').style.display = 'block';
+  document.getElementById('pa-result').style.display = 'none';
+
+  const msgs = ['Aria is reading your hair…','Detecting porosity and texture…','Measuring damage patterns…','Analyzing scalp and roots…','Building your treatment plan…'];
+  let mi = 0;
+  const msgEl = document.getElementById('pa-scanning-msg');
+  const msgTimer = setInterval(()=>{ mi=(mi+1)%msgs.length; msgEl.textContent=msgs[mi]; }, 1400);
+
+  try{
+    const r = await fetch('/api/photo-analysis',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body: JSON.stringify({image_b64: _paPhotoB64})
+    });
+    const d = await r.json();
+    clearInterval(msgTimer);
+    document.getElementById('pa-scanning-status').style.display = 'none';
+    if(d.success || d.score !== undefined){
+      paRenderResult(d);
+      paLoadHistory();
+    } else {
+      showToast(d.error || 'Analysis failed — try again');
+      paReset();
+    }
+  }catch(e){
+    clearInterval(msgTimer);
+    document.getElementById('pa-scanning-status').style.display = 'none';
+    showToast('Network error — please try again');
+    paReset();
+  }
+}
+
+function paRenderResult(d){
+  document.getElementById('pa-result').style.display = 'block';
+  // Score ring
+  const score = d.score || 0;
+  document.getElementById('pa-score-num').textContent = score;
+  const arc = document.getElementById('pa-score-arc');
+  if(arc){ setTimeout(()=>{ arc.style.strokeDashoffset = String(289 - 289*score/100); }, 100); }
+  document.getElementById('pa-result-title').textContent = d.title || 'Hair Health Score';
+  document.getElementById('pa-result-sub').textContent   = d.summary || '';
+  // Metrics
+  if(d.porosity)  document.getElementById('pa-porosity').textContent = d.porosity;
+  if(d.damage)    document.getElementById('pa-damage').textContent   = d.damage;
+  if(d.density)   document.getElementById('pa-density').textContent  = d.density;
+  if(d.texture)   document.getElementById('pa-texture').textContent  = d.texture;
+  // Advice
+  const adv = document.getElementById('pa-advice');
+  if(adv) adv.innerHTML = d.advice ? '<p>' + d.advice + '</p>' : '';
+  // Observations
+  const obs = document.getElementById('pa-obs');
+  if(obs && d.observations) obs.innerHTML = d.observations.map(o=>'<div class="pa-obs-item">• '+o+'</div>').join('');
+  // Recommendations
+  const recs = document.getElementById('pa-recs');
+  if(recs && d.products) recs.innerHTML = d.products.map(p=>'<div class="pa-rec-item">✦ '+p+'</div>').join('');
+}
+
+async function paLoadHistory(){
+  try{
+    const r = await fetch('/api/photo-analysis/history',{headers:{'X-Auth-Token':token}});
+    const d = await r.json();
+    const el = document.getElementById('pa-history-list');
+    if(!el) return;
+    if(!d.history || !d.history.length){ el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No past analyses yet.</div>'; return; }
+    el.innerHTML = d.history.slice(0,5).map(h=>'<div class="pa-history-item" style="padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);">'
+      +'<span style="color:var(--text);font-weight:600;">Score '+h.score+'</span> &nbsp;'
+      + new Date(h.created_at).toLocaleDateString()
+      +'</div>').join('');
+  }catch(e){ /* silent */ }
+}
 
 // Legacy aliases
 function onPhotoSelected(e){ paOnUpload(e); }
