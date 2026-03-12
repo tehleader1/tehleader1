@@ -2437,6 +2437,19 @@ async function doLogin(){{var email=document.getElementById('l-email').value;var
 # ── DASHBOARD PAGE ────────────────────────────────────────────────────────────
 @app.route("/dashboard")
 def dashboard():
+    # Server-side token check — redirect to login immediately if invalid
+    token = request.headers.get("X-Auth-Token") or request.cookies.get("srd_token")
+    # Also check query param (for Shopify redirect flows)
+    if not token:
+        token = request.args.get("token")
+    if token:
+        user = get_user_from_token(token)
+        if not user:
+            # Token exists but is invalid (e.g. after redeployment) — clear and redirect
+            resp = redirect("/login")
+            resp.delete_cookie("srd_token")
+            return resp
+    # No cookie token — let JS handle localStorage token check
     html = r"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8">
@@ -3719,18 +3732,25 @@ body::before{content:'';position:fixed;inset:0;
 
 <script>
 const token = localStorage.getItem('srd_token');
-if (!token) { window.location.href = '/login'; }
+if (!token) { window.location.href = '/login'; throw 'no token'; }
 
-// Verify token is still valid server-side (catches stale tokens after redeployment)
+// Block render until token is verified — catches stale tokens after redeployment
+document.documentElement.style.visibility = 'hidden';
 (async () => {
   try {
     const r = await fetch('/api/auth/me', { headers: { 'X-Auth-Token': token } });
     if (r.status === 401) {
       localStorage.removeItem('srd_token');
       localStorage.removeItem('srd_user');
-      window.location.href = '/login';
+      window.location.replace('/login');
+      return;
     }
-  } catch(e) { /* network error — let dashboard load and individual calls will handle it */ }
+    // Token valid — show the page
+    document.documentElement.style.visibility = '';
+  } catch(e) {
+    // Network error — show page anyway, individual API calls will handle 401s
+    document.documentElement.style.visibility = '';
+  }
 })();
 
 // ── TICKER ──
@@ -6715,7 +6735,7 @@ def pwa_manifest():
 @app.route("/sw.js")
 def service_worker():
     sw = """
-const CACHE = 'aria-v7';
+const CACHE = 'aria-v8';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
@@ -6726,9 +6746,14 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if(e.request.method !== 'GET' || e.request.url.includes('/api/')) return;
+  if(e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
+  // Never cache auth-sensitive pages or API calls
+  const noCache = ['/dashboard', '/login', '/api/'];
+  if(noCache.some(p => url.pathname.startsWith(p))) return;
+  // Redirect bare / to dashboard
   if(url.pathname === '/') { e.respondWith(Response.redirect('/dashboard', 302)); return; }
+  // Cache-first for static assets only
   e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
 });
 
