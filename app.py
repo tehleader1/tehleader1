@@ -4146,6 +4146,65 @@ def blog_save_post(post):
         print(f"blog_save_post error: {e}")
 
 # ── BLOG ROUTES ───────────────────────────────────────────────────────────────
+SRD_NAV = """
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+.srd-nav{position:sticky;top:0;z-index:9999;background:#f0ebe8;border-bottom:1px solid rgba(193,163,162,0.18);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:60px;}
+.srd-nav-logo{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;font-size:22px;color:#0d0906;text-decoration:none;letter-spacing:0.04em;display:flex;align-items:center;gap:10px;}
+.srd-nav-logo svg{flex-shrink:0;}
+.srd-nav-links{display:flex;align-items:center;gap:28px;}
+.srd-nav-links a{font-family:'Jost',sans-serif;font-size:11px;font-weight:400;letter-spacing:0.14em;text-transform:uppercase;color:rgba(0,0,0,0.55);text-decoration:none;transition:color 0.2s;}
+.srd-nav-links a:hover{color:#c1a3a2;}
+.srd-nav-cta{background:#0d0906;color:#f0ebe8 !important;padding:9px 20px;border-radius:30px;font-size:10px !important;letter-spacing:0.18em !important;}
+.srd-nav-cta:hover{background:#c1a3a2;color:#fff !important;}
+.srd-nav-hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;}
+.srd-nav-hamburger span{display:block;width:22px;height:1.5px;background:#0d0906;transition:all 0.3s;}
+.srd-mobile-menu{display:none;position:fixed;inset:0;background:#f0ebe8;z-index:9998;flex-direction:column;align-items:center;justify-content:center;gap:28px;}
+.srd-mobile-menu.open{{display:flex;}}
+.srd-mobile-menu a{{font-family:'Cormorant Garamond',serif;font-size:28px;font-style:italic;color:#0d0906;text-decoration:none;opacity:0;transform:translateY(12px);transition:opacity 0.3s,transform 0.3s;}}
+.srd-mobile-menu.open a{{opacity:1;transform:translateY(0);}}
+.srd-mobile-menu.open a:nth-child(1){{transition-delay:0.05s;}}
+.srd-mobile-menu.open a:nth-child(2){{transition-delay:0.1s;}}
+.srd-mobile-menu.open a:nth-child(3){{transition-delay:0.15s;}}
+.srd-mobile-menu.open a:nth-child(4){{transition-delay:0.2s;}}
+.srd-mobile-menu.open a:nth-child(5){{transition-delay:0.25s;}}
+.srd-mobile-close{{position:absolute;top:22px;right:28px;font-size:28px;cursor:pointer;color:#0d0906;background:none;border:none;font-family:'Jost',sans-serif;}}
+@media(max-width:700px){{
+  .srd-nav-links{{display:none;}}
+  .srd-nav-hamburger{{display:flex;}}
+}}
+</style>
+<nav class="srd-nav">
+  <a href="https://supportrd.com" class="srd-nav-logo">
+    <svg width="24" height="24" viewBox="0 0 72 72" fill="none">
+      <circle cx="36" cy="36" r="34" stroke="#c1a3a2" stroke-width="0.8" opacity="0.5"/>
+      <path d="M28 14 C26 22,32 28,30 36 C28 44,22 48,24 58" stroke="#c1a3a2" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.9"/>
+      <path d="M36 12 C35 20,39 26,37 36 C35 46,31 50,33 60" stroke="#9d7f6a" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+      <path d="M44 14 C46 22,40 28,42 36 C44 44,50 48,48 58" stroke="#c1a3a2" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.9"/>
+    </svg>
+    SupportRD
+  </a>
+  <div class="srd-nav-links">
+    <a href="https://supportrd.com/collections/all">Shop</a>
+    <a href="https://supportrd.com/pages/custom-order">Custom Order</a>
+    <a href="/blog">Hair Journal</a>
+    <a href="https://supportrd.com/pages/about">About</a>
+    <a href="/" class="srd-nav-cta">Try Aria Free →</a>
+  </div>
+  <div class="srd-nav-hamburger" onclick="document.getElementById('srdMobileMenu').classList.add('open')">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+<div class="srd-mobile-menu" id="srdMobileMenu">
+  <button class="srd-mobile-close" onclick="document.getElementById('srdMobileMenu').classList.remove('open')">✕</button>
+  <a href="https://supportrd.com/collections/all">Shop</a>
+  <a href="https://supportrd.com/pages/custom-order">Custom Order</a>
+  <a href="/blog">Hair Journal</a>
+  <a href="https://supportrd.com/pages/about">About</a>
+  <a href="/" style="color:#c1a3a2;">Try Aria Free →</a>
+</div>
+"""
+
 SRD_PAGE_LOADER = """<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap" rel="stylesheet">
 <style>
   #srd-loader{position:fixed;inset:0;background:#f0ebe8;z-index:99999;display:flex;align-items:center;justify-content:center;}
@@ -4240,6 +4299,7 @@ def blog_index():
 footer{{text-align:center;padding:40px;font-size:12px;color:rgba(0,0,0,0.3);border-top:1px solid rgba(193,163,162,0.12);}}
 footer a{{color:#c1a3a2;text-decoration:none;}}
 </style></head><body>
+{SRD_NAV}
 <div class="header-brand"><h1>Hair Care Journal</h1><p>Expert tips from SupportRD</p></div>
 <div class="container">{cards}</div>
 <footer><a href="https://supportrd.com">← Back to SupportRD</a> &nbsp;·&nbsp; <a href="/">Try Aria AI →</a></footer>
@@ -4273,6 +4333,7 @@ footer{{text-align:center;padding:32px;font-size:12px;color:rgba(0,0,0,0.3);}}
 footer a{{color:#c1a3a2;text-decoration:none;}}
 @media(max-width:600px){{.post-body{{padding:28px 20px;}}}}
 </style></head><body>
+{SRD_NAV}
 <div class="container">
   <div class="post-date">{date}</div>
   <div class="post-body">{post['html']}</div>
