@@ -109,20 +109,36 @@ def get_current_user():
 
 def get_hair_profile(user_id):
     con = get_db()
+    for col in ["porosity TEXT","scalp TEXT","wash_freq TEXT","heat_styling TEXT","environment TEXT","goals TEXT"]:
+        try: con.execute(f"ALTER TABLE hair_profiles ADD COLUMN {col}"); con.commit()
+        except: pass
     row = con.execute("SELECT * FROM hair_profiles WHERE user_id=?", (user_id,)).fetchone()
+    if not row: con.close(); return {}
+    cols = [d[0] for d in con.execute("SELECT * FROM hair_profiles LIMIT 0").description]
     con.close()
-    if not row: return {}
-    return {"hair_type":row[2],"hair_concerns":row[3],"treatments":row[4],"products_tried":row[5]}
+    d = dict(zip(cols, row))
+    return {"hair_type":d.get("hair_type",""),"hair_concerns":d.get("hair_concerns",""),
+            "treatments":d.get("treatments",""),"products_tried":d.get("products_tried",""),
+            "porosity":d.get("porosity",""),"scalp":d.get("scalp",""),
+            "wash_freq":d.get("wash_freq",""),"heat_styling":d.get("heat_styling",""),
+            "environment":d.get("environment",""),"goals":d.get("goals","")}
 
 def save_hair_profile(user_id, data):
     con = get_db()
-    con.execute("""INSERT INTO hair_profiles (user_id,hair_type,hair_concerns,treatments,products_tried)
-        VALUES (?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET
+    for col in ["porosity TEXT","scalp TEXT","wash_freq TEXT","heat_styling TEXT","environment TEXT","goals TEXT"]:
+        try: con.execute(f"ALTER TABLE hair_profiles ADD COLUMN {col}"); con.commit()
+        except: pass
+    con.execute("""INSERT INTO hair_profiles (user_id,hair_type,hair_concerns,treatments,products_tried,porosity,scalp,wash_freq,heat_styling,environment,goals)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET
         hair_type=excluded.hair_type, hair_concerns=excluded.hair_concerns,
         treatments=excluded.treatments, products_tried=excluded.products_tried,
+        porosity=excluded.porosity, scalp=excluded.scalp, wash_freq=excluded.wash_freq,
+        heat_styling=excluded.heat_styling, environment=excluded.environment, goals=excluded.goals,
         last_updated=datetime('now')""",
         (user_id, data.get("hair_type",""), data.get("hair_concerns",""),
-         data.get("treatments",""), data.get("products_tried","")))
+         data.get("treatments",""), data.get("products_tried",""),
+         data.get("porosity",""), data.get("scalp",""), data.get("wash_freq",""),
+         data.get("heat_styling",""), data.get("environment",""), data.get("goals","")))
     con.commit()
     con.close()
 
@@ -1824,6 +1840,12 @@ CLIENT PROFILE:
 - Hair concerns: {profile.get("hair_concerns","not specified")}
 - Chemical treatments: {profile.get("treatments","none")}
 - Products they use: {profile.get("products_tried","not specified")}
+- Porosity: {profile.get("porosity","unknown")}
+- Scalp type: {profile.get("scalp","unknown")}
+- Wash frequency: {profile.get("wash_freq","unknown")}
+- Heat styling: {profile.get("heat_styling","unknown")}
+- Environment: {profile.get("environment","unknown")}
+- Goals: {profile.get("goals","not specified")}
 
 SupportRD PRODUCTS (use these specifically):
 - Formula Exclusiva ($55) — all-in-one treatment, moisture + strength + scalp
@@ -2158,6 +2180,40 @@ def profile():
         save_hair_profile(user["id"], request.get_json())
         return jsonify({"ok":True})
     return jsonify(get_hair_profile(user["id"]))
+
+@app.route("/api/profile/ai-status", methods=["GET","OPTIONS"])
+def profile_ai_status():
+    user = get_current_user()
+    if not user: return jsonify({"error":"Not logged in"}), 401
+    profile = get_hair_profile(user["id"])
+    # Get last photo analysis for context
+    con = get_db()
+    last_analysis = con.execute("SELECT analysis,ts FROM photo_analyses WHERE user_id=? ORDER BY ts DESC LIMIT 1",(user["id"],)).fetchone()
+    con.close()
+    analysis_ctx = ""
+    if last_analysis:
+        try:
+            a = json.loads(last_analysis[0])
+            analysis_ctx = f"Last scan ({last_analysis[1][:10]}): porosity={a.get('porosity','?')}, damage={a.get('damage_level','?')}, score={a.get('overall_health_score','?')}."
+        except: pass
+    prompt = f"""You are Aria, hair advisor for SupportRD. Write ONE uplifting, forward-looking sentence (max 30 words) about this client's hair journey. Make it personal, warm, and exciting — like they are leveling up. Reference their current products if they use any. Do NOT use quotes. Just the sentence.
+
+Name: {user.get('name','this client')}
+Hair type: {profile.get('hair_type','unknown')}
+Concerns: {profile.get('hair_concerns','none listed')}
+Products using: {profile.get('products_tried','none yet')}
+{analysis_ctx}"""
+    try:
+        import urllib.request as urlreq
+        payload = json.dumps({{"model":"claude-sonnet-4-20250514","max_tokens":80,"messages":[{{"role":"user","content":prompt}}]}}).encode()
+        req = urlreq.Request("https://api.anthropic.com/v1/messages", data=payload,
+            headers={{"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"}}, method="POST")
+        with urlreq.urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read().decode())
+            status = result["content"][0]["text"].strip()
+        return jsonify({{"status": status}})
+    except Exception as e:
+        return jsonify({{"status": "Your hair journey is gaining momentum — keep going!"}}), 200
 
 @app.route("/api/history", methods=["GET","OPTIONS"])
 def history():
@@ -2693,7 +2749,65 @@ body::before{content:'';position:fixed;inset:0;
 .ppage-regen:hover{background:rgba(240,160,144,0.22);border-color:var(--rose);}
 .ppage-loading{display:flex;align-items:center;gap:12px;color:var(--muted2);font-size:13px;padding:40px 0;}
 .ppage-spinner{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--rose);border-radius:50%;animation:spin 0.8s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes spin{to{transform:rotate(360deg)}
+/* ── OCCASION CARDS ─────────────────────────────── */
+.occ-step-block{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:12px;}
+.occ-step-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--rose);text-transform:uppercase;margin-bottom:12px;}
+.occ-card{background:var(--bg3);border:1.5px solid var(--border2);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.15s;min-width:100px;text-align:center;}
+.occ-card:hover{border-color:var(--rose);background:rgba(240,160,144,0.08);transform:translateY(-2px);}
+.occ-card.selected{border-color:var(--rose);background:rgba(240,160,144,0.12);box-shadow:0 0 0 1px rgba(240,160,144,0.3);}
+.occ-card-icon{font-size:22px;margin-bottom:5px;}
+.occ-card-title{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--text);line-height:1.3;}
+.occ-card-sub{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.3;}
+.occ-day-card{min-width:56px;padding:10px 8px;}
+.occ-action-card{min-width:140px;text-align:left;}
+.occ-action-card .occ-card-icon{font-size:18px;}
+.occ-sum-chip{font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.06);border:1px solid var(--border2);color:var(--muted2);}
+.occ-sum-chip.occ-sum-product{border-color:rgba(224,176,80,0.3);color:var(--gold);}
+.occ-sum-chip.occ-sum-action{border-color:rgba(96,168,255,0.3);color:var(--blue);}
+/* ── ARIA JOURNEY ────────────────────────────────── */
+.aj-tier{display:flex;align-items:flex-start;gap:20px;margin-bottom:28px;position:relative;z-index:2;}
+/* Orb container */
+.aj-orb{position:relative;width:72px;height:72px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.aj-orb-inner{width:64px;height:64px;border-radius:50%;background:var(--bg3);border:2px solid var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:all 0.5s;position:relative;z-index:3;}
+.aj-orb-num{font-family:'Syne',sans-serif;font-size:11px;font-weight:800;color:var(--muted);transition:all 0.5s;line-height:1;}
+.aj-orb-icon{font-size:18px;opacity:0.3;transition:all 0.5s;line-height:1;}
+/* Ring (inactive) */
+.aj-orb-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--border2);transition:all 0.5s;}
+/* Pulse (hidden until active) */
+.aj-orb-pulse{position:absolute;inset:-8px;border-radius:50%;opacity:0;pointer-events:none;}
+/* ACTIVE STATE */
+.aj-orb.active .aj-orb-inner{background:radial-gradient(circle at 35% 35%,color-mix(in srgb,var(--orb-color) 90%,#fff),var(--orb-color));border-color:var(--orb-color);box-shadow:0 0 0 0px rgba(var(--orb-rgb),0.5),0 8px 32px rgba(var(--orb-rgb),0.45),inset 0 1px 0 rgba(255,255,255,0.25);}
+.aj-orb.active .aj-orb-num{color:#fff;font-size:20px;}
+.aj-orb.active .aj-orb-icon{opacity:1;}
+.aj-orb.active .aj-orb-ring{border-color:rgba(var(--orb-rgb),0.5);transform:scale(1.1);}
+.aj-orb.active .aj-orb-pulse{animation:ajPulse 2.4s ease-out infinite;background:radial-gradient(circle,rgba(var(--orb-rgb),0.25),transparent 70%);}
+/* CURRENT (brightest glow) */
+.aj-orb.current .aj-orb-inner{box-shadow:0 0 0 4px rgba(var(--orb-rgb),0.3),0 8px 40px rgba(var(--orb-rgb),0.6),0 0 80px rgba(var(--orb-rgb),0.2),inset 0 1px 0 rgba(255,255,255,0.3);}
+.aj-orb.current .aj-orb-pulse{animation:ajPulse 1.8s ease-out infinite;}
+/* LOCKED */
+.aj-orb.locked .aj-orb-inner{opacity:0.25;filter:grayscale(1);}
+/* Tier body */
+.aj-tier-body{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;flex:1;transition:all 0.4s;}
+.aj-tier-body.active{border-color:rgba(var(--orb-rgb,240,160,144),0.35);background:rgba(var(--orb-rgb,240,160,144),0.04);}
+.aj-tier-body.current{border-color:rgba(var(--orb-rgb,240,160,144),0.5);background:rgba(var(--orb-rgb,240,160,144),0.07);}
+.aj-tier-body.locked{opacity:0.35;pointer-events:none;}
+.aj-tier-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;}
+.aj-tier-desc{font-size:11px;color:var(--muted2);line-height:1.65;}
+.aj-tier-verdict{font-size:10px;margin-top:8px;font-style:italic;color:var(--muted2);line-height:1.5;}
+.aj-bt-btn{margin-top:8px;background:none;border:1px solid rgba(255,255,255,0.1);color:var(--muted);padding:5px 12px;border-radius:16px;font-size:9px;cursor:pointer;font-family:'Space Grotesk',sans-serif;letter-spacing:0.06em;transition:all 0.2s;}
+.aj-bt-btn:hover{border-color:var(--rose);color:var(--rose);}
+@keyframes ajPulse{0%{opacity:0.7;transform:scale(0.95);}70%{opacity:0;transform:scale(1.6);}100%{opacity:0;transform:scale(1.6);}}
+.aj-session{position:relative;padding-left:28px;margin-bottom:20px;}
+.aj-session::before{content:'';position:absolute;left:6px;top:0;bottom:-20px;width:1px;background:var(--border2);}
+.aj-session:last-child::before{display:none;}
+.aj-session-dot{position:absolute;left:0;top:4px;width:13px;height:13px;border-radius:50%;background:var(--bg3);border:2px solid var(--rose);}
+.aj-session-date{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;}
+.aj-session-head{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.aj-session-body{font-size:12px;color:var(--muted2);line-height:1.65;}
+.aj-session-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.aj-session-tag{font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(240,160,144,0.08);border:1px solid rgba(240,160,144,0.18);color:var(--rose);}
+.aj-depth-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.08em;}}
 .ppage-empty{color:var(--muted2);font-size:13px;padding:40px 0;text-align:center;line-height:1.6;}
 /* Premium gate */
 .premium-gate{text-align:center;padding:60px 20px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;max-width:460px;margin:40px auto;}
@@ -2987,7 +3101,7 @@ body::before{content:'';position:fixed;inset:0;
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchPTab('overview')">Overview</div>
     <div class="nav-tab" onclick="switchPTab('profile')">Hair Profile</div>
-    <div class="nav-tab" onclick="switchPTab('routine')">✦ Routine</div>
+    <div class="nav-tab" onclick="switchPTab('journey')">✦ Aria Journey</div>
     <div class="nav-tab" onclick="switchPTab('progress')">✦ Progress</div>
     <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
     <div class="nav-tab" onclick="switchPTab('journal')">✦ Journal</div>
@@ -3011,8 +3125,8 @@ body::before{content:'';position:fixed;inset:0;
   <button class="mob-tab" id="mobt-profile" onclick="switchPTab('profile')">
     <span class="mob-tab-icon">✦</span>Profile
   </button>
-  <button class="mob-tab" id="mobt-routine" onclick="switchPTab('routine')">
-    <span class="mob-tab-icon">📋</span>Routine
+  <button class="mob-tab" id="mobt-journey" onclick="switchPTab('journey')">
+    <span class="mob-tab-icon">✦</span>Journey
   </button>
   <button class="mob-tab" id="mobt-photo" onclick="switchPTab('photo')">
     <span class="mob-tab-icon">📸</span>Scan
@@ -3028,6 +3142,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="mob-more-title">All Features</div>
     <div class="mob-more-grid">
       <div class="mob-more-item" onclick="switchPTab('progress');closeMobMore()"><span class="mob-more-item-icon">📈</span>Progress</div>
+      <div class="mob-more-item" onclick="switchPTab('journey');closeMobMore()"><span class="mob-more-item-icon">✦</span>Aria Journey</div>
       <div class="mob-more-item" onclick="switchPTab('journal');closeMobMore()"><span class="mob-more-item-icon">📓</span>Journal</div>
       <div class="mob-more-item" onclick="switchPTab('whatsapp');closeMobMore()"><span class="mob-more-item-icon">💬</span>Aria SMS</div>
       <div class="mob-more-item" onclick="switchPTab('settings');closeMobMore()"><span class="mob-more-item-icon">⚙</span>Settings</div>
@@ -3238,133 +3353,453 @@ body::before{content:'';position:fixed;inset:0;
 
 <!-- ✦ HAIR PROFILE FULL PAGE -->
 <div class="ppage" id="pp-profile-page">
-  <div class="ppage-head">
-    <div class="ppage-title">✦ Hair Profile</div>
-    <button class="ppage-regen" onclick="saveProfile()">✦ Save & Update Score</button>
-  </div>
 
-  <div style="max-width:800px;margin:0 auto;">
+<!-- ── PROFILE HERO CARD ───────────────────────────────── -->
+<div id="prof-hero" style="position:relative;background:linear-gradient(145deg,rgba(240,160,144,0.08),rgba(193,163,162,0.05));border:1px solid rgba(240,160,144,0.18);border-radius:20px;padding:28px 24px 24px;margin-bottom:20px;overflow:hidden;">
+  <!-- glow behind name -->
+  <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:280px;height:180px;background:radial-gradient(ellipse,rgba(240,160,144,0.18),transparent 70%);pointer-events:none;"></div>
 
-    <!-- Profile summary card -->
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:20px 24px;margin-bottom:16px;display:flex;align-items:center;gap:18px;">
-      <div id="pp-avatar-big" style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;flex-shrink:0;">?</div>
-      <div style="flex:1;">
-        <div id="pp-user-name" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px;">—</div>
-        <div id="pp-user-email" style="font-size:12px;color:var(--muted2);margin-bottom:6px;">—</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <span id="pp-plan-badge" style="font-size:9px;padding:3px 9px;border-radius:3px;background:var(--gold-dim);border:1px solid rgba(224,176,80,0.3);color:var(--gold);font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;">FREE</span>
-          <span id="pp-score-badge" style="font-size:9px;padding:3px 9px;border-radius:3px;background:rgba(240,160,144,0.1);border:1px solid rgba(240,160,144,0.25);color:var(--rose);font-family:'IBM Plex Mono',monospace;">SCORE —</span>
-        </div>
+  <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;position:relative;">
+
+    <!-- Avatar + product shelf -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0;">
+      <!-- Avatar -->
+      <div style="position:relative;">
+        <div id="prof-avatar" style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#fff;border:3px solid rgba(240,160,144,0.4);box-shadow:0 0 24px rgba(240,160,144,0.25);">?</div>
+        <div style="position:absolute;bottom:2px;right:2px;width:20px;height:20px;background:#30e890;border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:9px;">✓</div>
       </div>
-      <div style="text-align:right;">
-        <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Member since</div>
-        <div id="pp-member-since" style="font-size:12px;color:var(--muted2);">—</div>
+      <!-- Share icons -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:100px;">
+        <a id="share-ig" href="#" target="_blank" title="Instagram" onclick="profShare('instagram');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">📷</a>
+        <a id="share-fb" href="#" target="_blank" title="Facebook" onclick="profShare('facebook');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">👥</a>
+        <a id="share-tt" href="#" target="_blank" title="TikTok" onclick="profShare('tiktok');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">🎵</a>
+        <a id="share-tw" href="#" target="_blank" title="X / Twitter" onclick="profShare('twitter');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">🐦</a>
+        <a id="share-wa" href="#" target="_blank" title="WhatsApp" onclick="profShare('whatsapp');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">💬</a>
+        <a id="share-pi" href="#" target="_blank" title="Pinterest" onclick="profShare('pinterest');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">📌</a>
       </div>
     </div>
 
-    <!-- Hair type & concerns grid -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:18px 20px;">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Hair Type</div>
-        <div class="tags" id="pf-tags-type">
-          <div class="tag" onclick="toggleTag(this,'type')">Straight</div>
-          <div class="tag" onclick="toggleTag(this,'type')">Wavy</div>
-          <div class="tag" onclick="toggleTag(this,'type')">Curly</div>
-          <div class="tag" onclick="toggleTag(this,'type')">Coily</div>
-          <div class="tag" onclick="toggleTag(this,'type')">Fine</div>
-          <div class="tag" onclick="toggleTag(this,'type')">Thick</div>
-          <div class="tag" onclick="toggleTag(this,'type')">Dry / Brittle</div>
+    <!-- Product shelf (carousel) -->
+    <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">My Products</div>
+      <div id="prof-product-carousel" style="width:72px;overflow:hidden;position:relative;height:220px;">
+        <div id="prof-product-track" style="display:flex;flex-direction:column;gap:8px;transition:transform 0.3s ease;" data-idx="0">
+          <!-- filled by JS -->
         </div>
       </div>
-
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:18px 20px;">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Main Concerns</div>
-        <div class="tags" id="pf-tags-concerns">
-          <div class="tag" onclick="toggleTag(this,'concerns')">Frizz</div>
-          <div class="tag" onclick="toggleTag(this,'concerns')">Damaged</div>
-          <div class="tag" onclick="toggleTag(this,'concerns')">Breakage</div>
-          <div class="tag" onclick="toggleTag(this,'concerns')">Hair Loss</div>
-          <div class="tag" onclick="toggleTag(this,'concerns')">Thinning</div>
-          <div class="tag" onclick="toggleTag(this,'concerns')">Oily Scalp</div>
-          <div class="tag" onclick="toggleTag(this,'concerns')">Dandruff</div>
-          <div class="tag" onclick="toggleTag(this,'concerns')">Split Ends</div>
-          <div class="tag" onclick="toggleTag(this,'concerns')">Slow Growth</div>
-        </div>
-      </div>
-
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:18px 20px;">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Chemical Treatments</div>
-        <div class="tags" id="pf-tags-treatments">
-          <div class="tag" onclick="toggleTag(this,'treatments')">None / Natural</div>
-          <div class="tag" onclick="toggleTag(this,'treatments')">Relaxer</div>
-          <div class="tag" onclick="toggleTag(this,'treatments')">Bleach</div>
-          <div class="tag" onclick="toggleTag(this,'treatments')">Hair Color</div>
-          <div class="tag" onclick="toggleTag(this,'treatments')">Keratin</div>
-          <div class="tag" onclick="toggleTag(this,'treatments')">Perm / Wave</div>
-        </div>
-      </div>
-
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:18px 20px;">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Products I Use</div>
-        <div class="tags" id="pf-tags-products">
-          <div class="tag" onclick="toggleTag(this,'products')">Formula Exclusiva</div>
-          <div class="tag" onclick="toggleTag(this,'products')">Laciador Crece</div>
-          <div class="tag" onclick="toggleTag(this,'products')">Gotero Rapido</div>
-          <div class="tag" onclick="toggleTag(this,'products')">Gotitas Brillantes</div>
-          <div class="tag" onclick="toggleTag(this,'products')">Mascarilla Capilar</div>
-          <div class="tag" onclick="toggleTag(this,'products')">Shampoo Aloe Vera</div>
-        </div>
-      </div>
-
+      <div id="prof-product-dots" style="display:flex;gap:5px;justify-content:center;margin-top:4px;"></div>
     </div>
 
-    <!-- Hair goals text input -->
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:18px 20px;margin-bottom:16px;">
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">My Hair Goals</div>
-      <textarea id="pf-goals" placeholder="What do you want your hair to look and feel like? The more Aria knows, the better she can help you…" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--text);resize:vertical;min-height:80px;outline:none;" onfocus="this.style.borderColor='var(--rose)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-    </div>
+    <!-- Name / bio / status -->
+    <div style="flex:1;min-width:180px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+        <div id="prof-name-big" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);">—</div>
+        <span id="prof-plan-badge" style="font-size:8px;padding:3px 8px;border-radius:3px;background:var(--gold-dim);border:1px solid rgba(224,176,80,0.3);color:var(--gold);font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;">FREE</span>
+      </div>
+      <div id="prof-email-sm" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
 
-    <!-- Aria insight block -->
-    <div id="pf-aria-insight" style="display:none;background:rgba(240,160,144,0.06);border:1px solid rgba(240,160,144,0.2);border-radius:14px;padding:16px 20px;margin-bottom:16px;">
-      <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;">✦ Aria says</div>
-      <div id="pf-aria-insight-text" style="font-size:13px;color:var(--muted2);line-height:1.7;"></div>
-    </div>
+      <!-- AI Hair Status — glowing -->
+      <div id="prof-ai-status-wrap" style="background:rgba(240,160,144,0.07);border:1px solid rgba(240,160,144,0.22);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden;">
+        <div style="position:absolute;inset:0;border-radius:12px;box-shadow:inset 0 0 18px rgba(240,160,144,0.08);pointer-events:none;"></div>
+        <div style="font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;">✦ Aria's Current Read</div>
+        <div id="prof-ai-status" style="font-size:13px;color:var(--text);line-height:1.7;font-style:italic;animation:profGlow 3s ease-in-out infinite;">Tap ✦ Refresh to get Aria's latest read on your hair…</div>
+        <button onclick="profRefreshAiStatus()" style="margin-top:8px;background:none;border:1px solid rgba(240,160,144,0.3);color:var(--rose);padding:4px 12px;border-radius:20px;font-size:10px;cursor:pointer;letter-spacing:0.08em;">✦ Refresh</button>
+      </div>
 
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <button class="save-btn" style="margin-top:0;" onclick="saveProfileFull()">✦ Save & Update Score</button>
-      <button onclick="switchPTab('overview')" style="background:none;border:1px solid var(--border2);color:var(--muted2);padding:10px 18px;border-radius:6px;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:11px;">← Back to Overview</button>
-      <div id="pf-save-msg" style="display:none;font-size:12px;color:var(--green);">✓ Profile saved</div>
+      <!-- Stats row -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;">
+        <div style="text-align:center;">
+          <div id="prof-score-big" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--rose);">—</div>
+          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Hair Score</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div style="text-align:center;">
+          <div id="prof-streak" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--gold);">—</div>
+          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Day Streak</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div style="text-align:center;">
+          <div id="prof-member-since" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--blue);">—</div>
+          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Member Since</div>
+        </div>
+      </div>
     </div>
 
   </div>
 </div>
 
-<!-- ✦ SMART ROUTINE BUILDER -->
-<div class="ppage" id="pp-routine">
-  <div class="ppage-head">
-    <div class="ppage-title">✦ Smart Routine Builder <span class="premium-badge">PREMIUM</span></div>
-    <button class="ppage-regen" id="routine-regen-btn" onclick="generateRoutine()">⟳ Generate My Routine</button>
+<!-- ── HAIR DATA GRID ─────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Hair Type</div>
+    <div class="tags" id="pf-tags-type">
+      <div class="tag" onclick="toggleTag(this,'type')">Straight</div><div class="tag" onclick="toggleTag(this,'type')">Wavy</div><div class="tag" onclick="toggleTag(this,'type')">Curly</div><div class="tag" onclick="toggleTag(this,'type')">Coily / 4C</div><div class="tag" onclick="toggleTag(this,'type')">Fine</div><div class="tag" onclick="toggleTag(this,'type')">Medium</div><div class="tag" onclick="toggleTag(this,'type')">Thick</div><div class="tag" onclick="toggleTag(this,'type')">Dry / Brittle</div><div class="tag" onclick="toggleTag(this,'type')">Oily</div><div class="tag" onclick="toggleTag(this,'type')">Normal</div>
+    </div>
   </div>
-  <div id="routine-gate" class="premium-gate" style="display:none">
-    <div class="gate-icon">✦</div>
-    <div class="gate-title">Smart Routine Builder</div>
-    <div class="gate-desc">Aria builds your personalized 7-day hair care schedule based on your hair type, concerns, and products. Tap to unlock.</div>
-    <button class="gate-btn" onclick="dashboardUpgrade()">Unlock Premium — $35/mo →</button>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Main Concerns</div>
+    <div class="tags" id="pf-tags-concerns">
+      <div class="tag" onclick="toggleTag(this,'concerns')">Frizz</div><div class="tag" onclick="toggleTag(this,'concerns')">Damaged</div><div class="tag" onclick="toggleTag(this,'concerns')">Breakage</div><div class="tag" onclick="toggleTag(this,'concerns')">Hair Loss</div><div class="tag" onclick="toggleTag(this,'concerns')">Thinning</div><div class="tag" onclick="toggleTag(this,'concerns')">Oily Scalp</div><div class="tag" onclick="toggleTag(this,'concerns')">Dandruff</div><div class="tag" onclick="toggleTag(this,'concerns')">Split Ends</div><div class="tag" onclick="toggleTag(this,'concerns')">Slow Growth</div><div class="tag" onclick="toggleTag(this,'concerns')">Dullness</div><div class="tag" onclick="toggleTag(this,'concerns')">Heat Damage</div><div class="tag" onclick="toggleTag(this,'concerns')">Sun Damage</div><div class="tag" onclick="toggleTag(this,'concerns')">Dryness</div><div class="tag" onclick="toggleTag(this,'concerns')">Scalp Irritation</div>
+    </div>
   </div>
-  <div id="routine-loading" class="ppage-loading" style="display:none">
-    <div class="ppage-spinner"></div><div>Aria is crafting your routine…</div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Chemical Treatments</div>
+    <div class="tags" id="pf-tags-treatments">
+      <div class="tag" onclick="toggleTag(this,'treatments')">None / Natural</div><div class="tag" onclick="toggleTag(this,'treatments')">Relaxer</div><div class="tag" onclick="toggleTag(this,'treatments')">Bleach</div><div class="tag" onclick="toggleTag(this,'treatments')">Hair Color</div><div class="tag" onclick="toggleTag(this,'treatments')">Keratin</div><div class="tag" onclick="toggleTag(this,'treatments')">Perm / Wave</div><div class="tag" onclick="toggleTag(this,'treatments')">Brazilian Blowout</div><div class="tag" onclick="toggleTag(this,'treatments')">Highlights</div>
+    </div>
   </div>
-  <div id="routine-content" style="display:none">
-    <div class="routine-tips" id="routine-tips"></div>
-    <div class="routine-grid" id="routine-grid"></div>
-    <div class="routine-products" id="routine-products"></div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Porosity Level</div>
+    <div class="tags" id="pf-tags-porosity">
+      <div class="tag" onclick="toggleTag(this,'porosity')">Low Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">Medium Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">High Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">Not Sure</div>
+    </div>
   </div>
-  <div id="routine-empty" class="ppage-empty">
-    <div>Fill in your <strong>Hair Profile</strong> first, then tap <em>Generate My Routine</em> above.</div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Scalp Type</div>
+    <div class="tags" id="pf-tags-scalp">
+      <div class="tag" onclick="toggleTag(this,'scalp')">Normal</div><div class="tag" onclick="toggleTag(this,'scalp')">Dry / Flaky</div><div class="tag" onclick="toggleTag(this,'scalp')">Oily</div><div class="tag" onclick="toggleTag(this,'scalp')">Sensitive</div><div class="tag" onclick="toggleTag(this,'scalp')">Itchy</div><div class="tag" onclick="toggleTag(this,'scalp')">Dandruff</div>
+    </div>
+  </div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Wash Frequency</div>
+    <div class="tags" id="pf-tags-washfreq">
+      <div class="tag" onclick="toggleTag(this,'washfreq')">Daily</div><div class="tag" onclick="toggleTag(this,'washfreq')">Every 2-3 Days</div><div class="tag" onclick="toggleTag(this,'washfreq')">Weekly</div><div class="tag" onclick="toggleTag(this,'washfreq')">Every 2 Weeks</div>
+    </div>
+  </div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Heat Styling</div>
+    <div class="tags" id="pf-tags-heat">
+      <div class="tag" onclick="toggleTag(this,'heat')">No Heat</div><div class="tag" onclick="toggleTag(this,'heat')">Occasionally</div><div class="tag" onclick="toggleTag(this,'heat')">1-2x / Week</div><div class="tag" onclick="toggleTag(this,'heat')">Daily</div><div class="tag" onclick="toggleTag(this,'heat')">Flat Iron</div><div class="tag" onclick="toggleTag(this,'heat')">Blow Dryer</div><div class="tag" onclick="toggleTag(this,'heat')">Curling Iron</div>
+    </div>
+  </div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Environment / Lifestyle</div>
+    <div class="tags" id="pf-tags-env">
+      <div class="tag" onclick="toggleTag(this,'env')">Hard Water</div><div class="tag" onclick="toggleTag(this,'env')">Humid Climate</div><div class="tag" onclick="toggleTag(this,'env')">Dry Climate</div><div class="tag" onclick="toggleTag(this,'env')">Sun Exposure</div><div class="tag" onclick="toggleTag(this,'env')">Pool / Chlorine</div><div class="tag" onclick="toggleTag(this,'env')">Ocean / Salt</div><div class="tag" onclick="toggleTag(this,'env')">Active / Workouts</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Products I Use -->
+<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">SupportRD Products I Use</div>
+  <div class="tags" id="pf-tags-products">
+    <div class="tag" onclick="toggleTag(this,'products')">Formula Exclusiva</div><div class="tag" onclick="toggleTag(this,'products')">Laciador Crece</div><div class="tag" onclick="toggleTag(this,'products')">Gotero Rapido</div><div class="tag" onclick="toggleTag(this,'products')">Gotitas Brillantes</div><div class="tag" onclick="toggleTag(this,'products')">Mascarilla Capilar</div><div class="tag" onclick="toggleTag(this,'products')">Shampoo Aloe Vera</div>
   </div>
 </div>
 
+<!-- Goals + notes -->
+<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">My Hair Goals</div>
+  <textarea id="pf-goals" placeholder="What do you want your hair to look and feel like? The more Aria knows, the better she can help…" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--text);resize:vertical;min-height:70px;outline:none;" onfocus="this.style.borderColor='var(--rose)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+</div>
+
+<!-- Save -->
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:28px;">
+  <button class="save-btn" style="margin-top:0;" onclick="saveProfileFull()">✦ Save Profile & Update Score</button>
+  <div id="pf-save-msg" style="display:none;font-size:12px;color:var(--green);">✓ Saved</div>
+</div>
+
+<!-- ── OCCASIONS ── -->
+<div id="occ-section">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);">✦ Occasion Routines</div>
+      <div style="font-size:12px;color:var(--muted2);margin-top:2px;">Pick an occasion, choose your product, select your routine action — then drop it onto any day of the week.</div>
+    </div>
+    <button onclick="occToggleWeekly()" id="occ-weekly-btn" style="background:var(--bg2);border:1px solid var(--border2);color:var(--muted2);padding:8px 16px;border-radius:20px;font-size:11px;cursor:pointer;letter-spacing:0.06em;font-family:'Space Grotesk',sans-serif;">📅 View My Week</button>
+  </div>
+
+  <!-- ── STEP 1: PICK OCCASION ── -->
+  <div class="occ-step-block">
+    <div class="occ-step-label">Step 1 — Choose Your Occasion</div>
+    <div id="occ-occasion-grid" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+  </div>
+
+  <!-- ── STEP 2: PICK PRODUCT ── -->
+  <div class="occ-step-block" id="occ-step2" style="display:none;">
+    <div class="occ-step-label">Step 2 — Which Product Today?</div>
+    <div id="occ-product-grid" style="display:flex;flex-wrap:wrap;gap:8px;">
+
+      <div class="occ-card" onclick="occPickProduct('Formula Exclusiva','💊','All-in-one treatment: moisture, strength + scalp')">
+        <div class="occ-card-icon">💊</div>
+        <div class="occ-card-title">Formula Exclusiva</div>
+        <div class="occ-card-sub">All-in-one treatment</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Laciador Crece','🌿','Softness, elasticity, shine + growth')">
+        <div class="occ-card-icon">🌿</div>
+        <div class="occ-card-title">Laciador Crece</div>
+        <div class="occ-card-sub">Softness + growth</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Gotero Rapido','💧','Scalp treatment — clears + stimulates growth')">
+        <div class="occ-card-icon">💧</div>
+        <div class="occ-card-title">Gotero Rapido</div>
+        <div class="occ-card-sub">Scalp treatment</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Gotitas Brillantes','✨','Shine serum — apply after styling')">
+        <div class="occ-card-icon">✨</div>
+        <div class="occ-card-title">Gotitas Brillantes</div>
+        <div class="occ-card-sub">Shine serum</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Mascarilla Capilar','🫙','Deep conditioning mask treatment')">
+        <div class="occ-card-icon">🫙</div>
+        <div class="occ-card-title">Mascarilla Capilar</div>
+        <div class="occ-card-sub">Deep condition mask</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Shampoo Aloe Vera','🍃','Gentle cleanse — daily or weekly')">
+        <div class="occ-card-icon">🍃</div>
+        <div class="occ-card-title">Shampoo Aloe Vera</div>
+        <div class="occ-card-sub">Gentle cleanse</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Multiple Products','🗂️','Using a combination today')">
+        <div class="occ-card-icon">🗂️</div>
+        <div class="occ-card-title">Multiple Products</div>
+        <div class="occ-card-sub">Combination routine</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── STEP 3: PICK ROUTINE ACTION ── -->
+  <div class="occ-step-block" id="occ-step3" style="display:none;">
+    <div class="occ-step-label">Step 3 — What Are You Doing?</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Simply Applying','🖐️','Quick application — work product through hair, no wash needed')">
+        <div class="occ-card-icon">🖐️</div>
+        <div class="occ-card-title">Simply Applying</div>
+        <div class="occ-card-sub">Quick — no wash needed</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Next Wash Day','🚿','Applying now, washing on next scheduled wash day')">
+        <div class="occ-card-icon">🚿</div>
+        <div class="occ-card-title">Next Wash Day</div>
+        <div class="occ-card-sub">Apply now, wash later</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Shampoo + Laciador','🔁','Shampoo hair, remove buildup, then apply Laciador for softness')">
+        <div class="occ-card-icon">🔁</div>
+        <div class="occ-card-title">Shampoo + Laciador</div>
+        <div class="occ-card-sub">Wash, remove, rebuild</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Full Professional Wash','💆','Take to a SupportRD salon — deep wash with full product treatment')">
+        <div class="occ-card-icon">💆</div>
+        <div class="occ-card-title">Full Professional Wash</div>
+        <div class="occ-card-sub">Salon deep treatment</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Overnight Treatment','🌙','Apply before bed, let it absorb overnight, rinse in morning')">
+        <div class="occ-card-icon">🌙</div>
+        <div class="occ-card-title">Overnight Treatment</div>
+        <div class="occ-card-sub">Sleep-in formula</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Pre-Event Prep','💄','Quick styling prep before the occasion — product + style')">
+        <div class="occ-card-icon">💄</div>
+        <div class="occ-card-title">Pre-Event Prep</div>
+        <div class="occ-card-sub">Style + product for the event</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Deep Condition Mask','🫙','Apply Mascarilla, leave 15–30 min, rinse and style')">
+        <div class="occ-card-icon">🫙</div>
+        <div class="occ-card-title">Deep Condition Mask</div>
+        <div class="occ-card-sub">15–30 min mask treatment</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Scalp Treatment','💧','Apply Gotero directly to scalp, massage in, leave in')">
+        <div class="occ-card-icon">💧</div>
+        <div class="occ-card-title">Scalp Treatment</div>
+        <div class="occ-card-sub">Scalp focus — leave in</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── STEP 4: ADD TO WEEK DAY ── -->
+  <div class="occ-step-block" id="occ-step4" style="display:none;">
+    <div class="occ-step-label">Step 4 — Add to Which Day?</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Monday')"><div class="occ-card-title">Mon</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Tuesday')"><div class="occ-card-title">Tue</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Wednesday')"><div class="occ-card-title">Wed</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Thursday')"><div class="occ-card-title">Thu</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Friday')"><div class="occ-card-title">Fri</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Saturday')"><div class="occ-card-title">Sat</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Sunday')"><div class="occ-card-title">Sun</div></div>
+      <div class="occ-card occ-day-card" onclick="occSaveNoDay()" style="background:rgba(240,160,144,0.08);border-color:rgba(240,160,144,0.3);"><div class="occ-card-title" style="color:var(--rose);">Save Only</div></div>
+    </div>
+  </div>
+
+  <!-- ── CURRENT SELECTION SUMMARY ── -->
+  <div id="occ-summary" style="display:none;background:rgba(240,160,144,0.06);border:1px solid rgba(240,160,144,0.2);border-radius:12px;padding:14px 18px;margin-top:4px;margin-bottom:8px;">
+    <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;">✦ Current Selection</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span id="occ-sum-occasion" class="occ-sum-chip" style="display:none;"></span>
+      <span id="occ-sum-product"  class="occ-sum-chip occ-sum-product" style="display:none;"></span>
+      <span id="occ-sum-action"   class="occ-sum-chip occ-sum-action" style="display:none;"></span>
+    </div>
+    <button onclick="occReset()" style="margin-top:10px;background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:0;letter-spacing:0.06em;">↩ Start over</button>
+  </div>
+
+  <!-- ── WEEKLY PLANNER (collapsed by default) ── -->
+  <div id="occ-weekly-panel" style="display:none;margin-top:8px;">
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;">📅 My Week</div>
+    <div id="occ-week-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;"></div>
+    <button onclick="occClearWeek()" style="margin-top:12px;background:none;border:1px solid var(--border2);color:var(--muted);padding:6px 16px;border-radius:16px;font-size:10px;cursor:pointer;">Clear week</button>
+  </div>
+
+  <!-- ── SAVED OCCASIONS ── -->
+  <div style="margin-top:20px;" id="occ-saved-wrap">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;" id="occ-saved-header"></div>
+    <div id="occ-saved-list"></div>
+  </div>
+
+</div>
+</div>
+
+</div>
+<!-- ✦ ARIA JOURNEY -->
+<div class="ppage" id="pp-journey">
+<div class="ppage-head">
+  <div class="ppage-title">✦ My Aria Journey</div>
+  <div id="aj-depth-badge"></div>
+</div>
+
+<!-- LEVEL TRACK — 4 big glowing orbs -->
+<div id="aj-milestones" style="margin-bottom:36px;">
+
+  <!-- progress spine -->
+  <div style="position:relative;padding:0 8px;">
+    <div id="aj-spine" style="position:absolute;left:50px;top:52px;width:3px;border-radius:3px;background:var(--border2);z-index:0;" id="aj-spine"></div>
+    <div id="aj-spine-fill" style="position:absolute;left:50px;top:52px;width:3px;border-radius:3px;background:linear-gradient(to bottom,var(--rose),var(--gold),var(--blue),var(--green));z-index:1;transition:height 1s ease;height:0;"></div>
+
+    <!-- Level 1: Discovery -->
+    <div class="aj-tier" id="aj-tier-1">
+      <div class="aj-orb" id="aj-orb-1" style="--orb-color:var(--rose);--orb-rgb:240,160,144;">
+        <div class="aj-orb-inner">
+          <div class="aj-orb-num">1</div>
+          <div class="aj-orb-icon">🌱</div>
+        </div>
+        <div class="aj-orb-ring"></div>
+        <div class="aj-orb-pulse"></div>
+      </div>
+      <div class="aj-tier-body" id="aj-tbody-1">
+        <div class="aj-tier-name">Discovery</div>
+        <div class="aj-tier-desc">Aria meets you. She learns your name, your hair story, and your first products. This is where your transformation begins.</div>
+        <div class="aj-tier-verdict" id="aj-v1"></div>
+        <div class="aj-tier-backtrack" id="aj-bt1" style="display:none;">
+          <button onclick="ajForceLevel(0)" class="aj-bt-btn">↩ Aria and I are still getting started</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Level 2: Use Cases & Upgrades -->
+    <div class="aj-tier" id="aj-tier-2">
+      <div class="aj-orb" id="aj-orb-2" style="--orb-color:var(--gold);--orb-rgb:224,176,80;">
+        <div class="aj-orb-inner">
+          <div class="aj-orb-num">2</div>
+          <div class="aj-orb-icon">🔬</div>
+        </div>
+        <div class="aj-orb-ring"></div>
+        <div class="aj-orb-pulse"></div>
+      </div>
+      <div class="aj-tier-body" id="aj-tbody-2">
+        <div class="aj-tier-name">Use Cases &amp; Upgrades</div>
+        <div class="aj-tier-desc">Aria knows your full routine inside out. She's giving you application techniques, timing, what to expect each week — and upgrade paths based on your real results.</div>
+        <div class="aj-tier-verdict" id="aj-v2"></div>
+        <div class="aj-tier-backtrack" id="aj-bt2" style="display:none;">
+          <button onclick="ajForceLevel(1)" class="aj-bt-btn">↩ We haven't gone this deep yet</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Level 3: Inner Circle -->
+    <div class="aj-tier" id="aj-tier-3">
+      <div class="aj-orb" id="aj-orb-3" style="--orb-color:var(--blue);--orb-rgb:96,168,255;">
+        <div class="aj-orb-inner">
+          <div class="aj-orb-num">3</div>
+          <div class="aj-orb-icon">💫</div>
+        </div>
+        <div class="aj-orb-ring"></div>
+        <div class="aj-orb-pulse"></div>
+      </div>
+      <div class="aj-tier-body" id="aj-tbody-3">
+        <div class="aj-tier-name">Inner Circle</div>
+        <div class="aj-tier-desc">Your partner noticed. Your family is asking. Aria now knows the people around you and helps you bring SupportRD into their lives too.</div>
+        <div class="aj-tier-verdict" id="aj-v3"></div>
+        <div class="aj-tier-backtrack" id="aj-bt3" style="display:none;">
+          <button onclick="ajForceLevel(2)" class="aj-bt-btn">↩ Not quite there yet with Aria</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Level 4: Professional — Making Money -->
+    <div class="aj-tier" id="aj-tier-4">
+      <div class="aj-orb" id="aj-orb-4" style="--orb-color:var(--green);--orb-rgb:48,232,144;">
+        <div class="aj-orb-inner">
+          <div class="aj-orb-num">4</div>
+          <div class="aj-orb-icon">💎</div>
+        </div>
+        <div class="aj-orb-ring"></div>
+        <div class="aj-orb-pulse"></div>
+      </div>
+      <div class="aj-tier-body" id="aj-tbody-4">
+        <div class="aj-tier-name">Professional — Making Money</div>
+        <div class="aj-tier-desc">You've become a SupportRD story. People ask what you use, they trust your results, and you're ready to turn that into real income. You are now a VIP client.</div>
+        <div class="aj-tier-verdict" id="aj-v4"></div>
+        <!-- CONTACT US CTA — only shown at level 4 -->
+        <div id="aj-level4-cta" style="display:none;margin-top:14px;padding:16px 18px;background:linear-gradient(135deg,rgba(48,232,144,0.1),rgba(48,232,144,0.04));border:1px solid rgba(48,232,144,0.3);border-radius:12px;">
+          <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--green);margin-bottom:6px;">✦ You've Earned This</div>
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;">Let's talk directly.</div>
+          <div style="font-size:12px;color:var(--muted2);line-height:1.65;margin-bottom:14px;">You are exactly who we built SupportRD for. We want to connect with you personally — whether that's an ambassador program, a referral partnership, or just making sure you have everything you need.</div>
+          <a href="mailto:hello@supportrd.com?subject=Making Money Level — Let's Connect&body=Hi SupportRD team, I've reached the Professional level with Aria and I'd love to talk." style="display:inline-block;background:var(--green);color:#000;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:12px;padding:12px 24px;border-radius:20px;text-decoration:none;letter-spacing:0.06em;">✦ Contact SupportRD Directly →</a>
+          <div style="font-size:10px;color:var(--muted);margin-top:10px;">Or reach us at <strong>hello@supportrd.com</strong> — mention your name and Aria will share your profile.</div>
+        </div>
+        <div class="aj-tier-backtrack" id="aj-bt4" style="display:none;">
+          <button onclick="ajForceLevel(3)" class="aj-bt-btn">↩ Not at this level yet</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /relative -->
+</div><!-- /milestones -->
+
+<!-- CURRENT LEVEL STATEMENT -->
+<div id="aj-current-depth" style="background:rgba(240,160,144,0.07);border:1px solid rgba(240,160,144,0.2);border-radius:16px;padding:20px 22px;margin-bottom:28px;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(240,160,144,0.12),transparent 70%);pointer-events:none;"></div>
+  <div style="font-size:8px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;">✦ Based on your conversations with Aria</div>
+  <div id="aj-depth-title" style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);margin-bottom:6px;">—</div>
+  <div id="aj-depth-msg" style="font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:10px;"></div>
+  <div id="aj-next-label" style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"></div>
+</div>
+
+<!-- SESSION TIMELINE -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+  <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);">Your Sessions with Aria</div>
+  <div id="aj-session-count" style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;"></div>
+</div>
+<div id="aj-timeline" style="position:relative;padding-bottom:20px;">
+  <div class="ppage-empty" id="aj-empty" style="display:none;">Start chatting with Aria to build your journey history.</div>
+</div>
+
+</div>
 <!-- ✦ PROGRESS TRACKER (Score History + Treatment Log) -->
 <div class="ppage" id="pp-progress">
   <div class="ppage-head">
@@ -3888,7 +4323,7 @@ function toggleTag(el,group){
   setTimeout(()=>renderScore(calcScore()),50);
 }
 
-function tagsToString(id){return[...document.querySelectorAll('#'+id+' .tag.on')].map(t=>t.textContent.trim()).join(', ');}
+function tagsToString(id){return[...document.querySelectorAll('#'+id+' .tag.active')].map(t=>t.textContent.trim()).join(', ');}
 function setTagsFromString(id,val){
   if(!val) return;
   const sel=val.split(',').map(s=>s.trim().toLowerCase());
@@ -3911,291 +4346,252 @@ async function dashboardUpgrade(){
 // ── PROFILE PAGE ─────────────────────────────────────────────────────────────
 function openProfilePage(){
   const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
-  // Avatar + name + email
-  const av = document.getElementById('pp-avatar-big');
-  const nm = document.getElementById('pp-user-name');
-  const em = document.getElementById('pp-user-email');
-  if(av && u.name) av.textContent = u.name.charAt(0).toUpperCase();
-  if(nm) nm.textContent = u.name || '—';
-  if(em) em.textContent = u.email || '—';
-  // Plan badge
-  const planBadge = document.getElementById('pp-plan-badge');
-  if(planBadge) planBadge.textContent = _isPremium ? 'PREMIUM' : 'FREE';
-  // Score badge
-  const scoreBadge = document.getElementById('pp-score-badge');
-  if(scoreBadge){
-    const scoreEl = document.getElementById('score-big');
-    const score = scoreEl ? scoreEl.textContent : '—';
-    scoreBadge.textContent = 'SCORE ' + score;
+  // Avatar
+  const av = document.getElementById('prof-avatar');
+  if(av) av.textContent = (u.name||'?')[0].toUpperCase();
+  if(document.getElementById('prof-name-big'))  document.getElementById('prof-name-big').textContent  = u.name||'—';
+  if(document.getElementById('prof-email-sm'))  document.getElementById('prof-email-sm').textContent  = u.email||'';
+  if(document.getElementById('prof-score-big')) document.getElementById('prof-score-big').textContent = localStorage.getItem('srd_score')||'—';
+  if(document.getElementById('prof-member-since')){
+    const ms = u.created_at ? new Date(u.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '—';
+    document.getElementById('prof-member-since').textContent = ms;
   }
-  // Member since (from user object or fallback)
-  const msEl = document.getElementById('pp-member-since');
-  if(msEl) msEl.textContent = u.created_at ? new Date(u.created_at).toLocaleDateString('en-US',{month:'long',year:'numeric'}) : 'Member';
+  // Plan badge
+  const pb = document.getElementById('prof-plan-badge');
+  if(pb){ const isPrem = localStorage.getItem('srd_premium')==='1'; pb.textContent=isPrem?'PREMIUM':'FREE'; pb.style.color=isPrem?'var(--green)':'var(--gold)'; }
+  // Streak (days since last visit — rough approximation)
+  const lastV = parseInt(localStorage.getItem('srd_last_visit')||'0');
+  const today = Math.floor(Date.now()/86400000);
+  let streak = parseInt(localStorage.getItem('srd_streak')||'1');
+  if(lastV === today-1){ streak++; localStorage.setItem('srd_streak',streak); }
+  else if(lastV < today-1){ streak=1; localStorage.setItem('srd_streak',1); }
+  localStorage.setItem('srd_last_visit',today);
+  if(document.getElementById('prof-streak')) document.getElementById('prof-streak').textContent = streak+'d';
 
-  // Sync tag selections from the bot-row profile panel (same underlying data)
-  const groups = ['type','concerns','treatments','products'];
-  groups.forEach(g=>{
-    const srcTags = document.querySelectorAll('#tags-'+g+' .tag.on');
-    const dstTags = document.querySelectorAll('#pf-tags-'+g+' .tag');
-    const selected = Array.from(srcTags).map(t=>t.textContent.trim());
-    dstTags.forEach(t=>{
-      t.classList.toggle('on', selected.includes(t.textContent.trim()));
-    });
-  });
-
-  // Aria insight — pull from profile if available
+  // Load profile tags from API
   fetch('/api/profile',{headers:{'X-Auth-Token':token}}).then(r=>r.json()).then(d=>{
-    if(d.goals){
-      const g = document.getElementById('pf-goals');
-      if(g) g.value = d.goals;
-    }
-    if(d.aria_insight){
-      document.getElementById('pf-aria-insight').style.display='block';
-      document.getElementById('pf-aria-insight-text').textContent = d.aria_insight;
-    }
+    if(!d) return;
+    restoreTags('pf-tags-type',       d.hair_type);
+    restoreTags('pf-tags-concerns',   d.hair_concerns);
+    restoreTags('pf-tags-treatments', d.treatments);
+    restoreTags('pf-tags-products',   d.products_tried);
+    restoreTags('pf-tags-porosity',   d.porosity||'');
+    restoreTags('pf-tags-scalp',      d.scalp||'');
+    restoreTags('pf-tags-washfreq',   d.wash_freq||'');
+    restoreTags('pf-tags-heat',       d.heat_styling||'');
+    restoreTags('pf-tags-env',        d.environment||'');
+    if(document.getElementById('pf-goals')) document.getElementById('pf-goals').value = d.goals||'';
+    profBuildProductCarousel(d.products_tried||'');
   }).catch(()=>{});
+
+  occInit();
+}
+
+function restoreTags(containerId, csv){
+  if(!csv) return;
+  const vals = csv.toLowerCase().split(',').map(s=>s.trim());
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.querySelectorAll('.tag').forEach(t=>{
+    if(vals.some(v=>t.textContent.toLowerCase().includes(v)||v.includes(t.textContent.toLowerCase().slice(0,5))))
+      t.classList.add('active');
+  });
+}
+
+// ── PRODUCT CAROUSEL ─────────────────────────────────────────────
+const PROD_IMGS = {
+  'Formula Exclusiva':  'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/formula.jpg',
+  'Laciador Crece':     'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/laciador.jpg',
+  'Gotero Rapido':      'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/gotero.jpg',
+  'Gotitas Brillantes': 'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/gotitas.jpg',
+  'Mascarilla Capilar': 'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/mascarilla.jpg',
+  'Shampoo Aloe Vera':  'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/shampoo.jpg',
+};
+const PROD_COLORS = ['var(--rose)','var(--gold)','var(--blue)','var(--green)','var(--purple)','#c06050'];
+
+function profBuildProductCarousel(csv){
+  const track = document.getElementById('prof-product-track');
+  const dots  = document.getElementById('prof-product-dots');
+  if(!track||!dots) return;
+  const names = csv ? csv.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  if(!names.length){
+    track.innerHTML = '<div style="width:72px;height:90px;background:var(--bg2);border:1px dashed var(--border2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">✦</div>';
+    dots.innerHTML=''; return;
+  }
+  // 3 visible at a time, scroll with dots
+  const pages = Math.ceil(names.length/3);
+  track.innerHTML = names.map((n,i)=>{
+    const col = PROD_COLORS[i%PROD_COLORS.length];
+    return '<div style="width:72px;height:90px;border-radius:10px;background:'+col+';background:linear-gradient(160deg,'+col+',rgba(0,0,0,0.4));border:1px solid rgba(255,255,255,0.1);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:6px;overflow:hidden;flex-shrink:0;">'
+      +'<div style="font-size:7px;text-align:center;color:#fff;font-family:\'IBM Plex Mono\',monospace;letter-spacing:0.06em;line-height:1.3;">'+n+'</div></div>';
+  }).join('');
+  dots.innerHTML = Array.from({length:pages},(_,i)=>'<div onclick="profCarouselTo('+i+')" style="width:6px;height:6px;border-radius:50%;background:'+(i===0?'var(--rose)':'var(--border2)')+';cursor:pointer;transition:background 0.2s;" id="prof-dot-'+i+'"></div>').join('');
+}
+
+function profCarouselTo(page){
+  const track = document.getElementById('prof-product-track');
+  if(!track) return;
+  const itemH = 98; // 90px + 8px gap
+  track.style.transform = 'translateY(-'+(page*3*itemH)+'px)';
+  document.querySelectorAll('[id^="prof-dot-"]').forEach((d,i)=>{
+    d.style.background = i===page ? 'var(--rose)' : 'var(--border2)';
+  });
+}
+
+// ── AI STATUS REFRESH ─────────────────────────────────────────────
+async function profRefreshAiStatus(){
+  const el = document.getElementById('prof-ai-status');
+  if(!el) return;
+  el.textContent = 'Aria is reading your hair journey…';
+  try{
+    const r = await fetch('/api/profile/ai-status',{headers:{'X-Auth-Token':token}});
+    const d = await r.json();
+    if(d.status) el.textContent = d.status;
+    else el.textContent = 'Keep logging your progress and Aria will tell you more!';
+  }catch(e){ el.textContent = 'Could not reach Aria right now — try again soon.'; }
+}
+
+// ── SHARE ─────────────────────────────────────────────────────────
+function profShare(platform){
+  const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
+  const score = localStorage.getItem('srd_score')||'?';
+  const text = encodeURIComponent((u.name||'I')+' scored '+score+'/100 on my hair health with Aria by SupportRD! ✦ Try it free: https://aria.supportrd.com');
+  const urls = {
+    instagram: 'https://www.instagram.com/',
+    facebook:  'https://www.facebook.com/sharer/sharer.php?u=https://aria.supportrd.com&quote='+text,
+    tiktok:    'https://www.tiktok.com/',
+    twitter:   'https://twitter.com/intent/tweet?text='+text,
+    whatsapp:  'https://wa.me/?text='+text,
+    pinterest: 'https://pinterest.com/pin/create/button/?url=https://aria.supportrd.com&description='+text,
+  };
+  window.open(urls[platform]||'https://aria.supportrd.com','_blank');
+}
+
+// ── OCCASIONS ─────────────────────────────────────────────────────
+const OCC_TEMPLATES = [
+  'Professional Meeting','Job Interview','Date Night','Wedding Guest','Bride / Groom','Bridesmaid',
+  'Graduation','Birthday Party','Red Carpet','Gala / Formal Event','Baby Shower','Bridal Shower',
+  'Church / Religious Service','First Day of School','School Photo Day','Prom','Quinceañera',
+  'Beach Day','Pool Party','Outdoor Festival','Camping / Hiking','Road Trip','Vacation',
+  'Gym / Workout','Sports Event','Yoga / Pilates','Running / Marathon',
+  'At-Home Wash Day','Lazy Sunday','Protective Style Day','Twist Out / Braid Out Day',
+  'Hot Oil Treatment Night','Deep Condition Day','Scalp Massage Night','Overnight Mask',
+  'Holiday Party','New Year\'s Eve','Halloween','Valentine\'s Day','4th of July','Christmas',
+  'Family Reunion','Girls Trip','Bachelorette','Spa Day',
+  'Photoshoot','Content Creation Day','Headshot Day','Stage Performance','Concert',
+  'Casual Friday','Business Casual','Remote Work Day','Zoom Call',
+  'Rain Day','Snow Day','Humid Weather','Dry Season','High Altitude Travel',
+  'Post-Swim','Post-Workout','Post-Color Treatment','Post-Relaxer Care',
+];
+
+let _occCurrentName = '';
+
+function profBuildOccasionTemplates(){
+  const el = document.getElementById('occ-templates');
+  if(!el) return;
+  el.innerHTML = OCC_TEMPLATES.map(n=>
+    '<button onclick="occOpenEditor(\''+n.replace(/'/g,"\\'")+'\')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted2);padding:6px 12px;border-radius:20px;font-size:11px;cursor:pointer;white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.borderColor=\'var(--rose)\';this.style.color=\'var(--rose)\'" onmouseout="this.style.borderColor=\'var(--border2)\';this.style.color=\'var(--muted2)\'">'+n+'</button>'
+  ).join('');
+}
+
+function occOpenEditor(name){
+  _occCurrentName = name;
+  document.getElementById('occ-editor-title').textContent = '✦ '+name;
+  document.getElementById('occ-steps').value='';
+  document.querySelectorAll('#occ-product-tags .tag').forEach(t=>t.classList.remove('active'));
+  // Pre-fill if already saved
+  const saved = JSON.parse(localStorage.getItem('srd_occasions')||'{}');
+  if(saved[name]){
+    document.getElementById('occ-steps').value = saved[name].steps||'';
+    (saved[name].products||[]).forEach(p=>{
+      document.querySelectorAll('#occ-product-tags .tag').forEach(t=>{ if(t.textContent===p) t.classList.add('active'); });
+    });
+  }
+  const ed = document.getElementById('occ-editor');
+  ed.style.display='block';
+  ed.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function occSave(){
+  if(!_occCurrentName){ showToast('Pick an occasion first'); return; }
+  const steps = document.getElementById('occ-steps').value.trim();
+  const products = [...document.querySelectorAll('#occ-product-tags .tag.active')].map(t=>t.textContent);
+  const saved = JSON.parse(localStorage.getItem('srd_occasions')||'{}');
+  saved[_occCurrentName] = {steps, products, updated: new Date().toLocaleDateString()};
+  localStorage.setItem('srd_occasions', JSON.stringify(saved));
+  showToast('✦ '+_occCurrentName+' routine saved!');
+  document.getElementById('occ-editor').style.display='none';
+  occLoadSaved();
+}
+
+function occLoadSaved(){
+  const el = document.getElementById('occ-saved-list');
+  if(!el) return;
+  const saved = JSON.parse(localStorage.getItem('srd_occasions')||'{}');
+  const keys = Object.keys(saved);
+  if(!keys.length){ el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No occasions saved yet — pick a template above.</div>'; return; }
+  el.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Saved Occasions ('+keys.length+')</div>'
+    + keys.map(k=>{
+    const o = saved[k];
+    return '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 18px;margin-bottom:10px;">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+      +'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:13px;color:var(--text);">✦ '+k+'</div>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<button onclick="occOpenEditor(\''+k.replace(/'/g,"\\'")+'\')" style="background:none;border:1px solid var(--border2);color:var(--muted2);padding:3px 10px;border-radius:10px;font-size:10px;cursor:pointer;">Edit</button>'
+      +'<button onclick="occDelete(\''+k.replace(/'/g,"\\'")+'\')" style="background:none;border:1px solid rgba(255,80,80,0.3);color:rgba(255,120,120,0.7);padding:3px 10px;border-radius:10px;font-size:10px;cursor:pointer;">✕</button>'
+      +'</div></div>'
+      +(o.steps?'<div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:8px;">'+o.steps+'</div>':'')
+      +(o.products&&o.products.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+        +o.products.map(p=>'<span style="font-size:10px;padding:3px 8px;background:rgba(240,160,144,0.1);border:1px solid rgba(240,160,144,0.2);border-radius:10px;color:var(--rose);">'+p+'</span>').join('')
+        +'</div>':'')
+      +'<div style="font-size:9px;color:var(--muted);margin-top:8px;">Updated '+o.updated+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function occDelete(name){
+  const saved = JSON.parse(localStorage.getItem('srd_occasions')||'{}');
+  delete saved[name];
+  localStorage.setItem('srd_occasions',JSON.stringify(saved));
+  occLoadSaved();
+  showToast('Removed '+name);
 }
 
 async function saveProfileFull(){
-  // Sync tag selections back to the main hidden profile panel so saveProfile() works
-  const groups = ['type','concerns','treatments','products'];
-  groups.forEach(g=>{
-    const pfSelected = Array.from(document.querySelectorAll('#pf-tags-'+g+' .tag.on')).map(t=>t.textContent.trim());
-    document.querySelectorAll('#tags-'+g+' .tag').forEach(t=>{
-      t.classList.toggle('on', pfSelected.includes(t.textContent.trim()));
+  // Sync all tag groups
+  const data = {
+    hair_type:      tagsToString('tags-type'),
+    hair_concerns:  tagsToString('tags-concerns'),
+    treatments:     tagsToString('tags-treatments'),
+    products_tried: tagsToString('tags-products'),
+    porosity:       tagsToString('pf-tags-porosity').replace(/pf-tags-/g,''),
+    scalp:          tagsToString('pf-tags-scalp').replace(/pf-tags-/g,''),
+    wash_freq:      tagsToString('pf-tags-washfreq').replace(/pf-tags-/g,''),
+    heat_styling:   tagsToString('pf-tags-heat').replace(/pf-tags-/g,''),
+    environment:    tagsToString('pf-tags-env').replace(/pf-tags-/g,''),
+    goals:          (document.getElementById('pf-goals')||{}).value||'',
+  };
+  // Also sync the hidden bot-row tags so score updates
+  ['type','concerns','treatments','products'].forEach(k=>{
+    const src = document.getElementById('pf-tags-'+k);
+    const dst = document.getElementById('tags-'+k);
+    if(!src||!dst) return;
+    dst.querySelectorAll('.tag').forEach(dt=>{
+      const match = [...src.querySelectorAll('.tag')].find(st=>st.textContent===dt.textContent);
+      dt.classList.toggle('active', match ? match.classList.contains('active') : false);
     });
   });
-  await saveProfile();
-  const msg = document.getElementById('pf-save-msg');
-  if(msg){ msg.style.display='block'; setTimeout(()=>msg.style.display='none',3000); }
-}
-
-// ── SETTINGS ─────────────────────────────────────────────────────────────────
-async function stRefreshPushStatus(){
-  const btn = document.getElementById('st-push-btn');
-  if(!btn) return;
-  if(!('Notification' in window)){ btn.textContent='🔔 Not supported'; btn.disabled=true; return; }
-  if(Notification.permission==='denied'){ btn.textContent='🚫 Blocked in browser settings'; btn.disabled=true; return; }
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)){ btn.textContent='🔔 Not supported'; btn.disabled=true; return; }
   try{
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if(sub){ btn.textContent='🔕 Disable Notifications'; btn.style.background='rgba(48,232,144,0.15)'; btn.style.color='#30e890'; btn.style.border='1px solid #30e890'; }
-    else { btn.textContent='🔔 Enable Push Notifications'; btn.style.background=''; btn.style.color=''; btn.style.border=''; }
-  }catch(e){ btn.textContent='🔔 Enable Push Notifications'; }
+    await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});
+    renderScore(calcScore());
+    profBuildProductCarousel(data.products_tried);
+    const msg = document.getElementById('pf-save-msg');
+    if(msg){ msg.style.display='block'; setTimeout(()=>msg.style.display='none',2500); }
+    showToast('✦ Profile saved!');
+  }catch(e){ showToast('Save failed — try again'); }
 }
 
-async function stTogglePush(){
-  const btn = document.getElementById('st-push-btn');
-  if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){
-    showToast('Push notifications not supported on this browser'); return;
-  }
-  try{
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if(sub){
-      // Disable
-      await fetch('/api/push/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({endpoint:sub.endpoint})});
-      await sub.unsubscribe();
-      showToast('Notifications disabled');
-      stRefreshPushStatus();
-      return;
-    }
-    // Enable — request permission first
-    const perm = await Notification.requestPermission();
-    if(perm!=='granted'){ showToast('Permission denied — enable in browser settings'); return; }
-    // Get VAPID key
-    const kr = await fetch('/api/push/vapid-public-key');
-    const kd = await kr.json();
-    if(!kd.key){ showToast('Push not configured on server'); return; }
-    const newSub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array(kd.key)});
-    const j = newSub.toJSON();
-    await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth})});
-    showToast('🔔 Notifications enabled!');
-    stRefreshPushStatus();
-  }catch(e){ showToast('Error: '+e.message); }
-}
 
-function openSettingsPage(){
-  // Load current user data into fields
-  const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
-  if(u.name) document.getElementById('st-name').value = u.name;
-  if(u.email) document.getElementById('st-email').value = u.email;
-  // Load billing info
-  fetch('/api/subscription/status',{headers:{'X-Auth-Token':token}}).then(r=>r.json()).then(d=>{
-    const planEl = document.getElementById('st-plan-name');
-    const nextEl = document.getElementById('st-next-payment');
-    const manageBtn = document.getElementById('st-manage-btn');
-    if(d.plan==='premium' || d.subscribed){
-      planEl.textContent = 'Premium · $35/month';
-      planEl.style.color = 'var(--gold)';
-      if(d.current_period_end){
-        const dt = new Date(d.current_period_end);
-        nextEl.innerHTML = 'Next payment: <strong>'+dt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+'</strong>';
-      } else if(d.admin_bypass){
-        nextEl.innerHTML = '<strong style="color:var(--rose)">Admin Access — No billing</strong>';
-      } else {
-        nextEl.textContent = 'Active subscription';
-      }
-      manageBtn.textContent = 'Manage Subscription →';
-      manageBtn.href = 'https://supportrd.com/account';
-    } else {
-      planEl.textContent = 'Free Plan';
-      nextEl.textContent = 'Upgrade to unlock all 7 premium features';
-      manageBtn.textContent = 'Upgrade to Premium — $35/mo →';
-      manageBtn.href = 'https://supportrd.com/products/hair-advisor-premium';
-    }
-  }).catch(()=>{});
-  // Check push status
-  stRefreshPushStatus();
-}
-
-async function saveProfileSettings(){
-  const name = document.getElementById('st-name').value.trim();
-  const email = document.getElementById('st-email').value.trim();
-  const phone = document.getElementById('st-phone').value.trim();
-  const address = document.getElementById('st-address').value.trim();
-  const city = document.getElementById('st-city').value.trim();
-  const msgEl = document.getElementById('st-profile-msg');
-  const errEl = document.getElementById('st-profile-err');
-  msgEl.style.display='none'; errEl.style.display='none';
-  if(!name||!email){errEl.textContent='Name and email required.';errEl.style.display='block';return;}
-  try{
-    const r = await fetch('/api/auth/update-profile',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Auth-Token':token},
-      body:JSON.stringify({name,email,phone,address,city})
-    });
-    const d = await r.json();
-    if(d.ok){
-      // Update localStorage
-      const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
-      u.name=name; u.email=email;
-      localStorage.setItem('srd_user',JSON.stringify(u));
-      document.getElementById('nav-name').textContent=name;
-      msgEl.style.display='block';
-      setTimeout(()=>msgEl.style.display='none',3000);
-    } else {
-      errEl.textContent=d.error||'Update failed';errEl.style.display='block';
-    }
-  }catch(e){errEl.textContent='Connection error';errEl.style.display='block';}
-}
-
-async function savePasswordSettings(){
-  const np = document.getElementById('st-new-pass').value;
-  const cp = document.getElementById('st-confirm-pass').value;
-  const msgEl = document.getElementById('st-pass-msg');
-  const errEl = document.getElementById('st-pass-err');
-  msgEl.style.display='none'; errEl.style.display='none';
-  if(!np){errEl.textContent='Enter a new password.';errEl.style.display='block';return;}
-  if(np.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
-  if(np!==cp){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
-  try{
-    const r = await fetch('/api/auth/change-password',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Auth-Token':token},
-      body:JSON.stringify({new_password:np})
-    });
-    const d = await r.json();
-    if(d.ok){
-      document.getElementById('st-new-pass').value='';
-      document.getElementById('st-confirm-pass').value='';
-      msgEl.style.display='block';
-      setTimeout(()=>msgEl.style.display='none',3000);
-    } else {
-      errEl.textContent=d.error||'Update failed';errEl.style.display='block';
-    }
-  }catch(e){errEl.textContent='Connection error';errEl.style.display='block';}
-}
-
-function confirmDeleteAccount(){
-  if(confirm('Are you sure? This will permanently delete your account and all your data. This cannot be undone.')){
-    fetch('/api/auth/delete-account',{method:'DELETE',headers:{'X-Auth-Token':token}})
-      .then(()=>{ localStorage.clear(); window.location.href='/login'; })
-      .catch(()=>showToast('Error — try again'));
-  }
-}
-
-function openMobMore(){ document.getElementById('mob-more-overlay').classList.add('open'); }
-function closeMobMore(){ document.getElementById('mob-more-overlay').classList.remove('open'); }
-
-function updateMobileTabBar(name){
-  const map = {overview:'mobt-overview',profile:'mobt-profile',routine:'mobt-routine',photo:'mobt-photo'};
-  document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
-  if(map[name]) document.getElementById(map[name])?.classList.add('active');
-}
-
-function switchPTab(name){
-  updateMobileTabBar(name);
-  // Settings is a standalone page
-  if(name==='settings'){
-    const mainPanels=['top-row','mid-row','bot-row'];
-    mainPanels.forEach(id=>{ const el=document.querySelector('.'+id); if(el) el.style.display='none'; });
-    document.querySelectorAll('.ppage').forEach(p=>p.classList.remove('active'));
-    const sp=document.getElementById('pp-settings');
-    if(sp) sp.classList.add('active');
-    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.nav-tab')[7]?.classList.add('active');
-    openSettingsPage();
-    return;
-  }
-  // Hide main app panels
-  const mainPanels = ['top-row','mid-row','bot-row'];
-  mainPanels.forEach(id=>{
-    const el=document.querySelector('.'+id);
-    if(el) el.style.display=(name==='overview')?'':'none';
-  });
-  // Hide all premium pages
-  document.querySelectorAll('.ppage').forEach(p=>p.classList.remove('active'));
-  // Profile → show full profile page
-  if(name==='profile'){
-    const pp=document.getElementById('pp-profile-page');
-    if(pp){ pp.classList.add('active'); openProfilePage(); }
-    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.nav-tab')[1]?.classList.add('active');
-    return;
-  }
-  // Show premium page if needed
-  if(name!=='overview'&&name!=='history'){
-    const pp=document.getElementById('pp-'+name);
-    if(pp){ pp.classList.add('active'); onPremiumPageOpen(name); }
-  }
-  // Nav tabs
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  const tabs={overview:0,profile:1,routine:2,progress:3,photo:4,journal:5,whatsapp:6,settings:7};
-  const idx=tabs[name]??0;
-  document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
-  // History sub-tab
-  if(name==='overview'||name==='history'){
-    const pt=document.getElementById('pt-history');
-    const pc=document.getElementById('pc-history');
-    if(pt) pt.classList.toggle('on',name==='history');
-    if(pc) pc.classList.toggle('on',name==='history');
-    if(name==='history') loadHistory();
-  }
-}
-
-function onPremiumPageOpen(name){
-  if(!_isPremium){
-    // Show gates on premium pages
-    ['routine-gate','progress-gate','photo-gate','journal-gate','whatsapp-gate'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.style.display='';
-    });
-    ['routine-content','routine-empty','progress-content','photo-content','journal-content','whatsapp-content'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.style.display='none';
-    });
-    return;
-  }
-  if(name==='routine') openRoutinePage();
-  if(name==='progress') openProgressPage();
-  if(name==='photo') openPhotoPage();
-  if(name==='journal') openJournalPage();
-  if(name==='whatsapp') openWhatsappPage();
-}
-
-// ── ROUTINE BUILDER ──────────────────────────────────────────────────────────
 async function openRoutinePage(){
   document.getElementById('routine-gate').style.display='none';
   document.getElementById('routine-loading').style.display='none';
@@ -5132,1570 +5528,535 @@ async function loadRealStats(){
 }
 
 buildTicker(null);
+
+// ═══════════════════════════════════════════════════════════════
+// ✦ SWITCHPTAB — the universal page router (was missing, now fixed)
+// ═══════════════════════════════════════════════════════════════
+const _PAGE_MAP = {
+  overview: {page:'pp-overview',   open: openOverviewPage},
+  profile:  {page:'pp-profile-page', open: openProfilePage},
+  journey:  {page:'pp-journey',    open: openJourneyPage},
+  progress: {page:'pp-progress',   open: openProgressPage},
+  photo:    {page:'pp-photo',      open: openPhotoPage},
+  journal:  {page:'pp-journal',    open: openJournalPage},
+  whatsapp: {page:'pp-whatsapp',   open: openWhatsappPage},
+  settings: {page:'pp-settings',   open: openSettingsPage},
+  history:  {page:'pp-history',    open: ()=>{}},
+};
+
+let _currentTab = 'overview';
+
+function switchPTab(name){
+  if(_currentTab === name) return;
+  _currentTab = name;
+
+  // Hide all ppages
+  document.querySelectorAll('.ppage').forEach(p => p.classList.remove('active'));
+
+  // Show target
+  const cfg = _PAGE_MAP[name];
+  if(cfg){
+    const el = document.getElementById(cfg.page);
+    if(el) el.classList.add('active');
+    try{ cfg.open(); }catch(e){ console.warn('Page open error:', e); }
+  }
+
+  // Update desktop nav tabs
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    const txt = t.textContent.replace('✦','').replace('⚙','').trim().toLowerCase();
+    const match = name === 'journey' ? txt.includes('journey') : txt.startsWith(name.slice(0,4));
+    t.classList.toggle('active', match);
+  });
+
+  // Update mobile bottom tabs
+  ['overview','profile','journey','photo'].forEach(n => {
+    const btn = document.getElementById('mobt-'+n);
+    if(btn) btn.classList.toggle('active', n === name);
+  });
+
+  // Scroll to top
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// Stub openers for pages that already have their own openers defined below
+function openOverviewPage(){ /* overview is default, no special load needed */ }
+function openPhotoPage(){
+  const gate = document.getElementById('photo-gate');
+  const cont = document.getElementById('photo-content');
+  if(!gate||!cont) return;
+  const isPrem = localStorage.getItem('srd_premium')==='1';
+  gate.style.display = isPrem ? 'none' : 'block';
+  cont.style.display = isPrem ? 'block' : 'none';
+}
+function openJournalPage(){
+  const gate = document.getElementById('journal-gate');
+  const cont = document.getElementById('journal-content');
+  if(!gate||!cont) return;
+  const isPrem = localStorage.getItem('srd_premium')==='1';
+  gate.style.display = isPrem ? 'none' : 'block';
+  cont.style.display = isPrem ? 'block' : 'none';
+}
+function openSettingsPage(){/* settings loads itself */}
+
+
+// ═══════════════════════════════════════════════════════════════
+// ✦ OCCASIONS — full card flow (no typing, pure selectable)
+// ═══════════════════════════════════════════════════════════════
+const OCC_LIST = [
+  // Professional
+  {n:'Job Interview',       icon:'💼', cat:'Professional'},
+  {n:'Business Meeting',    icon:'🤝', cat:'Professional'},
+  {n:'Presentation',        icon:'📊', cat:'Professional'},
+  {n:'Zoom / Video Call',   icon:'💻', cat:'Professional'},
+  {n:'First Day at Work',   icon:'🏢', cat:'Professional'},
+  // Social
+  {n:'Date Night',          icon:'🌹', cat:'Social'},
+  {n:'Girls Night Out',     icon:'💃', cat:'Social'},
+  {n:'Night Out',           icon:'🎉', cat:'Social'},
+  {n:'Birthday Party',      icon:'🎂', cat:'Social'},
+  {n:'Girls Trip',          icon:'✈️', cat:'Social'},
+  {n:'Family Reunion',      icon:'👨‍👩‍👧', cat:'Social'},
+  // Formal
+  {n:'Wedding',             icon:'💒', cat:'Formal'},
+  {n:'Wedding Guest',       icon:'💐', cat:'Formal'},
+  {n:'Prom',                icon:'👑', cat:'Formal'},
+  {n:'Graduation',          icon:'🎓', cat:'Formal'},
+  {n:'Quinceañera',         icon:'🩰', cat:'Formal'},
+  {n:'Gala / Red Carpet',   icon:'🥂', cat:'Formal'},
+  {n:'Church Service',      icon:'🙏', cat:'Formal'},
+  // Outdoors
+  {n:'Beach Day',           icon:'🏖️', cat:'Outdoors'},
+  {n:'Pool Party',          icon:'🏊', cat:'Outdoors'},
+  {n:'Festival',            icon:'🎪', cat:'Outdoors'},
+  {n:'Camping',             icon:'⛺', cat:'Outdoors'},
+  {n:'Hiking',              icon:'🥾', cat:'Outdoors'},
+  {n:'Road Trip',           icon:'🚗', cat:'Outdoors'},
+  {n:'Vacation',            icon:'🌴', cat:'Outdoors'},
+  // Fitness
+  {n:'Gym / Workout',       icon:'🏋️', cat:'Active'},
+  {n:'Running',             icon:'🏃', cat:'Active'},
+  {n:'Yoga / Pilates',      icon:'🧘', cat:'Active'},
+  {n:'Sports Game',         icon:'⚽', cat:'Active'},
+  {n:'Swimming',            icon:'🏊', cat:'Active'},
+  // At Home
+  {n:'Wash Day',            icon:'🚿', cat:'At Home'},
+  {n:'Deep Condition Day',  icon:'🫙', cat:'At Home'},
+  {n:'Scalp Massage Night', icon:'💆', cat:'At Home'},
+  {n:'Overnight Mask',      icon:'🌙', cat:'At Home'},
+  {n:'Lazy Sunday',         icon:'☕', cat:'At Home'},
+  {n:'Protective Style Day',icon:'🪢', cat:'At Home'},
+  // Content / Creative
+  {n:'Photoshoot',          icon:'📸', cat:'Content'},
+  {n:'Content Day',         icon:'🎬', cat:'Content'},
+  {n:'Headshot Day',        icon:'🖼️', cat:'Content'},
+  {n:'Stage / Performance', icon:'🎤', cat:'Content'},
+  {n:'Concert',             icon:'🎵', cat:'Content'},
+  // School
+  {n:'School Photo Day',    icon:'📚', cat:'School'},
+  {n:'First Day of School', icon:'🎒', cat:'School'},
+  {n:'Graduation Party',    icon:'🎓', cat:'School'},
+  // Seasonal
+  {n:'Holiday Party',       icon:'🎄', cat:'Seasonal'},
+  {n:"New Year's Eve",      icon:'🥳', cat:'Seasonal'},
+  {n:'Valentine\'s Day',    icon:'💝', cat:'Seasonal'},
+  {n:'Halloween',           icon:'🎃', cat:'Seasonal'},
+];
+
+let _occ = {occasion:null, product:null, action:null, actionDesc:null};
+
+function occBuildGrid(){
+  const grid = document.getElementById('occ-occasion-grid');
+  if(!grid) return;
+  // Group by category
+  const cats = {};
+  OCC_LIST.forEach(o=>{ cats[o.cat]=cats[o.cat]||[]; cats[o.cat].push(o); });
+  let html = '';
+  Object.entries(cats).forEach(([cat, items])=>{
+    html += '<div style="width:100%;margin-top:8px;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">'+cat+'</div>';
+    items.forEach(o=>{
+      html += '<div class="occ-card" onclick="occPickOccasion(\''+o.n.replace(/'/g,"\\'")+'\')" style="min-width:90px;padding:10px 10px;">'
+        +'<div class="occ-card-icon">'+o.icon+'</div>'
+        +'<div class="occ-card-title" style="font-size:10px;">'+o.n+'</div>'
+        +'</div>';
+    });
+  });
+  grid.innerHTML = html;
+}
+
+function occPickOccasion(name){
+  _occ.occasion = name;
+  // Highlight selected
+  document.querySelectorAll('#occ-occasion-grid .occ-card').forEach(c=>{
+    c.classList.toggle('selected', c.querySelector('.occ-card-title')&&c.querySelector('.occ-card-title').textContent===name);
+  });
+  occUpdateSummary();
+  document.getElementById('occ-step2').style.display='block';
+  document.getElementById('occ-step2').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function occPickProduct(name, icon, desc){
+  _occ.product = name;
+  document.querySelectorAll('#occ-product-grid .occ-card').forEach(c=>{
+    c.classList.toggle('selected', c.querySelector('.occ-card-title')&&c.querySelector('.occ-card-title').textContent===name);
+  });
+  occUpdateSummary();
+  document.getElementById('occ-step3').style.display='block';
+  document.getElementById('occ-step3').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function occPickAction(name, icon, desc){
+  _occ.action = name;
+  _occ.actionDesc = desc;
+  document.querySelectorAll('.occ-action-card').forEach(c=>{
+    c.classList.toggle('selected', c.querySelector('.occ-card-title')&&c.querySelector('.occ-card-title').textContent===name);
+  });
+  occUpdateSummary();
+  document.getElementById('occ-step4').style.display='block';
+  document.getElementById('occ-step4').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function occUpdateSummary(){
+  const wrap = document.getElementById('occ-summary');
+  if(wrap) wrap.style.display = (_occ.occasion||_occ.product||_occ.action) ? 'block':'none';
+  const s1 = document.getElementById('occ-sum-occasion');
+  const s2 = document.getElementById('occ-sum-product');
+  const s3 = document.getElementById('occ-sum-action');
+  if(s1){ s1.style.display=_occ.occasion?'inline':'none'; s1.textContent='📍 '+(_occ.occasion||''); }
+  if(s2){ s2.style.display=_occ.product?'inline':'none'; s2.textContent='💊 '+(_occ.product||''); }
+  if(s3){ s3.style.display=_occ.action?'inline':'none'; s3.textContent='⚡ '+(_occ.action||''); }
+}
+
+function occAddToDay(day){
+  if(!_occ.occasion||!_occ.product||!_occ.action){ showToast('Complete all 3 steps first'); return; }
+  const week = JSON.parse(localStorage.getItem('srd_week')||'{}');
+  if(!week[day]) week[day]=[];
+  week[day].push({..._occ, saved: new Date().toLocaleDateString()});
+  localStorage.setItem('srd_week', JSON.stringify(week));
+  occSaveOccasion();
+  showToast('✦ Added to '+day+'!');
+  occReset();
+  occRenderWeek();
+}
+
+function occSaveNoDay(){
+  if(!_occ.occasion||!_occ.product||!_occ.action){ showToast('Complete all 3 steps first'); return; }
+  occSaveOccasion();
+  showToast('✦ Occasion saved!');
+  occReset();
+}
+
+function occSaveOccasion(){
+  const saved = JSON.parse(localStorage.getItem('srd_occasions2')||'[]');
+  // Don't duplicate exact same combo
+  const exists = saved.some(s=>s.occasion===_occ.occasion&&s.product===_occ.product&&s.action===_occ.action);
+  if(!exists) saved.unshift({..._occ, saved: new Date().toLocaleDateString()});
+  if(saved.length > 30) saved.pop();
+  localStorage.setItem('srd_occasions2', JSON.stringify(saved));
+  occLoadSaved();
+}
+
+function occReset(){
+  _occ = {occasion:null,product:null,action:null,actionDesc:null};
+  document.querySelectorAll('.occ-card').forEach(c=>c.classList.remove('selected'));
+  ['occ-step2','occ-step3','occ-step4','occ-summary'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+}
+
+function occToggleWeekly(){
+  const panel = document.getElementById('occ-weekly-panel');
+  const btn   = document.getElementById('occ-weekly-btn');
+  if(!panel) return;
+  const show = panel.style.display==='none';
+  panel.style.display = show ? 'block' : 'none';
+  btn.textContent = show ? '📅 Hide My Week' : '📅 View My Week';
+  if(show) occRenderWeek();
+}
+
+function occRenderWeek(){
+  const grid = document.getElementById('occ-week-grid');
+  if(!grid) return;
+  const week = JSON.parse(localStorage.getItem('srd_week')||'{}');
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  grid.innerHTML = DAYS.map(day=>{
+    const items = week[day]||[];
+    return '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:10px 8px;min-height:80px;">'
+      +'<div style="font-size:9px;font-weight:700;color:var(--rose);margin-bottom:6px;letter-spacing:0.06em;">'+day.slice(0,3).toUpperCase()+'</div>'
+      +(items.length
+        ? items.map(it=>'<div style="font-size:9px;color:var(--muted2);background:var(--bg3);border-radius:6px;padding:4px 6px;margin-bottom:4px;line-height:1.4;">'
+          +'<div style="font-weight:700;color:var(--text);">'+it.occasion+'</div>'
+          +'<div style="color:var(--gold);">'+it.product+'</div>'
+          +'<div>'+it.action+'</div></div>').join('')
+        : '<div style="font-size:9px;color:var(--border2);padding:4px 0;">—</div>')
+      +'</div>';
+  }).join('');
+}
+
+function occClearWeek(){
+  if(!confirm('Clear all week entries?')) return;
+  localStorage.removeItem('srd_week');
+  occRenderWeek();
+  showToast('Week cleared');
+}
+
+function occLoadSaved(){
+  const el = document.getElementById('occ-saved-list');
+  const hdr = document.getElementById('occ-saved-header');
+  if(!el) return;
+  const saved = JSON.parse(localStorage.getItem('srd_occasions2')||'[]');
+  if(hdr) hdr.textContent = saved.length ? 'Saved Occasions ('+saved.length+')' : '';
+  if(!saved.length){ el.innerHTML=''; return; }
+  el.innerHTML = saved.map((o,i)=>
+    '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">'
+    +'<div style="flex:1;">'
+    +'<div style="font-weight:700;font-size:13px;color:var(--text);">'+o.occasion+'</div>'
+    +'<div style="font-size:11px;color:var(--gold);margin-top:1px;">'+o.product+'</div>'
+    +'<div style="font-size:11px;color:var(--blue);margin-top:1px;">'+o.action+'</div>'
+    +'<div style="font-size:9px;color:var(--muted);margin-top:4px;">'+o.saved+'</div>'
+    +'</div>'
+    +'<button onclick="occDeleteSaved('+i+')" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px;">✕</button>'
+    +'</div>'
+  ).join('');
+}
+
+function occDeleteSaved(i){
+  const saved = JSON.parse(localStorage.getItem('srd_occasions2')||'[]');
+  saved.splice(i,1);
+  localStorage.setItem('srd_occasions2',JSON.stringify(saved));
+  occLoadSaved();
+}
+
+function occInit(){
+  occBuildGrid();
+  occLoadSaved();
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// ✦ ARIA JOURNEY PAGE
+// ═══════════════════════════════════════════════════════════════
+const DEPTH_LEVELS = [
+  { n:'Discovery',                   color:'var(--rose)',  rgb:'240,160,144', icon:'🌱',
+    msg:'Aria is getting to know you. She knows your name, your first products, and the main issue you came here to fix.'},
+  { n:'Use Cases & Upgrades',        color:'var(--gold)',  rgb:'224,176,80',  icon:'🔬',
+    msg:'Aria is inside your routine now. She knows exactly how and when to use each product — and is watching your results to tell you what to upgrade next.'},
+  { n:'Inner Circle',                color:'var(--blue)',  rgb:'96,168,255',  icon:'💫',
+    msg:'This goes beyond your hair. Aria knows who\'s in your life, who notices, and is helping you bring SupportRD to the people you care about.'},
+  { n:'Professional — Making Money', color:'var(--green)', rgb:'48,232,144',  icon:'💎',
+    msg:'You have become the story. People ask what you use. Aria is your business partner now — and SupportRD wants to talk to you directly.'},
+];
+
+// Keywords Aria uses at each depth that reveal which level the conversation has reached
+const DEPTH_SIGNALS = [
+  // Level 1 → 2: product HOW-TOs, timing, application technique, week-by-week results
+  ['how to apply','apply it to','leave it on','rinse after','morning routine','evening routine',
+   'how often','twice a week','every wash','week one','first week','second week','next week',
+   'you should see','results in','noticeable','improvement','upgrade','switch to'],
+  // Level 2 → 3: family, partner, friends, others asking, recommending, sharing
+  ['your partner','your boyfriend','your girlfriend','your husband','your wife','your mom',
+   'your sister','your brother','your friend','someone asked','people notice','they asked',
+   'tell them about','recommend','share this','for her','for him','for them','family'],
+  // Level 3 → 4: making money, selling, ambassador, income, professional, business
+  ['making money','earn','income','sell','ambassador','referral','commission',
+   'your business','your clients','salon','stylist','professional','they pay',
+   'people buy','turned it into','monetize','brand','partner with'],
+];
+
+// Stored override (for backtrack)
+let _ajForcedLevel = null;
+
+async function openJourneyPage(){
+  _ajForcedLevel = JSON.parse(localStorage.getItem('srd_aj_level')||'null');
+  await renderJourneyPage();
+}
+
+async function renderJourneyPage(){
+  // ── 1. Load full chat history ──────────────────────────────────────────────
+  let sessions = [];
+  try{
+    const r = await fetch('/api/history',{headers:{'X-Auth-Token':token}});
+    const d = await r.json();
+    sessions = d.history || [];
+  }catch(e){ console.warn('Journey load:', e); }
+
+  // ── 2. Determine depth from Aria's actual RESPONSES (AI signals) ──────────
+  // Read all of Aria's messages and check which signal tier she's reached
+  const ariaText = sessions
+    .filter(s=>s.role==='assistant')
+    .map(s=>(s.content||'').toLowerCase())
+    .join(' ');
+
+  let detectedLevel = 0; // 0-indexed
+  if(_ajForcedLevel !== null){
+    detectedLevel = _ajForcedLevel; // user override via backtrack
+  } else {
+    // Check from highest to lowest — stay at the highest matched tier
+    for(let i=DEPTH_SIGNALS.length-1;i>=0;i--){
+      if(DEPTH_SIGNALS[i].some(kw => ariaText.includes(kw))){
+        detectedLevel = i+1; // i+1 because signals[0] triggers level 1→2 etc
+        break;
+      }
+    }
+  }
+  // Cap to valid range
+  detectedLevel = Math.max(0, Math.min(3, detectedLevel));
+
+  const depth = DEPTH_LEVELS[detectedLevel];
+
+  // ── 3. Render all 4 orbs ──────────────────────────────────────────────────
+  const SPINE_POSITIONS = [0, 33, 66, 100]; // % of spine filled
+  const spineFill = document.getElementById('aj-spine-fill');
+
+  for(let i=0;i<4;i++){
+    const orb   = document.getElementById('aj-orb-'+(i+1));
+    const tbody = document.getElementById('aj-tbody-'+(i+1));
+    const verd  = document.getElementById('aj-v'+(i+1));
+    const bt    = document.getElementById('aj-bt'+(i+1));
+    if(!orb||!tbody) continue;
+
+    // Remove all state classes
+    orb.classList.remove('active','current','locked');
+    tbody.classList.remove('active','current','locked');
+    // Set CSS var for this orb's color (for active/current CSS)
+    tbody.style.setProperty('--orb-rgb', DEPTH_LEVELS[i].rgb);
+
+    if(i < detectedLevel){
+      // Passed level — fully lit
+      orb.classList.add('active');
+      tbody.classList.add('active');
+      if(verd) verd.textContent = '✓ Aria and you have been here.';
+      if(bt){ bt.style.display='block'; }
+    } else if(i === detectedLevel){
+      // CURRENT — brightest glow
+      orb.classList.add('active','current');
+      tbody.classList.add('active','current');
+      if(verd) verd.textContent = '▶ This is where you and Aria are right now.';
+      if(bt){ bt.style.display = i > 0 ? 'block' : 'none'; } // no backtrack on level 1
+    } else {
+      // Not yet reached
+      orb.classList.add('locked');
+      tbody.classList.add('locked');
+      if(verd) verd.textContent = '';
+      if(bt){ bt.style.display='none'; }
+    }
+  }
+
+  // Animate spine fill height
+  const spineEl = document.getElementById('aj-spine');
+  if(spineEl && spineFill){
+    // Calculate total spine height after render
+    requestAnimationFrame(()=>{
+      const totalH = document.getElementById('aj-milestones').offsetHeight - 80;
+      if(spineEl) spineEl.style.height = totalH+'px';
+      const fillPct = detectedLevel === 0 ? 0 : (detectedLevel / 3);
+      if(spineFill) spineFill.style.height = Math.round(totalH * fillPct)+'px';
+    });
+  }
+
+  // ── 4. Level 4 CTA ────────────────────────────────────────────────────────
+  const cta = document.getElementById('aj-level4-cta');
+  if(cta) cta.style.display = detectedLevel === 3 ? 'block' : 'none';
+
+  // ── 5. Current depth summary card ─────────────────────────────────────────
+  const dtitle = document.getElementById('aj-depth-title');
+  const dmsg   = document.getElementById('aj-depth-msg');
+  const dnext  = document.getElementById('aj-next-label');
+  const dbadge = document.getElementById('aj-depth-badge');
+
+  if(dtitle) dtitle.textContent = 'Level '+(detectedLevel+1)+' — '+depth.n;
+  if(dmsg)   dmsg.textContent   = depth.msg;
+
+  if(dnext){
+    if(detectedLevel < 3){
+      const next = DEPTH_LEVELS[detectedLevel+1];
+      dnext.innerHTML = '✦ <strong>Next level — '+next.n+':</strong> Keep talking with Aria. As your conversations go deeper, she\'ll naturally move into the next chapter with you.';
+    } else {
+      dnext.innerHTML = '✦ You\'ve reached the final level. <strong style="color:var(--green);">Contact SupportRD directly</strong> — you\'ve earned a personal conversation.';
+    }
+  }
+
+  if(dbadge){
+    dbadge.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.08em;background:rgba('+depth.rgb+',0.12);border:1px solid rgba('+depth.rgb+',0.35);color:'+depth.color+';">'+depth.icon+' Level '+(detectedLevel+1)+' of 4</div>';
+  }
+
+  // ── 6. Session timeline ───────────────────────────────────────────────────
+  ajRenderTimeline(sessions, detectedLevel);
+}
+
+function ajForceLevel(levelIdx){
+  // User says "I'm not there yet" — backtrack
+  _ajForcedLevel = Math.max(0, levelIdx);
+  localStorage.setItem('srd_aj_level', JSON.stringify(_ajForcedLevel));
+  showToast('Level adjusted — refreshing your journey');
+  renderJourneyPage();
+}
+
+function ajRenderTimeline(sessions, depthIdx){
+  const tl    = document.getElementById('aj-timeline');
+  const empty = document.getElementById('aj-empty');
+  const cnt   = document.getElementById('aj-session-count');
+  if(!tl) return;
+  const byDate = {};
+  sessions.forEach(msg=>{
+    const d = (msg.ts||'').slice(0,10)||'Unknown';
+    if(!byDate[d]) byDate[d]=[];
+    byDate[d].push(msg);
+  });
+  const dates = Object.keys(byDate).sort().reverse();
+  if(cnt) cnt.textContent = dates.length+' sessions';
+  if(!dates.length){ if(empty) empty.style.display='block'; tl.innerHTML=''; return; }
+  if(empty) empty.style.display='none';
+  const DL=[{n:'Discovery',rgb:'240,160,144'},{n:'Use Cases & Upgrades',rgb:'224,176,80'},{n:'Inner Circle',rgb:'96,168,255'},{n:'Professional',rgb:'48,232,144'}];
+  const DS=[['how to apply','leave it on','morning routine','results in','upgrade'],['your partner','your mom','your friend','someone asked','recommend'],['making money','earn','income','ambassador','referral','professional']];
+  tl.innerHTML=dates.map((date,di)=>{
+    const msgs=byDate[date];
+    const uMsgs=msgs.filter(m=>m.role==='user');
+    const aMsgs=msgs.filter(m=>m.role==='assistant');
+    const ariaUp=sessions.filter(s=>s.role==='assistant'&&(s.ts||'').slice(0,10)<=date).map(s=>(s.content||'').toLowerCase()).join(' ');
+    let sd=0;
+    for(let i=DS.length-1;i>=0;i--){ if(DS[i].some(kw=>ariaUp.includes(kw))){ sd=i+1; break; } }
+    const d=DL[sd];
+    const txt=uMsgs.map(m=>m.content||'').join(' ').toLowerCase();
+    const tags=[];
+    if(txt.includes('formula')) tags.push('Formula Exclusiva');
+    if(txt.includes('laciador')) tags.push('Laciador Crece');
+    if(txt.includes('gotero')) tags.push('Gotero Rapido');
+    if(txt.includes('damage')) tags.push('Hair Damage');
+    if(txt.includes('grow')) tags.push('Growth');
+    if(txt.includes('scalp')) tags.push('Scalp');
+    if(txt.includes('premium')||txt.includes('upgrade')) tags.push('Upgrade');
+    if(!tags.length) tags.push('Hair Consultation');
+    const sum=aMsgs.length?(aMsgs[0].content||'').slice(0,120)+'...':'Aria guided your hair journey.';
+    const isFirst=di===dates.length-1;
+    let fd; try{ fd=new Date(date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }catch(e){ fd=date; }
+    return '<div class="aj-session"><div class="aj-session-dot" style="border-color:rgba('+d.rgb+',0.8);background:rgba('+d.rgb+',0.15);"></div>'
+      +'<div class="aj-session-date">'+(isFirst?'✦ First Session — ':'')+fd+'</div>'
+      +'<div class="aj-session-head">Aria &amp; you &mdash; '+uMsgs.length+' messages <span style="font-size:9px;color:rgba('+d.rgb+',1);"> '+d.n+'</span></div>'
+      +'<div class="aj-session-body">'+sum+'</div>'
+      +'<div class="aj-session-tags">'+tags.map(t=>'<span class="aj-session-tag">'+t+'</span>').join('')+'</div></div>';
+  }).join('');
+}
+
 loadData();
 loadRealStats();
 </script>
 </body></html>"""
-    return html
-
-
-
-
-# ── BLOG DB ───────────────────────────────────────────────────────────────────
-BLOG_DB = os.environ.get("BLOG_DB_PATH", "/data/srd_blog.db")
-
-def _init_blog_db():
-    try:
-        db = sqlite3.connect(BLOG_DB)
-        db.execute("""CREATE TABLE IF NOT EXISTS posts (
-            handle TEXT PRIMARY KEY,
-            title TEXT,
-            html TEXT,
-            meta TEXT,
-            chinese_title TEXT,
-            chinese_summary TEXT,
-            date TEXT
-        )""")
-        db.commit()
-        db.close()
-    except Exception as e:
-        print(f"Blog DB init error: {e}")
-
-_init_blog_db()
-
-def blog_get_index(limit=90):
-    try:
-        db = sqlite3.connect(BLOG_DB, timeout=10, check_same_thread=False)
-        db.row_factory = sqlite3.Row
-        rows = db.execute("SELECT handle, title, meta, date FROM posts ORDER BY date DESC LIMIT ?", (limit,)).fetchall()
-        db.close()
-        return [dict(r) for r in rows]
-    except Exception as e:
-        print(f"blog_get_index error: {e}")
-        return []
-
-def blog_get_post(handle):
-    try:
-        con = sqlite3.connect(BLOG_DB, timeout=10, check_same_thread=False)
-        con.row_factory = sqlite3.Row
-        row = con.execute("SELECT * FROM posts WHERE handle=?", (handle,)).fetchone()
-        con.close()
-        return dict(row) if row else None
-    except Exception as e:
-        print(f"blog_get_post error: {e}")
-        return None
-
-def blog_save_post(post):
-    try:
-        db = sqlite3.connect(BLOG_DB)
-        db.execute("""INSERT OR REPLACE INTO posts
-            (handle,title,html,meta,chinese_title,chinese_summary,date)
-            VALUES (?,?,?,?,?,?,?)""",
-            (post.get("handle"),post.get("title"),post.get("html"),
-             post.get("meta",""),post.get("chinese_title",""),
-             post.get("chinese_summary",""),post.get("date","")))
-        db.commit(); db.close()
-    except Exception as e:
-        print(f"blog_save_post error: {e}")
-
-# ── BLOG ROUTES ───────────────────────────────────────────────────────────────
-SRD_NAV = """
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-.srd-nav{position:sticky;top:0;z-index:9999;background:#f0ebe8;border-bottom:1px solid rgba(193,163,162,0.18);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:60px;}
-.srd-nav-logo{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;font-size:22px;color:#0d0906;text-decoration:none;letter-spacing:0.04em;display:flex;align-items:center;gap:10px;}
-.srd-nav-logo svg{flex-shrink:0;}
-.srd-nav-links{display:flex;align-items:center;gap:28px;}
-.srd-nav-links a{font-family:'Jost',sans-serif;font-size:11px;font-weight:400;letter-spacing:0.14em;text-transform:uppercase;color:rgba(0,0,0,0.55);text-decoration:none;transition:color 0.2s;}
-.srd-nav-links a:hover{color:#c1a3a2;}
-.srd-nav-cta{background:#0d0906;color:#f0ebe8 !important;padding:9px 20px;border-radius:30px;font-size:10px !important;letter-spacing:0.18em !important;}
-.srd-nav-cta:hover{background:#c1a3a2;color:#fff !important;}
-.srd-nav-hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;}
-.srd-nav-hamburger span{display:block;width:22px;height:1.5px;background:#0d0906;transition:all 0.3s;}
-.srd-mobile-menu{display:none;position:fixed;inset:0;background:#f0ebe8;z-index:9998;flex-direction:column;align-items:center;justify-content:center;gap:28px;}
-.srd-mobile-menu.open{{display:flex;}}
-.srd-mobile-menu a{{font-family:'Cormorant Garamond',serif;font-size:28px;font-style:italic;color:#0d0906;text-decoration:none;opacity:0;transform:translateY(12px);transition:opacity 0.3s,transform 0.3s;}}
-.srd-mobile-menu.open a{{opacity:1;transform:translateY(0);}}
-.srd-mobile-menu.open a:nth-child(1){{transition-delay:0.05s;}}
-.srd-mobile-menu.open a:nth-child(2){{transition-delay:0.1s;}}
-.srd-mobile-menu.open a:nth-child(3){{transition-delay:0.15s;}}
-.srd-mobile-menu.open a:nth-child(4){{transition-delay:0.2s;}}
-.srd-mobile-menu.open a:nth-child(5){{transition-delay:0.25s;}}
-.srd-mobile-close{{position:absolute;top:22px;right:28px;font-size:28px;cursor:pointer;color:#0d0906;background:none;border:none;font-family:'Jost',sans-serif;}}
-@media(max-width:700px){{
-  .srd-nav-links{{display:none;}}
-  .srd-nav-hamburger{{display:flex;}}
-}}
-</style>
-<nav class="srd-nav">
-  <a href="https://supportrd.com" class="srd-nav-logo">
-    <svg width="24" height="24" viewBox="0 0 72 72" fill="none">
-      <circle cx="36" cy="36" r="34" stroke="#c1a3a2" stroke-width="0.8" opacity="0.5"/>
-      <path d="M28 14 C26 22,32 28,30 36 C28 44,22 48,24 58" stroke="#c1a3a2" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.9"/>
-      <path d="M36 12 C35 20,39 26,37 36 C35 46,31 50,33 60" stroke="#9d7f6a" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-      <path d="M44 14 C46 22,40 28,42 36 C44 44,50 48,48 58" stroke="#c1a3a2" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.9"/>
-    </svg>
-    SupportRD
-  </a>
-  <div class="srd-nav-links">
-    <a href="https://supportrd.com/collections/all">Shop</a>
-    <a href="https://supportrd.com/pages/custom-order">Custom Order</a>
-    <a href="/blog">Hair Journal</a>
-    <a href="https://supportrd.com/pages/about">About</a>
-    <a href="/" class="srd-nav-cta">Try Aria Free →</a>
-  </div>
-  <div class="srd-nav-hamburger" onclick="document.getElementById('srdMobileMenu').classList.add('open')">
-    <span></span><span></span><span></span>
-  </div>
-</nav>
-<div class="srd-mobile-menu" id="srdMobileMenu">
-  <button class="srd-mobile-close" onclick="document.getElementById('srdMobileMenu').classList.remove('open')">✕</button>
-  <a href="https://supportrd.com/collections/all">Shop</a>
-  <a href="https://supportrd.com/pages/custom-order">Custom Order</a>
-  <a href="/blog">Hair Journal</a>
-  <a href="https://supportrd.com/pages/about">About</a>
-  <a href="/" style="color:#c1a3a2;">Try Aria Free →</a>
-</div>
-"""
-
-SRD_PAGE_LOADER = """<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap" rel="stylesheet">
-<style>
-  #srd-loader{position:fixed;inset:0;background:#f0ebe8;z-index:99999;display:flex;align-items:center;justify-content:center;}
-  #srd-loader-canvas{position:absolute;inset:0;width:100%;height:100%;}
-  .srd-logo-wrap{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:18px;opacity:0;animation:srdLogoReveal 1.2s cubic-bezier(0.22,1,0.36,1) 0.4s forwards;}
-  .srd-emblem{width:72px;height:72px;}
-  .srd-divider-line{width:48px;height:1px;background:linear-gradient(90deg,transparent,#c1a3a2,transparent);opacity:0;animation:srdFadeIn 0.8s ease 1.0s forwards;}
-  .srd-brand-script{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(13px,2vw,16px);letter-spacing:0.32em;text-transform:uppercase;color:#9d7f6a;opacity:0;animation:srdFadeUp 0.8s ease 1.1s forwards;}
-  .srd-dot-row{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:3;opacity:0;animation:srdFadeUp 0.6s ease 1.3s forwards;}
-  .srd-dot{width:4px;height:4px;border-radius:50%;background:rgba(193,163,162,0.25);transition:background 0.3s ease,transform 0.3s ease;}
-  .srd-dot.active{background:#c1a3a2;transform:scale(1.4);}
-  #srd-loader.srd-exit{animation:srdDissolve 0.9s cubic-bezier(0.4,0,0.2,1) forwards;}
-  @keyframes srdLogoReveal{0%{opacity:0;transform:scale(0.92)}100%{opacity:1;transform:scale(1)}}
-  @keyframes srdFadeIn{to{opacity:1}}
-  @keyframes srdFadeUp{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}
-  @keyframes srdDissolve{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
-</style>
-<div id="srd-loader">
-  <canvas id="srd-loader-canvas"></canvas>
-  <div class="srd-logo-wrap">
-    <svg class="srd-emblem" viewBox="0 0 72 72" fill="none">
-      <circle cx="36" cy="36" r="34" stroke="#c1a3a2" stroke-width="0.6" opacity="0.5"/>
-      <circle cx="36" cy="36" r="26" stroke="#c1a3a2" stroke-width="0.4" opacity="0.3"/>
-      <path d="M28 14 C26 22,32 28,30 36 C28 44,22 48,24 58" stroke="#c1a3a2" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.9"/>
-      <path d="M36 12 C35 20,39 26,37 36 C35 46,31 50,33 60" stroke="#9d7f6a" stroke-width="1.4" stroke-linecap="round" fill="none"/>
-      <path d="M44 14 C46 22,40 28,42 36 C44 44,50 48,48 58" stroke="#c1a3a2" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.9"/>
-    </svg>
-    <div class="srd-divider-line"></div>
-    <div class="srd-brand-script">Professional Hair Care</div>
-  </div>
-  <div class="srd-dot-row">
-    <div class="srd-dot" id="srd-d0"></div><div class="srd-dot" id="srd-d1"></div>
-    <div class="srd-dot" id="srd-d2"></div><div class="srd-dot" id="srd-d3"></div>
-    <div class="srd-dot" id="srd-d4"></div>
-  </div>
-</div>
-<script>
-(function(){
-  var cv=document.getElementById('srd-loader-canvas'),ctx=cv.getContext('2d');
-  function rsz(){cv.width=window.innerWidth;cv.height=window.innerHeight;}rsz();window.addEventListener('resize',rsz);
-  function S(){this.i();}
-  S.prototype.i=function(){this.x=Math.random()*cv.width;this.y=-60-Math.random()*200;this.len=100+Math.random()*200;this.wave=(Math.random()-.5)*40;this.spd=.18+Math.random()*.35;this.w=.3+Math.random()*.8;this.a=.04+Math.random()*.10;this.off=Math.random()*Math.PI*2;this.dr=(Math.random()-.5)*.3;var c=[[193,163,162],[157,127,106],[210,185,178]];this.rgb=c[Math.floor(Math.random()*c.length)];};
-  S.prototype.u=function(){this.y+=this.spd;this.x+=this.dr;if(this.y>cv.height+60)this.i();};
-  S.prototype.d=function(t){var n=20;ctx.beginPath();ctx.moveTo(this.x,this.y);for(var i=1;i<=n;i++){var p=i/n;ctx.lineTo(this.x+Math.sin(p*Math.PI*2+t*.008+this.off)*this.wave*p,this.y+p*this.len);}ctx.strokeStyle='rgba('+this.rgb[0]+','+this.rgb[1]+','+this.rgb[2]+','+this.a+')';ctx.lineWidth=this.w;ctx.lineCap='round';ctx.stroke();};
-  var ss=[];for(var i=0;i<55;i++){var s=new S();s.y=Math.random()*cv.height;ss.push(s);}
-  var t=0;function ani(){t++;ctx.clearRect(0,0,cv.width,cv.height);ss.forEach(function(s){s.u();s.d(t);});requestAnimationFrame(ani);}ani();
-  var ds=[0,1,2,3,4].map(function(i){return document.getElementById('srd-d'+i);});
-  var st=0;[600,1200,1900,2800,3800].forEach(function(ms){setTimeout(function(){ds.forEach(function(d){d.classList.remove('active');});if(ds[st])ds[st].classList.add('active');st++;},ms);});
-  var ex=false;
-  function doExit(){if(ex)return;ex=true;ds.forEach(function(d){d.classList.add('active');});setTimeout(function(){var el=document.getElementById('srd-loader');el.classList.add('srd-exit');setTimeout(function(){el.style.display='none';},900);},200);}
-  window.addEventListener('load',function(){setTimeout(doExit,1200);});setTimeout(doExit,4500);
-})();
-</script>"""
-
-@app.route("/api/blog-posts", methods=["GET"])
-def api_blog_posts():
-    return jsonify(blog_get_index())
-
-@app.route("/api/blog-post/<handle>", methods=["GET"])
-def api_blog_post(handle):
-    post = blog_get_post(handle)
-    if post: return jsonify(post)
-    return jsonify({"error": "not found"}), 404
-
-@app.route("/blog")
-def blog_index():
-    posts = blog_get_index()
-    cards = ""
-    for p in posts:
-        date = p.get("date","")[:10]
-        cards += f'<article class="post-card"><a href="/blog/{p["handle"]}"><h2>{p["title"]}</h2><p class="meta">{p.get("meta","")}</p><span class="date">{date}</span></a></article>'
-    if not cards:
-        cards = '<p class="empty">No posts yet — check back soon.</p>'
-    return f"""<!DOCTYPE html><html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hair Care Journal — SupportRD</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-{SRD_PAGE_LOADER}
-<style>
-*{{box-sizing:border-box;margin:0;padding:0;}}body{{font-family:'Jost',sans-serif;font-weight:300;background:#f0ebe8;color:#0d0906;}}
-.header-brand{{text-align:center;padding:48px 24px 36px;background:#f0ebe8;}}
-.header-brand h1{{font-family:'Cormorant Garamond',serif;font-size:clamp(32px,5vw,48px);font-style:italic;font-weight:400;}}
-.header-brand p{{font-size:13px;color:rgba(0,0,0,0.4);margin-top:10px;letter-spacing:0.10em;text-transform:uppercase;}}
-.container{{max-width:900px;margin:0 auto;padding:40px 24px;}}
-.post-card{{background:#fff;border-radius:16px;margin-bottom:20px;transition:transform 0.2s,box-shadow 0.2s;box-shadow:0 2px 12px rgba(0,0,0,0.05);border:1px solid rgba(193,163,162,0.12);}}
-.post-card:hover{{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.10);}}
-.post-card a{{display:block;padding:28px 32px;text-decoration:none;color:inherit;}}
-.post-card h2{{font-family:'Cormorant Garamond',serif;font-size:24px;color:#0d0906;margin-bottom:8px;line-height:1.3;}}
-.post-card .meta{{font-size:13px;color:rgba(0,0,0,0.45);line-height:1.6;margin-bottom:12px;}}
-.post-card .date{{font-size:11px;color:#c1a3a2;letter-spacing:0.08em;}}
-.empty{{text-align:center;color:rgba(0,0,0,0.3);padding:60px;font-size:14px;}}
-footer{{text-align:center;padding:40px;font-size:12px;color:rgba(0,0,0,0.3);border-top:1px solid rgba(193,163,162,0.12);}}
-footer a{{color:#c1a3a2;text-decoration:none;}}
-</style></head><body>
-{SRD_NAV}
-<div class="header-brand"><h1>Hair Care Journal</h1><p>Expert tips from SupportRD</p></div>
-<div class="container">{cards}</div>
-<footer><a href="https://supportrd.com">← Back to SupportRD</a> &nbsp;·&nbsp; <a href="/">Try Aria AI →</a></footer>
-</body></html>"""
-
-@app.route("/blog/<handle>")
-def blog_post(handle):
-    post = blog_get_post(handle)
-    if not post:
-        return "<h2>Post not found</h2>", 404
-    date = post.get("date","")[:10]
-    return f"""<!DOCTYPE html><html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{post['title']} — SupportRD</title>
-<meta name="description" content="{post.get('meta','')}">
-<link rel="canonical" href="https://ai-hair-advisor.onrender.com/blog/{handle}">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-{SRD_PAGE_LOADER}
-<style>
-*{{box-sizing:border-box;margin:0;padding:0;}}body{{font-family:'Jost',sans-serif;font-weight:300;background:#f0ebe8;}}
-.container{{max-width:720px;margin:0 auto;padding:48px 24px;}}
-.post-date{{font-size:11px;color:#c1a3a2;letter-spacing:0.10em;margin-bottom:16px;text-transform:uppercase;}}
-.post-body{{background:#fff;border-radius:20px;padding:48px;box-shadow:0 2px 20px rgba(0,0,0,0.06);line-height:1.8;font-size:15px;}}
-.post-body h1{{font-family:'Cormorant Garamond',serif;font-size:36px;font-style:italic;font-weight:400;margin-bottom:24px;line-height:1.2;}}
-.post-body h2{{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;margin:32px 0 12px;}}
-.post-body p{{margin-bottom:16px;color:rgba(0,0,0,0.75);}}
-.cta{{background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;text-align:center;padding:36px;border-radius:16px;margin-top:32px;}}
-.cta h3{{font-family:'Cormorant Garamond',serif;font-size:26px;font-style:italic;font-weight:400;margin-bottom:8px;}}
-.cta a{{display:inline-block;margin-top:16px;padding:12px 28px;background:#fff;color:#c1a3a2;border-radius:30px;text-decoration:none;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;}}
-footer{{text-align:center;padding:32px;font-size:12px;color:rgba(0,0,0,0.3);}}
-footer a{{color:#c1a3a2;text-decoration:none;}}
-@media(max-width:600px){{.post-body{{padding:28px 20px;}}}}
-</style></head><body>
-{SRD_NAV}
-<div class="container">
-  <div class="post-date">{date}</div>
-  <div class="post-body">{post['html']}</div>
-  <div class="cta"><h3>Get your personalized hair routine</h3><p>Tell Aria about your hair and get expert advice tailored to you.</p><a href="/">Chat with Aria Free →</a></div>
-</div>
-<footer><a href="https://supportrd.com">SupportRD</a> &nbsp;·&nbsp; <a href="/blog">← More Articles</a></footer>
-</body></html>"""
-
-
-# ── SITEMAP / ROBOTS ──────────────────────────────────────────────────────────
-@app.route("/sitemap.xml")
-def sitemap():
-    import urllib.parse as _up
-    base_url = APP_BASE_URL.rstrip("/")
-    def _safe_loc(path):
-        # Encode any non-ASCII or XML-unsafe characters in the path
-        encoded = _up.quote(path, safe="/-_.")
-        return f"{base_url}{encoded}"
-    def _escape_xml(s):
-        return (s.replace("&","&amp;")
-                 .replace("<","&lt;")
-                 .replace(">","&gt;")
-                 .replace('"',"&quot;")
-                 .replace("'","&apos;"))
-    urls = [
-        f"""  <url><loc>{_safe_loc("/")}</loc><changefreq>daily</changefreq><priority>1.0</priority></url>""",
-        f"""  <url><loc>{_safe_loc("/blog")}</loc><changefreq>daily</changefreq><priority>0.9</priority></url>""",
-    ]
-    try:
-        for p in blog_get_index(limit=500):
-            handle = p.get("handle","").strip()
-            date   = p.get("date","")[:10]
-            if not handle: continue
-            # Skip handles with characters that break XML even after encoding
-            loc = _safe_loc(f"/blog/{handle}")
-            urls.append(f"""  <url><loc>{loc}</loc><lastmod>{date}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>""")
-    except: pass
-    body = "\n".join(urls)
-    xml  = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + body + '\n</urlset>'
-    return Response(xml, mimetype="application/xml")
-
-@app.route("/robots.txt")
-def robots():
-    base_url = APP_BASE_URL.rstrip("/")
-    return Response(
-        f"User-agent: *\nAllow: /\nAllow: /blog\nDisallow: /api\nDisallow: /dashboard\nDisallow: /admin\n\nSitemap: {base_url}/sitemap.xml\n",
-        mimetype="text/plain"
-    )
-
-def ping_search_engines():
-    """Tell every search engine about updated sitemap — called after every new blog post."""
-    import urllib.request as _pr
-    from urllib.parse import quote as _pq
-    base_url = APP_BASE_URL.rstrip("/")
-    sitemap_url = f"{base_url}/sitemap.xml"
-    engines = [
-        f"https://www.google.com/ping?sitemap={_pq(sitemap_url)}",
-        f"https://www.bing.com/ping?sitemap={_pq(sitemap_url)}",
-        f"https://search.yahoo.com/mrss/ping?sitemap={_pq(sitemap_url)}",
-    ]
-    for url in engines:
-        try:
-            req = _pr.Request(url, headers={"User-Agent":"SupportRD-Bot/1.0"})
-            with _pr.urlopen(req, timeout=8) as r:
-                print(f"[SEO Ping] {url[:60]}… {r.status}", flush=True)
-        except Exception as e:
-            print(f"[SEO Ping] Failed {url[:60]}: {e}", flush=True)
-
-@app.route("/apps/hair-advisor")
-def shopify_proxy():
-    return index()
-
-@app.route("/google65f6d985572e55c5.html")
-def google_verify():
-    return "google-site-verification: google65f6d985572e55c5.html"
-
-
-# ── CONTENT ENGINE ────────────────────────────────────────────────────────────
-ENGINE_LOG = []
-
-@app.route("/api/content-engine/run", methods=["POST","OPTIONS"])
-def content_engine_run():
-    admin_key = request.headers.get("X-Admin-Key","")
-    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
-        return jsonify({"error":"Unauthorized"}), 401
-    def run_in_background():
-        entry = {"date":datetime.datetime.utcnow().isoformat(),"topic":"generating...","shopify_url":None,"pinterest":False,"reddit":False,"error":None}
-        ENGINE_LOG.insert(0, entry)
-        if len(ENGINE_LOG) > 50: ENGINE_LOG.pop()
-        try:
-            from content_engine import run_engine
-            result = run_engine()
-            if isinstance(result, dict): entry.update({"topic":result.get("topic","completed"),"shopify_url":result.get("shopify_url"),"pinterest":result.get("pinterest",False),"reddit":result.get("reddit",False)})
-            else: entry["topic"] = "completed"
-        except Exception as e:
-            entry["error"] = str(e); entry["topic"] = "error"
-    threading.Thread(target=run_in_background, daemon=True).start()
-    return jsonify({"ok":True,"message":"Engine started in background"})
-
-@app.route("/api/content-engine/log", methods=["GET"])
-def content_engine_log():
-    admin_key = request.args.get("admin_key","")
-    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
-        return jsonify({"error":"Unauthorized"}), 401
-    return jsonify({"runs": ENGINE_LOG})
-
-
-
-# ═══════════════════════════════════════════════════════════
-# PHASE 5B — REFLEXIVE KEYWORD INJECTION
-# The moment you click, the post is live. No lag.
-# ═══════════════════════════════════════════════════════════
-
-import hashlib as _hashlib
-
-def _kw_slug(phrase):
-    """Convert keyword phrase to a clean URL handle"""
-    slug = phrase.lower().strip()
-    slug = _re.sub(r"[^a-z0-9\s-]", "", slug)
-    slug = _re.sub(r"\s+", "-", slug).strip("-")
-    slug = slug[:60]
-    # Add short hash to avoid collisions
-    h = _hashlib.md5(phrase.encode()).hexdigest()[:6]
-    return f"{slug}-{h}"
-
-def _kw_generate_post(phrase, lang="en"):
-    """Call Claude directly and return post the instant it's done"""
-    lang_instructions = {
-        "en":    "Write in English.",
-        "en-ca": "Write in Canadian English.",
-        "es":    "Escribe en español.",
-        "fr":    "Écris en français.",
-        "ar":    "اكتب باللغة العربية.",
-        "de":    "Schreibe auf Deutsch.",
-        "sw":    "Andika kwa Kiswahili.",
-        "ru":    "Пиши на русском языке.",
-        "pt":    "Escreva em português.",
-        "zh-CN": "用中文写。",
-        "ja":    "日本語で書いてください。",
-        "it":    "Scrivi in italiano.",
-        "nl":    "Schrijf in het Nederlands.",
-        "pl":    "Pisz po polsku.",
-        "tr":    "Türkçe yaz.",
-        "ko":    "한국어로 쓰세요.",
-        "sv":    "Skriv på svenska.",
-        "no":    "Skriv på norsk.",
-        "da":    "Skriv på dansk.",
-        "ro":    "Scrie în română.",
-        "uk":    "Пиши українською.",
-        "cs":    "Piš česky.",
-        "hu":    "Írj magyarul.",
-    }
-    lang_instr = lang_instructions.get(lang, "Write in English.")
-
-    prompt = f"""You are a hair care expert writing for SupportRD, a premium hair care brand.
-Write a helpful, friendly blog post targeting the exact search phrase: "{phrase}"
-
-{lang_instr}
-
-Rules:
-- Title must contain the exact phrase "{phrase}" naturally
-- Write like a real person talking to a friend — everyday language, no jargon
-- 350-500 words
-- Naturally mention 1-2 SupportRD products where relevant (Formula Exclusiva, Laciador Crece, Gotero Rapido, Gotitas Brillantes, Mascarilla Natural, or Shampoo Aloe & Romero)
-- End with a soft call to action mentioning supportrd.com/pages/custom-order
-- Return ONLY valid HTML: <h1>title</h1> followed by <p> paragraphs. No markdown, no preamble, no explanation."""
-
-    try:
-        import urllib.request as _ur
-        import json as _j
-        payload = _j.dumps({
-            "model": "claude-opus-4-6",
-            "max_tokens": 1200,
-            "messages": [{"role": "user", "content": prompt}]
-        }).encode()
-        req = _ur.Request(
-            "https://api.anthropic.com/v1/messages",
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "x-api-key": os.environ.get("ANTHROPIC_API_KEY",""),
-                "anthropic-version": "2023-06-01"
-            }
-        )
-        with _ur.urlopen(req, timeout=30) as resp:
-            result = _j.loads(resp.read().decode())
-            html = result["content"][0]["text"].strip()
-            # Extract title from <h1>
-            title_match = _re.search(r"<h1[^>]*>(.*?)</h1>", html, _re.DOTALL)
-            title = _re.sub(r"<[^>]+>", "", title_match.group(1)).strip() if title_match else phrase.title()
-            # Build meta description — first <p> text, stripped
-            meta_match = _re.search(r"<p[^>]*>(.*?)</p>", html, _re.DOTALL)
-            meta = _re.sub(r"<[^>]+>", "", meta_match.group(1)).strip()[:160] if meta_match else phrase
-            return {"title": title, "html": html, "meta": meta}
-    except Exception as e:
-        print(f"[reflexive] generate error: {e}")
-        return None
-
-
-@app.route("/api/keywords/fire", methods=["POST","OPTIONS"])
-def keyword_fire():
-    """Reflexive injection — keyword in, live blog post out. Instant."""
-    if request.method=="OPTIONS":
-        r=jsonify({}); r.headers.update({"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"*","Access-Control-Allow-Methods":"POST"}); return r
-    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
-    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"):
-        return jsonify({"error":"Unauthorized"}), 401
-
-    data = request.get_json() or {}
-    phrase = data.get("phrase","").strip()
-    lang   = data.get("lang","en")
-    if not phrase:
-        return jsonify({"error":"phrase required"}), 400
-
-    # Generate post NOW — no background thread, we wait and return result
-    post_data = _kw_generate_post(phrase, lang)
-    if not post_data:
-        return jsonify({"error":"Generation failed — check API key"}), 500
-
-    handle = _kw_slug(phrase)
-    post = {
-        "handle":         handle,
-        "title":          post_data["title"],
-        "html":           post_data["html"],
-        "meta":           post_data["meta"],
-        "date":           datetime.datetime.utcnow().strftime("%Y-%m-%d"),
-        "chinese_title":  "",
-        "chinese_summary":""
-    }
-
-    # Save directly to blog DB — live the instant this function returns
-    blog_save_post(post)
-
-    # Ping every search engine immediately — they know about this post within seconds
-    threading.Thread(target=ping_search_engines, daemon=True).start()
-
-    # Mark keyword as fired in keywords DB
-    try:
-        db = get_keyword_db()
-        db.execute("UPDATE keywords SET score=score+10 WHERE phrase=? AND lang=?", (phrase, lang))
-        db.commit(); db.close()
-    except: pass
-
-    return jsonify({
-        "ok":     True,
-        "handle": handle,
-        "title":  post_data["title"],
-        "url":    f"/blog/{handle}"
-    })
-
-
-# ── MOVEMENT FEED ─────────────────────────────────────────────────────────────
-import time as _time
-
-_CITIES = [("Miami, FL","🇺🇸"),("New York, NY","🇺🇸"),("Los Angeles, CA","🇺🇸"),("Houston, TX","🇺🇸"),("Atlanta, GA","🇺🇸"),("Santo Domingo","🇩🇴"),("Santiago, DR","🇩🇴"),("San Juan, PR","🇵🇷"),("Bogotá","🇨🇴"),("Madrid","🇪🇸"),("Toronto","🇨🇦"),("London","🇬🇧"),("Paris","🇫🇷")]
-_PRODUCTS = ["Formula Exclusiva","Laciador Crece","Gotero Rapido","Gotitas Brillantes"]
-_CONCERNS = ["damaged hair","dry hair","frizzy hair","oily scalp","hair thinning","lack of shine"]
-_ACTIONS  = ["just ordered {product}","found their solution for {concern}","recommended {product} to a client","reordered {product} for their salon","discovered {product} for {concern}"]
-
-def _make_movement_event(source="simulated", mins_ago=None):
-    city, flag = random.choice(_CITIES)
-    product = random.choice(_PRODUCTS)
-    concern = random.choice(_CONCERNS)
-    action = random.choice(_ACTIONS).format(product=product, concern=concern)
-    if mins_ago is None: mins_ago = random.randint(0, 55)
-    ts = datetime.datetime.utcnow() - datetime.timedelta(minutes=mins_ago)
-    return {"id":int(_time.time()*1000)+random.randint(0,999),"city":city,"flag":flag,"action":action,"product":product,"ts":ts.isoformat(),"source":source}
-
-_MOVEMENT_EVENTS = [_make_movement_event(mins_ago=random.randint(1,55)) for _ in range(15)]
-
-@app.route("/api/movement", methods=["GET","OPTIONS"])
-def movement():
-    live = []
-    try:
-        con = get_analytics_db()
-        rows = con.execute("SELECT ts,lang,product FROM events ORDER BY id DESC LIMIT 30").fetchall()
-        con.close()
-        lang_city = {"en-US":[("New York, NY","🇺🇸"),("Miami, FL","🇺🇸")],"es-ES":[("Madrid","🇪🇸")],"fr-FR":[("Paris","🇫🇷")],"pt-BR":[("Bogotá","🇨🇴")]}
-        for (ts, lang, product) in rows:
-            if not product or product == "Unknown": continue
-            city, flag = random.choice(lang_city.get(lang,[("Miami, FL","🇺🇸")]))
-            live.append({"id":hash(ts+product)%999999,"city":city,"flag":flag,"action":f"just ordered {product}","product":product,"ts":ts,"source":"real"})
-    except Exception as e:
-        print("Movement error:", e)
-    _MOVEMENT_EVENTS.insert(0, _make_movement_event(mins_ago=0))
-    if len(_MOVEMENT_EVENTS) > 50: _MOVEMENT_EVENTS.pop()
-    combined = (live + _MOVEMENT_EVENTS)[:15]
-    return jsonify({"events":combined,"total":len(combined)+random.randint(80,140)})
-
-@app.route("/api/add-movement", methods=["POST","OPTIONS"])
-def add_movement():
-    data = request.get_json()
-    action = data.get("action","")
-    if not action: return jsonify({"error":"action required"}), 400
-    event = {"id":int(_time.time()*1000),"city":data.get("city","United States"),"flag":data.get("flag","🇺🇸"),"action":action,"product":data.get("product",""),"ts":datetime.datetime.utcnow().isoformat(),"source":"transcript"}
-    _MOVEMENT_EVENTS.insert(0, event)
-    return jsonify({"ok":True,"event":event})
-
-
-# ── ADMIN CODES PAGE ──────────────────────────────────────────────────────────
-@app.route("/admin-codes")
-def admin_codes_page():
-    admin_key = request.args.get("key","")
-    if admin_key != os.environ.get("ADMIN_KEY","srd_admin_2024"):
-        return "<h2>Unauthorized</h2>", 401
-    return f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SupportRD — Premium Codes</title>
-<style>body{{font-family:'Helvetica Neue',sans-serif;max-width:700px;margin:40px auto;padding:20px;background:#faf9f8;color:#0d0906;}}h1{{font-size:22px;color:#c1a3a2;margin-bottom:4px;}}p{{font-size:13px;color:rgba(0,0,0,0.4);margin-bottom:30px;}}button{{padding:12px 28px;background:#c1a3a2;color:#fff;border:none;border-radius:24px;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;}}button:hover{{background:#9d7f6a;}}#result{{margin-top:20px;padding:16px;background:#fff;border:1px solid rgba(193,163,162,0.3);border-radius:12px;display:none;}}#code-display{{font-size:28px;font-weight:bold;color:#c1a3a2;letter-spacing:0.1em;margin:8px 0;}}table{{width:100%;border-collapse:collapse;margin-top:30px;}}th{{background:#c1a3a2;color:#fff;padding:10px 14px;font-size:11px;text-align:left;}}td{{padding:10px 14px;font-size:13px;border-bottom:1px solid rgba(0,0,0,0.05);}}
-</style></head><body>
-<h1>✦ Premium Codes</h1><p>Generate a code for each customer who purchases Hair Advisor Premium.</p>
-<button onclick="generateCode()">Generate New Code</button>
-<div id="result"><div id="code-display"></div><button onclick="copyCode()" style="margin-top:8px;padding:8px 20px;font-size:11px;">Copy</button></div>
-<div id="codes-table"></div>
-<script>
-var ADMIN_KEY='{admin_key}';var lastCode='';
-function generateCode(){{var xhr=new XMLHttpRequest();xhr.open('POST','/api/admin/generate-code',true);xhr.setRequestHeader('X-Admin-Key',ADMIN_KEY);xhr.setRequestHeader('Content-Type','application/json');xhr.onload=function(){{var d=JSON.parse(xhr.responseText);if(d.ok){{lastCode=d.code;document.getElementById('code-display').textContent=d.code;document.getElementById('result').style.display='block';loadCodes();}}}};xhr.send('{{}}');}}
-function copyCode(){{navigator.clipboard.writeText(lastCode);}}
-function loadCodes(){{var xhr=new XMLHttpRequest();xhr.open('GET','/api/admin/list-codes',true);xhr.setRequestHeader('X-Admin-Key',ADMIN_KEY);xhr.onload=function(){{var d=JSON.parse(xhr.responseText);var codes=d.codes||[];var html='<table><tr><th>Code</th><th>Status</th><th>Used At</th></tr>';codes.forEach(function(c){{html+='<tr><td>'+(c.used?'<s>'+c.code+'</s>':c.code)+'</td><td>'+(c.used?'Used':'Available')+'</td><td>'+(c.used_at||'—')+'</td></tr>';}});html+='</table>';document.getElementById('codes-table').innerHTML=html;}};xhr.send();}}
-loadCodes();
-</script></body></html>"""
-
-
-# ── DEBUG ENDPOINTS ───────────────────────────────────────────────────────────
-
-
-# ═══════════════════════════════════════════════════════════
-# PHASE 5 — KEYWORD INTELLIGENCE ENGINE
-# ═══════════════════════════════════════════════════════════
-
-import threading as _kw_thread
-from urllib import request as _kw_req
-from urllib.parse import quote as _kw_quote
-import json as _kw_json
-import time as _kw_time
-
-KEYWORD_DB = os.path.join(os.path.dirname(__file__), "keywords.db")
-
-def get_keyword_db():
-    con = sqlite3.connect(KEYWORD_DB, timeout=30, check_same_thread=False)
-    con.execute("PRAGMA journal_mode=WAL")
-    con.execute("""CREATE TABLE IF NOT EXISTS keywords (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        phrase TEXT NOT NULL,
-        lang TEXT NOT NULL,
-        lang_name TEXT NOT NULL,
-        score INTEGER DEFAULT 1,
-        created_at TEXT DEFAULT (datetime('now')),
-        UNIQUE(phrase, lang)
-    )""")
-    con.commit()
-    return con
-
-# Every major language + everyday hair slang seeds
-KW_LANGUAGES = {
-    "en":    ("English",          "us"),
-    "en-ca": ("Canadian English", "ca"),
-    "es":    ("Spanish",          "es"),
-    "fr":    ("French",           "fr"),
-    "ar":    ("Arabic",           "sa"),
-    "de":    ("German",           "de"),
-    "sw":    ("Swahili",          "ke"),
-    "ru":    ("Russian",          "ru"),
-    "pt":    ("Portuguese",       "br"),
-    "zh-CN": ("Chinese",          "cn"),
-    "ja":    ("Japanese",         "jp"),
-    "it":    ("Italian",          "it"),
-    "nl":    ("Dutch",            "nl"),
-    "pl":    ("Polish",           "pl"),
-    "tr":    ("Turkish",          "tr"),
-    "ko":    ("Korean",           "kr"),
-    "sv":    ("Swedish",          "se"),
-    "no":    ("Norwegian",        "no"),
-    "da":    ("Danish",           "dk"),
-    "ro":    ("Romanian",         "ro"),
-    "uk":    ("Ukrainian",        "ua"),
-    "cs":    ("Czech",            "cz"),
-    "hu":    ("Hungarian",        "hu"),
-}
-
-# Seed phrases per language — everyday language people actually type
-KW_SEEDS = {
-    "en":    [
-        # Everyday hair problems — exactly how people type it
-        "why is my hair so dry","hair won't grow","edges won't lay flat","hair falling out",
-        "frizzy hair fix","hair breakage","4c hair routine","low porosity hair",
-        "high porosity hair","scalp itchy","hair loss woman","heat damage repair",
-        "bleached hair care","postpartum hair loss","oily scalp dry ends",
-        "my curls are undefined","hair feels like straw","how to moisturize natural hair",
-        "protein overload hair","hair thinning crown",
-        # 2011 freelancer search language — the people who escaped the 9-5
-        # typing from internet cafés in Thailand, Philippines, Latin America
-        # Raw, honest, broke-but-determined search queries
-        "how to make money online from home","work from home jobs no experience",
-        "how to start freelancing with no money","make money blogging 2011",
-        "how to escape the 9 to 5","passive income ideas","make money online fast",
-        "how to get clients online","freelance writing jobs","online jobs for beginners",
-        "how to make money from a blog","affiliate marketing for beginners",
-        "how to build a website and make money","social media jobs from home",
-        "virtual assistant jobs","how to quit your job and work online",
-        "digital nomad how to start","location independent income",
-        "how to make money while traveling","work from anywhere jobs",
-        # The intersection — beauty/hair entrepreneurs searching for both
-        "how to start a hair business online","sell hair products online",
-        "hair care affiliate marketing","start a beauty blog and make money",
-        "hair influencer how to start","natural hair business ideas",
-        "how to grow a hair brand online","hair care content creator income",
-    ],
-    "en-ca": ["why is my hair so dry","hair loss canada","frizzy hair humidity","natural hair routine","hair breakage fix","scalp care","postpartum hair loss","hair won't grow","dry hair treatment","best hair mask"],
-    "es":    [
-        "por qué se me cae el cabello","cabello muy seco","cómo crecer el cabello",
-        "caída del cabello","cabello frizz","puntas abiertas","cabello sin vida",
-        "cabello rizado cuidado","hidratación del cabello","cabello se rompe",
-        "cuero cabelludo picazón","cabello quemado por plancha","mascarilla para cabello seco",
-        "rizos definidos","cabello encrespado solución",
-        # Freelancer escape — Latin American 2011 search language
-        "cómo ganar dinero por internet","trabajar desde casa sin experiencia",
-        "cómo empezar a trabajar freelance","ganar dinero con un blog",
-        "escapar del trabajo de oficina","ingresos pasivos desde casa",
-        "negocios de cabello en línea","vender productos de cabello online",
-        "cómo ser influencer de cabello","negocio de belleza desde casa",
-    ],
-    "fr":    [
-        "pourquoi mes cheveux tombent","cheveux très secs","faire pousser les cheveux",
-        "cheveux cassants","frisottis cheveux","pointes abîmées","hydratation cheveux naturels",
-        "cuir chevelu qui gratte","cheveux fins","chute de cheveux femme",
-        "routine cheveux bouclés","cheveux abîmés par la chaleur","masque cheveux maison",
-        "cheveux gras","cheveux sans vie",
-        # Freelancer escape — French-speaking African + European communities 2011
-        "comment gagner de l'argent sur internet","travailler depuis chez soi",
-        "devenir freelance sans expérience","gagner de l'argent avec un blog beauté",
-        "business cheveux en ligne","vendre des produits capillaires en ligne",
-        "influenceuse cheveux comment démarrer","revenu passif depuis la maison",
-    ],
-    "ar":    ["لماذا يتساقط شعري","الشعر الجاف جداً","كيف يطول الشعر","تساقط الشعر","شعر مجعد","أطراف الشعر التالفة","علاج الشعر التالف","قشرة الشعر","الشعر الخفيف","ترطيب الشعر","شعر محترق من الفرد","ماسك للشعر الجاف","تكسر الشعر","روتين العناية بالشعر","الشعر الدهني"],
-    "de":    ["warum fallen meine Haare aus","sehr trockenes Haar","Haare wachsen lassen","Haarausfall Frau","krauses Haar","gespaltene Spitzen","Haarpflege Routine","Kopfhaut juckt","dünnes Haar","Haare nach Schwangerschaft","Hitzeschäden Haare","Haarmaske selbst machen","fettige Kopfhaut trockene Spitzen","lockige Haare pflegen","Haare brechen ab"],
-    "sw":    ["kwa nini nywele zangu zinaanguka","nywele kavu sana","jinsi ya kukua nywele","kupoteza nywele","nywele zenye maumivu","ncha za nywele zilizoharibiwa","utunzaji wa nywele za asili","ngozi ya kichwa inawasha","nywele nyembamba","nywele zimeungua","dawa ya nywele kavu","kujipiga nywele"],
-    "ru":    ["почему выпадают волосы","очень сухие волосы","как отрастить волосы","выпадение волос у женщин","вьющиеся волосы уход","секущиеся кончики","уход за натуральными волосами","зуд кожи головы","тонкие волосы","волосы после родов","повреждённые волосы восстановление","маска для сухих волос","жирная кожа сухие концы","ломкие волосы"],
-    "pt":    [
-        "por que meu cabelo cai","cabelo muito seco","como fazer o cabelo crescer",
-        "queda de cabelo","frizz no cabelo","pontas duplas","hidratação para cabelo seco",
-        "cronograma capilar","cabelo danificado","couro cabeludo com coceira",
-        "cabelo fino e fraco","cachos definidos","transição capilar",
-        "cabelo ressecado o que fazer","cabelo oleoso",
-        # Freelancer escape — Brazilian 2011
-        "como ganhar dinheiro na internet","trabalhar em casa sem experiência",
-        "como começar a trabalhar freelance","ganhar dinheiro com blog de beleza",
-        "negócio de cabelo online","vender produtos capilares pela internet",
-        "como ser influencer de cabelo","renda extra em casa",
-    ],
-    "zh-CN": ["为什么我的头发这么干燥","头发不长","头发脱落","卷发护理","头发毛躁","头发断裂","头皮痒","产后脱发","头发烫伤修复","低孔隙度头发","高孔隙度头发","如何滋润自然卷发","蛋白质过量头发","头发稀疏","头发像稻草一样"],
-    "ja":    ["なぜ髪がこんなに乾燥するの","髪が伸びない","髪が抜ける","くせ毛のケア","髪のパサパサ","切れ毛","頭皮がかゆい","産後の抜け毛","熱ダメージ修復","細い髪のケア","天然パーマのルーティン","頭皮のケア","髪にツヤがない","枝毛の直し方","乾燥した頭皮"],
-    "it":    ["perché i capelli cadono","capelli molto secchi","far crescere i capelli","caduta dei capelli","capelli crespi","doppie punte","idratazione capelli naturali","cuoio capelluto che pizzica","capelli sottili","capelli dopo il parto","capelli danneggiati dal calore","maschera fatta in casa","capelli grassi","routine capelli ricci"],
-    "nl":    ["waarom valt mijn haar uit","zeer droog haar","haar laten groeien","haaruitval vrouw","krullend haar verzorging","gespleten punten","hoofdhuid jeuk","dun haar","haar na zwangerschap","hitteschade haar","zelf haarmasker maken","vet haar droge punten","haar breekt af"],
-    "pl":    ["dlaczego wypadają włosy","bardzo suche włosy","jak rosnąć włosy","wypadanie włosów kobieta","kręcone włosy pielęgnacja","rozdwojone końcówki","swędząca skóra głowy","cienkie włosy","włosy po porodzie","zniszczone włosy regeneracja","maska do suchych włosów","przetłuszczająca się skóra głowy"],
-    "tr":    ["saçlar neden dökülüyor","çok kuru saç","saç uzatma","saç dökülmesi kadın","kıvırcık saç bakımı","kırık uçlar","kafa derisi kaşıntısı","ince saç","doğum sonrası saç dökülmesi","ısı hasarı onarımı","kuru saç maskesi","yağlı kafa derisi kuru uçlar"],
-    "ko":    ["머리카락이 왜 이렇게 건조해","머리가 안 자라","탈모","곱슬머리 관리","머리카락 끊어짐","두피 가려움","산후 탈모","열손상 복구","저다공성 모발","고다공성 모발","자연 모발 보습","두피 케어","머리카락 푸석","가는 머리","윤기 없는 머리"],
-    "sv":    ["varför faller håret av","mycket torrt hår","få håret att växa","håravfall kvinna","lockigt hår vård","nariga spetsar","klåda i hårbotten","tunt hår","hår efter förlossning","värmeskador hår","hårmaske hemma","fett hår torra spetsar"],
-    "no":    ["hvorfor faller håret av","veldig tørt hår","få håret til å vokse","hårtap kvinne","krøllete hår stell","splittede tupper","kløende hodebunm","tynt hår","hår etter fødsel","varmeskade reparasjon","hårmaske hjemmelaget"],
-    "da":    ["hvorfor falder mit hår af","meget tørt hår","få håret til at vokse","hårtab kvinde","krøllet hår pleje","splittede spidser","kløende hovedbund","tyndt hår","hår efter fødsel","varmeskade hår","hårmaske hjemmelavet"],
-    "ro":    ["de ce îmi cade părul","păr foarte uscat","cum să crești părul","căderea părului","păr creț îngrijire","vârfuri despicate","scalp mâncărime","păr subțire","păr după naștere","reparare deteriorare termică","mască de păr","păr gras"],
-    "uk":    ["чому випадає волосся","дуже сухе волосся","як відростити волосся","випадіння волосся","кучеряве волосся догляд","посічені кінці","свербіж шкіри голови","тонке волосся","волосся після пологів","маска для сухого волосся","ламке волосся"],
-    "cs":    ["proč mi padají vlasy","velmi suché vlasy","jak nechat vlasy růst","vypadávání vlasů","kudrnaté vlasy péče","roztřepené konečky","svědění pokožky hlavy","tenké vlasy","vlasy po porodu","poškozené vlasy obnova","maska na suché vlasy"],
-    "hu":    ["miért hullik a hajam","nagyon száraz haj","hogyan növesztjük a hajat","hajhullás nőknek","göndör haj ápolása","kettős hajvégek","viszketős fejbőr","vékony haj","haj szülés után","hőkárosodás javítása","hajmaszk házilag"],
-}
-
-def _kw_google_suggest(query, lang, country):
-    """Pull real search phrases from Google autocomplete"""
-    results = []
-    try:
-        url = f"https://suggestqueries.google.com/complete/search?client=firefox&q={_kw_quote(query)}&hl={lang}&gl={country}"
-        req = _kw_req.Request(url, headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-        with _kw_req.urlopen(req, timeout=8) as resp:
-            data = _kw_json.loads(resp.read().decode("utf-8"))
-            for s in (data[1] if len(data)>1 else []):
-                s = s.strip()
-                if 5 < len(s) < 80:
-                    results.append(s)
-    except:
-        pass
-    return results
-
-def run_keyword_sweep():
-    db = get_keyword_db()
-    total = 0
-    for lang, (lang_name, country) in KW_LANGUAGES.items():
-        seeds = KW_SEEDS.get(lang, KW_SEEDS.get("en", []))
-        for seed in seeds:
-            phrases = _kw_google_suggest(seed, lang.split("-")[0], country)
-            # Always include the seed itself
-            all_phrases = [seed] + phrases
-            for phrase in all_phrases:
-                phrase = phrase.strip()
-                if not phrase or len(phrase) < 4:
-                    continue
-                try:
-                    db.execute("""INSERT INTO keywords (phrase, lang, lang_name, score)
-                        VALUES (?,?,?,1)
-                        ON CONFLICT(phrase,lang) DO UPDATE SET score=score+1""",
-                        (phrase, lang, lang_name))
-                    total += 1
-                except:
-                    pass
-            _kw_time.sleep(0.25)
-        db.commit()
-    db.close()
-    return total
-
-_kw_sweep_status = {"running": False, "count": 0, "done": False}
-
-@app.route("/api/keywords/sweep", methods=["POST","OPTIONS"])
-def keyword_sweep():
-    if request.method=="OPTIONS":
-        r=jsonify({}); r.headers.update({"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"*","Access-Control-Allow-Methods":"POST"}); return r
-    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
-    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
-    if _kw_sweep_status["running"]: return jsonify({"ok":True,"message":"Already running…"})
-    _kw_sweep_status["running"]=True
-    _kw_sweep_status["done"]=False
-    def _run():
-        try:
-            n = run_keyword_sweep()
-            _kw_sweep_status["count"] = n
-        except Exception as e:
-            print(f"KW sweep error: {e}")
-        finally:
-            _kw_sweep_status["running"]=False
-            _kw_sweep_status["done"]=True
-    _kw_thread.Thread(target=_run, daemon=True).start()
-    return jsonify({"ok":True,"message":"Sweep started — takes ~2 minutes for all 24 languages"})
-
-@app.route("/api/keywords/status", methods=["GET"])
-def keyword_status():
-    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
-    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
-    db=get_keyword_db()
-    count=db.execute("SELECT COUNT(*) FROM keywords").fetchone()[0]
-    db.close()
-    return jsonify({**_kw_sweep_status,"total":count})
-
-@app.route("/api/keywords/list", methods=["GET"])
-def keyword_list():
-    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
-    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
-    lang=request.args.get("lang","")
-    db=get_keyword_db()
-    if lang:
-        rows=db.execute("SELECT phrase,lang,lang_name,score FROM keywords WHERE lang=? ORDER BY score DESC,phrase ASC",(lang,)).fetchall()
-    else:
-        rows=db.execute("SELECT phrase,lang,lang_name,score FROM keywords ORDER BY lang ASC,score DESC,phrase ASC").fetchall()
-    db.close()
-    return jsonify({"keywords":[{"phrase":r[0],"lang":r[1],"lang_name":r[2],"score":r[3]} for r in rows]})
-
-@app.route("/api/keywords/export", methods=["GET"])
-def keyword_export():
-    admin_key=request.headers.get("X-Admin-Key","") or request.args.get("key","")
-    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return "<h2>Unauthorized</h2>",401
-    lang=request.args.get("lang","")
-    fmt=request.args.get("fmt","csv")
-    db=get_keyword_db()
-    if lang:
-        rows=db.execute("SELECT phrase,lang,lang_name,score FROM keywords WHERE lang=? ORDER BY score DESC,phrase ASC",(lang,)).fetchall()
-    else:
-        rows=db.execute("SELECT phrase,lang,lang_name,score FROM keywords ORDER BY lang ASC,score DESC").fetchall()
-    db.close()
-    if fmt=="csv":
-        lines=["Keyword,Language,Language Name,Frequency"]
-        for r in rows:
-            lines.append(f'"{r[0]}",{r[1]},"{r[2]}",{r[3]}')
-        from flask import Response
-        return Response("\n".join(lines), mimetype="text/csv",
-            headers={"Content-Disposition":"attachment;filename=srd_keywords.csv"})
-    # Plain text - one keyword per line, for direct paste into any SEO tool
-    lines=[r[0] for r in rows]
-    from flask import Response
-    return Response("\n".join(lines), mimetype="text/plain",
-        headers={"Content-Disposition":"attachment;filename=srd_keywords.txt"})
-
-@app.route("/api/keywords/delete", methods=["POST"])
-def keyword_delete():
-    admin_key=request.headers.get("X-Admin-Key","") or request.json.get("key","")
-    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return jsonify({"error":"Unauthorized"}),401
-    phrase=request.json.get("phrase",""); lang=request.json.get("lang","")
-    db=get_keyword_db()
-    if lang: db.execute("DELETE FROM keywords WHERE phrase=? AND lang=?",(phrase,lang))
-    else: db.execute("DELETE FROM keywords WHERE phrase=?",(phrase,))
-    db.commit(); db.close()
-    return jsonify({"ok":True})
-
-@app.route("/keyword-intelligence")
-def keyword_intelligence_page():
-    admin_key=request.args.get("key","")
-    if admin_key!=os.environ.get("ADMIN_KEY","srd_admin_2024"): return "<h2>Unauthorized</h2>",401
-    return f"""<!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Keyword Intelligence — SupportRD</title>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:ital,wght@1,400&display=swap" rel="stylesheet">
-<style>
-*{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:'Jost',sans-serif;font-weight:300;background:#f0ebe8;color:#0d0906;min-height:100vh}}
-header{{background:#fff;border-bottom:1px solid rgba(193,163,162,0.2);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}}
-.h-title{{font-family:'Cormorant Garamond',serif;font-size:24px;font-style:italic}}
-.h-sub{{font-size:11px;color:rgba(0,0,0,0.38);letter-spacing:0.12em;text-transform:uppercase;margin-top:3px}}
-.h-right{{display:flex;gap:10px;align-items:center;flex-wrap:wrap}}
-.btn{{padding:9px 22px;border-radius:22px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border:none;transition:all 0.2s;white-space:nowrap}}
-.btn-rose{{background:#c1a3a2;color:#fff}} .btn-rose:hover{{background:#9d7f6a}}
-.btn-outline{{background:transparent;border:1px solid rgba(193,163,162,0.4);color:#0d0906}} .btn-outline:hover,.btn-outline.on{{background:rgba(193,163,162,0.12);border-color:#c1a3a2;color:#8B5E52}}
-.status{{padding:9px 32px;background:rgba(193,163,162,0.07);border-bottom:1px solid rgba(193,163,162,0.12);font-size:12px;color:rgba(0,0,0,0.45);display:none;align-items:center;gap:8px}}
-.dot{{width:7px;height:7px;border-radius:50%;background:#c1a3a2;animation:p 1.4s ease-in-out infinite;flex-shrink:0}}
-@keyframes p{{0%,100%{{opacity:1}}50%{{opacity:0.3}}}}
-.main{{max-width:1060px;margin:0 auto;padding:28px 24px}}
-.toolbar{{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center}}
-.search{{padding:8px 16px;border:1px solid rgba(193,163,162,0.3);border-radius:20px;font-family:'Jost',sans-serif;font-size:13px;outline:none;background:#fff;width:200px}} .search:focus{{border-color:#c1a3a2}}
-.lang-tabs{{display:flex;gap:6px;flex-wrap:wrap}}
-.lt{{padding:5px 13px;border-radius:14px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border:1px solid rgba(193,163,162,0.3);background:transparent;color:rgba(0,0,0,0.5);transition:all 0.15s}} .lt:hover,.lt.on{{background:rgba(193,163,162,0.15);border-color:#c1a3a2;color:#8B5E52;font-weight:500}}
-.export-row{{display:flex;gap:8px;margin-left:auto}}
-.table-box{{background:#fff;border-radius:14px;border:1px solid rgba(193,163,162,0.15);overflow:hidden}}
-table{{width:100%;border-collapse:collapse}}
-thead th{{background:rgba(193,163,162,0.07);padding:11px 16px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.45);text-align:left;border-bottom:1px solid rgba(193,163,162,0.12);cursor:pointer;white-space:nowrap;user-select:none}} thead th:hover{{color:#8B5E52}}
-tbody tr{{border-bottom:1px solid rgba(0,0,0,0.04);transition:background 0.12s}} tbody tr:last-child{{border:none}} tbody tr:hover{{background:rgba(193,163,162,0.04)}}
-td{{padding:10px 16px;font-size:13px}}
-.lang-badge{{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:500}}
-.l-en,.l-en-ca{{background:rgba(80,160,255,0.1);color:#2a6fc0}}
-.l-es{{background:rgba(255,160,50,0.12);color:#b06010}}
-.l-fr{{background:rgba(200,80,200,0.1);color:#802080}}
-.l-ar{{background:rgba(50,180,100,0.1);color:#207040}}
-.l-de{{background:rgba(40,40,200,0.08);color:#202090}}
-.l-sw{{background:rgba(220,60,60,0.1);color:#902020}}
-.l-ru{{background:rgba(200,40,40,0.1);color:#901010}}
-.l-pt{{background:rgba(40,200,120,0.1);color:#107050}}
-.l-zh-CN{{background:rgba(255,50,50,0.1);color:#c01010}}
-.l-ja{{background:rgba(220,100,160,0.1);color:#901050}}
-.l-it{{background:rgba(100,160,255,0.1);color:#2040b0}}
-.l-nl{{background:rgba(255,140,40,0.1);color:#a05010}}
-.l-pl{{background:rgba(180,30,80,0.1);color:#901040}}
-.l-tr{{background:rgba(220,60,30,0.1);color:#902010}}
-.l-ko{{background:rgba(80,80,200,0.1);color:#303090}}
-.l-sv,.l-no,.l-da{{background:rgba(40,100,200,0.08);color:#104080}}
-.l-ro,.l-uk,.l-cs,.l-hu{{background:rgba(120,80,180,0.1);color:#502080}}
-.del{{background:none;border:none;color:rgba(0,0,0,0.2);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:6px;transition:all 0.15s}} .del:hover{{background:rgba(255,80,80,0.12);color:#c02020}}
-.empty{{text-align:center;padding:56px;color:rgba(0,0,0,0.3);font-size:14px}}
-.toast{{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0d0906;color:#fff;padding:9px 20px;border-radius:20px;font-size:12px;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:999;white-space:nowrap}}
-.count{{font-size:12px;color:rgba(0,0,0,0.35);padding:10px 16px;border-top:1px solid rgba(193,163,162,0.1)}}
-</style></head><body>
-<header>
-  <div><div class="h-title">Keyword Intelligence</div><div class="h-sub">Real search phrases · 24 languages · Phase 5</div></div>
-  <div class="h-right">
-    <button class="btn btn-rose" id="sweep-btn" onclick="runSweep()">⟳ Run Keyword Sweep</button>
-  </div>
-</header>
-<div class="status" id="status-bar"><div class="dot"></div><span id="status-txt">Sweeping all 24 languages from Google…</span></div>
-<div class="main">
-  <div class="toolbar">
-    <input class="search" id="search" placeholder="Search keywords…" oninput="render()">
-    <div class="lang-tabs" id="lang-tabs">
-      <button class="lt on" onclick="setLang('')" data-lang="">All</button>
-    </div>
-    <div class="export-row">
-      <button class="btn btn-outline" onclick="exportList('txt')">↓ Export .txt</button>
-      <button class="btn btn-outline" onclick="exportList('csv')">↓ Export .csv</button>
-    </div>
-  </div>
-  <div class="table-box">
-    <table id="kw-table">
-      <thead><tr>
-        <th onclick="sort('phrase')"># &nbsp; Keyword Phrase ↕</th>
-        <th onclick="sort('lang_name')">Language ↕</th>
-        <th onclick="sort('score')">Frequency ↕</th>
-        <th></th>
-      </tr></thead>
-      <tbody id="tbody"></tbody>
-    </table>
-    <div class="empty" id="empty">No keywords yet — click <strong>Run Keyword Sweep</strong> to pull from Google across all 24 languages</div>
-    <div class="count" id="count" style="display:none"></div>
-  </div>
-</div>
-<div class="toast" id="toast"></div>
-<script>
-const KEY='{admin_key}';
-let all=[],cur='',scol='lang_name',sdir=1;
-
-async function load(){{
-  try{{
-    const r=await fetch('/api/keywords/list?key='+KEY+(cur?'&lang='+cur:''));
-    const d=await r.json();
-    all=d.keywords||[];
-    buildLangTabs();
-    render();
-  }}catch(e){{toast('Failed to load')}}
-}}
-
-function buildLangTabs(){{
-  const seen=new Map();
-  all.forEach(k=>{{if(!seen.has(k.lang)) seen.set(k.lang,k.lang_name);}});
-  const tabs=document.getElementById('lang-tabs');
-  // Keep "All" button, rebuild the rest
-  const allBtn=tabs.querySelector('[data-lang=""]');
-  tabs.innerHTML='';
-  tabs.appendChild(allBtn);
-  [...seen.entries()].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([lang,name])=>{{
-    const b=document.createElement('button');
-    b.className='lt'+(cur===lang?' on':'');
-    b.dataset.lang=lang;
-    b.textContent=name;
-    b.onclick=()=>setLang(lang);
-    tabs.appendChild(b);
-  }});
-}}
-
-function setLang(lang){{
-  cur=lang;
-  document.querySelectorAll('.lt').forEach(b=>b.classList.toggle('on',b.dataset.lang===lang));
-  render();
-}}
-
-function sort(col){{
-  if(scol===col)sdir*=-1; else{{scol=col;sdir=1;}}
-  render();
-}}
-
-function render(){{
-  const q=document.getElementById('search').value.toLowerCase();
-  let kws=all.filter(k=>!q||k.phrase.toLowerCase().includes(q));
-  kws.sort((a,b)=>{{
-    let av=a[scol],bv=b[scol];
-    if(typeof av==='string'){{av=av.toLowerCase();bv=bv.toLowerCase();}}
-    return sdir*(av>bv?1:av<bv?-1:0);
-  }});
-  const tbody=document.getElementById('tbody');
-  const empty=document.getElementById('empty');
-  const count=document.getElementById('count');
-  if(!kws.length){{tbody.innerHTML='';empty.style.display='block';count.style.display='none';return;}}
-  empty.style.display='none';
-  count.style.display='block';
-  count.textContent=kws.length+' keyword'+(kws.length===1?'':'s')+' shown';
-  tbody.innerHTML=kws.map((k,i)=>`<tr>
-    <td><span style="color:rgba(0,0,0,0.25);font-size:11px;margin-right:10px;">${{i+1}}</span>${{k.phrase}}</td>
-    <td><span class="lang-badge l-${{k.lang}}">${{k.lang_name}}</span></td>
-    <td style="color:rgba(0,0,0,0.45);font-size:12px;">${{k.score}}</td>
-    <td style="display:flex;gap:6px;align-items:center;">
-      <button class="fire-btn" id="fire-${{i}}" onclick="fireBlog(${{JSON.stringify(k.phrase)}},${{JSON.stringify(k.lang)}},'fire-${{i}}')" style="padding:4px 12px;border-radius:12px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border:none;background:rgba(193,163,162,0.15);color:#8B5E52;transition:all 0.2s;">⚡ Fire</button>
-      <button class="del" onclick="del(${{JSON.stringify(k.phrase)}},${{JSON.stringify(k.lang)}})" title="Remove">✕</button>
-    </td>
-  </tr>`).join('');
-}}
-
-async function fireBlog(phrase, lang, btnId){{
-  const btn = document.getElementById(btnId);
-  if(!btn) return;
-  btn.textContent='…writing';
-  btn.disabled=true;
-  btn.style.background='rgba(255,200,50,0.15)';
-  btn.style.color='#9a7010';
-  toast('⚡ Firing: ' + phrase);
-  try{{
-    const r=await fetch('/api/keywords/fire',{{
-      method:'POST',
-      headers:{{'X-Admin-Key':KEY,'Content-Type':'application/json'}},
-      body:JSON.stringify({{phrase,lang}})
-    }});
-    const d=await r.json();
-    if(d.ok){{
-      btn.textContent='✓ Live';
-      btn.style.background='rgba(50,180,80,0.15)';
-      btn.style.color='#1a7a30';
-      btn.disabled=false;
-      btn.onclick=()=>window.open('/blog/'+d.handle,'_blank');
-      toast('✓ Live → /blog/'+d.handle);
-    }} else {{
-      btn.textContent='⚡ Fire';
-      btn.disabled=false;
-      btn.style.background='rgba(193,163,162,0.15)';
-      btn.style.color='#8B5E52';
-      toast('Error: '+(d.error||'failed'));
-    }}
-  }}catch(e){{
-    btn.textContent='⚡ Fire';
-    btn.disabled=false;
-    btn.style.background='rgba(193,163,162,0.15)';
-    btn.style.color='#8B5E52';
-    toast('Network error');
-  }}
-}}
-
-async function runSweep(){{
-  const btn=document.getElementById('sweep-btn');
-  btn.textContent='⟳ Sweeping…';btn.disabled=true;
-  document.getElementById('status-bar').style.display='flex';
-  const r=await fetch('/api/keywords/sweep',{{method:'POST',headers:{{'X-Admin-Key':KEY,'Content-Type':'application/json'}}}});
-  const d=await r.json();
-  toast(d.message||'Sweep started');
-  poll();
-}}
-
-let polls=0;
-async function poll(){{
-  polls++;
-  const r=await fetch('/api/keywords/status?key='+KEY);
-  const d=await r.json();
-  document.getElementById('status-txt').textContent='Sweeping… '+d.total+' keywords found so far';
-  if(d.done||polls>40){{
-    document.getElementById('sweep-btn').textContent='⟳ Run Keyword Sweep';
-    document.getElementById('sweep-btn').disabled=false;
-    document.getElementById('status-bar').style.display='none';
-    polls=0; load(); toast('✓ Sweep complete — '+d.total+' keywords');
-  }} else {{ setTimeout(poll,4000); }}
-}}
-
-function exportList(fmt){{
-  const lang=cur?'&lang='+cur:'';
-  window.open('/api/keywords/export?key='+KEY+lang+'&fmt='+fmt,'_blank');
-}}
-
-async function del(phrase,lang){{
-  await fetch('/api/keywords/delete',{{method:'POST',headers:{{'X-Admin-Key':KEY,'Content-Type':'application/json'}},body:JSON.stringify({{phrase,lang}})}});
-  all=all.filter(k=>!(k.phrase===phrase&&k.lang===lang));
-  render(); buildLangTabs();
-}}
-
-function toast(msg){{
-  const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';
-  setTimeout(()=>t.style.opacity='0',3000);
-}}
-
-load();
-</script>
-</body></html>"""
-
-
-
-@app.route("/api/test-register")
-def test_register():
-    try:
-        con = get_db()
-        con.execute("SELECT count(*) FROM users").fetchone()
-        con.close()
-        return jsonify({"ok":True,"db":"connected","auth_db_path":AUTH_DB})
-    except Exception as e:
-        return jsonify({"ok":False,"error":str(e)})
-
-
-# ── UNIFIED CONTENT SCHEDULER — 4 posts/day ──────────────────────────────────
-# 2 from content engine (brand topics) + 2 from keyword list (SEO phrases)
-# Fires at 4 random times spread across morning, afternoon, evening, night
-def _start_content_scheduler():
-    import time as _t
-    import random as _r
-
-    def _pick_todays_times():
-        today = datetime.datetime.utcnow().date()
-        seed = int(today.strftime("%Y%m%d"))
-        rng = _r.Random(seed)
-        # 4 windows across the day — one post each
-        windows = [(6,9),(10,13),(15,18),(20,23)]
-        times = []
-        for lo, hi in windows:
-            h = rng.randint(lo, hi)
-            m = rng.randint(0, 59)
-            times.append((h, m))
-        return times  # [engine, keyword, engine, keyword] alternating
-
-    def _run_content_engine():
-        try:
-            from content_engine import run_engine
-            result = run_engine()
-            print(f"[Scheduler] Content engine post done: {result}", flush=True)
-            threading.Thread(target=ping_search_engines, daemon=True).start()
-        except Exception as e:
-            print(f"[Scheduler] Content engine error: {e}", flush=True)
-
-    def _run_keyword_post():
-        """Pick highest-scoring uncovered keyword, write post targeting it exactly."""
-        try:
-            db = get_keyword_db()
-            # Get existing blog handles to check coverage
-            try:
-                bdb = sqlite3.connect(BLOG_DB, timeout=10, check_same_thread=False)
-                existing_handles = set(r[0] for r in bdb.execute("SELECT handle FROM posts").fetchall())
-                bdb.close()
-            except:
-                existing_handles = set()
-
-            # Pick top uncovered keyword — highest score not yet posted
-            rows = db.execute(
-                "SELECT phrase, lang FROM keywords ORDER BY score DESC LIMIT 200"
-            ).fetchall()
-            db.close()
-
-            target = None
-            for phrase, lang in rows:
-                handle = _kw_slug(phrase)
-                if handle not in existing_handles:
-                    target = (phrase, lang)
-                    break
-
-            if not target:
-                print("[Scheduler] No uncovered keywords found — all covered!", flush=True)
-                return
-
-            phrase, lang = target
-            print(f"[Scheduler] Writing keyword post: '{phrase}' ({lang})", flush=True)
-            post_data = _kw_generate_post(phrase, lang)
-            if not post_data:
-                print(f"[Scheduler] Keyword post generation failed for: {phrase}", flush=True)
-                return
-
-            handle = _kw_slug(phrase)
-            blog_save_post({
-                "handle":          handle,
-                "title":           post_data["title"],
-                "html":            post_data["html"],
-                "meta":            post_data["meta"],
-                "date":            datetime.datetime.utcnow().strftime("%Y-%m-%d"),
-                "chinese_title":   "",
-                "chinese_summary": ""
-            })
-            threading.Thread(target=ping_search_engines, daemon=True).start()
-            print(f"[Scheduler] Keyword post live: /blog/{handle}", flush=True)
-
-        except Exception as e:
-            print(f"[Scheduler] Keyword post error: {e}", flush=True)
-
-    _fired = set()
-    _todays_times = _pick_todays_times()
-    # Alternate: slot 0=engine, 1=keyword, 2=engine, 3=keyword
-    _slot_types = ["engine", "keyword", "engine", "keyword"]
-
-    def scheduler():
-        nonlocal _fired, _todays_times
-        _t.sleep(90)
-        while True:
-            now = datetime.datetime.utcnow()
-            today = now.date()
-            # Reset daily
-            if today != getattr(scheduler, "_last_date", None):
-                scheduler._last_date = today
-                _fired.clear()
-                _todays_times[:] = _pick_todays_times()
-
-            for i, (h, m) in enumerate(_todays_times):
-                key = (today, h, m)
-                if (now.hour, now.minute) == (h, m) and key not in _fired:
-                    _fired.add(key)
-                    slot = _slot_types[i]
-                    print(f"[Scheduler] Firing slot {i} ({slot}) at {h:02d}:{m:02d} UTC", flush=True)
-                    if slot == "engine":
-                        threading.Thread(target=_run_content_engine, daemon=True).start()
-                    else:
-                        threading.Thread(target=_run_keyword_post, daemon=True).start()
-            _t.sleep(30)
-
-    threading.Thread(target=scheduler, daemon=True).start()
-
-_start_content_scheduler()
-
-
-def _start_keyword_scheduler():
-    """Keyword sweep runs continuously — finishes one sweep, immediately starts the next.
-    Always pulling fresh data from Google in real time. Never stops."""
-    import time as _kw_t
-    def _run():
-        # Short boot delay so DB initialises
-        _kw_t.sleep(30)
-        while True:
-            try:
-                print("[Keyword Scheduler] Sweep starting…", flush=True)
-                run_keyword_sweep()
-                print("[Keyword Scheduler] Sweep done — restarting immediately.", flush=True)
-            except Exception as e:
-                print(f"[Keyword Scheduler] Error: {e} — retrying in 10s", flush=True)
-                _kw_t.sleep(10)
-    threading.Thread(target=_run, daemon=True).start()
-
-_start_keyword_scheduler()
-
-
-# ── KEEP-ALIVE ────────────────────────────────────────────────────────────────
-def _keep_alive():
-    import time, urllib.request as _urlreq
-    _url = os.environ.get("APP_BASE_URL","https://ai-hair-advisor.onrender.com") + "/api/ping"
-    time.sleep(60)
-    while True:
-        time.sleep(600)
-        try: _urlreq.urlopen(_url, timeout=10)
-        except: pass
-
-threading.Thread(target=_keep_alive, daemon=True).start()
-
-
-# ── PWA MANIFEST + SERVICE WORKER ─────────────────────────────────────────────
-@app.route("/manifest.json")
-def pwa_manifest():
-    manifest = {
-        "name": "Aria — SupportRD Hair Advisor",
-        "short_name": "Aria",
-        "description": "Your personal AI hair advisor from SupportRD",
-        "start_url": "/dashboard",
-        "display": "standalone",
-        "background_color": "#f0ebe8",
-        "theme_color": "#c1a3a2",
-        "orientation": "portrait",
-        "id": "/dashboard",
-        "icons": [
-            {"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-            {"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
-        ],
-        "shortcuts": [
-            {"name": "Chat with Aria", "url": "/", "description": "Start a hair consultation", "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512"}]},
-            {"name": "My Dashboard", "url": "/dashboard", "description": "View your hair health dashboard", "icons": [{"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512"}]}
-        ]
-    }
-    resp = Response(json.dumps(manifest), mimetype="application/manifest+json")
-    resp.headers["Cache-Control"] = "no-cache"
-    return resp
-
-@app.route("/sw.js")
-def service_worker():
-    sw = """
-const CACHE = 'aria-v8';
-
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', e => {
-  if(e.request.method !== 'GET') return;
-  const url = new URL(e.request.url);
-  // Never cache auth-sensitive pages or API calls
-  const noCache = ['/dashboard', '/login', '/api/'];
-  if(noCache.some(p => url.pathname.startsWith(p))) return;
-  // Redirect bare / to dashboard
-  if(url.pathname === '/') { e.respondWith(Response.redirect('/dashboard', 302)); return; }
-  // Cache-first for static assets only
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-});
-
-// ── PUSH NOTIFICATIONS ──
-self.addEventListener('push', e => {
-  const data = e.data ? e.data.json() : {};
-  const title = data.title || 'Aria Hair Advisor';
-  const options = {
-    body: data.body || 'Time to care for your hair!',
-    icon: 'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838',
-    badge: 'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools.png?v=1773174838',
-    data: { url: data.url || '/dashboard' },
-    vibrate: [200, 100, 200],
-    actions: [
-      { action: 'open', title: 'Open Aria' },
-      { action: 'dismiss', title: 'Dismiss' }
-    ]
-  };
-  e.waitUntil(self.registration.showNotification(title, options));
-});
-
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  if(e.action !== 'dismiss'){
-    const url = e.notification.data?.url || '/dashboard';
-    e.waitUntil(clients.openWindow(url));
-  }
-});
-""".strip()
-    return Response(sw, mimetype="application/javascript", headers={
-        "Service-Worker-Allowed": "/",
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-    })
-
-
-# ── PUSH NOTIFICATION ROUTES ───────────────────────────────────────────────────
-@app.route("/api/push/subscribe", methods=["POST", "OPTIONS"])
-def push_subscribe():
-    user = get_current_user()
-    if not user: return jsonify({"error": "unauthorized"}), 401
-    data = request.get_json(silent=True) or {}
-    endpoint = data.get("endpoint", "")
-    p256dh   = data.get("p256dh", "")
-    auth     = data.get("auth", "")
-    if not endpoint or not p256dh or not auth:
-        return jsonify({"error": "Missing subscription fields"}), 400
-    db_execute(
-        "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth) VALUES (?,?,?,?) "
-        "ON CONFLICT(user_id, endpoint) DO UPDATE SET p256dh=excluded.p256dh, auth=excluded.auth",
-        (user["id"], endpoint, p256dh, auth)
-    )
-    return jsonify({"ok": True})
-
-@app.route("/api/push/unsubscribe", methods=["POST", "OPTIONS"])
-def push_unsubscribe():
-    user = get_current_user()
-    if not user: return jsonify({"error": "unauthorized"}), 401
-    data = request.get_json(silent=True) or {}
-    endpoint = data.get("endpoint", "")
-    if endpoint:
-        db_execute("DELETE FROM push_subscriptions WHERE user_id=? AND endpoint=?", (user["id"], endpoint))
-    return jsonify({"ok": True})
-
-@app.route("/api/push/vapid-public-key", methods=["GET"])
-def vapid_public_key():
-    key = os.environ.get("VAPID_PUBLIC_KEY", "")
-    return jsonify({"key": key})
-
-def _send_push_notification(user_id, title, body, url="/dashboard"):
-    """Send a Web Push notification to all of a user's subscriptions."""
-    vapid_private = os.environ.get("VAPID_PRIVATE_KEY", "")
-    vapid_public  = os.environ.get("VAPID_PUBLIC_KEY", "")
-    vapid_email   = os.environ.get("VAPID_EMAIL", "mailto:hello@supportrd.com")
-    if not vapid_private or not vapid_public:
-        print("VAPID keys not configured — push not sent")
-        return
-    try:
-        from pywebpush import webpush, WebPushException
-    except ImportError:
-        print("pywebpush not installed — run: pip install pywebpush")
-        return
-    rows = db_execute(
-        "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id=?",
-        (user_id,), fetchall=True
-    ) or []
-    payload = json.dumps({"title": title, "body": body, "url": url})
-    for (endpoint, p256dh, auth) in rows:
-        try:
-            webpush(
-                subscription_info={"endpoint": endpoint, "keys": {"p256dh": p256dh, "auth": auth}},
-                data=payload,
-                vapid_private_key=vapid_private,
-                vapid_claims={"sub": vapid_email}
-            )
-        except WebPushException as e:
-            if "410" in str(e) or "404" in str(e):
-                db_execute("DELETE FROM push_subscriptions WHERE endpoint=?", (endpoint,))
-        except Exception as e:
-            print(f"Push send error: {e}")
-
-# ── PUSH SCHEDULER — sends routine reminders daily ─────────────────────────────
-def _start_push_scheduler():
-    import time as _t
-
-    WASH_DAY_KEYWORDS  = ["wash day", "shampoo", "cleanse"]
-    DEEP_COND_KEYWORDS = ["deep condition", "mascarilla", "conditioning"]
-    SCALP_KEYWORDS     = ["scalp", "gotero", "dropper"]
-    TREATMENT_KEYWORDS = ["treatment", "formula exclusiva", "laciador"]
-
-    def _get_todays_routine_events():
-        """Return list of (user_id, notification_title, notification_body) for today."""
-        day_name = datetime.datetime.utcnow().strftime("%A").lower()
-        con = get_db()
-        rows = con.execute(
-            "SELECT u.id, u.name, r.routine_json FROM users u "
-            "JOIN routines r ON r.user_id = u.id "
-            "JOIN push_subscriptions ps ON ps.user_id = u.id "
-            "WHERE r.routine_json IS NOT NULL"
-        ).fetchall()
-        con.close()
-        events = []
-        for (uid, name, routine_json) in rows:
-            try:
-                rt    = json.loads(routine_json)
-                today = rt.get("days", {}).get(day_name, {})
-                title_tag  = today.get("title", "")
-                products   = " ".join(today.get("products", [])).lower()
-                morning    = " ".join(today.get("morning", [])).lower()
-                all_text   = (title_tag + " " + products + " " + morning).lower()
-                fname = (name or "").split()[0] if name else "Hey"
-                if any(k in all_text for k in WASH_DAY_KEYWORDS):
-                    events.append((uid, f"🚿 Wash Day — {fname}!", f"Today is your wash day. {title_tag} — Aria is ready to guide you.", "/dashboard"))
-                elif any(k in all_text for k in DEEP_COND_KEYWORDS):
-                    events.append((uid, f"🥑 Deep Condition Day — {fname}!", f"Today: {title_tag}. Don't skip your deep conditioning treatment!", "/dashboard"))
-                elif any(k in all_text for k in SCALP_KEYWORDS):
-                    events.append((uid, f"💧 Scalp Care Day — {fname}!", f"Tonight apply your Gotero Rapido before bed. Your scalp will thank you.", "/dashboard"))
-                elif any(k in all_text for k in TREATMENT_KEYWORDS):
-                    events.append((uid, f"✦ Treatment Day — {fname}!", f"Today: {title_tag}. Your SupportRD products are ready.", "/dashboard"))
-                elif title_tag:
-                    events.append((uid, f"🌿 Hair Routine — {fname}!", f"Today is your {title_tag}. Aria built your routine — check it out.", "/dashboard"))
-            except Exception as e:
-                print(f"Push scheduler routine parse error: {e}")
-        return events
-
-    def _scheduler():
-        _t.sleep(120)  # wait for app to start
-        fired_today = set()
-        while True:
-            now = datetime.datetime.utcnow()
-            # Send reminders at 8:00 AM UTC daily
-            if now.hour == 8 and now.minute == 0:
-                day_key = now.strftime("%Y-%m-%d")
-                if day_key not in fired_today:
-                    fired_today.add(day_key)
-                    if len(fired_today) > 7:
-                        fired_today.pop()
-                    try:
-                        events = _get_todays_routine_events()
-                        for (uid, title, body, url) in events:
-                            threading.Thread(
-                                target=_send_push_notification,
-                                args=(uid, title, body, url),
-                                daemon=True
-                            ).start()
-                        print(f"Push scheduler: sent {len(events)} reminders for {day_key}")
-                    except Exception as e:
-                        print(f"Push scheduler error: {e}")
-            _t.sleep(55)  # check every ~minute
-
-    threading.Thread(target=_scheduler, daemon=True).start()
-
-_start_push_scheduler()
-
-
-# ── KEYWORD SCHEDULER — auto-sweeps every 7 days, runs forever ──────────────
-def _start_keyword_scheduler():
-    import time as _kt
-
-    def _scheduler():
-        _kt.sleep(180)  # wait 3 min after app starts, then run first sweep
-        while True:
-            try:
-                print("[Keyword Scheduler] Starting auto-sweep...")
-                n = run_keyword_sweep()
-                print(f"[Keyword Scheduler] Sweep complete — {n} keywords indexed")
-            except Exception as e:
-                print(f"[Keyword Scheduler] Error: {e}")
-            # Sleep 7 days before next sweep
-            _kt.sleep(60 * 60 * 24 * 7)
-
-    threading.Thread(target=_scheduler, daemon=True).start()
-
-_start_keyword_scheduler()
-
-
-# ── HAIR JOURNAL ROUTES ────────────────────────────────────────────────────────
-@app.route("/api/journal", methods=["GET", "POST", "DELETE"])
-def hair_journal():
-    user = get_current_user()
-    if not user: return jsonify({"error": "unauthorized"}), 401
-
-    if request.method == "DELETE":
-        eid = request.args.get("id")
-        if eid:
-            db_execute("DELETE FROM hair_journal WHERE id=? AND user_id=?", (eid, user["id"]))
-        return jsonify({"ok": True})
-
-    if request.method == "POST":
-        data = request.get_json(silent=True) or {}
-        note        = data.get("note", "").strip()
-        image_b64   = data.get("image_b64", "")
-        hair_rating = int(data.get("hair_rating", 3))
-        if not note: return jsonify({"error": "Note required"}), 400
-
-        # Strip data URL prefix
-        if image_b64 and "," in image_b64:
-            image_b64 = image_b64.split(",", 1)[1]
-
-        # Ask Aria for a pattern insight after 3+ entries
-        aria_insight = ""
-        try:
-            recent = db_execute(
-                "SELECT note, hair_rating, ts FROM hair_journal WHERE user_id=? ORDER BY ts DESC LIMIT 7",
-                (user["id"],), fetchall=True
-            ) or []
-            if len(recent) >= 2:
-                history_text = "\n".join([f"- {r[2][:10]} (rating {r[1]}/5): {r[0]}" for r in recent])
-                insight_prompt = f"""You are Aria. Based on this user's last {len(recent)} hair journal entries, give ONE short pattern observation (1-2 sentences max, warm and specific). Focus on trends you notice.
-
-Journal entries:
-{history_text}
-
-New entry today (rating {hair_rating}/5): {note}
-
-Respond with just the insight, no preamble."""
-                import urllib.request as _ur
-                payload = json.dumps({
-                    "model": "claude-sonnet-4-20250514",
-                    "max_tokens": 80,
-                    "messages": [{"role": "user", "content": insight_prompt}]
-                }).encode()
-                req = _ur.Request(
-                    "https://api.anthropic.com/v1/messages",
-                    data=payload,
-                    headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
-                    method="POST"
-                )
-                with _ur.urlopen(req, timeout=10) as resp:
-                    result = json.loads(resp.read())
-                    aria_insight = result["content"][0]["text"].strip()
-        except Exception as e:
-            print(f"Journal insight error: {e}")
-
-        db_execute(
-            "INSERT INTO hair_journal (user_id, note, image_b64, hair_rating, aria_insight) VALUES (?,?,?,?,?)",
-            (user["id"], note, image_b64, hair_rating, aria_insight)
-        )
-        return jsonify({"ok": True, "aria_insight": aria_insight})
-
-    # GET — return last 30 entries
-    con = get_db()
-    rows = con.execute(
-        "SELECT id, note, hair_rating, aria_insight, ts FROM hair_journal WHERE user_id=? ORDER BY ts DESC LIMIT 30",
-        (user["id"],)
-    ).fetchall()
-    con.close()
-    return jsonify({"entries": [
-        {"id": r[0], "note": r[1], "hair_rating": r[2], "aria_insight": r[3], "ts": r[4]}
-        for r in rows
-    ]})
-
-
-# ── RUNNER ────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    return Response(html, mimetype='text/html')
+
+
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin','')
+    allowed = [os.environ.get('APP_BASE_URL',''), 'https://supportrd.com', 'https://www.supportrd.com',
+               'http://localhost:5000', 'http://127.0.0.1:5000']
+    if origin in allowed:
+        response.headers['Access-Control-Allow-Origin']  = origin
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,X-Auth-Token,Authorization'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
