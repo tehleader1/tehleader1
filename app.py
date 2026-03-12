@@ -4664,7 +4664,11 @@ function paCaptureAndAnalyze(){
   paAnalyze();
 }
 
-// ── UPLOAD MODE ───────────────────────────────────────────────────reader = new FileReader();
+// ── UPLOAD MODE ───────────────────────────────────────────────────
+function paOnUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
   reader.onload = ev=>{
     _paPhotoB64 = ev.target.result;
     const prev = document.getElementById('pa-upload-preview');
