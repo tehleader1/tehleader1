@@ -3547,7 +3547,9 @@ body::before{content:'';position:fixed;inset:0;
         <div class="pa-section-label">Past analyses</div>
         <div id="pa-history-list"></div>
 
-        <button class="pa-rescan-btn" onclick="paReset()">✦ Scan Again</button>
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);text-align:center;">
+          <button onclick="paReset()" style="background:var(--rose);color:#000;border:none;border-radius:30px;padding:14px 40px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.08em;cursor:pointer;width:100%;max-width:320px;">✦ Scan Again</button>
+        </div>
       </div>
 
     </div>
@@ -4524,8 +4526,8 @@ function paEvaluatePose(offset){
 
   let inPos = false;
   if(step.tilt === 'center') inPos = Math.abs(offset) < PA_TILT_THR;
-  if(step.tilt === 'left')   inPos = offset >  PA_TILT_THR;
-  if(step.tilt === 'right')  inPos = offset < -PA_TILT_THR;
+  if(step.tilt === 'left')   inPos = offset < -PA_TILT_THR;  // mirrored: turn left → face goes screen-right → right brighter → offset negative
+  if(step.tilt === 'right')  inPos = offset >  PA_TILT_THR;  // mirrored: turn right → face goes screen-left → left brighter → offset positive
 
   // Arrow shows which way to turn — arrow points in the direction user needs to move
   if(arrow){
@@ -4550,13 +4552,15 @@ function paEvaluatePose(offset){
   // Live nudge text
   if(!inPos && subEl && !_paInPosition){
     if(step.tilt === 'center'){
-      if(offset >  0.05) subEl.textContent = 'Tilt a little RIGHT to centre';
-      else if(offset < -0.05) subEl.textContent = 'Tilt a little LEFT to centre';
-      else subEl.textContent = 'Almost there — hold perfectly still';
+      // offset < 0 = face shifted right = turned right too much
+      // offset > 0 = face shifted left = turned left too much
+      if(offset < -0.05) subEl.textContent = 'Turn a little to the LEFT';
+      else if(offset > 0.05) subEl.textContent = 'Turn a little to the RIGHT';
+      else subEl.textContent = 'Almost there — hold still';
     } else if(step.tilt === 'left'){
-      subEl.textContent = offset < 0 ? 'Keep turning LEFT ←' : 'Tilt further to the LEFT ←';
+      subEl.textContent = 'Turn your head LEFT ←';
     } else {
-      subEl.textContent = offset > 0 ? 'Keep turning RIGHT →' : 'Tilt further to the RIGHT →';
+      subEl.textContent = 'Turn your head RIGHT →';
     }
   }
 
@@ -4756,7 +4760,7 @@ async function paLoadHistory(){
 
 // ── RESET: back to initial state, NO auto-camera ─────────────────
 function paReset(){
-  clearTimeout(_paScanTimer);
+  if(_paRafId){ clearTimeout(_paRafId); cancelAnimationFrame(_paRafId); _paRafId=null; }
   paStopCamera();
 
   _paPhotoB64  = null;
@@ -4781,7 +4785,7 @@ function paReset(){
   document.getElementById('pa-scan-line').classList.remove('active');
   document.getElementById('pa-turn-track').style.display = 'none';
   document.getElementById('pa-next-btn').style.display = 'none';
-  for(let i=0;i<5;i++){ const d=document.getElementById('pa-dot-'+i); if(d) d.classList.remove('done'); }
+  for(let i=0;i<3;i++){ const d=document.getElementById('pa-dot-'+i); if(d) d.classList.remove('done'); }
 
   // Reset instruction text
   document.getElementById('pa-instruction-text').textContent = 'Position your hair in the oval guide';
