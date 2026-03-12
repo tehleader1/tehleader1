@@ -2409,7 +2409,55 @@ def login_page():
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{{box-sizing:border-box;margin:0;padding:0;}}
-body{{background:#f0ebe8;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-weight:300;padding:24px;}}
+body{{background:#f0ebe8;min-height:100vh;font-family:'Jost',sans-serif;font-weight:300;}}
+.login-wrap{{display:flex;align-items:center;justify-content:center;padding:60px 24px 20px;}}
+.card{{background:#fff;border-radius:24px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 12px 48px rgba(0,0,0,0.08);border:1px solid rgba(193,163,162,0.20);}}
+/* Brand strip */
+.brand-strip{{background:#0d0906;padding:12px 0;overflow:hidden;white-space:nowrap;}}
+.brand-strip-inner{{display:flex;gap:0;animation:brandScroll 18s linear infinite;}}
+.brand-pill{{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#c1a3a2;padding:0 24px;flex-shrink:0;}}
+@keyframes brandScroll{{0%{{transform:translateX(0);}}100%{{transform:translateX(-50%);}}
+/* Shared section styles */
+.about-block,.team-block,.coding-block,.products-block{{max-width:680px;margin:0 auto;padding:56px 28px;}}
+.about-eyebrow{{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:#c1a3a2;margin-bottom:14px;}}
+.about-title{{font-family:'Cormorant Garamond',serif;font-size:48px;font-style:italic;font-weight:300;color:#0d0906;line-height:1.1;margin-bottom:8px;}}
+.about-sub{{font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#9d7f6a;margin-bottom:20px;}}
+.about-body{{font-size:15px;color:#444;line-height:1.8;}}
+.about-timestamp{{margin-top:20px;font-size:11px;color:#c1a3a2;letter-spacing:0.08em;background:rgba(193,163,162,0.08);border:1px solid rgba(193,163,162,0.2);border-radius:8px;padding:10px 14px;display:inline-block;}}
+/* Team */
+.team-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:4px;}}
+.team-card{{background:#fff;border:1px solid rgba(193,163,162,0.2);border-radius:16px;padding:24px 16px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.04);}}
+.team-avatar{{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;font-family:'Jost',sans-serif;font-size:18px;font-weight:400;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;}}
+.team-name{{font-family:'Cormorant Garamond',serif;font-size:16px;font-style:italic;color:#0d0906;margin-bottom:4px;}}
+.team-role{{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#9d7f6a;}}
+/* Coding */
+.coding-title{{font-family:'Cormorant Garamond',serif;font-size:30px;font-style:italic;font-weight:300;color:#0d0906;line-height:1.25;margin-bottom:10px;}}
+.coding-timestamp{{font-size:11px;color:#c1a3a2;background:rgba(193,163,162,0.08);border:1px solid rgba(193,163,162,0.2);border-radius:8px;padding:8px 14px;display:inline-block;margin-bottom:18px;}}
+.coding-body{{font-size:14px;color:#555;line-height:1.85;margin-bottom:24px;}}
+.coding-episodes{{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;}}
+.ep-card{{background:#fff;border:1px solid rgba(193,163,162,0.25);border-radius:12px;padding:16px 14px;}}
+.ep-card.ep-locked{{opacity:0.5;}}
+.ep-num{{font-size:9px;letter-spacing:0.18em;color:#c1a3a2;margin-bottom:6px;}}
+.ep-title{{font-size:13px;font-weight:400;color:#0d0906;margin-bottom:4px;}}
+.ep-time{{font-size:10px;color:#9d7f6a;letter-spacing:0.08em;}}
+.coding-cta{{display:inline-block;background:#0d0906;color:#fff;padding:14px 28px;border-radius:30px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;text-decoration:none;transition:background 0.3s;}}
+.coding-cta:hover{{background:#c1a3a2;}}
+/* Products */
+.products-grid{{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px;}}
+.prod-section{{background:#fff;border:1px solid rgba(193,163,162,0.2);border-radius:16px;padding:24px 20px;}}
+.prod-section.gift{{border-color:#9d7f6a;background:linear-gradient(135deg,#faf6f3,#fff);}}
+.prod-section-title{{font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:#0d0906;margin-bottom:8px;}}
+.prod-section-desc{{font-size:12px;color:#666;line-height:1.7;margin-bottom:16px;}}
+.prod-btn{{display:inline-block;background:#c1a3a2;color:#fff;padding:10px 20px;border-radius:20px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;}}
+.prod-badge{{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#9d7f6a;background:rgba(157,127,106,0.1);border:1px solid rgba(157,127,106,0.25);padding:6px 12px;border-radius:20px;display:inline-block;}}
+/* Global footer */
+.global-footer{{background:#0d0906;padding:32px 28px;text-align:center;}}
+.gf-links{{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}}
+.gf-links a{{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(193,163,162,0.7);text-decoration:none;transition:color 0.2s;cursor:pointer;}}
+.gf-links a:hover{{color:#c1a3a2;}}
+.gf-copy{{font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:0.1em;margin-bottom:6px;}}
+.gf-dem{{font-size:10px;color:rgba(193,163,162,0.5);letter-spacing:0.08em;}}
+@media(max-width:600px){{.team-grid{{grid-template-columns:1fr;}}.products-grid{{grid-template-columns:1fr;}}.about-title{{font-size:36px;}}
 .card{{background:#fff;border-radius:24px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 12px 48px rgba(0,0,0,0.08);border:1px solid rgba(193,163,162,0.20);}}
 .logo{{text-align:center;margin-bottom:32px;}}
 .logo-text{{font-family:'Cormorant Garamond',serif;font-size:32px;font-style:italic;font-weight:300;color:#0d0906;}}
@@ -2432,7 +2480,7 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
 .back{{text-align:center;margin-top:20px;font-size:11px;color:rgba(0,0,0,0.35);letter-spacing:0.08em;}}
 .back a{{color:#9d7f6a;text-decoration:none;}}
 </style></head><body>
-<div class="card">
+<div class="login-wrap"><div class="card">
   <div class="logo"><div class="logo-text">SupportRD</div><div class="logo-sub">Hair Advisor</div></div>
   <h2>Welcome back</h2>
   <div class="tabs">
@@ -2470,7 +2518,117 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
     <div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="outline" data-text="sign_in_with" data-size="large" data-logo_alignment="left"></div>
   </div>
   <div class="back"><a href="/">← Back to Hair Advisor</a></div>
+</div></div><!-- /login-wrap -->
+
+<!-- ── BRAND STRIP ─────────────────────────────────────────── -->
+<div class="brand-strip">
+  <div class="brand-strip-inner">
+    <div class="brand-pill">✦ Hair Care</div>
+    <div class="brand-pill">✦ Gift Shop</div>
+    <div class="brand-pill">✦ AI Advisor</div>
+    <div class="brand-pill">✦ Coding Guide</div>
+    <div class="brand-pill">✦ Hands-Free Drive</div>
+    <div class="brand-pill">✦ Hair Care</div>
+    <div class="brand-pill">✦ Gift Shop</div>
+    <div class="brand-pill">✦ AI Advisor</div>
+    <div class="brand-pill">✦ Coding Guide</div>
+    <div class="brand-pill">✦ Hands-Free Drive</div>
+    <div class="brand-pill">✦ Gift Shop</div>
+    <div class="brand-pill">✦ AI Advisor</div>
+    <div class="brand-pill">✦ Coding Guide</div>
+    <div class="brand-pill">✦ Hands-Free Drive</div>
+  </div>
 </div>
+
+<!-- ── ABOUT SUPPORT ───────────────────────────────────────── -->
+<div class="about-block">
+  <div class="about-eyebrow">✦ Who We Are</div>
+  <div class="about-title">Support</div>
+  <div class="about-sub">Born in the Dominican Republic. Built for the world.</div>
+  <div class="about-body">Support is a product company built on one belief — that real people deserve real tools. We started with hair care, built an AI advisor named Aria, and we're expanding into technology education, smart products, and hands-free living. Everything we build is designed to give you more power over your own life.</div>
+  <div class="about-timestamp">⏱ Official Coding Education Program launched: <strong>March 12, 2026</strong></div>
+</div>
+
+<!-- ── TEAM ────────────────────────────────────────────────── -->
+<div class="team-block">
+  <div class="about-eyebrow">✦ The Team</div>
+  <div class="team-grid">
+    <div class="team-card">
+      <div class="team-avatar">AF</div>
+      <div class="team-name">Anthony Figueroa</div>
+      <div class="team-role">Design &amp; Creative Direction</div>
+    </div>
+    <div class="team-card">
+      <div class="team-avatar">CF</div>
+      <div class="team-name">Crystal Figueroa</div>
+      <div class="team-role">Co-CEO</div>
+    </div>
+    <div class="team-card">
+      <div class="team-avatar">EV</div>
+      <div class="team-name">Evelyn</div>
+      <div class="team-role">Co-CEO &amp; Shampoo Inventor</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CODING STORY ─────────────────────────────────────────── -->
+<div class="coding-block">
+  <div class="about-eyebrow">✦ Coding Guide</div>
+  <div class="coding-title">I Survived a European Coding Expert.<br>Now I Build My Own Apps with AI.</div>
+  <div class="coding-timestamp">📅 Program officially launched: <strong>March 12, 2026</strong></div>
+  <div class="coding-body">This is a real story. I went through the fire — learning from a coding expert from Europe, following along through 10 to 15 minute and 15 to 20 minute lessons, watching someone else move fast while I tried to keep up. And then something clicked. I started building. I started shipping. I started using AI as a co-pilot and I haven't stopped since. <br><br>AI has opened a new lane for a new kind of millionaire — people who couldn't afford to go to school for this, people who were told it was too hard, people who just needed the right guide. That guide is now here.</div>
+  <div class="coding-episodes">
+    <div class="ep-card"><div class="ep-num">01</div><div class="ep-title">Starting From Zero</div><div class="ep-time">10–15 min</div></div>
+    <div class="ep-card"><div class="ep-num">02</div><div class="ep-title">Surviving the Expert</div><div class="ep-time">15–20 min</div></div>
+    <div class="ep-card"><div class="ep-num">03</div><div class="ep-title">AI as Your Co-Pilot</div><div class="ep-time">15–20 min</div></div>
+    <div class="ep-card ep-locked"><div class="ep-num">04</div><div class="ep-title">Building Real Products</div><div class="ep-time">Coming Soon</div></div>
+  </div>
+  <a href="/dashboard" class="coding-cta">Sign In to Access the Full Guide →</a>
+</div>
+
+<!-- ── PRODUCTS PREVIEW ────────────────────────────────────── -->
+<div class="products-block">
+  <div class="about-eyebrow">✦ What We Make</div>
+  <div class="products-grid">
+    <div class="prod-section">
+      <div class="prod-section-title">💧 Shampoo &amp; Hair Care</div>
+      <div class="prod-section-desc">Professional-grade formulas made for real hair. Developed by Evelyn. Sold on supportrd.com.</div>
+      <a href="https://supportrd.com" target="_blank" class="prod-btn">Shop Hair Care →</a>
+    </div>
+    <div class="prod-section gift">
+      <div class="prod-section-title">🎁 Gift Shop — Coming Soon</div>
+      <div class="prod-section-desc">Our first smart product: the <strong>Auto Grinder</strong> — a handheld electronic herb grinder. Drop it in, press once, done. Like a bullet blender but pocket-sized.</div>
+      <div class="prod-badge">🔧 In Development</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── GLOBAL FOOTER ───────────────────────────────────────── -->
+<div class="global-footer">
+  <div class="gf-links">
+    <a href="#about" onclick="document.querySelector('.about-block').scrollIntoView({behavior:'smooth'});return false;">About Us</a>
+    <a href="#team" onclick="document.querySelector('.team-block').scrollIntoView({behavior:'smooth'});return false;">Team</a>
+    <a href="#coding" onclick="document.querySelector('.coding-block').scrollIntoView({behavior:'smooth'});return false;">Coding Guide</a>
+    <a href="https://supportrd.com" target="_blank">Shop</a>
+    <a href="mailto:hello@supportrd.com">Contact</a>
+    <a href="#privacy">Privacy Policy</a>
+    <a href="#campaign" onclick="document.getElementById('campaign-modal').style.display='flex';return false;">🗳 Political Position</a>
+  </div>
+  <div class="gf-copy">© 2026 Support. Born in the Dominican Republic. All rights reserved.</div>
+  <div class="gf-dem">🫏 Affiliated: Democratic Party</div>
+</div>
+
+<!-- ── CAMPAIGN MODAL ─────────────────────────────────────── -->
+<div id="campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;padding:24px;" onclick="this.style.display='none'">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;max-width:440px;width:100%;position:relative;" onclick="event.stopPropagation()">
+    <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#c1a3a2;margin-bottom:10px;">✦ Our Political Position</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:#0d0906;margin-bottom:14px;">Ban Pornography on the Internet</div>
+    <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:20px;">Support the company publicly backs the campaign to ban pornography on the internet. We believe the unrestricted access to explicit content online causes documented harm to children, relationships, and communities. This is our official stated position as a company. We are affiliated with the Democratic Party.</div>
+    <div style="font-size:10px;color:#999;margin-bottom:20px;">This reflects the personal and company position of Support's leadership. It does not represent all staff.</div>
+    <button onclick="document.getElementById('campaign-modal').style.display='none'" style="background:#c1a3a2;color:#fff;border:none;border-radius:20px;padding:12px 28px;font-size:12px;letter-spacing:0.1em;cursor:pointer;">Close</button>
+  </div>
+</div>
+
 <script>
 function showForgotForm(){{document.getElementById('login-form').style.display='none';document.getElementById('forgot-form').style.display='block';document.querySelector('h2').textContent='Reset Password';hideMsg();}}
 function hideForgotForm(){{document.getElementById('forgot-form').style.display='none';document.getElementById('login-form').style.display='block';document.querySelector('h2').textContent='Welcome back';hideMsg();}}
@@ -2766,6 +2924,54 @@ body::before{content:'';position:fixed;inset:0;
 .occ-sum-chip.occ-sum-product{border-color:rgba(224,176,80,0.3);color:var(--gold);}
 .occ-sum-chip.occ-sum-action{border-color:rgba(96,168,255,0.3);color:var(--blue);}
 /* ── ARIA JOURNEY ────────────────────────────────── */
+/* ── DRIVE NAV BUTTON ──────────────────────────────────── */
+.drive-nav-btn{background:linear-gradient(135deg,var(--rose),#d06050);color:#fff;border:none;border-radius:20px;padding:7px 16px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;cursor:pointer;white-space:nowrap;box-shadow:0 2px 12px rgba(240,160,144,0.4);transition:all 0.2s;margin-left:10px;}
+.drive-nav-btn:hover{transform:scale(1.04);box-shadow:0 4px 20px rgba(240,160,144,0.55);}
+.mob-drive-btn{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--rose),#d06050);color:#fff;border:none;border-radius:28px;padding:13px 32px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.08em;cursor:pointer;z-index:200;box-shadow:0 4px 24px rgba(240,160,144,0.5);white-space:nowrap;display:none;}
+@media(max-width:768px){.mob-drive-btn{display:block;}}
+/* ── DRIVE FULLSCREEN PAGE ─────────────────────────────── */
+#pp-drive{padding:0;background:#0a0a0f;}
+.drive-fullscreen{display:flex;flex-direction:column;height:100vh;background:#0a0a0f;color:#fff;position:relative;}
+.drive-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
+.drive-header-left{display:flex;align-items:center;gap:10px;}
+.drive-status-dot{width:8px;height:8px;border-radius:50%;background:#4caf50;box-shadow:0 0 8px #4caf50;}
+.drive-title-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff;letter-spacing:0.04em;}
+.drive-engine-badge{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:10px;}
+.drive-header-right{}
+.drive-close-btn{background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.5);padding:7px 16px;border-radius:16px;font-size:11px;cursor:pointer;font-family:'Space Grotesk',sans-serif;letter-spacing:0.06em;transition:all 0.2s;}
+.drive-close-btn:hover{border-color:var(--rose);color:var(--rose);}
+.drive-aria-row{display:flex;align-items:center;gap:16px;padding:20px 24px;flex-shrink:0;}
+.drive-aria-orb{position:relative;width:56px;height:56px;flex-shrink:0;}
+.drive-aria-letter{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;position:relative;z-index:2;}
+.drive-aria-pulse{position:absolute;inset:-8px;border-radius:50%;background:radial-gradient(circle,rgba(240,160,144,0.2),transparent 70%);animation:drivePulse 2.4s ease-out infinite;pointer-events:none;}
+@keyframes drivePulse{0%{opacity:0.8;transform:scale(0.9);}70%{opacity:0;transform:scale(1.5);}100%{opacity:0;}}
+.drive-aria-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;}
+.drive-aria-status{font-size:13px;color:rgba(255,255,255,0.5);margin-top:3px;}
+/* Conversation area */
+.drive-msgs{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:20px;scroll-behavior:smooth;}
+.drive-msg{display:flex;max-width:90%;}
+.drive-msg-aria{align-self:flex-start;}
+.drive-msg-user{align-self:flex-end;flex-direction:row-reverse;}
+.drive-msg-bubble{padding:18px 22px;border-radius:18px;font-size:22px;line-height:1.55;font-family:'Space Grotesk',sans-serif;font-weight:400;}
+.drive-msg-aria .drive-msg-bubble{background:rgba(255,255,255,0.07);color:#fff;border-radius:4px 18px 18px 18px;}
+.drive-msg-user .drive-msg-bubble{background:var(--rose);color:#fff;border-radius:18px 4px 18px 18px;font-size:20px;}
+/* Input */
+.drive-input-row{display:flex;align-items:center;gap:10px;padding:16px 20px;background:rgba(255,255,255,0.04);border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
+.drive-mic-btn{width:60px;height:60px;border-radius:50%;background:rgba(240,160,144,0.15);border:2px solid var(--rose);color:var(--rose);font-size:24px;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
+.drive-mic-btn.listening{background:var(--rose);color:#fff;animation:micPulse 1s ease-in-out infinite;}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(240,160,144,0.5);}50%{box-shadow:0 0 0 12px rgba(240,160,144,0);}}
+.drive-text-input{flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:30px;padding:16px 22px;font-size:18px;color:#fff;font-family:'Space Grotesk',sans-serif;outline:none;}
+.drive-text-input::placeholder{color:rgba(255,255,255,0.25);}
+.drive-text-input:focus{border-color:rgba(240,160,144,0.4);}
+.drive-send-btn{width:56px;height:56px;border-radius:50%;background:var(--rose);border:none;color:#fff;font-size:22px;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
+.drive-send-btn:hover{background:#c06050;transform:scale(1.05);}
+.drive-mic-status{text-align:center;padding:10px;font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:0.1em;flex-shrink:0;}
+@media(max-width:600px){.drive-msg-bubble{font-size:19px;}.drive-text-input{font-size:16px;}}
+/* ── GLOBAL FOOTER IN DASHBOARD ────────────────────────── */
+.dashboard-footer{background:var(--bg);border-top:1px solid var(--border);padding:16px 28px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:center;}
+.dashboard-footer a{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;cursor:pointer;}
+.dashboard-footer a:hover{color:var(--rose);}
+
 .aj-tier{display:flex;align-items:flex-start;gap:20px;margin-bottom:28px;position:relative;z-index:2;}
 /* Orb container */
 .aj-orb{position:relative;width:72px;height:72px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
@@ -3108,6 +3314,9 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
     <div class="nav-tab" onclick="switchPTab('settings')">⚙ Settings</div>
   </div>
+  <button class="drive-nav-btn" onclick="switchPTab('drive')" id="drive-nav-btn">
+    🚗 Hands-Free Drive
+  </button>
   <div class="nav-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
     <span class="nav-name" id="nav-name">—</span>
@@ -3135,6 +3344,9 @@ body::before{content:'';position:fixed;inset:0;
     <span class="mob-tab-icon">⋯</span>More
   </button>
 </div>
+<button class="mob-drive-btn" id="mob-drive-btn" onclick="switchPTab('drive')">
+  🚗 Hands-Free Drive
+</button>
 
 <!-- MOBILE MORE SHEET -->
 <div class="mob-more-overlay" id="mob-more-overlay" onclick="closeMobMore()">
@@ -3993,6 +4205,58 @@ body::before{content:'';position:fixed;inset:0;
 </div>
 
 <!-- ✦ SETTINGS -->
+
+<!-- ✦ HANDS-FREE DRIVE -->
+<div class="ppage" id="pp-drive">
+<div class="drive-fullscreen" id="drive-fullscreen">
+
+  <!-- Header bar -->
+  <div class="drive-header">
+    <div class="drive-header-left">
+      <div class="drive-status-dot" id="drive-dot"></div>
+      <div class="drive-title-text">Hands-Free Drive</div>
+      <div class="drive-engine-badge">Powered by Claude claude-sonnet-4-20250514</div>
+    </div>
+    <div class="drive-header-right">
+      <button class="drive-close-btn" onclick="switchPTab('overview')">✕ Exit Drive Mode</button>
+    </div>
+  </div>
+
+  <!-- Aria avatar + status -->
+  <div class="drive-aria-row">
+    <div class="drive-aria-orb" id="drive-aria-orb">
+      <div class="drive-aria-letter">A</div>
+      <div class="drive-aria-pulse"></div>
+    </div>
+    <div>
+      <div class="drive-aria-name">Aria</div>
+      <div class="drive-aria-status" id="drive-aria-status">Ready. Tap the mic or type below.</div>
+    </div>
+  </div>
+
+  <!-- Conversation area — big and bold for reading while driving -->
+  <div class="drive-msgs" id="drive-msgs">
+    <div class="drive-msg drive-msg-aria">
+      <div class="drive-msg-bubble">Hey! I'm Aria. I'm in hands-free mode — speak or type and I'll respond. Drive safe. 🚗</div>
+    </div>
+  </div>
+
+  <!-- Input row -->
+  <div class="drive-input-row">
+    <button class="drive-mic-btn" id="drive-mic-btn" onclick="driveMicTap()">🎤</button>
+    <input type="text" class="drive-text-input" id="drive-text-input"
+      placeholder="Type or speak to Aria…"
+      onkeydown="if(event.key==='Enter')driveSend()">
+    <button class="drive-send-btn" onclick="driveSend()">↑</button>
+  </div>
+
+  <!-- Mic status -->
+  <div class="drive-mic-status" id="drive-mic-status">Tap mic to speak hands-free</div>
+
+</div>
+</div>
+<!-- /DRIVE PAGE -->
+
 <div class="ppage" id="pp-settings">
   <div class="ppage-head">
     <div class="ppage-title">⚙ Settings</div>
@@ -4047,6 +4311,21 @@ body::before{content:'';position:fixed;inset:0;
         <span id="st-notif-val" style="font-size:12px;color:var(--muted2);">Checking…</span>
       </div>
       <button class="settings-save-btn" id="st-push-btn" onclick="stTogglePush()">🔔 Enable Push Notifications</button>
+    </div>
+
+    <!-- Hands-Free Drive -->
+    <div class="settings-section">
+      <div class="settings-section-title">🚗 Hands-Free Drive Mode</div>
+      <div style="font-size:12px;color:var(--muted2);line-height:1.7;margin-bottom:14px;">Drive Mode gives you a full-screen, large-text conversation with Aria — designed to be used safely while driving. Speak hands-free or type at stops.</div>
+      <div class="settings-row" style="margin-bottom:10px;">
+        <span class="settings-label">AI Engine</span>
+        <span style="font-size:12px;color:var(--muted2);">Claude claude-sonnet-4-20250514 (Anthropic)</span>
+      </div>
+      <div class="settings-row" style="margin-bottom:14px;">
+        <span class="settings-label">Voice Input</span>
+        <span style="font-size:12px;color:var(--muted2);">Web Speech API (browser)</span>
+      </div>
+      <button class="settings-save-btn" onclick="switchPTab('drive')" style="background:var(--rose);">🚗 Open Hands-Free Drive →</button>
     </div>
 
     <!-- Account -->
@@ -5544,6 +5823,7 @@ const _PAGE_MAP = {
   whatsapp: {page:'pp-whatsapp',   open: openWhatsappPage},
   settings: {page:'pp-settings',   open: openSettingsPage},
   history:  {page:'pp-overview',   open: ()=>{}},
+  drive:    {page:'pp-drive',       open: openDrivePage},
 };
 
 let _currentTab = 'overview';
@@ -6051,9 +6331,155 @@ function ajRenderTimeline(sessions, depthIdx){
   }).join('');
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// ✦ HANDS-FREE DRIVE MODE
+// ═══════════════════════════════════════════════════════════════
+let _driveBusy = false;
+let _driveRecog = null;
+let _driveMsgHistory = [];
+
+function openDrivePage(){
+  const orb = document.getElementById('drive-aria-orb');
+  if(orb) orb.querySelector('.drive-aria-pulse').style.animationPlayState='running';
+}
+
+async function driveSend(){
+  const inp = document.getElementById('drive-text-input');
+  const msg = (inp?.value||'').trim();
+  if(!msg||_driveBusy) return;
+  inp.value='';
+  await driveAsk(msg);
+}
+
+async function driveMicTap(){
+  const btn = document.getElementById('drive-mic-btn');
+  const status = document.getElementById('drive-mic-status');
+  if(_driveRecog){ _driveRecog.stop(); _driveRecog=null; btn.classList.remove('listening'); status.textContent='Tap mic to speak hands-free'; return; }
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ showToast('Speech recognition not supported in this browser'); return; }
+  _driveRecog = new SR();
+  _driveRecog.lang='en-US'; _driveRecog.interimResults=false; _driveRecog.maxAlternatives=1;
+  btn.classList.add('listening');
+  status.textContent='🎤 Listening…';
+  _driveRecog.onresult = e => {
+    const txt = e.results[0][0].transcript;
+    const inp = document.getElementById('drive-text-input');
+    if(inp) inp.value=txt;
+    driveAsk(txt);
+  };
+  _driveRecog.onerror = () => { btn.classList.remove('listening'); status.textContent='Mic error — try again'; _driveRecog=null; };
+  _driveRecog.onend   = () => { btn.classList.remove('listening'); status.textContent='Tap mic to speak hands-free'; _driveRecog=null; };
+  _driveRecog.start();
+}
+
+async function driveAsk(msg){
+  if(_driveBusy) return;
+  _driveBusy = true;
+  const status = document.getElementById('drive-aria-status');
+
+  // Add user message
+  driveAddMsg(msg, 'user');
+  _driveMsgHistory.push({role:'user', content:msg});
+
+  if(status) status.textContent='Aria is thinking…';
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:400,
+        system:'You are Aria, a warm and helpful AI assistant for Support (the company). The user is driving. Keep responses SHORT — 1 to 3 sentences max. Be conversational, clear, and reassuring. Never give long lists. The person may be using voice — write naturally as you would speak.',
+        messages: _driveMsgHistory
+      })
+    });
+    const d = await r.json();
+    const reply = d.content?.[0]?.text || 'Sorry, I didn\'t catch that. Try again.';
+    _driveMsgHistory.push({role:'assistant', content:reply});
+    driveAddMsg(reply,'aria');
+    if(status) status.textContent='Ready. Speak or type.';
+    // Auto-speak response
+    driveSpeak(reply);
+  }catch(e){
+    driveAddMsg('Aria had a connection issue. Try again.','aria');
+    if(status) status.textContent='Connection error — try again';
+  }
+  _driveBusy=false;
+}
+
+function driveAddMsg(text, role){
+  const msgs = document.getElementById('drive-msgs');
+  if(!msgs) return;
+  const div = document.createElement('div');
+  div.className = 'drive-msg drive-msg-'+role;
+  div.innerHTML = '<div class="drive-msg-bubble">'+text+'</div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function driveSpeak(text){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate=0.95; u.pitch=1.05; u.volume=1;
+  window.speechSynthesis.speak(u);
+}
+
+
 loadData();
 loadRealStats();
 </script>
+<!-- DASHBOARD GLOBAL FOOTER -->
+<div class="dashboard-footer" id="dashboard-footer">
+  <a onclick="switchPTab('overview')">Overview</a>
+  <a onclick="switchPTab('profile')">Hair Profile</a>
+  <a onclick="switchPTab('settings')">Settings</a>
+  <a href="https://supportrd.com" target="_blank">Shop</a>
+  <a href="mailto:hello@supportrd.com">Contact</a>
+  <a onclick="document.getElementById('dash-campaign-modal').style.display='flex'">🗳 Political Position</a>
+  <a onclick="document.getElementById('dash-about-modal').style.display='flex'">About Us</a>
+  <a onclick="document.getElementById('dash-privacy-modal').style.display='flex'">Privacy Policy</a>
+</div>
+
+<!-- CAMPAIGN MODAL (dashboard) -->
+<div id="dash-campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:24px;" onclick="this.style.display='none'">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;max-width:440px;width:100%;" onclick="event.stopPropagation()">
+    <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:10px;">✦ Our Political Position</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);margin-bottom:12px;">Ban Pornography on the Internet</div>
+    <div style="font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:16px;">Support the company publicly backs the campaign to ban pornography on the internet. We believe unrestricted access to explicit content online causes documented harm to children, relationships, and communities. This is our official stated position. We are affiliated with the Democratic Party.</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:18px;">This reflects the personal and company position of Support's leadership.</div>
+    <button onclick="document.getElementById('dash-campaign-modal').style.display='none'" style="background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:11px;letter-spacing:0.1em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Close</button>
+  </div>
+</div>
+
+<!-- ABOUT MODAL (dashboard) -->
+<div id="dash-about-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:24px;" onclick="this.style.display='none'">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">
+    <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:10px;">✦ About Support</div>
+    <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px;">Born in the Dominican Republic.</div>
+    <div style="font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:20px;">Support is a product company built on one belief — that real people deserve real tools. We started with hair care, built Aria, and we're expanding into technology education, smart products, and hands-free living.</div>
+    <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--rose);margin-bottom:12px;">The Team</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;"><div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;color:#fff;font-size:12px;flex-shrink:0;">AF</div><div><div style="font-size:13px;font-weight:600;color:var(--text);">Anthony Figueroa</div><div style="font-size:10px;color:var(--muted);letter-spacing:0.08em;">Design &amp; Creative Direction</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;"><div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#c08020);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;color:#fff;font-size:12px;flex-shrink:0;">CF</div><div><div style="font-size:13px;font-weight:600;color:var(--text);">Crystal Figueroa</div><div style="font-size:10px;color:var(--muted);letter-spacing:0.08em;">Co-CEO</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;"><div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#2060c0);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;color:#fff;font-size:12px;flex-shrink:0;">EV</div><div><div style="font-size:13px;font-weight:600;color:var(--text);">Evelyn</div><div style="font-size:10px;color:var(--muted);letter-spacing:0.08em;">Co-CEO &amp; Shampoo Inventor</div></div></div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;">⏱ Coding Education officially launched March 12, 2026</div>
+    <button onclick="document.getElementById('dash-about-modal').style.display='none'" style="margin-top:16px;background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:11px;letter-spacing:0.1em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Close</button>
+  </div>
+</div>
+
+<!-- PRIVACY MODAL (dashboard) -->
+<div id="dash-privacy-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:24px;" onclick="this.style.display='none'">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">
+    <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:10px;">✦ Privacy Policy</div>
+    <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:14px;">Your Data at Support</div>
+    <div style="font-size:12px;color:var(--muted2);line-height:1.8;">We collect your name, email, hair profile data, and chat history with Aria. This data is used solely to operate the app and improve Aria's advice to you. We do not sell your data to third parties. Your chat conversations are stored securely. You may delete your account at any time from Settings, which permanently removes all your data. For questions contact hello@supportrd.com.</div>
+    <button onclick="document.getElementById('dash-privacy-modal').style.display='none'" style="margin-top:20px;background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:11px;letter-spacing:0.1em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Close</button>
+  </div>
+</div>
 </body></html>"""
     return Response(html, mimetype='text/html')
 
