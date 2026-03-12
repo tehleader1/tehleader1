@@ -4290,42 +4290,14 @@ let _paMode        = 'camera';
 let _paStream      = null;
 let _paPhotoB64    = null;
 let _paScanStep    = 0;
-let _paScanning    = false;
 let _paCameraReady = false;
-let _paRafId       = null;
-let _paStepLocked  = false;
-let _paInPosition  = false;
-let _paHoldStart   = 0;
-let _paDetector    = null;
-let _paFaceMode    = 'auto'; // 'auto' | 'manual'
 
 // ── STEPS ─────────────────────────────────────────────────────────
 const PA_STEPS = [
-  { tilt:'center', holdMs:1000, text:'Face the camera straight on',  sub:'Hold still — Aria is reading your hair' },
-  { tilt:'left',   holdMs:800,  text:'Turn your head to the LEFT',   sub:'Keep turning until the ring fills green' },
-  { tilt:'right',  holdMs:800,  text:'Now turn to the RIGHT',        sub:'Keep turning until the ring fills green' },
+  { tilt:'center', text:'Face the camera straight on',   sub:'Position your hair in the oval, then tap Next' },
+  { tilt:'left',   text:'Turn your head to the LEFT ←',  sub:'Turn left so Aria can see that side, then tap Next' },
+  { tilt:'right',  text:'Now turn to the RIGHT →',       sub:'Turn right so Aria can see that side, then tap Capture' },
 ];
-
-// ── INJECT OVERLAY UI ─────────────────────────────────────────────
-function paInjectPoseUI(){
-  if(document.getElementById('pa-pose-arrow')) return;
-  const ov = document.querySelector('.pa-scanner-overlay');
-  if(!ov) return;
-
-  const arrow = document.createElement('div');
-  arrow.id = 'pa-pose-arrow';
-  arrow.style.cssText = 'position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:26px;font-weight:700;color:#fff;opacity:0;transition:color 0.15s,opacity 0.15s;pointer-events:none;white-space:nowrap;text-shadow:0 0 10px rgba(255,255,255,0.5)';
-  ov.appendChild(arrow);
-
-  const ring = document.createElement('div');
-  ring.id = 'pa-hold-ring';
-  ring.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100px;height:100px;pointer-events:none;';
-  ring.innerHTML = '<svg viewBox="0 0 100 100" style="width:100px;height:100px;transform:rotate(-90deg)">'
-    +'<circle cx="50" cy="50" r="44" fill="none" stroke="rgba(48,232,144,0.15)" stroke-width="5"/>'
-    +'<circle id="pa-hold-arc" cx="50" cy="50" r="44" fill="none" stroke="#30e890" stroke-width="5" stroke-linecap="round" stroke-dasharray="276" stroke-dashoffset="276" style="transition:stroke-dashoffset 0.06s linear;filter:drop-shadow(0 0 5px #30e890)"/>'
-    +'</svg>';
-  ov.appendChild(ring);
-}
 
 // ── MODE SWITCH ───────────────────────────────────────────────────
 function paSetMode(mode){
@@ -4358,16 +4330,6 @@ async function paOpenCamera(){
     document.getElementById('pa-no-cam-link').style.display    = 'block';
     document.getElementById('pa-instruction-text').textContent = 'Position your hair in the oval guide';
     document.getElementById('pa-instruction-sub').textContent  = 'Good lighting works best · tap Start Scan when ready';
-    paInjectPoseUI();
-    // Try native FaceDetector
-    if(typeof FaceDetector !== 'undefined'){
-      try{
-        _paDetector = new FaceDetector({fastMode:true, maxDetectedFaces:1});
-        _paFaceMode = 'auto';
-      }catch(e){ _paDetector = null; _paFaceMode = 'manual'; }
-    } else {
-      _paFaceMode = 'manual';
-    }
   }catch(err){
     _paCameraReady = false;
     openBtn.disabled = false;
@@ -4379,221 +4341,59 @@ async function paOpenCamera(){
 
 // ── STOP CAMERA ───────────────────────────────────────────────────
 function paStopCamera(){
-  if(_paRafId){ clearTimeout(_paRafId); cancelAnimationFrame(_paRafId); _paRafId=null; }
-  _paScanning=false; _paStepLocked=false; _paInPosition=false; _paCameraReady=false;
+  _paCameraReady = false;
   if(_paStream){ _paStream.getTracks().forEach(t=>t.stop()); _paStream=null; }
 }
 
 // ── START SCAN ────────────────────────────────────────────────────
 function paStartScan(){
   if(!_paCameraReady){ showToast('Camera not ready'); return; }
-  _paScanStep=0; _paPhotoB64=null; _paScanning=true; _paStepLocked=false; _paInPosition=false;
-
+  _paScanStep = 0; _paPhotoB64 = null;
   document.getElementById('pa-start-scan-btn').style.display = 'none';
   document.getElementById('pa-no-cam-link').style.display    = 'none';
-  document.getElementById('pa-next-btn').style.display       = 'none';
   document.getElementById('pa-scanner-wrap').classList.add('scanning');
   document.getElementById('pa-scan-line').classList.add('active');
   document.getElementById('pa-turn-track').style.display = 'flex';
-
-  // Always use auto detection (pixel CoM works on all browsers)
-  _paNeutralFaceX = null;
-  _paFaceSamples = [];
   paShowStep(0);
-  paDetectLoop();
 }
 
-// ── MANUAL TAP MODE (fallback) ────────────────────────────────────
-function paShowStepManual(step){
-  const s = PA_STEPS[step];
-  document.getElementById('pa-instruction-text').textContent = s.text;
-  const btn = document.getElementById('pa-next-btn');
-  btn.style.display = 'block';
-  if(step === PA_STEPS.length - 1){
-    document.getElementById('pa-instruction-sub').textContent = 'Tap Capture when ready';
-    btn.textContent = '📸 Capture';
-    btn.onclick = paCaptureAndAnalyze;
-  } else {
-    document.getElementById('pa-instruction-sub').textContent = 'Get into position then tap Next';
-    btn.textContent = 'Next →';
-    btn.onclick = ()=>{ _paScanStep++; paShowStepManual(_paScanStep); };
-  }
-  for(let i=0;i<3;i++){ const d=document.getElementById('pa-dot-'+i); if(d) d.classList.toggle('done',i<step); }
-}
-
-// ── FACE TRACKING ────────────────────────────────────────────────
-// Tracks horizontal centre-of-mass of face brightness in frame.
-// Returns 0-1 (0=left edge, 1=right edge of video frame).
-function paGetFaceX(video){
-  if(video.readyState < 2) return null;
-  const canvas = document.getElementById('pa-capture-canvas');
-  const W = 64, H = 48;
-  canvas.width = W; canvas.height = H;
-  canvas.getContext('2d').drawImage(video, 0, 0, W, H);
-  const ctx = canvas.getContext('2d');
-  // Middle 70% of frame height
-  const y0 = Math.floor(H*0.15), y1 = Math.floor(H*0.85);
-  const data = ctx.getImageData(0, y0, W, y1-y0).data;
-  const rows = y1-y0;
-  // Sum brightness per column
-  const col = new Float32Array(W);
-  for(let y=0;y<rows;y++) for(let x=0;x<W;x++) col[x]+=(data[(y*W+x)*4]+data[(y*W+x)*4+1]+data[(y*W+x)*4+2])/3;
-  // Weighted centre-of-mass
-  let wSum=0, tot=0;
-  for(let x=0;x<W;x++){ wSum+=x*col[x]; tot+=col[x]; }
-  return tot>0 ? wSum/tot/W : null; // 0-1
-}
-
-let _paNeutralFaceX = null;
-let _paFaceSamples  = [];
-const PA_THR = 0.04; // turn threshold — fraction of frame width
-
-async function paDetectLoop(){
-  if(!_paScanning) return;
-  const video = document.getElementById('pa-video');
-  if(video.readyState < 2){ _paRafId = setTimeout(()=>requestAnimationFrame(paDetectLoop),100); return; }
-
-  let faceX = null;
-
-  // Try native FaceDetector first (Chrome/Edge — most accurate)
-  if(_paDetector){
-    try{
-      const faces = await _paDetector.detect(video);
-      if(faces && faces.length > 0){
-        const b = faces[0].boundingBox;
-        faceX = (b.x + b.width/2) / (video.videoWidth||1);
-      }
-    }catch(e){ _paDetector=null; }
-  }
-
-  // Pixel CoM fallback (works on all browsers)
-  if(faceX === null) faceX = paGetFaceX(video);
-
-  if(faceX !== null){
-    _paFaceSamples.push(faceX);
-    if(_paFaceSamples.length > 8) _paFaceSamples.shift();
-    const smooth = _paFaceSamples.reduce((a,b)=>a+b,0)/_paFaceSamples.length;
-
-    // Calibrate on first 8 frames
-    if(_paNeutralFaceX === null){
-      if(_paFaceSamples.length >= 8){
-        _paNeutralFaceX = smooth;
-        document.getElementById('pa-instruction-sub').textContent = PA_STEPS[0].sub;
-      } else {
-        document.getElementById('pa-instruction-sub').textContent = 'Calibrating… hold still (' + _paFaceSamples.length + '/8)';
-        if(_paScanning) _paRafId = setTimeout(()=>requestAnimationFrame(paDetectLoop),80);
-        return;
-      }
-    }
-
-    // offset: face moved RIGHT on screen = user turned LEFT (mirrored front camera)
-    //         face moved LEFT on screen  = user turned RIGHT
-    const offset = smooth - _paNeutralFaceX;
-
-    // Debug display
-    let dbg = document.getElementById('pa-dbg');
-    if(!dbg){
-      dbg = document.createElement('div');
-      dbg.id = 'pa-dbg';
-      dbg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.9);color:#30e890;font-family:monospace;font-size:12px;padding:6px 14px;border-radius:8px;z-index:9999;pointer-events:none;text-align:center;min-width:300px;white-space:pre;';
-      document.body.appendChild(dbg);
-    }
-    const thr = PA_THR;
-    const bar = '|' + (offset < -thr ? '◀◀' : offset > thr ? '▶▶' : '--') + '|';
-    dbg.textContent = 'faceX:' + smooth.toFixed(3) + '  neutral:' + _paNeutralFaceX.toFixed(3) + '  offset:' + offset.toFixed(3) + '  ' + bar + '  step:' + _paScanStep;
-
-    paEvaluatePose(offset);
-  }
-
-  if(_paScanning) _paRafId = setTimeout(()=>requestAnimationFrame(paDetectLoop), 80);
-}
-
+// ── SHOW STEP ─────────────────────────────────────────────────────
 function paShowStep(step){
   const s = PA_STEPS[step];
   document.getElementById('pa-instruction-text').textContent = s.text;
   document.getElementById('pa-instruction-sub').textContent  = s.sub;
-  for(let i=0;i<3;i++){ const d=document.getElementById('pa-dot-'+i); if(d) d.classList.toggle('done',i<step); }
-  const arrow = document.getElementById('pa-pose-arrow');
-  if(arrow){
-    if(s.tilt==='center'){ arrow.style.opacity='0'; }
-    else { arrow.textContent=s.tilt==='left'?'← turn left':'turn right →'; arrow.style.opacity='0.9'; arrow.style.color='#fff'; }
+  for(let i=0;i<3;i++){ const d=document.getElementById('pa-dot-'+i); if(d) d.classList.toggle('done', i<step); }
+
+  const btn = document.getElementById('pa-next-btn');
+  btn.style.display = 'block';
+  if(step === PA_STEPS.length - 1){
+    btn.textContent = '📸 Capture';
+    btn.onclick = paCaptureAndAnalyze;
+  } else {
+    btn.textContent = 'Next →';
+    btn.onclick = ()=>{
+      _paScanStep++;
+      const el = document.getElementById('pa-instruction-text');
+      el.style.color = '#30e890'; el.textContent = '✓ Got it!';
+      setTimeout(()=>{ el.style.color=''; paShowStep(_paScanStep); }, 600);
+    };
   }
-  paSetHoldArc(0);
-  _paStepLocked=false; _paInPosition=false;
-}
-
-function paEvaluatePose(offset){
-  if(_paStepLocked || _paScanStep>=PA_STEPS.length) return;
-  const step  = PA_STEPS[_paScanStep];
-  const arrow = document.getElementById('pa-pose-arrow');
-  const subEl = document.getElementById('pa-instruction-sub');
-
-  // Mirrored camera conventions:
-  // offset > 0 = face centre moved RIGHT on screen = user turned LEFT
-  // offset < 0 = face centre moved LEFT on screen  = user turned RIGHT
-  let inPos = false;
-  if(step.tilt==='center') inPos = Math.abs(offset) < PA_THR;
-  if(step.tilt==='left')   inPos = offset >  PA_THR;  // face→right on screen = user turned LEFT
-  if(step.tilt==='right')  inPos = offset < -PA_THR;  // face→left on screen  = user turned RIGHT
-
-  if(arrow && step.tilt!=='center'){
-    if(inPos){ arrow.textContent='✓'; arrow.style.color='#30e890'; arrow.style.textShadow='0 0 16px #30e890'; }
-    else { arrow.textContent=step.tilt==='left'?'← turn left':'turn right →'; arrow.style.color='#fff'; arrow.style.textShadow='0 0 8px rgba(255,255,255,0.4)'; }
-    arrow.style.opacity='0.95';
-  }
-
-  if(!inPos && subEl && !_paInPosition){
-    if(step.tilt==='center'){ subEl.textContent='Hold still — face the camera straight'; }
-    else if(step.tilt==='left'){ subEl.textContent = offset < -PA_THR*0.5 ? 'Too far — come back a little' : 'Turn your head LEFT ←'; }
-    else { subEl.textContent = offset > PA_THR*0.5 ? 'Too far — come back a little' : 'Turn your head RIGHT →'; }
-  }
-
-  if(inPos && !_paInPosition){
-    _paInPosition=true; _paHoldStart=Date.now();
-    if(subEl) subEl.textContent='✓ Hold still…';
-  } else if(!inPos && _paInPosition){
-    _paInPosition=false; paSetHoldArc(0); return;
-  }
-
-  if(_paInPosition){
-    const pct = Math.min((Date.now()-_paHoldStart)/step.holdMs, 1);
-    paSetHoldArc(pct);
-    if(pct>=1) paAutoAdvance();
-  }
-}
-
-function paSetHoldArc(pct){
-  const arc=document.getElementById('pa-hold-arc');
-  if(arc) arc.style.strokeDashoffset=String(276-276*pct);
-}
-
-function paAutoAdvance(){
-  if(_paStepLocked||!_paScanning) return;
-  _paStepLocked=true; _paInPosition=false; paSetHoldArc(0);
-  const next=_paScanStep+1;
-  if(next>=PA_STEPS.length){ paCaptureAndAnalyze(); return; }
-  _paScanStep=next;
-  const el=document.getElementById('pa-instruction-text');
-  el.style.color='#30e890'; el.textContent='✓ Got it!';
-  setTimeout(()=>{ el.style.color=''; paShowStep(_paScanStep); },700);
 }
 
 function paCaptureAndAnalyze(){
   if(!_paCameraReady) return;
-  _paScanning=false;
-  if(_paRafId){ clearTimeout(_paRafId); cancelAnimationFrame(_paRafId); _paRafId=null; }
-  const video=document.getElementById('pa-video');
-  const canvas=document.getElementById('pa-capture-canvas');
-  canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480;
-  canvas.getContext('2d').drawImage(video,0,0);
-  _paPhotoB64=canvas.toDataURL('image/jpeg',0.88);
+  const video  = document.getElementById('pa-video');
+  const canvas = document.getElementById('pa-capture-canvas');
+  canvas.width = video.videoWidth||640; canvas.height = video.videoHeight||480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  _paPhotoB64 = canvas.toDataURL('image/jpeg', 0.88);
+  paStopCamera();
   document.getElementById('pa-scanner-wrap').classList.remove('scanning');
   document.getElementById('pa-scan-line').classList.remove('active');
-  document.getElementById('pa-instruction-text').style.color='';
-  document.getElementById('pa-instruction-text').textContent='✦ Captured — sending to Aria';
-  document.getElementById('pa-instruction-sub').textContent='Analyzing your hair…';
-  const arrow=document.getElementById('pa-pose-arrow');
-  if(arrow) arrow.style.opacity='0';
+  document.getElementById('pa-next-btn').style.display = 'none';
+  document.getElementById('pa-instruction-text').style.color = '';
+  document.getElementById('pa-instruction-text').textContent = '✦ Captured — sending to Aria';
+  document.getElementById('pa-instruction-sub').textContent  = 'Analyzing your hair…';
   paAnalyze();
 }
 
