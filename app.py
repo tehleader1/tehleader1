@@ -4468,8 +4468,8 @@ async function paAnalyze(){
     const d = await r.json();
     clearInterval(msgTimer);
     document.getElementById('pa-scanning-status').style.display = 'none';
-    if(d.success || d.score !== undefined){
-      paRenderResult(d);
+    if(d.ok && d.analysis){
+      paRenderResult(d.analysis);
       paLoadHistory();
     } else {
       showToast(d.error || 'Analysis failed — try again');
@@ -4485,27 +4485,33 @@ async function paAnalyze(){
 
 function paRenderResult(d){
   document.getElementById('pa-result').style.display = 'block';
-  // Score ring
-  const score = d.score || 0;
+  // Score — API field is overall_health_score
+  const score = d.overall_health_score || d.score || 0;
   document.getElementById('pa-score-num').textContent = score;
   const arc = document.getElementById('pa-score-arc');
   if(arc){ setTimeout(()=>{ arc.style.strokeDashoffset = String(289 - 289*score/100); }, 100); }
-  document.getElementById('pa-result-title').textContent = d.title || 'Hair Health Score';
-  document.getElementById('pa-result-sub').textContent   = d.summary || '';
-  // Metrics
-  if(d.porosity)  document.getElementById('pa-porosity').textContent = d.porosity;
-  if(d.damage)    document.getElementById('pa-damage').textContent   = d.damage;
-  if(d.density)   document.getElementById('pa-density').textContent  = d.density;
-  if(d.texture)   document.getElementById('pa-texture').textContent  = d.texture;
-  // Advice
+  document.getElementById('pa-result-title').textContent = 'Hair Health Score';
+  document.getElementById('pa-result-sub').textContent   = d.personalized_advice || d.summary || '';
+  // Metrics — API fields: porosity, damage_level, density, texture
+  const porEl = document.getElementById('pa-porosity');
+  const dmgEl = document.getElementById('pa-damage');
+  const denEl = document.getElementById('pa-density');
+  const texEl = document.getElementById('pa-texture');
+  if(porEl) porEl.textContent = d.porosity   || '—';
+  if(dmgEl) dmgEl.textContent = d.damage_level|| d.damage || '—';
+  if(denEl) denEl.textContent = d.density    || '—';
+  if(texEl) texEl.textContent = d.texture    || '—';
+  // Advice block
   const adv = document.getElementById('pa-advice');
-  if(adv) adv.innerHTML = d.advice ? '<p>' + d.advice + '</p>' : '';
+  if(adv) adv.innerHTML = d.personalized_advice ? '<p style="font-size:13px;line-height:1.7;color:var(--muted2);">' + d.personalized_advice + '</p>' : '';
   // Observations
   const obs = document.getElementById('pa-obs');
-  if(obs && d.observations) obs.innerHTML = d.observations.map(o=>'<div class="pa-obs-item">• '+o+'</div>').join('');
+  const obsData = d.observations || d.observation_list || [];
+  if(obs) obs.innerHTML = obsData.length ? obsData.map(o=>'<div style="padding:6px 0;font-size:12px;color:var(--muted2);border-bottom:1px solid var(--border);">• '+o+'</div>').join('') : '<div style="color:var(--muted);font-size:12px;">No observations.</div>';
   // Recommendations
   const recs = document.getElementById('pa-recs');
-  if(recs && d.products) recs.innerHTML = d.products.map(p=>'<div class="pa-rec-item">✦ '+p+'</div>').join('');
+  const recData = d.recommended_products || d.products || [];
+  if(recs) recs.innerHTML = recData.length ? recData.map(p=>'<div style="padding:6px 0;font-size:12px;color:var(--rose);border-bottom:1px solid var(--border);">✦ '+p+'</div>').join('') : '';
 }
 
 async function paLoadHistory(){
@@ -4520,6 +4526,64 @@ async function paLoadHistory(){
       + new Date(h.created_at).toLocaleDateString()
       +'</div>').join('');
   }catch(e){ /* silent */ }
+}
+
+function paReset(){
+  _paPhotoB64 = null;
+
+  // Show tabs + camera mode, hide result/status
+  document.querySelector('.pa-mode-tabs').style.display = 'flex';
+  document.getElementById('pa-camera-mode').style.display = '';
+  document.getElementById('pa-upload-mode').style.display = 'none';
+  document.getElementById('pa-result').style.display = 'none';
+  document.getElementById('pa-scanning-status').style.display = 'none';
+
+  // Reset tab active state
+  document.getElementById('pa-tab-camera').classList.add('active');
+  document.getElementById('pa-tab-upload').classList.remove('active');
+
+  // Reset scanner wrap
+  const wrap = document.getElementById('pa-scanner-wrap');
+  if(wrap){ wrap.style.display = 'none'; wrap.classList.remove('scanning'); }
+  const scanLine = document.getElementById('pa-scan-line');
+  if(scanLine) scanLine.classList.remove('active');
+  const turnTrack = document.getElementById('pa-turn-track');
+  if(turnTrack) turnTrack.style.display = 'none';
+
+  // Reset dots
+  for(let i=0;i<3;i++){ const d=document.getElementById('pa-dot-'+i); if(d) d.classList.remove('done'); }
+
+  // Reset buttons
+  const openBtn = document.getElementById('pa-open-camera-btn');
+  if(openBtn){ openBtn.style.display='block'; openBtn.disabled=false; openBtn.textContent='📷 Open Camera'; }
+  const startBtn = document.getElementById('pa-start-scan-btn');
+  if(startBtn) startBtn.style.display='none';
+  const nextBtn = document.getElementById('pa-next-btn');
+  if(nextBtn) nextBtn.style.display='none';
+  const noCamLink = document.getElementById('pa-no-cam-link');
+  if(noCamLink) noCamLink.style.display='none';
+  const noAccess = document.getElementById('pa-cam-no-access');
+  if(noAccess) noAccess.style.display='none';
+
+  // Reset instructions
+  document.getElementById('pa-instruction-text').textContent = 'Position your hair in the oval guide';
+  document.getElementById('pa-instruction-text').style.color = '';
+  document.getElementById('pa-instruction-sub').textContent  = 'Good lighting works best · tap Start Scan when ready';
+
+  // Reset upload
+  const prev = document.getElementById('pa-upload-preview');
+  if(prev) prev.style.display='none';
+  const analyzeBtn = document.getElementById('pa-upload-analyze-btn');
+  if(analyzeBtn) analyzeBtn.style.display='none';
+  const fi = document.getElementById('pa-file-input');
+  if(fi) fi.value='';
+
+  // Stop camera if still running
+  paStopCamera();
+
+  // Scroll to top of photo page
+  const pp = document.getElementById('pp-photo');
+  if(pp) pp.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 // Legacy aliases
