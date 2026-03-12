@@ -4309,9 +4309,7 @@ const PA_STEPS = [
     sub: 'Turn right until the arrow goes green' },
 ];
 
-// Threshold: fraction of face width the nose must be offset to count as a turn
-// Lower = more sensitive. 0.08 = small nudge triggers it.
-const PA_TILT_THR = 0.10;
+// Tilt threshold defined in paEvaluatePose
 
 // ── INJECT OVERLAY UI (arrow + hold ring) ────────────────────────
 function paInjectPoseUI(){
@@ -4427,135 +4425,125 @@ function paStartScan(){
 // ── CALIBRATION: measure baseline nose X over 6 frames ───────────
 let _paNeutralX = null;  // calibrated center nose X (0-1 range)
 
-async function paCalibrateNeutral(){
+function paCalibrateNeutral(){
   const video = document.getElementById('pa-video');
   const samples = [];
-  for(let i = 0; i < 6; i++){
-    const x = await paGetNoseX(video);
-    if(x !== null) samples.push(x);
-    await new Promise(r => setTimeout(r, 80));
-  }
-  _paNeutralX = samples.length ? samples.reduce((a,b)=>a+b,0)/samples.length : 0.5;
-  document.getElementById('pa-instruction-sub').textContent = PA_STEPS[0].sub;
-  paDetectLoop();
+  // Take 8 quick readings over ~400ms to establish neutral brightness balance
+  let i = 0;
+  const interval = setInterval(()=>{
+    const v = paGetOffset(video);
+    if(v !== null) samples.push(v);
+    i++;
+    if(i >= 8){
+      clearInterval(interval);
+      _paNeutralX = samples.length ? samples.reduce((a,b)=>a+b,0)/samples.length : 0;
+      _paSamples.length = 0; // clear rolling average
+      document.getElementById('pa-instruction-sub').textContent = PA_STEPS[0].sub;
+      paDetectLoop();
+    }
+  }, 50);
 }
 
-// ── GET NOSE X (0=left edge, 1=right edge of frame) ──────────────
-// Uses native FaceDetector landmarks if available, else optical-flow
-// heuristic based on face bounding box asymmetry.
-async function paGetNoseX(video){
+// ── GET FACE OFFSET ──────────────────────────────────────────────
+// Samples a downscaled version of the video frame, splits it into
+// left/right halves and compares brightness.  Returns a smoothed
+// value: negative = face centre-of-mass left of neutral (user tilted RIGHT)
+//                   positive = face centre-of-mass right of neutral (user tilted LEFT)
+// We use a rolling average of the last 5 readings to reduce jitter.
+const _paSamples = [];
+
+function paGetOffset(video){
   if(video.readyState < 2) return null;
-
-  // ── Method A: native FaceDetector (Chrome/Edge) ──────────────
-  if(_paDetector){
-    try{
-      const faces = await _paDetector.detect(video);
-      if(faces && faces.length > 0){
-        const f = faces[0];
-        // Native API gives landmarks: eye, nose, mouth
-        const nose = f.landmarks && f.landmarks.find(l => l.type === 'nose');
-        if(nose && nose.locations && nose.locations[0]){
-          const vw = video.videoWidth || 1;
-          return nose.locations[0].x / vw;  // 0-1 normalised
-        }
-        // Fallback: use face bounding box centre
-        const vw = video.videoWidth || 1;
-        return (f.boundingBox.x + f.boundingBox.width/2) / vw;
-      }
-      return null;
-    }catch(e){ _paDetector = null; /* fall through */ }
-  }
-
-  // ── Method B: canvas pixel analysis ──────────────────────────
-  // Sample the upper-middle strip of the frame in vertical slices.
-  // The nose/face area tends to be lighter than background.
-  // We find the horizontal centre of mass of bright pixels.
   const canvas = document.getElementById('pa-capture-canvas');
-  const W = video.videoWidth  || 320;
-  const H = video.videoHeight || 240;
+  // Work at low resolution for speed
+  const W = 80, H = 60;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0, W, H);
 
-  // Sample middle 60% of frame height, skin-tone dominant rows
-  const y0 = Math.floor(H * 0.15);
-  const y1 = Math.floor(H * 0.55);
+  // Focus on the middle vertical strip where the face is
+  const y0 = Math.floor(H * 0.1);
+  const y1 = Math.floor(H * 0.8);
   const data = ctx.getImageData(0, y0, W, y1 - y0).data;
+  const rows = y1 - y0;
 
-  // Weighted centre-of-mass: weight each column by how "face-like" it is
-  // Face pixels: R high, G medium, B lower (skin tone regardless of shade)
-  let weightedX = 0, totalW = 0;
-  const cols = 80; // sample 80 columns
-  const step = Math.floor(W / cols);
-  const rowH = y1 - y0;
-
-  for(let col = 0; col < cols; col++){
-    const px = col * step;
-    let colW = 0;
-    // Sample 10 rows in this column
-    for(let row = 0; row < 10; row++){
-      const py = Math.floor(rowH * row / 10);
-      const idx = (py * W + px) * 4;
-      const r = data[idx], g = data[idx+1], b = data[idx+2];
-      // Skin heuristic: R > G > B, R > 60, not too dark, not too bright
-      const isSkin = r > 60 && r > g && g > b && (r - b) > 15 && r < 240;
-      if(isSkin) colW += r; // weight by brightness
+  // Sum brightness of left half vs right half
+  let leftSum = 0, rightSum = 0, count = 0;
+  for(let y = 0; y < rows; y++){
+    for(let x = 0; x < W; x++){
+      const i = (y * W + x) * 4;
+      const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+      if(x < W/2) leftSum  += brightness;
+      else         rightSum += brightness;
+      count++;
     }
-    weightedX += (px / W) * colW;
-    totalW    += colW;
   }
-
-  if(totalW < 500) return null;  // not enough face pixels detected
-  return weightedX / totalW;     // 0-1, centre of face mass
+  const half = count / 2;
+  // Normalise: 0 = equal brightness, positive = left brighter, negative = right brighter
+  // Left brighter on screen = face tilted toward screen-right = user tilted LEFT (mirrored)
+  const raw = (leftSum - rightSum) / (half * 128); // roughly -1..1
+  return raw;
 }
 
 // ── DETECTION LOOP ────────────────────────────────────────────────
-async function paDetectLoop(){
+function paDetectLoop(){
   if(!_paScanning) return;
   const video = document.getElementById('pa-video');
-  const noseX = await paGetNoseX(video);
+  const raw = paGetOffset(video);
 
-  if(noseX !== null && _paNeutralX !== null){
-    // offset: positive = nose right of neutral (user turned RIGHT on mirrored camera = head LEFT)
-    // Camera is mirrored: when user turns LEFT, nose moves RIGHT on screen → positive offset
-    // So: positive offset = user turned LEFT (from their POV)
-    //     negative offset = user turned RIGHT
-    const rawOffset = noseX - _paNeutralX;
-    paEvaluatePose(rawOffset);
+  if(raw !== null){
+    // Rolling average of last 5 samples to smooth jitter
+    _paSamples.push(raw);
+    if(_paSamples.length > 5) _paSamples.shift();
+    const smoothed = _paSamples.reduce((a,b)=>a+b,0) / _paSamples.length;
+
+    // Subtract calibrated neutral to get relative offset
+    const offset = smoothed - (_paNeutralX || 0);
+    paEvaluatePose(offset);
   }
 
   if(_paScanning){
-    // ~15fps is enough and keeps CPU low
     _paRafId = setTimeout(() => {
       if(_paScanning) requestAnimationFrame(paDetectLoop);
-    }, 65);
+    }, 80);
   }
 }
 
 // ── EVALUATE POSE ─────────────────────────────────────────────────
+// offset > 0  = face brightness shifted LEFT on screen
+//            = front camera is mirrored, so user turned their head LEFT
+// offset < 0  = face brightness shifted RIGHT on screen
+//            = user turned their head RIGHT
+const PA_TILT_THR = 0.04; // low threshold — a small turn is enough
+
 function paEvaluatePose(offset){
   if(_paStepLocked || _paScanStep >= PA_STEPS.length) return;
-  const step   = PA_STEPS[_paScanStep];
-  const arrow  = document.getElementById('pa-pose-arrow');
-  const subEl  = document.getElementById('pa-instruction-sub');
+  const step  = PA_STEPS[_paScanStep];
+  const arrow = document.getElementById('pa-pose-arrow');
+  const subEl = document.getElementById('pa-instruction-sub');
 
-  // Determine if user is in the required position
   let inPos = false;
   if(step.tilt === 'center') inPos = Math.abs(offset) < PA_TILT_THR;
-  if(step.tilt === 'left')   inPos = offset >  PA_TILT_THR;  // nose right on screen = user turned left
-  if(step.tilt === 'right')  inPos = offset < -PA_TILT_THR;  // nose left on screen  = user turned right
+  if(step.tilt === 'left')   inPos = offset >  PA_TILT_THR;
+  if(step.tilt === 'right')  inPos = offset < -PA_TILT_THR;
 
-  // Arrow colour feedback
+  // Arrow shows which way to turn — arrow points in the direction user needs to move
   if(arrow){
     if(step.tilt === 'center'){
       arrow.style.opacity = '0';
     } else {
-      arrow.textContent   = step.tilt === 'left' ? '←' : '→';
-      arrow.style.opacity = '0.9';
-      arrow.style.color   = inPos ? '#30e890' : '#ffffff';
-      arrow.style.textShadow = inPos
-        ? '0 0 16px rgba(48,232,144,1)'
-        : '0 0 12px rgba(255,255,255,0.5)';
+      // If already in position show checkmark, else show direction arrow
+      if(inPos){
+        arrow.textContent = '✓';
+        arrow.style.color = '#30e890';
+        arrow.style.textShadow = '0 0 16px rgba(48,232,144,1)';
+      } else {
+        // Arrow points the direction the user still needs to turn
+        arrow.textContent   = step.tilt === 'left' ? '← turn left' : 'turn right →';
+        arrow.style.color   = '#ffffff';
+        arrow.style.textShadow = '0 0 8px rgba(255,255,255,0.4)';
+      }
+      arrow.style.opacity = '0.95';
     }
   }
 
