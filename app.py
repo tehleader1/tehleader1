@@ -2455,7 +2455,31 @@ def dashboard():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Aria Command Center — SupportRD</title>
-<!-- build:v2.1 -->
+<!-- build:v2.2 -->
+<script>
+// Auth gate — runs synchronously in <head> before page renders
+(function(){
+  var t = localStorage.getItem('srd_token');
+  if(!t){ window.location.replace('/login'); throw 0; }
+  // Verify with server — use synchronous XHR so page is blocked until we know
+  try{
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/auth/me', false); // false = synchronous
+    xhr.setRequestHeader('X-Auth-Token', t);
+    xhr.send();
+    if(xhr.status === 401){
+      localStorage.removeItem('srd_token');
+      localStorage.removeItem('srd_user');
+      window.location.replace('/login');
+      throw 0;
+    }
+  }catch(e){
+    // If e===0 it's our intentional throw — re-throw to stop page load
+    if(e===0) throw e;
+    // Network error — allow page to load, API calls will handle 401s
+  }
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -3732,26 +3756,7 @@ body::before{content:'';position:fixed;inset:0;
 
 <script>
 const token = localStorage.getItem('srd_token');
-if (!token) { window.location.href = '/login'; throw 'no token'; }
-
-// Block render until token is verified — catches stale tokens after redeployment
-document.documentElement.style.visibility = 'hidden';
-(async () => {
-  try {
-    const r = await fetch('/api/auth/me', { headers: { 'X-Auth-Token': token } });
-    if (r.status === 401) {
-      localStorage.removeItem('srd_token');
-      localStorage.removeItem('srd_user');
-      window.location.replace('/login');
-      return;
-    }
-    // Token valid — show the page
-    document.documentElement.style.visibility = '';
-  } catch(e) {
-    // Network error — show page anyway, individual API calls will handle 401s
-    document.documentElement.style.visibility = '';
-  }
-})();
+// Token already verified in <head> — if we're here it's valid
 
 // ── TICKER ──
 const TDATA = [
