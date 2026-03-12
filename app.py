@@ -2606,9 +2606,9 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
 <!-- ── GLOBAL FOOTER ───────────────────────────────────────── -->
 <div class="global-footer">
   <div class="gf-links">
-    <a href="#about" onclick="document.querySelector('.about-block').scrollIntoView({behavior:'smooth'});return false;">About Us</a>
-    <a href="#team" onclick="document.querySelector('.team-block').scrollIntoView({behavior:'smooth'});return false;">Team</a>
-    <a href="#coding" onclick="document.querySelector('.coding-block').scrollIntoView({behavior:'smooth'});return false;">Coding Guide</a>
+    <a href="#about" onclick="document.querySelector('.about-block').scrollIntoView({{behavior:'smooth'}});return false;">About Us</a>
+    <a href="#team" onclick="document.querySelector('.team-block').scrollIntoView({{behavior:'smooth'}});return false;">Team</a>
+    <a href="#coding" onclick="document.querySelector('.coding-block').scrollIntoView({{behavior:'smooth'}});return false;">Coding Guide</a>
     <a href="https://supportrd.com" target="_blank">Shop</a>
     <a href="mailto:hello@supportrd.com">Contact</a>
     <a href="#privacy">Privacy Policy</a>
