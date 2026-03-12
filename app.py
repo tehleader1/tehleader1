@@ -6546,18 +6546,17 @@ async function driveAsk(msg){
   _driveMsgHistory.push({role:'user',content:msg});
   if(status) status.textContent='Aria is thinking…';
   try{
-    const r = await fetch('https://api.anthropic.com/v1/messages',{
+    const r = await fetch('/api/aria-drive',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
         max_tokens:400,
         system:'You are Aria, warm AI assistant for Support. The user is driving. Keep ALL responses SHORT — 1 to 3 sentences max. Be upbeat, clear, direct. Sound natural when spoken aloud.',
         messages:_driveMsgHistory
       })
     });
     const d = await r.json();
-    const reply = d.content?.[0]?.text || 'Sorry, try again.';
+    const reply = d.text || 'Sorry, try again.';
     _driveMsgHistory.push({role:'assistant',content:reply});
     driveAddMsg(reply,'aria');
     if(status) status.textContent='Ready.';
@@ -6948,12 +6947,12 @@ async function clAriaNavigate(place){
   const dist = clDistLabel(place.dist);
   const prompt = `You are Aria, a warm upbeat GPS companion with a Candy Land adventure personality. The user just selected "${place.name}" (${place.type}, ${dist}) as their destination. Give a SHORT 2-sentence navigation intro: one fun encouraging line about the journey, and one practical note about the destination type. Keep it under 40 words. Sound natural when spoken.`;
   try{
-    const r = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:120,messages:[{role:'user',content:prompt}]})
+    const r = await fetch('/api/aria-drive',{
+      method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body:JSON.stringify({max_tokens:120,messages:[{role:'user',content:prompt}]})
     });
     const d = await r.json();
-    const text = d.content?.[0]?.text||`Adventure to ${place.name} begins! ${dist} — let's go! 🚗✨`;
+    const text = d.text||`Adventure to ${place.name} begins! ${dist} — let's go! 🚗✨`;
     clSetNarration(text);
     driveSpeak(text);
   }catch(e){
@@ -7055,9 +7054,9 @@ function clCheckProximity(){
 async function clNarreLandmark(lm){
   const prompt=`You are Aria, a fun candy-land adventure GPS. The user is driving and just passed near "${lm.name}" (a ${lm.type}). Give ONE short sentence (max 20 words) narrating this landmark in an exciting upbeat way. Sound like a fun tour guide.`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:60,messages:[{role:'user',content:prompt}]})});
+    const r=await fetch('/api/aria-drive',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({max_tokens:60,messages:[{role:'user',content:prompt}]})});
     const d=await r.json();
-    const txt=d.content?.[0]?.text||`Passing by ${lm.name}! 🌟`;
+    const txt=d.text||`Passing by ${lm.name}! 🌟`;
     clSetNarration(txt);
     driveSpeak(txt);
   }catch(e){}
@@ -7123,18 +7122,17 @@ async function clGpsAsk(forcedText){
   }
 
   try{
-    const r = await fetch('https://api.anthropic.com/v1/messages',{
+    const r = await fetch('/api/aria-drive',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
         max_tokens:200,
         system:`You are Aria, a warm helpful AI co-pilot from Support (a hair care and tech company). The user is DRIVING — keep ALL answers SHORT, max 2-3 sentences. Be upbeat and natural.${ctx}`,
         messages:[{role:'user',content:msg}]
       })
     });
     const d = await r.json();
-    const reply = d.content?.[0]?.text||'Sorry, try again!';
+    const reply = d.text||'Sorry, try again!';
     clSetNarration(reply);
     driveSpeak(reply);
     if(status) status.textContent='';
