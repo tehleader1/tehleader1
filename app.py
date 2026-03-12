@@ -4494,13 +4494,22 @@ function paDetectLoop(){
   const raw = paGetOffset(video);
 
   if(raw !== null){
-    // Rolling average of last 5 samples to smooth jitter
     _paSamples.push(raw);
     if(_paSamples.length > 5) _paSamples.shift();
     const smoothed = _paSamples.reduce((a,b)=>a+b,0) / _paSamples.length;
-
-    // Subtract calibrated neutral to get relative offset
     const offset = smoothed - (_paNeutralX || 0);
+
+    // Live debug overlay so we can see values while scanning
+    let dbg = document.getElementById('pa-dbg');
+    if(!dbg){
+      dbg = document.createElement('div');
+      dbg.id = 'pa-dbg';
+      dbg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#30e890;font-family:monospace;font-size:13px;padding:8px 16px;border-radius:8px;z-index:9999;pointer-events:none;text-align:center;';
+      document.body.appendChild(dbg);
+    }
+    const bar = offset > 0 ? '▶'.repeat(Math.min(Math.round(offset/0.02),8)) : '◀'.repeat(Math.min(Math.round(-offset/0.02),8));
+    dbg.textContent = 'offset: ' + offset.toFixed(3) + '  ' + bar + '  thr:±' + PA_TILT_THR;
+
     paEvaluatePose(offset);
   }
 
@@ -4805,6 +4814,10 @@ function paReset(){
   document.getElementById('pa-upload-analyze-btn').style.display = 'none';
   const fi = document.getElementById('pa-file-input');
   if(fi) fi.value='';
+
+  // Remove debug overlay
+  const dbg = document.getElementById('pa-dbg');
+  if(dbg) dbg.remove();
 
   // Scroll back to top of photo page
   document.getElementById('pp-photo').scrollIntoView({behavior:'smooth',block:'start'});
