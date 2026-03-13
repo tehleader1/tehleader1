@@ -341,7 +341,22 @@ FREE_RESPONSE_LIMIT    = 50
 FREE_RESPONSE_PERIOD   = "weekly"   # reset every 7 days
 SUBSCRIPTION_PRICE_USD = 80
 APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor.onrender.com")
-SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
+SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportdr-com.myshopify.com")
+
+# ── SHOPIFY STORE SMART OVERRIDE ─────────────────────────────────────────────
+# If someone sets SHOPIFY_STORE=supportrd.com (the storefront URL) instead of
+# the myshopify handle, this maps it automatically so Admin API calls still work.
+_SHOPIFY_DOMAIN_MAP = {
+    "supportrd.com":     "supportdr-com.myshopify.com",
+    "www.supportrd.com": "supportdr-com.myshopify.com",
+}
+if SHOPIFY_STORE in _SHOPIFY_DOMAIN_MAP:
+    SHOPIFY_STORE = _SHOPIFY_DOMAIN_MAP[SHOPIFY_STORE]
+    print(f"[Shopify] Custom domain mapped -> {SHOPIFY_STORE}")
+# Strip https:// or trailing slashes if pasted in by mistake
+SHOPIFY_STORE = SHOPIFY_STORE.replace("https://","").replace("http://","").strip("/")
+print(f"[Shopify] Store endpoint: {SHOPIFY_STORE}")
+# ─────────────────────────────────────────────────────────────────────────────
 SHOPIFY_ADMIN_TOKEN    = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
 SHOPIFY_PRODUCT_HANDLE = "hair-advisor-premium"
 SHOPIFY_STOREFRONT_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN","")  # Public Storefront API token
