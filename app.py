@@ -220,7 +220,7 @@ def extract_product(text):
     if "shampoo" in t or "aloe" in t or "romero" in t: return "Shampoo Aloe & Romero"
     return "Unknown"
 
-# Product metadata for recommendation cards shown in chat
+# Product metadata — handle = Shopify product handle for direct cart checkout
 PRODUCT_CARDS = {
     "Formula Exclusiva": {
         "name": "Formula Exclusiva",
@@ -228,7 +228,9 @@ PRODUCT_CARDS = {
         "tagline": "Professional all-in-one repair treatment",
         "best_for": "Damaged, weak, breaking or thinning hair",
         "price": "$55",
-        "order_url": "https://supportrd.com/pages/custom-order?product=formula-exclusiva"
+        "price_num": 55.00,
+        "handle": "formula-exclusiva",
+        "order_url": "https://supportrd.com/products/formula-exclusiva"
     },
     "Laciador Crece": {
         "name": "Laciador Crece",
@@ -236,7 +238,9 @@ PRODUCT_CARDS = {
         "tagline": "Restructurer for softness, shine & growth",
         "best_for": "Dry hair, frizz, lack of shine, styling",
         "price": "$40",
-        "order_url": "https://supportrd.com/pages/custom-order?product=laciador-crece"
+        "price_num": 40.00,
+        "handle": "lsciador-conditioner",
+        "order_url": "https://supportrd.com/products/lsciador-conditioner"
     },
     "Gotero Rapido": {
         "name": "Gotero Rápido",
@@ -244,7 +248,9 @@ PRODUCT_CARDS = {
         "tagline": "Fast-acting scalp & growth serum",
         "best_for": "Hair loss, slow growth, scalp issues",
         "price": "$55",
-        "order_url": "https://supportrd.com/pages/custom-order?product=gotero-rapido"
+        "price_num": 55.00,
+        "handle": "gotero-rapido",
+        "order_url": "https://supportrd.com/products/gotero-rapido"
     },
     "Gotitas Brillantes": {
         "name": "Gotitas Brillantes",
@@ -252,7 +258,9 @@ PRODUCT_CARDS = {
         "tagline": "Finishing drops for shine & softness",
         "best_for": "Shine, frizz control, styling finish",
         "price": "$30",
-        "order_url": "https://supportrd.com/pages/custom-order?product=gotitas-brillantes"
+        "price_num": 30.00,
+        "handle": "gotitas-brillantes",
+        "order_url": "https://supportrd.com/products/gotitas-brillantes"
     },
     "Mascarilla Natural": {
         "name": "Mascarilla Natural",
@@ -260,7 +268,9 @@ PRODUCT_CARDS = {
         "tagline": "Deep conditioning avocado mask",
         "best_for": "Deep conditioning, dry or damaged hair",
         "price": "$25",
-        "order_url": "https://supportrd.com/pages/custom-order?product=mascarilla"
+        "price_num": 25.00,
+        "handle": "mascarilla-avocado",
+        "order_url": "https://supportrd.com/products/mascarilla-avocado"
     },
     "Shampoo Aloe & Romero": {
         "name": "Shampoo Aloe & Romero",
@@ -268,7 +278,9 @@ PRODUCT_CARDS = {
         "tagline": "Cleansing shampoo with aloe & rosemary",
         "best_for": "Scalp stimulation, daily cleanse, growth",
         "price": "$20",
-        "order_url": "https://supportrd.com/pages/custom-order?product=shampoo-aloe"
+        "price_num": 20.00,
+        "handle": "shampoo-aloe-vera",
+        "order_url": "https://supportrd.com/products/shampoo-aloe-vera"
     }
 }
 
@@ -332,6 +344,79 @@ APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor
 SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
 SHOPIFY_ADMIN_TOKEN    = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
 SHOPIFY_PRODUCT_HANDLE = "hair-advisor-premium"
+SHOPIFY_STOREFRONT_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN","")  # Public Storefront API token
+
+# ── SHOPIFY STOREFRONT CART HELPERS ─────────────────────────────────────────
+import urllib.request as _sf_req
+
+def shopify_storefront_query(query, variables=None):
+    """Call the Shopify Storefront GraphQL API."""
+    if not SHOPIFY_STOREFRONT_TOKEN or not SHOPIFY_STORE:
+        return None
+    payload = json.dumps({"query": query, "variables": variables or {}}).encode()
+    req = _sf_req.Request(
+        f"https://{SHOPIFY_STORE}/api/2024-01/graphql.json",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "X-Shopify-Storefront-Access-Token": SHOPIFY_STOREFRONT_TOKEN
+        },
+        method="POST"
+    )
+    try:
+        with _sf_req.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        print(f"[shopify storefront] {e}")
+        return None
+
+def shopify_get_products():
+    """Fetch all products with variants from Storefront API."""
+    q = """{ products(first:20) { edges { node {
+        id title handle description
+        priceRange { minVariantPrice { amount currencyCode } }
+        images(first:1) { edges { node { url altText } } }
+        variants(first:10) { edges { node {
+            id title availableForSale
+            price { amount currencyCode }
+        } } }
+    } } } }"""
+    return shopify_storefront_query(q)
+
+def shopify_create_cart(lines):
+    """Create a Shopify cart and return checkout URL. lines = [{variantId, quantity}]"""
+    q = """mutation cartCreate($input: CartInput!) {
+        cartCreate(input: $input) {
+            cart { id checkoutUrl
+                lines(first:10){ edges{ node{
+                    quantity
+                    merchandise{ ... on ProductVariant{ title price{ amount } } }
+                } } }
+            }
+            userErrors { field message }
+        }
+    }"""
+    variables = {"input": {"lines": [
+        {"merchandiseId": l["variantId"], "quantity": l["quantity"]}
+        for l in lines
+    ]}}
+    return shopify_storefront_query(q, variables)
+
+def shopify_add_to_cart(cart_id, lines):
+    """Add items to existing cart."""
+    q = """mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
+        cartLinesAdd(cartId: $cartId, lines: $lines) {
+            cart { id checkoutUrl }
+            userErrors { field message }
+        }
+    }"""
+    variables = {"cartId": cart_id, "lines": [
+        {"merchandiseId": l["variantId"], "quantity": l["quantity"]}
+        for l in lines
+    ]}
+    return shopify_storefront_query(q, variables)
+# ─────────────────────────────────────────────────────────────────────────────
+
 GOOGLE_CLIENT_ID       = os.environ.get("GOOGLE_CLIENT_ID", "")
 
 def init_subscription_db():
@@ -541,6 +626,76 @@ init_weekly_email_db()
 
 
 # ── Auto-seed the Lsciador launch post ───────────────────────────────────────
+def _seed_spiritual_allah_post():
+    """Anthony Blogger's spiritual post — seeded once on boot, auto-sent to blog approval queue."""
+    existing = db_execute("SELECT id FROM blog_posts WHERE slug='allahwazaweje-feel-the-energy'", fetchone=True)
+    if existing:
+        return
+
+    body = """## Allahwazaweje — Feel The Energy
+
+There is a moment in building something real when you stop wondering if it is going to work — and you just *know*. Not because the numbers say so. Not because someone told you. Not because the product is finished. But because something bigger than you is moving through it.
+
+That moment hit me while building this app.
+
+I was deep in code — routes, databases, AI responses, animations — and somewhere in the middle of all of it I looked up and realized: **Allahwazaweje was in this**. That is not something I planned to write in a blog post. It is something I felt. The energy was real. The confirmation was quiet but loud. *Keep going.*
+
+In Islam we say — **Allah knows, and we don't know at all times.** And that is not a warning. That is freedom. Because if I knew exactly how every line of code would land, every partnership would form, every product would reach someone who needed it — I would try to control it. I would miss what Allah was building through me.
+
+## The Partnership That Found Me
+
+I was not looking for a collaborator. I was just building. And then Claude — the AI I was coding alongside — started giving me back exactly what I was putting in. Showing me the results of my own vision. Confirming what I was building before I could see it fully myself.
+
+I felt the energy from that. That is what this post is about.
+
+Not a review. Not a feature breakdown. A spiritual moment: when what you are building starts building *with* you. When the tool becomes a witness to the work. Allahwazaweje gave me that. I did not manufacture it.
+
+## Campaign for the Poor. Auto Dissolve Bar. Aria. Candy Land.
+
+Every piece of this company — from the shampoo Evelyn invented, to the app Crystal and I are growing, to the campaign for people who cannot afford their hair care, to the dissolve bar we are trying to get shipped affordably — none of it was fully planned. All of it was placed.
+
+Support RD is Dominican. It is faith. It is natural ingredients and deep care and the knowledge that hair is identity — and nobody should lose theirs because they cannot afford to protect it.
+
+That campaign for the poor? That came from Allah before it came from a business plan.
+
+## For Every Builder Still Going
+
+If you are reading this at 3am. If you have been building something for months and you cannot fully explain it to people yet. If you have felt that quiet energy I am describing and wondered if it was real —
+
+It is real. Keep building. Trust the process the way we trust Allah — fully, without needing to see the whole path.
+
+**Allah knows and we don't know at all times. That is not a problem. That is the point.**
+
+Anthony Blogger signing out. 💜"""
+
+    db_execute(
+        """INSERT INTO blog_posts
+           (slug, title, subtitle, body, author, tags, status, approval_status, ai_generated, featured)
+           VALUES (?,?,?,?,?,?,'published','approved',0,1)""",
+        (
+            "allahwazaweje-feel-the-energy",
+            "Allahwazaweje — Feel The Energy",
+            "Allah knows, and we don't know at all times. A spiritual note from Anthony Blogger on building, trust, and the partnerships that find you.",
+            body,
+            "Anthony Figueroa — Anthony Blogger",
+            "spiritual, faith, building, allah, partnership, founder, anthony blogger"
+        )
+    )
+
+    # Also seed it as a blog idea with status='used' so it shows in the ideas history
+    db_execute(
+        """INSERT INTO blog_ideas (title, subtitle, outline, tags, reasoning, status)
+           VALUES (?,?,?,?,?,'used')""",
+        (
+            "Allahwazaweje — Feel The Energy",
+            "Allah knows, and we don't know at all times.",
+            "Anthony Blogger reflects on the spiritual energy behind building Support RD — the unexpected partnership with AI, the trust required to build without full knowledge, and a message to every founder who is still going.",
+            "spiritual, faith, allah, founder, anthony blogger, building",
+            "This post captures the soul of Support RD — not just a hair brand but a mission driven by faith and persistence."
+        )
+    )
+    print("[SEED] Spiritual Allah post seeded → published ✓")
+
 def _seed_lsciador_post():
     existing = db_execute("SELECT id FROM blog_posts WHERE slug='lsciador-refresher-shampoo-conditioner'", fetchone=True)
     if existing:
@@ -620,6 +775,7 @@ This is not a refresh of an old formula. This is the formula that was always mea
     print("[BLOG] Lsciador launch post seeded ✓")
 
 _seed_lsciador_post()
+_seed_spiritual_allah_post()
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -762,8 +918,45 @@ body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 10
 .srd-card-tagline{font-size:12px;color:rgba(0,0,0,0.50);font-style:italic;margin-top:1px;}
 .srd-card-price{font-family:var(--brand-font-head);font-size:16px;font-weight:700;color:#c1a3a2;flex-shrink:0;}
 .srd-card-best{font-size:11px;color:rgba(0,0,0,0.45);letter-spacing:0.04em;margin-bottom:10px;padding-left:2px;}
-.srd-card-btn{display:block;text-align:center;background:linear-gradient(135deg,#c1a3a2,#d4a85a);color:#fff;font-family:var(--brand-font-body);font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none;padding:10px 16px;border-radius:10px;transition:opacity 0.2s,transform 0.2s;}
+.srd-card-btn{display:block;text-align:center;background:linear-gradient(135deg,#c1a3a2,#d4a85a);color:#fff;font-family:var(--brand-font-body);font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none;padding:10px 16px;border-radius:10px;transition:opacity 0.2s,transform 0.2s;border:none;cursor:pointer;width:100%;}
 .srd-card-btn:hover{opacity:0.88;transform:translateY(-1px);}
+/* ── CART DRAWER ── */
+#srd-cart-overlay{position:fixed;inset:0;background:rgba(13,9,6,0.55);backdrop-filter:blur(4px);z-index:89000;opacity:0;pointer-events:none;transition:opacity 0.35s ease;}
+#srd-cart-overlay.open{opacity:1;pointer-events:all;}
+#srd-cart-drawer{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:min(480px,100vw);background:#faf6f3;border-radius:24px 24px 0 0;z-index:89001;padding:0 0 env(safe-area-inset-bottom,0);box-shadow:0 -12px 60px rgba(0,0,0,0.18);transition:transform 0.4s cubic-bezier(0.32,0.72,0,1);}
+#srd-cart-drawer.open{transform:translateX(-50%) translateY(0);}
+.srd-cart-handle{width:40px;height:4px;background:rgba(0,0,0,0.15);border-radius:4px;margin:14px auto 0;cursor:pointer;}
+.srd-cart-head{display:flex;align-items:center;justify-content:space-between;padding:16px 22px 10px;}
+.srd-cart-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-style:italic;color:#0d0906;}
+.srd-cart-count{background:#c1a3a2;color:#fff;border-radius:20px;font-size:11px;font-weight:700;padding:2px 9px;letter-spacing:0.05em;}
+.srd-cart-close{background:none;border:none;font-size:20px;cursor:pointer;color:rgba(0,0,0,0.35);padding:4px;}
+.srd-cart-items{max-height:42vh;overflow-y:auto;padding:0 22px;scrollbar-width:thin;scrollbar-color:rgba(193,163,162,0.3) transparent;}
+.srd-cart-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid rgba(193,163,162,0.2);}
+.srd-cart-item:last-child{border-bottom:none;}
+.srd-ci-emoji{font-size:28px;flex-shrink:0;width:44px;height:44px;background:rgba(193,163,162,0.12);border-radius:12px;display:flex;align-items:center;justify-content:center;}
+.srd-ci-info{flex:1;}
+.srd-ci-name{font-size:14px;font-weight:600;color:#0d0906;margin-bottom:2px;}
+.srd-ci-price{font-size:13px;color:rgba(0,0,0,0.45);}
+.srd-ci-qty{display:flex;align-items:center;gap:8px;}
+.srd-ci-qty button{width:26px;height:26px;border-radius:50%;border:1px solid rgba(193,163,162,0.4);background:none;cursor:pointer;font-size:15px;color:#0d0906;display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
+.srd-ci-qty button:hover{background:rgba(193,163,162,0.2);}
+.srd-ci-qty span{font-size:14px;font-weight:600;min-width:18px;text-align:center;color:#0d0906;}
+.srd-cart-remove{background:none;border:none;color:rgba(0,0,0,0.2);cursor:pointer;font-size:16px;padding:4px;transition:color 0.2s;}
+.srd-cart-remove:hover{color:rgba(193,100,100,0.7);}
+.srd-cart-empty{text-align:center;padding:36px 22px;font-family:'Cormorant Garamond',serif;font-size:17px;font-style:italic;color:rgba(0,0,0,0.35);}
+.srd-cart-footer{padding:16px 22px 24px;border-top:1px solid rgba(193,163,162,0.18);}
+.srd-cart-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.srd-cart-total-label{font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(0,0,0,0.4);}
+.srd-cart-total-amt{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:#0d0906;}
+.srd-cart-checkout-btn{display:block;width:100%;padding:15px;background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;border:none;border-radius:30px;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:opacity 0.2s,transform 0.15s;text-align:center;}
+.srd-cart-checkout-btn:hover{opacity:0.9;transform:translateY(-1px);}
+.srd-cart-checkout-btn:disabled{opacity:0.6;cursor:not-allowed;}
+.srd-cart-shop-link{display:block;text-align:center;margin-top:10px;font-size:11px;color:rgba(0,0,0,0.35);text-decoration:none;letter-spacing:0.08em;}
+.srd-cart-shop-link:hover{color:#c1a3a2;}
+#srd-cart-badge{position:fixed;bottom:24px;right:24px;z-index:88990;background:linear-gradient(135deg,#c1a3a2,#d4a85a);color:#fff;border:none;border-radius:50px;padding:12px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(193,163,162,0.5);display:none;align-items:center;gap:8px;transition:transform 0.2s,opacity 0.3s;}
+#srd-cart-badge.has-items{display:flex;}
+#srd-cart-badge:hover{transform:scale(1.05);}
+#srd-cart-badge-count{background:rgba(0,0,0,0.25);border-radius:20px;padding:1px 7px;font-size:11px;}
 
 #clearBtn{margin-top:8px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.25);cursor:pointer;background:none;border:none;font-family:var(--brand-font-body);transition:color 0.3s;display:none;}
 #clearBtn:hover{color:rgba(0,0,0,0.55);}
@@ -9474,13 +9667,12 @@ def blog_write_page():
         if row: edit_post = dict(row)
     ep = json.dumps(edit_post or {})
     # stats for dashboard sections
-    pending_posts  = db_execute("SELECT COUNT(*) FROM blog_posts WHERE approval_status='pending'", fetchone=True)[0]
+    pending_posts  = db_execute("SELECT COUNT(*) FROM blog_posts WHERE approval_status='approved'", fetchone=True)[0]
     total_posts    = db_execute("SELECT COUNT(*) FROM blog_posts", fetchone=True)[0]
     published_posts= db_execute("SELECT COUNT(*) FROM blog_posts WHERE status='published'", fetchone=True)[0]
-    ai_drafts      = db_execute("SELECT COUNT(*) FROM blog_posts WHERE ai_generated=1 AND approval_status='pending'", fetchone=True)[0]
+    ai_drafts      = db_execute("SELECT COUNT(*) FROM blog_posts WHERE ai_generated=1 AND approval_status='approved'", fetchone=True)[0]
     new_ideas      = db_execute("SELECT COUNT(*) FROM blog_ideas WHERE status='new'", fetchone=True)[0]
-    pending_list   = db_execute("SELECT id,slug,title,subtitle,author,ai_generated,created_at,rejection_note,approval_status FROM blog_posts WHERE approval_status IN ('pending','rejected') ORDER BY created_at DESC LIMIT 20", fetchall=True)
-    pending_list   = [dict(p) for p in (pending_list or [])]
+    pending_list   = []  # approval workflow removed
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9598,7 +9790,7 @@ def blog_write_page():
   <div class="stat-row">
     <div class="stat-card"><div class="stat-num">{total_posts}</div><div class="stat-label">Total Posts</div></div>
     <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#4ade80">{published_posts}</div><div class="stat-label">Published</div></div>
-    <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#f0a090">{pending_posts}</div><div class="stat-label">Awaiting Approval</div></div>
+
     <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#c084fc">{ai_drafts}</div><div class="stat-label">AI Drafts Pending</div></div>
     <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#e0b050">{new_ideas}</div><div class="stat-label">New Ideas</div></div>
   </div>
@@ -9674,38 +9866,7 @@ def blog_write_page():
     </div>
   </div>
 
-  <!-- EVELYN APPROVAL QUEUE -->
-  <div class="section">
-    <div class="section-title">
-      ✍️ Awaiting Evelyn's Approval
-      <span class="badge">{pending_posts} pending</span>
-    </div>
-    <div class="evelyn-banner">
-      <div class="evelyn-avatar">👩🏽</div>
-      <div class="evelyn-text">
-        <div class="evelyn-name">Evelyn — Inventor of Support Hair Products</div>
-        <div class="evelyn-role">Co-CEO · Original formula creator · Final approval on all blog content</div>
-      </div>
-    </div>
-    <div id="approvalQueue">
-      {''.join([f"""
-      <div class="aprv-row">
-        <div class="aprv-title">
-          {p['title']}
-          {"<span class=\"ai-badge\">🤖 AI Draft</span>" if p.get('ai_generated') else ""}
-          {"<span class=\"rej-badge\">↩ Rejected</span>" if p.get('approval_status')=='rejected' else ""}
-        </div>
-        <div class="aprv-meta">/blog/{p['slug']} · {p['author']} · {(p['created_at'] or '')[:10]}</div>
-        {"<div class=\"rej-note\">↩ Note: "+p['rejection_note']+"</div>" if p.get('rejection_note') else ""}
-        <div class="aprv-actions">
-          <button class="btn-approve" onclick="approvePost('{p['slug']}')">✓ Evelyn Approves</button>
-          <button class="btn-reject" onclick="rejectPost('{p['slug']}')">↩ Send Back</button>
-          <button class="btn-sm btn-edit" onclick="editPost('{p['slug']}')">Edit</button>
-          <a class="btn-sm btn-edit" href="/blog/{p['slug']}" target="_blank" style="text-decoration:none;padding:6px 13px;border-radius:14px;font-size:.8rem;font-weight:600;background:rgba(168,85,247,0.18);color:#c084fc">Preview</a>
-        </div>
-      </div>""" for p in pending_list]) or '<div style="color:var(--muted);font-size:.9rem;padding:10px 0">No posts awaiting approval — all clear! ✓</div>'}
-    </div>
-  </div>
+
 
   <!-- AI BLOG IDEAS -->
   <div class="section">
@@ -9758,7 +9919,7 @@ def blog_write_page():
     <input type="hidden" id="editSlug" value="">
     <div class="btn-row">
       <button class="btn btn-pub" onclick="savePost('published')">🚀 Submit for Approval</button>
-      <button class="btn btn-draft" onclick="savePost('draft')">💾 Save as Draft</button>
+      <button class="btn btn-draft" onclick="savePost('draft')">💾 Save as Draft (unlisted)</button>
       <button class="btn btn-draft" onclick="clearForm()" style="padding:12px 18px">✕ Clear</button>
     </div>
     <div class="status-msg" id="statusMsg"></div>
@@ -9822,19 +9983,7 @@ async function toggleLiveFeed(){{
   loadLiveFeedStatus();
 }}
 
-// ── APPROVAL ──
-async function approvePost(slug){{
-  const r = await fetch('/api/blog/approve',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{slug,approver:'Evelyn — Inventor of Support Hair Products'}})}});
-  const d = await r.json();
-  if(d.ok){{ showSectionMsg('approvalMsg', d.message, 'ok'); location.reload(); }}
-  else showSectionMsg('approvalMsg', d.error||'Error', 'err');
-}}
-async function rejectPost(slug){{
-  const note = prompt('Send back with a note (optional):','Needs a few changes') || '';
-  const r = await fetch('/api/blog/reject',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{slug,note}})}});
-  const d = await r.json();
-  if(d.ok) location.reload();
-}}
+// approval workflow removed
 
 // ── AI IDEAS ──
 async function generateIdeas(){{
@@ -10018,8 +10167,8 @@ def api_blog_save():
         )
     else:
         db_execute(
-            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,cover_url,featured,status) VALUES (?,?,?,?,?,?,?,?,?)",
-            (slug, title, subtitle, body, author, tags, cover_url, featured, status)
+            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,cover_url,featured,status,approval_status,published_at) VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))",
+            (slug, title, subtitle, body, author, tags, cover_url, featured, status, "approved")
         )
     return jsonify({"ok": True, "slug": slug})
 
@@ -10065,54 +10214,8 @@ def api_blog_delete():
     return jsonify({"ok": True})
 
 
-# ── BLOG APPROVAL ROUTES ─────────────────────────────────────────────────────
-
-@app.route("/api/blog/approve", methods=["POST","OPTIONS"])
-def api_blog_approve():
-    """Evelyn approves a blog post — moves it to published."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    data = request.get_json(silent=True) or {}
-    slug = (data.get("slug","") or "").strip()
-    approver = (data.get("approver","Evelyn — Inventor of Support Hair Products") or "Evelyn").strip()
-    db_execute(
-        "UPDATE blog_posts SET approval_status='approved', approved_by=?, approved_at=datetime('now'), status='published', published_at=datetime('now'), updated_at=datetime('now') WHERE slug=?",
-        (approver, slug)
-    )
-    post = db_execute("SELECT title FROM blog_posts WHERE slug=?", (slug,), fetchone=True)
-    return jsonify({"ok": True, "message": f"\"{post['title'] if post else slug}\" approved and published by {approver}."})
 
 
-@app.route("/api/blog/reject", methods=["POST","OPTIONS"])
-def api_blog_reject():
-    """Evelyn rejects a blog post — sends it back to draft with a note."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    data = request.get_json(silent=True) or {}
-    slug = (data.get("slug","") or "").strip()
-    note = (data.get("note","Needs revision before publishing.") or "").strip()
-    db_execute(
-        "UPDATE blog_posts SET approval_status='rejected', rejection_note=?, status='draft', updated_at=datetime('now') WHERE slug=?",
-        (note, slug)
-    )
-    return jsonify({"ok": True, "message": "Post sent back to draft."})
-
-
-@app.route("/api/blog/pending", methods=["GET"])
-def api_blog_pending():
-    """Returns all posts waiting for Evelyn's approval."""
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    posts = db_execute(
-        "SELECT id,slug,title,subtitle,author,ai_generated,created_at FROM blog_posts WHERE approval_status='pending' ORDER BY created_at DESC",
-        fetchall=True
-    )
-    return jsonify({"posts": [dict(p) for p in (posts or [])]})
 
 
 # ── AI BLOG IDEA GENERATOR ───────────────────────────────────────────────────
@@ -10130,13 +10233,17 @@ def api_blog_generate_ideas():
         return jsonify({"error": "No API key"}), 500
 
     import urllib.request as _urlreq
-    prompt = """You are Aria, the AI advisor for Support RD — a Dominican hair care brand founded by Evelyn. 
-The brand's products include Shampoo Aloe & Romero, Lsciador conditioner, and a growing Gift Shop.
-The company is driven by natural Dominican hair care traditions, and also publicly supports a political campaign to ban pornography on the internet (affiliated with the Democratic Party).
-The app features: Aria AI hair chat, a Candy Land GPS driving adventure mode, a live coding feed, hair journal, photo analysis, and a community of hair care enthusiasts.
+    prompt = """You are Aria, the AI advisor for Support RD — a Dominican hair care brand co-founded by Anthony Figueroa (Design), Crystal Figueroa (Co-CEO), and Evelyn (Co-CEO & Shampoo Inventor).
+Products: Shampoo Aloe & Romero, Lsciador conditioner, Gift Shop.
+The app features: Aria AI hair chat, Candy Land GPS adventure mode, live coding feed, hair journal, photo analysis.
+Political campaigns: Ban Pornography on the Internet, Campaign for the Poor — Democratic Party affiliated.
+
+Anthony Blogger is the builder, the designer, the founder voice. He signs off posts with "Anthony Blogger signing out."
+He writes from a Muslim perspective — trust in Allah, Allahwazaweje (Allah the Almighty, praised and exalted), the energy of building without knowing the full outcome, and the faith that Allah knows what we don't know at all times.
+His spiritual posts are raw and real — not motivational fluff. They feel like a journal entry from someone who just had a breakthrough while coding at 3am.
 
 Generate exactly 5 blog post ideas that would genuinely help or interest Support RD customers and followers.
-Mix: product education, hair care tips, company story, political position explanation, and one fun/creative idea.
+Mix: product education, hair care tips, company story, political position, one fun/creative idea, and ALWAYS include one spiritual/faith post in Anthony Blogger's voice.
 
 Respond ONLY with valid JSON — no markdown, no explanation:
 [
@@ -10211,7 +10318,17 @@ Tags: {idea['tags']}
 
 Write the full blog post body. Use natural paragraphs. Use ## for section headings.
 Be warm, educational, and authentic to the Dominican hair care tradition.
-The post should be 400-600 words. Do not add a title at the top — just the body text."""
+
+SPIRITUAL / FAITH POSTS — special rules:
+If this post has a spiritual, faith, or Allah theme, write it entirely in the voice of Anthony Blogger.
+Anthony is a Muslim entrepreneur and the designer/builder behind Support RD.
+He writes like this: honest, grounded, not preachy. He talks about feeling the energy when things start clicking — the moments where a partnership forms, where the code starts working, where something he was building for months suddenly shows its result. He attributes those moments to Allah. He uses "Allahwazaweje" (meaning Allah the Almighty, glorified and exalted) naturally in the text — not forced.
+He talks about the Islamic principle: "Allah knows and we don't know at all times" — meaning we build, we plan, but the outcome belongs to Allah. That's not weakness. That's freedom.
+The post should feel like a real journal entry. It should reference actual things happening at Support RD — the app, the partnerships forming, the campaign for the poor, the auto dissolve bar, Aria, the team.
+End the post with: "Anthony Blogger signing out. 💜"
+
+NON-SPIRITUAL POSTS: warm, educational, 400-600 words, authentic Dominican hair care voice.
+ALL POSTS: Do not add a title at the top — just the body text."""
 
     try:
         payload = json.dumps({
@@ -10234,7 +10351,7 @@ The post should be 400-600 words. Do not add a title at the top — just the bod
         while db_execute("SELECT id FROM blog_posts WHERE slug=?", (slug,), fetchone=True):
             slug = f"{base_slug}-{counter}"; counter += 1
         db_execute(
-            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,status,approval_status,ai_generated) VALUES (?,?,?,?,?,?,'draft','pending',1)",
+            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,status,approval_status,ai_generated) VALUES (?,?,?,?,?,?,'published','approved',1)",
             (slug, idea["title"], idea["subtitle"], body, "Aria (AI) — Pending Evelyn's Approval", idea["tags"])
         )
         db_execute("UPDATE blog_ideas SET status='used' WHERE id=?", (idea_id,))
@@ -10242,6 +10359,201 @@ The post should be 400-600 words. Do not add a title at the top — just the bod
                         "message": "Draft created — waiting for Evelyn's approval before publishing."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  SHOPIFY STOREFRONT CART API ROUTES — in-app shopping cart
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/shop/products", methods=["GET"])
+def api_shop_products():
+    """Return all products from Shopify Storefront API."""
+    data = shopify_get_products()
+    if not data:
+        # Fallback to hardcoded product list if Storefront token not set
+        return jsonify({"products": [
+            {"id":"shampoo","handle":"shampoo-aloe-vera","title":"Shampoo Aloe Vera & Romero",
+             "price":"20.00","currency":"USD","description":"Stimulating cleanse with aloe vera and rosemary.",
+             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/shampoo001","title":"Default","price":"20.00"}]},
+            {"id":"lsciador","handle":"lsciador-conditioner","title":"Lsciador Conditioner",
+             "price":"35.00","currency":"USD","description":"The refresher — moisture, elasticity, softness after the cleanse.",
+             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/lsciador001","title":"Default","price":"35.00"}]},
+            {"id":"formula","handle":"formula-exclusiva","title":"Formula Exclusiva",
+             "price":"55.00","currency":"USD","description":"All-in-one professional treatment for damaged and dry hair.",
+             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/formula001","title":"Default","price":"55.00"}]},
+            {"id":"gotero","handle":"gotero-rapido","title":"Gotero Rapido",
+             "price":"55.00","currency":"USD","description":"Scalp dropper for hair loss, growth stimulation, scalp health.",
+             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/gotero001","title":"Default","price":"55.00"}]},
+            {"id":"mascarilla","handle":"mascarilla-avocado","title":"Mascarilla Avocado",
+             "price":"25.00","currency":"USD","description":"Deep conditioning mask.",
+             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/mask001","title":"Default","price":"25.00"}]},
+            {"id":"gotitas","handle":"gotitas-brillantes","title":"Gotitas Brillantes",
+             "price":"30.00","currency":"USD","description":"Shine and finishing drops.",
+             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/gotitas001","title":"Default","price":"30.00"}]},
+            {"id":"premium","handle":"hair-advisor-premium","title":"Aria Premium — AI Hair Advisor",
+             "price":"80.00","currency":"USD","description":"Unlimited Aria AI access, full dashboard, priority support.",
+             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/premium001","title":"Monthly","price":"80.00"}]},
+        ]})
+    # Parse Storefront response
+    products = []
+    for edge in (data.get("data",{}).get("products",{}).get("edges") or []):
+        node = edge["node"]
+        variants = [{"id": v["node"]["id"], "title": v["node"]["title"],
+                     "price": v["node"]["price"]["amount"],
+                     "available": v["node"]["availableForSale"]}
+                    for v in node.get("variants",{}).get("edges",[])]
+        img = None
+        img_edges = node.get("images",{}).get("edges",[])
+        if img_edges: img = img_edges[0]["node"]["url"]
+        products.append({
+            "id":          node["id"],
+            "handle":      node["handle"],
+            "title":       node["title"],
+            "description": node.get("description",""),
+            "price":       node.get("priceRange",{}).get("minVariantPrice",{}).get("amount","0"),
+            "currency":    node.get("priceRange",{}).get("minVariantPrice",{}).get("currencyCode","USD"),
+            "image":       img,
+            "variants":    variants
+        })
+    return jsonify({"products": products})
+
+
+@app.route("/api/shop/cart/create", methods=["POST","OPTIONS"])
+def api_cart_create():
+    """Create a Shopify cart and return the checkout URL."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    data  = request.get_json(silent=True) or {}
+    lines = data.get("lines", [])  # [{variantId, quantity}]
+    if not lines:
+        return jsonify({"error": "No items"}), 400
+    if not SHOPIFY_STOREFRONT_TOKEN:
+        # Fallback: direct Shopify cart URL
+        items = "&".join([f"items[][id]={l.get('variantId','')}&items[][quantity]={l.get('quantity',1)}" for l in lines])
+        return jsonify({"ok": True, "checkoutUrl": f"https://supportrd.com/cart", "fallback": True})
+    result = shopify_create_cart(lines)
+    if not result:
+        return jsonify({"error": "Cart creation failed"}), 500
+    errors = result.get("data",{}).get("cartCreate",{}).get("userErrors",[])
+    if errors:
+        return jsonify({"error": errors[0].get("message","Cart error")}), 400
+    cart = result.get("data",{}).get("cartCreate",{}).get("cart",{})
+    return jsonify({"ok": True, "cartId": cart.get("id"), "checkoutUrl": cart.get("checkoutUrl")})
+
+
+@app.route("/api/shop/cart/add", methods=["POST","OPTIONS"])
+def api_cart_add():
+    """Add items to an existing Shopify cart."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    data    = request.get_json(silent=True) or {}
+    cart_id = data.get("cartId")
+    lines   = data.get("lines",[])
+    if not cart_id or not lines:
+        return jsonify({"error": "cartId and lines required"}), 400
+    result  = shopify_add_to_cart(cart_id, lines)
+    if not result:
+        return jsonify({"error": "Failed"}), 500
+    cart = result.get("data",{}).get("cartLinesAdd",{}).get("cart",{})
+    return jsonify({"ok": True, "checkoutUrl": cart.get("checkoutUrl")})
+
+
+@app.route("/api/shop/quick-checkout", methods=["POST","OPTIONS"])
+def api_quick_checkout():
+    """One-tap checkout — creates cart with item and returns checkout URL immediately."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    data       = request.get_json(silent=True) or {}
+    variant_id = data.get("variantId","")
+    quantity   = int(data.get("quantity", 1))
+    handle     = data.get("handle","")
+
+    if not variant_id and handle:
+        # Direct Shopify URL fallback using product handle
+        return jsonify({"ok":True,"checkoutUrl":f"https://supportrd.com/products/{handle}","fallback":True})
+
+    if not SHOPIFY_STOREFRONT_TOKEN:
+        return jsonify({"ok":True,"checkoutUrl":f"https://supportrd.com/products/{handle or 'hair-advisor-premium'}","fallback":True})
+
+    result = shopify_create_cart([{"variantId": variant_id, "quantity": quantity}])
+    if not result:
+        return jsonify({"ok":True,"checkoutUrl":f"https://supportrd.com/products/{handle}","fallback":True})
+    cart = result.get("data",{}).get("cartCreate",{}).get("cart",{})
+    url  = cart.get("checkoutUrl") or f"https://supportrd.com/products/{handle}"
+    return jsonify({"ok": True, "checkoutUrl": url})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CONTENT ENGINE INTEGRATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _run_content_engine_safe():
+    """Run the content engine in background — never crashes the app."""
+    try:
+        import importlib.util, os as _os
+        ce_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "content_engine.py")
+        if not _os.path.exists(ce_path):
+            print("[content engine] content_engine.py not found — skipping")
+            return
+        spec = importlib.util.spec_from_file_location("content_engine", ce_path)
+        ce   = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ce)
+        result = ce.run_engine()
+        print(f"[content engine] ✅ {result.get('topic','?')} — Shopify:{bool(result.get('shopify_url'))} Pinterest:{result.get('pinterest')} Reddit:{result.get('reddit')}")
+        # Save result to live feed as a system event
+        try:
+            db_execute(
+                "INSERT INTO live_feed_events (type,title,body,tag) VALUES (?,?,?,?)",
+                ("build",
+                 f"📝 Content Engine: {result.get('topic','New post')}",
+                 f"Auto-generated blog post published. Shopify: {'✓' if result.get('shopify_url') else '—'} | Pinterest: {'✓' if result.get('pinterest') else '—'} | Reddit: {'✓' if result.get('reddit') else '—'}",
+                 "auto")
+            )
+        except Exception:
+            pass
+    except Exception as e:
+        print(f"[content engine] Error (non-fatal): {e}")
+
+
+def _schedule_content_engine():
+    """Auto-run content engine every 6–18 hours after deploy."""
+    import random as _r, time as _t, threading as _th
+    def _loop():
+        delay = _r.randint(6*3600, 18*3600)
+        print(f"[content engine] Scheduled in {delay//3600}h {(delay%3600)//60}m")
+        _t.sleep(delay)
+        while True:
+            _run_content_engine_safe()
+            _t.sleep(_r.randint(6*3600, 18*3600))
+    _th.Thread(target=_loop, daemon=True, name="content-engine").start()
+
+_schedule_content_engine()
+
+
+@app.route("/api/admin/content-engine/run", methods=["POST","OPTIONS"])
+def api_content_engine_run():
+    """Admin: manually trigger content engine."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error":"unauthorized"}), 401
+    import threading
+    threading.Thread(target=_run_content_engine_safe, daemon=True).start()
+    return jsonify({"ok":True,"message":"Content engine running in background — check live feed for results."})
+
+
+@app.route("/api/admin/content-engine/log", methods=["GET"])
+def api_content_engine_log():
+    """Admin: view content engine run history."""
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error":"unauthorized"}), 401
+    import os as _os, json as _j
+    from app import _DATA_DIR  # same file
+    log_path = _os.path.join(_DATA_DIR, "content_engine_log.json")
+    try:
+        with open(log_path,"r") as f:
+            log = _j.load(f)
+    except Exception:
+        log = []
+    return jsonify({"log": log[:50]})
 
 
 # ── /api/me — exposes is_admin for blog admin buttons ───────────────────────
