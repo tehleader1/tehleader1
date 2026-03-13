@@ -386,6 +386,19 @@ def init_subscription_db():
         ts          TEXT DEFAULT (datetime('now'))
     )""")
     # Push notification subscriptions
+    con.execute("""CREATE TABLE IF NOT EXISTS upgrade_ideas (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER NOT NULL,
+        user_email  TEXT,
+        user_name   TEXT,
+        idea_title  TEXT NOT NULL,
+        idea_desc   TEXT NOT NULL,
+        code_snippet TEXT,
+        status      TEXT DEFAULT 'pending',
+        submitted_at TEXT DEFAULT (datetime('now')),
+        reviewed_at  TEXT,
+        admin_note   TEXT
+    )""")
     con.execute("""CREATE TABLE IF NOT EXISTS push_subscriptions (
         id         INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id    INTEGER NOT NULL,
@@ -3433,6 +3446,17 @@ body::before{content:'';position:fixed;inset:0;
 <div class="app">
 
 <div class="ppage active" id="pp-overview" style="padding:0;min-height:unset;">
+<!-- Upgrade promo banner -->
+<div id="upgrade-promo-banner" style="background:linear-gradient(135deg,rgba(240,160,144,0.12),rgba(224,176,80,0.08));border-bottom:1px solid rgba(240,160,144,0.2);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;cursor:pointer;" onclick="openUpgradeModal()">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:18px;">💡</span>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif;">Got an idea to upgrade Support?</div>
+      <div style="font-size:11px;color:var(--muted);">Submit it — if we build it, you earn 1 free month of Premium.</div>
+    </div>
+  </div>
+  <div style="background:var(--rose);color:#fff;border-radius:16px;padding:7px 16px;font-size:11px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:0.06em;white-space:nowrap;">Submit Idea →</div>
+</div>
 <!-- TOP ROW -->
 <div class="top-row">
   <div class="score-panel fu fu1">
@@ -7152,9 +7176,181 @@ function clAnimate(){
 clAnimate();
 
 
+// ═══════════════════════════════════════════════════════════════
+// ✦ UPGRADE IDEA MODAL
+// ═══════════════════════════════════════════════════════════════
+
+function openUpgradeModal(){
+  const modal = document.getElementById('upgrade-idea-modal');
+  if(!modal) return;
+  // Reset form to clean state
+  const fields = document.getElementById('upgrade-form-fields');
+  const success = document.getElementById('upgrade-success');
+  if(fields)  fields.style.display = 'block';
+  if(success) success.style.display = 'none';
+  const err = document.getElementById('ui-error');
+  if(err){ err.style.display='none'; err.textContent=''; }
+  const btn = document.getElementById('ui-submit-btn');
+  if(btn){ btn.disabled=false; btn.textContent='Submit Idea →'; }
+  const titleEl = document.getElementById('ui-title');
+  const descEl  = document.getElementById('ui-desc');
+  const codeEl  = document.getElementById('ui-code');
+  const countEl = document.getElementById('ui-desc-count');
+  if(titleEl) titleEl.value='';
+  if(descEl)  { descEl.value=''; if(countEl) countEl.textContent='0 / 3000'; }
+  if(codeEl)  codeEl.value='';
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  // Wire up char counter
+  if(descEl && countEl){
+    descEl.oninput = () => { countEl.textContent = descEl.value.length + ' / 3000'; };
+  }
+}
+
+function closeUpgradeModal(){
+  const modal = document.getElementById('upgrade-idea-modal');
+  if(modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function submitUpgradeIdea(){
+  const title = (document.getElementById('ui-title')?.value||'').trim();
+  const desc  = (document.getElementById('ui-desc')?.value||'').trim();
+  const code  = (document.getElementById('ui-code')?.value||'').trim();
+  const errEl = document.getElementById('ui-error');
+  const btn   = document.getElementById('ui-submit-btn');
+
+  const showErr = (msg) => {
+    if(errEl){ errEl.textContent=msg; errEl.style.display='block'; }
+    if(btn){ btn.disabled=false; btn.textContent='Submit Idea →'; }
+  };
+
+  // Validate
+  if(!title){ showErr('Please add a title for your idea.'); document.getElementById('ui-title')?.focus(); return; }
+  if(title.length > 120){ showErr('Title is too long — max 120 characters.'); return; }
+  if(!desc)  { showErr('Please describe your idea.'); document.getElementById('ui-desc')?.focus(); return; }
+  if(desc.length < 30){ showErr('Description is too short — give us a bit more detail (at least 30 characters).'); return; }
+
+  if(errEl) errEl.style.display='none';
+  if(btn){ btn.disabled=true; btn.textContent='Submitting…'; }
+
+  try{
+    const r = await fetch('/api/upgrade-idea',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body: JSON.stringify({ title, description: desc, code })
+    });
+    const d = await r.json();
+    if(!r.ok || d.error){
+      showErr(d.error || 'Something went wrong. Please try again.');
+      return;
+    }
+    // Show success state
+    const fields  = document.getElementById('upgrade-form-fields');
+    const success = document.getElementById('upgrade-success');
+    if(fields)  fields.style.display  = 'none';
+    if(success) success.style.display = 'block';
+  }catch(e){
+    showErr('Network error — please check your connection and try again.');
+  }
+}
+
+
 loadData();
 loadRealStats();
 </script>
+<!-- ✦ UPGRADE IDEA MODAL -->
+<div id="upgrade-idea-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeUpgradeModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:22px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;position:relative;">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,rgba(240,160,144,0.15),rgba(224,176,80,0.08));border-bottom:1px solid var(--border2);padding:24px 28px 20px;border-radius:22px 22px 0 0;">
+      <div style="font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;">✦ Community Upgrade Program</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px;">Got an idea to improve Support?</div>
+      <div style="font-size:13px;color:var(--muted2);line-height:1.65;">Submit your upgrade idea — describe the feature, show us the logic or code if you have it, and if we build it you earn <strong style="color:var(--gold);">1 free month of Premium</strong> on us.</div>
+    </div>
+
+    <!-- How it works -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border2);">
+      <div style="flex:1;padding:16px 20px;border-right:1px solid var(--border2);text-align:center;">
+        <div style="font-size:22px;margin-bottom:6px;">💡</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;">Submit Idea</div>
+        <div style="font-size:10px;color:var(--muted);">Describe the upgrade</div>
+      </div>
+      <div style="flex:1;padding:16px 20px;border-right:1px solid var(--border2);text-align:center;">
+        <div style="font-size:22px;margin-bottom:6px;">🔍</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;">We Review</div>
+        <div style="font-size:10px;color:var(--muted);">Team evaluates it</div>
+      </div>
+      <div style="flex:1;padding:16px 20px;text-align:center;">
+        <div style="font-size:22px;margin-bottom:6px;">🎉</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;">Get Rewarded</div>
+        <div style="font-size:10px;color:var(--muted);">1 free month if accepted</div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div style="padding:24px 28px;" id="upgrade-form-wrap">
+
+      <div id="upgrade-success" style="display:none;text-align:center;padding:32px 20px;">
+        <div style="font-size:48px;margin-bottom:16px;">🎉</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);margin-bottom:10px;">Idea Submitted!</div>
+        <div style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:20px;">We've received your upgrade idea and sent it to the Support team. If accepted, <strong style="color:var(--gold);">1 free month of Premium</strong> will be added to your account automatically — no action needed.</div>
+        <button onclick="closeUpgradeModal()" style="background:var(--rose);color:#fff;border:none;border-radius:20px;padding:12px 28px;font-size:12px;font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:0.08em;cursor:pointer;">Close</button>
+      </div>
+
+      <div id="upgrade-form-fields">
+        <!-- Title -->
+        <div style="margin-bottom:16px;">
+          <label style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Idea Title <span style="color:var(--rose);">*</span></label>
+          <input id="ui-title" type="text" maxlength="120"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;box-sizing:border-box;"
+            placeholder="e.g. Add a weekly hair progress chart to the dashboard">
+        </div>
+
+        <!-- Description -->
+        <div style="margin-bottom:16px;">
+          <label style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Describe Your Idea <span style="color:var(--rose);">*</span></label>
+          <textarea id="ui-desc" rows="5" maxlength="3000"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;resize:vertical;line-height:1.6;box-sizing:border-box;"
+            placeholder="Explain what the feature does, why it would be useful, how users would interact with it, and what problem it solves..."></textarea>
+          <div style="text-align:right;font-size:10px;color:var(--muted);margin-top:4px;" id="ui-desc-count">0 / 3000</div>
+        </div>
+
+        <!-- Code snippet -->
+        <div style="margin-bottom:20px;">
+          <label style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">
+            Code or Technical Logic
+            <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;"> — optional but encouraged</span>
+          </label>
+          <textarea id="ui-code" rows="6" maxlength="5000"
+            style="width:100%;background:#0d1220;border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:12px;color:#a8d8a8;font-family:'IBM Plex Mono',monospace;outline:none;resize:vertical;line-height:1.7;box-sizing:border-box;"
+            placeholder="// Paste any code, pseudocode, SQL, or technical logic here
+// Even rough ideas help us understand your vision
+
+function myUpgradeIdea() {
+  // e.g. track weekly hair score and show a chart
+}"></textarea>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;">💡 You don't need to be a developer. Pseudocode, diagrams described in words, or even just detailed logic all count.</div>
+        </div>
+
+        <!-- Error -->
+        <div id="ui-error" style="display:none;background:rgba(240,80,80,0.1);border:1px solid rgba(240,80,80,0.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#f05050;margin-bottom:14px;"></div>
+
+        <!-- Submit row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;max-width:260px;">By submitting you agree your idea may be used to improve Support. Credit given where possible.</div>
+          <button id="ui-submit-btn" onclick="submitUpgradeIdea()"
+            style="background:linear-gradient(135deg,var(--rose),#d06050);color:#fff;border:none;border-radius:20px;padding:13px 28px;font-size:12px;font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:0.08em;cursor:pointer;white-space:nowrap;box-shadow:0 4px 16px rgba(240,160,144,0.35);transition:all 0.2s;">
+            Submit Idea →
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- DASHBOARD GLOBAL FOOTER -->
 <div class="dashboard-footer" id="dashboard-footer">
   <a onclick="switchPTab('overview')">Overview</a>
@@ -7165,6 +7361,7 @@ loadRealStats();
   <a onclick="document.getElementById('dash-campaign-modal').style.display='flex'">🗳 Political Position</a>
   <a onclick="document.getElementById('dash-about-modal').style.display='flex'">About Us</a>
   <a onclick="document.getElementById('dash-privacy-modal').style.display='flex'">Privacy Policy</a>
+  <a onclick="openUpgradeModal()" style="color:var(--gold);font-weight:700;">💡 Submit an Upgrade — Earn 1 Free Month</a>
 </div>
 
 <!-- CAMPAIGN MODAL (dashboard) -->
@@ -7206,6 +7403,196 @@ loadRealStats();
 </div>
 </body></html>"""
     return Response(html, mimetype='text/html')
+
+
+# ── UPGRADE IDEAS ─────────────────────────────────────────────────
+
+@app.route("/api/upgrade-idea", methods=["POST","OPTIONS"])
+def submit_upgrade_idea():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user: return jsonify({"error":"unauthorized"}), 401
+    data  = request.get_json(silent=True) or {}
+    title = (data.get("title","") or "").strip()
+    desc  = (data.get("description","") or "").strip()
+    code  = (data.get("code","") or "").strip()
+    if not title or not desc:
+        return jsonify({"error":"Please provide a title and description."}), 400
+    if len(title) > 120:
+        return jsonify({"error":"Title too long (max 120 chars)."}), 400
+    if len(desc) > 3000:
+        return jsonify({"error":"Description too long (max 3000 chars)."}), 400
+
+    db_execute(
+        "INSERT INTO upgrade_ideas (user_id, user_email, user_name, idea_title, idea_desc, code_snippet) VALUES (?,?,?,?,?,?)",
+        (user["id"], user["email"], user["name"], title, desc, code)
+    )
+    idea_id = db_execute("SELECT last_insert_rowid()", fetchone=True)[0]
+
+    # Email admin
+    admin_email = os.environ.get("ADMIN_EMAIL","").strip()
+    approve_url = os.environ.get("APP_BASE_URL","https://aria.supportrd.com") + f"/api/upgrade-idea/approve?id={idea_id}&key=" + os.environ.get("ADMIN_KEY","")
+    reject_url  = os.environ.get("APP_BASE_URL","https://aria.supportrd.com") + f"/api/upgrade-idea/reject?id={idea_id}&key=" + os.environ.get("ADMIN_KEY","")
+    try:
+        import smtplib; from email.mime.text import MIMEText; from email.mime.multipart import MIMEMultipart
+        smtp_user = os.environ.get("SMTP_USER",""); smtp_pass = os.environ.get("SMTP_PASS","")
+        if smtp_user and smtp_pass and admin_email:
+            body = f"""New Upgrade Idea Submitted
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+From:    {user['name']} ({user['email']})
+Title:   {title}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{desc}
+
+{"─── Code Snippet ───" + chr(10) + code if code else "(No code submitted)"}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ APPROVE (grants 1 free month):
+{approve_url}
+
+❌ REJECT (sends decline email):
+{reject_url}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+            msg = MIMEText(body)
+            msg["Subject"] = f"[Support App] Upgrade Idea: {title}"
+            msg["From"]    = smtp_user
+            msg["To"]      = admin_email
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+    except Exception as e:
+        pass  # Email failure shouldn't block submission
+
+    return jsonify({"ok": True, "id": idea_id,
+        "message": "Your idea has been submitted! If accepted, you'll receive 1 free month of Premium automatically."})
+
+
+@app.route("/api/upgrade-idea/approve", methods=["GET","POST"])
+def approve_upgrade_idea():
+    key     = request.args.get("key","")
+    idea_id = request.args.get("id","")
+    if key != os.environ.get("ADMIN_KEY","") or not idea_id:
+        return "Unauthorized", 403
+
+    idea = db_execute("SELECT * FROM upgrade_ideas WHERE id=?", (idea_id,), fetchone=True)
+    if not idea: return "Idea not found", 404
+    if idea["status"] != "pending": return f"Already {idea['status']}", 200
+
+    # Grant 1 free month to the user
+    user_id    = idea["user_id"]
+    period_end = (datetime.datetime.utcnow() + datetime.timedelta(days=30)).isoformat()
+    existing   = db_execute("SELECT id FROM subscriptions WHERE user_id=?", (user_id,), fetchone=True)
+    if existing:
+        # Extend from current end date if already premium
+        cur = db_execute("SELECT current_period_end FROM subscriptions WHERE user_id=?", (user_id,), fetchone=True)
+        try:
+            cur_end = datetime.datetime.fromisoformat(cur["current_period_end"] or "")
+            if cur_end > datetime.datetime.utcnow():
+                period_end = (cur_end + datetime.timedelta(days=30)).isoformat()
+        except: pass
+        db_execute("UPDATE subscriptions SET status='active', plan='premium', current_period_end=?, updated_at=datetime('now') WHERE user_id=?", (period_end, user_id))
+    else:
+        db_execute("INSERT INTO subscriptions (user_id, status, plan, current_period_end) VALUES (?, 'active', 'premium', ?)", (user_id, period_end))
+
+    db_execute("UPDATE upgrade_ideas SET status='approved', reviewed_at=datetime('now') WHERE id=?", (idea_id,))
+
+    # Email the user
+    try:
+        import smtplib; from email.mime.text import MIMEText
+        smtp_user = os.environ.get("SMTP_USER",""); smtp_pass = os.environ.get("SMTP_PASS","")
+        if smtp_user and smtp_pass and idea["user_email"]:
+            body = f"""Hi {idea['user_name']},
+
+Great news — your upgrade idea was accepted! 🎉
+
+"{idea['idea_title']}"
+
+As a thank you, we've added 1 free month of SupportRD Premium to your account.
+Your premium access is active now. Log in and enjoy everything Aria has to offer.
+
+Thank you for helping make Support better.
+
+— The Support Team
+hello@supportrd.com"""
+            msg = MIMEText(body)
+            msg["Subject"] = "Your SupportRD upgrade idea was accepted — 1 free month added! 🎉"
+            msg["From"]    = smtp_user
+            msg["To"]      = idea["user_email"]
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+    except: pass
+
+    return f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+body{{font-family:sans-serif;background:#f0faf5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}}
+.card{{background:#fff;border-radius:16px;padding:40px;max-width:440px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.08);}}
+h2{{color:#2d6a4f;margin-bottom:12px;}} p{{color:#555;line-height:1.6;}}
+</style></head><body><div class="card">
+<h2>✅ Idea Approved!</h2>
+<p><strong>{idea['user_name']}</strong> has been granted 1 free month of Premium.</p>
+<p>An email confirmation has been sent to {idea['user_email']}.</p>
+<p style="margin-top:20px;font-size:13px;color:#999;">Idea: "{idea['idea_title']}"</p>
+</div></body></html>"""
+
+
+@app.route("/api/upgrade-idea/reject", methods=["GET","POST"])
+def reject_upgrade_idea():
+    key     = request.args.get("key","")
+    idea_id = request.args.get("id","")
+    if key != os.environ.get("ADMIN_KEY","") or not idea_id:
+        return "Unauthorized", 403
+
+    idea = db_execute("SELECT * FROM upgrade_ideas WHERE id=?", (idea_id,), fetchone=True)
+    if not idea: return "Idea not found", 404
+    if idea["status"] != "pending": return f"Already {idea['status']}", 200
+
+    db_execute("UPDATE upgrade_ideas SET status='rejected', reviewed_at=datetime('now') WHERE id=?", (idea_id,))
+
+    # Email the user a kind decline
+    try:
+        import smtplib; from email.mime.text import MIMEText
+        smtp_user = os.environ.get("SMTP_USER",""); smtp_pass = os.environ.get("SMTP_PASS","")
+        if smtp_user and smtp_pass and idea["user_email"]:
+            body = f"""Hi {idea['user_name']},
+
+Thank you for submitting your idea to Support:
+
+"{idea['idea_title']}"
+
+We reviewed it carefully. At this time we aren't moving forward with this particular idea, but we genuinely appreciate you taking the time to contribute.
+
+Keep the ideas coming — every submission helps us understand what our community needs.
+
+— The Support Team
+hello@supportrd.com"""
+            msg = MIMEText(body)
+            msg["Subject"] = "Your SupportRD upgrade idea — update from the team"
+            msg["From"]    = smtp_user
+            msg["To"]      = idea["user_email"]
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+    except: pass
+
+    return f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+body{{font-family:sans-serif;background:#fff8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}}
+.card{{background:#fff;border-radius:16px;padding:40px;max-width:440px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.08);}}
+h2{{color:#9d7f6a;margin-bottom:12px;}} p{{color:#555;line-height:1.6;}}
+</style></head><body><div class="card">
+<h2>Idea Declined</h2>
+<p>A polite decline email has been sent to <strong>{idea['user_email']}</strong>.</p>
+<p style="margin-top:20px;font-size:13px;color:#999;">Idea: "{idea['idea_title']}"</p>
+</div></body></html>"""
+
+
+@app.route("/api/admin/upgrade-ideas", methods=["GET"])
+def admin_upgrade_ideas():
+    key = request.args.get("key","")
+    if key != os.environ.get("ADMIN_KEY",""): return jsonify({"error":"unauthorized"}), 403
+    ideas = db_execute("SELECT * FROM upgrade_ideas ORDER BY submitted_at DESC", fetchall=True)
+    return jsonify([dict(i) for i in (ideas or [])])
 
 
 @app.after_request
