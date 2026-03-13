@@ -4,7 +4,9 @@ from flask import Flask, request, jsonify, Response, redirect
 app = Flask(__name__)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
-AUTH_DB = os.path.join(os.path.dirname(__file__), "users.db")
+# Use /data dir on Render (persistent disk) — fall back to local for dev
+_DATA_DIR = "/data" if os.path.isdir("/data") else os.path.dirname(os.path.abspath(__file__))
+AUTH_DB    = os.path.join(_DATA_DIR, "users.db")
 
 _db_lock = threading.Lock()
 
@@ -7593,6 +7595,57 @@ def admin_upgrade_ideas():
     if key != os.environ.get("ADMIN_KEY",""): return jsonify({"error":"unauthorized"}), 403
     ideas = db_execute("SELECT * FROM upgrade_ideas ORDER BY submitted_at DESC", fetchall=True)
     return jsonify([dict(i) for i in (ideas or [])])
+
+
+# ── ADMIN MAGIC LINK — always lets ADMIN_EMAIL back in ──────────
+
+@app.route("/admin-access")
+def admin_access():
+    """
+    Visit /admin-access?key=YOUR_ADMIN_KEY to get an instant session
+    as the admin account. Safe because it requires ADMIN_KEY.
+    """
+    key = request.args.get("key", "")
+    if not key or key != os.environ.get("ADMIN_KEY", ""):
+        return "Unauthorized", 403
+
+    admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    if not admin_email:
+        return "ADMIN_EMAIL env var not set on Render.", 500
+
+    # Find or create the admin user account
+    user = db_execute("SELECT * FROM users WHERE LOWER(email)=?", (admin_email,), fetchone=True)
+    if not user:
+        # Create admin account on the fly
+        pw_hash = hashlib.sha256(os.environ.get("ADMIN_KEY","admin").encode()).hexdigest()
+        db_execute(
+            "INSERT INTO users (email, name, password_hash) VALUES (?,?,?)",
+            (admin_email, "Admin", pw_hash)
+        )
+        user = db_execute("SELECT * FROM users WHERE LOWER(email)=?", (admin_email,), fetchone=True)
+
+    if not user:
+        return "Could not find or create admin account.", 500
+
+    # Create a fresh session
+    token = create_session(user["id"])
+
+    # Send back a page that stores the token in localStorage and redirects
+    return Response(f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Admin Access</title></head>
+<body style="font-family:sans-serif;background:#07090d;color:#eaedf5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+<div style="text-align:center;">
+  <div style="font-size:32px;margin-bottom:16px;">🔑</div>
+  <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Granting admin access…</div>
+  <div style="font-size:13px;color:rgba(255,255,255,0.4);">Redirecting to dashboard</div>
+</div>
+<script>
+  localStorage.setItem('srd_token', '{token}');
+  localStorage.setItem('srd_user', JSON.stringify({{name:'Admin',email:'{admin_email}',avatar:''}}));
+  localStorage.setItem('srd_premium', '1');
+  window.location.replace('/dashboard');
+</script>
+</body></html>""", mimetype="text/html")
 
 
 @app.after_request
