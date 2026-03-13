@@ -489,6 +489,30 @@ def init_blog_db():
 
 init_blog_db()
 
+# ─── GPS SOAP BOX DB ──────────────────────────────────────────────────────────
+def init_gps_box_db():
+    con = get_db()
+    con.execute("""CREATE TABLE IF NOT EXISTS gps_box_requests (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        store_name    TEXT NOT NULL,
+        store_address TEXT NOT NULL,
+        contact_name  TEXT,
+        contact_email TEXT,
+        contact_phone TEXT,
+        message       TEXT,
+        qty           INTEGER DEFAULT 1,
+        status        TEXT DEFAULT 'pending',
+        tracking_note TEXT,
+        shipped_at    TEXT,
+        created_at    TEXT DEFAULT (datetime('now')),
+        updated_at    TEXT DEFAULT (datetime('now'))
+    )""")
+    con.commit()
+    con.close()
+
+init_gps_box_db()
+# ─────────────────────────────────────────────────────────────────────────────
+
 # ─── WEEKLY EMAIL DB ──────────────────────────────────────────────────────────
 def init_weekly_email_db():
     con = get_db()
@@ -8246,7 +8270,7 @@ function myUpgradeIdea() {
   <a onclick="switchPTab('settings')">Settings</a>
   <a href="https://supportrd.com" target="_blank">Shop</a>
   <a href="mailto:hello@supportrd.com">Contact</a>
-  <a onclick="document.getElementById('dash-campaign-modal').style.display='flex'">🗳 Political Position</a>
+  <a onclick="document.getElementById('dash-campaign-modal').style.display='flex'">🗳 Our Positions</a>
   <a onclick="document.getElementById('dash-about-modal').style.display='flex'">About Us</a>
   <a onclick="document.getElementById('dash-privacy-modal').style.display='flex'">Privacy Policy</a>
   <a onclick="openUpgradeModal()" style="color:var(--gold);font-weight:700;">💡 Submit an Upgrade — Earn 1 Free Month</a>
@@ -8255,11 +8279,53 @@ function myUpgradeIdea() {
 
 <!-- CAMPAIGN MODAL (dashboard) -->
 <div id="dash-campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:24px;" onclick="this.style.display='none'">
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;max-width:440px;width:100%;" onclick="event.stopPropagation()">
-    <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:10px;">✦ Our Political Position</div>
-    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);margin-bottom:12px;">Ban Pornography on the Internet</div>
-    <div style="font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:16px;">Support the company publicly backs the campaign to ban pornography on the internet. We believe unrestricted access to explicit content online causes documented harm to children, relationships, and communities. This is our official stated position. We are affiliated with the Democratic Party.</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:18px;">This reflects the personal and company position of Support's leadership.</div>
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+
+    <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:18px;">✦ Our Political Positions</div>
+
+    <!-- Position 1: Ban Pornography -->
+    <div style="margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-size:1.1rem;">🛡</span>
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);">Ban Pornography on the Internet</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted2);line-height:1.75;margin-bottom:8px;">Support RD publicly backs the campaign to ban pornography on the internet. We believe unrestricted access to explicit content online causes documented harm to children, relationships, and communities. This is our official stated position.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span style="background:rgba(59,130,246,0.12);color:#60a5fa;border:1px solid rgba(59,130,246,0.25);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">🫏 Democratic Party</span>
+        <span style="background:rgba(240,160,144,0.1);color:var(--rose);border:1px solid rgba(240,160,144,0.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">Child Protection</span>
+      </div>
+    </div>
+
+    <!-- Position 2: Campaign for the Poor -->
+    <div style="margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-size:1.1rem;">🤝</span>
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);">Campaign for the Poor</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted2);line-height:1.75;margin-bottom:8px;">Support RD believes that quality hair care should not be a luxury reserved for people with money. We are actively working on pathways to make our products accessible to low-income communities — through pricing programs, community partnerships, and donation initiatives. Hair is identity. Nobody should lose theirs because they can't afford to maintain it.</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">This campaign is in active development. If your organization works with low-income communities and wants to partner, contact us.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span style="background:rgba(48,232,144,0.1);color:#30e890;border:1px solid rgba(48,232,144,0.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">Community Access</span>
+        <span style="background:rgba(59,130,246,0.12);color:#60a5fa;border:1px solid rgba(59,130,246,0.25);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">🫏 Democratic Party</span>
+        <span style="background:rgba(224,176,80,0.1);color:var(--gold);border:1px solid rgba(224,176,80,0.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">In Development</span>
+      </div>
+    </div>
+
+    <!-- Auto Dissolve Bar — Partnership Search -->
+    <div style="margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-size:1.1rem;">✨</span>
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);">Auto Dissolve Bar — Seeking Partner</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted2);line-height:1.75;margin-bottom:8px;">Support RD has developed a proprietary auto dissolve hair bar — a solid format product that dissolves on contact, delivers treatment without waste, and ships without liquid restrictions. We are actively looking for a shipping and distribution company that aligns with our values to bring this to market. If your company wants to be the first to ship this, reach out.</div>
+      <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:12px;padding:12px 14px;margin-bottom:10px;">
+        <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#c084fc;margin-bottom:4px;">What we need</div>
+        <div style="font-size:11px;color:var(--muted2);line-height:1.6;">A shipping partner who can handle solid format hair products, ship affordably to low-income customers, and wants to be part of a mission-driven beauty brand.</div>
+      </div>
+      <a href="mailto:hello@supportrd.com?subject=Auto Dissolve Bar Partnership" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;text-decoration:none;border-radius:20px;padding:9px 18px;font-size:11px;font-weight:700;letter-spacing:0.05em;">📦 Express Interest in Partnering</a>
+    </div>
+
+    <div style="font-size:10px;color:var(--muted);margin-bottom:18px;">These reflect the personal and company positions of Support's leadership — Anthony, Crystal, and Evelyn.</div>
     <button onclick="document.getElementById('dash-campaign-modal').style.display='none'" style="background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:11px;letter-spacing:0.1em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Close</button>
   </div>
 </div>
