@@ -446,6 +446,159 @@ def init_subscription_db():
 
 init_subscription_db()
 
+# ─── BLOG DB ─────────────────────────────────────────────────────────────────
+def init_blog_db():
+    con = get_db()
+    con.execute("""CREATE TABLE IF NOT EXISTS blog_posts (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug            TEXT UNIQUE NOT NULL,
+        title           TEXT NOT NULL,
+        subtitle        TEXT,
+        body            TEXT NOT NULL,
+        cover_url       TEXT,
+        author          TEXT DEFAULT 'Support RD Team',
+        tags            TEXT DEFAULT '',
+        status          TEXT DEFAULT 'draft',
+        approval_status TEXT DEFAULT 'pending',
+        approved_by     TEXT,
+        approved_at     TEXT,
+        rejection_note  TEXT,
+        featured        INTEGER DEFAULT 0,
+        views           INTEGER DEFAULT 0,
+        ai_generated    INTEGER DEFAULT 0,
+        created_at      TEXT DEFAULT (datetime('now')),
+        updated_at      TEXT DEFAULT (datetime('now')),
+        published_at    TEXT
+    )""")
+    con.execute("""CREATE TABLE IF NOT EXISTS blog_ideas (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        title       TEXT NOT NULL,
+        subtitle    TEXT,
+        outline     TEXT,
+        tags        TEXT,
+        reasoning   TEXT,
+        status      TEXT DEFAULT 'new',
+        created_at  TEXT DEFAULT (datetime('now'))
+    )""")
+    for col in [("approval_status","TEXT DEFAULT 'pending'"),("approved_by","TEXT"),
+                ("approved_at","TEXT"),("rejection_note","TEXT"),("ai_generated","INTEGER DEFAULT 0")]:
+        try: con.execute(f"ALTER TABLE blog_posts ADD COLUMN {col[0]} {col[1]}")
+        except: pass
+    con.commit()
+    con.close()
+
+init_blog_db()
+
+# ─── WEEKLY EMAIL DB ──────────────────────────────────────────────────────────
+def init_weekly_email_db():
+    con = get_db()
+    con.execute("""CREATE TABLE IF NOT EXISTS weekly_secrets (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        secret_text TEXT NOT NULL,
+        hint        TEXT,
+        reward      TEXT,
+        active      INTEGER DEFAULT 1,
+        week_of     TEXT DEFAULT (date('now')),
+        created_at  TEXT DEFAULT (datetime('now'))
+    )""")
+    con.execute("""CREATE TABLE IF NOT EXISTS weekly_email_log (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER,
+        user_email  TEXT,
+        secret_id   INTEGER,
+        email_type  TEXT,
+        sent_at     TEXT DEFAULT (datetime('now'))
+    )""")
+    con.commit()
+    con.close()
+
+init_weekly_email_db()
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ── Auto-seed the Lsciador launch post ───────────────────────────────────────
+def _seed_lsciador_post():
+    existing = db_execute("SELECT id FROM blog_posts WHERE slug='lsciador-refresher-shampoo-conditioner'", fetchone=True)
+    if existing:
+        return  # Already seeded
+    body = """It started with Evelyn.
+
+Not in a lab. Not in a boardroom. In a kitchen, in the Dominican Republic, with hands that knew what hair needed before science had a name for it.
+
+The original Shampoo Aloe & Romero was born from that knowing. Aloe vera — raw, direct from the plant. Romero (rosemary) — the herb Dominican grandmothers have trusted for generations to wake up sleeping follicles and keep scalp health where it belongs: clean, fed, alive. That shampoo became the foundation of Support RD. The product that said: *natural works. Dominican formulas work.*
+
+## So What Is Lsciador?
+
+Lsciador is what happens when you take that foundation and ask: what does hair need *after* the cleanse?
+
+The Shampoo Aloe & Romero opens the hair shaft. It removes buildup, activates circulation, and gives your scalp a clean slate. That is its job and it does it completely.
+
+Lsciador picks up exactly where the shampoo finishes.
+
+Think of it as the second half of one complete ritual. The shampoo strips away what doesn't belong. Lsciador restores what should have been there all along — moisture, elasticity, softness, and the kind of shine that doesn't come from silicone coating but from hair that is genuinely healthy inside the strand.
+
+## The Relationship Between the Two
+
+Here is the thing about hair care that most brands get wrong: they sell you a cleanser and a conditioner as if they are separate products that happen to sit next to each other on a shelf.
+
+Lsciador and the Shampoo Aloe & Romero were designed as a system.
+
+The shampoo's rosemary activates your scalp. Lsciador's formula is built to work with an activated, freshly cleansed scalp — not against a dry one, not on top of product buildup. When you use them together, the ingredients from each step speak to each other. The scalp stays stimulated. The strands get sealed. The moisture stays in.
+
+This is the Dominican difference: formulas that work *together*, not just *alongside*.
+
+## What Lsciador Does For Your Hair
+
+For those dealing with dryness after washing — that tight, brittle feeling that appears the moment water hits and then evaporates — Lsciador addresses the root of that problem. It reconstructs the moisture layer that cleansing temporarily disrupts and reinforces it so your hair holds onto hydration through styling, heat, and the rest of your day.
+
+For curly and coily textures, it defines without weighing down. For straight and wavy hair, it smooths without stripping natural movement.
+
+And for anyone who has been using the Shampoo Aloe & Romero alone — this is the missing piece. You have been doing half the ritual. Lsciador completes it.
+
+## A Note From the Team
+
+Evelyn created the original shampoo for the people in her life. The extension into Lsciador came from the same place: listening to what people said their hair was still asking for after the wash.
+
+That conversation between a founder and her community — that is what Support RD is. Every formula we make answers a real question from a real person.
+
+Lsciador is our answer to: *I cleanse, but my hair still feels like it needs more.*
+
+Now it has more.
+
+## How to Use Them Together
+
+Step 1: Shampoo Aloe & Romero. Work into wet scalp, massage gently for 90 seconds to let the rosemary stimulate circulation. Rinse thoroughly.
+
+Step 2: Lsciador. Apply to lengths and ends while hair is still damp. Leave in for 3 to 5 minutes. Rinse, or leave a small amount in for extra softness.
+
+That is the full ritual. Two products. One complete result.
+
+## Available Now
+
+Both products ship from supportrd.com. Use them together and feel the difference the first time.
+
+This is not a refresh of an old formula. This is the formula that was always meant to follow the one that started everything."""
+
+    db_execute(
+        "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,cover_url,featured,status,published_at) VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))",
+        (
+            "lsciador-refresher-shampoo-conditioner",
+            "Lsciador: The Refresher to the Original Shampoo & Conditioner",
+            "How Support RD's newest formula completes the ritual that started with Evelyn's original Shampoo Aloe & Romero.",
+            body,
+            "Evelyn & the Support RD Team",
+            "Lsciador, Shampoo, Conditioner, Dominican Hair Care, New Product",
+            "",
+            1,
+            "published"
+        )
+    )
+    print("[BLOG] Lsciador launch post seeded ✓")
+
+_seed_lsciador_post()
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 def get_subscription(user_id):
     con = get_db()
     row = con.execute("SELECT * FROM subscriptions WHERE user_id=?", (user_id,)).fetchone()
@@ -2313,6 +2466,65 @@ def create_checkout():
     return jsonify({"setup_needed":True,"checkout_url":"https://supportrd.com/products/hair-advisor-premium"})
 
 
+
+# ── 🎁 PREMIUM STARTER BAG — AI IDEA GENERATOR GIFT ─────────────────────────
+def _gift_blog_ideas_for_new_premium(user_id):
+    """When someone joins premium, Aria generates 5 blog ideas as a free welcome gift.
+    Stored in blog_ideas table with status='starter_gift' so they're easy to find."""
+    # Don't re-gift if they already have starter ideas
+    existing = db_execute("SELECT COUNT(*) FROM blog_ideas WHERE status='starter_gift'", fetchone=True)
+    if existing and existing[0] >= 5:
+        return  # Already gifted
+    ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY","")
+    if not ANTHROPIC_KEY:
+        return
+    import urllib.request as _urlreq
+    prompt = """You are Aria, the AI advisor for Support RD — a Dominican hair care brand founded by Evelyn.
+Products: Shampoo Aloe & Romero, Lsciador conditioner, Gift Shop.
+The app has: Aria AI chat, Candy Land GPS driving mode, live coding feed, hair journal, photo analysis.
+The company backs the campaign to ban pornography on the internet (Democratic Party affiliated).
+
+A new premium member just joined. Generate exactly 5 blog post ideas as their FREE STARTER GIFT.
+Make them feel special — mix product education, hair tips, company story, something fun, and one bold topic.
+
+Respond ONLY in valid JSON, no markdown:
+[
+  {
+    "title": "...",
+    "subtitle": "...",
+    "outline": "Three sentence outline.",
+    "tags": "tag1, tag2, tag3",
+    "reasoning": "One sentence on why this post serves the audience."
+  }
+]"""
+    try:
+        payload = json.dumps({
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 1500,
+            "messages": [{"role":"user","content":prompt}]
+        }).encode()
+        req = _urlreq.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"}
+        )
+        with _urlreq.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read())
+        raw = result.get("content",[{}])[0].get("text","[]")
+        raw = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+        ideas = json.loads(raw)
+        for idea in ideas[:5]:
+            db_execute(
+                "INSERT INTO blog_ideas (title,subtitle,outline,tags,reasoning,status) VALUES (?,?,?,?,?,'starter_gift')",
+                (idea.get("title","")[:200], idea.get("subtitle","")[:300],
+                 idea.get("outline","")[:500], idea.get("tags","")[:200],
+                 idea.get("reasoning","")[:300])
+            )
+        print(f"[STARTER BAG] 5 AI blog ideas gifted to user {user_id} ✓")
+    except Exception as e:
+        print(f"[STARTER BAG] Gift failed: {e}")
+# ─────────────────────────────────────────────────────────────────────────────
+
 @app.route("/api/shopify-order-webhook", methods=["POST"])
 def shopify_order_webhook():
     try:
@@ -2331,7 +2543,10 @@ def shopify_order_webhook():
         existing=db_execute("SELECT id FROM subscriptions WHERE user_id=?", (user_id,), fetchone=True)
         if existing: db_execute("UPDATE subscriptions SET status='active', plan='premium', current_period_end=?, updated_at=datetime('now') WHERE user_id=?",(period_end,user_id))
         else: db_execute("INSERT INTO subscriptions (user_id, status, plan, current_period_end) VALUES (?, 'active', 'premium', ?)",(user_id,period_end))
-        return jsonify({"ok":True,"status":"premium activated","email":email})
+        # 🎁 STARTER BAG — generate 5 free AI blog ideas as a welcome gift
+        try: _gift_blog_ideas_for_new_premium(user_id)
+        except: pass
+        return jsonify({"ok":True,"status":"premium activated","email":email,"gift":"starter_bag_ideas"})
     except Exception as e:
         return jsonify({"ok":False,"error":str(e)}), 500
 
@@ -2347,7 +2562,9 @@ def activate_shopify():
     row=db_execute("SELECT id FROM subscriptions WHERE user_id=?",(user["id"],),fetchone=True)
     if row: db_execute("UPDATE subscriptions SET status='active',plan='premium',current_period_end=?,updated_at=datetime('now') WHERE user_id=?",(period_end,user["id"]))
     else: db_execute("INSERT INTO subscriptions (user_id,status,plan,current_period_end) VALUES (?,'active','premium',?)",(user["id"],period_end))
-    return jsonify({"ok":True,"plan":"premium"})
+    try: _gift_blog_ideas_for_new_premium(user["id"])
+    except: pass
+    return jsonify({"ok":True,"plan":"premium","gift":"starter_bag_ideas"})
 
 @app.route("/api/admin/generate-code", methods=["POST","OPTIONS"])
 def generate_code():
@@ -2371,7 +2588,15 @@ def subscription_success():
     return """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SupportRD — Welcome to Premium</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#f0ebe8;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;padding:24px;}.card{background:#fff;border-radius:24px;padding:56px 40px;max-width:460px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.08);}.icon{font-size:56px;margin-bottom:20px;}.title{font-family:'Cormorant Garamond',serif;font-size:36px;font-style:italic;color:#0d0906;margin-bottom:10px;}.sub{font-size:13px;color:rgba(0,0,0,0.40);line-height:1.7;margin-bottom:28px;}.trial-badge{background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;padding:10px 24px;border-radius:20px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;display:inline-block;margin-bottom:28px;}.btn{display:block;padding:14px;background:#c1a3a2;color:#fff;text-decoration:none;border-radius:30px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;transition:background 0.2s;}.btn:hover{background:#9d7f6a;}.btn-outline{background:transparent;color:#9d7f6a;border:1px solid rgba(193,163,162,0.40);}</style></head><body>
-<div class="card"><div class="icon">🌿</div><div class="title">Welcome to Premium</div><div class="trial-badge">7-Day Free Trial Active</div><div class="sub">Your hair journey just leveled up. Unlimited Aria access, full hair health dashboard, and priority advisor support.</div><a href="/" class="btn">Talk to Aria Now</a><a href="/dashboard" class="btn btn-outline">View My Dashboard</a></div>
+<div class="card"><div class="icon">🌿</div><div class="title">Welcome to Premium</div><div class="trial-badge">7-Day Free Trial Active</div><div class="sub">Your hair journey just leveled up. Unlimited Aria access, full hair health dashboard, and priority advisor support.</div>
+<div style="background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(192,132,252,0.06));border:1px solid rgba(192,132,252,0.3);border-radius:16px;padding:18px 20px;margin-bottom:24px;text-align:left;">
+  <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#a855f7;margin-bottom:8px;font-family:'Jost',sans-serif;">🎁 Your Free Starter Bag</div>
+  <div style="font-size:13px;color:#333;line-height:1.7;margin-bottom:6px;"><strong>AI Blog Idea Generator</strong> — Aria just generated 5 custom blog post ideas for you. Head to the Blog Command Center to see them, write them, and publish them.</div>
+  <div style="font-size:11px;color:#9d7f6a;">This is your free weapon. Use it whenever you need fresh content ideas.</div>
+</div>
+<a href="/" class="btn">Talk to Aria Now</a>
+<a href="/dashboard" class="btn btn-outline">View My Dashboard</a>
+<a href="/blog/write" class="btn btn-outline" style="border-color:rgba(168,85,247,0.4);color:#a855f7;">✨ See My Starter Ideas</a></div>
 <script>var u=localStorage.getItem('srd_user');if(u){try{var p=JSON.parse(u);p.plan='premium';localStorage.setItem('srd_user',JSON.stringify(p));}catch(e){}}</script>
 </body></html>"""
 
@@ -3677,7 +3902,202 @@ body::before{content:'';position:fixed;inset:0;
 </div>
 </div><!-- /pp-overview -->
 
-<!-- ═══════════════ PREMIUM FULL-PAGE PANELS ═══════════════ -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!--  MORTAL KOMBAT EASTER EGG — "PLUS500" cheat on dashboard     -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="mk-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#000;flex-direction:column;align-items:center;justify-content:center;overflow:hidden">
+  <!-- Blood splatter BG -->
+  <canvas id="mk-canvas" style="position:absolute;inset:0;width:100%;height:100%;opacity:.35"></canvas>
+
+  <!-- MK logo area -->
+  <div id="mk-logo" style="position:relative;z-index:2;text-align:center;animation:mkDrop .6s cubic-bezier(.23,1.5,.6,1) both">
+    <div style="font-size:clamp(2rem,8vw,5rem);font-weight:900;letter-spacing:.08em;color:#f5c518;text-shadow:0 0 40px #f5c518,0 0 80px #ff4400;font-family:'Impact',sans-serif;line-height:1">SUPPORT RD</div>
+    <div style="font-size:clamp(.9rem,3vw,1.4rem);letter-spacing:.4em;color:#cc0000;font-family:'Impact',sans-serif;text-transform:uppercase;margin-top:4px">⚰ CHOOSE YOUR FIGHTER ⚰</div>
+  </div>
+
+  <!-- VS flash -->
+  <div id="mk-vs" style="position:relative;z-index:2;font-size:clamp(4rem,18vw,12rem);font-weight:900;color:#fff;font-family:'Impact',sans-serif;text-shadow:0 0 60px #ff0000,0 0 120px #ff4400;letter-spacing:.1em;opacity:0;transform:scale(3);transition:all .4s;margin:0 -20px">VS</div>
+
+  <!-- Fighter cards -->
+  <div id="mk-fighters" style="position:relative;z-index:2;display:flex;gap:clamp(20px,6vw,80px);align-items:flex-end;margin-top:20px;opacity:0;transform:translateY(40px);transition:all .5s .3s">
+
+    <!-- Fighter 1: Shampoo Aloe & Romero -->
+    <div class="mk-card" style="text-align:center;width:clamp(140px,28vw,200px)">
+      <div style="width:100%;aspect-ratio:3/4;background:linear-gradient(180deg,#0a1628,#051020);border:2px solid #1a3a6a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:16px 12px;position:relative;overflow:hidden">
+        <div style="font-size:clamp(3rem,10vw,5rem);position:absolute;top:50%;left:50%;transform:translate(-50%,-60%)">🟢</div>
+        <div style="font-size:clamp(3rem,10vw,5rem);position:absolute;top:50%;left:50%;transform:translate(-50%,-60%)">🌿</div>
+        <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,20,60,.9) 0%,transparent 50%)"></div>
+        <div style="position:relative;font-family:'Impact',sans-serif;font-size:clamp(.75rem,2.5vw,1rem);letter-spacing:.1em;color:#4af;text-transform:uppercase">The Original</div>
+        <div style="position:relative;font-family:'Impact',sans-serif;font-size:clamp(1rem,3.5vw,1.35rem);color:#fff;text-transform:uppercase;line-height:1.1;margin-top:4px">SHAMPOO<br>ALOE &amp; ROMERO</div>
+        <div style="position:relative;font-size:.7rem;color:#4af;margin-top:6px;letter-spacing:.2em">THE KLASSIC</div>
+      </div>
+      <div id="mk-hp1" style="background:#111;border:1px solid #333;height:14px;border-radius:3px;margin-top:8px;overflow:hidden">
+        <div style="height:100%;background:linear-gradient(90deg,#22cc44,#44ff88);width:100%;transition:width 1s .8s"></div>
+      </div>
+    </div>
+
+    <!-- Fighter 2: Lsciador — The Refresher -->
+    <div class="mk-card" style="text-align:center;width:clamp(140px,28vw,200px)">
+      <div style="width:100%;aspect-ratio:3/4;background:linear-gradient(180deg,#1a0828,#0a0514);border:2px solid #6a1a8a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:16px 12px;position:relative;overflow:hidden">
+        <div style="font-size:clamp(3rem,10vw,5rem);position:absolute;top:50%;left:50%;transform:translate(-50%,-60%)">⚡</div>
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(160,80,255,.3),transparent 70%)"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(40,0,80,.95) 0%,transparent 50%)"></div>
+        <div id="mk-new-badge" style="position:absolute;top:10px;right:10px;background:#ff4400;color:#fff;font-family:'Impact',sans-serif;font-size:.65rem;letter-spacing:.15em;padding:3px 8px;border-radius:3px;transform:rotate(12deg)">NEW</div>
+        <div style="position:relative;font-family:'Impact',sans-serif;font-size:clamp(.75rem,2.5vw,1rem);letter-spacing:.1em;color:#c084fc;text-transform:uppercase">The Refresher</div>
+        <div style="position:relative;font-family:'Impact',sans-serif;font-size:clamp(1.1rem,4vw,1.6rem);color:#fff;text-transform:uppercase;line-height:1.1;margin-top:4px;text-shadow:0 0 20px #a855f7">LSCIADOR</div>
+        <div style="position:relative;font-size:.7rem;color:#c084fc;margin-top:6px;letter-spacing:.2em">EVOLVED FORM</div>
+      </div>
+      <div style="background:#111;border:1px solid #333;height:14px;border-radius:3px;margin-top:8px;overflow:hidden">
+        <div style="height:100%;background:linear-gradient(90deg,#a855f7,#ec4899);width:100%;transition:width 1s 1s"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FINISH HIM text -->
+  <div id="mk-finish" style="position:relative;z-index:2;font-family:'Impact',sans-serif;font-size:clamp(1.5rem,6vw,3.5rem);letter-spacing:.25em;color:#ff4400;text-shadow:0 0 30px #ff4400;margin-top:24px;opacity:0;transition:opacity .4s .8s;text-transform:uppercase">
+    LSCIADOR HAS ENTERED
+  </div>
+
+  <!-- CTA -->
+  <div id="mk-cta" style="position:relative;z-index:2;margin-top:20px;opacity:0;transform:translateY(20px);transition:all .4s 1.2s;text-align:center">
+    <a id="mk-blog-link" href="/blog/lsciador-refresher-shampoo-conditioner" style="display:inline-block;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;text-decoration:none;font-family:'Impact',sans-serif;font-size:clamp(1rem,3vw,1.3rem);letter-spacing:.2em;padding:14px 32px;border-radius:6px;text-transform:uppercase;border:2px solid #c084fc;box-shadow:0 0 30px rgba(168,85,247,.5)">
+      ⚡ READ THE LSCIADOR REVEAL →
+    </a>
+    <div style="margin-top:12px;font-size:.8rem;color:#666;letter-spacing:.15em">PRESS ESC OR TAP TO EXIT</div>
+  </div>
+
+  <!-- Fatality message -->
+  <div id="mk-fatality" style="position:fixed;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s">
+    <div style="font-family:'Impact',sans-serif;font-size:clamp(3rem,12vw,7rem);letter-spacing:.15em;color:#f5c518;text-shadow:0 0 60px #f5c518,0 0 120px #ff4400;text-transform:uppercase">FATALITY</div>
+  </div>
+</div>
+
+<style>
+@keyframes mkDrop{from{opacity:0;transform:translateY(-60px) scale(1.2)}to{opacity:1;transform:none}}
+@keyframes mkBlood{0%{transform:translateY(-20px);opacity:1}100%{transform:translateY(100vh);opacity:0}}
+@keyframes mkShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+@keyframes mkFlash{0%,100%{opacity:0}50%{opacity:1}}
+</style>
+
+<script>
+// ── PLUS500 cheat code detector ─────────────────────────────
+(function(){
+  const CODE = 'PLUS500';
+  let buf = '';
+  let mkActive = false;
+
+  document.addEventListener('keydown', function(e){
+    if(mkActive && e.key === 'Escape'){ closeMK(); return; }
+    if(mkActive) return;
+    buf += e.key.toUpperCase();
+    if(buf.length > CODE.length) buf = buf.slice(-CODE.length);
+    if(buf === CODE){ buf=''; triggerMK(); }
+  });
+
+  document.getElementById('mk-overlay').addEventListener('click', function(e){
+    if(e.target === this || e.target.id === 'mk-overlay') closeMK();
+  });
+
+  function closeMK(){
+    const ov = document.getElementById('mk-overlay');
+    ov.style.opacity='0';
+    ov.style.transition='opacity .5s';
+    setTimeout(()=>{ ov.style.display='none'; ov.style.opacity=''; ov.style.transition=''; mkActive=false; },500);
+    stopBlood();
+  }
+
+  function triggerMK(){
+    mkActive = true;
+    const ov = document.getElementById('mk-overlay');
+    ov.style.display='flex';
+    // Reset animations
+    ['mk-vs','mk-fighters','mk-finish','mk-cta'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.style.opacity='0';
+      el.style.transform = id==='mk-vs' ? 'scale(3)' : 'translateY(40px)';
+    });
+
+    startBlood();
+
+    // Sequence
+    setTimeout(()=>{
+      const vs = document.getElementById('mk-vs');
+      vs.style.opacity='1';
+      vs.style.transform='scale(1)';
+      // flash red
+      document.getElementById('mk-overlay').style.background='#440000';
+      setTimeout(()=>{ document.getElementById('mk-overlay').style.background='#000'; }, 200);
+    }, 400);
+
+    setTimeout(()=>{
+      const f = document.getElementById('mk-fighters');
+      f.style.opacity='1';
+      f.style.transform='translateY(0)';
+    }, 900);
+
+    setTimeout(()=>{
+      const fi = document.getElementById('mk-finish');
+      fi.style.opacity='1';
+    }, 1400);
+
+    setTimeout(()=>{
+      const ct = document.getElementById('mk-cta');
+      ct.style.opacity='1';
+      ct.style.transform='translateY(0)';
+    }, 1800);
+
+    // Fatality flash at end
+    setTimeout(()=>{
+      const fat = document.getElementById('mk-fatality');
+      fat.style.opacity='1';
+      setTimeout(()=>{ fat.style.opacity='0'; }, 1200);
+    }, 2600);
+  }
+
+  // Blood drop canvas
+  let bloodRAF = null;
+  const drops = [];
+  function startBlood(){
+    const canvas = document.getElementById('mk-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    drops.length = 0;
+    for(let i=0;i<40;i++){
+      drops.push({
+        x: Math.random()*canvas.width,
+        y: -Math.random()*canvas.height,
+        r: Math.random()*6+2,
+        speed: Math.random()*4+2,
+        alpha: Math.random()*.8+.2
+      });
+    }
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      drops.forEach(d=>{
+        ctx.beginPath();
+        ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(${Math.random()>0.3?'180,0,0':'220,30,0'},${d.alpha})`;
+        ctx.fill();
+        d.y += d.speed;
+        if(d.y > canvas.height+20){ d.y=-20; d.x=Math.random()*canvas.width; }
+      });
+      bloodRAF = requestAnimationFrame(draw);
+    }
+    draw();
+  }
+  function stopBlood(){
+    if(bloodRAF) cancelAnimationFrame(bloodRAF);
+    bloodRAF=null;
+    const canvas=document.getElementById('mk-canvas');
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+})();
+</script>
+<!-- ════════════════════════════════════════════════════════════ -->
+
 
 <!-- ✦ HAIR PROFILE FULL PAGE -->
 <div class="ppage" id="pp-profile-page">
@@ -5061,30 +5481,6 @@ function occSave(){
   occLoadSaved();
 }
 
-function occLoadSaved(){
-  const el = document.getElementById('occ-saved-list');
-  if(!el) return;
-  const saved = JSON.parse(localStorage.getItem('srd_occasions')||'{}');
-  const keys = Object.keys(saved);
-  if(!keys.length){ el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No occasions saved yet — pick a template above.</div>'; return; }
-  el.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Saved Occasions ('+keys.length+')</div>'
-    + keys.map(k=>{
-    const o = saved[k];
-    return '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 18px;margin-bottom:10px;">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-      +'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:13px;color:var(--text);">✦ '+k+'</div>'
-      +'<div style="display:flex;gap:8px;">'
-      +'<button onclick="occOpenEditor(\''+k.replace(/'/g,"\\'")+'\')" style="background:none;border:1px solid var(--border2);color:var(--muted2);padding:3px 10px;border-radius:10px;font-size:10px;cursor:pointer;">Edit</button>'
-      +'<button onclick="occDelete(\''+k.replace(/'/g,"\\'")+'\')" style="background:none;border:1px solid rgba(255,80,80,0.3);color:rgba(255,120,120,0.7);padding:3px 10px;border-radius:10px;font-size:10px;cursor:pointer;">✕</button>'
-      +'</div></div>'
-      +(o.steps?'<div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:8px;">'+o.steps+'</div>':'')
-      +(o.products&&o.products.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
-        +o.products.map(p=>'<span style="font-size:10px;padding:3px 8px;background:rgba(240,160,144,0.1);border:1px solid rgba(240,160,144,0.2);border-radius:10px;color:var(--rose);">'+p+'</span>').join('')
-        +'</div>':'')
-      +'<div style="font-size:9px;color:var(--muted);margin-top:8px;">Updated '+o.updated+'</div>'
-      +'</div>';
-  }).join('');
-}
 
 function occDelete(name){
   const saved = JSON.parse(localStorage.getItem('srd_occasions')||'{}');
@@ -5255,11 +5651,6 @@ async function deleteTreatment(id){
 }
 
 // ── PHOTO ANALYSIS ───────────────────────────────────────────────────────────
-function openPhotoPage(){
-  document.getElementById('photo-gate').style.display='none';
-  document.getElementById('photo-content').style.display='block';
-  loadPhotoHistory();
-}
 
 let _photoB64=null;
 // ── PHOTO ANALYSIS — SCANNER UI ──────────────────────────────────────────────
@@ -5535,11 +5926,6 @@ function activateStat(el){
 let _journalRating = 3;
 let _journalPhotoB64 = null;
 
-function openJournalPage(){
-  document.getElementById('journal-gate').style.display='none';
-  document.getElementById('journal-content').style.display='block';
-  loadJournalEntries();
-}
 
 function openJournalEntry(){
   if(!_isPremium){ showUpgradeModal('Hair Journal'); return; }
@@ -5974,6 +6360,18 @@ async function loadData(){
     if(d.subscribed){ document.getElementById('plan-badge').textContent='PREMIUM'; _isPremium=true; }
     // Style premium nav tabs
     if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('✦')) t.style.color='var(--gold)'; });
+    // Show starter bag link for premium users
+    if(_isPremium){
+      const sbLink = document.getElementById('starterBagLink');
+      if(sbLink) sbLink.style.display='inline';
+      // First time premium welcome toast
+      if(!localStorage.getItem('srd_starter_bag_shown')){
+        localStorage.setItem('srd_starter_bag_shown','1');
+        setTimeout(()=>{
+          showToast('🎁 Welcome to Premium! Your AI starter bag is ready — check Blog Ideas!');
+        }, 1800);
+      }
+    }
     document.getElementById('st-chats').textContent=d.chat_count||0;
     document.getElementById('st-chats-trend').textContent='↑ '+(d.chat_count||0)+' all time';
     const concerns=(d.profile?.hair_concerns||'').split(',').filter(c=>c.trim()).length;
@@ -6026,6 +6424,261 @@ async function doLogout(){
 
 let toastT;
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
+
+// ── WOOPSIES — MORTAL KOMBAT DUMMY EASTER EGG ──────────────────────────────
+(function(){
+  const WOOPSIES = [
+    "WOOPSIES!!","Oop— Woopsies!","W O O P S I E S","woopsies hehe 😬",
+    "WOOOOPSIES!!","...woopsies","omg woopsies 😭","WoOpSiEs!! 💜",
+    "woopsies again?!","FINISH HIM... woopsies","FATALITY... just kidding. woopsies.",
+    "GET OVER HERE... woopsies","TOASTY! woopsies","flawless woopsies 💀"
+  ];
+  const SPECIAL_MSGS = [
+    "✦ Routine saved!","✦ Profile saved!","Treatment logged ✓","Entry saved ✓","Session started!",
+    "Published!","Going live!","Upgrade submitted!","Score saved!","Photo analyzed!"
+  ];
+
+  /* ── BUILD THE DUMMY DOM ── */
+  const wrap = document.createElement('div');
+  wrap.id = 'woopsie-wrap';
+  wrap.innerHTML = `
+    <div id="woopsie-stage">
+      <canvas id="woopsie-canvas" width="120" height="160"></canvas>
+      <div id="woopsie-cup-spill"></div>
+      <div id="woopsie-text"></div>
+      <div id="woopsie-drops"></div>
+    </div>`;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    #woopsie-wrap{position:fixed;z-index:99999;pointer-events:none;display:none;top:0;left:0;width:100vw;height:100vh;}
+    #woopsie-stage{position:absolute;display:flex;flex-direction:column;align-items:center;}
+    #woopsie-canvas{display:block;filter:drop-shadow(0 0 18px rgba(168,85,247,0.9)) drop-shadow(0 0 6px rgba(255,80,80,0.6));image-rendering:pixelated;}
+    #woopsie-text{
+      margin-top:8px;font-size:1.1rem;font-weight:900;color:#fff;
+      text-shadow:0 2px 14px #a855f7,0 0 32px #ff4444,0 0 4px #000;
+      letter-spacing:2px;white-space:nowrap;font-family:'IBM Plex Mono',monospace;
+      animation:wcPop 0.28s cubic-bezier(.17,.67,.35,1.4) both;
+    }
+    #woopsie-cup-spill{
+      position:absolute;top:58px;left:50%;transform:translateX(-50%);
+      width:70px;height:20px;
+      background:radial-gradient(ellipse,rgba(168,85,247,0.6) 0%,transparent 70%);
+      border-radius:50%;animation:wcSplash 0.5s ease-out forwards;
+    }
+    .wc-drop{position:fixed;pointer-events:none;z-index:99998;font-size:1.1rem;animation:wcDrop 1.1s ease-in forwards;}
+    @keyframes wcPop{0%{opacity:0;transform:scale(0.3) translateY(12px);}100%{opacity:1;transform:scale(1) translateY(0);}}
+    @keyframes wcSplash{0%{opacity:0;transform:translateX(-50%) scaleX(0.2);}40%{opacity:1;transform:translateX(-50%) scaleX(1.4);}100%{opacity:0;transform:translateX(-50%) scaleX(2);}}
+    @keyframes wcDrop{0%{opacity:1;transform:translateY(0) scale(1);}100%{opacity:0;transform:translateY(110px) scale(0.4);}}
+    @keyframes wcSlideIn{0%{opacity:0;transform:translateX(-60px) scaleY(0.5);}60%{transform:translateX(8px) scaleY(1.08);}100%{opacity:1;transform:translateX(0) scaleY(1);}}
+    @keyframes wcSlideOut{0%{opacity:1;transform:translateX(0);}100%{opacity:0;transform:translateX(60px);}}
+    @keyframes wcShake{0%,100%{transform:rotate(0deg);}20%{transform:rotate(-14deg);}40%{transform:rotate(12deg);}60%{transform:rotate(-10deg);}80%{transform:rotate(8deg);}}
+  `;
+  document.head.appendChild(style);
+  document.body.appendChild(wrap);
+
+  /* ── DRAW THE DUMMY ON CANVAS ── */
+  // MK-style stick fighter dummy — grey outfit, glowing eyes, spilling cup weapon
+  function drawDummy(canvas, framePhase) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,120,160);
+
+    const cx = 60; // center x
+
+    // GLOW background aura
+    const aura = ctx.createRadialGradient(cx,80,5,cx,80,55);
+    aura.addColorStop(0,'rgba(168,85,247,0.18)');
+    aura.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=aura; ctx.fillRect(0,0,120,160);
+
+    // LEGS — grey pants, slight stance
+    ctx.strokeStyle='#8888aa'; ctx.lineWidth=5; ctx.lineCap='round';
+    const legSway = Math.sin(framePhase*0.12)*6;
+    ctx.beginPath(); ctx.moveTo(cx,105); ctx.lineTo(cx-12+legSway,140); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,105); ctx.lineTo(cx+12-legSway,140); ctx.stroke();
+    // Boots
+    ctx.strokeStyle='#555577'; ctx.lineWidth=6;
+    ctx.beginPath(); ctx.moveTo(cx-12+legSway,140); ctx.lineTo(cx-18+legSway,148); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+12-legSway,140); ctx.lineTo(cx+18-legSway,148); ctx.stroke();
+
+    // TORSO — dark grey vest
+    ctx.strokeStyle='#7070909'; ctx.strokeStyle='#707090';
+    ctx.lineWidth=9;
+    ctx.beginPath(); ctx.moveTo(cx,68); ctx.lineTo(cx,105); ctx.stroke();
+    // belt
+    ctx.fillStyle='#444466';
+    ctx.fillRect(cx-12,98,24,6);
+
+    // ARMS — holding spilling cup weapon
+    const armSway = Math.sin(framePhase*0.15)*5;
+    // Left arm (raised, holding cup)
+    ctx.strokeStyle='#8888aa'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(cx,75); ctx.lineTo(cx-28,-armSway+58); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-28,58-armSway); ctx.lineTo(cx-38,42-armSway*1.2); ctx.stroke();
+    // Right arm (out to side, dramatic)
+    ctx.beginPath(); ctx.moveTo(cx,75); ctx.lineTo(cx+26,80+armSway); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+26,80+armSway); ctx.lineTo(cx+38,90+armSway); ctx.stroke();
+
+    // THE SPILLING CUP WEAPON (left hand)
+    const cupX = cx-40, cupY = 36-armSway*1.2;
+    // cup body — tilted
+    ctx.save();
+    ctx.translate(cupX, cupY);
+    ctx.rotate(-0.5);
+    ctx.strokeStyle='#c084fc'; ctx.lineWidth=2.5;
+    ctx.fillStyle='rgba(168,85,247,0.25)';
+    ctx.beginPath(); ctx.roundRect(-7,-10,14,16,2); ctx.fill(); ctx.stroke();
+    // liquid spilling out
+    ctx.fillStyle='rgba(168,85,247,0.7)';
+    ctx.beginPath();
+    ctx.moveTo(4,-2); ctx.bezierCurveTo(12,-8,22,2,18,14);
+    ctx.bezierCurveTo(14,10,8,4,4,-2);
+    ctx.fill();
+    // drops
+    for(let d=0;d<3;d++){
+      const dy = (framePhase*2+d*8)%22;
+      ctx.fillStyle=`rgba(192,132,252,${0.8-dy/28})`;
+      ctx.beginPath();
+      ctx.arc(8+d*4, dy+4, 2.2-d*0.3, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // NECK
+    ctx.strokeStyle='#9090b0'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(cx,54); ctx.lineTo(cx,68); ctx.stroke();
+
+    // HEAD
+    ctx.fillStyle='#9898b8';
+    ctx.beginPath(); ctx.ellipse(cx,44,13,14,0,0,Math.PI*2); ctx.fill();
+    // head outline
+    ctx.strokeStyle='#b0b0d0'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.ellipse(cx,44,13,14,0,0,Math.PI*2); ctx.stroke();
+    // helmet band
+    ctx.fillStyle='#555577';
+    ctx.fillRect(cx-13,38,26,7);
+
+    // GLOWING EYES — MK style
+    const eyeGlow = 0.7+Math.sin(framePhase*0.2)*0.3;
+    ctx.shadowColor='#ff4444'; ctx.shadowBlur=8;
+    ctx.fillStyle=`rgba(255,80,80,${eyeGlow})`;
+    ctx.beginPath(); ctx.ellipse(cx-5,42,3.5,2.5,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+5,42,3.5,2.5,0,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+
+    // MASK (lower face)
+    ctx.fillStyle='#444466';
+    ctx.fillRect(cx-9,46,18,8);
+
+    // HEALTH BAR (old school MK style)
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.fillRect(10,6,100,8);
+    ctx.fillStyle='#30e890';
+    const hpW = 60+Math.sin(framePhase*0.05)*15;
+    ctx.fillRect(10,6,hpW,8);
+    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1;
+    ctx.strokeRect(10,6,100,8);
+    // HP label
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='6px monospace';
+    ctx.fillText('WOOPSIES',12,13);
+  }
+
+  /* ── ANIMATION LOOP ── */
+  let _animId=null, _frame=0, _visible=false;
+  function _animate(){
+    if(!_visible){ _animId=null; return; }
+    _frame++;
+    const canvas = document.getElementById('woopsie-canvas');
+    if(canvas) drawDummy(canvas, _frame);
+    _animId = requestAnimationFrame(_animate);
+  }
+
+  /* ── SPAWN DROPS ── */
+  function spawnDrops(x,y){
+    const drops=['💧','💦','✨','🫧','💜','🩸'];
+    const container=document.getElementById('woopsie-drops');
+    if(!container) return;
+    container.innerHTML='';
+    for(let i=0;i<8;i++){
+      const d=document.createElement('div');
+      d.className='wc-drop';
+      d.textContent=drops[Math.floor(Math.random()*drops.length)];
+      d.style.left=(x-30+Math.random()*100)+'px';
+      d.style.top=(y+60)+'px';
+      d.style.animationDelay=(Math.random()*0.4)+'s';
+      container.appendChild(d);
+    }
+    setTimeout(()=>{if(container) container.innerHTML='';},1600);
+  }
+
+  /* ── SHOW WOOPSIES ── */
+  function showWoopsies(forced){
+    const msg=WOOPSIES[Math.floor(Math.random()*WOOPSIES.length)];
+    const vw=window.innerWidth, vh=window.innerHeight;
+    const x=60+Math.random()*(vw-200);
+    const y=60+Math.random()*(vh-200);
+
+    wrap.style.display='block';
+    const stage=document.getElementById('woopsie-stage');
+    stage.style.left=x+'px';
+    stage.style.top=y+'px';
+    stage.style.animation='wcSlideIn 0.4s cubic-bezier(.17,.67,.35,1.4) both';
+    document.getElementById('woopsie-text').textContent=msg;
+
+    _visible=true; _frame=0;
+    if(!_animId) _animate();
+    spawnDrops(x,y);
+
+    // Scream it
+    if(window.speechSynthesis){
+      const utt=new SpeechSynthesisUtterance(msg.replace(/[^a-zA-Z0-9 !.]/g,''));
+      utt.pitch=1.4+Math.random()*0.8;
+      utt.rate=0.8+Math.random()*0.5;
+      utt.volume=0.8;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utt);
+    }
+
+    setTimeout(()=>{
+      stage.style.animation='wcSlideOut 0.35s ease-in forwards';
+      setTimeout(()=>{
+        wrap.style.display='none';
+        stage.style.animation='';
+        _visible=false;
+      },360);
+    }, forced?2400:1900);
+  }
+
+  // RANDOM IDLE POPS — every 4–14 min
+  function scheduleRandom(){
+    setTimeout(()=>{showWoopsies(false);scheduleRandom();},240000+Math.random()*600000);
+  }
+  scheduleRandom();
+
+  // HOOK into showToast for special moments
+  const _origToast=window.showToast;
+  window.showToast=function(msg){
+    if(_origToast) _origToast(msg);
+    const special=SPECIAL_MSGS.some(s=>typeof msg==='string'&&msg.includes(s.replace(/[✦✓!]/g,'').trim()));
+    if(special||(typeof msg==='string'&&msg.startsWith('✦'))){
+      setTimeout(()=>showWoopsies(true),320);
+    }
+  };
+
+  window.triggerWoopsies=showWoopsies;
+
+  // Secret: tap logo 5× fast
+  let _logoTaps=0,_logoTimer;
+  document.addEventListener('click',function(e){
+    const el=e.target.closest('.nav-logo,.site-logo,.logo,h1');
+    if(!el)return;
+    _logoTaps++;
+    clearTimeout(_logoTimer);
+    if(_logoTaps>=5){_logoTaps=0;showWoopsies(true);}
+    else{_logoTimer=setTimeout(()=>{_logoTaps=0;},1200);}
+  });
+})();
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function loadRealStats(){
   try{
@@ -7432,7 +8085,7 @@ async function lfToggleLive(){
       body: JSON.stringify({title, desc})
     });
     const d = await r.json();
-    if(d.ok){ _lfIsLive=true; lfRenderToggle(); showToast('🔴 You are now LIVE!'); }
+    if(d.ok){ _lfIsLive=true; lfRenderToggle(); showToast('🔴 You are now LIVE!'); if(window.triggerWoopsies) setTimeout(()=>window.triggerWoopsies(true),500); }
   } else {
     // Go offline
     if(!confirm('End your live session?')) return;
@@ -7597,6 +8250,7 @@ function myUpgradeIdea() {
   <a onclick="document.getElementById('dash-about-modal').style.display='flex'">About Us</a>
   <a onclick="document.getElementById('dash-privacy-modal').style.display='flex'">Privacy Policy</a>
   <a onclick="openUpgradeModal()" style="color:var(--gold);font-weight:700;">💡 Submit an Upgrade — Earn 1 Free Month</a>
+  <a href="/blog/write" id="starterBagLink" style="color:#c084fc;font-weight:700;display:none;">🎁 Your Starter Bag — AI Ideas</a>
 </div>
 
 <!-- CAMPAIGN MODAL (dashboard) -->
@@ -8484,6 +9138,1054 @@ def _start_5am_scheduler():
 _start_5am_scheduler()
 
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  BLOG SYSTEM
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _blog_slug(title):
+    """Generate a URL slug from a post title."""
+    import re as _re
+    s = title.lower().strip()
+    s = _re.sub(r"[^\w\s-]", "", s)
+    s = _re.sub(r"[\s_]+", "-", s)
+    s = _re.sub(r"-+", "-", s).strip("-")
+    return s[:80]
+
+
+@app.route("/blog")
+def blog_index():
+    posts = db_execute(
+        "SELECT id,slug,title,subtitle,cover_url,author,tags,views,published_at,featured FROM blog_posts WHERE status='published' ORDER BY featured DESC, published_at DESC",
+        fetchall=True
+    )
+    posts = [dict(p) for p in (posts or [])]
+    # bump views is handled on individual post page
+
+    posts_json = json.dumps(posts)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blog — Support RD</title>
+<meta name="description" content="Hair care tips, product updates, and insider knowledge from the Support RD team.">
+<link rel="icon" href="https://supportrd.com/favicon.ico">
+<style>
+  *{{box-sizing:border-box;margin:0;padding:0}}
+  body{{background:#0a0a0f;color:#e8e0f0;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}}
+  .blog-nav{{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;background:rgba(10,10,20,0.95);border-bottom:1px solid rgba(180,130,255,0.15);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}}
+  .blog-nav-logo{{display:flex;align-items:center;gap:10px;text-decoration:none}}
+  .blog-nav-logo span{{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,#c084fc,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}}
+  .blog-nav-links{{display:flex;gap:20px;align-items:center}}
+  .blog-nav-links a{{color:#c4b0d8;text-decoration:none;font-size:.9rem;transition:color .2s}}
+  .blog-nav-links a:hover{{color:#c084fc}}
+  .blog-hero{{text-align:center;padding:72px 24px 48px;background:radial-gradient(ellipse at 50% 0%,rgba(168,85,247,0.15) 0%,transparent 70%)}}
+  .blog-hero h1{{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;background:linear-gradient(135deg,#fff 30%,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}}
+  .blog-hero p{{color:#a090b8;font-size:1.1rem;max-width:520px;margin:0 auto}}
+  .blog-grid{{max-width:1100px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:28px}}
+  .blog-card{{background:rgba(255,255,255,0.04);border:1px solid rgba(180,130,255,0.12);border-radius:18px;overflow:hidden;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;text-decoration:none;color:inherit;display:flex;flex-direction:column}}
+  .blog-card:hover{{transform:translateY(-4px);border-color:rgba(192,132,252,0.4);box-shadow:0 12px 40px rgba(168,85,247,0.15)}}
+  .blog-card.featured{{grid-column:1/-1;flex-direction:row;max-height:280px}}
+  .blog-card-img{{width:100%;height:200px;object-fit:cover;background:linear-gradient(135deg,#1a0a2e,#2d1b4e)}}
+  .blog-card.featured .blog-card-img{{width:45%;height:100%;flex-shrink:0}}
+  .blog-card-body{{padding:22px;flex:1;display:flex;flex-direction:column}}
+  .blog-card-tags{{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}}
+  .blog-tag{{background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.25);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:600;letter-spacing:.3px;text-transform:uppercase}}
+  .blog-card-title{{font-size:1.15rem;font-weight:700;line-height:1.35;margin-bottom:8px;color:#f0e8ff}}
+  .blog-card.featured .blog-card-title{{font-size:1.5rem}}
+  .blog-card-sub{{color:#9080a8;font-size:.88rem;line-height:1.5;flex:1}}
+  .blog-card-meta{{display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:.8rem;color:#6050788}}
+  .blog-card-meta{{color:#705090}}
+  .blog-feat-badge{{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border-radius:20px;padding:3px 12px;font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;display:inline-block;width:fit-content}}
+  .blog-empty{{text-align:center;padding:80px 24px;color:#6050788}}
+  .blog-empty{{color:#705090}}
+  .blog-empty h2{{font-size:1.5rem;margin-bottom:10px;color:#9080a8}}
+  .admin-write-btn{{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:24px;padding:10px 22px;font-size:.9rem;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity .2s}}
+  .admin-write-btn:hover{{opacity:.85}}
+  @media(max-width:600px){{.blog-card.featured{{flex-direction:column;max-height:none}}.blog-card.featured .blog-card-img{{width:100%;height:200px}}}}
+</style>
+</head>
+<body>
+<nav class="blog-nav">
+  <a class="blog-nav-logo" href="https://supportrd.com">
+    <span>Support RD</span>
+  </a>
+  <div class="blog-nav-links">
+    <a href="https://supportrd.com">Shop</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/blog" style="color:#c084fc">Blog</a>
+    <a id="adminWriteLink" href="/blog/write" class="admin-write-btn" style="display:none">✍️ Write Post</a>
+  </div>
+</nav>
+
+<div class="blog-hero">
+  <h1>Hair Stories &amp; Tips</h1>
+  <p>Product deep-dives, care routines, and the science behind Support RD.</p>
+</div>
+
+<div class="blog-grid" id="blogGrid">
+  <div class="blog-empty"><h2>Loading posts…</h2></div>
+</div>
+
+<script>
+const POSTS = {posts_json};
+
+function renderPosts() {{
+  const grid = document.getElementById('blogGrid');
+  if (!POSTS.length) {{
+    grid.innerHTML = '<div class="blog-empty"><h2>No posts yet</h2><p>Check back soon — we are writing!</p></div>';
+    return;
+  }}
+  grid.innerHTML = POSTS.map(p => {{
+    const tags = (p.tags||'').split(',').filter(Boolean).map(t=>`<span class="blog-tag">${{t.trim()}}</span>`).join('');
+    const img  = p.cover_url ? `<img class="blog-card-img" src="${{p.cover_url}}" alt="${{p.title}}" loading="lazy">` : `<div class="blog-card-img" style="display:flex;align-items:center;justify-content:center;font-size:3rem">💜</div>`;
+    const feat = p.featured ? '<span class="blog-feat-badge">✨ Featured</span>' : '';
+    const date = p.published_at ? new Date(p.published_at).toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}}) : '';
+    return `<a class="blog-card${{p.featured?' featured':''}}" href="/blog/${{p.slug}}">
+      ${{img}}
+      <div class="blog-card-body">
+        ${{feat}}
+        <div class="blog-card-tags">${{tags}}</div>
+        <div class="blog-card-title">${{p.title}}</div>
+        <div class="blog-card-sub">${{p.subtitle||''}}</div>
+        <div class="blog-card-meta"><span>By ${{p.author||'Support RD'}}</span><span>${{date}}</span></div>
+      </div>
+    </a>`;
+  }}).join('');
+}}
+
+// Show write button for admins
+fetch('/api/me', {{credentials:'include',headers:{{'X-Auth-Token':localStorage.getItem('aria_token')||''}}}})
+  .then(r=>r.json()).then(d=>{{
+    if(d.is_admin) document.getElementById('adminWriteLink').style.display='inline-block';
+  }}).catch(()=>{{}});
+
+renderPosts();
+</script>
+</body>
+</html>"""
+
+
+@app.route("/blog/<slug>")
+def blog_post(slug):
+    post = db_execute("SELECT * FROM blog_posts WHERE slug=? AND status='published'", (slug,), fetchone=True)
+    if not post:
+        return "<h1 style='font-family:sans-serif;text-align:center;padding:80px;color:#a855f7'>Post not found</h1>", 404
+    post = dict(post)
+    # Increment views
+    db_execute("UPDATE blog_posts SET views = views + 1 WHERE slug=?", (slug,))
+
+    related = db_execute(
+        "SELECT slug,title,cover_url FROM blog_posts WHERE status='published' AND slug!=? ORDER BY published_at DESC LIMIT 3",
+        (slug,), fetchall=True
+    )
+    related = [dict(r) for r in (related or [])]
+    related_html = ""
+    if related:
+        cards = "".join([f"""<a class="rel-card" href="/blog/{r['slug']}">
+          {'<img src="'+r['cover_url']+'" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px">' if r.get('cover_url') else '<div style="width:100%;height:120px;background:linear-gradient(135deg,#1a0a2e,#2d1b4e);border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;font-size:2rem">💜</div>'}
+          <div style="font-weight:600;color:#e8e0f0;font-size:.9rem">{r['title']}</div>
+        </a>""" for r in related])
+        related_html = f"""<div style="margin-top:60px;padding-top:40px;border-top:1px solid rgba(180,130,255,0.15)">
+          <h3 style="color:#c084fc;font-size:1rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px">More from Support RD</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px">{cards}</div>
+        </div>"""
+
+    tags_html = "".join([f'<span style="background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.25);border-radius:20px;padding:4px 12px;font-size:.78rem;font-weight:600">{t.strip()}</span>' for t in (post.get("tags") or "").split(",") if t.strip()])
+    cover_html = f'<img src="{post["cover_url"]}" alt="{post["title"]}" style="width:100%;max-height:480px;object-fit:cover;border-radius:16px;margin-bottom:36px">' if post.get("cover_url") else ""
+    pub_date = ""
+    if post.get("published_at"):
+        try:
+            pub_date = datetime.datetime.fromisoformat(post["published_at"]).strftime("%B %d, %Y")
+        except Exception:
+            pub_date = post["published_at"][:10]
+
+    # Convert plain newlines to paragraphs
+    body_html = "".join([f"<p>{line}</p>" if line.strip() else "<br>" for line in post["body"].split("\n")])
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{post['title']} — Support RD Blog</title>
+<meta name="description" content="{(post.get('subtitle') or '')[:160]}">
+<meta property="og:title" content="{post['title']}">
+<meta property="og:description" content="{(post.get('subtitle') or '')[:200]}">
+{'<meta property="og:image" content="'+post['cover_url']+'">' if post.get('cover_url') else ''}
+<link rel="icon" href="https://supportrd.com/favicon.ico">
+<style>
+  *{{box-sizing:border-box;margin:0;padding:0}}
+  body{{background:#0a0a0f;color:#e0d8f0;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}}
+  .post-nav{{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;background:rgba(10,10,20,0.95);border-bottom:1px solid rgba(180,130,255,0.15);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}}
+  .post-nav a{{color:#c4b0d8;text-decoration:none;font-size:.9rem;transition:color .2s}}
+  .post-nav a:hover{{color:#c084fc}}
+  .post-nav .logo{{font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,#c084fc,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}}
+  .post-wrap{{max-width:760px;margin:0 auto;padding:52px 24px 100px}}
+  .post-meta{{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}}
+  .post-author{{display:flex;align-items:center;gap:8px;color:#9080a8;font-size:.9rem}}
+  .post-author-dot{{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:700}}
+  .post-date{{color:#705090;font-size:.85rem}}
+  .post-views{{color:#705090;font-size:.85rem}}
+  .post-title{{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;line-height:1.2;color:#f0e8ff;margin-bottom:14px}}
+  .post-subtitle{{font-size:1.15rem;color:#9080a8;line-height:1.6;margin-bottom:28px}}
+  .post-tags{{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px}}
+  .post-body{{font-size:1.05rem;line-height:1.85;color:#d0c8e0}}
+  .post-body p{{margin-bottom:1.2em}}
+  .post-body h2{{font-size:1.5rem;font-weight:700;color:#e8e0ff;margin:2em 0 .8em;border-left:3px solid #a855f7;padding-left:14px}}
+  .post-body h3{{font-size:1.2rem;font-weight:600;color:#d8d0f0;margin:1.6em 0 .6em}}
+  .post-body ul,.post-body ol{{padding-left:1.5em;margin-bottom:1.2em}}
+  .post-body li{{margin-bottom:.5em}}
+  .post-body strong{{color:#e8e0f0;font-weight:700}}
+  .post-body em{{color:#c084fc}}
+  .rel-card{{display:block;text-decoration:none;background:rgba(255,255,255,0.04);border:1px solid rgba(180,130,255,0.12);border-radius:14px;padding:14px;transition:border-color .2s}}
+  .rel-card:hover{{border-color:rgba(192,132,252,0.35)}}
+  .back-btn{{display:inline-flex;align-items:center;gap:6px;color:#9080a8;text-decoration:none;font-size:.88rem;margin-bottom:36px;transition:color .2s}}
+  .back-btn:hover{{color:#c084fc}}
+  .admin-edit-bar{{background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:12px 18px;margin-bottom:28px;display:none;align-items:center;justify-content:space-between}}
+  .admin-edit-bar a{{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;text-decoration:none;border-radius:20px;padding:8px 18px;font-size:.85rem;font-weight:600}}
+</style>
+</head>
+<body>
+<nav class="post-nav">
+  <a class="logo" href="https://supportrd.com">Support RD</a>
+  <div style="display:flex;gap:20px">
+    <a href="/blog">← All Posts</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="https://supportrd.com">Shop</a>
+  </div>
+</nav>
+
+<div class="post-wrap">
+  <a class="back-btn" href="/blog">← Back to Blog</a>
+
+  <div class="admin-edit-bar" id="adminEditBar">
+    <span style="color:#c084fc;font-size:.9rem">✏️ You are viewing as admin</span>
+    <a href="/blog/write?edit={post['slug']}">Edit Post</a>
+  </div>
+
+  {cover_html}
+
+  <div class="post-meta">
+    <div class="post-author">
+      <div class="post-author-dot">{post.get('author','S')[0].upper()}</div>
+      <span>{post.get('author','Support RD Team')}</span>
+    </div>
+    <span class="post-date">📅 {pub_date}</span>
+    <span class="post-views">👁 {post.get('views',0)} views</span>
+  </div>
+
+  <h1 class="post-title">{post['title']}</h1>
+  {'<p class="post-subtitle">'+post['subtitle']+'</p>' if post.get('subtitle') else ''}
+  <div class="post-tags">{tags_html}</div>
+
+  <div class="post-body">{body_html}</div>
+
+  {related_html}
+</div>
+
+<script>
+fetch('/api/me',{{credentials:'include',headers:{{'X-Auth-Token':localStorage.getItem('aria_token')||''}}}})
+  .then(r=>r.json()).then(d=>{{
+    if(d.is_admin) document.getElementById('adminEditBar').style.display='flex';
+  }}).catch(()=>{{}});
+</script>
+</body>
+</html>"""
+
+@app.route("/blog/write")
+def blog_write_page():
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return redirect("/blog")
+    edit_slug = request.args.get("edit","").strip()
+    edit_post = None
+    if edit_slug:
+        row = db_execute("SELECT * FROM blog_posts WHERE slug=?", (edit_slug,), fetchone=True)
+        if row: edit_post = dict(row)
+    ep = json.dumps(edit_post or {})
+    # stats for dashboard sections
+    pending_posts  = db_execute("SELECT COUNT(*) FROM blog_posts WHERE approval_status='pending'", fetchone=True)[0]
+    total_posts    = db_execute("SELECT COUNT(*) FROM blog_posts", fetchone=True)[0]
+    published_posts= db_execute("SELECT COUNT(*) FROM blog_posts WHERE status='published'", fetchone=True)[0]
+    ai_drafts      = db_execute("SELECT COUNT(*) FROM blog_posts WHERE ai_generated=1 AND approval_status='pending'", fetchone=True)[0]
+    new_ideas      = db_execute("SELECT COUNT(*) FROM blog_ideas WHERE status='new'", fetchone=True)[0]
+    pending_list   = db_execute("SELECT id,slug,title,subtitle,author,ai_generated,created_at,rejection_note,approval_status FROM blog_posts WHERE approval_status IN ('pending','rejected') ORDER BY created_at DESC LIMIT 20", fetchall=True)
+    pending_list   = [dict(p) for p in (pending_list or [])]
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blog Command Center — Support RD</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="https://supportrd.com/favicon.ico">
+<style>
+  *{{box-sizing:border-box;margin:0;padding:0}}
+  body{{background:#08080f;color:#e8e0f0;font-family:'Space Grotesk',system-ui,sans-serif;min-height:100vh}}
+  :root{{--pur:#a855f7;--pur2:#c084fc;--pur-dim:rgba(168,85,247,0.15);--border:rgba(180,130,255,0.14);--bg2:rgba(255,255,255,0.04);--muted:#7060908;}}
+  :root{{--muted:#706090}}
+  .wnav{{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;background:rgba(8,8,15,0.96);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(14px)}}
+  .wnav-logo{{font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,#c084fc,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none}}
+  .wnav a{{color:#b0a0c8;text-decoration:none;font-size:.88rem;transition:color .2s}}
+  .wnav a:hover{{color:#c084fc}}
+  .wrap{{max-width:1100px;margin:0 auto;padding:36px 24px 100px}}
+  /* STAT CARDS */
+  .stat-row{{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:32px}}
+  .stat-card{{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:6px}}
+  .stat-num{{font-size:2rem;font-weight:800;background:linear-gradient(135deg,#fff,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}}
+  .stat-label{{font-size:.8rem;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase}}
+  /* SECTION CARDS */
+  .section{{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:26px 28px;margin-bottom:24px}}
+  .section-title{{font-size:1rem;font-weight:700;color:#c084fc;letter-spacing:.5px;text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;gap:10px}}
+  .section-title .badge{{background:var(--pur-dim);color:#c084fc;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:700}}
+  /* POLITICAL */
+  .pol-card{{background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(168,85,247,0.08));border:1px solid rgba(59,130,246,0.25);border-radius:14px;padding:20px 22px}}
+  .pol-title{{font-size:1.05rem;font-weight:700;color:#93c5fd;margin-bottom:8px}}
+  .pol-body{{font-size:.9rem;color:#c0b8d8;line-height:1.7}}
+  .pol-tag{{display:inline-block;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);border-radius:20px;padding:4px 12px;font-size:.78rem;font-weight:600;margin-top:10px;margin-right:6px}}
+  /* CANDY LAND GPS STATUS */
+  .candy-grid{{display:grid;grid-template-columns:1fr 1fr;gap:14px}}
+  .candy-item{{background:rgba(255,255,255,0.03);border:1px solid rgba(255,200,100,0.15);border-radius:12px;padding:14px 16px}}
+  .candy-icon{{font-size:1.5rem;margin-bottom:6px}}
+  .candy-label{{font-size:.8rem;color:#e0b050;font-weight:600;letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px}}
+  .candy-val{{font-size:.9rem;color:#e8e0f0;line-height:1.5}}
+  .candy-status{{display:inline-flex;align-items:center;gap:6px;background:rgba(48,232,144,0.1);border:1px solid rgba(48,232,144,0.25);color:#30e890;border-radius:20px;padding:4px 12px;font-size:.8rem;font-weight:600;margin-top:8px}}
+  .candy-status.beta{{background:rgba(224,176,80,0.1);border-color:rgba(224,176,80,0.25);color:#e0b050}}
+  /* APPROVAL QUEUE */
+  .aprv-row{{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px}}
+  .aprv-title{{font-weight:700;color:#e8e0f0;margin-bottom:4px;display:flex;align-items:center;gap:8px}}
+  .aprv-meta{{font-size:.8rem;color:var(--muted);margin-bottom:10px}}
+  .aprv-actions{{display:flex;gap:8px;flex-wrap:wrap}}
+  .ai-badge{{background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.25);border-radius:12px;padding:2px 8px;font-size:.72rem;font-weight:700}}
+  .rej-badge{{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:2px 8px;font-size:.72rem;font-weight:700}}
+  .rej-note{{background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.15);border-radius:8px;padding:8px 12px;font-size:.82rem;color:#f87171;margin-bottom:8px}}
+  /* LIVE FEED */
+  .live-indicator{{display:inline-flex;align-items:center;gap:8px;background:rgba(255,50,50,0.1);border:1px solid rgba(255,80,80,0.3);border-radius:24px;padding:8px 18px;font-size:.9rem;font-weight:700;color:#ff6060;cursor:pointer;transition:all .2s;text-decoration:none}}
+  .live-indicator:hover{{background:rgba(255,50,50,0.18);border-color:rgba(255,80,80,0.5)}}
+  .live-dot{{width:9px;height:9px;background:#ff4040;border-radius:50%;animation:livePulse 1.2s infinite}}
+  @keyframes livePulse{{0%,100%{{box-shadow:0 0 0 0 rgba(255,64,64,0.6)}}50%{{box-shadow:0 0 0 6px rgba(255,64,64,0)}}}}
+  .live-offline{{color:#706090;border-color:rgba(112,96,144,0.3);background:rgba(112,96,144,0.07)}}
+  .live-links{{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}}
+  .site-link{{display:inline-flex;align-items:center;gap:6px;background:var(--pur-dim);border:1px solid rgba(168,85,247,0.3);border-radius:20px;padding:8px 16px;font-size:.85rem;font-weight:600;color:#c084fc;text-decoration:none;transition:all .2s}}
+  .site-link:hover{{background:rgba(168,85,247,0.25);color:#e0c8ff}}
+  /* IDEA CARDS */
+  .idea-card{{background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.18);border-radius:12px;padding:16px 18px;margin-bottom:10px}}
+  .idea-title{{font-weight:700;color:#e0d8ff;margin-bottom:4px}}
+  .idea-sub{{font-size:.85rem;color:#a090c0;margin-bottom:8px;line-height:1.5}}
+  .idea-outline{{font-size:.82rem;color:#8878a8;font-style:italic;margin-bottom:10px;line-height:1.5}}
+  .idea-reasoning{{font-size:.78rem;color:#706090;border-left:2px solid rgba(168,85,247,0.3);padding-left:10px;margin-bottom:10px}}
+  /* FORM */
+  label{{display:block;font-size:.8rem;font-weight:600;color:#9080a8;margin-bottom:7px;letter-spacing:.3px;text-transform:uppercase}}
+  input[type=text],input[type=url],textarea,select{{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:#e8e0f0;font-size:.93rem;font-family:inherit;resize:vertical;outline:none;transition:border-color .2s}}
+  input:focus,textarea:focus{{border-color:rgba(192,132,252,0.4)}}
+  textarea{{min-height:280px;line-height:1.7}}
+  .form-row{{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
+  .form-group{{margin-bottom:18px}}
+  .tip{{font-size:.78rem;color:var(--muted);margin-top:5px}}
+  .btn-row{{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}}
+  .btn{{border:none;border-radius:22px;padding:12px 26px;font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .2s;font-family:inherit}}
+  .btn:hover{{opacity:.82}}
+  .btn-pub{{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff}}
+  .btn-draft{{background:rgba(255,255,255,0.07);color:#c4b0d8;border:1px solid var(--border)}}
+  .btn-idea{{background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.3)}}
+  .btn-approve{{background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.25);border-radius:16px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}}
+  .btn-approve:hover{{opacity:.8}}
+  .btn-reject{{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2);border-radius:16px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}}
+  .btn-reject:hover{{opacity:.8}}
+  .btn-use-idea{{background:rgba(168,85,247,0.15);color:#c084fc;border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:6px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s}}
+  .btn-sm{{border-radius:14px;padding:6px 13px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s;border:none}}
+  .btn-edit{{background:rgba(168,85,247,0.18);color:#c084fc}}
+  .btn-delete{{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.18)}}
+  .btn-toggle{{background:rgba(34,197,94,0.12);color:#4ade80}}
+  .btn-sm:hover{{opacity:.8}}
+  .status-msg{{margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.88rem;display:none}}
+  .status-msg.ok{{background:rgba(34,197,94,0.12);color:#4ade80;border:1px solid rgba(34,197,94,0.2)}}
+  .status-msg.err{{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2)}}
+  .divider{{border:none;border-top:1px solid var(--border);margin:28px 0}}
+  .evelyn-banner{{background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(192,132,252,0.06));border:1px solid rgba(192,132,252,0.25);border-radius:14px;padding:18px 20px;display:flex;align-items:center;gap:14px;margin-bottom:20px}}
+  .evelyn-avatar{{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}}
+  .evelyn-text{{flex:1}}
+  .evelyn-name{{font-weight:700;color:#e0d0ff;font-size:.95rem}}
+  .evelyn-role{{font-size:.8rem;color:#9070b0}}
+  @media(max-width:600px){{.form-row{{grid-template-columns:1fr}}.candy-grid{{grid-template-columns:1fr}}}}
+</style>
+</head>
+<body>
+<nav class="wnav">
+  <a class="wnav-logo" href="/">Support RD</a>
+  <div style="display:flex;gap:18px;align-items:center">
+    <a href="/blog">← Blog</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/live" style="color:#ff6060">🔴 Live</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div style="font-size:1.7rem;font-weight:800;background:linear-gradient(135deg,#fff,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px">✦ Blog Command Center</div>
+  <div style="color:var(--muted);font-size:.9rem;margin-bottom:28px">Write, approve, and manage all Support RD content from here.</div>
+
+  <!-- STAT CARDS -->
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-num">{total_posts}</div><div class="stat-label">Total Posts</div></div>
+    <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#4ade80">{published_posts}</div><div class="stat-label">Published</div></div>
+    <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#f0a090">{pending_posts}</div><div class="stat-label">Awaiting Approval</div></div>
+    <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#c084fc">{ai_drafts}</div><div class="stat-label">AI Drafts Pending</div></div>
+    <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#e0b050">{new_ideas}</div><div class="stat-label">New Ideas</div></div>
+  </div>
+
+  <!-- LIVE FEED STATUS -->
+  <div class="section">
+    <div class="section-title">🔴 Live Feed Status</div>
+    <div id="liveFeedStatus" style="color:var(--muted);font-size:.9rem">Loading…</div>
+    <div class="live-links" style="margin-top:16px">
+      <a class="site-link" href="https://ai-hair-advisor.onrender.com/live" target="_blank">🔗 ai-hair-advisor.onrender.com/live</a>
+      <a class="site-link" href="https://aria.supportrd.com/live" target="_blank">🔗 aria.supportrd.com/live</a>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-pub" id="goLiveBtn" onclick="toggleLiveFeed()" style="padding:10px 24px;font-size:.9rem">Loading…</button>
+      <button class="btn btn-draft" onclick="window.open('/live','_blank')">👁 View Feed</button>
+    </div>
+    <div class="status-msg" id="liveMsg"></div>
+  </div>
+
+  <!-- POLITICAL CAMPAIGN -->
+  <div class="section">
+    <div class="section-title">🗳 Political Campaign Position</div>
+    <div class="pol-card">
+      <div class="pol-title">Ban Pornography on the Internet</div>
+      <div class="pol-body">Support RD publicly backs the campaign to ban pornography on the internet. We believe unrestricted access to explicit content online causes documented harm to children, relationships, and communities. This is the company's official stated position — founded in values, not politics.<br><br>We are affiliated with the <strong style="color:#93c5fd">Democratic Party</strong>. This position is displayed across the app and website, and is part of our company identity.</div>
+      <span class="pol-tag">🏛 Democratic Party</span>
+      <span class="pol-tag">🛡 Child Protection</span>
+      <span class="pol-tag">💜 Company Value</span>
+    </div>
+    <div style="margin-top:14px;font-size:.83rem;color:var(--muted)">This is shown on the main site, the dashboard, and can be featured in a blog post to explain the company's stance to customers.</div>
+  </div>
+
+  <!-- CANDY LAND DRIVER APP STATUS -->
+  <div class="section">
+    <div class="section-title">🍭 Candy Land Driver App — Status</div>
+    <div class="candy-grid">
+      <div class="candy-item">
+        <div class="candy-icon">🗺</div>
+        <div class="candy-label">GPS Mode</div>
+        <div class="candy-val">Live inside the Hands-Free Drive page. Real GPS positioning with animated candy-tile path.</div>
+        <div class="candy-status">✓ Active</div>
+      </div>
+      <div class="candy-item">
+        <div class="candy-icon">🚗</div>
+        <div class="candy-label">Car Token</div>
+        <div class="candy-val">Moves with your real location in real time. Bearing arrow shows direction of travel.</div>
+        <div class="candy-status">✓ Active</div>
+      </div>
+      <div class="candy-item">
+        <div class="candy-icon">📍</div>
+        <div class="candy-label">Destinations</div>
+        <div class="candy-val">Pulls live POIs from OpenStreetMap: Coding Stores, Hair Shops, Parks, All Nearby.</div>
+        <div class="candy-status">✓ Active</div>
+      </div>
+      <div class="candy-item">
+        <div class="candy-icon">🎤</div>
+        <div class="candy-label">Aria GPS Narration</div>
+        <div class="candy-val">Aria narrates destinations and landmarks as you drive. Hands-free mic ask also active.</div>
+        <div class="candy-status beta">Beta</div>
+      </div>
+      <div class="candy-item">
+        <div class="candy-icon">📱</div>
+        <div class="candy-label">Mobile Test</div>
+        <div class="candy-val">Location permissions, mic, and TTS need full mobile test on deployment.</div>
+        <div class="candy-status beta">⚠ Needs Test</div>
+      </div>
+      <div class="candy-item">
+        <div class="candy-icon">🔁</div>
+        <div class="candy-label">API Proxy</div>
+        <div class="candy-val">All Aria drive calls go through /api/aria-drive — no exposed API keys client-side.</div>
+        <div class="candy-status">✓ Secured</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVELYN APPROVAL QUEUE -->
+  <div class="section">
+    <div class="section-title">
+      ✍️ Awaiting Evelyn's Approval
+      <span class="badge">{pending_posts} pending</span>
+    </div>
+    <div class="evelyn-banner">
+      <div class="evelyn-avatar">👩🏽</div>
+      <div class="evelyn-text">
+        <div class="evelyn-name">Evelyn — Inventor of Support Hair Products</div>
+        <div class="evelyn-role">Co-CEO · Original formula creator · Final approval on all blog content</div>
+      </div>
+    </div>
+    <div id="approvalQueue">
+      {''.join([f"""
+      <div class="aprv-row">
+        <div class="aprv-title">
+          {p['title']}
+          {"<span class=\"ai-badge\">🤖 AI Draft</span>" if p.get('ai_generated') else ""}
+          {"<span class=\"rej-badge\">↩ Rejected</span>" if p.get('approval_status')=='rejected' else ""}
+        </div>
+        <div class="aprv-meta">/blog/{p['slug']} · {p['author']} · {(p['created_at'] or '')[:10]}</div>
+        {"<div class=\"rej-note\">↩ Note: "+p['rejection_note']+"</div>" if p.get('rejection_note') else ""}
+        <div class="aprv-actions">
+          <button class="btn-approve" onclick="approvePost('{p['slug']}')">✓ Evelyn Approves</button>
+          <button class="btn-reject" onclick="rejectPost('{p['slug']}')">↩ Send Back</button>
+          <button class="btn-sm btn-edit" onclick="editPost('{p['slug']}')">Edit</button>
+          <a class="btn-sm btn-edit" href="/blog/{p['slug']}" target="_blank" style="text-decoration:none;padding:6px 13px;border-radius:14px;font-size:.8rem;font-weight:600;background:rgba(168,85,247,0.18);color:#c084fc">Preview</a>
+        </div>
+      </div>""" for p in pending_list]) or '<div style="color:var(--muted);font-size:.9rem;padding:10px 0">No posts awaiting approval — all clear! ✓</div>'}
+    </div>
+  </div>
+
+  <!-- AI BLOG IDEAS -->
+  <div class="section">
+    <div class="section-title">🤖 AI Blog Ideas <span class="badge">{new_ideas} new</span></div>
+    <div style="font-size:.88rem;color:var(--muted);margin-bottom:16px">Aria automatically generates blog post ideas based on Support RD topics, products, the political campaign, Candy Land GPS, and what customers are asking about.</div>
+    <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+      <button class="btn btn-idea" onclick="generateIdeas()" id="genBtn">✨ Generate 5 New Ideas</button>
+      <button class="btn btn-draft" onclick="loadIdeas()">🔄 Refresh Ideas</button>
+    </div>
+    <div id="ideasList"><div style="color:var(--muted);font-size:.88rem">Click "Generate" to have Aria think up new blog ideas.</div></div>
+    <div class="status-msg" id="ideaMsg"></div>
+  </div>
+
+  <!-- WRITE / EDIT POST -->
+  <div class="section">
+    <div class="section-title" id="writeTitle">✍️ Write a New Post</div>
+    <div class="form-group">
+      <label>Post Title *</label>
+      <input type="text" id="postTitle" placeholder="e.g. Why We Stand Against Online Pornography">
+    </div>
+    <div class="form-group">
+      <label>Subtitle / Summary</label>
+      <input type="text" id="postSubtitle" placeholder="One sentence summary">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Author Name</label>
+        <input type="text" id="postAuthor" value="Support RD Team">
+      </div>
+      <div class="form-group">
+        <label>Tags (comma separated)</label>
+        <input type="text" id="postTags" placeholder="hair care, Dominican, Lsciador">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Cover Image URL</label>
+      <input type="url" id="postCover" placeholder="https://cdn.shopify.com/...">
+    </div>
+    <div class="form-group">
+      <label>Blog Body *</label>
+      <textarea id="postBody" placeholder="Write your post here. Use ## for section headings."></textarea>
+      <p class="tip">## Heading · ### Sub-heading · **bold** · *italic*</p>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:10px;text-transform:none;font-size:.9rem;cursor:pointer">
+        <input type="checkbox" id="postFeatured" style="width:17px;height:17px;accent-color:#a855f7">
+        <span>⭐ Feature this post at the top of the blog</span>
+      </label>
+    </div>
+    <input type="hidden" id="editSlug" value="">
+    <div class="btn-row">
+      <button class="btn btn-pub" onclick="savePost('published')">🚀 Submit for Approval</button>
+      <button class="btn btn-draft" onclick="savePost('draft')">💾 Save as Draft</button>
+      <button class="btn btn-draft" onclick="clearForm()" style="padding:12px 18px">✕ Clear</button>
+    </div>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <!-- ALL POSTS LIST -->
+  <div class="section">
+    <div class="section-title">📋 All Posts</div>
+    <div id="allPostsList">Loading…</div>
+  </div>
+</div>
+
+<script>
+const EP = {ep};
+const TOKEN = localStorage.getItem('aria_token')||'';
+
+if(EP.slug){{
+  document.getElementById('writeTitle').textContent = '✏️ Edit Post';
+  document.getElementById('postTitle').value   = EP.title||'';
+  document.getElementById('postSubtitle').value= EP.subtitle||'';
+  document.getElementById('postAuthor').value  = EP.author||'Support RD Team';
+  document.getElementById('postTags').value    = EP.tags||'';
+  document.getElementById('postCover').value   = EP.cover_url||'';
+  document.getElementById('postBody').value    = EP.body||'';
+  document.getElementById('postFeatured').checked = !!EP.featured;
+  document.getElementById('editSlug').value    = EP.slug;
+}}
+
+// ── LIVE FEED ──
+let _lfIsLive = false;
+async function loadLiveFeedStatus(){{
+  try{{
+    const r = await fetch('/api/live-feed/status',{{headers:{{'X-Auth-Token':TOKEN}}}});
+    const d = await r.json();
+    _lfIsLive = !!d.is_live;
+    const el = document.getElementById('liveFeedStatus');
+    const btn = document.getElementById('goLiveBtn');
+    if(d.is_live){{
+      el.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,50,50,0.1);border:1px solid rgba(255,80,80,0.3);border-radius:24px;padding:8px 18px;font-size:.9rem;font-weight:700;color:#ff6060"><span style="width:9px;height:9px;background:#ff4040;border-radius:50%;animation:livePulse 1.2s infinite"></span>LIVE NOW — ${{d.session_title||'Coding Session'}}</span> <span style="font-size:.82rem;color:#706090;margin-left:12px">👁 ${{d.viewers||0}} viewers</span>`;
+      btn.textContent = '⏹ End Session';
+      btn.style.background = 'rgba(239,68,68,0.2)';
+      btn.style.color = '#f87171';
+    }} else {{
+      el.innerHTML = `<span style="color:#706090;font-size:.9rem">⭕ Offline — not currently streaming</span>`;
+      btn.textContent = '🔴 Go Live Now';
+      btn.style.background = '';
+      btn.style.color = '';
+    }}
+  }}catch(e){{}}
+}}
+
+async function toggleLiveFeed(){{
+  if(_lfIsLive){{
+    if(!confirm('End your live session?')) return;
+    await fetch('/api/live-feed/go-offline',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}}}});
+  }} else {{
+    const title = prompt('Session title (optional):','Building Support RD') || 'Building Support RD';
+    await fetch('/api/live-feed/go-live',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{title,desc:''}})}});
+    if(window.triggerWoopsies) setTimeout(()=>window.triggerWoopsies(true),400);
+  }}
+  loadLiveFeedStatus();
+}}
+
+// ── APPROVAL ──
+async function approvePost(slug){{
+  const r = await fetch('/api/blog/approve',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{slug,approver:'Evelyn — Inventor of Support Hair Products'}})}});
+  const d = await r.json();
+  if(d.ok){{ showSectionMsg('approvalMsg', d.message, 'ok'); location.reload(); }}
+  else showSectionMsg('approvalMsg', d.error||'Error', 'err');
+}}
+async function rejectPost(slug){{
+  const note = prompt('Send back with a note (optional):','Needs a few changes') || '';
+  const r = await fetch('/api/blog/reject',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{slug,note}})}});
+  const d = await r.json();
+  if(d.ok) location.reload();
+}}
+
+// ── AI IDEAS ──
+async function generateIdeas(){{
+  const btn = document.getElementById('genBtn');
+  btn.textContent = '⏳ Aria is thinking…';
+  btn.disabled = true;
+  showIdeaMsg('Generating 5 ideas…','');
+  try{{
+    const r = await fetch('/api/blog/generate-ideas',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}}}});
+    const d = await r.json();
+    if(d.ok){{ showIdeaMsg(`✅ ${{d.ideas.length}} ideas generated!`,'ok'); loadIdeas(); }}
+    else showIdeaMsg('Error: '+(d.error||'Unknown'),'err');
+  }}catch(e){{showIdeaMsg('Network error','err');}}
+  btn.textContent='✨ Generate 5 New Ideas'; btn.disabled=false;
+}}
+
+async function loadIdeas(){{
+  const el = document.getElementById('ideasList');
+  try{{
+    const r = await fetch('/api/blog/ideas',{{credentials:'include',headers:{{'X-Auth-Token':TOKEN}}}});
+    const d = await r.json();
+    if(!d.ideas||!d.ideas.length){{ el.innerHTML='<div style="color:#706090;font-size:.88rem">No ideas yet — click Generate!</div>'; return; }}
+    el.innerHTML = d.ideas.filter(i=>i.status!=='used').map(i=>`
+      <div class="idea-card">
+        <div class="idea-title">${{i.title}}</div>
+        <div class="idea-sub">${{i.subtitle||''}}</div>
+        <div class="idea-outline">${{i.outline||''}}</div>
+        <div class="idea-reasoning">💡 ${{i.reasoning||''}}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn-use-idea" onclick="useIdea(${{i.id}})">✍️ Write This Post</button>
+          <span style="font-size:.78rem;color:#706090">${{(i.tags||'').split(',').slice(0,3).join(' · ')}}</span>
+        </div>
+      </div>`).join('') || '<div style="color:#706090;font-size:.88rem">All ideas have been used! Generate more.</div>';
+  }}catch(e){{}}
+}}
+
+async function useIdea(id){{
+  showIdeaMsg('⏳ Aria is writing the full post…','');
+  try{{
+    const r = await fetch('/api/blog/idea-to-post',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{idea_id:id}})}});
+    const d = await r.json();
+    if(d.ok){{
+      showIdeaMsg(`✅ "${{d.title}}" drafted! Waiting for Evelyn's approval.`,'ok');
+      loadIdeas(); loadPosts(); location.reload();
+    }} else showIdeaMsg('Error: '+(d.error||'Unknown'),'err');
+  }}catch(e){{showIdeaMsg('Network error','err');}}
+}}
+
+// ── POST FORM ──
+async function savePost(status){{
+  const title = document.getElementById('postTitle').value.trim();
+  const body  = document.getElementById('postBody').value.trim();
+  if(!title||!body){{ showMsg('Title and body are required.','err'); return; }}
+  const payload = {{
+    title, status,
+    subtitle:  document.getElementById('postSubtitle').value.trim(),
+    author:    document.getElementById('postAuthor').value.trim()||'Support RD Team',
+    tags:      document.getElementById('postTags').value.trim(),
+    cover_url: document.getElementById('postCover').value.trim(),
+    body,
+    featured:  document.getElementById('postFeatured').checked?1:0,
+    edit_slug: document.getElementById('editSlug').value||null
+  }};
+  showMsg('Saving…','');
+  try{{
+    const r = await fetch('/api/blog/save',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify(payload)}});
+    const d = await r.json();
+    if(d.ok){{
+      const msg = status==='published'
+        ? `✅ Submitted! Waiting for Evelyn's approval. <a href="/blog/${{d.slug}}" style="color:#4ade80" target="_blank">Preview →</a>`
+        : '✅ Saved as draft.';
+      showMsg(msg,'ok');
+      if(status==='published'&&window.triggerWoopsies) setTimeout(()=>window.triggerWoopsies(true),400);
+      document.getElementById('editSlug').value = d.slug;
+      loadPosts();
+    }} else showMsg('Error: '+(d.error||'Unknown'),'err');
+  }}catch(e){{showMsg('Network error.','err');}}
+}}
+
+function clearForm(){{
+  ['postTitle','postSubtitle','postBody','postCover','postTags'].forEach(id=>{{document.getElementById(id).value=''}});
+  document.getElementById('postAuthor').value='Support RD Team';
+  document.getElementById('postFeatured').checked=false;
+  document.getElementById('editSlug').value='';
+  document.getElementById('writeTitle').textContent='✍️ Write a New Post';
+  document.getElementById('statusMsg').style.display='none';
+}}
+
+function editPost(slug){{ window.location.href='/blog/write?edit='+slug; }}
+
+async function loadPosts(){{
+  const el = document.getElementById('allPostsList');
+  try{{
+    const r = await fetch('/api/blog/admin-list',{{credentials:'include',headers:{{'X-Auth-Token':TOKEN}}}});
+    const d = await r.json();
+    if(!d.posts||!d.posts.length){{ el.innerHTML='<p style="color:#706090">No posts yet.</p>'; return; }}
+    el.innerHTML = d.posts.map(p=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:11px;padding:12px 16px;margin-bottom:9px;gap:12px;flex-wrap:wrap">
+        <div style="flex:1">
+          <div style="font-weight:600;color:#e0d8f0;margin-bottom:3px">${{p.title}}</div>
+          <div style="font-size:.78rem;color:#706090">/blog/${{p.slug}} · ${{p.status}} · 👁 ${{p.views}} · ${{(p.created_at||'').slice(0,10)}}</div>
+        </div>
+        <div style="display:flex;gap:7px;flex-shrink:0">
+          <button class="btn-sm btn-edit" onclick="editPost('${{p.slug}}')">Edit</button>
+          <button class="btn-sm btn-toggle" onclick="togglePost('${{p.slug}}','${{p.status}}')">
+            ${{p.status==='published'?'Unpublish':'Publish'}}
+          </button>
+          <button class="btn-sm btn-delete" onclick="deletePost('${{p.slug}}')">Delete</button>
+        </div>
+      </div>`).join('');
+  }}catch(e){{}}
+}}
+
+async function togglePost(slug,cur){{
+  const ns = cur==='published'?'draft':'published';
+  await fetch('/api/blog/toggle',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{slug,status:ns}})}});
+  loadPosts();
+}}
+async function deletePost(slug){{
+  if(!confirm('Delete this post forever?')) return;
+  await fetch('/api/blog/delete',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{slug}})}});
+  loadPosts();
+}}
+
+function showMsg(html,type){{const e=document.getElementById('statusMsg');e.innerHTML=html;e.className='status-msg '+(type||'ok');e.style.display='block';}}
+function showIdeaMsg(html,type){{const e=document.getElementById('ideaMsg');e.innerHTML=html;e.className='status-msg '+(type||'ok');e.style.display='block';}}
+function showSectionMsg(id,html,type){{const e=document.getElementById(id);if(e){{e.innerHTML=html;e.className='status-msg '+(type||'ok');e.style.display='block';}}}}
+
+// Boot
+loadLiveFeedStatus();
+loadIdeas();
+loadPosts();
+setInterval(loadLiveFeedStatus, 15000);
+</script>
+</body>
+</html>"""
+
+@app.route("/api/blog/save", methods=["POST","OPTIONS"])
+def api_blog_save():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    data      = request.get_json(silent=True) or {}
+    title     = (data.get("title","") or "").strip()[:200]
+    subtitle  = (data.get("subtitle","") or "").strip()[:300]
+    body      = (data.get("body","") or "").strip()
+    author    = (data.get("author","Support RD Team") or "Support RD Team").strip()[:100]
+    tags      = (data.get("tags","") or "").strip()[:200]
+    cover_url = (data.get("cover_url","") or "").strip()[:500]
+    featured  = 1 if data.get("featured") else 0
+    status    = data.get("status","draft")
+    if status not in ("published","draft"): status = "draft"
+    edit_slug = (data.get("edit_slug","") or "").strip()
+    if not title or not body:
+        return jsonify({"error": "title and body required"}), 400
+
+    pub_at = "datetime('now')" if status == "published" else "NULL"
+
+    if edit_slug:
+        existing = db_execute("SELECT id FROM blog_posts WHERE slug=?", (edit_slug,), fetchone=True)
+        if existing:
+            db_execute(
+                f"UPDATE blog_posts SET title=?,subtitle=?,body=?,author=?,tags=?,cover_url=?,featured=?,status=?,updated_at=datetime('now'){',published_at=datetime('+chr(39)+'now'+chr(39)+')' if status=='published' else ''} WHERE slug=?",
+                (title, subtitle, body, author, tags, cover_url, featured, status, edit_slug)
+            )
+            return jsonify({"ok": True, "slug": edit_slug})
+
+    # New post — generate unique slug
+    base_slug = _blog_slug(title) or "post"
+    slug = base_slug
+    counter = 1
+    while db_execute("SELECT id FROM blog_posts WHERE slug=?", (slug,), fetchone=True):
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    if status == "published":
+        db_execute(
+            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,cover_url,featured,status,published_at) VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))",
+            (slug, title, subtitle, body, author, tags, cover_url, featured, status)
+        )
+    else:
+        db_execute(
+            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,cover_url,featured,status) VALUES (?,?,?,?,?,?,?,?,?)",
+            (slug, title, subtitle, body, author, tags, cover_url, featured, status)
+        )
+    return jsonify({"ok": True, "slug": slug})
+
+
+@app.route("/api/blog/admin-list", methods=["GET"])
+def api_blog_admin_list():
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    posts = db_execute(
+        "SELECT id,slug,title,status,views,featured,created_at,published_at FROM blog_posts ORDER BY created_at DESC",
+        fetchall=True
+    )
+    return jsonify({"posts": [dict(p) for p in (posts or [])]})
+
+
+@app.route("/api/blog/toggle", methods=["POST","OPTIONS"])
+def api_blog_toggle():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    data   = request.get_json(silent=True) or {}
+    slug   = (data.get("slug","") or "").strip()
+    status = data.get("status","draft")
+    if status not in ("published","draft"): status = "draft"
+    if status == "published":
+        db_execute("UPDATE blog_posts SET status='published', published_at=datetime('now'), updated_at=datetime('now') WHERE slug=?", (slug,))
+    else:
+        db_execute("UPDATE blog_posts SET status='draft', updated_at=datetime('now') WHERE slug=?", (slug,))
+    return jsonify({"ok": True})
+
+
+@app.route("/api/blog/delete", methods=["POST","OPTIONS"])
+def api_blog_delete():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    slug = (data.get("slug","") or "").strip()
+    db_execute("DELETE FROM blog_posts WHERE slug=?", (slug,))
+    return jsonify({"ok": True})
+
+
+# ── BLOG APPROVAL ROUTES ─────────────────────────────────────────────────────
+
+@app.route("/api/blog/approve", methods=["POST","OPTIONS"])
+def api_blog_approve():
+    """Evelyn approves a blog post — moves it to published."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    slug = (data.get("slug","") or "").strip()
+    approver = (data.get("approver","Evelyn — Inventor of Support Hair Products") or "Evelyn").strip()
+    db_execute(
+        "UPDATE blog_posts SET approval_status='approved', approved_by=?, approved_at=datetime('now'), status='published', published_at=datetime('now'), updated_at=datetime('now') WHERE slug=?",
+        (approver, slug)
+    )
+    post = db_execute("SELECT title FROM blog_posts WHERE slug=?", (slug,), fetchone=True)
+    return jsonify({"ok": True, "message": f"\"{post['title'] if post else slug}\" approved and published by {approver}."})
+
+
+@app.route("/api/blog/reject", methods=["POST","OPTIONS"])
+def api_blog_reject():
+    """Evelyn rejects a blog post — sends it back to draft with a note."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    slug = (data.get("slug","") or "").strip()
+    note = (data.get("note","Needs revision before publishing.") or "").strip()
+    db_execute(
+        "UPDATE blog_posts SET approval_status='rejected', rejection_note=?, status='draft', updated_at=datetime('now') WHERE slug=?",
+        (note, slug)
+    )
+    return jsonify({"ok": True, "message": "Post sent back to draft."})
+
+
+@app.route("/api/blog/pending", methods=["GET"])
+def api_blog_pending():
+    """Returns all posts waiting for Evelyn's approval."""
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    posts = db_execute(
+        "SELECT id,slug,title,subtitle,author,ai_generated,created_at FROM blog_posts WHERE approval_status='pending' ORDER BY created_at DESC",
+        fetchall=True
+    )
+    return jsonify({"posts": [dict(p) for p in (posts or [])]})
+
+
+# ── AI BLOG IDEA GENERATOR ───────────────────────────────────────────────────
+
+@app.route("/api/blog/generate-ideas", methods=["POST","OPTIONS"])
+def api_blog_generate_ideas():
+    """Aria generates 5 blog post ideas based on Support RD topics."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+
+    ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY","")
+    if not ANTHROPIC_KEY:
+        return jsonify({"error": "No API key"}), 500
+
+    import urllib.request as _urlreq
+    prompt = """You are Aria, the AI advisor for Support RD — a Dominican hair care brand founded by Evelyn. 
+The brand's products include Shampoo Aloe & Romero, Lsciador conditioner, and a growing Gift Shop.
+The company is driven by natural Dominican hair care traditions, and also publicly supports a political campaign to ban pornography on the internet (affiliated with the Democratic Party).
+The app features: Aria AI hair chat, a Candy Land GPS driving adventure mode, a live coding feed, hair journal, photo analysis, and a community of hair care enthusiasts.
+
+Generate exactly 5 blog post ideas that would genuinely help or interest Support RD customers and followers.
+Mix: product education, hair care tips, company story, political position explanation, and one fun/creative idea.
+
+Respond ONLY with valid JSON — no markdown, no explanation:
+[
+  {
+    "title": "...",
+    "subtitle": "...",
+    "outline": "Three sentence outline of what the post covers.",
+    "tags": "tag1, tag2, tag3",
+    "reasoning": "One sentence on why this post serves the audience."
+  }
+]"""
+
+    try:
+        payload = json.dumps({
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 1500,
+            "messages": [{"role": "user", "content": prompt}]
+        }).encode()
+        req = _urlreq.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"}
+        )
+        with _urlreq.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read())
+        raw = result.get("content",[{}])[0].get("text","[]")
+        raw = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+        ideas = json.loads(raw)
+        saved = []
+        for idea in ideas[:5]:
+            db_execute(
+                "INSERT INTO blog_ideas (title,subtitle,outline,tags,reasoning) VALUES (?,?,?,?,?)",
+                (idea.get("title","")[:200], idea.get("subtitle","")[:300],
+                 idea.get("outline","")[:500], idea.get("tags","")[:200], idea.get("reasoning","")[:300])
+            )
+            row = db_execute("SELECT * FROM blog_ideas ORDER BY id DESC LIMIT 1", fetchone=True)
+            if row: saved.append(dict(row))
+        return jsonify({"ok": True, "ideas": saved})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/blog/ideas", methods=["GET"])
+def api_blog_ideas_list():
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    ideas = db_execute("SELECT * FROM blog_ideas ORDER BY id DESC LIMIT 30", fetchall=True)
+    return jsonify({"ideas": [dict(i) for i in (ideas or [])]})
+
+
+@app.route("/api/blog/idea-to-post", methods=["POST","OPTIONS"])
+def api_blog_idea_to_post():
+    """Takes an AI idea and generates a full draft blog post body using Aria."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    data    = request.get_json(silent=True) or {}
+    idea_id = data.get("idea_id")
+    idea    = db_execute("SELECT * FROM blog_ideas WHERE id=?", (idea_id,), fetchone=True)
+    if not idea: return jsonify({"error": "idea not found"}), 404
+    idea = dict(idea)
+
+    ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY","")
+    import urllib.request as _urlreq
+    prompt = f"""You are writing a blog post for Support RD, a Dominican hair care brand.
+Title: {idea['title']}
+Subtitle: {idea['subtitle']}
+Outline: {idea['outline']}
+Tags: {idea['tags']}
+
+Write the full blog post body. Use natural paragraphs. Use ## for section headings.
+Be warm, educational, and authentic to the Dominican hair care tradition.
+The post should be 400-600 words. Do not add a title at the top — just the body text."""
+
+    try:
+        payload = json.dumps({
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 1500,
+            "messages": [{"role": "user", "content": prompt}]
+        }).encode()
+        req = _urlreq.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"}
+        )
+        with _urlreq.urlopen(req, timeout=45) as resp:
+            result = json.loads(resp.read())
+        body = result.get("content",[{}])[0].get("text","").strip()
+        # Create as a pending draft awaiting Evelyn approval
+        base_slug = _blog_slug(idea["title"]) or "post"
+        slug = base_slug
+        counter = 1
+        while db_execute("SELECT id FROM blog_posts WHERE slug=?", (slug,), fetchone=True):
+            slug = f"{base_slug}-{counter}"; counter += 1
+        db_execute(
+            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,status,approval_status,ai_generated) VALUES (?,?,?,?,?,?,'draft','pending',1)",
+            (slug, idea["title"], idea["subtitle"], body, "Aria (AI) — Pending Evelyn's Approval", idea["tags"])
+        )
+        db_execute("UPDATE blog_ideas SET status='used' WHERE id=?", (idea_id,))
+        return jsonify({"ok": True, "slug": slug, "title": idea["title"],
+                        "message": "Draft created — waiting for Evelyn's approval before publishing."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── /api/me — exposes is_admin for blog admin buttons ───────────────────────
+@app.route("/api/me", methods=["GET","OPTIONS"])
+def api_me_alias():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user: return jsonify({"error": "not logged in"}), 401
+    return jsonify({"id": user["id"], "email": user.get("email",""), "name": user.get("name",""),
+                    "is_admin": is_admin_user(user["id"])})
 
 
 @app.after_request
