@@ -1,4 +1,4 @@
-import os, json, sqlite3, datetime, hashlib, secrets, threading, random, re
+import os, json, sqlite3, datetime, hashlib, secrets, threading, random, re, time
 from flask import Flask, request, jsonify, Response, redirect
 
 app = Flask(__name__)
@@ -419,6 +419,27 @@ def init_subscription_db():
         hair_rating INTEGER DEFAULT 3,
         aria_insight TEXT,
         ts         TEXT DEFAULT (datetime('now'))
+    )""")
+    # Live coding feed
+    con.execute("""CREATE TABLE IF NOT EXISTS live_feed_status (
+        id          INTEGER PRIMARY KEY DEFAULT 1,
+        is_live     INTEGER DEFAULT 0,
+        session_title TEXT DEFAULT '',
+        session_desc  TEXT DEFAULT '',
+        went_live_at  TEXT,
+        went_offline_at TEXT,
+        viewers     INTEGER DEFAULT 0
+    )""")
+    con.execute("INSERT OR IGNORE INTO live_feed_status (id,is_live) VALUES (1,0)")
+    con.execute("""CREATE TABLE IF NOT EXISTS live_feed_events (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        type        TEXT NOT NULL,
+        title       TEXT NOT NULL,
+        body        TEXT,
+        code        TEXT,
+        language    TEXT DEFAULT 'python',
+        tag         TEXT,
+        ts          TEXT DEFAULT (datetime('now'))
     )""")
     con.commit()
     con.close()
@@ -3037,6 +3058,8 @@ body::before{content:'';position:fixed;inset:0;
 .cl-result-badge.hair{background:rgba(255,110,180,0.15);color:#ff6eb4;border:1px solid rgba(255,110,180,0.3);}
 .cl-result-badge.park{background:rgba(80,220,120,0.15);color:#50dc78;border:1px solid rgba(80,220,120,0.3);}
 .cl-result-dist{font-size:11px;color:rgba(255,255,255,0.4);}
+.lf-type-btn{background:var(--c);border:1px solid var(--cb);color:var(--text);border-radius:16px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.2s;white-space:nowrap;}
+.lf-type-btn:hover{opacity:0.8;transform:scale(1.04);}
 .cl-ask-row{display:flex;align-items:center;gap:8px;margin-top:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:6px 8px;}
 .cl-ask-mic{width:44px;height:44px;border-radius:50%;background:rgba(240,160,144,0.12);border:1.5px solid var(--rose);color:var(--rose);font-size:20px;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
 .cl-ask-mic.listening{background:var(--rose);color:#fff;animation:micPulse 1s ease-in-out infinite;}
@@ -4488,6 +4511,80 @@ body::before{content:'';position:fixed;inset:0;
     </div>
 
     <!-- Account -->
+    <!-- ✦ LIVE CODING FEED PANEL (admin only) -->
+    <div class="settings-section" id="live-feed-panel" style="display:none;border-color:rgba(255,80,80,0.2);background:rgba(255,50,50,0.03);">
+      <div class="settings-section-title" style="color:#ff6060;">📡 Live Coding Feed</div>
+
+      <!-- Status row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);" id="lf-status-label">You are OFFLINE</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:3px;" id="lf-status-sub">Flip the switch to go live</div>
+        </div>
+        <!-- Go Live toggle -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-size:11px;color:var(--muted);" id="lf-toggle-label">Go Live</div>
+          <div id="lf-toggle" onclick="lfToggleLive()"
+            style="width:52px;height:28px;border-radius:14px;background:rgba(255,255,255,0.08);border:1px solid var(--border2);cursor:pointer;position:relative;transition:all 0.25s;">
+            <div id="lf-thumb"
+              style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:all 0.25s;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session title & desc -->
+      <div id="lf-session-fields">
+        <div style="margin-bottom:10px;">
+          <label style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;">Session Title</label>
+          <input id="lf-title" type="text" maxlength="120"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;"
+            placeholder="e.g. Building Candy Land GPS + bug fixes">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;">Session Description</label>
+          <input id="lf-desc" type="text" maxlength="300"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;"
+            placeholder="What are you working on today?">
+        </div>
+      </div>
+
+      <!-- Quick post events -->
+      <div id="lf-post-section" style="display:none;">
+        <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Post to Feed</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+          <button onclick="lfQuickPost('build')"  class="lf-type-btn" style="--c:rgba(96,168,255,0.15);--cb:rgba(96,168,255,0.4);">🔧 Build</button>
+          <button onclick="lfQuickPost('fix')"    class="lf-type-btn" style="--c:rgba(255,200,60,0.15);--cb:rgba(255,200,60,0.4);">🐛 Fix</button>
+          <button onclick="lfQuickPost('ship')"   class="lf-type-btn" style="--c:rgba(48,232,144,0.15);--cb:rgba(48,232,144,0.4);">✅ Ship</button>
+          <button onclick="lfQuickPost('code')"   class="lf-type-btn" style="--c:rgba(176,144,255,0.15);--cb:rgba(176,144,255,0.4);">💻 Code</button>
+          <button onclick="lfQuickPost('note')"   class="lf-type-btn" style="--c:rgba(255,255,255,0.07);--cb:rgba(255,255,255,0.2);">📝 Note</button>
+        </div>
+        <input id="lf-ev-title" type="text" maxlength="200"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;margin-bottom:6px;"
+          placeholder="Event title…">
+        <textarea id="lf-ev-body" rows="2" maxlength="2000"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;resize:vertical;margin-bottom:6px;"
+          placeholder="Description (optional)…"></textarea>
+        <textarea id="lf-ev-code" rows="3" maxlength="5000"
+          style="width:100%;background:#0a0d14;border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:11px;color:#a8d8a8;font-family:'IBM Plex Mono',monospace;outline:none;resize:vertical;margin-bottom:10px;"
+          placeholder="// Paste code snippet (optional)"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button id="lf-post-btn" onclick="lfPostEvent()"
+            style="background:var(--rose);color:#fff;border:none;border-radius:16px;padding:9px 20px;font-size:11px;font-weight:700;letter-spacing:0.07em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">
+            Post to Feed →
+          </button>
+          <a href="/live" target="_blank"
+            style="font-size:11px;color:var(--rose);text-decoration:none;padding:9px 14px;border:1px solid rgba(240,160,144,0.3);border-radius:16px;">
+            View Live Page ↗
+          </a>
+          <button onclick="lfClearFeed()"
+            style="font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:16px;padding:9px 14px;cursor:pointer;">
+            Clear Feed
+          </button>
+        </div>
+        <div id="lf-post-msg" style="font-size:11px;margin-top:8px;color:var(--green);display:none;"></div>
+      </div>
+    </div>
+
     <div class="settings-section">
       <div class="settings-section-title">Account</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -7258,8 +7355,144 @@ async function submitUpgradeIdea(){
 }
 
 
+// ════════════════════════════════════════════════════════════════
+// ✦ LIVE CODING FEED — ADMIN CONTROLS
+// ════════════════════════════════════════════════════════════════
+
+let _lfIsLive    = false;
+let _lfEventType = 'build';
+
+async function lfInit(){
+  // Only show panel for admin
+  try{
+    const r = await fetch('/api/subscription/status',{headers:{'X-Auth-Token':token}});
+    const d = await r.json();
+    if(d.admin_bypass){
+      const panel = document.getElementById('live-feed-panel');
+      if(panel) panel.style.display='block';
+      // Load current status
+      lfRefreshStatus();
+    }
+  }catch(e){}
+}
+
+async function lfRefreshStatus(){
+  try{
+    const r = await fetch('/api/live-feed/status');
+    const d = await r.json();
+    _lfIsLive = !!d.is_live;
+    lfRenderToggle();
+    const titleInp = document.getElementById('lf-title');
+    const descInp  = document.getElementById('lf-desc');
+    if(titleInp && d.session_title) titleInp.value = d.session_title;
+    if(descInp  && d.session_desc)  descInp.value  = d.session_desc;
+  }catch(e){}
+}
+
+function lfRenderToggle(){
+  const toggle  = document.getElementById('lf-toggle');
+  const thumb   = document.getElementById('lf-thumb');
+  const label   = document.getElementById('lf-status-label');
+  const sub     = document.getElementById('lf-status-sub');
+  const postSec = document.getElementById('lf-post-section');
+  const fields  = document.getElementById('lf-session-fields');
+  if(!toggle) return;
+  if(_lfIsLive){
+    toggle.style.background = 'rgba(255,50,50,0.3)';
+    toggle.style.borderColor = 'rgba(255,50,50,0.5)';
+    thumb.style.left         = '28px';
+    thumb.style.background   = '#ff5555';
+    if(label) label.textContent = '🔴 You are LIVE';
+    if(sub)   sub.textContent   = 'Your feed is streaming at /live';
+    if(postSec) postSec.style.display = 'block';
+    if(fields)  fields.style.display  = 'none';
+  } else {
+    toggle.style.background  = 'rgba(255,255,255,0.08)';
+    toggle.style.borderColor = 'var(--border2)';
+    thumb.style.left         = '3px';
+    thumb.style.background   = 'var(--muted)';
+    if(label) label.textContent = '⚫ You are OFFLINE';
+    if(sub)   sub.textContent   = 'Flip the switch to go live';
+    if(postSec) postSec.style.display = 'none';
+    if(fields)  fields.style.display  = 'block';
+  }
+}
+
+async function lfToggleLive(){
+  const titleInp = document.getElementById('lf-title');
+  const descInp  = document.getElementById('lf-desc');
+  const title = (titleInp?.value||'').trim() || 'Coding Session';
+  const desc  = (descInp?.value||'').trim();
+
+  if(!_lfIsLive){
+    // Go live
+    const r = await fetch('/api/live-feed/go-live',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body: JSON.stringify({title, desc})
+    });
+    const d = await r.json();
+    if(d.ok){ _lfIsLive=true; lfRenderToggle(); showToast('🔴 You are now LIVE!'); }
+  } else {
+    // Go offline
+    if(!confirm('End your live session?')) return;
+    const r = await fetch('/api/live-feed/go-offline',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token}
+    });
+    const d = await r.json();
+    if(d.ok){ _lfIsLive=false; lfRenderToggle(); showToast('Session ended.'); }
+  }
+}
+
+function lfQuickPost(type){
+  _lfEventType = type;
+  // Highlight selected button
+  document.querySelectorAll('.lf-type-btn').forEach(b=>{
+    b.style.opacity = b.textContent.toLowerCase().includes(type) ? '1' : '0.5';
+  });
+}
+
+async function lfPostEvent(){
+  const title = (document.getElementById('lf-ev-title')?.value||'').trim();
+  const body  = (document.getElementById('lf-ev-body')?.value||'').trim();
+  const code  = (document.getElementById('lf-ev-code')?.value||'').trim();
+  const msgEl = document.getElementById('lf-post-msg');
+  const btn   = document.getElementById('lf-post-btn');
+  if(!title){ showToast('Add a title for this event'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='Posting…'; }
+  try{
+    const r = await fetch('/api/live-feed/post-event',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body: JSON.stringify({type:_lfEventType, title, body, code})
+    });
+    const d = await r.json();
+    if(d.ok){
+      // Clear fields
+      const titleEl = document.getElementById('lf-ev-title');
+      const bodyEl  = document.getElementById('lf-ev-body');
+      const codeEl  = document.getElementById('lf-ev-code');
+      if(titleEl) titleEl.value='';
+      if(bodyEl)  bodyEl.value='';
+      if(codeEl)  codeEl.value='';
+      if(msgEl){ msgEl.textContent='✓ Posted to feed!'; msgEl.style.display='block'; setTimeout(()=>{ msgEl.style.display='none'; },2500); }
+      showToast('Posted to live feed ✓');
+    }
+  }catch(e){ showToast('Error posting event'); }
+  if(btn){ btn.disabled=false; btn.textContent='Post to Feed →'; }
+}
+
+async function lfClearFeed(){
+  if(!confirm('Clear all events from the feed? This cannot be undone.')) return;
+  await fetch('/api/live-feed/clear',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token}});
+  showToast('Feed cleared');
+}
+
+
 loadData();
 loadRealStats();
+lfInit();
 </script>
 <!-- ✦ UPGRADE IDEA MODAL -->
 <div id="upgrade-idea-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeUpgradeModal()">
@@ -7646,6 +7879,611 @@ def admin_access():
   window.location.replace('/dashboard');
 </script>
 </body></html>""", mimetype="text/html")
+
+
+# ════════════════════════════════════════════════════════════════
+# ✦ LIVE CODING FEED
+# ════════════════════════════════════════════════════════════════
+
+@app.route("/live")
+def live_feed_page():
+    return Response(r"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Support — Live Coding Feed</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07090d;--bg2:#0c0f16;--bg3:#11151f;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#eaedf5;--muted:#505870;--muted2:#8490a8;
+  --rose:#f0a090;--gold:#e0b050;--green:#30e890;--blue:#60a8ff;--red:#ff5555;
+}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 80% 0%,rgba(240,160,144,0.07) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 40% at 0% 90%,rgba(224,176,80,0.05) 0%,transparent 55%);
+  pointer-events:none;z-index:0;}
+
+/* ── TOP BAR ── */
+.top-bar{position:sticky;top:0;z-index:100;background:rgba(7,9,13,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;}
+.top-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.02em;}
+.top-logo span{color:var(--rose);}
+.top-right{display:flex;align-items:center;gap:14px;}
+.live-badge{display:flex;align-items:center;gap:7px;background:rgba(255,50,50,0.12);border:1px solid rgba(255,50,50,0.3);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:0.1em;color:#ff5555;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#ff5555;animation:livePulse 1.2s ease-in-out infinite;}
+.offline-badge{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);}
+.offline-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(255,50,50,0.4);}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(255,50,50,0);}}
+.viewer-count{font-size:11px;color:var(--muted2);}
+
+/* ── HERO ── */
+.hero{padding:40px 28px 24px;max-width:900px;margin:0 auto;position:relative;z-index:1;}
+.hero-eyebrow{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--rose);margin-bottom:12px;}
+.hero-title{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:800;line-height:1.1;margin-bottom:10px;}
+.hero-sub{font-size:14px;color:var(--muted2);line-height:1.6;max-width:560px;}
+.session-info-bar{margin-top:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.session-tag{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:600;color:var(--muted2);}
+.session-tag.live-tag{border-color:rgba(255,80,80,0.3);color:#ff6060;background:rgba(255,50,50,0.07);}
+
+/* ── COMMANDER LAYOUT ── */
+.commander{max-width:900px;margin:0 auto;padding:0 28px 60px;position:relative;z-index:1;}
+
+/* Status card */
+.status-card{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.status-left{}
+.status-now{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.status-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);}
+.status-desc{font-size:13px;color:var(--muted2);margin-top:5px;line-height:1.5;}
+.status-meta{display:flex;gap:24px;flex-wrap:wrap;}
+.stat-block{text-align:center;}
+.stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
+.stat-num.live-num{color:#ff6060;}
+.stat-num.green{color:var(--green);}
+.stat-label{font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;}
+
+/* Feed stream */
+.feed-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.feed-label{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);}
+.feed-auto{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;}
+.feed-auto-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:livePulse 2s infinite;}
+
+.feed-stream{display:flex;flex-direction:column;gap:10px;}
+
+/* Event cards — Plus500 style */
+.ev-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:flex;gap:14px;align-items:flex-start;animation:evSlideIn 0.4s cubic-bezier(.2,0,.2,1);}
+@keyframes evSlideIn{from{opacity:0;transform:translateY(-12px);}to{opacity:1;transform:translateY(0);}}
+.ev-card.type-session{border-color:rgba(240,160,144,0.25);background:rgba(240,160,144,0.04);}
+.ev-card.type-build{border-color:rgba(96,168,255,0.2);background:rgba(96,168,255,0.03);}
+.ev-card.type-fix{border-color:rgba(255,200,60,0.2);background:rgba(255,200,60,0.03);}
+.ev-card.type-ship{border-color:rgba(48,232,144,0.25);background:rgba(48,232,144,0.04);}
+.ev-card.type-note{border-color:var(--border);background:var(--bg3);}
+.ev-card.type-code{border-color:rgba(176,144,255,0.2);background:rgba(176,144,255,0.03);}
+.ev-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.ev-icon.type-session{background:rgba(240,160,144,0.12);}
+.ev-icon.type-build{background:rgba(96,168,255,0.12);}
+.ev-icon.type-fix{background:rgba(255,200,60,0.12);}
+.ev-icon.type-ship{background:rgba(48,232,144,0.12);}
+.ev-icon.type-note{background:rgba(255,255,255,0.06);}
+.ev-icon.type-code{background:rgba(176,144,255,0.12);}
+.ev-body{flex:1;min-width:0;}
+.ev-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+.ev-title{font-size:13px;font-weight:700;color:var(--text);}
+.ev-tag{font-size:9px;letter-spacing:0.1em;padding:2px 8px;border-radius:8px;font-weight:700;text-transform:uppercase;}
+.ev-tag.type-session{background:rgba(240,160,144,0.15);color:var(--rose);}
+.ev-tag.type-build{background:rgba(96,168,255,0.15);color:var(--blue);}
+.ev-tag.type-fix{background:rgba(255,200,60,0.15);color:#ffcc3c;}
+.ev-tag.type-ship{background:rgba(48,232,144,0.15);color:var(--green);}
+.ev-tag.type-note{background:rgba(255,255,255,0.07);color:var(--muted2);}
+.ev-tag.type-code{background:rgba(176,144,255,0.15);color:#b090ff;}
+.ev-desc{font-size:12px;color:var(--muted2);line-height:1.55;margin-bottom:6px;}
+.ev-code{background:#0a0d14;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a8d8a8;line-height:1.7;overflow-x:auto;white-space:pre;margin-top:8px;}
+.ev-time{font-size:10px;color:var(--muted);margin-top:4px;}
+.ev-card.new-flash{animation:newFlash 0.6s ease-out;}
+@keyframes newFlash{0%{background:rgba(240,160,144,0.15);}100%{background:inherit;}}
+
+/* Offline / empty state */
+.offline-state{text-align:center;padding:60px 20px;}
+.offline-icon{font-size:48px;margin-bottom:16px;}
+.offline-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;}
+.offline-sub{font-size:13px;color:var(--muted2);line-height:1.6;max-width:360px;margin:0 auto 24px;}
+.notify-btn{background:linear-gradient(135deg,var(--rose),#c06050);color:#fff;border:none;border-radius:20px;padding:12px 26px;font-size:12px;font-weight:700;letter-spacing:0.07em;cursor:pointer;font-family:'Space Grotesk',sans-serif;}
+
+/* Ticker tape — Plus500 style */
+.ticker-wrap{overflow:hidden;background:rgba(255,255,255,0.02);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px 0;margin-bottom:24px;}
+.ticker-inner{display:flex;gap:0;white-space:nowrap;animation:tickerScroll 28s linear infinite;}
+.ticker-item{display:inline-flex;align-items:center;gap:8px;padding:0 28px;font-size:11px;color:var(--muted2);border-right:1px solid var(--border);}
+.ticker-item .t-label{color:var(--text);font-weight:600;}
+.ticker-item .t-val{color:var(--green);}
+.ticker-item .t-val.down{color:var(--red);}
+@keyframes tickerScroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+
+/* Footer */
+.live-footer{border-top:1px solid var(--border);padding:24px 28px;text-align:center;font-size:11px;color:var(--muted);position:relative;z-index:1;}
+.live-footer a{color:var(--rose);text-decoration:none;}
+
+@media(max-width:600px){
+  .top-bar{padding:0 16px;}
+  .hero{padding:24px 16px 16px;}
+  .commander{padding:0 16px 48px;}
+  .status-card{flex-direction:column;}
+  .ev-card{padding:12px 14px;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="top-logo">Support<span>.</span></div>
+  <div class="top-right">
+    <div id="viewer-count" class="viewer-count">👁 — watching</div>
+    <div id="live-badge-wrap">
+      <div class="offline-badge"><div class="offline-dot"></div>OFFLINE</div>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">✦ Live Coding Feed</div>
+  <div class="hero-title" id="hero-title">Building Support in public.</div>
+  <div class="hero-sub" id="hero-sub">Every feature, fix, and experiment — streamed live as it happens. Watch Anthony build the platform in real time.</div>
+  <div class="session-info-bar" id="session-info-bar">
+    <div class="session-tag" id="session-tag-status">⚫ Offline</div>
+    <div class="session-tag" id="session-tag-time"></div>
+  </div>
+</div>
+
+<!-- TICKER TAPE -->
+<div class="ticker-wrap">
+  <div class="ticker-inner" id="ticker-inner">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- COMMANDER BODY -->
+<div class="commander">
+
+  <!-- Status card -->
+  <div class="status-card" id="status-card">
+    <div class="status-left">
+      <div class="status-now">Current Session</div>
+      <div class="status-title" id="status-title">—</div>
+      <div class="status-desc" id="status-desc">No active session</div>
+    </div>
+    <div class="status-meta">
+      <div class="stat-block">
+        <div class="stat-num" id="stat-events">0</div>
+        <div class="stat-label">Events</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-num green" id="stat-session-count">0</div>
+        <div class="stat-label">Sessions</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-num live-num" id="stat-live">OFFLINE</div>
+        <div class="stat-label">Status</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feed header -->
+  <div class="feed-header">
+    <div class="feed-label">Live Event Feed</div>
+    <div class="feed-auto"><div class="feed-auto-dot"></div>Auto-updating</div>
+  </div>
+
+  <!-- Offline state (shown when no events) -->
+  <div class="offline-state" id="offline-state">
+    <div class="offline-icon">📡</div>
+    <div class="offline-title">No session yet</div>
+    <div class="offline-sub">Anthony hasn't gone live yet. Check back soon — when he flips the switch, every build event streams here in real time.</div>
+    <button class="notify-btn" onclick="window.location.href='https://supportrd.com'">Visit SupportRD →</button>
+  </div>
+
+  <!-- Event stream -->
+  <div class="feed-stream" id="feed-stream" style="display:none;"></div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="live-footer">
+  Built with ❤️ by Anthony · <a href="https://supportrd.com">supportrd.com</a> · <a href="/dashboard">Dashboard</a>
+</div>
+
+<script>
+const TYPE_ICONS = {
+  session:'🚀', build:'🔧', fix:'🐛', ship:'✅', note:'📝', code:'💻'
+};
+const TYPE_LABELS = {
+  session:'SESSION', build:'BUILD', fix:'FIX', ship:'SHIPPED', note:'NOTE', code:'CODE'
+};
+let _lastId    = 0;
+let _isLive    = false;
+let _pollTimer = null;
+let _viewerTimer = null;
+
+async function poll(){
+  try{
+    const r = await fetch('/api/live-feed/status');
+    const d = await r.json();
+    updateStatus(d);
+    if(d.events && d.events.length){
+      const newEvs = d.events.filter(e=>e.id > _lastId);
+      if(newEvs.length){
+        newEvs.forEach(e=>prependEvent(e));
+        _lastId = Math.max(...d.events.map(e=>e.id));
+      }
+    }
+    updateTicker(d);
+    updateStats(d);
+  }catch(e){}
+  _pollTimer = setTimeout(poll, 4000);
+}
+
+function updateStatus(d){
+  const isLive = !!d.is_live;
+  _isLive = isLive;
+  const badgeWrap = document.getElementById('live-badge-wrap');
+  if(badgeWrap){
+    badgeWrap.innerHTML = isLive
+      ? '<div class="live-badge"><div class="live-dot"></div>LIVE</div>'
+      : '<div class="offline-badge"><div class="offline-dot"></div>OFFLINE</div>';
+  }
+  const statusEl = document.getElementById('session-tag-status');
+  if(statusEl) statusEl.textContent = isLive ? '🔴 Live Now' : '⚫ Offline';
+  if(statusEl) statusEl.className   = isLive ? 'session-tag live-tag' : 'session-tag';
+
+  const titleEl = document.getElementById('status-title');
+  const descEl  = document.getElementById('status-desc');
+  const heroT   = document.getElementById('hero-title');
+  const heroS   = document.getElementById('hero-sub');
+
+  if(isLive && d.session_title){
+    if(titleEl) titleEl.textContent = d.session_title;
+    if(descEl)  descEl.textContent  = d.session_desc||'Session in progress…';
+    if(heroT)   heroT.textContent   = d.session_title;
+    if(heroS)   heroS.textContent   = d.session_desc||'Building Support live. Watch every step.';
+  } else {
+    if(titleEl) titleEl.textContent = 'No active session';
+    if(descEl)  descEl.textContent  = 'Anthony will go live soon.';
+  }
+
+  const statLive = document.getElementById('stat-live');
+  if(statLive){ statLive.textContent = isLive?'LIVE':'OFFLINE'; statLive.style.color=isLive?'#ff5555':'var(--muted)';}
+
+  // Time
+  const tagTime = document.getElementById('session-tag-time');
+  if(tagTime && isLive && d.went_live_at){
+    const mins = Math.floor((Date.now() - new Date(d.went_live_at+'Z').getTime())/60000);
+    tagTime.textContent = '⏱ '+mins+'m live';
+  }
+
+  // Show/hide offline state vs feed
+  const offEl  = document.getElementById('offline-state');
+  const feedEl = document.getElementById('feed-stream');
+  const hasEvents = feedEl && feedEl.children.length > 0;
+  if(offEl)  offEl.style.display  = hasEvents ? 'none' : 'block';
+  if(feedEl) feedEl.style.display = hasEvents ? 'flex' : 'none';
+}
+
+function prependEvent(ev){
+  const feed = document.getElementById('feed-stream');
+  const offEl = document.getElementById('offline-state');
+  if(!feed) return;
+  offEl && (offEl.style.display='none');
+  feed.style.display='flex';
+
+  const card = document.createElement('div');
+  card.className = 'ev-card type-'+ev.type+' new-flash';
+  card.innerHTML = `
+    <div class="ev-icon type-${ev.type}">${TYPE_ICONS[ev.type]||'📌'}</div>
+    <div class="ev-body">
+      <div class="ev-top">
+        <div class="ev-title">${escHtml(ev.title)}</div>
+        <div class="ev-tag type-${ev.type}">${TYPE_LABELS[ev.type]||ev.type.toUpperCase()}</div>
+      </div>
+      ${ev.body ? `<div class="ev-desc">${escHtml(ev.body)}</div>` : ''}
+      ${ev.code ? `<div class="ev-code">${escHtml(ev.code)}</div>` : ''}
+      <div class="ev-time">${formatTime(ev.ts)}</div>
+    </div>`;
+  feed.insertBefore(card, feed.firstChild);
+}
+
+function updateStats(d){
+  const evCount = document.getElementById('stat-events');
+  const sesCount = document.getElementById('stat-session-count');
+  const viewEl   = document.getElementById('viewer-count');
+  if(evCount)  evCount.textContent  = d.total_events||0;
+  if(sesCount) sesCount.textContent = d.total_sessions||0;
+  if(viewEl)   viewEl.textContent   = '👁 '+(d.viewers||0)+' watching';
+}
+
+function updateTicker(d){
+  const inner = document.getElementById('ticker-inner');
+  if(!inner) return;
+  const items = [
+    {label:'Status',     val: d.is_live?'LIVE':'OFFLINE',  live:!!d.is_live},
+    {label:'Session',    val: d.session_title||'—',         live:false},
+    {label:'Events',     val: String(d.total_events||0),    live:false},
+    {label:'Sessions',   val: String(d.total_sessions||0),  live:false},
+    {label:'Watching',   val: String(d.viewers||1),         live:false},
+    {label:'Platform',   val: 'aria.supportrd.com',         live:false},
+    {label:'Stack',      val: 'Python · Flask · Claude AI', live:false},
+    {label:'Builder',    val: 'Anthony @ Support',          live:false},
+  ];
+  // Duplicate for infinite scroll
+  const all = [...items,...items];
+  inner.innerHTML = all.map(i=>`
+    <div class="ticker-item">
+      <span class="t-label">${i.label}</span>
+      <span class="t-val${i.live?'':''}">${i.val}</span>
+    </div>`).join('');
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatTime(ts){
+  if(!ts) return '';
+  const d = new Date(ts.includes('Z')?ts:ts+'Z');
+  return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) + ' · ' + d.toLocaleDateString([],{month:'short',day:'numeric'});
+}
+
+// Track viewers
+async function pingViewer(){
+  try{ await fetch('/api/live-feed/viewer-ping', {method:'POST'}); }catch(e){}
+}
+pingViewer();
+setInterval(pingViewer, 30000);
+
+poll();
+</script>
+</body></html>""", mimetype="text/html")
+
+
+@app.route("/api/live-feed/status", methods=["GET"])
+def live_feed_status():
+    status = db_execute("SELECT * FROM live_feed_status WHERE id=1", fetchone=True)
+    events = db_execute("SELECT * FROM live_feed_events ORDER BY id DESC LIMIT 50", fetchall=True)
+    total_events   = db_execute("SELECT COUNT(*) FROM live_feed_events", fetchone=True)[0]
+    total_sessions = db_execute("SELECT COUNT(*) FROM live_feed_events WHERE type='session'", fetchone=True)[0]
+    viewers = status["viewers"] if status else 0
+    return jsonify({
+        "is_live":       bool(status["is_live"]) if status else False,
+        "session_title": status["session_title"] if status else "",
+        "session_desc":  status["session_desc"]  if status else "",
+        "went_live_at":  status["went_live_at"]  if status else None,
+        "viewers":       viewers,
+        "total_events":  total_events,
+        "total_sessions":total_sessions,
+        "events":        [dict(e) for e in (events or [])]
+    })
+
+
+@app.route("/api/live-feed/go-live", methods=["POST","OPTIONS"])
+def live_feed_go_live():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error":"unauthorized"}), 401
+    data  = request.get_json(silent=True) or {}
+    title = (data.get("title","") or "Coding Session").strip()[:120]
+    desc  = (data.get("desc","")  or "").strip()[:300]
+    db_execute("UPDATE live_feed_status SET is_live=1, session_title=?, session_desc=?, went_live_at=datetime('now') WHERE id=1", (title, desc))
+    # Post a session-start event
+    db_execute("INSERT INTO live_feed_events (type,title,body,tag) VALUES ('session',?,?,'live')",
+               (title, desc or "New coding session started."))
+    return jsonify({"ok": True, "live": True})
+
+
+@app.route("/api/live-feed/go-offline", methods=["POST","OPTIONS"])
+def live_feed_go_offline():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error":"unauthorized"}), 401
+    db_execute("UPDATE live_feed_status SET is_live=0, went_offline_at=datetime('now') WHERE id=1")
+    db_execute("INSERT INTO live_feed_events (type,title,body) VALUES ('note','Session ended','Anthony has gone offline. See you next time.')")
+    return jsonify({"ok": True, "live": False})
+
+
+@app.route("/api/live-feed/post-event", methods=["POST","OPTIONS"])
+def live_feed_post_event():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error":"unauthorized"}), 401
+    data  = request.get_json(silent=True) or {}
+    etype = data.get("type","note")
+    if etype not in ("session","build","fix","ship","note","code"):
+        etype = "note"
+    title = (data.get("title","") or "Update").strip()[:200]
+    body  = (data.get("body","")  or "").strip()[:2000]
+    code  = (data.get("code","")  or "").strip()[:5000]
+    lang  = (data.get("language","python") or "python").strip()[:30]
+    tag   = (data.get("tag","")   or "").strip()[:40]
+    db_execute("INSERT INTO live_feed_events (type,title,body,code,language,tag) VALUES (?,?,?,?,?,?)",
+               (etype, title, body, code, lang, tag))
+    ev = db_execute("SELECT * FROM live_feed_events ORDER BY id DESC LIMIT 1", fetchone=True)
+    return jsonify({"ok": True, "event": dict(ev) if ev else {}})
+
+
+@app.route("/api/live-feed/viewer-ping", methods=["POST","OPTIONS"])
+def live_feed_viewer_ping():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    db_execute("UPDATE live_feed_status SET viewers = viewers + 1 WHERE id=1 AND is_live=1")
+    return jsonify({"ok": True})
+
+
+@app.route("/api/live-feed/clear", methods=["POST","OPTIONS"])
+def live_feed_clear():
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error":"unauthorized"}), 401
+    db_execute("DELETE FROM live_feed_events")
+    db_execute("UPDATE live_feed_status SET is_live=0, viewers=0, session_title='', session_desc='' WHERE id=1")
+    return jsonify({"ok": True})
+
+
+@app.route("/api/admin/refresh-now", methods=["POST","OPTIONS"])
+def admin_refresh_now():
+    """Admin-only: manually trigger the 5 AM company refresh immediately."""
+    if request.method == "OPTIONS": return jsonify({}), 200
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    threading.Thread(target=_company_refresh_5am, daemon=True, name="manual-refresh").start()
+    return jsonify({"ok": True, "message": "Company refresh triggered. Check live feed for the system event."})
+
+
+@app.route("/api/admin/refresh-status", methods=["GET"])
+def admin_refresh_status():
+    """Admin-only: show the last system refresh event from the live feed log."""
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    ev = db_execute(
+        "SELECT * FROM live_feed_events WHERE tag='system' ORDER BY id DESC LIMIT 1",
+        fetchone=True
+    )
+    next_wait = _seconds_until_5am_utc()
+    return jsonify({
+        "last_refresh":  dict(ev) if ev else None,
+        "next_refresh_in_seconds": int(next_wait),
+        "next_refresh_utc": (datetime.datetime.utcnow() + datetime.timedelta(seconds=next_wait)).isoformat()
+    })
+
+
+# ─── 5 AM DAILY COMPANY REFRESH ─────────────────────────────────────────────
+# Runs every day at 05:00 UTC. Archives old data, re-checks subscriptions,
+# clears stale sessions, and posts a system event to the live feed.
+
+def _company_refresh_5am():
+    """Hard-wired 5 AM company-wide refresh. Archives, compacts, re-checks."""
+    now_str = datetime.datetime.utcnow().isoformat()
+    print(f"[5AM REFRESH] Starting company refresh at {now_str}")
+
+    try:
+        con = sqlite3.connect(AUTH_DB, timeout=30, check_same_thread=False)
+        con.row_factory = sqlite3.Row
+
+        # 1. SUBSCRIPTION RE-CHECK: mark expired trials/plans as inactive
+        con.execute("""
+            UPDATE subscriptions
+            SET status = 'expired', updated_at = datetime('now')
+            WHERE status IN ('trialing','active')
+              AND trial_end IS NOT NULL
+              AND trial_end != ''
+              AND datetime(trial_end) < datetime('now')
+        """)
+        con.execute("""
+            UPDATE subscriptions
+            SET status = 'expired', updated_at = datetime('now')
+            WHERE status = 'active'
+              AND current_period_end IS NOT NULL
+              AND current_period_end != ''
+              AND datetime(current_period_end) < datetime('now')
+        """)
+
+        # 2. SESSION TOKENS: remove tokens older than 90 days
+        con.execute("""
+            DELETE FROM sessions
+            WHERE created_at < datetime('now', '-90 days')
+        """)
+
+        # 3. LIVE FEED: auto-close any session left open overnight
+        con.execute("""
+            UPDATE live_feed_status
+            SET is_live = 0,
+                went_offline_at = datetime('now')
+            WHERE is_live = 1
+              AND went_live_at < datetime('now', '-12 hours')
+        """)
+
+        # 4. UPGRADE IDEAS: archive ideas older than 90 days that were reviewed
+        con.execute("""
+            UPDATE upgrade_ideas
+            SET status = 'archived'
+            WHERE status IN ('approved','rejected')
+              AND reviewed_at < datetime('now', '-90 days')
+        """)
+
+        # 5. PUSH SUBSCRIPTIONS: remove stale entries older than 180 days
+        try:
+            con.execute("""
+                DELETE FROM push_subscriptions
+                WHERE created_at < datetime('now', '-180 days')
+            """)
+        except Exception:
+            pass
+
+        # 6. VIEWER COUNT RESET: reset viewer count nightly
+        con.execute("UPDATE live_feed_status SET viewers = 0 WHERE id = 1")
+
+        con.commit()
+        con.close()
+
+        # 7. ANALYTICS DB: vacuum to compact file size
+        try:
+            acon = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
+            acon.execute("DELETE FROM page_views WHERE timestamp < datetime('now', '-365 days')")
+            acon.commit()
+            acon.execute("VACUUM")
+            acon.close()
+        except Exception as ae:
+            print(f"[5AM REFRESH] Analytics cleanup warning: {ae}")
+
+        # 8. POST a system event to live feed log
+        try:
+            db_execute(
+                "INSERT INTO live_feed_events (type,title,body,tag) VALUES (?,?,?,?)",
+                ("note",
+                 "🌅 5 AM Company Refresh",
+                 f"Daily refresh ran at {now_str} UTC. Subscriptions re-checked, sessions compacted, stale data archived.",
+                 "system")
+            )
+        except Exception:
+            pass
+
+        print(f"[5AM REFRESH] Complete ✓")
+
+    except Exception as e:
+        print(f"[5AM REFRESH] Error: {e}")
+
+
+def _seconds_until_5am_utc():
+    """Returns seconds until the next 05:00 UTC."""
+    now = datetime.datetime.utcnow()
+    target = now.replace(hour=5, minute=0, second=0, microsecond=0)
+    if now >= target:
+        target += datetime.timedelta(days=1)
+    return (target - now).total_seconds()
+
+
+def _start_5am_scheduler():
+    """Background thread: waits until 5 AM UTC, runs refresh, repeats daily."""
+    def _loop():
+        # Wait for first 5 AM
+        wait = _seconds_until_5am_utc()
+        print(f"[5AM SCHEDULER] Next refresh in {int(wait//3600)}h {int((wait%3600)//60)}m")
+        time.sleep(wait)
+        while True:
+            _company_refresh_5am()
+            # Sleep until next 5 AM (always 24 h after running)
+            time.sleep(_seconds_until_5am_utc())
+
+    t = threading.Thread(target=_loop, daemon=True, name="5am-refresh")
+    t.start()
+    print("[5AM SCHEDULER] Scheduler thread started ✓")
+
+# Boot the scheduler when the app starts
+_start_5am_scheduler()
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 @app.after_request
