@@ -1,7 +1,22 @@
 import os, json, sqlite3, datetime, hashlib, secrets, threading, random, re, time
 from flask import Flask, request, jsonify, Response, redirect
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+
+# ── PROXY FIX — required on Render/Heroku behind load balancer ───────────────
+# Without this, request.is_secure is always False, HTTPS redirects break,
+# and Fortinet/firewall SSL inspection sees mismatched headers.
+# x_for=1 trusts 1 level of X-Forwarded-For (Render's proxy)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# ── FLASK CONFIG ─────────────────────────────────────────────────────────────
+app.config['SECRET_KEY']                   = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+app.config['SESSION_COOKIE_SECURE']        = True   # only send cookie over HTTPS
+app.config['SESSION_COOKIE_HTTPONLY']      = True   # no JS access to session cookie
+app.config['SESSION_COOKIE_SAMESITE']      = 'Lax'  # CSRF protection
+app.config['PREFERRED_URL_SCHEME']         = 'https'
+# ─────────────────────────────────────────────────────────────────────────────
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # Use /data dir on Render (persistent disk) — fall back to local for dev
@@ -2395,13 +2410,8 @@ def handle_preflight():
         resp.headers["Access-Control-Max-Age"]       = "3600"
         return resp
 
-@app.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"]  = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Auth-Token, X-Session-Id"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE"
-    response.headers["Access-Control-Max-Age"]       = "3600"
-    return response
+# CORS first pass — wide open for API calls (merged into main handler below)
+# (removed duplicate — see unified after_request at bottom of file)
 
 
 # ── AUTH ENDPOINTS ────────────────────────────────────────────────────────────
@@ -11231,14 +11241,53 @@ def api_me_alias():
 
 @app.after_request
 def after_request(response):
-    origin = request.headers.get('Origin','')
-    allowed = [os.environ.get('APP_BASE_URL',''), 'https://supportrd.com', 'https://www.supportrd.com',
-               'http://localhost:5000', 'http://127.0.0.1:5000']
-    if origin in allowed:
-        response.headers['Access-Control-Allow-Origin']  = origin
-        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,X-Auth-Token,Authorization'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    origin = request.headers.get('Origin', '')
+
+    # Always allow these origins — aria.supportrd.com, supportrd.com, localhost
+    allowed_origins = [
+        'https://aria.supportrd.com',
+        'https://supportrd.com',
+        'https://www.supportrd.com',
+        os.environ.get('APP_BASE_URL', ''),
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+    ]
+
+    # If origin matches — send it back explicitly (required for credentials)
+    # If no origin header (direct browser nav, Render health checks) — allow *
+    if origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin']       = origin
+        response.headers['Access-Control-Allow-Credentials']  = 'true'
+    else:
+        response.headers['Access-Control-Allow-Origin']       = '*'
+
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS,PATCH'
+    response.headers['Access-Control-Allow-Headers'] = (
+        'Content-Type,X-Auth-Token,Authorization,X-Session-Id,'
+        'X-Requested-With,Accept,Origin,Cache-Control'
+    )
+    response.headers['Access-Control-Max-Age']        = '86400'
+    response.headers['Access-Control-Expose-Headers'] = 'X-Auth-Token'
+
+    # ── Security headers — satisfy Fortinet / firewall SSL inspection ──────
+    # These tell the firewall the app is behaving correctly over HTTPS
+    response.headers['X-Content-Type-Options']        = 'nosniff'
+    response.headers['X-Frame-Options']               = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection']              = '1; mode=block'
+    response.headers['Referrer-Policy']               = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy']            = (
+        'geolocation=(self), microphone=(self), camera=()'
+    )
+    # HSTS — tell browser and any proxy: always use HTTPS, never downgrade
+    if request.is_secure or request.headers.get('X-Forwarded-Proto') == 'https':
+        response.headers['Strict-Transport-Security'] = (
+            'max-age=31536000; includeSubDomains'
+        )
+
+    # ── Preflight fast-return ──────────────────────────────────────────────
+    if request.method == 'OPTIONS':
+        response.status_code = 204
+
     return response
 
 
