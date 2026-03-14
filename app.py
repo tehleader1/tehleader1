@@ -10764,10 +10764,18 @@ async function lfInit(){
     const d = await r.json();
     if(d.admin_bypass){
       localStorage.setItem('srd_admin','1');
+      // ── FIX: persist admin key so all dashboard buttons work after reset ──
+      // Fetch the key from /api/admin/get-key (auth-token protected, no key needed)
+      try{
+        const kr = await fetch('/api/admin/get-key',{headers:{'X-Auth-Token':token}});
+        const kd = await kr.json();
+        if(kd.key) localStorage.setItem('srd_admin_key', kd.key);
+      }catch(ke){}
       const panel = document.getElementById('live-feed-panel');
       if(panel) panel.style.display='block';
       lfRefreshStatus();
       loadShopifyRevenue();
+      loadAdminDashboard();
       setTimeout(checkAdminRefreshNotice, 2000);
     }
   }catch(e){}
@@ -10916,6 +10924,119 @@ async function lfClearFeed(){
 loadData();
 loadRealStats();
 lfInit();
+
+// ══════════════════════════════════════════════════════════════════
+// ✦ ADMIN DASHBOARD — universal helper + button functions
+// All routes in app.py use X-Auth-Token (no admin key needed).
+// engine_routes.py uses X-Admin-Key (saved to srd_admin_key).
+// ══════════════════════════════════════════════════════════════════
+
+// Universal admin fetch — always sends both auth headers
+async function adminFetch(url, opts={}){
+  const headers = Object.assign({
+    'X-Auth-Token': token,
+    'X-Admin-Key':  localStorage.getItem('srd_admin_key')||'',
+    'Content-Type': 'application/json'
+  }, opts.headers||{});
+  return fetch(url, Object.assign({}, opts, {headers}));
+}
+
+// Called once on login — loads content engine log + blog queue counts
+async function loadAdminDashboard(){
+  if(localStorage.getItem('srd_admin')!=='1') return;
+  try{
+    // Refresh content engine log badge if element exists
+    const r = await adminFetch('/api/admin/content-engine/log');
+    if(r.ok){
+      const d = await r.json();
+      const el = document.getElementById('ce-run-count');
+      if(el) el.textContent = (d.log||[]).length + ' runs';
+    }
+  }catch(e){}
+  try{
+    // Refresh blog pending count if element exists
+    const r2 = await adminFetch('/api/blog/admin-list');
+    if(r2.ok){
+      const d2 = await r2.json();
+      const pending = (d2.posts||[]).filter(p=>p.status==='draft').length;
+      const el2 = document.getElementById('blog-pending-count');
+      if(el2) el2.textContent = pending + ' drafts';
+    }
+  }catch(e){}
+}
+
+// ── Content Engine: fire a post right now ────────────────────────
+async function runContentEngine(btnEl){
+  if(!confirm('Run content engine now? This will write and publish a new blog post.')) return;
+  if(btnEl){ btnEl.disabled=true; btnEl.textContent='Running…'; }
+  try{
+    // Try app.py route first (auth-token based)
+    const r = await adminFetch('/api/admin/content-engine/run',{method:'POST',body:'{}'});
+    const d = await r.json();
+    if(d.ok){
+      showToast('✓ Content engine started — post coming in ~30s');
+    } else if(d.error && d.error.includes('unauthorized')){
+      // Fallback: engine_routes.py route (key-based)
+      const r2 = await adminFetch('/api/content-engine/run',{method:'POST',body:'{}'});
+      const d2 = await r2.json();
+      if(d2.ok) showToast('✓ Content engine started');
+      else showToast('Error: '+(d2.error||'unknown'));
+    } else {
+      showToast('Error: '+(d.error||'unknown'));
+    }
+  }catch(e){ showToast('Network error — check Render logs'); }
+  if(btnEl){ setTimeout(()=>{ btnEl.disabled=false; btnEl.textContent='Run Content Engine'; },3000); }
+}
+
+// ── Blog: approve a post from dashboard ──────────────────────────
+async function approvePost(slug, btnEl){
+  if(!slug) return;
+  if(btnEl){ btnEl.disabled=true; btnEl.textContent='Approving…'; }
+  try{
+    const r = await adminFetch('/api/blog/toggle',{method:'POST',body:JSON.stringify({slug,status:'published'})});
+    const d = await r.json();
+    if(d.ok){ showToast('✓ Post published: '+slug); if(btnEl) btnEl.closest('.blog-approval-row')?.remove(); }
+    else showToast('Error: '+(d.error||'failed'));
+  }catch(e){ showToast('Network error'); }
+  if(btnEl){ btnEl.disabled=false; btnEl.textContent='Approve'; }
+}
+
+// ── Blog: reject/delete a post from dashboard ────────────────────
+async function rejectPost(slug, btnEl){
+  if(!slug) return;
+  if(!confirm('Delete this post? This cannot be undone.')) return;
+  if(btnEl){ btnEl.disabled=true; btnEl.textContent='Deleting…'; }
+  try{
+    const r = await adminFetch('/api/blog/delete',{method:'POST',body:JSON.stringify({slug})});
+    const d = await r.json();
+    if(d.ok){ showToast('Post deleted'); if(btnEl) btnEl.closest('.blog-approval-row')?.remove(); }
+    else showToast('Error: '+(d.error||'failed'));
+  }catch(e){ showToast('Network error'); }
+  if(btnEl){ btnEl.disabled=false; btnEl.textContent='Reject'; }
+}
+
+// ── Revenue: email blast (fixes missing TOKEN context) ───────────
+async function sendAdminBlast(){
+  const subject = document.getElementById('blast-subject')?.value?.trim();
+  const body    = document.getElementById('blast-body')?.value?.trim();
+  const product = document.getElementById('blast-product')?.value?.trim();
+  const url     = document.getElementById('blast-url')?.value?.trim();
+  const okEl    = document.getElementById('blast-ok');
+  const errEl   = document.getElementById('blast-err');
+  const btn     = document.getElementById('blast-btn');
+  if(okEl) okEl.style.display='none';
+  if(errEl) errEl.style.display='none';
+  if(!subject||!body){ if(errEl){errEl.textContent='Subject and body required.';errEl.style.display='block';} return; }
+  if(!confirm('Send to all registered users?')) return;
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  try{
+    const r = await adminFetch('/api/revenue/email-blast',{method:'POST',body:JSON.stringify({subject,body,product,url})});
+    const d = await r.json();
+    if(d.ok){ if(okEl){okEl.textContent='Done: '+d.message; okEl.style.display='block';} }
+    else { if(errEl){errEl.textContent=d.error||'Send failed'; errEl.style.display='block';} }
+  }catch(e){ if(errEl){errEl.textContent='Network error'; errEl.style.display='block';} }
+  if(btn){ btn.disabled=false; btn.textContent='Send to All Users'; }
+}
 </script>
 <!-- ✦ UPGRADE IDEA MODAL -->
 
@@ -13244,6 +13365,20 @@ def api_content_engine_log():
 
 
 # ── /api/me — exposes is_admin for blog admin buttons ───────────────────────
+@app.route("/api/admin/get-key", methods=["GET"])
+def api_admin_get_key():
+    """
+    Delivers the ADMIN_KEY to the authenticated admin user only.
+    The JS calls this once on login and caches in localStorage as srd_admin_key.
+    This means the key never needs to be hardcoded in frontend JS.
+    """
+    user = get_current_user()
+    if not user or not is_admin_user(user["id"]):
+        return jsonify({"error": "unauthorized"}), 401
+    key = os.environ.get("ADMIN_KEY", "srd_admin_2024")
+    return jsonify({"ok": True, "key": key})
+
+
 @app.route("/api/me", methods=["GET","OPTIONS"])
 def api_me_alias():
     if request.method == "OPTIONS": return jsonify({}), 200
@@ -13716,6 +13851,7 @@ textarea{min-height:120px;line-height:1.6;}
 </div>
 <script>
 const TOKEN = localStorage.getItem('srd_token')||localStorage.getItem('aria_token')||'';
+const AKEY  = localStorage.getItem('srd_admin_key')||'';
 async function loadStats(){
   try{
     const r=await fetch('/api/revenue/stats',{headers:{'X-Auth-Token':TOKEN}});
@@ -13742,7 +13878,12 @@ async function sendBlast(){
   if(!confirm('Send this email to all registered users?'))return;
   btn.disabled=true;btn.textContent='Sending...';
   try{
-    const r=await fetch('/api/revenue/email-blast',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},body:JSON.stringify({subject,body,product,url})});
+    // Always send both auth headers — works with both old and new auth checks
+    const r=await fetch('/api/revenue/email-blast',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN,'X-Admin-Key':AKEY},
+      body:JSON.stringify({subject,body,product,url})
+    });
     const d=await r.json();
     if(d.ok){okEl.textContent='Done: '+d.message;okEl.style.display='block';}
     else{errEl.textContent=d.error||'Send failed';errEl.style.display='block';}
