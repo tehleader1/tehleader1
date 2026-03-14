@@ -5874,822 +5874,592 @@ body::before{content:'';position:fixed;inset:0;
 
 <!-- ✦ HAIR PROFILE FULL PAGE -->
 <div class="ppage" id="pp-profile-page">
-
-<!-- ── PROFILE HERO CARD ───────────────────────────────── -->
-<div id="prof-hero" style="position:relative;background:linear-gradient(145deg,rgba(240,160,144,0.08),rgba(193,163,162,0.05));border:1px solid rgba(240,160,144,0.18);border-radius:20px;padding:28px 24px 24px;margin-bottom:20px;overflow:hidden;">
-  <!-- glow behind name -->
-  <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:280px;height:180px;background:radial-gradient(ellipse,rgba(240,160,144,0.18),transparent 70%);pointer-events:none;"></div>
-
-  <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;position:relative;">
-
-    <!-- Avatar + product shelf -->
-    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0;">
-      <!-- Avatar -->
-      <div style="position:relative;">
-        <div id="prof-avatar" style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#fff;border:3px solid rgba(240,160,144,0.4);box-shadow:0 0 24px rgba(240,160,144,0.25);">?</div>
-        <div style="position:absolute;bottom:2px;right:2px;width:20px;height:20px;background:#30e890;border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:9px;">✓</div>
-      </div>
-      <!-- Share icons -->
-      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
-        <a id="share-ig" href="#" target="_blank" onclick="profShare('instagram');return false;" style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">📷 Instagram</a>
-        <a id="share-wa" href="#" target="_blank" onclick="profShare('whatsapp');return false;" style="display:flex;align-items:center;gap:7px;background:#25d366;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">💬 WhatsApp</a>
-        <a id="share-tt" href="#" target="_blank" onclick="profShare('tiktok');return false;" style="display:flex;align-items:center;gap:7px;background:#000;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">🎵 TikTok</a>
-        <a id="share-fb" href="#" target="_blank" onclick="profShare('facebook');return false;" style="display:flex;align-items:center;gap:7px;background:#1877f2;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">👥 Facebook</a>
-        <a id="share-tw" href="#" target="_blank" onclick="profShare('twitter');return false;" style="display:flex;align-items:center;gap:7px;background:#000;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">🐦 X / Twitter</a>
-        <a id="share-pi" href="#" target="_blank" onclick="profShare('pinterest');return false;" style="display:flex;align-items:center;gap:7px;background:#e60023;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">📌 Pinterest</a>
-      </div>
-    </div>
-
-    <!-- Product shelf (carousel) -->
-    <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;">
-      <div style="font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">My Products</div>
-      <div id="prof-product-carousel" style="width:72px;overflow:hidden;position:relative;height:220px;">
-        <div id="prof-product-track" style="display:flex;flex-direction:column;gap:8px;transition:transform 0.3s ease;" data-idx="0">
-          <!-- filled by JS -->
-        </div>
-      </div>
-      <div id="prof-product-dots" style="display:flex;gap:5px;justify-content:center;margin-top:4px;"></div>
-    </div>
-
-    <!-- Name / bio / status -->
-    <div style="flex:1;min-width:180px;">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
-        <div id="prof-name-big" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);">—</div>
-        <span id="prof-plan-badge" style="font-size:8px;padding:3px 8px;border-radius:3px;background:var(--gold-dim);border:1px solid rgba(224,176,80,0.3);color:var(--gold);font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;">FREE</span>
-      </div>
-      <div id="prof-email-sm" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
-
-      <!-- AI Hair Status — glowing -->
-      <div id="prof-ai-status-wrap" style="background:rgba(240,160,144,0.07);border:1px solid rgba(240,160,144,0.22);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden;">
-        <div style="position:absolute;inset:0;border-radius:12px;box-shadow:inset 0 0 18px rgba(240,160,144,0.08);pointer-events:none;"></div>
-        <div style="font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;">✦ Aria's Current Read</div>
-        <div id="prof-ai-status" style="font-size:13px;color:var(--text);line-height:1.7;font-style:italic;animation:profGlow 3s ease-in-out infinite;">Tap ✦ Refresh to get Aria's latest read on your hair…</div>
-        <button onclick="profRefreshAiStatus()" style="margin-top:8px;background:none;border:1px solid rgba(240,160,144,0.3);color:var(--rose);padding:4px 12px;border-radius:20px;font-size:10px;cursor:pointer;letter-spacing:0.08em;">✦ Refresh</button>
-      </div>
-
-      <!-- Stats row -->
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;">
-        <div style="text-align:center;">
-          <div id="prof-score-big" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--rose);">—</div>
-          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Hair Score</div>
-        </div>
-        <div style="width:1px;background:var(--border);"></div>
-        <div style="text-align:center;">
-          <div id="prof-member-since" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--blue);">—</div>
-          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Member Since</div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ── HAIR DATA GRID ─────────────────────────────────────── -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Hair Type</div>
-    <div class="tags" id="pf-tags-type">
-      <div class="tag" onclick="toggleTag(this,'type')">Straight</div><div class="tag" onclick="toggleTag(this,'type')">Wavy</div><div class="tag" onclick="toggleTag(this,'type')">Curly</div><div class="tag" onclick="toggleTag(this,'type')">Coily / 4C</div><div class="tag" onclick="toggleTag(this,'type')">Fine</div><div class="tag" onclick="toggleTag(this,'type')">Medium</div><div class="tag" onclick="toggleTag(this,'type')">Thick</div><div class="tag" onclick="toggleTag(this,'type')">Dry / Brittle</div><div class="tag" onclick="toggleTag(this,'type')">Oily</div><div class="tag" onclick="toggleTag(this,'type')">Normal</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Main Concerns</div>
-    <div class="tags" id="pf-tags-concerns">
-      <div class="tag" onclick="toggleTag(this,'concerns')">Frizz</div><div class="tag" onclick="toggleTag(this,'concerns')">Damaged</div><div class="tag" onclick="toggleTag(this,'concerns')">Breakage</div><div class="tag" onclick="toggleTag(this,'concerns')">Hair Loss</div><div class="tag" onclick="toggleTag(this,'concerns')">Thinning</div><div class="tag" onclick="toggleTag(this,'concerns')">Oily Scalp</div><div class="tag" onclick="toggleTag(this,'concerns')">Dandruff</div><div class="tag" onclick="toggleTag(this,'concerns')">Split Ends</div><div class="tag" onclick="toggleTag(this,'concerns')">Slow Growth</div><div class="tag" onclick="toggleTag(this,'concerns')">Dullness</div><div class="tag" onclick="toggleTag(this,'concerns')">Heat Damage</div><div class="tag" onclick="toggleTag(this,'concerns')">Sun Damage</div><div class="tag" onclick="toggleTag(this,'concerns')">Dryness</div><div class="tag" onclick="toggleTag(this,'concerns')">Scalp Irritation</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Chemical Treatments</div>
-    <div class="tags" id="pf-tags-treatments">
-      <div class="tag" onclick="toggleTag(this,'treatments')">None / Natural</div><div class="tag" onclick="toggleTag(this,'treatments')">Relaxer</div><div class="tag" onclick="toggleTag(this,'treatments')">Bleach</div><div class="tag" onclick="toggleTag(this,'treatments')">Hair Color</div><div class="tag" onclick="toggleTag(this,'treatments')">Keratin</div><div class="tag" onclick="toggleTag(this,'treatments')">Perm / Wave</div><div class="tag" onclick="toggleTag(this,'treatments')">Brazilian Blowout</div><div class="tag" onclick="toggleTag(this,'treatments')">Highlights</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Porosity Level</div>
-    <div class="tags" id="pf-tags-porosity">
-      <div class="tag" onclick="toggleTag(this,'porosity')">Low Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">Medium Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">High Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">Not Sure</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Scalp Type</div>
-    <div class="tags" id="pf-tags-scalp">
-      <div class="tag" onclick="toggleTag(this,'scalp')">Normal</div><div class="tag" onclick="toggleTag(this,'scalp')">Dry / Flaky</div><div class="tag" onclick="toggleTag(this,'scalp')">Oily</div><div class="tag" onclick="toggleTag(this,'scalp')">Sensitive</div><div class="tag" onclick="toggleTag(this,'scalp')">Itchy</div><div class="tag" onclick="toggleTag(this,'scalp')">Dandruff</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Wash Frequency</div>
-    <div class="tags" id="pf-tags-washfreq">
-      <div class="tag" onclick="toggleTag(this,'washfreq')">Daily</div><div class="tag" onclick="toggleTag(this,'washfreq')">Every 2-3 Days</div><div class="tag" onclick="toggleTag(this,'washfreq')">Weekly</div><div class="tag" onclick="toggleTag(this,'washfreq')">Every 2 Weeks</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Heat Styling</div>
-    <div class="tags" id="pf-tags-heat">
-      <div class="tag" onclick="toggleTag(this,'heat')">No Heat</div><div class="tag" onclick="toggleTag(this,'heat')">Occasionally</div><div class="tag" onclick="toggleTag(this,'heat')">1-2x / Week</div><div class="tag" onclick="toggleTag(this,'heat')">Daily</div><div class="tag" onclick="toggleTag(this,'heat')">Flat Iron</div><div class="tag" onclick="toggleTag(this,'heat')">Blow Dryer</div><div class="tag" onclick="toggleTag(this,'heat')">Curling Iron</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Environment / Lifestyle</div>
-    <div class="tags" id="pf-tags-env">
-      <div class="tag" onclick="toggleTag(this,'env')">Hard Water</div><div class="tag" onclick="toggleTag(this,'env')">Humid Climate</div><div class="tag" onclick="toggleTag(this,'env')">Dry Climate</div><div class="tag" onclick="toggleTag(this,'env')">Sun Exposure</div><div class="tag" onclick="toggleTag(this,'env')">Pool / Chlorine</div><div class="tag" onclick="toggleTag(this,'env')">Ocean / Salt</div><div class="tag" onclick="toggleTag(this,'env')">Active / Workouts</div>
-    </div>
-  </div>
-
-</div>
-
-<!-- Products I Use -->
-<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">SupportRD Products I Use</div>
-  <div class="tags" id="pf-tags-products">
-    <div class="tag" onclick="toggleTag(this,'products')">Formula Exclusiva</div><div class="tag" onclick="toggleTag(this,'products')">Laciador Crece</div><div class="tag" onclick="toggleTag(this,'products')">Gotero Rapido</div><div class="tag" onclick="toggleTag(this,'products')">Gotitas Brillantes</div><div class="tag" onclick="toggleTag(this,'products')">Mascarilla Capilar</div><div class="tag" onclick="toggleTag(this,'products')">Shampoo Aloe Vera</div>
-  </div>
-</div>
-
-<!-- Goals + notes -->
-<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">My Hair Goals</div>
-  <textarea id="pf-goals" placeholder="What do you want your hair to look and feel like? The more Aria knows, the better she can help…" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--text);resize:vertical;min-height:70px;outline:none;" onfocus="this.style.borderColor='var(--rose)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-</div>
-
-<!-- Save -->
-<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:28px;">
-  <button class="save-btn" style="margin-top:0;" onclick="saveProfileFull()">✦ Save Profile & Update Score</button>
-  <div id="pf-save-msg" style="display:none;font-size:12px;color:var(--green);">✓ Saved</div>
-</div>
-
-<!-- ── OCCASIONS ── -->
-<div id="occ-section">
-
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
-    <div>
-      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);">✦ Occasion Routines</div>
-      <div style="font-size:12px;color:var(--muted2);margin-top:2px;">Pick an occasion, choose your product, select your routine action — then drop it onto any day of the week.</div>
-    </div>
-    <button onclick="occToggleWeekly()" id="occ-weekly-btn" style="background:var(--bg2);border:1px solid var(--border2);color:var(--muted2);padding:8px 16px;border-radius:20px;font-size:11px;cursor:pointer;letter-spacing:0.06em;font-family:'Space Grotesk',sans-serif;">📅 View My Week</button>
-  </div>
-
-  <!-- ── STEP 1: PICK OCCASION ── -->
-  <div class="occ-step-block">
-    <div class="occ-step-label">Step 1 — Choose Your Occasion</div>
-    <div id="occ-occasion-grid" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
-  </div>
-
-  <!-- ── STEP 2: PICK PRODUCT ── -->
-  <div class="occ-step-block" id="occ-step2" style="display:none;">
-    <div class="occ-step-label">Step 2 — Which Product Today?</div>
-    <div id="occ-product-grid" style="display:flex;flex-wrap:wrap;gap:8px;">
-
-      <div class="occ-card" onclick="occPickProduct('Formula Exclusiva','💊','All-in-one treatment: moisture, strength + scalp')">
-        <div class="occ-card-icon">💊</div>
-        <div class="occ-card-title">Formula Exclusiva</div>
-        <div class="occ-card-sub">All-in-one treatment</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Laciador Crece','🌿','Softness, elasticity, shine + growth')">
-        <div class="occ-card-icon">🌿</div>
-        <div class="occ-card-title">Laciador Crece</div>
-        <div class="occ-card-sub">Softness + growth</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Gotero Rapido','💧','Scalp treatment — clears + stimulates growth')">
-        <div class="occ-card-icon">💧</div>
-        <div class="occ-card-title">Gotero Rapido</div>
-        <div class="occ-card-sub">Scalp treatment</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Gotitas Brillantes','✨','Shine serum — apply after styling')">
-        <div class="occ-card-icon">✨</div>
-        <div class="occ-card-title">Gotitas Brillantes</div>
-        <div class="occ-card-sub">Shine serum</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Mascarilla Capilar','🫙','Deep conditioning mask treatment')">
-        <div class="occ-card-icon">🫙</div>
-        <div class="occ-card-title">Mascarilla Capilar</div>
-        <div class="occ-card-sub">Deep condition mask</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Shampoo Aloe Vera','🍃','Gentle cleanse — daily or weekly')">
-        <div class="occ-card-icon">🍃</div>
-        <div class="occ-card-title">Shampoo Aloe Vera</div>
-        <div class="occ-card-sub">Gentle cleanse</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Multiple Products','🗂️','Using a combination today')">
-        <div class="occ-card-icon">🗂️</div>
-        <div class="occ-card-title">Multiple Products</div>
-        <div class="occ-card-sub">Combination routine</div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── STEP 3: PICK ROUTINE ACTION ── -->
-  <div class="occ-step-block" id="occ-step3" style="display:none;">
-    <div class="occ-step-label">Step 3 — What Are You Doing?</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Simply Applying','🖐️','Quick application — work product through hair, no wash needed')">
-        <div class="occ-card-icon">🖐️</div>
-        <div class="occ-card-title">Simply Applying</div>
-        <div class="occ-card-sub">Quick — no wash needed</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Next Wash Day','🚿','Applying now, washing on next scheduled wash day')">
-        <div class="occ-card-icon">🚿</div>
-        <div class="occ-card-title">Next Wash Day</div>
-        <div class="occ-card-sub">Apply now, wash later</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Shampoo + Laciador','🔁','Shampoo hair, remove buildup, then apply Laciador for softness')">
-        <div class="occ-card-icon">🔁</div>
-        <div class="occ-card-title">Shampoo + Laciador</div>
-        <div class="occ-card-sub">Wash, remove, rebuild</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Full Professional Wash','💆','Take to a SupportRD salon — deep wash with full product treatment')">
-        <div class="occ-card-icon">💆</div>
-        <div class="occ-card-title">Full Professional Wash</div>
-        <div class="occ-card-sub">Salon deep treatment</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Overnight Treatment','🌙','Apply before bed, let it absorb overnight, rinse in morning')">
-        <div class="occ-card-icon">🌙</div>
-        <div class="occ-card-title">Overnight Treatment</div>
-        <div class="occ-card-sub">Sleep-in formula</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Pre-Event Prep','💄','Quick styling prep before the occasion — product + style')">
-        <div class="occ-card-icon">💄</div>
-        <div class="occ-card-title">Pre-Event Prep</div>
-        <div class="occ-card-sub">Style + product for the event</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Deep Condition Mask','🫙','Apply Mascarilla, leave 15–30 min, rinse and style')">
-        <div class="occ-card-icon">🫙</div>
-        <div class="occ-card-title">Deep Condition Mask</div>
-        <div class="occ-card-sub">15–30 min mask treatment</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Scalp Treatment','💧','Apply Gotero directly to scalp, massage in, leave in')">
-        <div class="occ-card-icon">💧</div>
-        <div class="occ-card-title">Scalp Treatment</div>
-        <div class="occ-card-sub">Scalp focus — leave in</div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── STEP 4: ADD TO WEEK DAY ── -->
-  <div class="occ-step-block" id="occ-step4" style="display:none;">
-    <div class="occ-step-label">Step 4 — Add to Which Day?</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Monday')"><div class="occ-card-title">Mon</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Tuesday')"><div class="occ-card-title">Tue</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Wednesday')"><div class="occ-card-title">Wed</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Thursday')"><div class="occ-card-title">Thu</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Friday')"><div class="occ-card-title">Fri</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Saturday')"><div class="occ-card-title">Sat</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Sunday')"><div class="occ-card-title">Sun</div></div>
-      <div class="occ-card occ-day-card" onclick="occSaveNoDay()" style="background:rgba(240,160,144,0.08);border-color:rgba(240,160,144,0.3);"><div class="occ-card-title" style="color:var(--rose);">Save Only</div></div>
-    </div>
-  </div>
-
-  <!-- ── CURRENT SELECTION SUMMARY ── -->
-  <div id="occ-summary" style="display:none;background:rgba(240,160,144,0.06);border:1px solid rgba(240,160,144,0.2);border-radius:12px;padding:14px 18px;margin-top:4px;margin-bottom:8px;">
-    <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;">✦ Current Selection</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <span id="occ-sum-occasion" class="occ-sum-chip" style="display:none;"></span>
-      <span id="occ-sum-product"  class="occ-sum-chip occ-sum-product" style="display:none;"></span>
-      <span id="occ-sum-action"   class="occ-sum-chip occ-sum-action" style="display:none;"></span>
-    </div>
-    <button onclick="occReset()" style="margin-top:10px;background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:0;letter-spacing:0.06em;">↩ Start over</button>
-  </div>
-
-  <!-- ── WEEKLY PLANNER (collapsed by default) ── -->
-  <div id="occ-weekly-panel" style="display:none;margin-top:8px;">
-    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;">📅 My Week</div>
-    <div id="occ-week-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;"></div>
-    <button onclick="occClearWeek()" style="margin-top:12px;background:none;border:1px solid var(--border2);color:var(--muted);padding:6px 16px;border-radius:16px;font-size:10px;cursor:pointer;">Clear week</button>
-  </div>
-
-  <!-- ── SAVED OCCASIONS ── -->
-  <div style="margin-top:20px;" id="occ-saved-wrap">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;" id="occ-saved-header"></div>
-    <div id="occ-saved-list"></div>
-  </div>
-
-</div>
-</div>
-
-</div>
-<!-- ✦ ARIA JOURNEY -->
-<div class="ppage" id="pp-journey" style="padding:0;overflow:hidden;">
-
-<!-- ══════════════════════════════════════════════════════════════════
-     SCROLL-SNAP FULLSCREEN ORB JOURNEY
-     Each level takes up the full viewport. Scroll snaps to center.
-     Orb grows from small → fullscreen ball as you scroll toward it.
-     ══════════════════════════════════════════════════════════════════ -->
-
 <style>
-/* Journey fullscreen scroll container */
-#aj-scroll-container{
-  height:calc(100vh - 80px);
-  overflow-y:scroll;
-  scroll-snap-type:y mandatory;
-  -webkit-overflow-scrolling:touch;
-  position:relative;
-}
-#aj-scroll-container::-webkit-scrollbar{display:none;}
-#aj-scroll-container{scrollbar-width:none;}
+/* ── PROFILE REBUILD ───────────────────────────────── */
+.prof-wrap{max-width:800px;margin:0 auto;padding:20px 16px 60px;}
 
-/* Each level = one full screen */
-.aj-level-screen{
-  height:100vh;
-  scroll-snap-align:center;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  position:relative;
-  overflow:hidden;
-  cursor:pointer;
-}
+/* ── PROFILE HERO — picture FIRST ── */
+.prof-hero{background:linear-gradient(145deg,rgba(240,160,144,0.07),rgba(193,163,162,0.04));border:1px solid rgba(240,160,144,0.18);border-radius:20px;padding:28px 24px;margin-bottom:20px;position:relative;overflow:hidden;}
+.prof-hero-glow{position:absolute;top:-50px;left:50%;transform:translateX(-50%);width:320px;height:220px;background:radial-gradient(ellipse,rgba(240,160,144,0.14),transparent 70%);pointer-events:none;}
 
-/* Background glow that fills the screen when centered */
-.aj-level-screen::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  background:radial-gradient(ellipse 80% 80% at 50% 50%, var(--orb-bg,rgba(255,255,255,0)) 0%, transparent 70%);
-  opacity:0;
-  transition:opacity 0.6s ease;
-  pointer-events:none;
-}
-.aj-level-screen.in-view::before{
-  opacity:1;
-}
+/* Picture hero layout */
+.prof-hero-top{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px;}
+.prof-pic-zone{display:flex;flex-direction:column;align-items:center;gap:10px;flex-shrink:0;}
 
-/* The big orb */
-.aj-scroll-orb{
-  position:relative;
-  width:120px;
-  height:120px;
-  border-radius:50%;
-  transition:width 0.5s cubic-bezier(.2,0,.2,1),
-             height 0.5s cubic-bezier(.2,0,.2,1),
-             box-shadow 0.5s ease,
-             filter 0.5s ease;
-  cursor:pointer;
-  flex-shrink:0;
-}
+/* The main profile picture — BIG */
+.prof-main-pic{position:relative;cursor:pointer;}
+.prof-avatar-big{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;color:#fff;border:3px solid rgba(240,160,144,0.5);box-shadow:0 0 28px rgba(240,160,144,0.3);overflow:hidden;transition:all 0.3s;}
+.prof-avatar-big img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.prof-avatar-big:hover{box-shadow:0 0 40px rgba(240,160,144,0.5);}
+.prof-pic-upload-hint{position:absolute;bottom:0;right:0;width:28px;height:28px;background:var(--rose);border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;}
+.prof-pic-upload-hint:hover{background:var(--rose2,#d08070);}
+#prof-pic-file{display:none;}
 
-/* ORB BALL SPHERE — 3D effect */
-.aj-scroll-orb-ball{
-  position:absolute;
-  inset:0;
-  border-radius:50%;
-  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,0.55) 0%, var(--orb-color) 50%, rgba(0,0,0,0.35) 100%);
-  box-shadow:
-    0 0 30px rgba(var(--orb-rgb),0.5),
-    0 0 80px rgba(var(--orb-rgb),0.3),
-    inset 0 3px 8px rgba(255,255,255,0.3),
-    inset 0 -4px 8px rgba(0,0,0,0.2);
-  transition:all 0.5s ease;
-}
+/* Share pills vertical */
+.prof-share-pills{display:flex;flex-direction:column;gap:5px;}
+.prof-share-pill{display:flex;align-items:center;gap:6px;border-radius:10px;padding:5px 9px;font-size:10px;font-weight:700;text-decoration:none;color:#fff;letter-spacing:0.03em;white-space:nowrap;transition:opacity 0.2s;}
+.prof-share-pill:hover{opacity:0.85;}
 
-/* Locked orb — greyscale */
-.aj-scroll-orb.locked .aj-scroll-orb-ball{
-  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,0.2) 0%, #2a2a3a 50%, #0a0a14 100%);
-  box-shadow:0 0 20px rgba(255,255,255,0.05),inset 0 2px 4px rgba(255,255,255,0.06);
-  filter:grayscale(1);
-}
+/* Name / stats */
+.prof-hero-info{flex:1;min-width:180px;}
+.prof-name{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;}
+.prof-email{font-size:11px;color:var(--muted);margin-bottom:14px;}
+.prof-stats-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+.prof-stat{text-align:center;}
+.prof-stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--rose);line-height:1;}
+.prof-stat-lbl{font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+.prof-plan-badge{font-size:8px;padding:3px 8px;border-radius:3px;background:var(--gold-dim);border:1px solid rgba(224,176,80,0.3);color:var(--gold);font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;display:inline-block;margin-bottom:10px;}
 
-/* Orb number + icon */
-.aj-scroll-orb-content{
-  position:absolute;
-  inset:0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:4px;
-  z-index:2;
-}
-.aj-scroll-num{
-  font-family:'Syne',sans-serif;
-  font-size:2.8rem;
-  font-weight:900;
-  color:#fff;
-  text-shadow:0 0 20px rgba(255,255,255,0.8);
-  line-height:1;
-  transition:font-size 0.5s ease;
-}
-.aj-scroll-icon{
-  font-size:1.8rem;
-  line-height:1;
-  filter:drop-shadow(0 0 8px rgba(255,255,255,0.6));
-  transition:font-size 0.5s ease;
-}
-.aj-scroll-orb.locked .aj-scroll-num{
-  color:rgba(255,255,255,0.2);
-  text-shadow:none;
-}
-.aj-scroll-orb.locked .aj-scroll-icon{
-  opacity:0.15;
-  filter:none;
-}
+/* Aria status */
+.prof-aria-status-block{background:rgba(240,160,144,0.06);border:1px solid rgba(240,160,144,0.2);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden;}
+.prof-aria-label{font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:5px;}
+.prof-aria-text{font-size:12px;color:var(--text);line-height:1.7;font-style:italic;}
+.prof-aria-refresh{margin-top:7px;background:none;border:1px solid rgba(240,160,144,0.28);color:var(--rose);padding:3px 11px;border-radius:20px;font-size:10px;cursor:pointer;letter-spacing:0.06em;}
 
-/* Outer pulse ring */
-.aj-scroll-ring{
-  position:absolute;
-  inset:-8px;
-  border-radius:50%;
-  border:2px solid rgba(var(--orb-rgb),0.4);
-  animation:ajScrollRing 2.5s ease-in-out infinite;
-  pointer-events:none;
-  opacity:0;
-  transition:opacity 0.4s;
-}
-.aj-scroll-orb.unlocked .aj-scroll-ring{opacity:1;}
-@keyframes ajScrollRing{
-  0%,100%{transform:scale(1);opacity:0.5;}
-  50%{transform:scale(1.08);opacity:1;}
-}
+/* ── 3-PRODUCT DISPLAY ── */
+.prof-products-section{margin-bottom:20px;}
+.prof-section-title{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.prof-product-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.prof-prod-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.prof-prod-card:hover{border-color:rgba(240,160,144,0.4);transform:translateY(-2px);}
+.prof-prod-card.selected{border-color:rgba(240,160,144,0.6);background:rgba(240,160,144,0.06);}
+.prof-prod-emoji{font-size:28px;margin-bottom:6px;}
+.prof-prod-name{font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3;}
+.prof-prod-price{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);}
+.prof-prod-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;margin:6px auto 0;transition:all 0.2s;}
+.prof-prod-card.selected .prof-prod-check{background:var(--rose);border-color:var(--rose);color:#fff;}
 
-/* Second outer ring */
-.aj-scroll-ring2{
-  position:absolute;
-  inset:-20px;
-  border-radius:50%;
-  border:1px solid rgba(var(--orb-rgb),0.2);
-  animation:ajScrollRing2 3s ease-in-out infinite 0.5s;
-  pointer-events:none;
-  opacity:0;
-  transition:opacity 0.4s;
-}
-.aj-scroll-orb.unlocked .aj-scroll-ring2{opacity:1;}
-@keyframes ajScrollRing2{
-  0%,100%{transform:scale(1);opacity:0.3;}
-  50%{transform:scale(1.06);opacity:0.6;}
-}
+/* ── ROUTINE BUILDER ── */
+.prof-routine-section{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:18px 18px 20px;margin-bottom:20px;}
+.prof-routine-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.prof-routine-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text);}
+.prof-routine-toggle{display:flex;gap:6px;}
+.prof-view-btn{font-size:10px;padding:5px 12px;border-radius:16px;border:1px solid var(--border2);color:var(--muted2);cursor:pointer;background:none;font-family:'Space Grotesk',sans-serif;transition:all 0.15s;}
+.prof-view-btn.active{background:var(--rose);color:#fff;border-color:var(--rose);}
 
-/* IN-VIEW state — orb grows big */
-.aj-level-screen.in-view .aj-scroll-orb{
-  width:220px;
-  height:220px;
-}
-.aj-level-screen.in-view .aj-scroll-orb.unlocked .aj-scroll-orb-ball{
-  box-shadow:
-    0 0 60px rgba(var(--orb-rgb),0.8),
-    0 0 120px rgba(var(--orb-rgb),0.5),
-    0 0 200px rgba(var(--orb-rgb),0.25),
-    inset 0 4px 12px rgba(255,255,255,0.4),
-    inset 0 -6px 12px rgba(0,0,0,0.25);
-}
-.aj-level-screen.in-view .aj-scroll-num{font-size:5rem;}
-.aj-level-screen.in-view .aj-scroll-icon{font-size:3rem;}
+/* Occasion dropdown cards */
+.prof-occasion-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.prof-occ-chip{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:7px 14px;font-size:11px;font-weight:600;color:var(--muted2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.prof-occ-chip:hover{border-color:rgba(240,160,144,0.35);color:var(--rose);}
+.prof-occ-chip.selected{background:rgba(240,160,144,0.1);border-color:rgba(240,160,144,0.45);color:var(--rose);}
+.prof-occ-icon{font-size:14px;}
 
-/* DEAD CENTER — orb goes fullscreen */
-.aj-level-screen.dead-center .aj-scroll-orb{
-  width:min(90vw,90vh);
-  height:min(90vw,90vh);
-}
-.aj-level-screen.dead-center .aj-scroll-orb.unlocked .aj-scroll-orb-ball{
-  box-shadow:
-    0 0 100px rgba(var(--orb-rgb),1),
-    0 0 200px rgba(var(--orb-rgb),0.7),
-    0 0 350px rgba(var(--orb-rgb),0.4);
-}
-.aj-level-screen.dead-center .aj-scroll-num{font-size:min(14vw,10rem);}
-.aj-level-screen.dead-center .aj-scroll-icon{font-size:min(10vw,7rem);}
-.aj-level-screen.dead-center.in-view::before{opacity:1;}
+/* Day display */
+.prof-day-display{margin-top:14px;}
+.prof-day-card{background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:13px 15px;margin-bottom:8px;}
+.prof-day-name{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;}
+.prof-day-routine-line{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted2);padding:3px 0;border-bottom:1px solid var(--border);last:border:none;}
+.prof-day-routine-line:last-child{border:none;}
+.prof-day-product-tag{background:rgba(240,160,144,0.1);color:var(--rose);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;}
+.prof-day-occasion-tag{background:rgba(224,176,80,0.1);color:var(--gold);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;}
 
-/* Level label under the orb */
-.aj-scroll-label{
-  margin-top:28px;
-  text-align:center;
-  opacity:0;
-  transform:translateY(16px);
-  transition:opacity 0.4s 0.2s ease, transform 0.4s 0.2s ease;
-}
-.aj-level-screen.in-view .aj-scroll-label{
-  opacity:1;
-  transform:translateY(0);
-}
-.aj-scroll-level-name{
-  font-family:'Syne',sans-serif;
-  font-size:1.3rem;
-  font-weight:800;
-  margin-bottom:8px;
-}
-.aj-scroll-level-desc{
-  font-size:13px;
-  color:var(--muted2);
-  line-height:1.65;
-  max-width:420px;
-  padding:0 24px;
-}
-.aj-scroll-verdict{
-  margin-top:12px;
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:0.08em;
-  text-transform:uppercase;
-  padding:6px 16px;
-  border-radius:20px;
-  display:inline-block;
-}
-.aj-scroll-verdict.current{
-  background:rgba(var(--orb-rgb),0.15);
-  color:var(--orb-color-hex, #fff);
-  border:1px solid rgba(var(--orb-rgb),0.35);
-}
-.aj-scroll-verdict.unlocked-past{
-  background:rgba(255,255,255,0.06);
-  color:var(--muted2);
-  border:1px solid var(--border);
-}
-.aj-scroll-verdict.locked{
-  background:rgba(255,255,255,0.03);
-  color:var(--muted);
-  border:1px solid var(--border);
-}
+/* Week view */
+.prof-week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.prof-week-cell{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 6px;text-align:center;}
+.prof-week-day-lbl{font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.prof-week-item{font-size:8px;color:var(--muted2);background:var(--bg2);border-radius:6px;padding:3px 4px;margin-bottom:3px;line-height:1.3;}
+.prof-week-item.product{color:var(--rose);}
+.prof-week-item.occasion{color:var(--gold);}
 
-/* Scroll hint */
-.aj-scroll-hint{
-  position:fixed;
-  bottom:90px;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:10px;
-  letter-spacing:0.14em;
-  text-transform:uppercase;
-  color:var(--muted);
-  display:flex;
-  align-items:center;
-  gap:6px;
-  animation:hintFade 2s ease-in-out infinite;
-  pointer-events:none;
-  z-index:50;
-}
-@keyframes hintFade{0%,100%{opacity:0.3;}50%{opacity:0.8;}}
+/* ── HAIR DATA TAGS ── */
+.prof-data-section{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.prof-data-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;}
+.prof-data-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
 
-/* Level dot nav — right side */
-.aj-dot-nav{
-  position:fixed;
-  right:20px;
-  top:50%;
-  transform:translateY(-50%);
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  z-index:60;
-}
-.aj-dot-nav-dot{
-  width:8px;
-  height:8px;
-  border-radius:50%;
-  background:var(--border2);
-  cursor:pointer;
-  transition:all 0.3s;
-}
-.aj-dot-nav-dot.active{
-  width:10px;
-  height:10px;
-  background:var(--orb-color-hex, #fff);
-  box-shadow:0 0 10px var(--orb-color-hex, #fff);
+/* Build week button */
+.prof-build-btn{background:linear-gradient(135deg,var(--rose),#c06050);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:12px;font-weight:700;letter-spacing:0.06em;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.2s;margin-top:12px;}
+.prof-build-btn:hover{opacity:0.88;transform:translateY(-1px);}
+.prof-save-btn{background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:12px;font-weight:700;letter-spacing:0.06em;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:background 0.2s;margin-top:12px;}
+.prof-save-btn:hover{background:#c06050;}
+.prof-save-msg{font-size:11px;color:var(--green);margin-left:12px;display:none;}
+
+@media(max-width:640px){
+  .prof-product-trio{grid-template-columns:1fr 1fr;}
+  .prof-week-grid{grid-template-columns:repeat(4,1fr);}
+  .prof-data-section{grid-template-columns:1fr;}
 }
 </style>
 
-<!-- SCROLL HINT -->
-<div class="aj-scroll-hint" id="aj-scroll-hint">
-  <span style="font-size:14px;">↕</span> scroll to explore your journey
-</div>
+<div class="prof-wrap">
 
-<!-- DOT NAV -->
-<div class="aj-dot-nav" id="aj-dot-nav">
-  <div class="aj-dot-nav-dot" onclick="ajScrollToLevel(0)" id="aj-dnav-0"></div>
-  <div class="aj-dot-nav-dot" onclick="ajScrollToLevel(1)" id="aj-dnav-1"></div>
-  <div class="aj-dot-nav-dot" onclick="ajScrollToLevel(2)" id="aj-dnav-2"></div>
-  <div class="aj-dot-nav-dot" onclick="ajScrollToLevel(3)" id="aj-dnav-3"></div>
-</div>
+<!-- ── PROFILE HERO ─────────────────────────────────── -->
+<div class="prof-hero">
+  <div class="prof-hero-glow"></div>
+  <div class="prof-hero-top">
 
-<!-- FULLSCREEN SCROLL CONTAINER -->
-<div id="aj-scroll-container">
-
-  <!-- LEVEL 1 -->
-  <div class="aj-level-screen" id="aj-screen-0"
-       style="--orb-bg:rgba(240,160,144,0.15);">
-    <div class="aj-scroll-orb locked" id="aj-sorb-0"
-         style="--orb-color:#f0a090;--orb-rgb:240,160,144;">
-      <div class="aj-scroll-orb-ball"></div>
-      <div class="aj-scroll-ring"></div>
-      <div class="aj-scroll-ring2"></div>
-      <div class="aj-scroll-orb-content">
-        <div class="aj-scroll-num">1</div>
-        <div class="aj-scroll-icon">🌱</div>
+    <!-- PICTURE ZONE — prominently first -->
+    <div class="prof-pic-zone">
+      <div class="prof-main-pic" onclick="document.getElementById('prof-pic-file').click()" title="Tap to change photo">
+        <div class="prof-avatar-big" id="prof-avatar-big">?</div>
+        <div class="prof-pic-upload-hint" title="Upload photo">📷</div>
+      </div>
+      <input type="file" id="prof-pic-file" accept="image/*" onchange="profUploadPic(event)">
+      <!-- Share pills -->
+      <div class="prof-share-pills">
+        <a class="prof-share-pill" style="background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);" onclick="profShare('instagram');return false;" href="#">📷 Insta</a>
+        <a class="prof-share-pill" style="background:#25d366;" onclick="profShare('whatsapp');return false;" href="#">💬 WA</a>
+        <a class="prof-share-pill" style="background:#000;" onclick="profShare('tiktok');return false;" href="#">🎵 TikTok</a>
+        <a class="prof-share-pill" style="background:#1877f2;" onclick="profShare('facebook');return false;" href="#">👥 FB</a>
+        <a class="prof-share-pill" style="background:#000;" onclick="profShare('twitter');return false;" href="#">🐦 X</a>
       </div>
     </div>
-    <div class="aj-scroll-label">
-      <div class="aj-scroll-level-name" style="color:#f0a090;">Discovery</div>
-      <div class="aj-scroll-level-desc">Aria meets you. She learns your name, your hair story, and your first products. This is where your transformation begins.</div>
-      <div class="aj-scroll-verdict locked" id="aj-sv-0">🔒 Not yet reached</div>
-    </div>
-  </div>
 
-  <!-- LEVEL 2 -->
-  <div class="aj-level-screen" id="aj-screen-1"
-       style="--orb-bg:rgba(224,176,80,0.12);">
-    <div class="aj-scroll-orb locked" id="aj-sorb-1"
-         style="--orb-color:#e0b050;--orb-rgb:224,176,80;">
-      <div class="aj-scroll-orb-ball"></div>
-      <div class="aj-scroll-ring"></div>
-      <div class="aj-scroll-ring2"></div>
-      <div class="aj-scroll-orb-content">
-        <div class="aj-scroll-num">2</div>
-        <div class="aj-scroll-icon">🔬</div>
+    <!-- INFO COLUMN -->
+    <div class="prof-hero-info">
+      <div id="prof-name" class="prof-name">—</div>
+      <div id="prof-email-sm" class="prof-email"></div>
+      <div id="prof-plan-badge" class="prof-plan-badge">FREE</div>
+      <div class="prof-stats-row">
+        <div class="prof-stat">
+          <div id="prof-score-num" class="prof-stat-num" style="color:var(--rose);">—</div>
+          <div class="prof-stat-lbl">Hair Score</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div class="prof-stat">
+          <div id="prof-chats-num" class="prof-stat-num" style="color:var(--blue);">—</div>
+          <div class="prof-stat-lbl">Sessions</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div class="prof-stat">
+          <div id="prof-since" class="prof-stat-num" style="font-size:14px;color:var(--muted2);">—</div>
+          <div class="prof-stat-lbl">Member</div>
+        </div>
       </div>
-    </div>
-    <div class="aj-scroll-label">
-      <div class="aj-scroll-level-name" style="color:#e0b050;">Use Cases &amp; Upgrades</div>
-      <div class="aj-scroll-level-desc">Aria knows your full routine inside out. She's giving you application techniques, timing, and upgrade paths based on your real results.</div>
-      <div class="aj-scroll-verdict locked" id="aj-sv-1">🔒 Keep talking with Aria</div>
-    </div>
-  </div>
-
-  <!-- LEVEL 3 -->
-  <div class="aj-level-screen" id="aj-screen-2"
-       style="--orb-bg:rgba(96,168,255,0.12);">
-    <div class="aj-scroll-orb locked" id="aj-sorb-2"
-         style="--orb-color:#60a8ff;--orb-rgb:96,168,255;">
-      <div class="aj-scroll-orb-ball"></div>
-      <div class="aj-scroll-ring"></div>
-      <div class="aj-scroll-ring2"></div>
-      <div class="aj-scroll-orb-content">
-        <div class="aj-scroll-num">3</div>
-        <div class="aj-scroll-icon">💫</div>
-      </div>
-    </div>
-    <div class="aj-scroll-label">
-      <div class="aj-scroll-level-name" style="color:#60a8ff;">Inner Circle</div>
-      <div class="aj-scroll-level-desc">Your partner noticed. Your family is asking. Aria now knows the people around you and helps you bring SupportRD into their lives too.</div>
-      <div class="aj-scroll-verdict locked" id="aj-sv-2">🔒 Keep going</div>
-    </div>
-  </div>
-
-  <!-- LEVEL 4 -->
-  <div class="aj-level-screen" id="aj-screen-3"
-       style="--orb-bg:rgba(48,232,144,0.12);">
-    <div class="aj-scroll-orb locked" id="aj-sorb-3"
-         style="--orb-color:#30e890;--orb-rgb:48,232,144;">
-      <div class="aj-scroll-orb-ball"></div>
-      <div class="aj-scroll-ring"></div>
-      <div class="aj-scroll-ring2"></div>
-      <div class="aj-scroll-orb-content">
-        <div class="aj-scroll-num">4</div>
-        <div class="aj-scroll-icon">💎</div>
-      </div>
-    </div>
-    <div class="aj-scroll-label">
-      <div class="aj-scroll-level-name" style="color:#30e890;">Professional — Making Money</div>
-      <div class="aj-scroll-level-desc">You've become a SupportRD story. People ask what you use, they trust your results, and you're ready to turn that into real income. You are now a VIP client.</div>
-      <div class="aj-scroll-verdict locked" id="aj-sv-3">🔒 The top level</div>
-      <div id="aj-level4-cta" style="display:none;margin-top:16px;">
-        <a href="mailto:hello@supportrd.com?subject=Making Money Level" style="background:#30e890;color:#000;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:12px;padding:12px 24px;border-radius:20px;text-decoration:none;letter-spacing:0.06em;display:inline-block;">✦ Contact SupportRD Directly</a>
+      <!-- Aria's current read -->
+      <div class="prof-aria-status-block">
+        <div class="prof-aria-label">✦ Aria's Current Read</div>
+        <div id="prof-aria-text" class="prof-aria-text">Tap Refresh to get Aria's latest read on your hair…</div>
+        <button class="prof-aria-refresh" onclick="profRefreshAiStatus()">✦ Refresh</button>
       </div>
     </div>
   </div>
+</div>
 
-</div><!-- /scroll container -->
+<!-- ── MY 3 PRODUCTS ─────────────────────────────────── -->
+<div class="prof-products-section">
+  <div class="prof-section-title">My Products — tap to select up to 3</div>
+  <div class="prof-product-trio" id="prof-prod-trio">
+    <div class="prof-prod-card" onclick="profToggleProd(this,'Formula Exclusiva')">
+      <div class="prof-prod-emoji">💊</div>
+      <div class="prof-prod-name">Formula Exclusiva</div>
+      <div class="prof-prod-price">$55</div>
+      <div class="prof-prod-check">✓</div>
+    </div>
+    <div class="prof-prod-card" onclick="profToggleProd(this,'Laciador Crece')">
+      <div class="prof-prod-emoji">🌿</div>
+      <div class="prof-prod-name">Laciador Crece</div>
+      <div class="prof-prod-price">$40</div>
+      <div class="prof-prod-check">✓</div>
+    </div>
+    <div class="prof-prod-card" onclick="profToggleProd(this,'Gotero Rapido')">
+      <div class="prof-prod-emoji">💧</div>
+      <div class="prof-prod-name">Gotero Rápido</div>
+      <div class="prof-prod-price">$55</div>
+      <div class="prof-prod-check">✓</div>
+    </div>
+    <div class="prof-prod-card" onclick="profToggleProd(this,'Gotitas Brillantes')">
+      <div class="prof-prod-emoji">✨</div>
+      <div class="prof-prod-name">Gotitas Brillantes</div>
+      <div class="prof-prod-price">$30</div>
+      <div class="prof-prod-check">✓</div>
+    </div>
+    <div class="prof-prod-card" onclick="profToggleProd(this,'Mascarilla Capilar')">
+      <div class="prof-prod-emoji">🥑</div>
+      <div class="prof-prod-name">Mascarilla Capilar</div>
+      <div class="prof-prod-price">$25</div>
+      <div class="prof-prod-check">✓</div>
+    </div>
+    <div class="prof-prod-card" onclick="profToggleProd(this,'Shampoo Aloe Vera')">
+      <div class="prof-prod-emoji">🍃</div>
+      <div class="prof-prod-name">Shampoo Aloe Vera</div>
+      <div class="prof-prod-price">$20</div>
+      <div class="prof-prod-check">✓</div>
+    </div>
+  </div>
+</div>
 
-<!-- OLD HIDDEN MILESTONES — kept for JS compatibility -->
-<div id="aj-milestones" style="display:none;margin-bottom:36px;">
+<!-- ── ROUTINE BUILDER ───────────────────────────────── -->
+<div class="prof-routine-section">
+  <div class="prof-routine-header">
+    <div class="prof-routine-title">My Routine</div>
+    <div class="prof-routine-toggle">
+      <button class="prof-view-btn active" id="prof-view-day" onclick="profSetRoutineView('day')">📅 Daily</button>
+      <button class="prof-view-btn" id="prof-view-week" onclick="profSetRoutineView('week')">📆 Full Week</button>
+    </div>
+  </div>
 
-  <!-- progress spine -->
-  <div style="position:relative;padding:0 8px;">
-    <div id="aj-spine" style="position:absolute;left:50px;top:52px;width:3px;border-radius:3px;background:var(--border2);z-index:0;" id="aj-spine"></div>
-    <div id="aj-spine-fill" style="position:absolute;left:50px;top:52px;width:3px;border-radius:3px;background:linear-gradient(to bottom,var(--rose),var(--gold),var(--blue),var(--green));z-index:1;transition:height 1s ease;height:0;"></div>
+  <!-- Occasion picker -->
+  <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Choose Occasion</div>
+  <div class="prof-occasion-row" id="prof-occ-row">
+    <div class="prof-occ-chip selected" onclick="profOccSelect(this,'Wash Day','🚿')"><span class="prof-occ-icon">🚿</span>Wash Day</div>
+    <div class="prof-occ-chip" onclick="profOccSelect(this,'Date Night','🌹')"><span class="prof-occ-icon">🌹</span>Date Night</div>
+    <div class="prof-occ-chip" onclick="profOccSelect(this,'Work Day','💼')"><span class="prof-occ-icon">💼</span>Work Day</div>
+    <div class="prof-occ-chip" onclick="profOccSelect(this,'Workout','🏋️')"><span class="prof-occ-icon">🏋️</span>Workout</div>
+    <div class="prof-occ-chip" onclick="profOccSelect(this,'Beach Day','🏖️')"><span class="prof-occ-icon">🏖️</span>Beach Day</div>
+    <div class="prof-occ-chip" onclick="profOccSelect(this,'Rest Day','🛋️')"><span class="prof-occ-icon">🛋️</span>Rest Day</div>
+    <div class="prof-occ-chip" onclick="profOccSelect(this,'Deep Condition','🫙')"><span class="prof-occ-icon">🫙</span>Deep Condition</div>
+    <div class="prof-occ-chip" onclick="profOccSelect(this,'Night Out','🎉')"><span class="prof-occ-icon">🎉</span>Night Out</div>
+  </div>
 
-    <!-- Level 1: Discovery -->
-    <div class="aj-tier" id="aj-tier-1">
-      <div class="aj-orb" id="aj-orb-1" style="--orb-color:var(--rose);--orb-rgb:240,160,144;">
-        <div class="aj-orb-inner">
-          <div class="aj-orb-num">1</div>
-          <div class="aj-orb-icon">🌱</div>
-        </div>
-        <div class="aj-orb-ring"></div>
-        <div class="aj-orb-pulse"></div>
+  <!-- Day view -->
+  <div id="prof-routine-day" class="prof-day-display"></div>
+
+  <!-- Week view -->
+  <div id="prof-routine-week" style="display:none;">
+    <div class="prof-week-grid" id="prof-week-grid"></div>
+  </div>
+
+  <button class="prof-build-btn" onclick="profBuildRoutine()">✦ Build My Routine</button>
+</div>
+
+<!-- ── HAIR DATA GRID ─────────────────────────────────── -->
+<div class="prof-data-section">
+  <div class="prof-data-card">
+    <div class="prof-data-label">Hair Type</div>
+    <div class="tags" id="pf-tags-type">
+      <div class="tag" onclick="toggleTag(this,'type')">Straight</div>
+      <div class="tag" onclick="toggleTag(this,'type')">Wavy</div>
+      <div class="tag" onclick="toggleTag(this,'type')">Curly</div>
+      <div class="tag" onclick="toggleTag(this,'type')">Coily / 4C</div>
+      <div class="tag" onclick="toggleTag(this,'type')">Fine</div>
+      <div class="tag" onclick="toggleTag(this,'type')">Medium</div>
+      <div class="tag" onclick="toggleTag(this,'type')">Thick</div>
+      <div class="tag" onclick="toggleTag(this,'type')">Dry / Brittle</div>
+    </div>
+  </div>
+  <div class="prof-data-card">
+    <div class="prof-data-label">Main Concerns</div>
+    <div class="tags" id="pf-tags-concerns">
+      <div class="tag" onclick="toggleTag(this,'concerns')">Frizz</div>
+      <div class="tag" onclick="toggleTag(this,'concerns')">Damaged</div>
+      <div class="tag" onclick="toggleTag(this,'concerns')">Breakage</div>
+      <div class="tag" onclick="toggleTag(this,'concerns')">Hair Loss</div>
+      <div class="tag" onclick="toggleTag(this,'concerns')">Thinning</div>
+      <div class="tag" onclick="toggleTag(this,'concerns')">Oily Scalp</div>
+      <div class="tag" onclick="toggleTag(this,'concerns')">Dandruff</div>
+      <div class="tag" onclick="toggleTag(this,'concerns')">Split Ends</div>
+      <div class="tag" onclick="toggleTag(this,'concerns')">Slow Growth</div>
+    </div>
+  </div>
+  <div class="prof-data-card">
+    <div class="prof-data-label">Treatments</div>
+    <div class="tags" id="pf-tags-treatments">
+      <div class="tag" onclick="toggleTag(this,'treatments')">None / Natural</div>
+      <div class="tag" onclick="toggleTag(this,'treatments')">Relaxer</div>
+      <div class="tag" onclick="toggleTag(this,'treatments')">Bleach</div>
+      <div class="tag" onclick="toggleTag(this,'treatments')">Hair Color</div>
+      <div class="tag" onclick="toggleTag(this,'treatments')">Keratin</div>
+      <div class="tag" onclick="toggleTag(this,'treatments')">Perm / Wave</div>
+    </div>
+  </div>
+  <div class="prof-data-card">
+    <div class="prof-data-label">Porosity + Scalp</div>
+    <div class="tags" id="pf-tags-porosity">
+      <div class="tag" onclick="toggleTag(this,'porosity')">Low Porosity</div>
+      <div class="tag" onclick="toggleTag(this,'porosity')">Medium</div>
+      <div class="tag" onclick="toggleTag(this,'porosity')">High Porosity</div>
+    </div>
+    <div class="tags" id="pf-tags-scalp" style="margin-top:6px;">
+      <div class="tag" onclick="toggleTag(this,'scalp')">Normal Scalp</div>
+      <div class="tag" onclick="toggleTag(this,'scalp')">Oily Scalp</div>
+      <div class="tag" onclick="toggleTag(this,'scalp')">Dry Scalp</div>
+      <div class="tag" onclick="toggleTag(this,'scalp')">Sensitive</div>
+    </div>
+  </div>
+  <div class="prof-data-card">
+    <div class="prof-data-label">Wash Frequency</div>
+    <div class="tags" id="pf-tags-washfreq">
+      <div class="tag" onclick="toggleTag(this,'washfreq')">Daily</div>
+      <div class="tag" onclick="toggleTag(this,'washfreq')">Every 2-3 Days</div>
+      <div class="tag" onclick="toggleTag(this,'washfreq')">Weekly</div>
+      <div class="tag" onclick="toggleTag(this,'washfreq')">Every 2 Weeks</div>
+    </div>
+  </div>
+  <div class="prof-data-card">
+    <div class="prof-data-label">Heat Styling</div>
+    <div class="tags" id="pf-tags-heat">
+      <div class="tag" onclick="toggleTag(this,'heat')">No Heat</div>
+      <div class="tag" onclick="toggleTag(this,'heat')">Occasionally</div>
+      <div class="tag" onclick="toggleTag(this,'heat')">1-2x / Week</div>
+      <div class="tag" onclick="toggleTag(this,'heat')">Daily</div>
+    </div>
+  </div>
+</div>
+
+<!-- Goals -->
+<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+  <div class="prof-data-label" style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">My Hair Goals</div>
+  <textarea id="pf-goals" placeholder="What do you want your hair to look and feel like? The more Aria knows, the better she can help…" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;color:var(--text);resize:vertical;min-height:60px;outline:none;" onfocus="this.style.borderColor='var(--rose)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+</div>
+
+<!-- Save -->
+<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+  <button class="prof-save-btn" onclick="saveProfileFull()">✦ Save Profile &amp; Update Score</button>
+  <span id="pf-save-msg" class="prof-save-msg">✓ Saved!</span>
+</div>
+
+</div><!-- /prof-wrap -->
+
+
+<!-- ✦ ARIA JOURNEY -->
+<div class="ppage" id="pp-journey" style="padding:0 0 40px;">
+
+<style>
+/* ─── JOURNEY REBUILT — smaller orbs + accordion history ─── */
+.aj2-wrap{max-width:680px;margin:0 auto;padding:24px 20px 60px;}
+
+/* Level rows */
+.aj2-level{display:flex;gap:16px;align-items:flex-start;margin-bottom:12px;position:relative;}
+.aj2-level::before{content:'';position:absolute;left:31px;top:64px;width:2px;bottom:-12px;background:var(--border2);z-index:0;}
+.aj2-level:last-child::before{display:none;}
+
+/* Orb — 64px, expands to 80px when current */
+.aj2-orb{width:64px;height:64px;border-radius:50%;flex-shrink:0;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;transition:all 0.5s cubic-bezier(0.2,0,0.2,1);cursor:default;}
+.aj2-orb-ball{position:absolute;inset:0;border-radius:50%;transition:all 0.5s;}
+.aj2-orb-num{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:rgba(255,255,255,0.25);position:relative;z-index:2;line-height:1;transition:all 0.4s;}
+.aj2-orb-icon{font-size:16px;position:relative;z-index:2;opacity:0.25;transition:all 0.4s;line-height:1;}
+.aj2-orb-ring{position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;transition:all 0.5s;}
+.aj2-orb-pulse{position:absolute;inset:-10px;border-radius:50%;opacity:0;pointer-events:none;}
+
+/* Locked */
+.aj2-orb.locked .aj2-orb-ball{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,0.05) 0%,#1a1a2a 60%,#0d0d18 100%);box-shadow:none;}
+
+/* Unlocked (passed) */
+.aj2-orb.unlocked .aj2-orb-ball{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,0.4) 0%,var(--orb-color,#f0a090) 50%,rgba(0,0,0,0.2) 100%);box-shadow:0 0 18px rgba(var(--orb-rgb,240,160,144),0.6),0 0 40px rgba(var(--orb-rgb,240,160,144),0.3),inset 0 2px 4px rgba(255,255,255,0.3);}
+.aj2-orb.unlocked .aj2-orb-num{color:#fff;font-size:18px;}
+.aj2-orb.unlocked .aj2-orb-icon{opacity:1;filter:drop-shadow(0 0 4px rgba(255,255,255,0.6));}
+.aj2-orb.unlocked .aj2-orb-ring{border-color:rgba(var(--orb-rgb,240,160,144),0.5);transform:scale(1.1);}
+
+/* Current — pulsing and larger */
+.aj2-orb.current{width:80px;height:80px;}
+.aj2-orb.current .aj2-orb-ball{animation:aj2Pulse 2s ease-in-out infinite;}
+.aj2-orb.current .aj2-orb-pulse{animation:aj2PulseRing 2s ease-out infinite;background:radial-gradient(circle,rgba(var(--orb-rgb,240,160,144),0.3),transparent 70%);}
+.aj2-orb.current .aj2-orb-num{font-size:22px;}
+.aj2-orb.current .aj2-orb-icon{font-size:18px;}
+@keyframes aj2Pulse{0%,100%{box-shadow:0 0 18px rgba(var(--orb-rgb,240,160,144),0.6),0 0 40px rgba(var(--orb-rgb,240,160,144),0.3),inset 0 2px 4px rgba(255,255,255,0.3);}50%{box-shadow:0 0 32px rgba(var(--orb-rgb,240,160,144),0.9),0 0 70px rgba(var(--orb-rgb,240,160,144),0.5),inset 0 2px 4px rgba(255,255,255,0.4);}}
+@keyframes aj2PulseRing{0%{opacity:0.7;transform:scale(0.9);}70%{opacity:0;transform:scale(1.7);}100%{opacity:0;}}
+
+/* Card body */
+.aj2-card{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;overflow:hidden;transition:border-color 0.4s;}
+.aj2-card.unlocked{border-color:rgba(var(--orb-rgb,240,160,144),0.25);}
+.aj2-card.current{border-color:rgba(var(--orb-rgb,240,160,144),0.45);background:rgba(var(--orb-rgb,240,160,144),0.04);}
+.aj2-card.locked{opacity:0.4;}
+
+.aj2-card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;gap:10px;}
+.aj2-level-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);}
+.aj2-verdict-badge{font-size:9px;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:0.06em;white-space:nowrap;flex-shrink:0;}
+.aj2-verdict-badge.current{background:rgba(var(--orb-rgb,240,160,144),0.15);color:var(--orb-color,#f0a090);border:1px solid rgba(var(--orb-rgb,240,160,144),0.35);}
+.aj2-verdict-badge.unlocked{background:rgba(255,255,255,0.06);color:var(--muted2);border:1px solid var(--border);}
+.aj2-verdict-badge.locked{background:rgba(255,255,255,0.03);color:var(--muted);border:1px solid var(--border);}
+.aj2-chevron{font-size:10px;color:var(--muted);transition:transform 0.3s;flex-shrink:0;}
+.aj2-card-head.open .aj2-chevron{transform:rotate(90deg);}
+
+/* Accordion body */
+.aj2-accordion{display:none;border-top:1px solid var(--border2);}
+.aj2-accordion.open{display:block;}
+
+/* 3 unlock descriptions */
+.aj2-unlocks{display:flex;flex-direction:column;gap:8px;padding:14px 16px;}
+.aj2-unlock-item{display:flex;align-items:flex-start;gap:10px;background:var(--bg3);border-radius:10px;padding:10px 12px;}
+.aj2-unlock-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px;background:var(--orb-color,#f0a090);}
+.aj2-unlock-text{font-size:12px;color:var(--muted2);line-height:1.6;}
+.aj2-unlock-text strong{color:var(--text);font-weight:600;}
+
+/* History sessions */
+.aj2-history{border-top:1px solid var(--border);padding:12px 16px;}
+.aj2-history-label{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.aj2-session{padding:8px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:3px;}
+.aj2-session:last-child{border:none;}
+.aj2-session-date{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.06em;}
+.aj2-session-preview{font-size:11px;color:var(--muted2);line-height:1.55;}
+.aj2-no-sessions{font-size:11px;color:var(--muted);font-style:italic;padding:8px 0;}
+
+/* Contact CTA for level 4 */
+.aj2-contact-cta{margin:12px 16px 16px;background:linear-gradient(135deg,rgba(48,232,144,0.08),rgba(48,232,144,0.03));border:1px solid rgba(48,232,144,0.25);border-radius:12px;padding:14px 16px;}
+.aj2-contact-cta-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--text);margin-bottom:5px;}
+.aj2-contact-cta-desc{font-size:11px;color:var(--muted2);line-height:1.6;margin-bottom:12px;}
+.aj2-contact-cta-person{font-size:10px;color:rgba(48,232,144,0.6);font-style:italic;margin-bottom:10px;}
+.aj2-contact-btn{display:inline-block;background:var(--green);color:#000;font-weight:700;font-size:11px;padding:9px 20px;border-radius:20px;text-decoration:none;letter-spacing:0.05em;}
+
+/* Current summary */
+.aj2-summary{background:var(--bg2);border:1px solid rgba(240,160,144,0.18);border-radius:16px;padding:18px 20px;margin-bottom:24px;}
+.aj2-summary-eyebrow{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;}
+.aj2-summary-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.aj2-summary-msg{font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:10px;}
+.aj2-summary-next{font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;}
+</style>
+
+<div class="aj2-wrap">
+  <!-- Summary card -->
+  <div class="aj2-summary">
+    <div class="aj2-summary-eyebrow">✦ Your Aria Journey</div>
+    <div class="aj2-summary-title" id="aj2-title">—</div>
+    <div class="aj2-summary-msg" id="aj2-msg"></div>
+    <div class="aj2-summary-next" id="aj2-next"></div>
+  </div>
+
+  <!-- 4 level rows -->
+  <div id="aj2-levels-wrap">
+    <!-- Level 1 -->
+    <div class="aj2-level" id="aj2-row-0">
+      <div class="aj2-orb locked" id="aj2-orb-0" style="--orb-color:#f0a090;--orb-rgb:240,160,144;">
+        <div class="aj2-orb-ball"></div>
+        <div class="aj2-orb-ring"></div>
+        <div class="aj2-orb-pulse"></div>
+        <div class="aj2-orb-num">1</div>
+        <div class="aj2-orb-icon">🌱</div>
       </div>
-      <div class="aj-tier-body" id="aj-tbody-1">
-        <div class="aj-tier-name">Discovery</div>
-        <div class="aj-tier-desc">Aria meets you. She learns your name, your hair story, and your first products. This is where your transformation begins.</div>
-        <div class="aj-tier-verdict" id="aj-v1"></div>
-        <div class="aj-tier-backtrack" id="aj-bt1" style="display:none;">
-          <button onclick="ajForceLevel(0)" class="aj-bt-btn">↩ Aria and I are still getting started</button>
+      <div class="aj2-card locked" id="aj2-card-0" style="--orb-color:#f0a090;--orb-rgb:240,160,144;">
+        <div class="aj2-card-head" onclick="aj2Toggle(0)">
+          <div class="aj2-level-name">Discovery</div>
+          <div class="aj2-verdict-badge locked" id="aj2-badge-0">🔒 Not yet reached</div>
+          <div class="aj2-chevron">▶</div>
+        </div>
+        <div class="aj2-accordion" id="aj2-acc-0">
+          <div class="aj2-unlocks">
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#f0a090;"></div>
+              <div class="aj2-unlock-text"><strong>Aria learns your name</strong> and starts building your profile from scratch — hair type, main concern, and what you're hoping to change.</div>
+            </div>
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#f0a090;"></div>
+              <div class="aj2-unlock-text"><strong>First product recommendation</strong> — Aria matches you to your first SupportRD product based on what you describe. No guessing.</div>
+            </div>
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#f0a090;"></div>
+              <div class="aj2-unlock-text"><strong>Your hair story begins.</strong> Everything you tell Aria gets remembered and builds into a profile she uses every future conversation.</div>
+            </div>
+          </div>
+          <div class="aj2-history" id="aj2-hist-0">
+            <div class="aj2-history-label">Conversations at this level</div>
+            <div class="aj2-no-sessions">Start chatting with Aria to build your journey.</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Level 2: Use Cases & Upgrades -->
-    <div class="aj-tier" id="aj-tier-2">
-      <div class="aj-orb" id="aj-orb-2" style="--orb-color:var(--gold);--orb-rgb:224,176,80;">
-        <div class="aj-orb-inner">
-          <div class="aj-orb-num">2</div>
-          <div class="aj-orb-icon">🔬</div>
-        </div>
-        <div class="aj-orb-ring"></div>
-        <div class="aj-orb-pulse"></div>
+    <!-- Level 2 -->
+    <div class="aj2-level" id="aj2-row-1">
+      <div class="aj2-orb locked" id="aj2-orb-1" style="--orb-color:#e0b050;--orb-rgb:224,176,80;">
+        <div class="aj2-orb-ball"></div>
+        <div class="aj2-orb-ring"></div>
+        <div class="aj2-orb-pulse"></div>
+        <div class="aj2-orb-num">2</div>
+        <div class="aj2-orb-icon">🔬</div>
       </div>
-      <div class="aj-tier-body" id="aj-tbody-2">
-        <div class="aj-tier-name">Use Cases &amp; Upgrades</div>
-        <div class="aj-tier-desc">Aria knows your full routine inside out. She's giving you application techniques, timing, what to expect each week — and upgrade paths based on your real results.</div>
-        <div class="aj-tier-verdict" id="aj-v2"></div>
-        <div class="aj-tier-backtrack" id="aj-bt2" style="display:none;">
-          <button onclick="ajForceLevel(1)" class="aj-bt-btn">↩ We haven't gone this deep yet</button>
+      <div class="aj2-card locked" id="aj2-card-1" style="--orb-color:#e0b050;--orb-rgb:224,176,80;">
+        <div class="aj2-card-head" onclick="aj2Toggle(1)">
+          <div class="aj2-level-name">Use Cases & Upgrades</div>
+          <div class="aj2-verdict-badge locked" id="aj2-badge-1">🔒 Keep talking with Aria</div>
+          <div class="aj2-chevron">▶</div>
         </div>
-      </div>
-    </div>
-
-    <!-- Level 3: Inner Circle -->
-    <div class="aj-tier" id="aj-tier-3">
-      <div class="aj-orb" id="aj-orb-3" style="--orb-color:var(--blue);--orb-rgb:96,168,255;">
-        <div class="aj-orb-inner">
-          <div class="aj-orb-num">3</div>
-          <div class="aj-orb-icon">💫</div>
-        </div>
-        <div class="aj-orb-ring"></div>
-        <div class="aj-orb-pulse"></div>
-      </div>
-      <div class="aj-tier-body" id="aj-tbody-3">
-        <div class="aj-tier-name">Inner Circle</div>
-        <div class="aj-tier-desc">Your partner noticed. Your family is asking. Aria now knows the people around you and helps you bring SupportRD into their lives too.</div>
-        <div class="aj-tier-verdict" id="aj-v3"></div>
-        <div class="aj-tier-backtrack" id="aj-bt3" style="display:none;">
-          <button onclick="ajForceLevel(2)" class="aj-bt-btn">↩ Not quite there yet with Aria</button>
+        <div class="aj2-accordion" id="aj2-acc-1">
+          <div class="aj2-unlocks">
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#e0b050;"></div>
+              <div class="aj2-unlock-text"><strong>Application deep-dive</strong> — Aria tells you exactly how to use each product: when to apply, how much, what to layer it with, and what to expect week by week.</div>
+            </div>
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#e0b050;"></div>
+              <div class="aj2-unlock-text"><strong>Upgrade recommendations</strong> — Based on how your hair is responding, Aria suggests the next product to add to your routine for maximum results.</div>
+            </div>
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#e0b050;"></div>
+              <div class="aj2-unlock-text"><strong>Your full routine is mapped.</strong> Aria now knows your wash days, your styling routine, your goals — and builds a complete weekly plan around them.</div>
+            </div>
+          </div>
+          <div class="aj2-history" id="aj2-hist-1">
+            <div class="aj2-history-label">Conversations at this level</div>
+            <div class="aj2-no-sessions">Not reached yet.</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Level 4: Professional — Making Money -->
-    <div class="aj-tier" id="aj-tier-4">
-      <div class="aj-orb" id="aj-orb-4" style="--orb-color:var(--green);--orb-rgb:48,232,144;">
-        <div class="aj-orb-inner">
-          <div class="aj-orb-num">4</div>
-          <div class="aj-orb-icon">💎</div>
-        </div>
-        <div class="aj-orb-ring"></div>
-        <div class="aj-orb-pulse"></div>
+    <!-- Level 3 -->
+    <div class="aj2-level" id="aj2-row-2">
+      <div class="aj2-orb locked" id="aj2-orb-2" style="--orb-color:#60a8ff;--orb-rgb:96,168,255;">
+        <div class="aj2-orb-ball"></div>
+        <div class="aj2-orb-ring"></div>
+        <div class="aj2-orb-pulse"></div>
+        <div class="aj2-orb-num">3</div>
+        <div class="aj2-orb-icon">💫</div>
       </div>
-      <div class="aj-tier-body" id="aj-tbody-4">
-        <div class="aj-tier-name">Professional — Making Money</div>
-        <div class="aj-tier-desc">You've become a SupportRD story. People ask what you use, they trust your results, and you're ready to turn that into real income. You are now a VIP client.</div>
-        <div class="aj-tier-verdict" id="aj-v4"></div>
-        <!-- CONTACT US CTA — only shown at level 4 -->
-        <div id="aj-level4-cta" style="display:none;margin-top:14px;padding:16px 18px;background:linear-gradient(135deg,rgba(48,232,144,0.1),rgba(48,232,144,0.04));border:1px solid rgba(48,232,144,0.3);border-radius:12px;">
-          <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--green);margin-bottom:6px;">✦ You've Earned This</div>
-          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;">Let's talk directly.</div>
-          <div style="font-size:12px;color:var(--muted2);line-height:1.65;margin-bottom:14px;">You are exactly who we built SupportRD for. We want to connect with you personally — whether that's an ambassador program, a referral partnership, or just making sure you have everything you need.</div>
-          <a href="mailto:hello@supportrd.com?subject=Making Money Level — Let's Connect&body=Hi SupportRD team, I've reached the Professional level with Aria and I'd love to talk." style="display:inline-block;background:var(--green);color:#000;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:12px;padding:12px 24px;border-radius:20px;text-decoration:none;letter-spacing:0.06em;">✦ Contact SupportRD Directly →</a>
-          <div style="font-size:10px;color:var(--muted);margin-top:10px;">Or reach us at <strong>hello@supportrd.com</strong> — mention your name and Aria will share your profile.</div>
+      <div class="aj2-card locked" id="aj2-card-2" style="--orb-color:#60a8ff;--orb-rgb:96,168,255;">
+        <div class="aj2-card-head" onclick="aj2Toggle(2)">
+          <div class="aj2-level-name">Inner Circle</div>
+          <div class="aj2-verdict-badge locked" id="aj2-badge-2">🔒 Keep going</div>
+          <div class="aj2-chevron">▶</div>
         </div>
-        <div class="aj-tier-backtrack" id="aj-bt4" style="display:none;">
-          <button onclick="ajForceLevel(3)" class="aj-bt-btn">↩ Not at this level yet</button>
+        <div class="aj2-accordion" id="aj2-acc-2">
+          <div class="aj2-unlocks">
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#60a8ff;"></div>
+              <div class="aj2-unlock-text"><strong>People around you noticed.</strong> Your partner, your family, someone at work. Aria recognizes this milestone and helps you talk about the products to others.</div>
+            </div>
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#60a8ff;"></div>
+              <div class="aj2-unlock-text"><strong>Shared routines</strong> — Aria helps you build routines for people in your life, not just yourself. She knows your household and adapts recommendations for each person.</div>
+            </div>
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#60a8ff;"></div>
+              <div class="aj2-unlock-text"><strong>SupportRD in your community.</strong> You're naturally recommending products to people around you. Aria helps you share, explain, and convert people with confidence.</div>
+            </div>
+          </div>
+          <div class="aj2-history" id="aj2-hist-2">
+            <div class="aj2-history-label">Conversations at this level</div>
+            <div class="aj2-no-sessions">Not reached yet.</div>
+          </div>
         </div>
       </div>
     </div>
 
-  </div><!-- /relative -->
-</div><!-- /milestones -->
-
-<!-- CURRENT LEVEL STATEMENT -->
-<div id="aj-current-depth" style="background:rgba(240,160,144,0.07);border:1px solid rgba(240,160,144,0.2);border-radius:16px;padding:20px 22px;margin-bottom:28px;position:relative;overflow:hidden;">
-  <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(240,160,144,0.12),transparent 70%);pointer-events:none;"></div>
-  <div style="font-size:8px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;">✦ Based on your conversations with Aria</div>
-  <div id="aj-depth-title" style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);margin-bottom:6px;">—</div>
-  <div id="aj-depth-msg" style="font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:10px;"></div>
-  <div id="aj-next-label" style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"></div>
+    <!-- Level 4 -->
+    <div class="aj2-level" id="aj2-row-3">
+      <div class="aj2-orb locked" id="aj2-orb-3" style="--orb-color:#30e890;--orb-rgb:48,232,144;">
+        <div class="aj2-orb-ball"></div>
+        <div class="aj2-orb-ring"></div>
+        <div class="aj2-orb-pulse"></div>
+        <div class="aj2-orb-num">4</div>
+        <div class="aj2-orb-icon">💎</div>
+      </div>
+      <div class="aj2-card locked" id="aj2-card-3" style="--orb-color:#30e890;--orb-rgb:48,232,144;">
+        <div class="aj2-card-head" onclick="aj2Toggle(3)">
+          <div class="aj2-level-name">Professional — Making Money</div>
+          <div class="aj2-verdict-badge locked" id="aj2-badge-3">🔒 The top level</div>
+          <div class="aj2-chevron">▶</div>
+        </div>
+        <div class="aj2-accordion" id="aj2-acc-3">
+          <div class="aj2-unlocks">
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#30e890;"></div>
+              <div class="aj2-unlock-text"><strong>You've become the story.</strong> People ask what you use. They trust your results before they even try the product themselves. You are a living SupportRD testimonial.</div>
+            </div>
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:#30e890;"></div>
+              <div class="aj2-unlock-text"><strong>Income opportunities open.</strong> Ambassador programs, referral income, and direct partnership conversations become possible for VIP clients at this level.</div>
+            </div>
+            <div class="aj2-unlock-item">
+              <div class="aj2-unlock-dot" style="background:rgba(48,232,144,0.35);"></div>
+              <div class="aj2-unlock-text" style="color:var(--muted);"><strong style="color:var(--muted);">Personal contact from Support</strong> — a member of the founding team reaches out directly to VIP clients. <span style="color:var(--muted);font-style:italic;">(Available when reached)</span></div>
+            </div>
+          </div>
+          <div class="aj2-contact-cta" id="aj2-cta-3" style="display:none;">
+            <div class="aj2-contact-cta-title">✦ You've earned this</div>
+            <div class="aj2-contact-cta-desc">You are at the top. SupportRD wants to connect with you personally — whether that's an ambassador program, a referral partnership, or making sure you have everything you need.</div>
+            <div class="aj2-contact-cta-person">From Anthony, Crystal, and Evelyn — the founding team</div>
+            <a href="mailto:hello@supportrd.com?subject=Level 4 — Making Money" class="aj2-contact-btn">Contact SupportRD Directly →</a>
+          </div>
+          <div class="aj2-history" id="aj2-hist-3">
+            <div class="aj2-history-label">Conversations at this level</div>
+            <div class="aj2-no-sessions">Not reached yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- SESSION TIMELINE -->
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-  <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);">Your Sessions with Aria</div>
-  <div id="aj-session-count" style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;"></div>
-</div>
-<div id="aj-timeline" style="position:relative;padding-bottom:20px;">
-  <div class="ppage-empty" id="aj-empty" style="display:none;">Start chatting with Aria to build your journey history.</div>
-</div>
-
-</div>
 <!-- ✦ PROGRESS TRACKER (Score History + Treatment Log) -->
 <div class="ppage" id="pp-progress">
   <div class="ppage-head">
@@ -7472,50 +7242,302 @@ async function dashboardUpgrade(){
 // ── PROFILE PAGE ─────────────────────────────────────────────────────────────
 function openProfilePage(){
   const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
-  // Avatar
-  const av = document.getElementById('prof-avatar');
-  if(av) av.textContent = (u.name||'?')[0].toUpperCase();
-  if(document.getElementById('prof-name-big'))  document.getElementById('prof-name-big').textContent  = u.name||'—';
-  if(document.getElementById('prof-email-sm'))  document.getElementById('prof-email-sm').textContent  = u.email||'';
-  if(document.getElementById('prof-score-big')) document.getElementById('prof-score-big').textContent = localStorage.getItem('srd_score')||'—';
-  if(document.getElementById('prof-member-since')){
-    const ms = u.created_at ? new Date(u.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '—';
-    document.getElementById('prof-member-since').textContent = ms;
-  }
-  // Plan badge
-  const pb = document.getElementById('prof-plan-badge');
-  if(pb){ const isPrem = localStorage.getItem('srd_premium')==='1'; pb.textContent=isPrem?'PREMIUM':'FREE'; pb.style.color=isPrem?'var(--green)':'var(--gold)'; }
-  // streak removed
 
-  // Load profile tags from API
+  // ── Profile hero ──────────────────────────────────────────────
+  // Show saved profile photo if exists
+  const savedPic = localStorage.getItem('srd_prof_pic');
+  const avEl = document.getElementById('prof-avatar-big');
+  if(avEl){
+    if(savedPic){
+      avEl.innerHTML = '<img src="'+savedPic+'" alt="Profile">';
+    } else {
+      avEl.textContent = (u.name||'?')[0].toUpperCase();
+    }
+  }
+
+  const nameEl = document.getElementById('prof-name');
+  const emailEl= document.getElementById('prof-email-sm');
+  const planEl = document.getElementById('prof-plan-badge');
+  const scoreEl= document.getElementById('prof-score-num');
+  const chatsEl= document.getElementById('prof-chats-num');
+  const sinceEl= document.getElementById('prof-since');
+  if(nameEl)  nameEl.textContent  = u.name||'—';
+  if(emailEl) emailEl.textContent = u.email||'';
+  if(planEl){
+    const isPrem = localStorage.getItem('srd_premium')==='1';
+    planEl.textContent = isPrem ? 'PREMIUM' : 'FREE';
+    planEl.style.color = isPrem ? 'var(--green)' : 'var(--gold)';
+  }
+  // Hair score from computed value
+  const sc = calcScore();
+  if(scoreEl) scoreEl.textContent = sc.overall;
+  localStorage.setItem('srd_score', sc.overall);
+
+  // Load profile from API and sync tags
   fetch('/api/profile',{headers:{'X-Auth-Token':token}}).then(r=>r.json()).then(d=>{
     if(!d) return;
     restoreTags('pf-tags-type',       d.hair_type);
     restoreTags('pf-tags-concerns',   d.hair_concerns);
     restoreTags('pf-tags-treatments', d.treatments);
-    restoreTags('pf-tags-products',   d.products_tried);
     restoreTags('pf-tags-porosity',   d.porosity||'');
     restoreTags('pf-tags-scalp',      d.scalp||'');
     restoreTags('pf-tags-washfreq',   d.wash_freq||'');
     restoreTags('pf-tags-heat',       d.heat_styling||'');
-    restoreTags('pf-tags-env',        d.environment||'');
     if(document.getElementById('pf-goals')) document.getElementById('pf-goals').value = d.goals||'';
-    profBuildProductCarousel(d.products_tried||'');
+    // Restore selected products from profile
+    if(d.products_tried){
+      const prodNames = d.products_tried.split(',').map(s=>s.trim().toLowerCase());
+      document.querySelectorAll('.prof-prod-card').forEach(card=>{
+        const name = card.querySelector('.prof-prod-name')?.textContent||'';
+        if(prodNames.some(p=>name.toLowerCase().includes(p.slice(0,8))||p.includes(name.toLowerCase().slice(0,8)))){
+          card.classList.add('selected');
+        }
+      });
+    }
+    profBuildDayDisplay();
   }).catch(()=>{});
 
-  occInit();
+  // Load chat count from me endpoint
+  fetch('/api/auth/me',{headers:{'X-Auth-Token':token}}).then(r=>r.json()).then(d=>{
+    if(chatsEl) chatsEl.textContent = d.chat_count||0;
+    if(sinceEl && d.created_at){
+      const yr = new Date(d.created_at).getFullYear();
+      sinceEl.textContent = yr||'—';
+    }
+  }).catch(()=>{});
 }
 
+// ── Profile photo upload ────────────────────────────────────────
+function profUploadPic(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const b64 = ev.target.result;
+    localStorage.setItem('srd_prof_pic', b64);
+    const avEl = document.getElementById('prof-avatar-big');
+    if(avEl) avEl.innerHTML = '<img src="'+b64+'" alt="Profile">';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Product toggle (max 3) ──────────────────────────────────────
+function profToggleProd(el, name){
+  const selected = document.querySelectorAll('.prof-prod-card.selected');
+  if(el.classList.contains('selected')){
+    el.classList.remove('selected');
+  } else {
+    if(selected.length >= 3){
+      // Remove first selected to make room
+      selected[0].classList.remove('selected');
+    }
+    el.classList.add('selected');
+  }
+  profBuildDayDisplay();
+}
+
+// ── Occasion select ─────────────────────────────────────────────
+let _profOccasion = {name:'Wash Day', icon:'🚿'};
+function profOccSelect(el, name, icon){
+  document.querySelectorAll('.prof-occ-chip').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  _profOccasion = {name, icon};
+  profBuildDayDisplay();
+}
+
+// ── Routine view toggle ─────────────────────────────────────────
+function profSetRoutineView(view){
+  document.getElementById('prof-view-day').classList.toggle('active', view==='day');
+  document.getElementById('prof-view-week').classList.toggle('active', view==='week');
+  document.getElementById('prof-routine-day').style.display  = view==='day'  ? 'block' : 'none';
+  document.getElementById('prof-routine-week').style.display = view==='week' ? 'block' : 'none';
+}
+
+// ── Build the daily display ──────────────────────────────────────
+function profBuildDayDisplay(){
+  const dayEl  = document.getElementById('prof-routine-day');
+  if(!dayEl) return;
+  const selectedProds = [...document.querySelectorAll('.prof-prod-card.selected')].map(c=>({
+    name:  c.querySelector('.prof-prod-name')?.textContent||'',
+    emoji: c.querySelector('.prof-prod-emoji')?.textContent||'',
+  }));
+  const occ = _profOccasion;
+  const hairType = [...document.querySelectorAll('#pf-tags-type .tag.on')].map(t=>t.textContent).join(', ') ||
+                   [...document.querySelectorAll('#pf-tags-type .tag.active')].map(t=>t.textContent).join(', ');
+
+  if(!selectedProds.length){
+    dayEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:14px 0;font-style:italic;">Select at least 1 product above to build your routine</div>';
+    return;
+  }
+
+  // Build routine steps based on occasion + products
+  const OCC_STEPS = {
+    'Wash Day':       ['🚿 Shampoo hair thoroughly','💆 Massage scalp for 90 seconds','🌿 Apply product to damp hair','⏰ Leave for 3-5 minutes','💧 Rinse and style'],
+    'Date Night':     ['💨 Blow-dry or diffuse','✨ Apply finishing product','💃 Style as desired'],
+    'Work Day':       ['🌅 Quick refresh or water spray','🌿 Apply light product to ends','💼 Smooth and style'],
+    'Workout':        ['🪢 Protective style before workout','💧 Keep scalp dry if possible','🚿 Wash after if needed'],
+    'Beach Day':      ['🛡 Apply product before beach','🧴 Reapply after water','🌊 Rinse salt water after'],
+    'Rest Day':       ['🌙 Light moisture if dry','💤 No heat today','🌱 Scalp massage (optional)'],
+    'Deep Condition': ['🚿 Start with clean hair','🫙 Apply mask generously','⏰ Leave 20-30 minutes','🧖 Rinse thoroughly'],
+    'Night Out':      ['💄 Volume boost if needed','✨ Finishing drops for shine','💫 Set with light mist'],
+  };
+
+  const steps = OCC_STEPS[occ.name] || ['🌿 Apply product as needed','💆 Massage in gently','⏰ Leave as directed'];
+
+  let html = `<div class="prof-day-card">
+    <div class="prof-day-name">${occ.icon} ${occ.name} Routine</div>`;
+
+  steps.forEach(step=>{
+    html += `<div class="prof-day-routine-line">${step}</div>`;
+  });
+
+  // Product application lines
+  if(selectedProds.length){
+    html += '<div style="margin-top:10px;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Products to use</div>';
+    selectedProds.forEach(p=>{
+      const APPLY = {
+        'Formula Exclusiva': 'Apply to damp hair, work through, leave 5 min, rinse',
+        'Laciador Crece':    'Apply to damp ends, comb through, can leave in or rinse',
+        'Gotero Rápido':     'Apply directly to scalp with dropper, massage in, leave overnight',
+        'Gotitas Brillantes':'Apply 2-3 drops to dry hair after styling',
+        'Mascarilla Capilar':'Apply generously, cover, leave 20+ min, rinse',
+        'Shampoo Aloe Vera': 'Lather on wet hair and scalp, rinse thoroughly',
+      };
+      const instructions = Object.entries(APPLY).find(([k])=>p.name.includes(k.slice(0,8)))?.[1]||'Apply as directed';
+      html += `<div class="prof-day-routine-line"><span class="prof-day-product-tag">${p.emoji} ${p.name}</span><span style="font-size:11px;color:var(--muted2);margin-left:6px;">${instructions}</span></div>`;
+    });
+  }
+
+  // Occasion tag
+  html += `<div style="margin-top:10px;"><span class="prof-day-occasion-tag">${occ.icon} ${occ.name}</span></div>`;
+  html += '</div>';
+  dayEl.innerHTML = html;
+}
+
+// ── Build full week display ──────────────────────────────────────
+function profBuildRoutine(){
+  profBuildWeekDisplay();
+  profSetRoutineView('week');
+}
+
+function profBuildWeekDisplay(){
+  const weekEl = document.getElementById('prof-week-grid');
+  if(!weekEl) return;
+  const selectedProds = [...document.querySelectorAll('.prof-prod-card.selected')].map(c=>({
+    name: c.querySelector('.prof-prod-name')?.textContent||'',
+    emoji:c.querySelector('.prof-prod-emoji')?.textContent||'',
+  }));
+  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const DAY_OCCASIONS = ['Wash Day','Work Day','Work Day','Rest Day','Date Night','Deep Condition','Rest Day'];
+  const DAY_ICONS     = ['🚿','💼','💼','🛋️','🌹','🫙','🛋️'];
+  const PROD_DAYS     = [0,1,3,5]; // which days get product application
+
+  weekEl.innerHTML = DAYS.map((day,i)=>{
+    const isProductDay = PROD_DAYS.includes(i) && selectedProds.length;
+    let items = `<div class="prof-week-item occasion">${DAY_ICONS[i]} ${DAY_OCCASIONS[i]}</div>`;
+    if(isProductDay){
+      const prod = selectedProds[i % selectedProds.length];
+      items += `<div class="prof-week-item product">${prod.emoji} ${prod.name.split(' ')[0]}</div>`;
+    }
+    return `<div class="prof-week-cell">
+      <div class="prof-week-day-lbl">${day}</div>
+      ${items}
+    </div>`;
+  }).join('');
+}
+
+// ── AI Status refresh ────────────────────────────────────────────
+async function profRefreshAiStatus(){
+  const el = document.getElementById('prof-aria-text');
+  // Also keep backward compat with old id
+  const el2 = document.getElementById('prof-ai-status');
+  if(el) el.textContent = 'Aria is reading your hair journey…';
+  if(el2) el2.textContent = 'Aria is reading your hair journey…';
+  try{
+    const r = await fetch('/api/profile/ai-status',{headers:{'X-Auth-Token':token}});
+    const d = await r.json();
+    const status = d.status || 'Keep logging your progress and Aria will tell you more!';
+    if(el)  el.textContent  = status;
+    if(el2) el2.textContent = status;
+  }catch(e){
+    const msg = 'Could not reach Aria right now — try again soon.';
+    if(el)  el.textContent  = msg;
+    if(el2) el2.textContent = msg;
+  }
+}
+
+// ── Share ────────────────────────────────────────────────────────
+function profShare(platform){
+  const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
+  const score = localStorage.getItem('srd_score')||'?';
+  const text = encodeURIComponent((u.name||'I')+' scored '+score+'/100 on my hair health with Aria by SupportRD! ✦ Try it free: https://aria.supportrd.com');
+  const urls = {
+    instagram: 'https://www.instagram.com/',
+    facebook:  'https://www.facebook.com/sharer/sharer.php?u=https://aria.supportrd.com&quote='+text,
+    tiktok:    'https://www.tiktok.com/',
+    twitter:   'https://twitter.com/intent/tweet?text='+text,
+    whatsapp:  'https://wa.me/?text='+text,
+    pinterest: 'https://pinterest.com/pin/create/button/?url=https://aria.supportrd.com&description='+text,
+  };
+  window.open(urls[platform]||'https://aria.supportrd.com','_blank');
+}
+
+// ── saveProfileFull — update to save products from new UI ────────
+async function saveProfileFull(){
+  const selectedProds = [...document.querySelectorAll('.prof-prod-card.selected')].map(c=>c.querySelector('.prof-prod-name')?.textContent||'').filter(Boolean);
+  const data = {
+    hair_type:      tagsToString('pf-tags-type'),
+    hair_concerns:  tagsToString('pf-tags-concerns'),
+    treatments:     tagsToString('pf-tags-treatments'),
+    products_tried: selectedProds.join(', '),
+    porosity:       tagsToString('pf-tags-porosity'),
+    scalp:          tagsToString('pf-tags-scalp'),
+    wash_freq:      tagsToString('pf-tags-washfreq'),
+    heat_styling:   tagsToString('pf-tags-heat'),
+    goals:          (document.getElementById('pf-goals')||{}).value||'',
+  };
+  // Also sync hidden overview tags
+  ['type','concerns','treatments'].forEach(k=>{
+    const src_el = document.getElementById('pf-tags-'+k);
+    const dst_el = document.getElementById('tags-'+k);
+    if(!src_el||!dst_el) return;
+    dst_el.querySelectorAll('.tag').forEach(dt=>{
+      const match=[...src_el.querySelectorAll('.tag')].find(st=>st.textContent===dt.textContent);
+      dt.classList.toggle('active', match ? match.classList.contains('on') : false);
+    });
+  });
+  // Sync products to overview panel
+  const dst_prod = document.getElementById('tags-products');
+  if(dst_prod){
+    dst_prod.querySelectorAll('.tag').forEach(dt=>{
+      dt.classList.toggle('active', selectedProds.some(p=>p.toLowerCase().includes(dt.textContent.toLowerCase().slice(0,5))));
+    });
+  }
+  try{
+    await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});
+    renderScore(calcScore());
+    const msg = document.getElementById('pf-save-msg');
+    if(msg){ msg.style.display='inline'; setTimeout(()=>msg.style.display='none',2500); }
+    showToast('✦ Profile saved!');
+  }catch(e){ showToast('Save failed — try again'); }
+}
+
+// ── restoreTags helper — works with both .on and .active ─────────
 function restoreTags(containerId, csv){
   if(!csv) return;
-  const vals = csv.toLowerCase().split(',').map(s=>s.trim());
+  const vals = csv.toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
   const el = document.getElementById(containerId);
   if(!el) return;
   el.querySelectorAll('.tag').forEach(t=>{
-    if(vals.some(v=>t.textContent.toLowerCase().includes(v)||v.includes(t.textContent.toLowerCase().slice(0,5))))
-      t.classList.add('active');
+    const match = vals.some(v=>t.textContent.toLowerCase().includes(v.slice(0,5))||v.includes(t.textContent.toLowerCase().slice(0,5)));
+    if(match) t.classList.add('on');
   });
 }
+
+function tagsToString(id){
+  return [...document.querySelectorAll('#'+id+' .tag.on,#'+id+' .tag.active')].map(t=>t.textContent.trim()).join(', ');
+}
+
 
 // ── PRODUCT CAROUSEL ─────────────────────────────────────────────
 const PROD_IMGS = {
@@ -7558,33 +7580,10 @@ function profCarouselTo(page){
 }
 
 // ── AI STATUS REFRESH ─────────────────────────────────────────────
-async function profRefreshAiStatus(){
-  const el = document.getElementById('prof-ai-status');
-  if(!el) return;
-  el.textContent = 'Aria is reading your hair journey…';
-  try{
-    const r = await fetch('/api/profile/ai-status',{headers:{'X-Auth-Token':token}});
-    const d = await r.json();
-    if(d.status) el.textContent = d.status;
-    else el.textContent = 'Keep logging your progress and Aria will tell you more!';
-  }catch(e){ el.textContent = 'Could not reach Aria right now — try again soon.'; }
-}
+// profRefreshAiStatus moved to profile rebuild above
 
 // ── SHARE ─────────────────────────────────────────────────────────
-function profShare(platform){
-  const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
-  const score = localStorage.getItem('srd_score')||'?';
-  const text = encodeURIComponent((u.name||'I')+' scored '+score+'/100 on my hair health with Aria by SupportRD! ✦ Try it free: https://aria.supportrd.com');
-  const urls = {
-    instagram: 'https://www.instagram.com/',
-    facebook:  'https://www.facebook.com/sharer/sharer.php?u=https://aria.supportrd.com&quote='+text,
-    tiktok:    'https://www.tiktok.com/',
-    twitter:   'https://twitter.com/intent/tweet?text='+text,
-    whatsapp:  'https://wa.me/?text='+text,
-    pinterest: 'https://pinterest.com/pin/create/button/?url=https://aria.supportrd.com&description='+text,
-  };
-  window.open(urls[platform]||'https://aria.supportrd.com','_blank');
-}
+// profShare moved to profile rebuild above
 
 // ── OCCASIONS ─────────────────────────────────────────────────────
 const OCC_TEMPLATES = [
@@ -7652,39 +7651,7 @@ function occDelete(name){
   showToast('Removed '+name);
 }
 
-async function saveProfileFull(){
-  // Sync all tag groups
-  const data = {
-    hair_type:      tagsToString('tags-type'),
-    hair_concerns:  tagsToString('tags-concerns'),
-    treatments:     tagsToString('tags-treatments'),
-    products_tried: tagsToString('tags-products'),
-    porosity:       tagsToString('pf-tags-porosity').replace(/pf-tags-/g,''),
-    scalp:          tagsToString('pf-tags-scalp').replace(/pf-tags-/g,''),
-    wash_freq:      tagsToString('pf-tags-washfreq').replace(/pf-tags-/g,''),
-    heat_styling:   tagsToString('pf-tags-heat').replace(/pf-tags-/g,''),
-    environment:    tagsToString('pf-tags-env').replace(/pf-tags-/g,''),
-    goals:          (document.getElementById('pf-goals')||{}).value||'',
-  };
-  // Also sync the hidden bot-row tags so score updates
-  ['type','concerns','treatments','products'].forEach(k=>{
-    const src = document.getElementById('pf-tags-'+k);
-    const dst = document.getElementById('tags-'+k);
-    if(!src||!dst) return;
-    dst.querySelectorAll('.tag').forEach(dt=>{
-      const match = [...src.querySelectorAll('.tag')].find(st=>st.textContent===dt.textContent);
-      dt.classList.toggle('active', match ? match.classList.contains('active') : false);
-    });
-  });
-  try{
-    await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});
-    renderScore(calcScore());
-    profBuildProductCarousel(data.products_tried);
-    const msg = document.getElementById('pf-save-msg');
-    if(msg){ msg.style.display='block'; setTimeout(()=>msg.style.display='none',2500); }
-    showToast('✦ Profile saved!');
-  }catch(e){ showToast('Save failed — try again'); }
-}
+// saveProfileFull moved to profile rebuild section above
 
 
 async function openRoutinePage(){
@@ -9216,273 +9183,173 @@ function occInit(){
 
 
 // ═══════════════════════════════════════════════════════════════
-// ✦ ARIA JOURNEY PAGE
+// ✦ ARIA JOURNEY PAGE v2 — accordion history + smaller orbs
 // ═══════════════════════════════════════════════════════════════
+
 const DEPTH_LEVELS = [
-  { n:'Discovery',                   color:'#f0a090',  rgb:'240,160,144', icon:'🌱',
+  { n:'Discovery',                   color:'#f0a090', rgb:'240,160,144', icon:'🌱',
     msg:'Aria is getting to know you. She knows your name, your first products, and the main issue you came here to fix.'},
-  { n:'Use Cases & Upgrades',        color:'#e0b050',  rgb:'224,176,80',  icon:'🔬',
-    msg:'Aria is inside your routine now. She knows exactly how and when to use each product — and is watching your results to tell you what to upgrade next.'},
-  { n:'Inner Circle',                color:'#60a8ff',  rgb:'96,168,255',  icon:'💫',
-    msg:'This goes beyond your hair. Aria knows who\'s in your life, who notices, and is helping you bring SupportRD to the people you care about.'},
-  { n:'Professional — Making Money', color:'#30e890',  rgb:'48,232,144',  icon:'💎',
-    msg:'You have become the story. People ask what you use. Aria is your business partner now — and SupportRD wants to talk to you directly.'},
+  { n:'Use Cases & Upgrades',        color:'#e0b050', rgb:'224,176,80',  icon:'🔬',
+    msg:"Aria is inside your routine. She knows exactly how and when to use each product — and is watching your results to tell you what to upgrade next."},
+  { n:'Inner Circle',                color:'#60a8ff', rgb:'96,168,255',  icon:'💫',
+    msg:"This goes beyond your hair. Aria knows who's in your life, who notices, and is helping you bring SupportRD to the people you care about."},
+  { n:'Professional — Making Money', color:'#30e890', rgb:'48,232,144',  icon:'💎',
+    msg:"You've become the story. People ask what you use. Aria is your business partner now — and SupportRD wants to talk to you directly."},
 ];
 
-// Keywords Aria uses at each depth that reveal which level the conversation has reached
 const DEPTH_SIGNALS = [
-  // Level 1 → 2: product HOW-TOs, timing, application technique, week-by-week results
-  ['how to apply','apply it to','leave it on','rinse after','morning routine','evening routine',
+  ['how to apply','apply it to','leave it on','morning routine','evening routine',
    'how often','twice a week','every wash','week one','first week','second week','next week',
    'you should see','results in','noticeable','improvement','upgrade','switch to'],
-  // Level 2 → 3: family, partner, friends, others asking, recommending, sharing
   ['your partner','your boyfriend','your girlfriend','your husband','your wife','your mom',
    'your sister','your brother','your friend','someone asked','people notice','they asked',
    'tell them about','recommend','share this','for her','for him','for them','family'],
-  // Level 3 → 4: making money, selling, ambassador, income, professional, business
   ['making money','earn','income','sell','ambassador','referral','commission',
    'your business','your clients','salon','stylist','professional','they pay',
    'people buy','turned it into','monetize','brand','partner with'],
 ];
 
-// Stored override (for backtrack)
 let _ajForcedLevel = null;
-
-// ── SCROLL JOURNEY SYSTEM ─────────────────────────────────────────────────
-let _ajScrollObserver = null;
-let _ajCenterObserver = null;
-let _ajScrollInited = false;
-let _ajUnlockedLevel = 0; // 0 = level 1 unlocked (always), etc.
+let _aj2OpenIdx = -1;
 
 async function openJourneyPage(){
   _ajForcedLevel = JSON.parse(localStorage.getItem('srd_aj_level')||'null');
   await renderJourneyPage();
-  // Small delay to let DOM settle then boot scroll system
-  setTimeout(ajInitScrollSystem, 100);
 }
 
-function ajInitScrollSystem(){
-  const container = document.getElementById('aj-scroll-container');
-  if(!container) return;
-
-  // Kill old observers
-  if(_ajScrollObserver){ _ajScrollObserver.disconnect(); }
-  if(_ajCenterObserver){ _ajCenterObserver.disconnect(); }
-
-  // ── IN-VIEW observer (60% visible = orb grows) ──
-  _ajScrollObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      entry.target.classList.toggle('in-view', entry.isIntersecting);
-      if(entry.isIntersecting){
-        // Update dot nav
-        const idx = parseInt(entry.target.dataset.level || '0');
-        document.querySelectorAll('.aj-dot-nav-dot').forEach((d,i)=>{
-          d.classList.toggle('active', i === idx);
-        });
-        // Hide scroll hint after first scroll
-        const hint = document.getElementById('aj-scroll-hint');
-        if(hint && idx > 0) hint.style.opacity = '0';
-      }
-    });
-  }, {
-    root: container,
-    threshold: 0.6,
-  });
-
-  // ── DEAD CENTER observer (85% visible = fullscreen) ──
-  _ajCenterObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      entry.target.classList.toggle('dead-center', entry.isIntersecting);
-    });
-  }, {
-    root: container,
-    threshold: 0.85,
-  });
-
-  // Observe all level screens
-  document.querySelectorAll('.aj-level-screen').forEach((screen, i) => {
-    screen.dataset.level = i;
-    _ajScrollObserver.observe(screen);
-    _ajCenterObserver.observe(screen);
-  });
-
-  // Scroll to current level on open
-  setTimeout(()=>{
-    const target = document.getElementById('aj-screen-' + Math.min(_ajUnlockedLevel, 3));
-    if(target) target.scrollIntoView({behavior:'smooth', block:'center'});
-  }, 300);
-}
-
-function ajScrollToLevel(idx){
-  const target = document.getElementById('aj-screen-' + idx);
-  if(target) target.scrollIntoView({behavior:'smooth', block:'center'});
+function aj2Toggle(idx){
+  const acc = document.getElementById('aj2-acc-'+idx);
+  const head = document.querySelector('#aj2-card-'+idx+' .aj2-card-head');
+  if(!acc) return;
+  const isOpen = acc.classList.contains('open');
+  // Close all
+  for(let i=0;i<4;i++){
+    const a=document.getElementById('aj2-acc-'+i);
+    const h=document.querySelector('#aj2-card-'+i+' .aj2-card-head');
+    if(a){ a.classList.remove('open'); }
+    if(h){ h.classList.remove('open'); }
+  }
+  // Open clicked if it was closed
+  if(!isOpen && acc){
+    acc.classList.add('open');
+    if(head) head.classList.add('open');
+    _aj2OpenIdx = idx;
+  } else {
+    _aj2OpenIdx = -1;
+  }
 }
 
 async function renderJourneyPage(){
-  // ── 1. Load full chat history ──────────────────────────────────────────────
+  // 1. Load chat history
   let sessions = [];
   try{
     const r = await fetch('/api/history',{headers:{'X-Auth-Token':token}});
     const d = await r.json();
     sessions = d.history || [];
-  }catch(e){ console.warn('Journey load:', e); }
+  }catch(e){}
 
-  // ── 2. Determine depth from Aria's actual RESPONSES (AI signals) ──────────
-  // Read all of Aria's messages and check which signal tier she's reached
-  const ariaText = sessions
-    .filter(s=>s.role==='assistant')
-    .map(s=>(s.content||'').toLowerCase())
-    .join(' ');
-
-  let detectedLevel = 0; // 0-indexed
+  // 2. Detect level
+  const ariaText = sessions.filter(s=>s.role==='assistant').map(s=>(s.content||'').toLowerCase()).join(' ');
+  let detectedLevel = 0;
   if(_ajForcedLevel !== null){
-    detectedLevel = _ajForcedLevel; // user override via backtrack
+    detectedLevel = _ajForcedLevel;
   } else {
-    // Check from highest to lowest — stay at the highest matched tier
     for(let i=DEPTH_SIGNALS.length-1;i>=0;i--){
-      if(DEPTH_SIGNALS[i].some(kw => ariaText.includes(kw))){
-        detectedLevel = i+1; // i+1 because signals[0] triggers level 1→2 etc
-        break;
-      }
+      if(DEPTH_SIGNALS[i].some(kw=>ariaText.includes(kw))){ detectedLevel=i+1; break; }
     }
   }
-  // Cap to valid range
-  detectedLevel = Math.max(0, Math.min(3, detectedLevel));
-
+  detectedLevel = Math.max(0,Math.min(3,detectedLevel));
   const depth = DEPTH_LEVELS[detectedLevel];
 
-  // ── 3. Render all 4 orbs ──────────────────────────────────────────────────
-  const SPINE_POSITIONS = [0, 33, 66, 100]; // % of spine filled
-  const spineFill = document.getElementById('aj-spine-fill');
-
-  for(let i=0;i<4;i++){
-    const orb   = document.getElementById('aj-orb-'+(i+1));
-    const tbody = document.getElementById('aj-tbody-'+(i+1));
-    const verd  = document.getElementById('aj-v'+(i+1));
-    const bt    = document.getElementById('aj-bt'+(i+1));
-    if(!orb||!tbody) continue;
-
-    // Remove all state classes
-    orb.classList.remove('active','current','locked');
-    tbody.classList.remove('active','current','locked');
-    // Set CSS vars on BOTH elements — orb needs them for its own CSS rules
-    orb.style.setProperty('--orb-color', DEPTH_LEVELS[i].color);
-    orb.style.setProperty('--orb-rgb', DEPTH_LEVELS[i].rgb);
-    tbody.style.setProperty('--orb-rgb', DEPTH_LEVELS[i].rgb);
-
-    if(i < detectedLevel){
-      // Passed level — fully lit
-      orb.classList.add('active');
-      tbody.classList.add('active');
-      if(verd) verd.textContent = '✓ Aria and you have been here.';
-      if(bt){ bt.style.display='block'; }
-    } else if(i === detectedLevel){
-      // CURRENT — brightest glow
-      orb.classList.add('active','current');
-      tbody.classList.add('active','current');
-      if(verd) verd.textContent = '▶ This is where you and Aria are right now.';
-      if(bt){ bt.style.display = i > 0 ? 'block' : 'none'; } // no backtrack on level 1
-    } else {
-      // Not yet reached
-      orb.classList.add('locked');
-      tbody.classList.add('locked');
-      if(verd) verd.textContent = '';
-      if(bt){ bt.style.display='none'; }
-    }
-  }
-
-  // Animate spine fill height
-  const spineEl = document.getElementById('aj-spine');
-  if(spineEl && spineFill){
-    requestAnimationFrame(()=>{
-      const totalH = document.getElementById('aj-milestones').offsetHeight - 80;
-      if(spineEl) spineEl.style.height = totalH+'px';
-      const fillPct = detectedLevel === 0 ? 0 : (detectedLevel / 3);
-      if(spineFill) spineFill.style.height = Math.round(totalH * fillPct)+'px';
-    });
-  }
-
-  // ── UPDATE SCROLL ORBS (the new fullscreen ones) ───────────────────────────
-  _ajUnlockedLevel = detectedLevel;
-  const ORBLABELS = [
-    {c:'✦ You are here', cls:'current'},
-    {c:'🔒 Keep talking with Aria', cls:'locked'},
-    {c:'🔒 Keep going', cls:'locked'},
-    {c:'🔒 The top level', cls:'locked'},
-  ];
-  const COLORS = ['#f0a090','#e0b050','#60a8ff','#30e890'];
-
-  for(let i=0;i<4;i++){
-    const sorb    = document.getElementById('aj-sorb-'+i);
-    const screen  = document.getElementById('aj-screen-'+i);
-    const verdict = document.getElementById('aj-sv-'+i);
-    const dnav    = document.getElementById('aj-dnav-'+i);
-    if(!sorb||!screen) continue;
-
-    sorb.classList.remove('locked','unlocked','current-level');
-
-    if(i < detectedLevel){
-      // Passed — fully colored
-      sorb.classList.add('unlocked');
-      if(verdict){
-        verdict.textContent = '✓ Unlocked';
-        verdict.className = 'aj-scroll-verdict unlocked-past';
-      }
-      if(dnav) dnav.style.background = COLORS[i];
-    } else if(i === detectedLevel){
-      // Current level — colored + pulsing
-      sorb.classList.add('unlocked','current-level');
-      if(verdict){
-        verdict.textContent = '▶ You are here';
-        verdict.className = 'aj-scroll-verdict current';
-        verdict.style.setProperty('--orb-rgb', DEPTH_LEVELS[i].rgb);
-        verdict.style.color = COLORS[i];
-        verdict.style.borderColor = 'rgba('+DEPTH_LEVELS[i].rgb+',0.4)';
-        verdict.style.background  = 'rgba('+DEPTH_LEVELS[i].rgb+',0.12)';
-      }
-      if(dnav){ dnav.style.background = COLORS[i]; dnav.style.boxShadow = '0 0 10px '+COLORS[i]; }
-    } else {
-      // Locked — greyscale
-      sorb.classList.add('locked');
-      if(verdict){
-        verdict.textContent = '🔒 Not yet reached';
-        verdict.className = 'aj-scroll-verdict locked';
-        verdict.style.color='';verdict.style.borderColor='';verdict.style.background='';
-      }
-      if(dnav){ dnav.style.background=''; dnav.style.boxShadow=''; }
-    }
-  }
-
-  // Level 4 CTA
-  const cta = document.getElementById('aj-level4-cta');
-  if(cta) cta.style.display = detectedLevel === 3 ? 'block' : 'none';
-
-  // ── 5. Current depth summary card ─────────────────────────────────────────
-  const dtitle = document.getElementById('aj-depth-title');
-  const dmsg   = document.getElementById('aj-depth-msg');
-  const dnext  = document.getElementById('aj-next-label');
-  const dbadge = document.getElementById('aj-depth-badge');
-
-  if(dtitle) dtitle.textContent = 'Level '+(detectedLevel+1)+' — '+depth.n;
-  if(dmsg)   dmsg.textContent   = depth.msg;
-
-  if(dnext){
+  // 3. Update summary card
+  const titleEl = document.getElementById('aj2-title');
+  const msgEl   = document.getElementById('aj2-msg');
+  const nextEl  = document.getElementById('aj2-next');
+  if(titleEl) titleEl.textContent = 'Level '+(detectedLevel+1)+' of 4 — '+depth.n;
+  if(msgEl)   msgEl.textContent   = depth.msg;
+  if(nextEl){
     if(detectedLevel < 3){
       const next = DEPTH_LEVELS[detectedLevel+1];
-      dnext.innerHTML = '✦ <strong>Next level — '+next.n+':</strong> Keep talking with Aria. As your conversations go deeper, she\'ll naturally move into the next chapter with you.';
+      nextEl.innerHTML = '✦ <strong>Next: '+next.n+'</strong> — Keep talking with Aria. As your conversations go deeper, she naturally moves into the next level.';
     } else {
-      dnext.innerHTML = '✦ You\'ve reached the final level. <strong style="color:var(--green);">Contact SupportRD directly</strong> — you\'ve earned a personal conversation.';
+      nextEl.innerHTML = '✦ <strong style="color:var(--green);">You\'ve reached the top.</strong> Contact SupportRD directly — you\'ve earned a personal conversation.';
     }
   }
 
-  if(dbadge){
-    dbadge.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.08em;background:rgba('+depth.rgb+',0.12);border:1px solid rgba('+depth.rgb+',0.35);color:'+depth.color+';">'+depth.icon+' Level '+(detectedLevel+1)+' of 4</div>';
+  // 4. Render orbs + cards
+  for(let i=0;i<4;i++){
+    const orb  = document.getElementById('aj2-orb-'+i);
+    const card = document.getElementById('aj2-card-'+i);
+    const badge= document.getElementById('aj2-badge-'+i);
+    const cta  = document.getElementById('aj2-cta-3');
+    if(!orb||!card) continue;
+
+    orb.classList.remove('locked','unlocked','current');
+    card.classList.remove('locked','unlocked','current');
+    if(badge) badge.className='aj2-verdict-badge';
+
+    if(i < detectedLevel){
+      orb.classList.add('unlocked');
+      card.classList.add('unlocked');
+      if(badge){ badge.classList.add('unlocked'); badge.textContent='✓ Unlocked'; }
+    } else if(i === detectedLevel){
+      orb.classList.add('unlocked','current');
+      card.classList.add('current');
+      if(badge){ badge.classList.add('current'); badge.textContent='▶ You are here'; }
+      if(cta && i===3) cta.style.display='block';
+    } else {
+      orb.classList.add('locked');
+      card.classList.add('locked');
+      if(badge){ badge.classList.add('locked'); badge.textContent=i===3?'🔒 The top level':'🔒 Keep going'; }
+    }
   }
 
-  // ── 6. Session timeline ───────────────────────────────────────────────────
-  ajRenderTimeline(sessions, detectedLevel);
-}
+  // 5. Populate history accordions
+  // Group sessions by date → assign to level bucket based on cumulative aria signal
+  const buckets = {0:[],1:[],2:[],3:[]};
+  const msgs_by_date = {};
+  sessions.forEach(msg=>{
+    const d=(msg.ts||'').slice(0,10)||'unknown';
+    if(!msgs_by_date[d]) msgs_by_date[d]=[];
+    msgs_by_date[d].push(msg);
+  });
+  let runningLevel = 0;
+  Object.keys(msgs_by_date).sort().forEach(date=>{
+    const dayMsgs = msgs_by_date[date];
+    const dayAriaText = dayMsgs.filter(m=>m.role==='assistant').map(m=>(m.content||'').toLowerCase()).join(' ');
+    // Advance level if signals present
+    for(let i=DEPTH_SIGNALS.length-1;i>=0;i--){
+      if(DEPTH_SIGNALS[i].some(kw=>dayAriaText.includes(kw))){ runningLevel=Math.max(runningLevel,i+1); break; }
+    }
+    if(!buckets[runningLevel]) buckets[runningLevel]=[];
+    buckets[runningLevel].push({date, msgs: dayMsgs});
+  });
 
+  for(let level=0;level<4;level++){
+    const histEl = document.getElementById('aj2-hist-'+level);
+    if(!histEl) continue;
+    const bucket = buckets[level]||[];
+    if(!bucket.length){
+      histEl.innerHTML = '<div class="aj2-history-label">Conversations at this level</div><div class="aj2-no-sessions">'+(level > detectedLevel ? 'Not reached yet.' : 'Start chatting with Aria to build your journey.')+'</div>';
+      continue;
+    }
+    let html = '<div class="aj2-history-label">Conversations at this level ('+bucket.length+')</div>';
+    bucket.slice(-6).reverse().forEach(({date, msgs})=>{
+      const userMsgs = msgs.filter(m=>m.role==='user');
+      const ariaMsgs = msgs.filter(m=>m.role==='assistant');
+      const preview  = ariaMsgs.length ? (ariaMsgs[0].content||'').slice(0,100)+'…' : userMsgs.length ? (userMsgs[0].content||'').slice(0,80)+'…' : 'Session';
+      let fmtDate;
+      try{ fmtDate=new Date(date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }catch(e){ fmtDate=date; }
+      html += `<div class="aj2-session"><div class="aj2-session-date">${fmtDate} · ${userMsgs.length} messages</div><div class="aj2-session-preview">${preview}</div></div>`;
+    });
+    histEl.innerHTML = html;
+  }
+
+  // Auto-open the current level accordion
+  if(_aj2OpenIdx < 0){
+    aj2Toggle(detectedLevel);
+  }
+}
 
 // ── 5AM ADMIN CORNER TOAST ────────────────────────────────────────
 function showAdminCornerToast(msg){
@@ -9941,53 +9808,112 @@ function clSimulateSatelliteLock(){
   }, 400);
 }
 
-// ── HUD STRIP INJECTION ──────────────────────────────────────────
+// ── HUD STRIP INJECTION — GARMIN-STYLE ──────────────────────────
 function clInjectHUD(){
   const wrap = document.getElementById('cl-map-wrap');
   if(!wrap || document.getElementById('cl-hud')) return;
+
+  // ── TOP HUD STRIP ─────────────────────────────────────────────
   const hud = document.createElement('div');
   hud.id = 'cl-hud';
   hud.innerHTML = `
-    <div id="cl-hud-speed" class="cl-hud-cell">
+    <div class="cl-hud-cell" id="cl-hud-speed">
       <div class="cl-hud-val" id="cl-hud-speed-val">0</div>
       <div class="cl-hud-label">km/h</div>
     </div>
-    <div id="cl-hud-limit" class="cl-hud-cell">
-      <div class="cl-hud-val cl-hud-limit-circle" id="cl-hud-limit-val">${_clSpeedLimit}</div>
+    <div class="cl-hud-cell" id="cl-hud-limit">
+      <div class="cl-hud-limit-circle" id="cl-hud-limit-val">${_clSpeedLimit}</div>
       <div class="cl-hud-label">limit</div>
     </div>
-    <div id="cl-hud-eta" class="cl-hud-cell">
+    <div class="cl-hud-cell" id="cl-hud-eta">
       <div class="cl-hud-val" id="cl-hud-eta-val">--</div>
-      <div class="cl-hud-label">ETA min</div>
+      <div class="cl-hud-label">ETA</div>
     </div>
-    <div id="cl-hud-sat" class="cl-hud-cell cl-hud-sat" style="font-size:10px;color:#a8ff78;">🛰 acquiring</div>
+    <div class="cl-hud-cell cl-hud-sat-cell" id="cl-hud-sat-cell">
+      <div id="cl-hud-sat-display">
+        <div class="cl-sat-row" id="cl-sat-gps"><span class="cl-sat-dot"></span><span class="cl-sat-lbl">GPS</span><span class="cl-sat-count" id="cl-sc-gps">0</span></div>
+        <div class="cl-sat-row" id="cl-sat-glo"><span class="cl-sat-dot glo"></span><span class="cl-sat-lbl">GLO</span><span class="cl-sat-count" id="cl-sc-glo">0</span></div>
+        <div class="cl-sat-row" id="cl-sat-gal"><span class="cl-sat-dot gal"></span><span class="cl-sat-lbl">GAL</span><span class="cl-sat-count" id="cl-sc-gal">0</span></div>
+        <div class="cl-sat-row" id="cl-sat-bei"><span class="cl-sat-dot bei"></span><span class="cl-sat-lbl">BDS</span><span class="cl-sat-count" id="cl-sc-bei">0</span></div>
+      </div>
+    </div>
     <div class="cl-hud-cell">
-      <div id="cl-hud-mode-btn" onclick="clToggle3D()" style="cursor:pointer;font-size:10px;background:rgba(255,255,255,0.1);border-radius:8px;padding:3px 7px;color:#fff;">2D</div>
-      <div id="cl-hud-night-btn" onclick="clToggleNight()" style="cursor:pointer;font-size:10px;background:rgba(255,255,255,0.1);border-radius:8px;padding:3px 7px;color:#fff;margin-top:3px;">${_clNightMode?'🌙':'☀️'}</div>
+      <div id="cl-hud-mode-btn" onclick="clToggle3D()" class="cl-hud-toggle-btn" id="cl-3d-btn">2D</div>
+      <div id="cl-hud-night-btn" onclick="clToggleNight()" class="cl-hud-toggle-btn" style="margin-top:3px;">${_clNightMode ? '🌙' : '☀️'}</div>
     </div>`;
-  hud.style.cssText = `
-    position:absolute;top:0;left:0;right:0;z-index:20;
-    display:flex;align-items:center;gap:8px;padding:6px 10px;
-    background:linear-gradient(180deg,rgba(0,0,0,0.7) 0%,transparent 100%);
-    pointer-events:none;`;
-  // Make buttons clickable
+  hud.style.cssText = 'position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;gap:6px;padding:6px 10px;background:linear-gradient(180deg,rgba(0,0,0,0.78) 0%,transparent 100%);pointer-events:none;';
   hud.querySelectorAll('[onclick]').forEach(el=>el.style.pointerEvents='auto');
   wrap.appendChild(hud);
 
+  // ── SCHOOL ZONE ALERT (shows/hides dynamically) ───────────────
+  const schoolAlert = document.createElement('div');
+  schoolAlert.id = 'cl-school-alert';
+  schoolAlert.innerHTML = '🏫 SCHOOL ZONE — Slow Down';
+  schoolAlert.style.cssText = 'display:none;position:absolute;top:52px;left:50%;transform:translateX(-50%);background:rgba(255,200,0,0.95);color:#000;font-weight:900;font-size:12px;padding:7px 18px;border-radius:20px;z-index:30;letter-spacing:0.06em;white-space:nowrap;box-shadow:0 2px 16px rgba(255,200,0,0.5);';
+  wrap.appendChild(schoolAlert);
+
   const style = document.createElement('style');
   style.textContent = `
-    .cl-hud-cell{display:flex;flex-direction:column;align-items:center;min-width:36px;}
-    .cl-hud-val{font-size:16px;font-weight:900;color:#fff;font-family:'Space Grotesk',monospace;line-height:1;}
-    .cl-hud-label{font-size:8px;color:rgba(255,255,255,0.5);letter-spacing:0.1em;text-transform:uppercase;}
-    .cl-hud-limit-circle{width:28px;height:28px;border-radius:50%;border:2.5px solid #ff4444;display:flex;align-items:center;justify-content:center;font-size:11px;color:#ff4444;background:rgba(255,68,68,0.1);}
-    .cl-hud-sat{align-self:center;white-space:nowrap;}
+    .cl-hud-cell{display:flex;flex-direction:column;align-items:center;min-width:38px;}
+    .cl-hud-val{font-size:18px;font-weight:900;color:#fff;font-family:'DM Mono',monospace;line-height:1;}
+    .cl-hud-label{font-size:7px;color:rgba(255,255,255,0.45);letter-spacing:0.12em;text-transform:uppercase;margin-top:2px;}
+    .cl-hud-limit-circle{width:30px;height:30px;border-radius:50%;border:2.5px solid #ff9944;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#ff9944;background:rgba(255,153,68,0.1);font-family:'DM Mono',monospace;transition:border-color 0.3s,color 0.3s;}
+    .cl-hud-limit-circle.speeding{border-color:#ff4444!important;color:#ff4444!important;background:rgba(255,68,68,0.15)!important;animation:clLimitPulse 0.5s ease-in-out infinite alternate;}
+    @keyframes clLimitPulse{0%{opacity:1;}100%{opacity:0.5;}}
+    .cl-hud-sat-cell{min-width:52px;}
+    .cl-sat-row{display:flex;align-items:center;gap:3px;margin-bottom:1px;}
+    .cl-sat-dot{width:6px;height:6px;border-radius:50%;background:#a8ff78;display:inline-block;flex-shrink:0;}
+    .cl-sat-dot.glo{background:#78c8ff;}
+    .cl-sat-dot.gal{background:#ffcc44;}
+    .cl-sat-dot.bei{background:#ff8844;}
+    .cl-sat-lbl{font-size:7px;color:rgba(255,255,255,0.5);letter-spacing:0.08em;min-width:20px;}
+    .cl-sat-count{font-size:8px;font-weight:700;color:#fff;font-family:'DM Mono',monospace;}
+    .cl-hud-toggle-btn{cursor:pointer;font-size:10px;background:rgba(255,255,255,0.1);border-radius:6px;padding:3px 7px;color:#fff;pointer-events:auto;transition:background 0.2s;}
+    .cl-hud-toggle-btn:hover{background:rgba(255,255,255,0.2);}
     .cl-speed-warn .cl-hud-val{color:#ff4444;animation:clSpeedPulse 0.4s ease-in-out infinite alternate;}
     @keyframes clSpeedPulse{0%{opacity:1;}100%{opacity:0.4;}}
-    .cl-junction-overlay{position:absolute;bottom:0;right:0;width:120px;height:100px;background:rgba(0,0,0,0.8);border-top-left-radius:12px;z-index:25;overflow:hidden;}
-    .cl-reroute-banner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,158,0,0.95);color:#000;font-weight:900;font-size:13px;padding:10px 20px;border-radius:20px;z-index:30;letter-spacing:0.05em;animation:clFadeIn 0.3s ease;}
+    .cl-junction-overlay{position:absolute;bottom:0;right:0;width:120px;height:110px;background:rgba(0,0,0,0.85);border-top-left-radius:14px;z-index:25;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+    .cl-junction-label{font-size:8px;color:rgba(255,255,255,0.5);letter-spacing:0.1em;text-transform:uppercase;}
+    .cl-junction-arrow{font-size:36px;line-height:1;}
+    .cl-reroute-banner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,140,0,0.97);color:#000;font-weight:900;font-size:13px;padding:12px 24px;border-radius:22px;z-index:30;letter-spacing:0.06em;animation:clFadeIn 0.3s ease;box-shadow:0 4px 24px rgba(255,140,0,0.6);}
     @keyframes clFadeIn{from{opacity:0;transform:translate(-50%,-54%);}to{opacity:1;transform:translate(-50%,-50%);}}
   `;
   document.head.appendChild(style);
+
+  // Start multi-constellation satellite lock animation
+  clSimulateSatelliteLock();
+}
+
+// ── MULTI-CONSTELLATION SATELLITE LOCK ───────────────────────────
+// Counts up GPS + GLONASS + Galileo + BeiDou like a real receiver
+let _clSatCounts = {gps:0, glo:0, gal:0, bei:0};
+let _clSatLockDone = false;
+function clSimulateSatelliteLock(){
+  if(_clSatLockDone) return;
+  const targets = {gps: 4+Math.floor(Math.random()*4), glo: 2+Math.floor(Math.random()*3), gal: 1+Math.floor(Math.random()*3), bei: 1+Math.floor(Math.random()*2)};
+  const keys = ['gps','glo','gal','bei'];
+  let step = 0;
+  const maxSteps = 18;
+  const iv = setInterval(()=>{
+    step++;
+    keys.forEach(k=>{
+      const progress = step / maxSteps;
+      _clSatCounts[k] = Math.round(targets[k] * Math.min(progress + Math.random()*0.12, 1));
+      const el = document.getElementById('cl-sc-'+k);
+      if(el) el.textContent = _clSatCounts[k];
+    });
+    _clSatCount = Object.values(_clSatCounts).reduce((a,b)=>a+b,0);
+    if(step >= maxSteps){
+      clearInterval(iv);
+      _clSatLockDone = true;
+      Object.keys(targets).forEach(k=>{
+        _clSatCounts[k] = targets[k];
+        const el = document.getElementById('cl-sc-'+k);
+        if(el) el.textContent = targets[k];
+      });
+      _clSatCount = Object.values(targets).reduce((a,b)=>a+b,0);
+    }
+  }, 280);
 }
 
 // ── GPS WATCH ───────────────────────────────────────────────────
@@ -10051,9 +9977,19 @@ function clUpdateHUD(){
   const sv = document.getElementById('cl-hud-speed-val');
   const ev = document.getElementById('cl-hud-eta-val');
   const lv = document.getElementById('cl-hud-limit-val');
-  if(sv) sv.textContent = _clSpeedKmh;
-  if(ev) ev.textContent = _clEtaMinutes !== null ? _clEtaMinutes : '--';
-  if(lv){ lv.textContent = _clSpeedLimit; lv.style.color = _clSpeedKmh > _clSpeedLimit+10 ? '#ff4444' : '#ff9944'; }
+  const speedCell = document.getElementById('cl-hud-speed');
+  const speeding = _clSpeedKmh > _clSpeedLimit + 10;
+  if(sv) sv.textContent = Math.round(_clSpeedKmh);
+  if(ev) ev.textContent = _clEtaMinutes !== null ? _clEtaMinutes+' min' : '--';
+  if(lv){
+    lv.textContent = _clSpeedLimit;
+    if(speeding){ lv.classList.add('speeding'); } else { lv.classList.remove('speeding'); }
+  }
+  if(speedCell){ if(speeding){ speedCell.classList.add('cl-speed-warn'); } else { speedCell.classList.remove('cl-speed-warn'); } }
+  const nb = document.getElementById('cl-hud-night-btn');
+  if(nb) nb.textContent = _clNightMode ? '🌙' : '☀️';
+  const mb = document.getElementById('cl-hud-mode-btn');
+  if(mb) mb.textContent = _cl3DMode ? '3D' : '2D';
 }
 
 // ── ETA CALCULATION ──────────────────────────────────────────────
@@ -10432,6 +10368,22 @@ async function clSelectDest(idx){
 // ── JUNCTION VIEW — Advanced Lane Guidance ───────────────────────
 // Matches Garmin DriveSmart 66/76/86 advanced lane guidance feature
 function clShowJunctionView(place){
+  // Build a proper corner junction card instead of blank overlay
+  let existing = document.getElementById('cl-junction-card');
+  if(existing) existing.remove();
+  const wrap = document.getElementById('cl-map-wrap');
+  if(!wrap) return;
+  const bear = (_clUserLat && place.lat) ? clBearing(_clUserLat,_clUserLng,place.lat,place.lng) : 0;
+  const diff = ((bear - _clHeading) + 360) % 360;
+  const arrow = diff < 45 || diff > 315 ? '⬆' : diff < 135 ? '↗' : diff < 225 ? '➡' : '↘';
+  const card = document.createElement('div');
+  card.id = 'cl-junction-card';
+  card.className = 'cl-junction-overlay';
+  card.innerHTML = `<div class="cl-junction-label">TURN</div><div class="cl-junction-arrow">${arrow}</div><div style="font-size:8px;color:rgba(255,255,255,0.5);text-align:center;padding:0 4px;">${place.name||''}</div>`;
+  wrap.appendChild(card);
+  setTimeout(()=>{ if(card.parentNode) card.remove(); }, 8000);
+  // original junction view function body continues:
+  void 0;
   const wrap = document.getElementById('cl-map-wrap');
   if(!wrap) return;
   let junc = document.getElementById('cl-junction');
@@ -10596,6 +10548,14 @@ function clTriggerReroute(){
 // ── PROXIMITY CHECK ──────────────────────────────────────────────
 let _clLastLandmarkIdx = -1;
 function clCheckProximity(){
+  // ── School zone alert ──────────────────────────────────────────
+  const schoolEl = document.getElementById('cl-school-alert');
+  if(schoolEl && _clUserLat && _clPlaces){
+    const nearSchool = _clPlaces.some(p => p.type==='school' && clHaversine(_clUserLat,_clUserLng,p.lat,p.lng)<0.05);
+    schoolEl.style.display = nearSchool ? 'block' : 'none';
+    if(nearSchool && !schoolEl._spoken){ schoolEl._spoken=true; driveSpeak('School zone ahead — please slow down.'); }
+    else if(!nearSchool){ schoolEl._spoken=false; }
+  }
   if(!_clUserLat) return;
   _clLandmarks.forEach((lm,i)=>{
     if(i===_clLastLandmarkIdx) return;
