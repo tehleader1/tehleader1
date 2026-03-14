@@ -3155,6 +3155,12 @@ self.addEventListener('notificationclick', function(event) {
                     headers={"Cache-Control": "no-cache, no-store, must-revalidate",
                              "Service-Worker-Allowed": "/"})
 
+
+@app.route("/about")
+def about_page():
+    """Standalone About Us page — linked from nav and login."""
+    return redirect("/login#about")
+
 @app.route("/login")
 def login_page():
     return f"""<!DOCTYPE html><html><head>
@@ -3212,8 +3218,7 @@ body{{background:#f0ebe8;min-height:100vh;font-family:'Jost',sans-serif;font-wei
 .gf-links a:hover{{color:#c1a3a2;}}
 .gf-copy{{font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:0.1em;margin-bottom:6px;}}
 .gf-dem{{font-size:10px;color:rgba(193,163,162,0.5);letter-spacing:0.08em;}}
-@media(max-width:600px){{.team-grid{{grid-template-columns:1fr;}}.products-grid{{grid-template-columns:1fr;}}.about-title{{font-size:36px;}}
-.card{{background:#fff;border-radius:24px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 12px 48px rgba(0,0,0,0.08);border:1px solid rgba(193,163,162,0.20);}}
+@media(max-width:600px){{.team-grid{{grid-template-columns:1fr;}}.products-grid{{grid-template-columns:1fr;}}.about-title{{font-size:36px;}}card{{padding:32px 24px;}}}}
 .logo{{text-align:center;margin-bottom:32px;}}
 .logo-text{{font-family:'Cormorant Garamond',serif;font-size:32px;font-style:italic;font-weight:300;color:#0d0906;}}
 .logo-sub{{font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:#c1a3a2;margin-top:4px;}}
@@ -3274,6 +3279,16 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
   </div>
   <div class="back"><a href="/">← Back to Hair Advisor</a></div>
 </div></div><!-- /login-wrap -->
+
+<!-- ✦ CODER FOUNDATION SECTION -->
+<div style="max-width:420px;margin:0 auto 20px;padding:0 24px;">
+  <div style="background:linear-gradient(135deg,#0d0906,#1a1008);border:1px solid rgba(193,163,162,0.25);border-radius:20px;padding:22px 24px;">
+    <div style="font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#c1a3a2;margin-bottom:8px;font-family:'Jost',sans-serif;">✦ Foundation</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-style:italic;color:#fff;margin-bottom:8px;">SupportRD created a learning environment for Coders Everywhere.</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.65;font-family:'Jost',sans-serif;margin-bottom:14px;">Built by Anthony Figueroa — the full story of how a hair care company became a coding foundation for real people who want to build real things.</div>
+    <a href="/about#coding" style="display:inline-block;background:#c1a3a2;color:#0d0906;font-family:'Jost',sans-serif;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;padding:10px 20px;border-radius:20px;text-decoration:none;font-weight:500;">Read the Full Story →</a>
+  </div>
+</div>
 
 <!-- ✦ ARIA DRIVE SAFETY FEATURE CARD -->
 <div style="max-width:420px;margin:0 auto 28px;padding:0 24px;">
@@ -3378,7 +3393,7 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
 <!-- ── GLOBAL FOOTER ───────────────────────────────────────── -->
 <div class="global-footer">
   <div class="gf-links">
-    <a href="#about" onclick="document.querySelector('.about-block').scrollIntoView({{behavior:'smooth'}});return false;">About Us</a>
+    <a href="/about">About Us</a>
     <a href="#team" onclick="document.querySelector('.team-block').scrollIntoView({{behavior:'smooth'}});return false;">Team</a>
     <a href="#coding" onclick="document.querySelector('.coding-block').scrollIntoView({{behavior:'smooth'}});return false;">Coding Guide</a>
     <a href="https://supportrd.com" target="_blank">Shop</a>
@@ -4151,13 +4166,13 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab active" onclick="switchPTab('overview')">Overview</div>
     <div class="nav-tab" onclick="switchPTab('profile')">Hair Profile</div>
     <div class="nav-tab" onclick="switchPTab('journey')">✦ Aria Journey</div>
-    <div class="nav-tab" onclick="switchPTab('progress')">✦ Progress</div>
     <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
     <div class="nav-tab" onclick="switchPTab('journal')">✦ Journal</div>
     <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
     <div class="nav-tab" onclick="switchPTab('settings')">⚙ Settings</div>
+    <a class="nav-tab" href="/login#about" target="_blank" style="text-decoration:none;color:inherit;">About</a>
   </div>
-  <button class="drive-nav-btn" onclick="switchPTab('drive')" id="drive-nav-btn">
+  <button onclick="switchPTab('drive')" id="drive-nav-btn" style="background:linear-gradient(135deg,#ff6eb4,#ff4500);color:#fff;border:none;border-radius:24px;padding:10px 22px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;letter-spacing:0.06em;cursor:pointer;box-shadow:0 3px 18px rgba(255,100,50,0.5);transition:all 0.2s;white-space:nowrap;">
     🚗 Hands-Free Drive
   </button>
   <div class="nav-right">
@@ -4187,7 +4202,7 @@ body::before{content:'';position:fixed;inset:0;
     <span class="mob-tab-icon">⋯</span>More
   </button>
 </div>
-<button class="mob-drive-btn" id="mob-drive-btn" onclick="switchPTab('drive')">
+<button id="mob-drive-btn" onclick="switchPTab('drive')" style="position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6eb4,#ff4500);color:#fff;border:none;border-radius:32px;padding:15px 40px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;letter-spacing:0.06em;cursor:pointer;z-index:200;box-shadow:0 4px 28px rgba(255,100,50,0.6);display:none;">
   🚗 Hands-Free Drive
 </button>
 
@@ -4196,11 +4211,13 @@ body::before{content:'';position:fixed;inset:0;
   <div class="mob-more-sheet" onclick="event.stopPropagation()">
     <div class="mob-more-title">All Features</div>
     <div class="mob-more-grid">
-      <div class="mob-more-item" onclick="switchPTab('progress');closeMobMore()"><span class="mob-more-item-icon">📈</span>Progress</div>
       <div class="mob-more-item" onclick="switchPTab('journey');closeMobMore()"><span class="mob-more-item-icon">✦</span>Aria Journey</div>
       <div class="mob-more-item" onclick="switchPTab('journal');closeMobMore()"><span class="mob-more-item-icon">📓</span>Journal</div>
       <div class="mob-more-item" onclick="switchPTab('whatsapp');closeMobMore()"><span class="mob-more-item-icon">💬</span>Aria SMS</div>
       <div class="mob-more-item" onclick="switchPTab('settings');closeMobMore()"><span class="mob-more-item-icon">⚙</span>Settings</div>
+      <div class="mob-more-item" onclick="window.open('/blog/write','_blank');closeMobMore()"><span class="mob-more-item-icon">✍️</span>Write Blog Post</div>
+      <div class="mob-more-item" onclick="window.open('/revenue','_blank');closeMobMore()"><span class="mob-more-item-icon">💰</span>Revenue Engine</div>
+      <div class="mob-more-item" onclick="window.open('/traffic','_blank');closeMobMore()"><span class="mob-more-item-icon">📈</span>Traffic Growth</div>
     </div>
     <div style="text-align:center;margin-top:16px;">
       <button onclick="doLogout()" style="font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);padding:8px 20px;border-radius:16px;cursor:pointer;font-family:'Space Grotesk',sans-serif;letter-spacing:0.08em;">Sign out</button>
@@ -4665,13 +4682,13 @@ body::before{content:'';position:fixed;inset:0;
         <div style="position:absolute;bottom:2px;right:2px;width:20px;height:20px;background:#30e890;border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:9px;">✓</div>
       </div>
       <!-- Share icons -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:100px;">
-        <a id="share-ig" href="#" target="_blank" title="Instagram" onclick="profShare('instagram');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">📷</a>
-        <a id="share-fb" href="#" target="_blank" title="Facebook" onclick="profShare('facebook');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">👥</a>
-        <a id="share-tt" href="#" target="_blank" title="TikTok" onclick="profShare('tiktok');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">🎵</a>
-        <a id="share-tw" href="#" target="_blank" title="X / Twitter" onclick="profShare('twitter');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">🐦</a>
-        <a id="share-wa" href="#" target="_blank" title="WhatsApp" onclick="profShare('whatsapp');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">💬</a>
-        <a id="share-pi" href="#" target="_blank" title="Pinterest" onclick="profShare('pinterest');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">📌</a>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+        <a id="share-ig" href="#" target="_blank" onclick="profShare('instagram');return false;" style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">📷 Instagram</a>
+        <a id="share-wa" href="#" target="_blank" onclick="profShare('whatsapp');return false;" style="display:flex;align-items:center;gap:7px;background:#25d366;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">💬 WhatsApp</a>
+        <a id="share-tt" href="#" target="_blank" onclick="profShare('tiktok');return false;" style="display:flex;align-items:center;gap:7px;background:#000;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">🎵 TikTok</a>
+        <a id="share-fb" href="#" target="_blank" onclick="profShare('facebook');return false;" style="display:flex;align-items:center;gap:7px;background:#1877f2;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">👥 Facebook</a>
+        <a id="share-tw" href="#" target="_blank" onclick="profShare('twitter');return false;" style="display:flex;align-items:center;gap:7px;background:#000;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">🐦 X / Twitter</a>
+        <a id="share-pi" href="#" target="_blank" onclick="profShare('pinterest');return false;" style="display:flex;align-items:center;gap:7px;background:#e60023;color:#fff;border-radius:12px;padding:6px 10px;font-size:10px;font-weight:700;text-decoration:none;letter-spacing:0.04em;">📌 Pinterest</a>
       </div>
     </div>
 
@@ -4707,11 +4724,6 @@ body::before{content:'';position:fixed;inset:0;
         <div style="text-align:center;">
           <div id="prof-score-big" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--rose);">—</div>
           <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Hair Score</div>
-        </div>
-        <div style="width:1px;background:var(--border);"></div>
-        <div style="text-align:center;">
-          <div id="prof-streak" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--gold);">—</div>
-          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Day Streak</div>
         </div>
         <div style="width:1px;background:var(--border);"></div>
         <div style="text-align:center;">
@@ -5674,7 +5686,7 @@ body::before{content:'';position:fixed;inset:0;
       <div class="drive-engine-badge">Powered by Claude claude-sonnet-4-20250514</div>
     </div>
     <div class="drive-header-right">
-      <button class="drive-mode-toggle" id="drive-mode-toggle" onclick="driveToggleMode()">🍬 Adventure GPS</button>
+      <button id="drive-mode-toggle" onclick="driveToggleMode()" style="background:linear-gradient(135deg,#ff6eb4,#ff9f43);color:#fff;border:none;border-radius:20px;padding:9px 18px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:800;letter-spacing:0.06em;cursor:pointer;box-shadow:0 2px 14px rgba(255,110,180,0.5);transition:all 0.2s;margin-right:8px;">🗺 GPS Mode</button>
       <button class="drive-close-btn" onclick="switchPTab('overview')">✕ Exit</button>
     </div>
   </div>
@@ -5786,6 +5798,33 @@ body::before{content:'';position:fixed;inset:0;
     <div class="ppage-title">⚙ Settings</div>
   </div>
   <div class="settings-page">
+
+    <!-- ── TOOLS & PERKS ─────────────────────────────────── -->
+    <div style="background:linear-gradient(135deg,rgba(224,176,80,0.08),rgba(192,132,252,0.06));border:1px solid rgba(224,176,80,0.2);border-radius:14px;padding:18px 20px;margin-bottom:18px;">
+      <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">✦ Tools &amp; Perks</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <button onclick="openUpgradeModal()" style="background:rgba(224,176,80,0.1);border:1px solid rgba(224,176,80,0.25);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);">💡 Submit an Upgrade Idea — Earn 1 Free Month</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Have an idea for Aria or the app? Submit it and earn 1 free month of Premium.</div>
+        </button>
+        <button id="goodie-bag-btn" onclick="window.open('/blog/write','_blank')" style="background:rgba(192,132,252,0.08);border:1px solid rgba(192,132,252,0.2);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;display:none;">
+          <div style="font-size:12px;font-weight:700;color:#c084fc;">🎁 Your Starter Bag — AI Ideas</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Premium members: your AI-generated content ideas are ready. Open yours here.</div>
+        </button>
+        <button onclick="window.open('/blog/write','_blank')" style="background:rgba(240,160,144,0.08);border:1px solid rgba(240,160,144,0.2);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;">
+          <div style="font-size:12px;font-weight:700;color:var(--rose);">✍️ Write a Blog Post</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Publish to the SupportRD blog. Every post drives traffic and builds your brand.</div>
+        </button>
+        <button onclick="window.open('/revenue','_blank')" style="background:rgba(48,232,144,0.06);border:1px solid rgba(48,232,144,0.2);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;">
+          <div style="font-size:12px;font-weight:700;color:var(--green);">💰 Revenue Engine</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Email blasts, share links, Shopify balance — all your sales tools in one place.</div>
+        </button>
+        <button onclick="document.getElementById('dash-campaign-modal').style.display='flex'" style="background:rgba(224,80,80,0.06);border:1px solid rgba(224,80,80,0.2);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;">
+          <div style="font-size:12px;font-weight:700;color:var(--rose);">🗳 Our Positions &amp; Campaigns</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Donate to the Campaign for the Poor. Partner with us on the Auto Dissolve Bar.</div>
+        </button>
+      </div>
+    </div>
 
     <!-- Billing -->
     <div class="settings-section">
@@ -6238,14 +6277,7 @@ function openProfilePage(){
   // Plan badge
   const pb = document.getElementById('prof-plan-badge');
   if(pb){ const isPrem = localStorage.getItem('srd_premium')==='1'; pb.textContent=isPrem?'PREMIUM':'FREE'; pb.style.color=isPrem?'var(--green)':'var(--gold)'; }
-  // Streak (days since last visit — rough approximation)
-  const lastV = parseInt(localStorage.getItem('srd_last_visit')||'0');
-  const today = Math.floor(Date.now()/86400000);
-  let streak = parseInt(localStorage.getItem('srd_streak')||'1');
-  if(lastV === today-1){ streak++; localStorage.setItem('srd_streak',streak); }
-  else if(lastV < today-1){ streak=1; localStorage.setItem('srd_streak',1); }
-  localStorage.setItem('srd_last_visit',today);
-  if(document.getElementById('prof-streak')) document.getElementById('prof-streak').textContent = streak+'d';
+  // streak removed
 
   // Load profile tags from API
   fetch('/api/profile',{headers:{'X-Auth-Token':token}}).then(r=>r.json()).then(d=>{
@@ -7301,6 +7333,8 @@ async function loadData(){
     if(_isPremium){
       const sbLink = document.getElementById('starterBagLink');
       if(sbLink) sbLink.style.display='inline';
+      const goodieBtn = document.getElementById('goodie-bag-btn');
+      if(goodieBtn) goodieBtn.style.display='block';
       // First time premium welcome toast
       if(!localStorage.getItem('srd_starter_bag_shown')){
         localStorage.setItem('srd_starter_bag_shown','1');
@@ -7725,8 +7759,9 @@ function openPhotoPage(){
   const cont = document.getElementById('photo-content');
   if(!gate||!cont) return;
   const isPrem = localStorage.getItem('srd_premium')==='1';
-  gate.style.display = isPrem ? 'none' : 'block';
-  cont.style.display = isPrem ? 'block' : 'none';
+  const isAdm  = localStorage.getItem('srd_admin')==='1';
+  gate.style.display = (isPrem||isAdm) ? 'none' : 'block';
+  cont.style.display = (isPrem||isAdm) ? 'block' : 'none';
 }
 function openJournalPage(){
   const gate = document.getElementById('journal-gate');
@@ -8238,6 +8273,48 @@ async function renderJourneyPage(){
 
   // ── 6. Session timeline ───────────────────────────────────────────────────
   ajRenderTimeline(sessions, detectedLevel);
+}
+
+
+// ── 5AM ADMIN CORNER TOAST ────────────────────────────────────────
+function showAdminCornerToast(msg){
+  const el = document.getElementById('admin-corner-toast');
+  const msgEl = document.getElementById('admin-corner-msg');
+  if(!el||!msgEl) return;
+  msgEl.textContent = msg;
+  el.style.display = 'block';
+  // Auto-hide after 30 seconds
+  setTimeout(()=>{ if(el) el.style.display='none'; }, 30000);
+}
+
+async function triggerManualRefresh(){
+  document.getElementById('admin-corner-toast').style.display='none';
+  showToast('🌅 Refreshing app data…');
+  try{
+    const r = await fetch('/api/admin/manual-refresh',{headers:{'X-Auth-Token':token,'X-Admin-Key':localStorage.getItem('srd_admin_key')||''}});
+    const d = await r.json();
+    if(d.ok) showToast('✓ App refreshed — '+d.message);
+    else showToast('Refresh: '+d.error);
+  }catch(e){ showToast('Refresh failed'); }
+}
+
+function checkAdminRefreshNotice(){
+  if(localStorage.getItem('srd_admin')!=='1') return;
+  const lastRefresh = localStorage.getItem('srd_last_refresh_notice');
+  const today = new Date().toDateString();
+  if(lastRefresh === today) return; // already shown today
+  // Check if it's near 5am local time or just show once per day
+  const hour = new Date().getHours();
+  const isAdminSession = localStorage.getItem('srd_admin')==='1';
+  if(isAdminSession){
+    localStorage.setItem('srd_last_refresh_notice', today);
+    const msgs = [
+      'Daily 5AM refresh complete. Blog posts regenerated, AI topics updated, analytics reset for the new day.',
+      'App is running on today's fresh data. All systems operational.',
+      'Good morning! SupportRD refreshed at 5AM — new content ready.',
+    ];
+    showAdminCornerToast(msgs[Math.floor(Math.random()*msgs.length)]);
+  }
 }
 
 function ajForceLevel(levelIdx){
@@ -9518,12 +9595,12 @@ async function lfInit(){
     const r = await fetch('/api/subscription/status',{headers:{'X-Auth-Token':token}});
     const d = await r.json();
     if(d.admin_bypass){
+      localStorage.setItem('srd_admin','1');
       const panel = document.getElementById('live-feed-panel');
       if(panel) panel.style.display='block';
-      // Load current status
       lfRefreshStatus();
-      // Load Shopify revenue card
       loadShopifyRevenue();
+      setTimeout(checkAdminRefreshNotice, 2000);
     }
   }catch(e){}
 }
@@ -9673,6 +9750,24 @@ loadRealStats();
 lfInit();
 </script>
 <!-- ✦ UPGRADE IDEA MODAL -->
+
+<!-- ═══ 5AM ADMIN CORNER TOAST ═══════════════════════════════════ -->
+<div id="admin-corner-toast" style="display:none;position:fixed;bottom:20px;right:20px;z-index:99999;max-width:300px;">
+  <div style="background:linear-gradient(135deg,#0c0f16,#11151f);border:1px solid rgba(48,232,144,0.35);border-radius:16px;padding:16px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+    <div style="display:flex;align-items:flex-start;gap:12px;">
+      <div style="font-size:20px;flex-shrink:0;">🌅</div>
+      <div style="flex:1;">
+        <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">Daily App Refresh</div>
+        <div id="admin-corner-msg" style="font-size:11px;color:var(--muted2);line-height:1.55;"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button onclick="document.getElementById('admin-corner-toast').style.display='none'" style="background:rgba(48,232,144,0.12);color:var(--green);border:1px solid rgba(48,232,144,0.25);border-radius:12px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Got it</button>
+          <button onclick="triggerManualRefresh()" style="background:var(--green);color:#000;border:none;border-radius:12px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Refresh Now</button>
+        </div>
+      </div>
+      <button onclick="document.getElementById('admin-corner-toast').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0;">×</button>
+    </div>
+  </div>
+</div>
 <div id="upgrade-idea-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeUpgradeModal()">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:22px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;position:relative;">
 
@@ -9776,8 +9871,8 @@ function myUpgradeIdea() {
   <a onclick="document.getElementById('dash-campaign-modal').style.display='flex'">🗳 Our Positions</a>
   <a onclick="document.getElementById('dash-about-modal').style.display='flex'">About Us</a>
   <a onclick="document.getElementById('dash-privacy-modal').style.display='flex'">Privacy Policy</a>
-  <a onclick="openUpgradeModal()" style="color:var(--gold);font-weight:700;">💡 Submit an Upgrade — Earn 1 Free Month</a>
-  <a href="/blog/write" id="starterBagLink" style="color:#c084fc;font-weight:700;display:none;">🎁 Your Starter Bag — AI Ideas</a>
+  <a onclick="openUpgradeModal()" style="color:var(--gold);font-weight:700;">💡 Upgrade Ideas</a>
+  <a href="/blog/write" id="starterBagLink" style="color:#c084fc;font-weight:700;display:none;">🎁 Starter Bag</a>
 </div>
 
 <!-- CAMPAIGN MODAL (dashboard) -->
@@ -9829,6 +9924,23 @@ function myUpgradeIdea() {
     </div>
 
     <div style="font-size:10px;color:var(--muted);margin-bottom:18px;">These reflect the personal and company positions of Support's leadership — Anthony, Crystal, and Evelyn.</div>
+    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:14px;letter-spacing:0.06em;">ACTIVE CAMPAIGNS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="background:rgba(224,176,80,0.08);border:1px solid rgba(224,176,80,0.2);border-radius:12px;padding:14px;">
+          <div style="font-size:18px;margin-bottom:6px;">🫶</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">Campaign for the Poor</div>
+          <div style="font-size:11px;color:var(--muted2);line-height:1.5;margin-bottom:10px;">Help us provide affordable hair care to families who can't access it.</div>
+          <a href="mailto:hello@supportrd.com?subject=Campaign for the Poor — I want to help" style="background:var(--gold);color:#000;border-radius:16px;padding:7px 14px;font-size:10px;font-weight:700;text-decoration:none;display:inline-block;letter-spacing:0.04em;">Donate Now</a>
+        </div>
+        <div style="background:rgba(96,168,255,0.08);border:1px solid rgba(96,168,255,0.2);border-radius:12px;padding:14px;">
+          <div style="font-size:18px;margin-bottom:6px;">🧼</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">Auto Dissolve Bar</div>
+          <div style="font-size:11px;color:var(--muted2);line-height:1.5;margin-bottom:10px;">We have the product. We need a shipping partner to get it to the world.</div>
+          <a href="mailto:hello@supportrd.com?subject=Dissolve Bar Shipping Partner — Interested" style="background:var(--blue);color:#000;border-radius:16px;padding:7px 14px;font-size:10px;font-weight:700;text-decoration:none;display:inline-block;letter-spacing:0.04em;">Partner With Us</a>
+        </div>
+      </div>
+    </div>
     <button onclick="document.getElementById('dash-campaign-modal').style.display='none'" style="background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:11px;letter-spacing:0.1em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Close</button>
   </div>
 </div>
