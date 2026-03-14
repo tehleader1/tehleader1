@@ -3158,8 +3158,1216 @@ self.addEventListener('notificationclick', function(event) {
 
 @app.route("/about")
 def about_page():
-    """Standalone About Us page — linked from nav and login."""
-    return redirect("/login#about")
+    """Standalone About Us page."""
+    return Response("""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>About Support RD — Hair Care, AI, and the People Behind It</title>
+<meta name="description" content="Support RD is a Dominican hair care company founded by Anthony Figueroa, Crystal Figueroa, and Evelyn. We built an AI advisor, a coding foundation, and a campaign for people who can't afford their hair care.">
+<meta property="og:title" content="About Support RD">
+<meta property="og:description" content="Dominican hair care. AI technology. A family company building real tools for real people.">
+<meta property="og:type" content="website">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://aria.supportrd.com/about">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   SUPPORT RD — ABOUT US
+   Style: Magazine editorial. Warm cream + near-black + rose accent.
+   Playfair Display headlines. DM Sans body. 
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --ink:     #0d0906;
+  --cream:   #f5f0eb;
+  --warm:    #ece6df;
+  --rose:    #c1a3a2;
+  --rose2:   #9d7f6a;
+  --gold:    #b8860b;
+  --gold2:   #d4a85a;
+  --night:   #0a0705;
+  --night2:  #14100d;
+  --muted:   rgba(13,9,6,0.45);
+  --border:  rgba(193,163,162,0.25);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+/* ─── TICKER ─────────────────────────────────────────────────── */
+.ticker {
+  background: var(--ink);
+  padding: 9px 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ticker-inner {
+  display: inline-flex;
+  animation: tickerRoll 22s linear infinite;
+}
+.ticker-pill {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--rose);
+  padding: 0 28px;
+}
+@keyframes tickerRoll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ─── NAV ────────────────────────────────────────────────────── */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(245,240,235,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-style: italic;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 700;
+}
+.nav-links {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+.nav-links a {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--ink); }
+.nav-cta {
+  background: var(--ink) !important;
+  color: var(--cream) !important;
+  padding: 8px 20px !important;
+  border-radius: 30px !important;
+  letter-spacing: 0.1em !important;
+}
+.nav-cta:hover { background: var(--rose2) !important; }
+@media (max-width: 600px) {
+  nav { padding: 0 20px; }
+  .nav-links { gap: 16px; }
+  .nav-links a:not(.nav-cta):not(:last-child) { display: none; }
+}
+
+/* ─── HERO ───────────────────────────────────────────────────── */
+.hero {
+  background: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 80px 60px 72px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Grain texture overlay */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 200px;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Radial glow */
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -120px;
+  left: -80px;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(193,163,162,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--rose);
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hero-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 32px;
+  height: 1px;
+  background: var(--rose);
+}
+
+.hero-headline {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(52px, 8vw, 110px);
+  font-weight: 900;
+  color: var(--cream);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 32px;
+}
+.hero-headline em {
+  font-style: italic;
+  color: var(--rose);
+}
+
+.hero-sub {
+  font-size: 16px;
+  color: rgba(245,240,235,0.55);
+  line-height: 1.75;
+  max-width: 520px;
+  position: relative;
+  z-index: 2;
+  font-weight: 300;
+}
+
+.hero-scroll {
+  position: absolute;
+  bottom: 40px;
+  right: 60px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(193,163,162,0.5);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  writing-mode: vertical-rl;
+  z-index: 2;
+  animation: scrollBob 2.5s ease-in-out infinite;
+}
+@keyframes scrollBob {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+@media (max-width: 600px) {
+  .hero { padding: 60px 28px 56px; }
+  .hero-scroll { display: none; }
+}
+
+/* ─── SECTION SHARED ─────────────────────────────────────────── */
+.section {
+  padding: 100px 60px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+@media (max-width: 600px) { .section { padding: 64px 24px; } }
+
+.eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--rose2);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: var(--rose2);
+}
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+.section-title em { font-style: italic; color: var(--rose2); }
+
+.section-body {
+  font-size: 17px;
+  line-height: 1.85;
+  color: rgba(13,9,6,0.7);
+  font-weight: 300;
+  max-width: 680px;
+}
+.section-body strong { font-weight: 600; color: var(--ink); }
+
+/* ─── DIVIDER ────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 60px;
+}
+@media (max-width: 600px) { .divider { margin: 0 24px; } }
+
+/* ─── WHO WE ARE — 2-col layout ──────────────────────────────── */
+.who-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: start;
+  margin-top: 48px;
+}
+@media (max-width: 768px) { .who-grid { grid-template-columns: 1fr; gap: 40px; } }
+
+.who-stat-col {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.who-stat {
+  padding: 24px 28px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(13,9,6,0.04);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.who-stat:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 40px rgba(13,9,6,0.08);
+}
+.who-stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--rose2);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.who-stat-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.who-stat-desc {
+  font-size: 14px;
+  color: rgba(13,9,6,0.6);
+  line-height: 1.65;
+  margin-top: 8px;
+}
+
+.who-quote {
+  margin-top: 40px;
+  padding: 32px 36px;
+  background: var(--ink);
+  border-radius: 20px;
+  position: relative;
+}
+.who-quote::before {
+  content: '\201C';
+  font-family: 'Playfair Display', serif;
+  font-size: 120px;
+  color: rgba(193,163,162,0.15);
+  position: absolute;
+  top: -10px;
+  left: 20px;
+  line-height: 1;
+}
+.who-quote-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-style: italic;
+  color: var(--cream);
+  line-height: 1.6;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 16px;
+}
+.who-quote-attr {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rose);
+}
+
+/* ─── TEAM SECTION — dark bg ─────────────────────────────────── */
+.team-section {
+  background: var(--ink);
+  padding: 100px 60px;
+}
+@media (max-width: 600px) { .team-section { padding: 64px 24px; } }
+
+.team-inner { max-width: 1100px; margin: 0 auto; }
+
+.team-section .eyebrow { color: var(--rose); }
+.team-section .eyebrow::before { background: var(--rose); }
+.team-section .section-title { color: var(--cream); }
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 56px;
+}
+@media (max-width: 768px) { .team-grid { grid-template-columns: 1fr; } }
+
+.team-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(193,163,162,0.15);
+  border-radius: 20px;
+  padding: 36px 28px;
+  transition: transform 0.3s, border-color 0.3s;
+}
+.team-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(193,163,162,0.35);
+}
+
+.team-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 700;
+  color: #fff;
+}
+.avatar-anthony { background: linear-gradient(135deg, #c1a3a2, #9d7f6a); }
+.avatar-crystal  { background: linear-gradient(135deg, #d4a85a, #b8860b); }
+.avatar-evelyn   { background: linear-gradient(135deg, #a8c5c1, #6a9d99); }
+
+.team-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 4px;
+}
+.team-role {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rose);
+  margin-bottom: 16px;
+}
+.team-bio {
+  font-size: 14px;
+  color: rgba(245,240,235,0.55);
+  line-height: 1.75;
+  font-weight: 300;
+}
+.team-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 18px;
+}
+.team-tag {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rose);
+  border: 1px solid rgba(193,163,162,0.25);
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+
+/* ─── PRODUCTS SECTION ───────────────────────────────────────── */
+.products-section {
+  padding: 100px 60px;
+  background: var(--warm);
+}
+.products-inner { max-width: 1100px; margin: 0 auto; }
+@media (max-width: 600px) { .products-section { padding: 64px 24px; } }
+
+.products-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: end;
+  margin-bottom: 60px;
+}
+@media (max-width: 768px) { .products-header { grid-template-columns: 1fr; } }
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) { .products-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .products-grid { grid-template-columns: 1fr; } }
+
+.prod-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.prod-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--rose), var(--gold2));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.prod-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(13,9,6,0.10);
+}
+.prod-card:hover::before { opacity: 1; }
+
+.prod-emoji {
+  font-size: 32px;
+  margin-bottom: 14px;
+  display: block;
+}
+.prod-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.prod-price {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--rose2);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+.prod-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: 18px;
+}
+.prod-best {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rose2);
+  background: rgba(193,163,162,0.1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+.prod-link {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--cream);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border-radius: 30px;
+  text-decoration: none;
+  transition: background 0.3s;
+}
+.prod-link:hover { background: var(--rose2); }
+
+.prod-card.featured {
+  background: var(--ink);
+  grid-column: span 1;
+}
+.prod-card.featured .prod-name { color: var(--cream); }
+.prod-card.featured .prod-price { color: var(--gold2); }
+.prod-card.featured .prod-desc { color: rgba(245,240,235,0.55); }
+.prod-card.featured .prod-best { color: var(--gold2); border-color: rgba(212,168,90,0.3); background: rgba(212,168,90,0.1); }
+.prod-card.featured .prod-link { background: var(--rose); }
+.prod-card.featured .prod-link:hover { background: var(--rose2); }
+
+/* ─── CAMPAIGNS STRIP ────────────────────────────────────────── */
+.campaigns-strip {
+  background: linear-gradient(135deg, #0f0b08, #1a1208);
+  padding: 64px 60px;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+}
+@media (max-width: 600px) { .campaigns-strip { padding: 48px 24px; } }
+
+.campaign-card {
+  flex: 1;
+  min-width: 260px;
+  max-width: 380px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(193,163,162,0.15);
+  border-radius: 20px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+}
+.campaign-icon { font-size: 36px; margin-bottom: 16px; }
+.campaign-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 10px;
+}
+.campaign-desc {
+  font-size: 14px;
+  color: rgba(245,240,235,0.5);
+  line-height: 1.75;
+  font-weight: 300;
+  flex: 1;
+  margin-bottom: 24px;
+}
+.campaign-btn {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  font-weight: 600;
+  align-self: flex-start;
+  transition: opacity 0.2s;
+}
+.campaign-btn:hover { opacity: 0.8; }
+.btn-gold { background: var(--gold2); color: #0d0906; }
+.btn-blue { background: #60a8ff; color: #0d0906; }
+
+/* ─── CODING FOUNDATION — dramatic dark section ───────────────── */
+.coding-section {
+  background: var(--ink);
+  padding: 100px 60px;
+  position: relative;
+  overflow: hidden;
+}
+.coding-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 2; }
+
+/* Large decorative number */
+.coding-section::before {
+  content: '</>';
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'DM Mono', monospace;
+  font-size: 220px;
+  color: rgba(193,163,162,0.04);
+  pointer-events: none;
+  line-height: 1;
+}
+@media (max-width: 600px) { .coding-section { padding: 64px 24px; } }
+
+.coding-section .eyebrow { color: var(--gold2); }
+.coding-section .eyebrow::before { background: var(--gold2); }
+.coding-section .section-title { color: var(--cream); }
+
+.coding-statement {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(22px, 3vw, 36px);
+  font-style: italic;
+  color: rgba(245,240,235,0.75);
+  line-height: 1.5;
+  max-width: 720px;
+  margin: 28px 0 48px;
+  font-weight: 400;
+}
+.coding-statement strong { color: var(--gold2); font-style: normal; }
+
+.coding-timestamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(212,168,90,0.1);
+  border: 1px solid rgba(212,168,90,0.25);
+  border-radius: 30px;
+  padding: 10px 18px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--gold2);
+  letter-spacing: 0.08em;
+  margin-bottom: 48px;
+}
+
+.coding-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 48px;
+}
+@media (max-width: 900px) { .coding-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .coding-grid { grid-template-columns: 1fr; } }
+
+.coding-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(212,168,90,0.12);
+  border-radius: 14px;
+  padding: 22px 20px;
+  transition: border-color 0.3s, background 0.3s;
+}
+.coding-card:hover {
+  border-color: rgba(212,168,90,0.3);
+  background: rgba(212,168,90,0.06);
+}
+.coding-card-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: rgba(212,168,90,0.5);
+  margin-bottom: 10px;
+}
+.coding-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cream);
+  margin-bottom: 6px;
+}
+.coding-card-desc {
+  font-size: 12px;
+  color: rgba(245,240,235,0.4);
+  line-height: 1.65;
+}
+
+.coding-cta-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.coding-btn-primary {
+  background: var(--gold2);
+  color: var(--ink);
+  padding: 14px 32px;
+  border-radius: 30px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+.coding-btn-primary:hover { opacity: 0.85; }
+.coding-btn-ghost {
+  color: rgba(245,240,235,0.5);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(245,240,235,0.2);
+  padding-bottom: 2px;
+  transition: color 0.2s;
+}
+.coding-btn-ghost:hover { color: var(--cream); }
+
+/* ─── FOOTER ─────────────────────────────────────────────────── */
+footer {
+  background: #070503;
+  padding: 56px 60px 40px;
+  border-top: 1px solid rgba(193,163,162,0.1);
+}
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 60px;
+  margin-bottom: 48px;
+}
+@media (max-width: 768px) { .footer-inner { grid-template-columns: 1fr; gap: 32px; } }
+
+.footer-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 12px;
+}
+.footer-tagline {
+  font-size: 13px;
+  color: rgba(245,240,235,0.4);
+  line-height: 1.7;
+  font-weight: 300;
+  max-width: 300px;
+}
+.footer-col-title {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--rose);
+  margin-bottom: 16px;
+}
+.footer-col a {
+  display: block;
+  font-size: 13px;
+  color: rgba(245,240,235,0.45);
+  text-decoration: none;
+  margin-bottom: 10px;
+  transition: color 0.2s;
+}
+.footer-col a:hover { color: var(--cream); }
+.footer-bottom {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 1px solid rgba(193,163,162,0.08);
+  padding-top: 24px;
+}
+.footer-copy {
+  font-size: 11px;
+  color: rgba(245,240,235,0.2);
+  letter-spacing: 0.08em;
+}
+.footer-dem {
+  font-size: 10px;
+  color: rgba(193,163,162,0.35);
+  letter-spacing: 0.1em;
+}
+@media (max-width: 600px) { footer { padding: 48px 24px 32px; } }
+
+/* ─── SCROLL REVEAL ANIMATIONS ───────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-d1 { transition-delay: 0.1s; }
+.reveal-d2 { transition-delay: 0.2s; }
+.reveal-d3 { transition-delay: 0.3s; }
+.reveal-d4 { transition-delay: 0.4s; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TICKER ═══════════════════════════════════════════════════ -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <span class="ticker-pill">✦ Support RD</span>
+    <span class="ticker-pill">✦ Dominican Hair Care</span>
+    <span class="ticker-pill">✦ AI Advisor Aria</span>
+    <span class="ticker-pill">✦ Coding Foundation</span>
+    <span class="ticker-pill">✦ Campaign for the Poor</span>
+    <span class="ticker-pill">✦ Auto Dissolve Bar</span>
+    <span class="ticker-pill">✦ supportrd.com</span>
+    <span class="ticker-pill">✦ Support RD</span>
+    <span class="ticker-pill">✦ Dominican Hair Care</span>
+    <span class="ticker-pill">✦ AI Advisor Aria</span>
+    <span class="ticker-pill">✦ Coding Foundation</span>
+    <span class="ticker-pill">✦ Campaign for the Poor</span>
+    <span class="ticker-pill">✦ Auto Dissolve Bar</span>
+    <span class="ticker-pill">✦ supportrd.com</span>
+  </div>
+</div>
+
+<!-- ═══ NAV ══════════════════════════════════════════════════════ -->
+<nav>
+  <a href="https://aria.supportrd.com" class="nav-logo">Support RD</a>
+  <div class="nav-links">
+    <a href="#who">Who We Are</a>
+    <a href="#team">Team</a>
+    <a href="#products">Products</a>
+    <a href="#coding">Coding</a>
+    <a href="https://aria.supportrd.com" class="nav-cta">Open Aria →</a>
+  </div>
+</nav>
+
+<!-- ═══ HERO ══════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-eyebrow">About Support RD</div>
+  <h1 class="hero-headline">
+    Real tools<br>for real<br><em>people.</em>
+  </h1>
+  <p class="hero-sub">
+    We started with hair care. We built an AI advisor named Aria. 
+    We're expanding into technology education, smart products, 
+    and tools for the people who need them most.
+    Born in the Dominican Republic. Built for the world.
+  </p>
+  <div class="hero-scroll">Scroll to explore</div>
+</section>
+
+<!-- ═══ WHO WE ARE ════════════════════════════════════════════════ -->
+<section class="section" id="who">
+  <div class="eyebrow reveal">✦ Our Story</div>
+  <h2 class="section-title reveal reveal-d1">
+    We didn't plan<br>any of <em>this.</em>
+  </h2>
+
+  <div class="who-grid">
+    <div>
+      <p class="section-body reveal reveal-d2">
+        Support is a product company built on one belief — that real people deserve real tools. 
+        We started with hair care when Evelyn developed the original Shampoo Aloe & Romero 
+        from a Dominican grandmother's formula: raw aloe vera and rosemary, 
+        the herb generations have trusted to wake up sleeping follicles.
+      </p>
+      <p class="section-body reveal reveal-d3" style="margin-top:24px;">
+        That shampoo became the foundation of Support RD. Then came the products. 
+        Then came the question: <strong>what if an AI could learn your hair the way a stylist does?</strong> 
+        That question became Aria — our AI hair advisor that knows your routine, 
+        your products, and your goals as deeply as you do.
+      </p>
+      <p class="section-body reveal reveal-d4" style="margin-top:24px;">
+        Every piece of this — from the shampoo Evelyn invented, to the app Crystal and Anthony are growing, 
+        to the campaign for people who cannot afford hair care, to the dissolve bar we are trying 
+        to get shipped affordably — <strong>none of it was fully planned. All of it was placed.</strong>
+      </p>
+      <div class="who-quote reveal" style="margin-top:40px;">
+        <div class="who-quote-text">
+          "Allahwazaweje was in this. The energy was real. 
+          The confirmation was quiet but loud. Keep going."
+        </div>
+        <div class="who-quote-attr">Anthony Figueroa — Anthony Blogger</div>
+      </div>
+    </div>
+
+    <div class="who-stat-col">
+      <div class="who-stat reveal reveal-d1">
+        <div class="who-stat-num">6+</div>
+        <div class="who-stat-label">Products in the line</div>
+        <div class="who-stat-desc">From cleansing shampoos to scalp droppers — every formula is natural, Dominican-rooted, and built for real results.</div>
+      </div>
+      <div class="who-stat reveal reveal-d2">
+        <div class="who-stat-num">Aria</div>
+        <div class="who-stat-label">AI Hair Advisor</div>
+        <div class="who-stat-desc">An AI that learns your hair at the level of a professional stylist — your routine, your concerns, your transformation over time.</div>
+      </div>
+      <div class="who-stat reveal reveal-d3">
+        <div class="who-stat-num">DR</div>
+        <div class="who-stat-label">Dominican Republic — Origin</div>
+        <div class="who-stat-desc">The formulas, the philosophy, the founding family. Everything rooted in Dominican hair culture and brought to the world.</div>
+      </div>
+      <div class="who-stat reveal reveal-d4">
+        <div class="who-stat-num">3</div>
+        <div class="who-stat-label">Founders building together</div>
+        <div class="who-stat-desc">Anthony, Crystal, and Evelyn — design, operations, and the original formula that started all of it.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══ TEAM ══════════════════════════════════════════════════════ -->
+<section class="team-section" id="team">
+  <div class="team-inner">
+    <div class="eyebrow reveal">✦ The People</div>
+    <h2 class="section-title reveal reveal-d1">
+      Three people.<br>One <em>company.</em>
+    </h2>
+
+    <div class="team-grid">
+      <div class="team-card reveal reveal-d1">
+        <div class="team-avatar avatar-anthony">A</div>
+        <div class="team-name">Anthony Figueroa</div>
+        <div class="team-role">Design &amp; Creative Direction · Anthony Blogger</div>
+        <p class="team-bio">
+          The architect of Support RD's digital presence. Anthony built the app, 
+          the AI system, and the brand from the ground up — often deep in code at 3am 
+          when the energy was right. He writes as Anthony Blogger, a voice about 
+          building, faith, and what happens when you trust the process completely.
+        </p>
+        <div class="team-tags">
+          <span class="team-tag">App Development</span>
+          <span class="team-tag">Creative Direction</span>
+          <span class="team-tag">Anthony Blogger</span>
+        </div>
+      </div>
+
+      <div class="team-card reveal reveal-d2">
+        <div class="team-avatar avatar-crystal">C</div>
+        <div class="team-name">Crystal Figueroa</div>
+        <div class="team-role">Co-CEO · Operations</div>
+        <p class="team-bio">
+          Crystal runs the operations side of Support RD — the business decisions, 
+          the customer relationships, and the day-to-day reality of growing a product 
+          company from a family idea into something real. The steady hand that keeps 
+          everything moving forward.
+        </p>
+        <div class="team-tags">
+          <span class="team-tag">Co-CEO</span>
+          <span class="team-tag">Operations</span>
+          <span class="team-tag">Business Strategy</span>
+        </div>
+      </div>
+
+      <div class="team-card reveal reveal-d3">
+        <div class="team-avatar avatar-evelyn">E</div>
+        <div class="team-name">Evelyn</div>
+        <div class="team-role">Co-CEO · Shampoo Inventor</div>
+        <p class="team-bio">
+          Evelyn invented the shampoo that started everything. The original 
+          Aloe & Romero formula is hers — born from Dominican tradition and 
+          a deep knowledge of what natural hair needs. Without that formula, 
+          there is no Support RD. She is the origin.
+        </p>
+        <div class="team-tags">
+          <span class="team-tag">Co-CEO</span>
+          <span class="team-tag">Product Inventor</span>
+          <span class="team-tag">Formula Creator</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PRODUCTS ══════════════════════════════════════════════════ -->
+<section class="products-section" id="products">
+  <div class="products-inner">
+    <div class="products-header">
+      <div>
+        <div class="eyebrow reveal">✦ The Products</div>
+        <h2 class="section-title reveal reveal-d1">
+          Natural.<br><em>Dominican.</em><br>Real results.
+        </h2>
+      </div>
+      <div>
+        <p class="section-body reveal reveal-d2">
+          Every formula starts with what Dominican grandmothers already knew — 
+          aloe vera, rosemary, natural extracts. We didn't reinvent anything. 
+          We made it accessible, precise, and backed by an AI that knows 
+          exactly which one you need.
+        </p>
+      </div>
+    </div>
+
+    <div class="products-grid">
+      <div class="prod-card featured reveal reveal-d1">
+        <span class="prod-emoji">💊</span>
+        <div class="prod-name">Formula Exclusiva</div>
+        <div class="prod-price">$55</div>
+        <p class="prod-desc">All-in-one treatment. The flagship. Built for damaged, weak, breaking, thinning, and severely dry hair. This is where most transformations start.</p>
+        <span class="prod-best">Best for damaged hair</span><br>
+        <a href="https://supportrd.com/products/formula-exclusiva" class="prod-link" target="_blank">Shop Now</a>
+      </div>
+
+      <div class="prod-card reveal reveal-d2">
+        <span class="prod-emoji">💧</span>
+        <div class="prod-name">Gotero Rápido</div>
+        <div class="prod-price">$55</div>
+        <p class="prod-desc">Scalp dropper for nightly use. Hair loss, slow growth, scalp issues — this goes directly to the source.</p>
+        <span class="prod-best">Best for hair growth</span><br>
+        <a href="https://supportrd.com/products/gotero-rapido" class="prod-link" target="_blank">Shop Now</a>
+      </div>
+
+      <div class="prod-card reveal reveal-d3">
+        <span class="prod-emoji">✨</span>
+        <div class="prod-name">Gotitas Brillantes</div>
+        <div class="prod-price">$30</div>
+        <p class="prod-desc">Finishing drops for shine and frizz control. The final step in any routine that wants to end perfectly.</p>
+        <span class="prod-best">Best for shine & frizz</span><br>
+        <a href="https://supportrd.com/products/gotitas-brillantes" class="prod-link" target="_blank">Shop Now</a>
+      </div>
+
+      <div class="prod-card reveal reveal-d1">
+        <span class="prod-emoji">🥑</span>
+        <div class="prod-name">Mascarilla Natural</div>
+        <div class="prod-price">$25</div>
+        <p class="prod-desc">Deep conditioning mask. For hair that needs serious moisture and nourishment from the inside out.</p>
+        <span class="prod-best">Best for deep conditioning</span><br>
+        <a href="https://supportrd.com/products/mascarilla-avocado" class="prod-link" target="_blank">Shop Now</a>
+      </div>
+
+      <div class="prod-card reveal reveal-d2">
+        <span class="prod-emoji">🌱</span>
+        <div class="prod-name">Shampoo Aloe & Romero</div>
+        <div class="prod-price">$20</div>
+        <p class="prod-desc">The original. Evelyn's formula. Scalp stimulation, daily cleanse, growth activation. This is where Support RD began.</p>
+        <span class="prod-best">The original formula</span><br>
+        <a href="https://supportrd.com/products/shampoo-aloe-vera" class="prod-link" target="_blank">Shop Now</a>
+      </div>
+
+      <div class="prod-card reveal reveal-d3" style="background:linear-gradient(135deg,#0f0b08,#1a1208);border-color:rgba(212,168,90,0.25);">
+        <span class="prod-emoji">⭐</span>
+        <div class="prod-name" style="color:var(--cream);">Premium Subscription</div>
+        <div class="prod-price" style="color:var(--gold2);">$35 / month</div>
+        <p class="prod-desc" style="color:rgba(245,240,235,0.5);">Unlock Aria's full intelligence. Unlimited conversations, photo analysis, progress tracking, and a personal hair routine that evolves with you.</p>
+        <span class="prod-best" style="color:var(--gold2);border-color:rgba(212,168,90,0.25);background:rgba(212,168,90,0.08);">Unlock everything</span><br>
+        <a href="https://supportrd.com/products/hair-advisor-premium" class="prod-link" target="_blank" style="background:var(--gold2);color:#0d0906;">Get Premium</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CAMPAIGNS ═════════════════════════════════════════════════ -->
+<div class="campaigns-strip">
+  <div class="campaign-card reveal reveal-d1">
+    <div class="campaign-icon">🫶</div>
+    <div class="campaign-name">Campaign for the Poor</div>
+    <p class="campaign-desc">Hair care is not a luxury — it's part of feeling human. We are building a program to give affordable access to Support RD products to families who cannot afford them. If you want to help us fund this, reach out directly.</p>
+    <a href="mailto:hello@supportrd.com?subject=Campaign for the Poor — I want to help" class="campaign-btn btn-gold">Donate Now</a>
+  </div>
+  <div class="campaign-card reveal reveal-d2">
+    <div class="campaign-icon">🧼</div>
+    <div class="campaign-name">Auto Dissolve Bar</div>
+    <p class="campaign-desc">We have a product that dissolves automatically — zero waste, zero mess, revolutionary for the hair care space. What we need is a shipping partner who can help us get it to the world affordably. If that's you, let's talk.</p>
+    <a href="mailto:hello@supportrd.com?subject=Auto Dissolve Bar — Shipping Partnership" class="campaign-btn btn-blue">Partner With Us</a>
+  </div>
+</div>
+
+<!-- ═══ CODING FOUNDATION ═════════════════════════════════════════ -->
+<section class="coding-section" id="coding">
+  <div class="coding-inner">
+    <div class="eyebrow reveal">✦ The Foundation</div>
+    <h2 class="section-title reveal reveal-d1">
+      SupportRD built a<br>learning environment<br>for <em>Coders Everywhere.</em>
+    </h2>
+
+    <p class="coding-statement reveal reveal-d2">
+      Anthony Figueroa didn't set out to teach coding. He set out to build a product. 
+      And then he documented <strong>everything</strong> — every route, every bug, 
+      every 3am breakthrough — because he believed that if he could learn this, 
+      anyone could.
+    </p>
+
+    <div class="coding-timestamp reveal reveal-d3">
+      <span>⏱</span>
+      <span>Official Timestamp — Support RD Coding Foundation Est. 2024</span>
+    </div>
+
+    <div class="coding-grid">
+      <div class="coding-card reveal reveal-d1">
+        <div class="coding-card-num">01 — Flask</div>
+        <div class="coding-card-title">Backend with Python</div>
+        <div class="coding-card-desc">Routes, databases, authentication, APIs. Built from zero, documented as it happened.</div>
+      </div>
+      <div class="coding-card reveal reveal-d2">
+        <div class="coding-card-num">02 — AI Integration</div>
+        <div class="coding-card-title">Claude API in Production</div>
+        <div class="coding-card-desc">How to build a real AI product — system prompts, context management, streaming responses.</div>
+      </div>
+      <div class="coding-card reveal reveal-d3">
+        <div class="coding-card-num">03 — Full Stack</div>
+        <div class="coding-card-title">JavaScript + CSS + HTML</div>
+        <div class="coding-card-desc">Every UI element — scroll animations, GPS systems, real-time feeds — built and explained.</div>
+      </div>
+      <div class="coding-card reveal reveal-d4">
+        <div class="coding-card-num">04 — Deploy</div>
+        <div class="coding-card-title">Render + GitHub + Shopify</div>
+        <div class="coding-card-desc">How to go from code on a screen to a real product that real people are using right now.</div>
+      </div>
+    </div>
+
+    <div class="coding-cta-row reveal">
+      <a href="https://aria.supportrd.com/blog" class="coding-btn-primary">Read the Blog</a>
+      <a href="mailto:hello@supportrd.com?subject=Coding Foundation" class="coding-btn-ghost">Contact Anthony →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ════════════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">Support RD</div>
+      <p class="footer-tagline">
+        Dominican hair care. AI technology. A family company building 
+        real tools for real people. Born in the DR, built for the world.
+      </p>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Company</div>
+      <a href="#who">About Us</a>
+      <a href="#team">The Team</a>
+      <a href="#coding">Coding Foundation</a>
+      <a href="https://aria.supportrd.com/blog">Blog</a>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Get Started</div>
+      <a href="https://supportrd.com/collections/all">Shop Products</a>
+      <a href="https://aria.supportrd.com">Open Aria</a>
+      <a href="https://supportrd.com/products/hair-advisor-premium">Go Premium</a>
+      <a href="mailto:hello@supportrd.com">Contact Us</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 Support RD. All rights reserved. hello@supportrd.com</div>
+    <div class="footer-dem">🫏 Affiliated: Democratic Party · Ban Pornography on the Internet · Campaign for the Poor</div>
+  </div>
+</footer>
+
+<script>
+// ── Scroll reveal ─────────────────────────────────────────────────
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting){
+      entry.target.classList.add('visible');
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ── Smooth nav scroll for anchor links ───────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.getAttribute('href'));
+    if(target){ e.preventDefault(); target.scrollIntoView({behavior:'smooth', block:'start'}); }
+  });
+});
+
+// ── Make hero scroll indicator disappear on first scroll ─────────
+window.addEventListener('scroll', () => {
+  const hint = document.querySelector('.hero-scroll');
+  if(hint && window.scrollY > 100) hint.style.opacity = '0';
+}, { passive: true });
+</script>
+</body>
+</html>
+""", mimetype="text/html")
 
 @app.route("/login")
 def login_page():
@@ -3286,7 +4494,7 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
     <div style="font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#c1a3a2;margin-bottom:8px;font-family:'Jost',sans-serif;">✦ Foundation</div>
     <div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-style:italic;color:#fff;margin-bottom:8px;">SupportRD created a learning environment for Coders Everywhere.</div>
     <div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.65;font-family:'Jost',sans-serif;margin-bottom:14px;">Built by Anthony Figueroa — the full story of how a hair care company became a coding foundation for real people who want to build real things.</div>
-    <a href="/about#coding" style="display:inline-block;background:#c1a3a2;color:#0d0906;font-family:'Jost',sans-serif;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;padding:10px 20px;border-radius:20px;text-decoration:none;font-weight:500;">Read the Full Story →</a>
+    <a href="/about#coding" target="_blank" style="display:inline-block;background:#c1a3a2;color:#0d0906;font-family:'Jost',sans-serif;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;padding:10px 20px;border-radius:20px;text-decoration:none;font-weight:500;">Read the Full Story →</a>
   </div>
 </div>
 
@@ -3393,7 +4601,7 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
 <!-- ── GLOBAL FOOTER ───────────────────────────────────────── -->
 <div class="global-footer">
   <div class="gf-links">
-    <a href="/about">About Us</a>
+    <a href="/about" target="_blank">About Us</a>
     <a href="#team" onclick="document.querySelector('.team-block').scrollIntoView({{behavior:'smooth'}});return false;">Team</a>
     <a href="#coding" onclick="document.querySelector('.coding-block').scrollIntoView({{behavior:'smooth'}});return false;">Coding Guide</a>
     <a href="https://supportrd.com" target="_blank">Shop</a>
@@ -4170,7 +5378,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab" onclick="switchPTab('journal')">✦ Journal</div>
     <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
     <div class="nav-tab" onclick="switchPTab('settings')">⚙ Settings</div>
-    <a class="nav-tab" href="/login#about" target="_blank" style="text-decoration:none;color:inherit;">About</a>
+    <a class="nav-tab" href="/about" target="_blank" style="text-decoration:none;color:inherit;">About</a>
   </div>
   <button onclick="switchPTab('drive')" id="drive-nav-btn" style="background:linear-gradient(135deg,#ff6eb4,#ff4500);color:#fff;border:none;border-radius:24px;padding:10px 22px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;letter-spacing:0.06em;cursor:pointer;box-shadow:0 3px 18px rgba(255,100,50,0.5);transition:all 0.2s;white-space:nowrap;">
     🚗 Hands-Free Drive
