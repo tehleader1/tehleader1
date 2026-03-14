@@ -890,6 +890,14 @@ def index():
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="msvalidate.01" content="3F286CDF7ADFCEB2065F8D5EA5DE84F3">
 <meta name="google-site-verification" content="google65f6d985572e55c5">
+<meta name="description" content="AI hair care advisor by SupportRD. Professional Dominican hair care advice, personalized routines, and product recommendations.">
+<meta name="keywords" content="hair care, hair advisor, Dominican hair, natural hair, beauty, shampoo, conditioner">
+<meta name="rating" content="general">
+<meta name="category" content="Health and Beauty">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SupportRD Hair Advisor">
+<meta property="og:title" content="Aria — SupportRD Hair Advisor">
+<meta property="og:description" content="Professional AI hair care advice. Family friendly.">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Aria">
 <link rel="manifest" href="/manifest.json">
@@ -3010,8 +3018,49 @@ def ping():
     return jsonify({"ok": True, "status": "awake"})
 
 
-# ── LOGIN PAGE ────────────────────────────────────────────────────────────────
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+@app.route("/robots.txt")
+def robots_txt():
+    body = "\n".join([
+        "User-agent: *",
+        "Allow: /",
+        "Sitemap: https://aria.supportrd.com/sitemap.xml",
+        ""
+    ])
+    return Response(body, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap():
+    body = '<?xml version="1.0" encoding="UTF-8"?>'
+    body += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+    body += '<url><loc>https://aria.supportrd.com/</loc><priority>1.0</priority></url>'
+    body += '<url><loc>https://aria.supportrd.com/login</loc><priority>0.8</priority></url>'
+    body += '<url><loc>https://aria.supportrd.com/dashboard</loc><priority>0.8</priority></url>'
+    body += '<url><loc>https://aria.supportrd.com/blog</loc><priority>0.7</priority></url>'
+    body += '</urlset>'
+    return Response(body, mimetype="application/xml")
+
+
+@app.route("/health")
+def health_check():
+    body = (
+        '<!DOCTYPE html><html><head>'
+        '<meta charset="UTF-8">'
+        '<meta name="description" content="SupportRD Hair Advisor - Professional AI hair care advice">'
+        '<meta name="keywords" content="hair care, hair advisor, Dominican hair, natural hair, beauty">'
+        '<meta name="rating" content="general">'
+        '<meta name="category" content="Health and Beauty">'
+        '<title>SupportRD Hair Advisor — Health &amp; Beauty</title>'
+        '</head><body style="font-family:sans-serif;padding:40px;max-width:600px;margin:0 auto">'
+        '<h1>SupportRD Hair Advisor</h1>'
+        '<p>Professional AI-powered hair care advice for the whole family.</p>'
+        '<p><strong>Category:</strong> Health and Beauty</p>'
+        '<p><strong>Rating:</strong> General — Family Friendly</p>'
+        '<p><strong>Status:</strong> Online</p>'
+        '<p><a href="https://supportrd.com">supportrd.com</a> &mdash; <a href="mailto:hello@supportrd.com">hello@supportrd.com</a></p>'
+        '</body></html>'
+    )
+    return Response(body, mimetype="text/html")
 
 @app.route("/login")
 def login_page():
