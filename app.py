@@ -3822,14 +3822,18 @@ body::before{content:'';position:fixed;inset:0;
 /* Pulse (hidden until active) */
 .aj-orb-pulse{position:absolute;inset:-8px;border-radius:50%;opacity:0;pointer-events:none;}
 /* ACTIVE STATE */
-.aj-orb.active .aj-orb-inner{background:radial-gradient(circle at 35% 35%,color-mix(in srgb,var(--orb-color) 90%,#fff),var(--orb-color));border-color:var(--orb-color);box-shadow:0 0 0 0px rgba(var(--orb-rgb),0.5),0 8px 32px rgba(var(--orb-rgb),0.45),inset 0 1px 0 rgba(255,255,255,0.25);}
-.aj-orb.active .aj-orb-num{color:#fff;font-size:20px;}
-.aj-orb.active .aj-orb-icon{opacity:1;}
-.aj-orb.active .aj-orb-ring{border-color:rgba(var(--orb-rgb),0.5);transform:scale(1.1);}
-.aj-orb.active .aj-orb-pulse{animation:ajPulse 2.4s ease-out infinite;background:radial-gradient(circle,rgba(var(--orb-rgb),0.25),transparent 70%);}
-/* CURRENT (brightest glow) */
-.aj-orb.current .aj-orb-inner{box-shadow:0 0 0 4px rgba(var(--orb-rgb),0.3),0 8px 40px rgba(var(--orb-rgb),0.6),0 0 80px rgba(var(--orb-rgb),0.2),inset 0 1px 0 rgba(255,255,255,0.3);}
-.aj-orb.current .aj-orb-pulse{animation:ajPulse 1.8s ease-out infinite;}
+.aj-orb.active .aj-orb-inner{background:radial-gradient(circle at 32% 28%,rgba(255,255,255,0.6) 0%,var(--orb-color) 50%,rgba(0,0,0,0.25) 100%);border-color:var(--orb-color);border-width:3px;box-shadow:0 0 0 4px rgba(var(--orb-rgb),0.18),0 0 22px rgba(var(--orb-rgb),0.75),0 0 55px rgba(var(--orb-rgb),0.4),inset 0 2px 4px rgba(255,255,255,0.35);}
+.aj-orb.active .aj-orb-num{color:#fff;font-size:22px;font-weight:900;text-shadow:0 0 12px rgba(255,255,255,0.9);}
+.aj-orb.active .aj-orb-icon{opacity:1;filter:drop-shadow(0 0 5px rgba(255,255,255,0.7));}
+.aj-orb.active .aj-orb-ring{border-color:rgba(var(--orb-rgb),0.65);transform:scale(1.16);border-width:2px;}
+.aj-orb.active .aj-orb-pulse{animation:ajPulse 2.4s ease-out infinite;background:radial-gradient(circle,rgba(var(--orb-rgb),0.35),transparent 70%);}
+/* CURRENT (brightest glow — pulsing) */
+.aj-orb.current .aj-orb-inner{animation:orbCurrentPulse 2s ease-in-out infinite;}
+.aj-orb.current .aj-orb-pulse{animation:ajPulse 1.6s ease-out infinite;}
+@keyframes orbCurrentPulse{
+  0%,100%{box-shadow:0 0 0 6px rgba(var(--orb-rgb),0.25),0 0 30px rgba(var(--orb-rgb),0.9),0 0 65px rgba(var(--orb-rgb),0.5),inset 0 2px 4px rgba(255,255,255,0.35);}
+  50%{box-shadow:0 0 0 12px rgba(var(--orb-rgb),0.12),0 0 55px rgba(var(--orb-rgb),1),0 0 100px rgba(var(--orb-rgb),0.6),inset 0 2px 4px rgba(255,255,255,0.4);}
+}
 /* LOCKED */
 .aj-orb.locked .aj-orb-inner{opacity:0.25;filter:grayscale(1);}
 /* Tier body */
@@ -4968,14 +4972,388 @@ body::before{content:'';position:fixed;inset:0;
 
 </div>
 <!-- ✦ ARIA JOURNEY -->
-<div class="ppage" id="pp-journey">
-<div class="ppage-head">
-  <div class="ppage-title">✦ My Aria Journey</div>
-  <div id="aj-depth-badge"></div>
+<div class="ppage" id="pp-journey" style="padding:0;overflow:hidden;">
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCROLL-SNAP FULLSCREEN ORB JOURNEY
+     Each level takes up the full viewport. Scroll snaps to center.
+     Orb grows from small → fullscreen ball as you scroll toward it.
+     ══════════════════════════════════════════════════════════════════ -->
+
+<style>
+/* Journey fullscreen scroll container */
+#aj-scroll-container{
+  height:calc(100vh - 80px);
+  overflow-y:scroll;
+  scroll-snap-type:y mandatory;
+  -webkit-overflow-scrolling:touch;
+  position:relative;
+}
+#aj-scroll-container::-webkit-scrollbar{display:none;}
+#aj-scroll-container{scrollbar-width:none;}
+
+/* Each level = one full screen */
+.aj-level-screen{
+  height:100vh;
+  scroll-snap-align:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  overflow:hidden;
+  cursor:pointer;
+}
+
+/* Background glow that fills the screen when centered */
+.aj-level-screen::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(ellipse 80% 80% at 50% 50%, var(--orb-bg,rgba(255,255,255,0)) 0%, transparent 70%);
+  opacity:0;
+  transition:opacity 0.6s ease;
+  pointer-events:none;
+}
+.aj-level-screen.in-view::before{
+  opacity:1;
+}
+
+/* The big orb */
+.aj-scroll-orb{
+  position:relative;
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  transition:width 0.5s cubic-bezier(.2,0,.2,1),
+             height 0.5s cubic-bezier(.2,0,.2,1),
+             box-shadow 0.5s ease,
+             filter 0.5s ease;
+  cursor:pointer;
+  flex-shrink:0;
+}
+
+/* ORB BALL SPHERE — 3D effect */
+.aj-scroll-orb-ball{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,0.55) 0%, var(--orb-color) 50%, rgba(0,0,0,0.35) 100%);
+  box-shadow:
+    0 0 30px rgba(var(--orb-rgb),0.5),
+    0 0 80px rgba(var(--orb-rgb),0.3),
+    inset 0 3px 8px rgba(255,255,255,0.3),
+    inset 0 -4px 8px rgba(0,0,0,0.2);
+  transition:all 0.5s ease;
+}
+
+/* Locked orb — greyscale */
+.aj-scroll-orb.locked .aj-scroll-orb-ball{
+  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,0.2) 0%, #2a2a3a 50%, #0a0a14 100%);
+  box-shadow:0 0 20px rgba(255,255,255,0.05),inset 0 2px 4px rgba(255,255,255,0.06);
+  filter:grayscale(1);
+}
+
+/* Orb number + icon */
+.aj-scroll-orb-content{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  z-index:2;
+}
+.aj-scroll-num{
+  font-family:'Syne',sans-serif;
+  font-size:2.8rem;
+  font-weight:900;
+  color:#fff;
+  text-shadow:0 0 20px rgba(255,255,255,0.8);
+  line-height:1;
+  transition:font-size 0.5s ease;
+}
+.aj-scroll-icon{
+  font-size:1.8rem;
+  line-height:1;
+  filter:drop-shadow(0 0 8px rgba(255,255,255,0.6));
+  transition:font-size 0.5s ease;
+}
+.aj-scroll-orb.locked .aj-scroll-num{
+  color:rgba(255,255,255,0.2);
+  text-shadow:none;
+}
+.aj-scroll-orb.locked .aj-scroll-icon{
+  opacity:0.15;
+  filter:none;
+}
+
+/* Outer pulse ring */
+.aj-scroll-ring{
+  position:absolute;
+  inset:-8px;
+  border-radius:50%;
+  border:2px solid rgba(var(--orb-rgb),0.4);
+  animation:ajScrollRing 2.5s ease-in-out infinite;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 0.4s;
+}
+.aj-scroll-orb.unlocked .aj-scroll-ring{opacity:1;}
+@keyframes ajScrollRing{
+  0%,100%{transform:scale(1);opacity:0.5;}
+  50%{transform:scale(1.08);opacity:1;}
+}
+
+/* Second outer ring */
+.aj-scroll-ring2{
+  position:absolute;
+  inset:-20px;
+  border-radius:50%;
+  border:1px solid rgba(var(--orb-rgb),0.2);
+  animation:ajScrollRing2 3s ease-in-out infinite 0.5s;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 0.4s;
+}
+.aj-scroll-orb.unlocked .aj-scroll-ring2{opacity:1;}
+@keyframes ajScrollRing2{
+  0%,100%{transform:scale(1);opacity:0.3;}
+  50%{transform:scale(1.06);opacity:0.6;}
+}
+
+/* IN-VIEW state — orb grows big */
+.aj-level-screen.in-view .aj-scroll-orb{
+  width:220px;
+  height:220px;
+}
+.aj-level-screen.in-view .aj-scroll-orb.unlocked .aj-scroll-orb-ball{
+  box-shadow:
+    0 0 60px rgba(var(--orb-rgb),0.8),
+    0 0 120px rgba(var(--orb-rgb),0.5),
+    0 0 200px rgba(var(--orb-rgb),0.25),
+    inset 0 4px 12px rgba(255,255,255,0.4),
+    inset 0 -6px 12px rgba(0,0,0,0.25);
+}
+.aj-level-screen.in-view .aj-scroll-num{font-size:5rem;}
+.aj-level-screen.in-view .aj-scroll-icon{font-size:3rem;}
+
+/* DEAD CENTER — orb goes fullscreen */
+.aj-level-screen.dead-center .aj-scroll-orb{
+  width:min(90vw,90vh);
+  height:min(90vw,90vh);
+}
+.aj-level-screen.dead-center .aj-scroll-orb.unlocked .aj-scroll-orb-ball{
+  box-shadow:
+    0 0 100px rgba(var(--orb-rgb),1),
+    0 0 200px rgba(var(--orb-rgb),0.7),
+    0 0 350px rgba(var(--orb-rgb),0.4);
+}
+.aj-level-screen.dead-center .aj-scroll-num{font-size:min(14vw,10rem);}
+.aj-level-screen.dead-center .aj-scroll-icon{font-size:min(10vw,7rem);}
+.aj-level-screen.dead-center.in-view::before{opacity:1;}
+
+/* Level label under the orb */
+.aj-scroll-label{
+  margin-top:28px;
+  text-align:center;
+  opacity:0;
+  transform:translateY(16px);
+  transition:opacity 0.4s 0.2s ease, transform 0.4s 0.2s ease;
+}
+.aj-level-screen.in-view .aj-scroll-label{
+  opacity:1;
+  transform:translateY(0);
+}
+.aj-scroll-level-name{
+  font-family:'Syne',sans-serif;
+  font-size:1.3rem;
+  font-weight:800;
+  margin-bottom:8px;
+}
+.aj-scroll-level-desc{
+  font-size:13px;
+  color:var(--muted2);
+  line-height:1.65;
+  max-width:420px;
+  padding:0 24px;
+}
+.aj-scroll-verdict{
+  margin-top:12px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  padding:6px 16px;
+  border-radius:20px;
+  display:inline-block;
+}
+.aj-scroll-verdict.current{
+  background:rgba(var(--orb-rgb),0.15);
+  color:var(--orb-color-hex, #fff);
+  border:1px solid rgba(var(--orb-rgb),0.35);
+}
+.aj-scroll-verdict.unlocked-past{
+  background:rgba(255,255,255,0.06);
+  color:var(--muted2);
+  border:1px solid var(--border);
+}
+.aj-scroll-verdict.locked{
+  background:rgba(255,255,255,0.03);
+  color:var(--muted);
+  border:1px solid var(--border);
+}
+
+/* Scroll hint */
+.aj-scroll-hint{
+  position:fixed;
+  bottom:90px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+  display:flex;
+  align-items:center;
+  gap:6px;
+  animation:hintFade 2s ease-in-out infinite;
+  pointer-events:none;
+  z-index:50;
+}
+@keyframes hintFade{0%,100%{opacity:0.3;}50%{opacity:0.8;}}
+
+/* Level dot nav — right side */
+.aj-dot-nav{
+  position:fixed;
+  right:20px;
+  top:50%;
+  transform:translateY(-50%);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  z-index:60;
+}
+.aj-dot-nav-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--border2);
+  cursor:pointer;
+  transition:all 0.3s;
+}
+.aj-dot-nav-dot.active{
+  width:10px;
+  height:10px;
+  background:var(--orb-color-hex, #fff);
+  box-shadow:0 0 10px var(--orb-color-hex, #fff);
+}
+</style>
+
+<!-- SCROLL HINT -->
+<div class="aj-scroll-hint" id="aj-scroll-hint">
+  <span style="font-size:14px;">↕</span> scroll to explore your journey
 </div>
 
-<!-- LEVEL TRACK — 4 big glowing orbs -->
-<div id="aj-milestones" style="margin-bottom:36px;">
+<!-- DOT NAV -->
+<div class="aj-dot-nav" id="aj-dot-nav">
+  <div class="aj-dot-nav-dot" onclick="ajScrollToLevel(0)" id="aj-dnav-0"></div>
+  <div class="aj-dot-nav-dot" onclick="ajScrollToLevel(1)" id="aj-dnav-1"></div>
+  <div class="aj-dot-nav-dot" onclick="ajScrollToLevel(2)" id="aj-dnav-2"></div>
+  <div class="aj-dot-nav-dot" onclick="ajScrollToLevel(3)" id="aj-dnav-3"></div>
+</div>
+
+<!-- FULLSCREEN SCROLL CONTAINER -->
+<div id="aj-scroll-container">
+
+  <!-- LEVEL 1 -->
+  <div class="aj-level-screen" id="aj-screen-0"
+       style="--orb-bg:rgba(240,160,144,0.15);">
+    <div class="aj-scroll-orb locked" id="aj-sorb-0"
+         style="--orb-color:#f0a090;--orb-rgb:240,160,144;">
+      <div class="aj-scroll-orb-ball"></div>
+      <div class="aj-scroll-ring"></div>
+      <div class="aj-scroll-ring2"></div>
+      <div class="aj-scroll-orb-content">
+        <div class="aj-scroll-num">1</div>
+        <div class="aj-scroll-icon">🌱</div>
+      </div>
+    </div>
+    <div class="aj-scroll-label">
+      <div class="aj-scroll-level-name" style="color:#f0a090;">Discovery</div>
+      <div class="aj-scroll-level-desc">Aria meets you. She learns your name, your hair story, and your first products. This is where your transformation begins.</div>
+      <div class="aj-scroll-verdict locked" id="aj-sv-0">🔒 Not yet reached</div>
+    </div>
+  </div>
+
+  <!-- LEVEL 2 -->
+  <div class="aj-level-screen" id="aj-screen-1"
+       style="--orb-bg:rgba(224,176,80,0.12);">
+    <div class="aj-scroll-orb locked" id="aj-sorb-1"
+         style="--orb-color:#e0b050;--orb-rgb:224,176,80;">
+      <div class="aj-scroll-orb-ball"></div>
+      <div class="aj-scroll-ring"></div>
+      <div class="aj-scroll-ring2"></div>
+      <div class="aj-scroll-orb-content">
+        <div class="aj-scroll-num">2</div>
+        <div class="aj-scroll-icon">🔬</div>
+      </div>
+    </div>
+    <div class="aj-scroll-label">
+      <div class="aj-scroll-level-name" style="color:#e0b050;">Use Cases &amp; Upgrades</div>
+      <div class="aj-scroll-level-desc">Aria knows your full routine inside out. She's giving you application techniques, timing, and upgrade paths based on your real results.</div>
+      <div class="aj-scroll-verdict locked" id="aj-sv-1">🔒 Keep talking with Aria</div>
+    </div>
+  </div>
+
+  <!-- LEVEL 3 -->
+  <div class="aj-level-screen" id="aj-screen-2"
+       style="--orb-bg:rgba(96,168,255,0.12);">
+    <div class="aj-scroll-orb locked" id="aj-sorb-2"
+         style="--orb-color:#60a8ff;--orb-rgb:96,168,255;">
+      <div class="aj-scroll-orb-ball"></div>
+      <div class="aj-scroll-ring"></div>
+      <div class="aj-scroll-ring2"></div>
+      <div class="aj-scroll-orb-content">
+        <div class="aj-scroll-num">3</div>
+        <div class="aj-scroll-icon">💫</div>
+      </div>
+    </div>
+    <div class="aj-scroll-label">
+      <div class="aj-scroll-level-name" style="color:#60a8ff;">Inner Circle</div>
+      <div class="aj-scroll-level-desc">Your partner noticed. Your family is asking. Aria now knows the people around you and helps you bring SupportRD into their lives too.</div>
+      <div class="aj-scroll-verdict locked" id="aj-sv-2">🔒 Keep going</div>
+    </div>
+  </div>
+
+  <!-- LEVEL 4 -->
+  <div class="aj-level-screen" id="aj-screen-3"
+       style="--orb-bg:rgba(48,232,144,0.12);">
+    <div class="aj-scroll-orb locked" id="aj-sorb-3"
+         style="--orb-color:#30e890;--orb-rgb:48,232,144;">
+      <div class="aj-scroll-orb-ball"></div>
+      <div class="aj-scroll-ring"></div>
+      <div class="aj-scroll-ring2"></div>
+      <div class="aj-scroll-orb-content">
+        <div class="aj-scroll-num">4</div>
+        <div class="aj-scroll-icon">💎</div>
+      </div>
+    </div>
+    <div class="aj-scroll-label">
+      <div class="aj-scroll-level-name" style="color:#30e890;">Professional — Making Money</div>
+      <div class="aj-scroll-level-desc">You've become a SupportRD story. People ask what you use, they trust your results, and you're ready to turn that into real income. You are now a VIP client.</div>
+      <div class="aj-scroll-verdict locked" id="aj-sv-3">🔒 The top level</div>
+      <div id="aj-level4-cta" style="display:none;margin-top:16px;">
+        <a href="mailto:hello@supportrd.com?subject=Making Money Level" style="background:#30e890;color:#000;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:12px;padding:12px 24px;border-radius:20px;text-decoration:none;letter-spacing:0.06em;display:inline-block;">✦ Contact SupportRD Directly</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /scroll container -->
+
+<!-- OLD HIDDEN MILESTONES — kept for JS compatibility -->
+<div id="aj-milestones" style="display:none;margin-bottom:36px;">
 
   <!-- progress spine -->
   <div style="position:relative;padding:0 8px;">
@@ -7598,13 +7976,13 @@ function occInit(){
 // ✦ ARIA JOURNEY PAGE
 // ═══════════════════════════════════════════════════════════════
 const DEPTH_LEVELS = [
-  { n:'Discovery',                   color:'var(--rose)',  rgb:'240,160,144', icon:'🌱',
+  { n:'Discovery',                   color:'#f0a090',  rgb:'240,160,144', icon:'🌱',
     msg:'Aria is getting to know you. She knows your name, your first products, and the main issue you came here to fix.'},
-  { n:'Use Cases & Upgrades',        color:'var(--gold)',  rgb:'224,176,80',  icon:'🔬',
+  { n:'Use Cases & Upgrades',        color:'#e0b050',  rgb:'224,176,80',  icon:'🔬',
     msg:'Aria is inside your routine now. She knows exactly how and when to use each product — and is watching your results to tell you what to upgrade next.'},
-  { n:'Inner Circle',                color:'var(--blue)',  rgb:'96,168,255',  icon:'💫',
+  { n:'Inner Circle',                color:'#60a8ff',  rgb:'96,168,255',  icon:'💫',
     msg:'This goes beyond your hair. Aria knows who\'s in your life, who notices, and is helping you bring SupportRD to the people you care about.'},
-  { n:'Professional — Making Money', color:'var(--green)', rgb:'48,232,144',  icon:'💎',
+  { n:'Professional — Making Money', color:'#30e890',  rgb:'48,232,144',  icon:'💎',
     msg:'You have become the story. People ask what you use. Aria is your business partner now — and SupportRD wants to talk to you directly.'},
 ];
 
@@ -7627,9 +8005,74 @@ const DEPTH_SIGNALS = [
 // Stored override (for backtrack)
 let _ajForcedLevel = null;
 
+// ── SCROLL JOURNEY SYSTEM ─────────────────────────────────────────────────
+let _ajScrollObserver = null;
+let _ajCenterObserver = null;
+let _ajScrollInited = false;
+let _ajUnlockedLevel = 0; // 0 = level 1 unlocked (always), etc.
+
 async function openJourneyPage(){
   _ajForcedLevel = JSON.parse(localStorage.getItem('srd_aj_level')||'null');
   await renderJourneyPage();
+  // Small delay to let DOM settle then boot scroll system
+  setTimeout(ajInitScrollSystem, 100);
+}
+
+function ajInitScrollSystem(){
+  const container = document.getElementById('aj-scroll-container');
+  if(!container) return;
+
+  // Kill old observers
+  if(_ajScrollObserver){ _ajScrollObserver.disconnect(); }
+  if(_ajCenterObserver){ _ajCenterObserver.disconnect(); }
+
+  // ── IN-VIEW observer (60% visible = orb grows) ──
+  _ajScrollObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      entry.target.classList.toggle('in-view', entry.isIntersecting);
+      if(entry.isIntersecting){
+        // Update dot nav
+        const idx = parseInt(entry.target.dataset.level || '0');
+        document.querySelectorAll('.aj-dot-nav-dot').forEach((d,i)=>{
+          d.classList.toggle('active', i === idx);
+        });
+        // Hide scroll hint after first scroll
+        const hint = document.getElementById('aj-scroll-hint');
+        if(hint && idx > 0) hint.style.opacity = '0';
+      }
+    });
+  }, {
+    root: container,
+    threshold: 0.6,
+  });
+
+  // ── DEAD CENTER observer (85% visible = fullscreen) ──
+  _ajCenterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      entry.target.classList.toggle('dead-center', entry.isIntersecting);
+    });
+  }, {
+    root: container,
+    threshold: 0.85,
+  });
+
+  // Observe all level screens
+  document.querySelectorAll('.aj-level-screen').forEach((screen, i) => {
+    screen.dataset.level = i;
+    _ajScrollObserver.observe(screen);
+    _ajCenterObserver.observe(screen);
+  });
+
+  // Scroll to current level on open
+  setTimeout(()=>{
+    const target = document.getElementById('aj-screen-' + Math.min(_ajUnlockedLevel, 3));
+    if(target) target.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 300);
+}
+
+function ajScrollToLevel(idx){
+  const target = document.getElementById('aj-screen-' + idx);
+  if(target) target.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 async function renderJourneyPage(){
@@ -7679,7 +8122,9 @@ async function renderJourneyPage(){
     // Remove all state classes
     orb.classList.remove('active','current','locked');
     tbody.classList.remove('active','current','locked');
-    // Set CSS var for this orb's color (for active/current CSS)
+    // Set CSS vars on BOTH elements — orb needs them for its own CSS rules
+    orb.style.setProperty('--orb-color', DEPTH_LEVELS[i].color);
+    orb.style.setProperty('--orb-rgb', DEPTH_LEVELS[i].rgb);
     tbody.style.setProperty('--orb-rgb', DEPTH_LEVELS[i].rgb);
 
     if(i < detectedLevel){
@@ -7706,7 +8151,6 @@ async function renderJourneyPage(){
   // Animate spine fill height
   const spineEl = document.getElementById('aj-spine');
   if(spineEl && spineFill){
-    // Calculate total spine height after render
     requestAnimationFrame(()=>{
       const totalH = document.getElementById('aj-milestones').offsetHeight - 80;
       if(spineEl) spineEl.style.height = totalH+'px';
@@ -7715,7 +8159,58 @@ async function renderJourneyPage(){
     });
   }
 
-  // ── 4. Level 4 CTA ────────────────────────────────────────────────────────
+  // ── UPDATE SCROLL ORBS (the new fullscreen ones) ───────────────────────────
+  _ajUnlockedLevel = detectedLevel;
+  const ORBLABELS = [
+    {c:'✦ You are here', cls:'current'},
+    {c:'🔒 Keep talking with Aria', cls:'locked'},
+    {c:'🔒 Keep going', cls:'locked'},
+    {c:'🔒 The top level', cls:'locked'},
+  ];
+  const COLORS = ['#f0a090','#e0b050','#60a8ff','#30e890'];
+
+  for(let i=0;i<4;i++){
+    const sorb    = document.getElementById('aj-sorb-'+i);
+    const screen  = document.getElementById('aj-screen-'+i);
+    const verdict = document.getElementById('aj-sv-'+i);
+    const dnav    = document.getElementById('aj-dnav-'+i);
+    if(!sorb||!screen) continue;
+
+    sorb.classList.remove('locked','unlocked','current-level');
+
+    if(i < detectedLevel){
+      // Passed — fully colored
+      sorb.classList.add('unlocked');
+      if(verdict){
+        verdict.textContent = '✓ Unlocked';
+        verdict.className = 'aj-scroll-verdict unlocked-past';
+      }
+      if(dnav) dnav.style.background = COLORS[i];
+    } else if(i === detectedLevel){
+      // Current level — colored + pulsing
+      sorb.classList.add('unlocked','current-level');
+      if(verdict){
+        verdict.textContent = '▶ You are here';
+        verdict.className = 'aj-scroll-verdict current';
+        verdict.style.setProperty('--orb-rgb', DEPTH_LEVELS[i].rgb);
+        verdict.style.color = COLORS[i];
+        verdict.style.borderColor = 'rgba('+DEPTH_LEVELS[i].rgb+',0.4)';
+        verdict.style.background  = 'rgba('+DEPTH_LEVELS[i].rgb+',0.12)';
+      }
+      if(dnav){ dnav.style.background = COLORS[i]; dnav.style.boxShadow = '0 0 10px '+COLORS[i]; }
+    } else {
+      // Locked — greyscale
+      sorb.classList.add('locked');
+      if(verdict){
+        verdict.textContent = '🔒 Not yet reached';
+        verdict.className = 'aj-scroll-verdict locked';
+        verdict.style.color='';verdict.style.borderColor='';verdict.style.background='';
+      }
+      if(dnav){ dnav.style.background=''; dnav.style.boxShadow=''; }
+    }
+  }
+
+  // Level 4 CTA
   const cta = document.getElementById('aj-level4-cta');
   if(cta) cta.style.display = detectedLevel === 3 ? 'block' : 'none';
 
