@@ -3062,6 +3062,70 @@ def health_check():
     )
     return Response(body, mimetype="text/html")
 
+
+@app.route("/sw.js")
+def service_worker():
+    """
+    Service worker — minimal version that:
+    1. Immediately unregisters itself to clear any broken cached SW
+    2. Does NOT intercept fetch requests (no caching that breaks the app)
+    3. Stays registered just enough for push notifications to work
+    """
+    sw_code = """
+// SupportRD Service Worker v3 — push only, no fetch interception
+const SW_VERSION = 'srd-v3';
+
+self.addEventListener('install', function(event) {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(
+    // Clear ALL old caches from previous broken versions
+    caches.keys().then(function(keys) {
+      return Promise.all(keys.map(function(key) {
+        console.log('[SW] Deleting old cache:', key);
+        return caches.delete(key);
+      }));
+    }).then(function() {
+      return self.clients.claim();
+    })
+  );
+});
+
+// NO fetch handler — let all requests go directly to network
+// This is what was broken before: old SW had a fetch handler
+// that failed to return a proper Response, blocking the whole site.
+
+// Push notification handler only
+self.addEventListener('push', function(event) {
+  try {
+    const data = event.data ? event.data.json() : {};
+    const title = data.title || 'Aria — SupportRD';
+    const options = {
+      body:    data.body    || 'Your hair routine reminder is ready.',
+      icon:    data.icon    || 'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845',
+      badge:   data.badge   || '',
+      tag:     data.tag     || 'aria-reminder',
+      data:    data.url     || '/',
+      vibrate: [200, 100, 200]
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch(e) {
+    console.warn('[SW] Push error:', e);
+  }
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  const url = event.notification.data || '/';
+  event.waitUntil(clients.openWindow(url));
+});
+"""
+    return Response(sw_code, mimetype="application/javascript",
+                    headers={"Cache-Control": "no-cache, no-store, must-revalidate",
+                             "Service-Worker-Allowed": "/"})
+
 @app.route("/login")
 def login_page():
     return f"""<!DOCTYPE html><html><head>
@@ -6563,12 +6627,27 @@ async function disablePushNotifications(){
   }catch(e){ showToast('Error: '+e.message); }
 }
 
-// Register service worker + auto-check push on load
+// ── SERVICE WORKER — unregister broken old versions first, then register clean v3 ──
 (async()=>{
   if('serviceWorker' in navigator){
     try{
-      await navigator.serviceWorker.register('/sw.js',{scope:'/'});
-    }catch(e){ console.warn('SW register failed',e); }
+      // Step 1: unregister ALL existing service workers (clears the broken one)
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for(const reg of regs){
+        const swUrl = reg.active?.scriptURL || '';
+        // Only unregister if it's NOT our current clean v3
+        if(!swUrl.includes('/sw.js') || reg.active?.state === 'redundant'){
+          await reg.unregister();
+          console.log('[SW] Unregistered old SW:', swUrl);
+        }
+      }
+      // Step 2: clear all caches so old broken SW cache is gone
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      // Step 3: register the clean v3 SW
+      await navigator.serviceWorker.register('/sw.js', {scope:'/', updateViaCache:'none'});
+      console.log('[SW] Clean v3 registered');
+    }catch(e){ console.warn('SW setup:', e); }
   }
 })();
 
