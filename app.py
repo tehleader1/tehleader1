@@ -116,11 +116,11 @@ def require_admin():
 
 
 # ---------------------------------------------------
-# DASHBOARD DATA
+# DASHBOARD DATA API
 # ---------------------------------------------------
 
 @app.route("/api/dashboard")
-def dashboard():
+def dashboard_api():
 
     conn = get_db()
 
@@ -259,7 +259,6 @@ def run_content_engine():
 try:
 
     from engine_routes import register_engine_routes
-
     register_engine_routes(app)
 
     print("Engine routes loaded")
@@ -270,7 +269,7 @@ except Exception as e:
 
 
 # ---------------------------------------------------
-# HEALTH CHECKS
+# HEALTH ROUTES
 # ---------------------------------------------------
 
 @app.route("/api/ping")
@@ -287,15 +286,45 @@ def health():
 
 
 # ---------------------------------------------------
-# ROOT
+# PAGE ROUTES (prevent 404s)
 # ---------------------------------------------------
 
 @app.route("/")
 def root():
-
     return jsonify({
         "app": "SupportRD API",
         "status": "running"
+    })
+
+
+@app.route("/dashboard")
+def dashboard_page():
+    return jsonify({
+        "page": "dashboard",
+        "api": "/api/dashboard"
+    })
+
+
+@app.route("/aria")
+def aria_page():
+    return jsonify({
+        "page": "aria",
+        "api": "/api/aria/chat"
+    })
+
+
+@app.route("/scan")
+def scan_page():
+    return jsonify({
+        "page": "hair scanner",
+        "api": "/api/hair-scan"
+    })
+
+
+@app.route("/admin")
+def admin_page():
+    return jsonify({
+        "page": "admin"
     })
 
 
