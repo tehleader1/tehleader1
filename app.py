@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import secrets
-from flask import Flask, request, jsonify, redirect, Response
+from flask import Flask, request, jsonify, Response, redirect
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
@@ -43,13 +43,13 @@ def get_user_from_token(token):
     return u
 
 
-# HEALTH
+# HEALTH CHECK
 @app.route("/api/ping")
 def ping():
     return {"status":"ok"}
 
 
-# AUTH LOGIN
+# LOGIN
 @app.route("/api/auth/login",methods=["POST"])
 def login():
 
@@ -89,6 +89,7 @@ def login():
 def register():
 
     data=request.json
+
     name=data.get("name")
     email=data.get("email")
     password=data.get("password")
@@ -108,7 +109,7 @@ def register():
         c.close()
 
     except:
-        return {"error":"Account exists"}
+        return {"error":"Account already exists"}
 
     return {
         "token":token,
@@ -117,7 +118,20 @@ def register():
     }
 
 
-# AUTH ME
+# GOOGLE LOGIN
+@app.route("/api/auth/google",methods=["POST"])
+def google():
+
+    token=create_token()
+
+    return {
+        "token":token,
+        "name":"Google User",
+        "email":"google@user.com"
+    }
+
+
+# GET CURRENT USER
 @app.route("/api/auth/me")
 def me():
 
@@ -137,28 +151,156 @@ def me():
     }
 
 
-# GOOGLE (dummy for now)
-@app.route("/api/auth/google",methods=["POST"])
-def google():
+# LOGIN PAGE
+@app.route("/")
+@app.route("/login")
+def login_page():
 
-    data=request.json
-    cred=data.get("credential")
+    html = """
+<!DOCTYPE html>
+<html>
+<head>
+<title>SupportRD Hair Advisor</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{
+font-family:sans-serif;
+background:#ececf3;
+display:flex;
+align-items:center;
+justify-content:center;
+height:100vh;
+margin:0;
+}
+.card{
+background:white;
+padding:40px;
+border-radius:12px;
+width:420px;
+}
+input{
+width:100%;
+padding:12px;
+margin-bottom:12px;
+}
+button{
+width:100%;
+padding:14px;
+background:#6a4df4;
+color:white;
+border:none;
+border-radius:6px;
+}
+</style>
+</head>
 
-    if not cred:
-        return {"error":"Invalid Google login"}
+<body>
 
-    token=create_token()
+<div class="card">
 
-    return {
-        "token":token,
-        "name":"Google User",
-        "email":"google@user.com"
-    }
+<h2>SupportRD Hair Advisor</h2>
+
+<input id="email" placeholder="email">
+<input id="pass" type="password" placeholder="password">
+
+<button onclick="login()">Sign In</button>
+
+</div>
+
+<script>
+
+async function login(){
+
+let email=document.getElementById('email').value
+let pass=document.getElementById('pass').value
+
+let r=await fetch('/api/auth/login',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({email:email,password:pass})
+})
+
+let d=await r.json()
+
+if(d.error){
+alert(d.error)
+return
+}
+
+localStorage.setItem('srd_token',d.token)
+
+window.location='/dashboard'
+
+}
+
+</script>
+
+</body>
+</html>
+"""
+
+    return Response(html,mimetype="text/html")
 
 
-# IMPORTANT
-# We DO NOT touch your UI routes
-# They remain inside your original file
+# DASHBOARD
+@app.route("/dashboard")
+def dashboard():
+
+    html = """
+<!DOCTYPE html>
+<html>
+<head>
+<title>SupportRD Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{
+background:#0b0d12;
+color:white;
+font-family:sans-serif;
+padding:60px;
+}
+button{
+background:#6a4df4;
+border:none;
+padding:12px 20px;
+color:white;
+margin-right:10px;
+border-radius:6px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>SupportRD AI Hair Advisor Dashboard</h1>
+
+<button onclick="scan()">Run Hair Scan</button>
+<button onclick="aria()">Ask Aria</button>
+<button onclick="logout()">Logout</button>
+
+<script>
+
+function logout(){
+localStorage.removeItem('srd_token')
+window.location='/login'
+}
+
+function scan(){
+alert('Hair scan starting...')
+}
+
+function aria(){
+alert('Opening Aria AI...')
+}
+
+</script>
+
+</body>
+</html>
+"""
+
+    return Response(html,mimetype="text/html")
+
 
 if __name__=="__main__":
 
