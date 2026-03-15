@@ -22,7 +22,6 @@ ADMIN_KEY = os.environ.get("ADMIN_KEY", "supportrd_admin")
 DATA_DIR = "/data" if os.path.isdir("/data") else os.getcwd()
 DB_PATH = os.path.join(DATA_DIR, "supportrd.db")
 
-
 # ---------------------------------------------------
 # DATABASE
 # ---------------------------------------------------
@@ -59,7 +58,6 @@ def init_db():
 
 
 init_db()
-
 
 # ---------------------------------------------------
 # AUTH
@@ -179,7 +177,6 @@ def hair_scan():
 def aria_chat():
 
     data = request.get_json()
-
     message = data.get("message")
 
     if not message:
@@ -273,16 +270,20 @@ except Exception as e:
 
 
 # ---------------------------------------------------
-# HEALTH CHECK
+# HEALTH CHECKS
 # ---------------------------------------------------
+
+@app.route("/api/ping")
+def ping():
+    return {"status": "ok"}
+
 
 @app.route("/health")
 def health():
-
-    return jsonify({
-        "status": "ok",
+    return {
+        "status": "running",
         "time": datetime.utcnow().isoformat()
-    })
+    }
 
 
 # ---------------------------------------------------
