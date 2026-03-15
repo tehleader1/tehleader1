@@ -1,5 +1,5 @@
-Flask
-Flask-SQLAlchemy
+Flask>=2.3.2
+Flask-SQLAlchemy>=3.0.3
 psycopg2-binary>=2.9.9
-gunicorn
-psutil
+gunicorn>=21.2.0
+psutil>=5.9.5
