@@ -8,14 +8,16 @@ app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 
 DB = "users.db"
 
-# -----------------------------
+
+# ----------------
 # DATABASE
-# -----------------------------
+# ----------------
 
 def db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def init():
     c = db()
@@ -30,11 +32,13 @@ def init():
     c.commit()
     c.close()
 
+
 init()
 
-# -----------------------------
+
+# ----------------
 # SERVICE WORKER
-# -----------------------------
+# ----------------
 
 @app.route("/sw.js")
 def sw():
@@ -43,17 +47,19 @@ self.addEventListener('install',e=>self.skipWaiting());
 self.addEventListener('fetch',e=>{});
 """,200,{"Content-Type":"application/javascript"}
 
-# -----------------------------
+
+# ----------------
 # HEALTH CHECK
-# -----------------------------
+# ----------------
 
 @app.route("/api/ping")
 def ping():
-    return {"status":"ok"}
+    return {"status": "ok"}
 
-# -----------------------------
+
+# ----------------
 # LOGIN PAGE
-# -----------------------------
+# ----------------
 
 @app.route("/")
 def login_page():
@@ -65,7 +71,6 @@ def login_page():
 <title>SupportRD Hair Advisor</title>
 
 <style>
-
 body{
 background:#e6e6ef;
 font-family:Arial;
@@ -110,12 +115,8 @@ color:white;
 font-size:16px;
 cursor:pointer;
 }
-
-button:hover{
-opacity:.9;
-}
-
 </style>
+
 </head>
 
 <body>
@@ -160,9 +161,10 @@ window.location=j.redirect
 </html>
 """
 
-# -----------------------------
+
+# ----------------
 # DASHBOARD
-# -----------------------------
+# ----------------
 
 @app.route("/dashboard")
 def dashboard():
@@ -170,10 +172,13 @@ def dashboard():
     if "user" not in session:
         return redirect("/")
 
+    user = session["user"]
+
     return f"""
 <!DOCTYPE html>
 <html>
 <head>
+
 <title>Dashboard</title>
 
 <style>
@@ -212,13 +217,14 @@ background:#7c5cff;
 }}
 
 </style>
+
 </head>
 
 <body>
 
 <div class="card">
 
-<h1>Welcome {session['user']}</h1>
+<h1>Welcome {user}</h1>
 
 <p>SupportRD AI Hair Advisor Dashboard</p>
 
@@ -232,41 +238,39 @@ background:#7c5cff;
 
 <script>
 
-async function scan(){
-
-let r = await fetch('/api/hair-scan',{
+async function scan(){{
+let r = await fetch('/api/hair-scan',{{
 method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({dryness:2,breakage:1,oil:1})
-})
+headers:{{'Content-Type':'application/json'}},
+body:JSON.stringify({{
+dryness:2,
+breakage:1,
+oil:1
+}})
+}})
 
 let j = await r.json()
-
 document.getElementById('result').innerText=JSON.stringify(j,null,2)
+}}
 
-}
-
-async function aria(){
-
+async function aria(){{
 let msg = prompt("Ask Aria something")
 
-let r = await fetch('/api/aria/chat',{
+let r = await fetch('/api/aria/chat',{{
 method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({message:msg})
-})
+headers:{{'Content-Type':'application/json'}},
+body:JSON.stringify({{
+message:msg
+}})
+}})
 
 let j = await r.json()
-
 document.getElementById('result').innerText=j.reply
+}}
 
-}
-
-function logout(){
-
+function logout(){{
 window.location='/logout'
-
-}
+}}
 
 </script>
 
@@ -274,39 +278,41 @@ window.location='/logout'
 </html>
 """
 
-# -----------------------------
-# LOGIN API
-# -----------------------------
 
-@app.route("/api/login",methods=["POST"])
+# ----------------
+# LOGIN API
+# ----------------
+
+@app.route("/api/login", methods=["POST"])
 def login():
 
-    d=request.json
+    d = request.json
 
-    username=d.get("username")
-    email=d.get("email")
-    password=d.get("password")
+    username = d.get("username")
+    email = d.get("email")
+    password = d.get("password")
 
-    c=db()
+    c = db()
 
-    u=c.execute("SELECT * FROM users WHERE username=?",(username,)).fetchone()
+    u = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
 
     if not u:
         c.execute(
-        "INSERT INTO users(username,email,password) VALUES(?,?,?)",
-        (username,email,password)
+            "INSERT INTO users(username,email,password) VALUES(?,?,?)",
+            (username, email, password),
         )
         c.commit()
 
     c.close()
 
-    session["user"]=username
+    session["user"] = username
 
-    return {"redirect":"/dashboard"}
+    return {"redirect": "/dashboard"}
 
-# -----------------------------
+
+# ----------------
 # LOGOUT
-# -----------------------------
+# ----------------
 
 @app.route("/logout")
 def logout():
@@ -314,43 +320,46 @@ def logout():
     session.clear()
     return redirect("/")
 
-# -----------------------------
-# HAIR SCAN
-# -----------------------------
 
-@app.route("/api/hair-scan",methods=["POST"])
+# ----------------
+# HAIR SCAN
+# ----------------
+
+@app.route("/api/hair-scan", methods=["POST"])
 def scan():
 
-    d=request.json
+    d = request.json
 
-    score=d.get("dryness",0)+d.get("breakage",0)+d.get("oil",0)
+    score = d.get("dryness", 0) + d.get("breakage", 0) + d.get("oil", 0)
 
-    if score<4:
-        result="Healthy hair"
-    elif score<8:
-        result="Needs hydration"
+    if score < 4:
+        result = "Healthy hair"
+    elif score < 8:
+        result = "Needs hydration"
     else:
-        result="Hair damage detected"
+        result = "Hair damage detected"
 
-    return {"score":score,"diagnosis":result}
+    return {"score": score, "diagnosis": result}
 
-# -----------------------------
+
+# ----------------
 # ARIA AI
-# -----------------------------
+# ----------------
 
-@app.route("/api/aria/chat",methods=["POST"])
+@app.route("/api/aria/chat", methods=["POST"])
 def aria():
 
-    msg=request.json.get("message","")
+    msg = request.json.get("message", "")
 
-    return {"reply":"Aria AI received: "+msg}
+    return {"reply": "Aria AI received: " + msg}
 
-# -----------------------------
+
+# ----------------
 # START
-# -----------------------------
+# ----------------
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
-    port=int(os.environ.get("PORT",5000))
+    port = int(os.environ.get("PORT", 5000))
 
-    app.run(host="0.0.0.0",port=port)
+    app.run(host="0.0.0.0", port=port)
