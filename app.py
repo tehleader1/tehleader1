@@ -4481,7 +4481,7 @@ body{{background:#f0ebe8;min-height:100vh;font-family:'Jost',sans-serif;font-wei
 .brand-strip{{background:#0d0906;padding:12px 0;overflow:hidden;white-space:nowrap;}}
 .brand-strip-inner{{display:flex;gap:0;animation:brandScroll 18s linear infinite;}}
 .brand-pill{{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#c1a3a2;padding:0 24px;flex-shrink:0;}}
-@keyframes brandScroll{{0%{{transform:translateX(0);}}100%{{transform:translateX(-50%);}}
+@keyframes brandScroll{{0%{{transform:translateX(0);}}100%{{transform:translateX(-50%);}}}}
 /* Shared section styles */
 .about-block,.team-block,.coding-block,.products-block{{max-width:680px;margin:0 auto;padding:56px 28px;}}
 .about-eyebrow{{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:#c1a3a2;margin-bottom:14px;}}
