@@ -2,14 +2,6 @@ import os, json, sqlite3, datetime, hashlib, secrets, threading, random, re, tim
 from flask import Flask, request, jsonify, Response, redirect
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-# ── ENGINE ROUTES — register content engine endpoints ────────────────────────
-try:
-    from engine_routes import register_engine_routes as _register_engine_routes
-    _engine_routes_loaded = True
-except Exception as _e:
-    print(f"[engine_routes] Could not import engine_routes: {_e}")
-    _engine_routes_loaded = False
-
 app = Flask(__name__)
 
 # ── PROXY FIX — required on Render/Heroku behind load balancer ───────────────
@@ -109,14 +101,14 @@ def init_auth_db():
 
 init_auth_db()
 
-# ── WIRE ENGINE ROUTES ────────────────────────────────────────────────────────
+# ── ENGINE ROUTES ────────────────────────────────────────────────────
 try:
-    from engine_routes import register_engine_routes as _reg_engine
-    _reg_engine(app)
-    print("[engine_routes] Registered ✓")
-except Exception as _er:
-    print(f"[engine_routes] Skipped (non-fatal): {_er}")
-# ─────────────────────────────────────────────────────────────────────────────
+    from engine_routes import register_engine_routes as _reg_eng
+    _reg_eng(app)
+    print("[engine_routes] ✓ registered")
+except Exception as _e:
+    print(f"[engine_routes] skipped: {_e}")
+# ─────────────────────────────────────────────────────────────────────
 
 def hash_password(pw):
     salt = "supportrd_salt_2024"
@@ -1620,7 +1612,7 @@ body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 10
 })();
 </script>
 
-<!-- ── SHOPIFY CART DRAWER ─────────────────────────────────── -->
+<!-- ── CART DRAWER ──────────────────────────────────────────────── -->
 <div id="srd-cart-overlay" onclick="srdCloseCart()"></div>
 <div id="srd-cart-drawer">
   <div class="srd-cart-handle" onclick="srdCloseCart()"></div>
@@ -1644,100 +1636,68 @@ body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 10
 <button id="srd-cart-badge" onclick="srdOpenCart()">
   🛒 Cart <span id="srd-cart-badge-count">0</span>
 </button>
-
 <script>
-// ── CART ENGINE ──────────────────────────────────────────────────────────────
-var _srdCart = JSON.parse(localStorage.getItem('srd_cart') || '[]');
-var _srdCartId = localStorage.getItem('srd_cart_id') || null;
-
-function srdSaveCart(){ localStorage.setItem('srd_cart', JSON.stringify(_srdCart)); }
-
+var _srdCart=[];try{_srdCart=JSON.parse(localStorage.getItem('srd_cart')||'[]');}catch(e){}
+function srdSaveCart(){try{localStorage.setItem('srd_cart',JSON.stringify(_srdCart));}catch(e){}}
 function srdRenderCart(){
-  var items = document.getElementById('srd-cart-items');
-  var countEl = document.getElementById('srd-cart-count');
-  var badgeCount = document.getElementById('srd-cart-badge-count');
-  var totalEl = document.getElementById('srd-cart-total');
-  var badge = document.getElementById('srd-cart-badge');
-  if(!items) return;
-  var total = 0;
-  var totalQty = 0;
-  _srdCart.forEach(function(i){ total += parseFloat(i.price||0) * (i.qty||1); totalQty += (i.qty||1); });
-  if(countEl) countEl.textContent = totalQty;
-  if(badgeCount) badgeCount.textContent = totalQty;
-  if(totalEl) totalEl.textContent = '$' + total.toFixed(2);
-  if(badge){ badge.classList.toggle('has-items', totalQty > 0); }
-  if(!_srdCart.length){
-    items.innerHTML = '<div class="srd-cart-empty">Your cart is empty</div>';
-    return;
-  }
-  items.innerHTML = _srdCart.map(function(item, idx){
+  var el=document.getElementById('srd-cart-items'),ct=document.getElementById('srd-cart-count'),
+      bc=document.getElementById('srd-cart-badge-count'),tot=document.getElementById('srd-cart-total'),
+      badge=document.getElementById('srd-cart-badge');
+  if(!el)return;
+  var total=0,qty=0;
+  _srdCart.forEach(function(i){total+=parseFloat(i.price||0)*(i.qty||1);qty+=(i.qty||1);});
+  if(ct)ct.textContent=qty; if(bc)bc.textContent=qty;
+  if(tot)tot.textContent='$'+total.toFixed(2);
+  if(badge)badge.classList.toggle('has-items',qty>0);
+  if(!_srdCart.length){el.innerHTML='<div class="srd-cart-empty">Your cart is empty</div>';return;}
+  el.innerHTML=_srdCart.map(function(item,idx){
     return '<div class="srd-cart-item">'
-      +'<div class="srd-ci-emoji"><span style="font-size:22px">' + (item.emoji||'🌿') + '</span></div>'
-      +'<div class="srd-ci-info"><div class="srd-ci-name">' + item.name + '</div>'
-      +'<div class="srd-ci-price">$' + parseFloat(item.price||0).toFixed(2) + '</div></div>'
-      +'<div class="srd-ci-qty">'
-      +'<button onclick="srdChangeQty(' + idx + ',-1)">−</button>'
-      +'<span>' + (item.qty||1) + '</span>'
-      +'<button onclick="srdChangeQty(' + idx + ',1)">+</button>'
-      +'</div>'
-      +'<button class="srd-cart-remove" onclick="srdRemoveItem(' + idx + ')">✕</button>'
-      +'</div>';
+      +'<div class="srd-ci-emoji">'+(item.emoji||'🌿')+'</div>'
+      +'<div class="srd-ci-info"><div class="srd-ci-name">'+item.name+'</div>'
+      +'<div class="srd-ci-price">$'+parseFloat(item.price||0).toFixed(2)+'</div></div>'
+      +'<div class="srd-ci-qty"><button onclick="srdChangeQty('+idx+',-1)">−</button>'
+      +'<span>'+(item.qty||1)+'</span>'
+      +'<button onclick="srdChangeQty('+idx+',1)">+</button></div>'
+      +'<button class="srd-cart-remove" onclick="srdRemoveItem('+idx+')">✕</button></div>';
   }).join('');
 }
-
-function srdAddToCart(name, price, variantId, emoji, handle){
-  var existing = _srdCart.find(function(i){ return i.variantId === variantId; });
-  if(existing){ existing.qty = (existing.qty||1) + 1; }
-  else { _srdCart.push({name:name, price:price, variantId:variantId, emoji:emoji||'🌿', handle:handle||'', qty:1}); }
-  srdSaveCart(); srdRenderCart(); srdOpenCart();
+function srdAddToCart(name,price,variantId,emoji,handle){
+  var ex=_srdCart.find(function(i){return i.variantId===variantId;});
+  if(ex){ex.qty=(ex.qty||1)+1;}
+  else{_srdCart.push({name:name,price:price,variantId:variantId,emoji:emoji||'🌿',handle:handle||'',qty:1});}
+  srdSaveCart();srdRenderCart();srdOpenCart();
 }
-
-function srdChangeQty(idx, delta){
-  if(!_srdCart[idx]) return;
-  _srdCart[idx].qty = Math.max(0, (_srdCart[idx].qty||1) + delta);
-  if(_srdCart[idx].qty === 0) _srdCart.splice(idx, 1);
-  srdSaveCart(); srdRenderCart();
+function srdChangeQty(idx,delta){
+  if(!_srdCart[idx])return;
+  _srdCart[idx].qty=Math.max(0,(_srdCart[idx].qty||1)+delta);
+  if(_srdCart[idx].qty===0)_srdCart.splice(idx,1);
+  srdSaveCart();srdRenderCart();
 }
-
-function srdRemoveItem(idx){
-  _srdCart.splice(idx, 1);
-  srdSaveCart(); srdRenderCart();
-}
-
+function srdRemoveItem(idx){_srdCart.splice(idx,1);srdSaveCart();srdRenderCart();}
 function srdOpenCart(){
-  document.getElementById('srd-cart-overlay').classList.add('open');
-  document.getElementById('srd-cart-drawer').classList.add('open');
-  srdRenderCart();
+  var o=document.getElementById('srd-cart-overlay'),d=document.getElementById('srd-cart-drawer');
+  if(o)o.classList.add('open'); if(d)d.classList.add('open'); srdRenderCart();
 }
-
 function srdCloseCart(){
-  document.getElementById('srd-cart-overlay').classList.remove('open');
-  document.getElementById('srd-cart-drawer').classList.remove('open');
+  var o=document.getElementById('srd-cart-overlay'),d=document.getElementById('srd-cart-drawer');
+  if(o)o.classList.remove('open'); if(d)d.classList.remove('open');
 }
-
 async function srdCheckout(){
-  var btn = document.getElementById('srd-cart-checkout-btn');
-  if(!_srdCart.length){ srdCloseCart(); window.open('https://supportrd.com/collections/all','_blank'); return; }
-  btn.disabled = true; btn.textContent = 'Opening checkout…';
+  var btn=document.getElementById('srd-cart-checkout-btn');
+  if(!_srdCart.length){srdCloseCart();window.open('https://supportrd.com/collections/all','_blank');return;}
+  if(btn){btn.disabled=true;btn.textContent='Opening…';}
   try{
-    var lines = _srdCart.map(function(i){ return {variantId:i.variantId, quantity:i.qty||1}; });
-    var resp = await fetch('/api/shop/cart/create',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({lines:lines})
-    });
-    var d = await resp.json();
-    if(d.checkoutUrl){ window.open(d.checkoutUrl,'_blank'); _srdCart=[]; srdSaveCart(); srdRenderCart(); srdCloseCart(); }
-    else { window.open('https://supportrd.com/cart','_blank'); }
-  }catch(e){ window.open('https://supportrd.com/cart','_blank'); }
-  btn.disabled = false; btn.textContent = 'Checkout →';
+    var lines=_srdCart.map(function(i){return{variantId:i.variantId,quantity:i.qty||1};});
+    var r=await fetch('/api/shop/cart/create',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:lines})});
+    var d=await r.json();
+    if(d.checkoutUrl){window.open(d.checkoutUrl,'_blank');_srdCart=[];srdSaveCart();srdRenderCart();srdCloseCart();}
+    else{window.open('https://supportrd.com/cart','_blank');}
+  }catch(e){window.open('https://supportrd.com/cart','_blank');}
+  if(btn){btn.disabled=false;btn.textContent='Checkout →';}
 }
-
-// Init cart badge on load
 srdRenderCart();
-// ─────────────────────────────────────────────────────────────────────────────
 </script>
-
 
 <script>
 // ── AUTH STATE ──
@@ -4794,28 +4754,38 @@ def dashboard():
             resp = redirect("/login")
             resp.delete_cookie("srd_token")
             return resp
-    # No cookie token — let JS handle localStorage token check
+    # No cookie/header token — serve a redirect-shim that checks localStorage
+    # This handles the case where token is in localStorage (not a cookie)
     html = r"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Aria Command Center — SupportRD</title>
-<!-- build:v2.2 -->
+<!-- build:v2.3 -->
 <script>
+// Immediate localStorage check — runs before any render
 (function(){
   var t = localStorage.getItem('srd_token');
-  if(!t){ window.location.replace('/login'); return; }
-  try{
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/api/auth/me', false);
-    xhr.setRequestHeader('X-Auth-Token', t);
-    xhr.send();
-    if(xhr.status === 401){
+  if(!t){
+    // No token at all — go to login immediately
+    window.location.replace('/login');
+    return;
+  }
+  // Token exists — validate async, then show dashboard
+  fetch('/api/auth/me', {
+    method: 'GET',
+    headers: {'X-Auth-Token': t}
+  }).then(function(r){
+    if(r.status === 401){
       localStorage.removeItem('srd_token');
       localStorage.removeItem('srd_user');
+      localStorage.removeItem('srd_premium');
       window.location.replace('/login');
     }
-  }catch(e){ /* network error — let page load */ }
+    // 200 = valid, page already loading — nothing to do
+  }).catch(function(){
+    // Network error — allow page to load anyway (offline mode)
+  });
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -12878,7 +12848,7 @@ def blog_write_page():
 
 <script>
 const EP = {ep};
-const TOKEN = localStorage.getItem('aria_token')||'';
+const TOKEN = localStorage.getItem('srd_token')||localStorage.getItem('aria_token')||'';
 
 if(EP.slug){{
   document.getElementById('writeTitle').textContent = '✏️ Edit Post';
@@ -13490,8 +13460,8 @@ def api_content_engine_log():
     if not user or not is_admin_user(user["id"]):
         return jsonify({"error":"unauthorized"}), 401
     import os as _os, json as _j
-    _DATA_DIR2 = "/data" if os.path.isdir("/data") else os.path.dirname(os.path.abspath(__file__))
-    log_path = _os.path.join(_DATA_DIR2, "content_engine_log.json")
+    _DATA_DIR_local = "/data" if os.path.isdir("/data") else os.path.dirname(os.path.abspath(__file__))
+    log_path = _os.path.join(_DATA_DIR_local, "content_engine_log.json")
     try:
         with open(log_path,"r") as f:
             log = _j.load(f)
@@ -13986,7 +13956,7 @@ textarea{min-height:120px;line-height:1.6;}
   </div>
 </div>
 <script>
-const TOKEN = localStorage.getItem('srd_token')||localStorage.getItem('aria_token')||'';
+const TOKEN = localStorage.getItem('srd_token')||localStorage.getItem('srd_token')||localStorage.getItem('aria_token')||'';
 const AKEY  = localStorage.getItem('srd_admin_key')||'';
 async function loadStats(){
   try{
