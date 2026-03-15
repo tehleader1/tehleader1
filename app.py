@@ -4,7 +4,7 @@ import threading
 import time
 from datetime import datetime
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, redirect
 from flask_sqlalchemy import SQLAlchemy
 from engine_routes import register_engine_routes
 
@@ -100,6 +100,13 @@ def start_scheduler():
     logging.info("Automation scheduler started")
 
 # ----------------------
+# ROOT ROUTE
+# ----------------------
+@app.route("/")
+def root():
+    return redirect("/dashboard")
+
+# ----------------------
 # DASHBOARD ROUTE
 # ----------------------
 @app.route("/dashboard")
@@ -144,6 +151,7 @@ def handle_exception(e):
 # APP STARTUP
 # ----------------------
 if __name__ == "__main__":
+    # Only init db and scheduler in main process
     init_database()
     start_scheduler()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
