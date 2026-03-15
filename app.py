@@ -100,31 +100,26 @@ def start_scheduler():
     logging.info("Automation scheduler started")
 
 # ----------------------
-# ROOT ROUTE
+# ROUTES
 # ----------------------
 @app.route("/")
 def root():
-    return redirect("/dashboard")
+    return redirect("/login")
 
-# ----------------------
-# DASHBOARD ROUTE
-# ----------------------
+@app.route("/login")
+def login():
+    return render_template("login.html")
+
 @app.route("/dashboard")
 def dashboard():
     return render_template("dashboard.html")
 
-# ----------------------
-# ANALYTICS
-# ----------------------
 @app.route("/analytics")
 def analytics():
     blogs = BlogPost.query.count()
     keywords = Keyword.query.count()
     return jsonify({"blogs": blogs, "keywords": keywords})
 
-# ----------------------
-# SYSTEM METRICS
-# ----------------------
 @app.route("/system/metrics")
 def metrics():
     import psutil
@@ -134,9 +129,6 @@ def metrics():
         "disk": psutil.disk_usage('/').percent
     })
 
-# ----------------------
-# RENDER HEALTH CHECK
-# ----------------------
 @app.route("/api/ping")
 def ping():
     return jsonify({"status": "ok"})
@@ -158,7 +150,6 @@ def handle_exception(e):
 # APP STARTUP
 # ----------------------
 if __name__ == "__main__":
-    # Only init db and scheduler in main process
     init_database()
     start_scheduler()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
