@@ -3153,6 +3153,26 @@ def robots_txt():
     ])
     return Response(body, mimetype="text/plain")
 
+@app.route("/manifest.json")
+def manifest_json():
+    manifest = {
+        "name": "Aria — SupportRD Hair Advisor",
+        "short_name": "Aria",
+        "description": "AI hair care advisor by SupportRD. Professional Dominican hair care advice.",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#f0ebe8",
+        "theme_color": "#c1a3a2",
+        "orientation": "portrait",
+        "icons": [
+            {"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "192x192", "type": "image/png"},
+            {"src": "https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845", "sizes": "512x512", "type": "image/png"}
+        ]
+    }
+    return Response(json.dumps(manifest), mimetype="application/json")
+
+
+
 
 @app.route("/sitemap.xml")
 def sitemap():
