@@ -1,10 +1,11 @@
-// Prevent Aria sphere from loading on login
+// Prevent Aria sphere from running on login
 console.log("Login page loaded - Aria sphere disabled");
 
-// Example login handler (optional)
-document.getElementById("loginForm").addEventListener("submit", (e)=>{
+// Simple login handler (simulated)
+document.getElementById("loginForm").addEventListener("submit", function(e){
     e.preventDefault();
-    alert("Login simulated, redirecting to dashboard...");
+    // You can replace this with real authentication later
+    const username = document.getElementById("username").value;
+    alert(`Welcome ${username}! Redirecting to dashboard...`);
     window.location.href = "/dashboard";
 });
-
