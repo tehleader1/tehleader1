@@ -1,7 +1,7 @@
 import os
-import asyncio
 import logging
-import random
+import threading
+import time
 from datetime import datetime
 
 from flask import Flask, jsonify
@@ -22,15 +22,20 @@ logging.basicConfig(level=logging.INFO)
 # DATABASE CONFIG
 # --------------------------------------------------
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable not set")
+
+# Render sometimes gives postgres://
+if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
+
 
 # --------------------------------------------------
 # DATABASE MODELS
@@ -42,7 +47,7 @@ class Keyword(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    phrase = db.Column(db.String(255))
+    phrase = db.Column(db.String(255), unique=True)
 
     language = db.Column(db.String(10))
 
@@ -71,15 +76,16 @@ class BlogPost(db.Model):
 
 
 # --------------------------------------------------
-# INITIALIZE DATABASE
+# DATABASE INIT
 # --------------------------------------------------
 
-@app.before_first_request
-def create_tables():
+def init_database():
 
-    db.create_all()
+    with app.app_context():
 
-    logging.info("Database tables ready")
+        db.create_all()
+
+        logging.info("Database tables initialized")
 
 
 # --------------------------------------------------
@@ -87,58 +93,62 @@ def create_tables():
 # --------------------------------------------------
 
 SEED_KEYWORDS = [
-    "hair growth tips",
-    "how to repair damaged hair",
-    "natural hair care routine",
-    "best shampoo for dry hair",
-    "how to stop hair breakage",
-    "how to grow hair faster",
-    "curly hair routine",
-    "scalp health tips",
-    "hair care routine for frizz",
-]
 
-LANGUAGES = ["en", "es", "fr", "pt"]
+    "hair growth tips",
+
+    "repair damaged hair",
+
+    "stop hair breakage",
+
+    "curly hair routine",
+
+    "scalp health",
+
+    "hair hydration tips",
+
+    "hair strengthening routine"
+
+]
 
 
 def discover_keywords():
 
-    logging.info("Running keyword discovery")
+    with app.app_context():
 
-    for seed in SEED_KEYWORDS:
+        logging.info("Running keyword discovery")
 
-        for i in range(10):
+        for seed in SEED_KEYWORDS:
 
-            phrase = f"{seed} {i+1}"
+            for i in range(5):
 
-            exists = Keyword.query.filter_by(phrase=phrase).first()
+                phrase = f"{seed} {i+1}"
 
-            if not exists:
+                exists = Keyword.query.filter_by(phrase=phrase).first()
 
-                kw = Keyword(
+                if not exists:
 
-                    phrase=phrase,
+                    kw = Keyword(
 
-                    language=random.choice(LANGUAGES),
+                        phrase=phrase,
 
-                    score=random.randint(1, 100),
+                        language="en",
 
-                )
+                        score=50
 
-                db.session.add(kw)
+                    )
 
-    db.session.commit()
+                    db.session.add(kw)
 
-    logging.info("Keyword discovery completed")
+        db.session.commit()
+
+        logging.info("Keyword discovery complete")
 
 
 # --------------------------------------------------
-# AUTOMATION SCHEDULER
+# AUTOMATION LOOP
 # --------------------------------------------------
 
 def automation_loop():
-
-    import time
 
     while True:
 
@@ -146,18 +156,14 @@ def automation_loop():
 
             discover_keywords()
 
-            logging.info("Automation cycle complete")
-
         except Exception as e:
 
             logging.error(e)
 
-        time.sleep(21600)
+        time.sleep(21600)  # 6 hours
 
 
 def start_scheduler():
-
-    import threading
 
     t = threading.Thread(target=automation_loop)
 
@@ -169,12 +175,12 @@ def start_scheduler():
 
 
 # --------------------------------------------------
-# DASHBOARD API
+# DASHBOARD
 # --------------------------------------------------
 
 @app.route("/dashboard")
 
-async def dashboard():
+def dashboard():
 
     return jsonify({
 
@@ -205,15 +211,15 @@ async def dashboard():
 
 def analytics():
 
-    blog_count = BlogPost.query.count()
+    blogs = BlogPost.query.count()
 
-    keyword_count = Keyword.query.count()
+    keywords = Keyword.query.count()
 
     return jsonify({
 
-        "total_blogs": blog_count,
+        "blogs": blogs,
 
-        "keywords_discovered": keyword_count
+        "keywords": keywords
 
     })
 
@@ -224,7 +230,7 @@ def analytics():
 
 @app.route("/system/metrics")
 
-def system_metrics():
+def metrics():
 
     import psutil
 
@@ -240,28 +246,7 @@ def system_metrics():
 
 
 # --------------------------------------------------
-# TEST DATA
-# --------------------------------------------------
-
-@app.route("/dashboard/data")
-
-async def dashboard_data():
-
-    await asyncio.sleep(1)
-
-    return jsonify([
-
-        "AI Content Engine Ready",
-
-        "Keyword Discovery Running",
-
-        "SEO Automation Active"
-
-    ])
-
-
-# --------------------------------------------------
-# REGISTER CONTENT ENGINE ROUTES
+# REGISTER ENGINE ROUTES
 # --------------------------------------------------
 
 register_engine_routes(app)
@@ -281,11 +266,18 @@ def handle_exception(e):
 
 
 # --------------------------------------------------
-# START SERVER
+# APP STARTUP
+# --------------------------------------------------
+
+init_database()
+
+start_scheduler()
+
+
+# --------------------------------------------------
+# LOCAL DEV
 # --------------------------------------------------
 
 if __name__ == "__main__":
-
-    start_scheduler()
 
     app.run(host="0.0.0.0", port=10000)
