@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # ---------------------------------------------------
-# APP SETUP
+# APP INIT
 # ---------------------------------------------------
 
 app = Flask(__name__)
@@ -22,6 +22,7 @@ ADMIN_KEY = os.environ.get("ADMIN_KEY", "supportrd_admin")
 DATA_DIR = "/data" if os.path.isdir("/data") else os.getcwd()
 DB_PATH = os.path.join(DATA_DIR, "supportrd.db")
 
+
 # ---------------------------------------------------
 # DATABASE
 # ---------------------------------------------------
@@ -33,6 +34,7 @@ def get_db():
 
 
 def init_db():
+
     conn = get_db()
 
     conn.execute("""
@@ -58,6 +60,7 @@ def init_db():
 
 init_db()
 
+
 # ---------------------------------------------------
 # AUTH
 # ---------------------------------------------------
@@ -65,7 +68,7 @@ init_db()
 @app.route("/api/login", methods=["POST"])
 def login():
 
-    data = request.json
+    data = request.get_json()
 
     email = data.get("email")
     password = data.get("password")
@@ -80,7 +83,7 @@ def login():
     conn.close()
 
     if not user:
-        return jsonify({"error": "invalid login"}), 401
+        return jsonify({"error": "invalid credentials"}), 401
 
     session["user"] = user["email"]
 
@@ -96,7 +99,7 @@ def logout():
 
 
 # ---------------------------------------------------
-# ADMIN AUTH
+# ADMIN CHECK
 # ---------------------------------------------------
 
 def require_admin():
@@ -115,34 +118,39 @@ def require_admin():
 
 
 # ---------------------------------------------------
-# DASHBOARD STATS
+# DASHBOARD DATA
 # ---------------------------------------------------
 
 @app.route("/api/dashboard")
-def dashboard_data():
+def dashboard():
 
     conn = get_db()
 
-    users = conn.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
-    events = conn.execute("SELECT COUNT(*) as c FROM events").fetchone()["c"]
+    users = conn.execute(
+        "SELECT COUNT(*) as count FROM users"
+    ).fetchone()["count"]
+
+    events = conn.execute(
+        "SELECT COUNT(*) as count FROM events"
+    ).fetchone()["count"]
 
     conn.close()
 
     return jsonify({
         "users": users,
         "events": events,
-        "time": datetime.utcnow().isoformat()
+        "server_time": datetime.utcnow().isoformat()
     })
 
 
 # ---------------------------------------------------
-# HAIR SCANNER
+# HAIR SCANNER API
 # ---------------------------------------------------
 
 @app.route("/api/hair-scan", methods=["POST"])
 def hair_scan():
 
-    data = request.json
+    data = request.get_json()
 
     dryness = data.get("dryness", 0)
     breakage = data.get("breakage", 0)
@@ -151,14 +159,14 @@ def hair_scan():
     score = dryness + breakage + oil
 
     if score < 4:
-        result = "Healthy hair"
+        diagnosis = "Healthy hair"
     elif score < 8:
-        result = "Needs moisture"
+        diagnosis = "Needs moisture"
     else:
-        result = "Damage detected"
+        diagnosis = "Hair damage detected"
 
     return jsonify({
-        "result": result,
+        "diagnosis": diagnosis,
         "score": score
     })
 
@@ -170,7 +178,8 @@ def hair_scan():
 @app.route("/api/aria/chat", methods=["POST"])
 def aria_chat():
 
-    data = request.json
+    data = request.get_json()
+
     message = data.get("message")
 
     if not message:
@@ -194,7 +203,9 @@ def aria_chat():
 
         reply = msg.content[0].text
 
-    except Exception:
+    except Exception as e:
+
+        print("AI error:", e)
 
         reply = "Aria is temporarily unavailable."
 
@@ -207,15 +218,27 @@ def aria_chat():
 # CONTENT ENGINE
 # ---------------------------------------------------
 
+run_engine = None
+
+try:
+    from content_engine import run_engine
+    print("Content engine loaded")
+except Exception as e:
+    print("Content engine not loaded:", e)
+
+
 @app.route("/api/content/run", methods=["POST"])
 def run_content_engine():
 
     if not require_admin():
         return jsonify({"error": "unauthorized"}), 403
 
-    try:
+    if run_engine is None:
+        return jsonify({
+            "error": "content engine unavailable"
+        }), 500
 
-        from content_engine import run_engine
+    try:
 
         result = run_engine()
 
@@ -242,13 +265,15 @@ try:
 
     register_engine_routes(app)
 
+    print("Engine routes loaded")
+
 except Exception as e:
 
     print("Engine routes not loaded:", e)
 
 
 # ---------------------------------------------------
-# HEALTH
+# HEALTH CHECK
 # ---------------------------------------------------
 
 @app.route("/health")
@@ -261,7 +286,20 @@ def health():
 
 
 # ---------------------------------------------------
-# START SERVER
+# ROOT
+# ---------------------------------------------------
+
+@app.route("/")
+def root():
+
+    return jsonify({
+        "app": "SupportRD API",
+        "status": "running"
+    })
+
+
+# ---------------------------------------------------
+# START
 # ---------------------------------------------------
 
 if __name__ == "__main__":
