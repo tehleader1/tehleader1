@@ -11,7 +11,7 @@ from engine_routes import register_engine_routes
 # ----------------------
 # APP SETUP
 # ----------------------
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates", static_folder="static")
 logging.basicConfig(level=logging.INFO)
 
 # ----------------------
@@ -100,11 +100,11 @@ def start_scheduler():
     logging.info("Automation scheduler started")
 
 # ----------------------
-# DASHBOARD
+# DASHBOARD ROUTE
 # ----------------------
 @app.route("/dashboard")
 def dashboard():
-    return render_template("dashboard.html")  # Serve real HTML page
+    return render_template("dashboard.html")
 
 # ----------------------
 # ANALYTICS
@@ -146,4 +146,4 @@ def handle_exception(e):
 if __name__ == "__main__":
     init_database()
     start_scheduler()
-    app.run(host="0.0.0.0", port=10000)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
