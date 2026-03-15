@@ -135,6 +135,13 @@ def metrics():
     })
 
 # ----------------------
+# RENDER HEALTH CHECK
+# ----------------------
+@app.route("/api/ping")
+def ping():
+    return jsonify({"status": "ok"})
+
+# ----------------------
 # REGISTER ENGINE ROUTES
 # ----------------------
 register_engine_routes(app)
