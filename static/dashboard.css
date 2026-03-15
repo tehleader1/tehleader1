@@ -1,1 +1,5 @@
+body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
+nav button { margin-right: 10px; padding: 8px 16px; cursor: pointer; }
+.p-tab { margin-top: 20px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+pre { background: #eee; padding: 10px; border-radius: 5px; }
 
