@@ -911,7 +911,7 @@ def index():
 <meta name="apple-mobile-web-app-title" content="Aria">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845">
-<title>Aria — SupportRD Hair Advisor</title>
+<title>Aria — SupportRD Hair Advisor v3</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -3185,6 +3185,12 @@ def sitemap():
     body += '</urlset>'
     return Response(body, mimetype="application/xml")
 
+
+
+
+@app.route("/version")
+def version():
+    return Response("SupportRD v3 — login+dashboard fixed", mimetype="text/plain")
 
 @app.route("/health")
 def health_check():
