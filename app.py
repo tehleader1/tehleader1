@@ -545,8 +545,7 @@ def init_subscription_db():
         went_offline_at TEXT,
         viewers     INTEGER DEFAULT 0
     )""")
-    con.execute("INSERT OR IGNORE INTO live_feed_status (id,is_live) VALUES (1,1)")
-    con.execute("UPDATE live_feed_status SET is_live=1 WHERE id=1")
+    con.execute("INSERT OR IGNORE INTO live_feed_status (id,is_live) VALUES (1,0)")
     con.execute("""CREATE TABLE IF NOT EXISTS live_feed_events (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         type        TEXT NOT NULL,
@@ -725,7 +724,7 @@ Anthony Blogger signing out. 💜"""
             "This post captures the soul of Support RD — not just a hair brand but a mission driven by faith and persistence."
         )
     )
-    print("[SEED] Spiritual Allah post seeded -> published (OK)")
+    print("[SEED] Spiritual Allah post seeded → published ✓")
 
 def _seed_lsciador_post():
     existing = db_execute("SELECT id FROM blog_posts WHERE slug='lsciador-refresher-shampoo-conditioner'", fetchone=True)
@@ -803,7 +802,7 @@ This is not a refresh of an old formula. This is the formula that was always mea
             "published"
         )
     )
-    print("[BLOG] Lsciador launch post seeded (OK)")
+    print("[BLOG] Lsciador launch post seeded ✓")
 
 _seed_lsciador_post()
 _seed_spiritual_allah_post()
@@ -819,24 +818,13 @@ def get_subscription(user_id):
             "status","plan","trial_start","trial_end","current_period_end","created_at","updated_at"]
     return dict(zip(cols, row))
 
-def _get_admin_emails():
-    """Resolve admin emails from env, with a safe fallback for local/dev."""
-    raw_list = os.environ.get("ADMIN_EMAILS", "").strip()
-    if raw_list:
-        return {e.strip().lower() for e in raw_list.split(",") if e.strip()}
-    single = os.environ.get("ADMIN_EMAIL", "").strip().lower()
-    if single:
-        return {single}
-    # Local/dev fallback to keep dashboards usable when env isn't set
-    return {"agentsupport@supportrd.com"}
-
 def is_admin_user(user_id):
-    """Returns True if this user's email is in the admin list."""
-    admins = _get_admin_emails()
-    if not admins:
+    """Returns True if this user's email matches the ADMIN_EMAIL env var."""
+    admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    if not admin_email:
         return False
     row = db_execute("SELECT email FROM users WHERE id=?", (user_id,), fetchone=True)
-    if row and row[0].strip().lower() in admins:
+    if row and row[0].strip().lower() == admin_email:
         return True
     return False
 
@@ -2374,6 +2362,26 @@ SupportRD products to reference: Formula Exclusiva ($55), Laciador Crece ($40), 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/photo-analysis/history", methods=["GET","OPTIONS"])
+def photo_analysis_history():
+    user = get_current_user()
+    if not user: return jsonify({"error":"unauthorized"}), 401
+    if not is_subscribed(user["id"]): return jsonify({"error":"premium_required"}), 403
+    con = get_db()
+    rows = con.execute("SELECT analysis, ts FROM photo_analyses WHERE user_id=? ORDER BY ts DESC LIMIT 10",
+                       (user["id"],)).fetchall()
+    con.close()
+    history = []
+    for r in rows:
+        score = 0
+        try:
+            a = json.loads(r[0]) if r[0] else {}
+            score = a.get("overall_health_score", a.get("score", 0))
+        except Exception:
+            score = 0
+        history.append({"score": score, "created_at": r[1]})
+    return jsonify({"history": history})
+
 
 @app.route("/analytics")
 def analytics():
@@ -2578,7 +2586,7 @@ def delete_account():
     if not user: return jsonify({"error":"Not authenticated"}),401
     uid = user["id"]
     # Delete all user data
-    for table in ["sessions","subscriptions","hair_profiles","photo_analyses","hair_journal","treatment_log","score_history","user_settings"]:
+    for table in ["sessions","subscriptions","hair_profiles","photo_analyses","hair_journal","treatment_log","hair_score_history","user_settings"]:
         try: db_execute(f"DELETE FROM {table} WHERE user_id=?", (uid,))
         except: pass
     db_execute("DELETE FROM users WHERE id=?", (uid,))
@@ -2621,6 +2629,16 @@ def reset_password():
                (hash_password(password), user[0]))
     return jsonify({"ok": True})
 
+@app.route("/api/auth/change-password", methods=["POST","OPTIONS"])
+def change_password():
+    user = get_current_user()
+    if not user: return jsonify({"error":"Not logged in"}), 401
+    data = request.get_json(silent=True) or {}
+    new_pw = (data.get("new_password","") or "").strip()
+    if len(new_pw) < 6: return jsonify({"error":"Password must be at least 6 characters"}), 400
+    db_execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(new_pw), user["id"]))
+    return jsonify({"ok": True})
+
 
 # ── PROFILE / HISTORY ENDPOINTS ───────────────────────────────────────────────
 @app.route("/api/profile", methods=["GET","POST","OPTIONS"])
@@ -2631,6 +2649,43 @@ def profile():
         save_hair_profile(user["id"], request.get_json())
         return jsonify({"ok":True})
     return jsonify(get_hair_profile(user["id"]))
+
+@app.route("/api/settings", methods=["GET","POST","OPTIONS"])
+def settings():
+    user = get_current_user()
+    if not user: return jsonify({"error":"Not logged in"}), 401
+    if request.method == "GET":
+        row = db_execute("SELECT phone,address,city FROM user_settings WHERE user_id=?", (user["id"],), fetchone=True)
+        return jsonify({
+            "name": user.get("name",""),
+            "email": user.get("email",""),
+            "phone": row[0] if row else "",
+            "address": row[1] if row else "",
+            "city": row[2] if row else ""
+        })
+    data = request.get_json(silent=True) or {}
+    name    = (data.get("name","") or "").strip()
+    email   = (data.get("email","") or "").strip().lower()
+    phone   = (data.get("phone","") or "").strip()
+    address = (data.get("address","") or "").strip()
+    city    = (data.get("city","") or "").strip()
+
+    if name:
+        db_execute("UPDATE users SET name=? WHERE id=?", (name, user["id"]))
+    if email:
+        existing = db_execute("SELECT id FROM users WHERE email=? AND id!=?", (email, user["id"]), fetchone=True)
+        if existing: return jsonify({"error":"Email already in use"}), 400
+        db_execute("UPDATE users SET email=? WHERE id=?", (email, user["id"]))
+
+    db_execute("CREATE TABLE IF NOT EXISTS user_settings (user_id INTEGER PRIMARY KEY, phone TEXT, address TEXT, city TEXT)")
+    existing_s = db_execute("SELECT user_id FROM user_settings WHERE user_id=?", (user["id"],), fetchone=True)
+    if existing_s:
+        db_execute("UPDATE user_settings SET phone=?,address=?,city=? WHERE user_id=?",
+                   (phone,address,city,user["id"]))
+    else:
+        db_execute("INSERT INTO user_settings (user_id,phone,address,city) VALUES (?,?,?,?)",
+                   (user["id"],phone,address,city))
+    return jsonify({"ok": True})
 
 @app.route("/api/profile/ai-status", methods=["GET","OPTIONS"])
 def profile_ai_status():
@@ -2782,7 +2837,7 @@ Respond ONLY in valid JSON, no markdown:
                  idea.get("outline","")[:500], idea.get("tags","")[:200],
                  idea.get("reasoning","")[:300])
             )
-        print(f"[STARTER BAG] 5 AI blog ideas gifted to user {user_id} (OK)")
+        print(f"[STARTER BAG] 5 AI blog ideas gifted to user {user_id} ✓")
     except Exception as e:
         print(f"[STARTER BAG] Gift failed: {e}")
 # ─────────────────────────────────────────────────────────────────────────────
@@ -7208,6 +7263,7 @@ function renderScore(sc) {
   _scores=sc;
   const z=getZone(sc.overall);
   const circ=408, ring=document.getElementById('score-ring');
+  if(!ring) return;
   ring.style.strokeDasharray=circ;
   ring.style.strokeDashoffset=circ-(circ*(sc.overall/100));
   animNum(document.getElementById('score-num'),sc.overall,2000);
@@ -7231,7 +7287,7 @@ function toggleTag(el,group){
   setTimeout(()=>renderScore(calcScore()),50);
 }
 
-function tagsToString(id){return[...document.querySelectorAll('#'+id+' .tag.active')].map(t=>t.textContent.trim()).join(', ');}
+function tagsToString(id){return[...document.querySelectorAll('#'+id+' .tag.on, #'+id+' .tag.active')].map(t=>t.textContent.trim()).join(', ');}
 function setTagsFromString(id,val){
   if(!val) return;
   const sel=val.split(',').map(s=>s.trim().toLowerCase());
@@ -7239,6 +7295,8 @@ function setTagsFromString(id,val){
 }
 
 let _isPremium = false;
+function isAdminUser(){ return localStorage.getItem('srd_admin')==='1'; }
+function hasPremiumAccess(){ return _isPremium || localStorage.getItem('srd_premium')==='1' || isAdminUser(); }
 
 function showUpgradeModal(feature){
   // Always push to the Shopify product page — works even if Stripe is down
@@ -7718,12 +7776,16 @@ function renderRoutine(rt){
 
 // ── PROGRESS TRACKER ─────────────────────────────────────────────────────────
 async function openProgressPage(){
-  document.getElementById('progress-gate').style.display='none';
-  document.getElementById('progress-content').style.display='block';
+  const gate = document.getElementById('progress-gate');
+  const cont = document.getElementById('progress-content');
+  const ok = hasPremiumAccess();
+  if(gate) gate.style.display = ok ? 'none' : 'block';
+  if(cont) cont.style.display = ok ? 'block' : 'none';
+  if(!ok) return;
   // Auto-save today's score
   const sc=calcScore();
   fetch('/api/score-history',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},
-    body:JSON.stringify({score:sc.total,moisture:sc.moisture,strength:sc.strength,scalp:sc.scalp,growth:sc.growth})});
+    body:JSON.stringify({score:sc.overall,moisture:sc.moisture,strength:sc.strength,scalp:sc.scalp,growth:sc.growth})});
   // Load history
   const r=await fetch('/api/score-history',{headers:{'X-Auth-Token':token}});
   const d=await r.json();
@@ -7981,14 +8043,21 @@ function paRenderResult(d){
 
 async function paLoadHistory(){
   try{
-    const r = await fetch('/api/photo-analysis/history',{headers:{'X-Auth-Token':token}});
+    let r = await fetch('/api/photo-analysis/history',{headers:{'X-Auth-Token':token}});
+    if(!r.ok){
+      r = await fetch('/api/photo-analysis',{headers:{'X-Auth-Token':token}});
+    }
     const d = await r.json();
     const el = document.getElementById('pa-history-list');
     if(!el) return;
-    if(!d.history || !d.history.length){ el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No past analyses yet.</div>'; return; }
-    el.innerHTML = d.history.slice(0,5).map(h=>'<div class="pa-history-item" style="padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);">'
-      +'<span style="color:var(--text);font-weight:600;">Score '+h.score+'</span> &nbsp;'
-      + new Date(h.created_at).toLocaleDateString()
+    const history = d.history || (d.analyses||[]).map(a=>({
+      score: (a.analysis?.overall_health_score || a.analysis?.score || a.overall_health_score || a.score || 0),
+      created_at: a.ts || a.created_at || ''
+    }));
+    if(!history || !history.length){ el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No past analyses yet.</div>'; return; }
+    el.innerHTML = history.slice(0,5).map(h=>'<div class="pa-history-item" style="padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);">'
+      +'<span style="color:var(--text);font-weight:600;">Score '+(h.score||0)+'</span> &nbsp;'
+      + (h.created_at ? new Date(h.created_at).toLocaleDateString() : '')
       +'</div>').join('');
   }catch(e){ /* silent */ }
 }
@@ -8069,7 +8138,7 @@ let _journalPhotoB64 = null;
 
 
 function openJournalEntry(){
-  if(!_isPremium){ showUpgradeModal('Hair Journal'); return; }
+  if(!hasPremiumAccess()){ showUpgradeModal('Hair Journal'); return; }
   _journalRating=3; _journalPhotoB64=null;
   document.getElementById('jf-note').value='';
   document.getElementById('jf-photo-preview').style.display='none';
@@ -8162,9 +8231,12 @@ async function deleteJournalEntry(id){
 
 // ── WHATSAPP PAGE ─────────────────────────────────────────────────────────────
 function openWhatsappPage(){
-  document.getElementById('whatsapp-gate').style.display='none';
-  document.getElementById('whatsapp-content').style.display='block';
-  checkPushStatus();
+  const gate = document.getElementById('whatsapp-gate');
+  const cont = document.getElementById('whatsapp-content');
+  const ok = hasPremiumAccess();
+  if(gate) gate.style.display = ok ? 'none' : 'block';
+  if(cont) cont.style.display = ok ? 'block' : 'none';
+  if(ok) checkPushStatus();
 }
 
 async function linkPhone(){
@@ -8513,7 +8585,14 @@ async function loadData(){
     document.getElementById('nav-name').textContent=d.name||d.email;
     const av=document.getElementById('nav-av');
     if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
-    if(d.subscribed){ document.getElementById('plan-badge').textContent='PREMIUM'; _isPremium=true; }
+    if(d.subscribed){
+      document.getElementById('plan-badge').textContent='PREMIUM';
+      _isPremium=true;
+      localStorage.setItem('srd_premium','1');
+    } else {
+      _isPremium=false;
+      localStorage.removeItem('srd_premium');
+    }
     // Style premium nav tabs
     if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('✦')) t.style.color='var(--gold)'; });
     // Show starter bag link for premium users
@@ -8849,7 +8928,7 @@ async function loadRealStats(){
       let base=s.active_today;
       setInterval(()=>{base+=Math.floor(Math.random()*3)-1;base=Math.max(s.active_today-3,Math.min(s.active_today+8,base));ac.textContent=base;},4000);
     }
-    const sent=s.sentiment;
+    const sent=s.sentiment||{};
     const mp=sent.moisture_pct||68, gp=sent.growth_pct||54;
     document.getElementById('ins-bar-m').style.width=mp+'%';
     document.getElementById('ins-bar-mb').style.width=(100-mp)+'%';
@@ -8945,20 +9024,194 @@ function openPhotoPage(){
   const gate = document.getElementById('photo-gate');
   const cont = document.getElementById('photo-content');
   if(!gate||!cont) return;
-  const isPrem = localStorage.getItem('srd_premium')==='1';
-  const isAdm  = localStorage.getItem('srd_admin')==='1';
-  gate.style.display = (isPrem||isAdm) ? 'none' : 'block';
-  cont.style.display = (isPrem||isAdm) ? 'block' : 'none';
+  const ok = hasPremiumAccess();
+  gate.style.display = ok ? 'none' : 'block';
+  cont.style.display = ok ? 'block' : 'none';
+  if(ok){ paLoadHistory(); }
 }
 function openJournalPage(){
   const gate = document.getElementById('journal-gate');
   const cont = document.getElementById('journal-content');
   if(!gate||!cont) return;
-  const isPrem = localStorage.getItem('srd_premium')==='1';
-  gate.style.display = isPrem ? 'none' : 'block';
-  cont.style.display = isPrem ? 'block' : 'none';
+  const ok = hasPremiumAccess();
+  gate.style.display = ok ? 'none' : 'block';
+  cont.style.display = ok ? 'block' : 'none';
+  if(ok){ loadJournalEntries(); }
 }
-function openSettingsPage(){/* settings loads itself */}
+function openSettingsPage(){
+  loadSettingsPage();
+  stRefreshPushStatus();
+}
+
+async function loadSettingsPage(){
+  try{
+    const r = await fetch('/api/settings',{headers:{'X-Auth-Token':token}});
+    const d = await r.json();
+    if(d.error) return;
+    const nameEl = document.getElementById('st-name');
+    const emailEl= document.getElementById('st-email');
+    const phoneEl= document.getElementById('st-phone');
+    const addrEl = document.getElementById('st-address');
+    const cityEl = document.getElementById('st-city');
+    if(nameEl) nameEl.value  = d.name || '';
+    if(emailEl) emailEl.value = d.email || '';
+    if(phoneEl) phoneEl.value = d.phone || '';
+    if(addrEl) addrEl.value = d.address || '';
+    if(cityEl) cityEl.value = d.city || '';
+
+    const planEl = document.getElementById('st-plan-name');
+    const nextEl = document.getElementById('st-next-payment');
+    const manEl  = document.getElementById('st-manage-btn');
+    if(planEl) planEl.textContent = hasPremiumAccess() ? 'Premium Plan' : 'Free Plan';
+    if(nextEl) nextEl.textContent = hasPremiumAccess() ? 'Active subscription' : '—';
+    if(manEl){
+      manEl.textContent = hasPremiumAccess() ? 'Manage Subscription →' : 'Upgrade to Premium →';
+      manEl.href = 'https://supportrd.com/products/hair-advisor-premium';
+    }
+  }catch(e){}
+}
+
+function stShowMsg(id,msg){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.textContent = msg;
+  el.style.display='block';
+  setTimeout(()=>{ el.style.display='none'; }, 2400);
+}
+
+function stShowErr(id,msg){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.textContent = msg;
+  el.style.display='block';
+  setTimeout(()=>{ el.style.display='none'; }, 2800);
+}
+
+async function saveProfileSettings(){
+  const name = (document.getElementById('st-name')?.value||'').trim();
+  const email= (document.getElementById('st-email')?.value||'').trim();
+  const phone= (document.getElementById('st-phone')?.value||'').trim();
+  const address=(document.getElementById('st-address')?.value||'').trim();
+  const city= (document.getElementById('st-city')?.value||'').trim();
+  try{
+    const r = await fetch('/api/settings',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body: JSON.stringify({name,email,phone,address,city})
+    });
+    const d = await r.json();
+    if(d.error){ stShowErr('st-profile-err', d.error); return; }
+    stShowMsg('st-profile-msg','✓ Profile updated');
+    // Sync nav + local profile cache
+    const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
+    if(name) u.name = name;
+    if(email) u.email = email;
+    localStorage.setItem('srd_user', JSON.stringify(u));
+    const navName = document.getElementById('nav-name');
+    if(navName) navName.textContent = u.name || u.email || '';
+  }catch(e){ stShowErr('st-profile-err','Save failed — try again'); }
+}
+
+async function savePasswordSettings(){
+  const p1 = (document.getElementById('st-new-pass')?.value||'').trim();
+  const p2 = (document.getElementById('st-confirm-pass')?.value||'').trim();
+  if(p1.length < 6){ stShowErr('st-pass-err','Password must be at least 6 characters'); return; }
+  if(p1 !== p2){ stShowErr('st-pass-err','Passwords do not match'); return; }
+  try{
+    const r = await fetch('/api/auth/change-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body: JSON.stringify({new_password:p1})
+    });
+    const d = await r.json();
+    if(d.error){ stShowErr('st-pass-err', d.error); return; }
+    stShowMsg('st-pass-msg','✓ Password updated');
+    document.getElementById('st-new-pass').value='';
+    document.getElementById('st-confirm-pass').value='';
+  }catch(e){ stShowErr('st-pass-err','Update failed — try again'); }
+}
+
+async function stRefreshPushStatus(){
+  const label = document.getElementById('st-notif-val');
+  const btn = document.getElementById('st-push-btn');
+  if(!label||!btn) return;
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    label.textContent='Not supported on this browser.';
+    btn.disabled=true;
+    return;
+  }
+  const perm = Notification.permission;
+  if(perm==='denied'){
+    label.textContent='Blocked in browser settings.';
+    btn.disabled=true;
+    return;
+  }
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub && perm==='granted'){
+      label.textContent='Enabled — daily reminders on.';
+      btn.textContent='🔕 Disable Push Notifications';
+      btn.dataset.state='enabled';
+    } else {
+      label.textContent='Not enabled';
+      btn.textContent='🔔 Enable Push Notifications';
+      btn.dataset.state='disabled';
+    }
+  }catch(e){
+    label.textContent='Could not check status';
+  }
+}
+
+async function stEnablePush(){
+  try{
+    if(!_vapidKey){
+      const kr=await fetch('/api/push/vapid-public-key');
+      const kd=await kr.json();
+      _vapidKey=kd.key;
+    }
+    if(!_vapidKey){ stShowErr('st-pass-err','Push not configured'); return; }
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ return; }
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:urlBase64ToUint8Array(_vapidKey)
+    });
+    const subJson=sub.toJSON();
+    await fetch('/api/push/subscribe',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body:JSON.stringify({
+        endpoint:subJson.endpoint,
+        p256dh:subJson.keys.p256dh,
+        auth:subJson.keys.auth
+      })
+    });
+  }catch(e){}
+}
+
+async function stDisablePush(){
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    if(sub){
+      await fetch('/api/push/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({endpoint:sub.endpoint})});
+      await sub.unsubscribe();
+    }
+  }catch(e){}
+}
+
+async function stTogglePush(){
+  const btn = document.getElementById('st-push-btn');
+  if(!btn) return;
+  if(btn.dataset.state==='enabled'){
+    await stDisablePush();
+  } else {
+    await stEnablePush();
+  }
+  stRefreshPushStatus();
+}
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -10936,6 +11189,7 @@ async function lfClearFeed(){
 loadData();
 loadRealStats();
 lfInit();
+setTimeout(()=>{ try{ renderScore(calcScore()); }catch(e){} }, 300);
 
 // ══════════════════════════════════════════════════════════════════
 // ✦ ADMIN DASHBOARD — universal helper + button functions
@@ -11272,99 +11526,6 @@ function myUpgradeIdea() {
     <button onclick="document.getElementById('dash-privacy-modal').style.display='none'" style="margin-top:20px;background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:11px;letter-spacing:0.1em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Close</button>
   </div>
 </div>
-
-<script>
-(function(){
-  function hideLoader(){
-    var loader = document.getElementById('srd-loader');
-    if(loader){
-      loader.style.display = 'none';
-      loader.style.pointerEvents = 'none';
-    }
-  }
-
-  function fallbackSwitchPTab(name){
-    var map = {
-      overview: {page:'pp-overview'},
-      profile: {page:'pp-profile-page'},
-      journey: {page:'pp-journey'},
-      progress:{page:'pp-progress'},
-      photo:   {page:'pp-photo'},
-      journal: {page:'pp-journal'},
-      whatsapp:{page:'pp-whatsapp'},
-      settings:{page:'pp-settings'},
-      history: {page:'pp-overview'},
-      drive:   {page:'pp-drive'}
-    };
-
-    var cfg = map[name] || {page: 'pp-' + name};
-    document.querySelectorAll('.ppage').forEach(function(p){
-      p.classList.remove('active');
-    });
-    var el = document.getElementById(cfg.page);
-    if(el){ el.classList.add('active'); }
-
-    document.querySelectorAll('.nav-tab').forEach(function(t){
-      var label = t.textContent.replace(/✦|⚙/g,'').trim().toLowerCase();
-      var match = false;
-      if(name==='overview')  match = label==='overview';
-      else if(name==='profile') match = label==='hair profile' || label==='profile';
-      else if(name==='journey') match = label.indexOf('journey')>=0 || label.indexOf('aria')>=0;
-      else if(name==='progress') match = label.indexOf('progress')>=0;
-      else if(name==='photo')   match = label.indexOf('photo')>=0;
-      else if(name==='journal') match = label.indexOf('journal')>=0;
-      else if(name==='whatsapp') match = label.indexOf('sms')>=0 || label.indexOf('whatsapp')>=0;
-      else if(name==='settings') match = label.indexOf('setting')>=0;
-      else match = label.indexOf(name.slice(0,4))===0;
-      t.classList.toggle('active', match);
-    });
-
-    ['overview','profile','journey','photo'].forEach(function(n){
-      var btn = document.getElementById('mobt-'+n);
-      if(btn) btn.classList.toggle('active', n===name);
-    });
-
-    try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
-  }
-
-  function ensureSwitchPTab(){
-    if(typeof window.switchPTab !== 'function'){
-      window.switchPTab = fallbackSwitchPTab;
-    }
-  }
-
-  function bindSwitchButtons(){
-    var nodes = document.querySelectorAll('[onclick*=\"switchPTab(\"]');
-    nodes.forEach(function(el){
-      if(el.dataset.ptBound) return;
-      var raw = el.getAttribute('onclick') || '';
-      var match = /switchPTab\\('([^']+)'\\)/.exec(raw);
-      if(!match) return;
-      el.dataset.ptBound = '1';
-      el.onclick = null;
-      el.addEventListener('click', function(e){
-        e.preventDefault();
-        ensureSwitchPTab();
-        window.switchPTab(match[1]);
-      });
-    });
-  }
-
-  ensureSwitchPTab();
-  bindSwitchButtons();
-  hideLoader();
-  window.addEventListener('load', function(){
-    hideLoader();
-    ensureSwitchPTab();
-    bindSwitchButtons();
-  });
-  setTimeout(function(){
-    hideLoader();
-    ensureSwitchPTab();
-    bindSwitchButtons();
-  }, 1800);
-})();
-</script>
 </body></html>"""
     return Response(html, mimetype='text/html')
 
@@ -11903,10 +12064,9 @@ function updateStatus(d){
   // Show/hide offline state vs feed
   const offEl  = document.getElementById('offline-state');
   const feedEl = document.getElementById('feed-stream');
-  const hasEvents = (d.events && d.events.length > 0) || (feedEl && feedEl.children.length > 0);
-  const showOffline = !isLive && !hasEvents;
-  if(offEl)  offEl.style.display  = showOffline ? 'block' : 'none';
-  if(feedEl) feedEl.style.display = showOffline ? 'none' : 'flex';
+  const hasEvents = feedEl && feedEl.children.length > 0;
+  if(offEl)  offEl.style.display  = hasEvents ? 'none' : 'block';
+  if(feedEl) feedEl.style.display = hasEvents ? 'flex' : 'none';
 }
 
 function prependEvent(ev){
@@ -12001,36 +12161,16 @@ def live_feed_status():
     events = db_execute("SELECT * FROM live_feed_events ORDER BY id DESC LIMIT 50", fetchall=True)
     total_events   = db_execute("SELECT COUNT(*) FROM live_feed_events", fetchone=True)[0]
     total_sessions = db_execute("SELECT COUNT(*) FROM live_feed_events WHERE type='session'", fetchone=True)[0]
-    def _row_get(row, key, idx, default=None):
-        if not row:
-            return default
-        try:
-            return row[key]
-        except Exception:
-            try:
-                return row[idx]
-            except Exception:
-                return default
-    viewers = _row_get(status, "viewers", 6, 0)
-    event_cols = ["id","type","title","body","code","language","tag","ts"]
-    def _event_to_dict(row):
-        if row is None:
-            return {}
-        try:
-            return dict(row)
-        except Exception:
-            if isinstance(row, (list, tuple)):
-                return {event_cols[i]: row[i] if i < len(row) else None for i in range(len(event_cols))}
-            return {}
+    viewers = status["viewers"] if status else 0
     return jsonify({
-        "is_live":       bool(_row_get(status, "is_live", 1, 0)),
-        "session_title": _row_get(status, "session_title", 2, ""),
-        "session_desc":  _row_get(status, "session_desc", 3, ""),
-        "went_live_at":  _row_get(status, "went_live_at", 4, None),
+        "is_live":       bool(status["is_live"]) if status else False,
+        "session_title": status["session_title"] if status else "",
+        "session_desc":  status["session_desc"]  if status else "",
+        "went_live_at":  status["went_live_at"]  if status else None,
         "viewers":       viewers,
         "total_events":  total_events,
         "total_sessions":total_sessions,
-        "events":        [_event_to_dict(e) for e in (events or [])]
+        "events":        [dict(e) for e in (events or [])]
     })
 
 
@@ -12220,7 +12360,7 @@ def _company_refresh_5am():
         except Exception:
             pass
 
-        print(f"[5AM REFRESH] Complete (OK)")
+        print(f"[5AM REFRESH] Complete ✓")
 
     except Exception as e:
         print(f"[5AM REFRESH] Error: {e}")
@@ -12249,7 +12389,7 @@ def _start_5am_scheduler():
 
     t = threading.Thread(target=_loop, daemon=True, name="5am-refresh")
     t.start()
-    print("[5AM SCHEDULER] Scheduler thread started (OK)")
+    print("[5AM SCHEDULER] Scheduler thread started ✓")
 
 # Boot the scheduler when the app starts
 _start_5am_scheduler()
