@@ -2479,6 +2479,7 @@ body{{background:#f0ebe8;min-height:100vh;font-family:'Jost',sans-serif;font-wei
 .gf-links a{{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(193,163,162,0.7);text-decoration:none;transition:color 0.2s;cursor:pointer;}}
 .gf-links a:hover{{color:#c1a3a2;}}
 .gf-copy{{font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:0.1em;margin-bottom:6px;}}
+.build-id{{font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:0.18em;text-transform:uppercase;}}
 .gf-dem{{font-size:10px;color:rgba(193,163,162,0.5);letter-spacing:0.08em;}}
 @media(max-width:600px){{.team-grid{{grid-template-columns:1fr;}}.products-grid{{grid-template-columns:1fr;}}.about-title{{font-size:36px;}}.login-info{{grid-template-columns:1fr;}}
 .card{{background:#fff;border-radius:24px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 12px 48px rgba(0,0,0,0.08);border:1px solid rgba(193,163,162,0.20);}}
@@ -2592,6 +2593,7 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
     <a href="#privacy">Privacy Policy</a>
   </div>
   <div class="gf-copy">© 2026 Support. Born in the Dominican Republic. All rights reserved.</div>
+  <div class="build-id">Build 2026-03-16-2</div>
 </div>
 
 <script>
@@ -2773,7 +2775,7 @@ a{text-decoration:none;color:inherit;}
   </div>
 </section>
 
-<div class="footer">SupportRD — Built for Real People</div>
+<div class="footer">SupportRD — Built for Real People · Build 2026-03-16-2</div>
 </body></html>"""
 
 
