@@ -11272,6 +11272,99 @@ function myUpgradeIdea() {
     <button onclick="document.getElementById('dash-privacy-modal').style.display='none'" style="margin-top:20px;background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:11px;letter-spacing:0.1em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Close</button>
   </div>
 </div>
+
+<script>
+(function(){
+  function hideLoader(){
+    var loader = document.getElementById('srd-loader');
+    if(loader){
+      loader.style.display = 'none';
+      loader.style.pointerEvents = 'none';
+    }
+  }
+
+  function fallbackSwitchPTab(name){
+    var map = {
+      overview: {page:'pp-overview'},
+      profile: {page:'pp-profile-page'},
+      journey: {page:'pp-journey'},
+      progress:{page:'pp-progress'},
+      photo:   {page:'pp-photo'},
+      journal: {page:'pp-journal'},
+      whatsapp:{page:'pp-whatsapp'},
+      settings:{page:'pp-settings'},
+      history: {page:'pp-overview'},
+      drive:   {page:'pp-drive'}
+    };
+
+    var cfg = map[name] || {page: 'pp-' + name};
+    document.querySelectorAll('.ppage').forEach(function(p){
+      p.classList.remove('active');
+    });
+    var el = document.getElementById(cfg.page);
+    if(el){ el.classList.add('active'); }
+
+    document.querySelectorAll('.nav-tab').forEach(function(t){
+      var label = t.textContent.replace(/✦|⚙/g,'').trim().toLowerCase();
+      var match = false;
+      if(name==='overview')  match = label==='overview';
+      else if(name==='profile') match = label==='hair profile' || label==='profile';
+      else if(name==='journey') match = label.indexOf('journey')>=0 || label.indexOf('aria')>=0;
+      else if(name==='progress') match = label.indexOf('progress')>=0;
+      else if(name==='photo')   match = label.indexOf('photo')>=0;
+      else if(name==='journal') match = label.indexOf('journal')>=0;
+      else if(name==='whatsapp') match = label.indexOf('sms')>=0 || label.indexOf('whatsapp')>=0;
+      else if(name==='settings') match = label.indexOf('setting')>=0;
+      else match = label.indexOf(name.slice(0,4))===0;
+      t.classList.toggle('active', match);
+    });
+
+    ['overview','profile','journey','photo'].forEach(function(n){
+      var btn = document.getElementById('mobt-'+n);
+      if(btn) btn.classList.toggle('active', n===name);
+    });
+
+    try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
+  }
+
+  function ensureSwitchPTab(){
+    if(typeof window.switchPTab !== 'function'){
+      window.switchPTab = fallbackSwitchPTab;
+    }
+  }
+
+  function bindSwitchButtons(){
+    var nodes = document.querySelectorAll('[onclick*=\"switchPTab(\"]');
+    nodes.forEach(function(el){
+      if(el.dataset.ptBound) return;
+      var raw = el.getAttribute('onclick') || '';
+      var match = /switchPTab\\('([^']+)'\\)/.exec(raw);
+      if(!match) return;
+      el.dataset.ptBound = '1';
+      el.onclick = null;
+      el.addEventListener('click', function(e){
+        e.preventDefault();
+        ensureSwitchPTab();
+        window.switchPTab(match[1]);
+      });
+    });
+  }
+
+  ensureSwitchPTab();
+  bindSwitchButtons();
+  hideLoader();
+  window.addEventListener('load', function(){
+    hideLoader();
+    ensureSwitchPTab();
+    bindSwitchButtons();
+  });
+  setTimeout(function(){
+    hideLoader();
+    ensureSwitchPTab();
+    bindSwitchButtons();
+  }, 1800);
+})();
+</script>
 </body></html>"""
     return Response(html, mimetype='text/html')
 
