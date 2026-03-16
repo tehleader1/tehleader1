@@ -2431,7 +2431,7 @@ body{{background:#f0ebe8;min-height:100vh;font-family:'Jost',sans-serif;font-wei
 .brand-strip{{background:#0d0906;padding:12px 0;overflow:hidden;white-space:nowrap;}}
 .brand-strip-inner{{display:flex;gap:0;animation:brandScroll 18s linear infinite;}}
 .brand-pill{{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#c1a3a2;padding:0 24px;flex-shrink:0;}}
-@keyframes brandScroll{{0%{{transform:translateX(0);}}100%{{transform:translateX(-50%);}}
+@keyframes brandScroll{{0%{{transform:translateX(0);}}100%{{transform:translateX(-50%);}}}}
 /* Shared section styles */
 .about-block,.team-block,.coding-block,.products-block{{max-width:680px;margin:0 auto;padding:56px 28px;}}
 .about-eyebrow{{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:#c1a3a2;margin-bottom:14px;}}
@@ -2830,6 +2830,11 @@ def dashboard():
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body.drive-mode .nav,
+body.drive-mode .ticker-wrap,
+body.drive-mode .mobile-tab-bar,
+body.drive-mode .mob-drive-btn{display:none !important;}
+body.drive-mode .app{padding:0 !important;}
 body::before{content:'';position:fixed;inset:0;
   background:radial-gradient(ellipse 55% 45% at 75% 5%,rgba(240,160,144,0.07) 0%,transparent 55%),
     radial-gradient(ellipse 40% 35% at 5% 85%,rgba(224,176,80,0.05) 0%,transparent 50%),
@@ -4119,7 +4124,7 @@ body::before{content:'';position:fixed;inset:0;
       </div>
       <div class="aj-tier-body" id="aj-tbody-1">
         <div class="aj-tier-name">Discovery</div>
-        <div class="aj-tier-desc">Aria meets you. She learns your name, your hair story, and your first products. This is where your transformation begins.</div>
+        <div class="aj-tier-desc">Aria is just starting to mention your products — the first spark of your journey.</div>
         <div class="aj-tier-verdict" id="aj-v1"></div>
         <div class="aj-tier-backtrack" id="aj-bt1" style="display:none;">
           <button onclick="ajForceLevel(0)" class="aj-bt-btn">↩ Aria and I are still getting started</button>
@@ -4138,8 +4143,8 @@ body::before{content:'';position:fixed;inset:0;
         <div class="aj-orb-pulse"></div>
       </div>
       <div class="aj-tier-body" id="aj-tbody-2">
-        <div class="aj-tier-name">Use Cases &amp; Upgrades</div>
-        <div class="aj-tier-desc">Aria knows your full routine inside out. She's giving you application techniques, timing, what to expect each week — and upgrade paths based on your real results.</div>
+        <div class="aj-tier-name">Use Cases &amp; Changes</div>
+        <div class="aj-tier-desc">Aria is now in depth level 2 — she’s mentioning use cases and what you can change for better results.</div>
         <div class="aj-tier-verdict" id="aj-v2"></div>
         <div class="aj-tier-backtrack" id="aj-bt2" style="display:none;">
           <button onclick="ajForceLevel(1)" class="aj-bt-btn">↩ We haven't gone this deep yet</button>
@@ -4159,7 +4164,7 @@ body::before{content:'';position:fixed;inset:0;
       </div>
       <div class="aj-tier-body" id="aj-tbody-3">
         <div class="aj-tier-name">Inner Circle</div>
-        <div class="aj-tier-desc">Your partner noticed. Your family is asking. Aria now knows the people around you and helps you bring SupportRD into their lives too.</div>
+        <div class="aj-tier-desc">Aria now knows what your girlfriend likes and what your friends/family notice.</div>
         <div class="aj-tier-verdict" id="aj-v3"></div>
         <div class="aj-tier-backtrack" id="aj-bt3" style="display:none;">
           <button onclick="ajForceLevel(2)" class="aj-bt-btn">↩ Not quite there yet with Aria</button>
@@ -4179,7 +4184,7 @@ body::before{content:'';position:fixed;inset:0;
       </div>
       <div class="aj-tier-body" id="aj-tbody-4">
         <div class="aj-tier-name">Professional — Making Money</div>
-        <div class="aj-tier-desc">You've become a SupportRD story. People ask what you use, they trust your results, and you're ready to turn that into real income. You are now a VIP client.</div>
+        <div class="aj-tier-desc">You’ve entered the final depth: Professional — making money with your new hair level.</div>
         <div class="aj-tier-verdict" id="aj-v4"></div>
         <!-- CONTACT US CTA — only shown at level 4 -->
         <div id="aj-level4-cta" style="display:none;margin-top:14px;padding:16px 18px;background:linear-gradient(135deg,rgba(48,232,144,0.1),rgba(48,232,144,0.04));border:1px solid rgba(48,232,144,0.3);border-radius:12px;">
@@ -5282,10 +5287,12 @@ function renderRoutine(rt){
 async function openProgressPage(){
   document.getElementById('progress-gate').style.display='none';
   document.getElementById('progress-content').style.display='block';
+  const isPrem = _isPremium || localStorage.getItem('srd_premium')==='1';
+  if(!isPrem){ document.getElementById('progress-gate').style.display='block'; document.getElementById('progress-content').style.display='none'; return; }
   // Auto-save today's score
   const sc=calcScore();
   fetch('/api/score-history',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},
-    body:JSON.stringify({score:sc.total,moisture:sc.moisture,strength:sc.strength,scalp:sc.scalp,growth:sc.growth})});
+    body:JSON.stringify({score:sc.overall,moisture:sc.moisture,strength:sc.strength,scalp:sc.scalp,growth:sc.growth})});
   // Load history
   const r=await fetch('/api/score-history',{headers:{'X-Auth-Token':token}});
   const d=await r.json();
@@ -5736,6 +5743,8 @@ async function deleteJournalEntry(id){
 function openWhatsappPage(){
   document.getElementById('whatsapp-gate').style.display='none';
   document.getElementById('whatsapp-content').style.display='block';
+  const isPrem = _isPremium || localStorage.getItem('srd_premium')==='1';
+  if(!isPrem){ document.getElementById('whatsapp-gate').style.display='block'; document.getElementById('whatsapp-content').style.display='none'; return; }
   checkPushStatus();
 }
 
@@ -6085,6 +6094,7 @@ async function loadData(){
         }
       }
     }catch(e){}
+    localStorage.setItem('srd_premium', (_isPremium||adminBypass) ? '1' : '0');
     maybeShowAdminToast(adminBypass);
     renderToolsPerks();
     // Style premium nav tabs
@@ -6258,7 +6268,8 @@ let _currentTab = 'overview';
 
 function switchPTab(name){
   _currentTab = name;
-  if(name!=='drive'){ _driveGpsMode=false; clStopSafetyRefresh(); }
+  if(name==='drive'){ document.body.classList.add('drive-mode'); }
+  else { document.body.classList.remove('drive-mode'); _driveGpsMode=false; clStopSafetyRefresh(); }
 
   // Hide ALL ppages
   document.querySelectorAll('.ppage').forEach(p => p.classList.remove('active'));
@@ -6307,7 +6318,7 @@ function openPhotoPage(){
   const gate = document.getElementById('photo-gate');
   const cont = document.getElementById('photo-content');
   if(!gate||!cont) return;
-  const isPrem = localStorage.getItem('srd_premium')==='1';
+  const isPrem = _isPremium || localStorage.getItem('srd_premium')==='1';
   gate.style.display = isPrem ? 'none' : 'block';
   cont.style.display = isPrem ? 'block' : 'none';
 }
@@ -6315,7 +6326,7 @@ function openJournalPage(){
   const gate = document.getElementById('journal-gate');
   const cont = document.getElementById('journal-content');
   if(!gate||!cont) return;
-  const isPrem = localStorage.getItem('srd_premium')==='1';
+  const isPrem = _isPremium || localStorage.getItem('srd_premium')==='1';
   gate.style.display = isPrem ? 'none' : 'block';
   cont.style.display = isPrem ? 'block' : 'none';
 }
@@ -6744,13 +6755,13 @@ function ajRenderTimeline(sessions, depthIdx){
   const DS=[['how to apply','leave it on','morning routine','results in','upgrade'],['your partner','your mom','your friend','someone asked','recommend'],['making money','earn','income','ambassador','referral','professional']];
   tl.innerHTML=dates.map((date,di)=>{
     const msgs=byDate[date];
-    const uMsgs=msgs.filter(m=>m.role==='user');
     const aMsgs=msgs.filter(m=>m.role==='assistant');
+    const totalMsgs = msgs.length;
     const ariaUp=sessions.filter(s=>s.role==='assistant'&&(s.ts||'').slice(0,10)<=date).map(s=>(s.content||'').toLowerCase()).join(' ');
     let sd=0;
     for(let i=DS.length-1;i>=0;i--){ if(DS[i].some(kw=>ariaUp.includes(kw))){ sd=i+1; break; } }
     const d=DL[sd];
-    const txt=uMsgs.map(m=>m.content||'').join(' ').toLowerCase();
+    const txt=msgs.map(m=>m.content||'').join(' ').toLowerCase();
     const tags=[];
     if(txt.includes('formula')) tags.push('Formula Exclusiva');
     if(txt.includes('laciador')) tags.push('Laciador Crece');
@@ -6765,7 +6776,7 @@ function ajRenderTimeline(sessions, depthIdx){
     let fd; try{ fd=new Date(date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }catch(e){ fd=date; }
     return '<div class="aj-session"><div class="aj-session-dot" style="border-color:rgba('+d.rgb+',0.8);background:rgba('+d.rgb+',0.15);"></div>'
       +'<div class="aj-session-date">'+(isFirst?'✦ First Session — ':'')+fd+'</div>'
-      +'<div class="aj-session-head">Aria &amp; you &mdash; '+uMsgs.length+' messages <span style="font-size:9px;color:rgba('+d.rgb+',1);"> '+d.n+'</span></div>'
+      +'<div class="aj-session-head">Aria &amp; you &mdash; '+totalMsgs+' messages <span style="font-size:9px;color:rgba('+d.rgb+',1);"> '+d.n+'</span></div>'
       +'<div class="aj-session-body">'+sum+'</div>'
       +'<div class="aj-session-tags">'+tags.map(t=>'<span class="aj-session-tag">'+t+'</span>').join('')+'</div></div>';
   }).join('');
