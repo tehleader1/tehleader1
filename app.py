@@ -2425,6 +2425,8 @@ def login_page():
 body{{background:#f0ebe8;min-height:100vh;font-family:'Jost',sans-serif;font-weight:300;}}
 .login-wrap{{display:flex;align-items:center;justify-content:center;padding:60px 24px 20px;}}
 .card{{background:#fff;border-radius:24px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 12px 48px rgba(0,0,0,0.08);border:1px solid rgba(193,163,162,0.20);}}
+.login-board{{margin-top:14px;background:linear-gradient(135deg,#faf6f3,#fff);border:1px solid rgba(193,163,162,0.25);border-radius:18px;padding:16px 18px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.7);}}
+.login-board-title{{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:#c1a3a2;margin-bottom:10px;text-align:center;}}
 /* Brand strip */
 .brand-strip{{background:#0d0906;padding:12px 0;overflow:hidden;white-space:nowrap;}}
 .brand-strip-inner{{display:flex;gap:0;animation:brandScroll 18s linear infinite;}}
@@ -2463,6 +2465,14 @@ body{{background:#f0ebe8;min-height:100vh;font-family:'Jost',sans-serif;font-wei
 .prod-section-desc{{font-size:12px;color:#666;line-height:1.7;margin-bottom:16px;}}
 .prod-btn{{display:inline-block;background:#c1a3a2;color:#fff;padding:10px 20px;border-radius:20px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;}}
 .prod-badge{{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#9d7f6a;background:rgba(157,127,106,0.1);border:1px solid rgba(157,127,106,0.25);padding:6px 12px;border-radius:20px;display:inline-block;}}
+/* Login info strip */
+.login-info{{max-width:920px;margin:28px auto 0;padding:0 24px 20px;display:grid;grid-template-columns:1.1fr 0.9fr;gap:16px;}}
+.info-card{{background:#0d0906;border:1px solid rgba(193,163,162,0.35);border-radius:18px;padding:22px 20px;color:#f5f1ee;box-shadow:0 10px 30px rgba(0,0,0,0.2);}}
+.info-tag{{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#c1a3a2;margin-bottom:10px;}}
+.info-title{{font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;line-height:1.2;margin-bottom:8px;}}
+.info-desc{{font-size:12px;color:rgba(255,255,255,0.7);line-height:1.7;margin-bottom:12px;}}
+.info-link{{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#c1a3a2;text-decoration:none;}}
+.info-link:hover{{color:#fff;}}
 /* Global footer */
 .global-footer{{background:#0d0906;padding:32px 28px;text-align:center;}}
 .gf-links{{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}}
@@ -2470,7 +2480,7 @@ body{{background:#f0ebe8;min-height:100vh;font-family:'Jost',sans-serif;font-wei
 .gf-links a:hover{{color:#c1a3a2;}}
 .gf-copy{{font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:0.1em;margin-bottom:6px;}}
 .gf-dem{{font-size:10px;color:rgba(193,163,162,0.5);letter-spacing:0.08em;}}
-@media(max-width:600px){{.team-grid{{grid-template-columns:1fr;}}.products-grid{{grid-template-columns:1fr;}}.about-title{{font-size:36px;}}
+@media(max-width:600px){{.team-grid{{grid-template-columns:1fr;}}.products-grid{{grid-template-columns:1fr;}}.about-title{{font-size:36px;}}.login-info{{grid-template-columns:1fr;}}
 .card{{background:#fff;border-radius:24px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 12px 48px rgba(0,0,0,0.08);border:1px solid rgba(193,163,162,0.20);}}
 .logo{{text-align:center;margin-bottom:32px;}}
 .logo-text{{font-family:'Cormorant Garamond',serif;font-size:32px;font-style:italic;font-weight:300;color:#0d0906;}}
@@ -2502,33 +2512,36 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
   </div>
   <div id="err" class="err"></div>
   <div id="success" class="success"></div>
-  <div id="login-form">
-    <input type="email" id="l-email" placeholder="Email address">
-    <input type="password" id="l-pass" placeholder="Password">
-    <button class="btn" onclick="doLogin()">Sign In</button>
-    <div style="text-align:right;margin-top:8px;">
-      <a href="#" onclick="showForgotForm();return false;" style="font-size:11px;color:#9d7f6a;text-decoration:none;letter-spacing:0.06em;">Forgot password?</a>
+  <div class="login-board">
+    <div class="login-board-title">Secure Access</div>
+    <div id="login-form">
+      <input type="email" id="l-email" placeholder="Email address">
+      <input type="password" id="l-pass" placeholder="Password">
+      <button class="btn" onclick="doLogin()">Sign In</button>
+      <div style="text-align:right;margin-top:8px;">
+        <a href="#" onclick="showForgotForm();return false;" style="font-size:11px;color:#9d7f6a;text-decoration:none;letter-spacing:0.06em;">Forgot password?</a>
+      </div>
     </div>
-  </div>
-  <!-- Forgot Password Form -->
-  <div id="forgot-form" style="display:none">
-    <div style="font-size:13px;color:rgba(0,0,0,0.55);margin-bottom:16px;line-height:1.6;">Enter your email and we'll send a reset link.</div>
-    <input type="email" id="fp-email" placeholder="Email address">
-    <button class="btn" onclick="doForgotPassword()">Send Reset Link</button>
-    <div style="text-align:center;margin-top:12px;">
-      <a href="#" onclick="hideForgotForm();return false;" style="font-size:11px;color:#9d7f6a;text-decoration:none;">← Back to Sign In</a>
+    <!-- Forgot Password Form -->
+    <div id="forgot-form" style="display:none">
+      <div style="font-size:13px;color:rgba(0,0,0,0.55);margin-bottom:16px;line-height:1.6;">Enter your email and we'll send a reset link.</div>
+      <input type="email" id="fp-email" placeholder="Email address">
+      <button class="btn" onclick="doForgotPassword()">Send Reset Link</button>
+      <div style="text-align:center;margin-top:12px;">
+        <a href="#" onclick="hideForgotForm();return false;" style="font-size:11px;color:#9d7f6a;text-decoration:none;">← Back to Sign In</a>
+      </div>
     </div>
-  </div>
-  <div id="register-form" style="display:none;">
-    <input type="text" id="r-name" placeholder="Your name">
-    <input type="email" id="r-email" placeholder="Email address">
-    <input type="password" id="r-pass" placeholder="Password (min 6 characters)">
-    <button class="btn" onclick="doRegister()">Create Account</button>
-  </div>
-  <div class="divider"><div class="divider-line"></div><div class="divider-text">or</div><div class="divider-line"></div></div>
-  <div class="google-wrap">
-    <div id="g_id_onload" data-client_id="{GOOGLE_CLIENT_ID}" data-callback="handleGoogle"></div>
-    <div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="outline" data-text="sign_in_with" data-size="large" data-logo_alignment="left"></div>
+    <div id="register-form" style="display:none;">
+      <input type="text" id="r-name" placeholder="Your name">
+      <input type="email" id="r-email" placeholder="Email address">
+      <input type="password" id="r-pass" placeholder="Password (min 6 characters)">
+      <button class="btn" onclick="doRegister()">Create Account</button>
+    </div>
+    <div class="divider"><div class="divider-line"></div><div class="divider-text">or</div><div class="divider-line"></div></div>
+    <div class="google-wrap">
+      <div id="g_id_onload" data-client_id="{GOOGLE_CLIENT_ID}" data-callback="handleGoogle"></div>
+      <div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="outline" data-text="sign_in_with" data-size="large" data-logo_alignment="left"></div>
+    </div>
   </div>
   <div class="back"><a href="/">← Back to Hair Advisor</a></div>
 </div></div><!-- /login-wrap -->
@@ -2553,93 +2566,32 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
   </div>
 </div>
 
-<!-- ── ABOUT SUPPORT ───────────────────────────────────────── -->
-<div class="about-block">
-  <div class="about-eyebrow">✦ Who We Are</div>
-  <div class="about-title">Support</div>
-  <div class="about-sub">Born in the Dominican Republic. Built for the world.</div>
-  <div class="about-body">Support is a product company built on one belief — that real people deserve real tools. We started with hair care, built an AI advisor named Aria, and we're expanding into technology education, smart products, and hands-free living. Everything we build is designed to give you more power over your own life.</div>
-  <div class="about-timestamp">⏱ Official Coding Education Program launched: <strong>March 12, 2026</strong></div>
-</div>
-
-<!-- ── TEAM ────────────────────────────────────────────────── -->
-<div class="team-block">
-  <div class="about-eyebrow">✦ The Team</div>
-  <div class="team-grid">
-    <div class="team-card">
-      <div class="team-avatar">AF</div>
-      <div class="team-name">Anthony Figueroa</div>
-      <div class="team-role">Design &amp; Creative Direction</div>
-    </div>
-    <div class="team-card">
-      <div class="team-avatar">CF</div>
-      <div class="team-name">Crystal Figueroa</div>
-      <div class="team-role">Co-CEO</div>
-    </div>
-    <div class="team-card">
-      <div class="team-avatar">EV</div>
-      <div class="team-name">Evelyn</div>
-      <div class="team-role">Co-CEO &amp; Shampoo Inventor</div>
-    </div>
+<div class="login-info">
+  <!-- Coder Foundation card (comes first) -->
+  <div class="info-card">
+    <div class="info-tag">Coder Foundation</div>
+    <div class="info-title">SupportRD created a learning environment for Coders Everywhere</div>
+    <div class="info-desc">From Flask to AI to full‑stack shipping, we built a path for real people to build real products with AI.</div>
+    <a class="info-link" href="/about">Read the full story →</a>
   </div>
-</div>
-
-<!-- ── CODING STORY ─────────────────────────────────────────── -->
-<div class="coding-block">
-  <div class="about-eyebrow">✦ Coding Guide</div>
-  <div class="coding-title">I Survived a European Coding Expert.<br>Now I Build My Own Apps with AI.</div>
-  <div class="coding-timestamp">📅 Program officially launched: <strong>March 12, 2026</strong></div>
-  <div class="coding-body">This is a real story. I went through the fire — learning from a coding expert from Europe, following along through 10 to 15 minute and 15 to 20 minute lessons, watching someone else move fast while I tried to keep up. And then something clicked. I started building. I started shipping. I started using AI as a co-pilot and I haven't stopped since. <br><br>AI has opened a new lane for a new kind of millionaire — people who couldn't afford to go to school for this, people who were told it was too hard, people who just needed the right guide. That guide is now here.</div>
-  <div class="coding-episodes">
-    <div class="ep-card"><div class="ep-num">01</div><div class="ep-title">Starting From Zero</div><div class="ep-time">10–15 min</div></div>
-    <div class="ep-card"><div class="ep-num">02</div><div class="ep-title">Surviving the Expert</div><div class="ep-time">15–20 min</div></div>
-    <div class="ep-card"><div class="ep-num">03</div><div class="ep-title">AI as Your Co-Pilot</div><div class="ep-time">15–20 min</div></div>
-    <div class="ep-card ep-locked"><div class="ep-num">04</div><div class="ep-title">Building Real Products</div><div class="ep-time">Coming Soon</div></div>
-  </div>
-  <a href="/dashboard" class="coding-cta">Sign In to Access the Full Guide →</a>
-</div>
-
-<!-- ── PRODUCTS PREVIEW ────────────────────────────────────── -->
-<div class="products-block">
-  <div class="about-eyebrow">✦ What We Make</div>
-  <div class="products-grid">
-    <div class="prod-section">
-      <div class="prod-section-title">💧 Shampoo &amp; Hair Care</div>
-      <div class="prod-section-desc">Professional-grade formulas made for real hair. Developed by Evelyn. Sold on supportrd.com.</div>
-      <a href="https://supportrd.com" target="_blank" class="prod-btn">Shop Hair Care →</a>
-    </div>
-    <div class="prod-section gift">
-      <div class="prod-section-title">🎁 Gift Shop — Coming Soon</div>
-      <div class="prod-section-desc">Our first smart product: the <strong>Auto Grinder</strong> — a handheld electronic herb grinder. Drop it in, press once, done. Like a bullet blender but pocket-sized.</div>
-      <div class="prod-badge">🔧 In Development</div>
-    </div>
+  <!-- GPS Safety card -->
+  <div class="info-card">
+    <div class="info-tag">GPS Safety</div>
+    <div class="info-title">🛰 GPS Safety Lock</div>
+    <div class="info-desc">Hands‑Free Drive uses instant refresh GPS and voice guidance so your first position is accurate and your hands stay on the wheel.</div>
+    <a class="info-link" href="/dashboard">Open Hands‑Free Drive →</a>
   </div>
 </div>
 
 <!-- ── GLOBAL FOOTER ───────────────────────────────────────── -->
 <div class="global-footer">
   <div class="gf-links">
-    <a href="#about" onclick="document.querySelector('.about-block').scrollIntoView({{behavior:'smooth'}});return false;">About Us</a>
-    <a href="#team" onclick="document.querySelector('.team-block').scrollIntoView({{behavior:'smooth'}});return false;">Team</a>
-    <a href="#coding" onclick="document.querySelector('.coding-block').scrollIntoView({{behavior:'smooth'}});return false;">Coding Guide</a>
+    <a href="/about">About Us</a>
     <a href="https://supportrd.com" target="_blank">Shop</a>
     <a href="mailto:hello@supportrd.com">Contact</a>
     <a href="#privacy">Privacy Policy</a>
-    <a href="#campaign" onclick="document.getElementById('campaign-modal').style.display='flex';return false;">🗳 Political Position</a>
   </div>
   <div class="gf-copy">© 2026 Support. Born in the Dominican Republic. All rights reserved.</div>
-  <div class="gf-dem">🫏 Affiliated: Democratic Party</div>
-</div>
-
-<!-- ── CAMPAIGN MODAL ─────────────────────────────────────── -->
-<div id="campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;padding:24px;" onclick="this.style.display='none'">
-  <div style="background:#fff;border-radius:20px;padding:36px 32px;max-width:440px;width:100%;position:relative;" onclick="event.stopPropagation()">
-    <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#c1a3a2;margin-bottom:10px;">✦ Our Political Position</div>
-    <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:#0d0906;margin-bottom:14px;">Ban Pornography on the Internet</div>
-    <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:20px;">Support the company publicly backs the campaign to ban pornography on the internet. We believe the unrestricted access to explicit content online causes documented harm to children, relationships, and communities. This is our official stated position as a company. We are affiliated with the Democratic Party.</div>
-    <div style="font-size:10px;color:#999;margin-bottom:20px;">This reflects the personal and company position of Support's leadership. It does not represent all staff.</div>
-    <button onclick="document.getElementById('campaign-modal').style.display='none'" style="background:#c1a3a2;color:#fff;border:none;border-radius:20px;padding:12px 28px;font-size:12px;letter-spacing:0.1em;cursor:pointer;">Close</button>
-  </div>
 </div>
 
 <script>
@@ -2659,6 +2611,170 @@ function hideMsg(){{document.getElementById('err').style.display='none';document
 function saveAndRedirect(data){{localStorage.setItem('srd_token',data.token);localStorage.setItem('srd_user',JSON.stringify({{name:data.name,email:data.email,avatar:data.avatar||''}}));showOk('Welcome, '+data.name+'! Redirecting...');setTimeout(()=>window.location.href='/dashboard',1200);}}
 async function doLogin(){{var email=document.getElementById('l-email').value;var pass=document.getElementById('l-pass').value;if(!email||!pass){{showErr('Please fill in all fields.');return;}}var r=await fetch('/api/auth/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email,password:pass}})}});var d=await r.json();if(d.error){{showErr(d.error);}}else{{saveAndRedirect(d);}}}}\nasync function doRegister(){{var name=document.getElementById('r-name').value;var email=document.getElementById('r-email').value;var pass=document.getElementById('r-pass').value;if(!name||!email||!pass){{showErr('Please fill in all fields.');return;}}var r=await fetch('/api/auth/register',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{name,email,password:pass}})}});var d=await r.json();if(d.error){{showErr(d.error);}}else{{saveAndRedirect(d);}}}}\nasync function handleGoogle(response){{var r=await fetch('/api/auth/google',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{credential:response.credential}})}});var d=await r.json();if(d.error){{showErr(d.error);}}else{{saveAndRedirect(d);}}}}
 </script></body></html>"""
+
+
+# ── ABOUT PAGE ───────────────────────────────────────────────────────────────
+@app.route("/about")
+def about_page():
+    return """<!DOCTYPE html><html><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>About SupportRD</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#07090d;color:#e9edf5;font-family:'Space Grotesk',sans-serif;min-height:100vh;}
+a{text-decoration:none;color:inherit;}
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:60px 24px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 30% 20%,rgba(240,160,144,0.12),transparent 55%),radial-gradient(ellipse 45% 35% at 80% 80%,rgba(224,176,80,0.08),transparent 50%);}
+.hero-inner{max-width:980px;text-align:center;position:relative;z-index:1;}
+.hero-title{font-family:'Playfair Display',serif;font-size:64px;font-style:italic;line-height:1.05;letter-spacing:-0.02em;}
+.hero-sub{margin-top:16px;font-size:12px;letter-spacing:0.3em;text-transform:uppercase;color:#c1a3a2;}
+.hero-scroll{margin-top:26px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#9aa3b2;}
+.section{padding:70px 28px;}
+.story{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.2fr 0.8fr;gap:28px;}
+.eyebrow{font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#c1a3a2;margin-bottom:12px;}
+.story-title{font-family:'Playfair Display',serif;font-size:34px;font-style:italic;margin-bottom:12px;}
+.story-body{font-size:15px;color:#b9c0ce;line-height:1.9;}
+.quote{margin-top:18px;border-left:2px solid rgba(240,160,144,0.5);padding-left:14px;color:#e8d7d0;font-style:italic;}
+.stats{display:grid;grid-template-columns:1fr;gap:12px;}
+.stat-card{background:#0c0f16;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;}
+.stat-val{font-family:'Playfair Display',serif;font-size:22px;color:#f0a090;margin-bottom:4px;}
+.stat-lbl{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#9aa3b2;}
+.team{background:#0c0f16;}
+.team-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.team-card{background:#07090d;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:22px;transition:transform 0.2s,border-color 0.2s;}
+.team-card:hover{transform:translateY(-4px);border-color:rgba(240,160,144,0.4);}
+.team-name{font-family:'Playfair Display',serif;font-size:18px;font-style:italic;margin-bottom:6px;}
+.team-role{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#c1a3a2;margin-bottom:8px;}
+.team-bio{font-size:12px;color:#b9c0ce;line-height:1.7;margin-bottom:10px;}
+.team-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.team-tag{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(255,255,255,0.08);padding:4px 8px;border-radius:20px;color:#9aa3b2;}
+.products{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.prod-card{background:#0c0f16;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;}
+.prod-title{font-family:'Playfair Display',serif;font-size:20px;font-style:italic;margin-bottom:8px;}
+.prod-desc{font-size:12px;color:#b9c0ce;line-height:1.7;margin-bottom:12px;}
+.prod-link{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#f0a090;}
+.campaigns{max-width:1100px;margin:0 auto;margin-top:26px;background:linear-gradient(135deg,rgba(240,160,144,0.15),rgba(224,176,80,0.08));border:1px solid rgba(240,160,144,0.25);border-radius:16px;padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.camp-item{background:#07090d;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;}
+.camp-title{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#c1a3a2;margin-bottom:6px;}
+.camp-desc{font-size:12px;color:#b9c0ce;line-height:1.7;margin-bottom:10px;}
+.camp-link{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#f0a090;}
+.coding{background:#0c0f16;position:relative;overflow:hidden;}
+.coding::before{content:'</>';position:absolute;right:8%;top:20%;font-family:'Playfair Display',serif;font-size:180px;color:rgba(255,255,255,0.03);transform:rotate(-8deg);}
+.coding-inner{max-width:1100px;margin:0 auto;position:relative;z-index:1;}
+.time-badge{display:inline-block;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;background:rgba(240,160,144,0.12);border:1px solid rgba(240,160,144,0.25);padding:6px 12px;border-radius:20px;color:#f0a090;margin-bottom:14px;}
+.episodes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;}
+.ep{background:#07090d;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;}
+.ep-num{font-size:9px;letter-spacing:0.2em;color:#c1a3a2;margin-bottom:6px;}
+.ep-title{font-size:12px;font-weight:600;}
+.cta-row{margin-top:18px;display:flex;gap:12px;flex-wrap:wrap;}
+.cta{background:#f0a090;color:#000;border-radius:24px;padding:10px 18px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;}
+.cta.alt{background:transparent;border:1px solid rgba(240,160,144,0.35);color:#f0a090;}
+.footer{padding:30px 24px;text-align:center;font-size:10px;color:#8b93a3;letter-spacing:0.14em;text-transform:uppercase;}
+@media(max-width:900px){
+  .hero-title{font-size:44px;}
+  .story,.products,.campaigns,.episodes{grid-template-columns:1fr;}
+  .team-grid{grid-template-columns:1fr;}
+}
+</style></head><body>
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-title">Real tools for real people.</div>
+    <div class="hero-sub">SupportRD</div>
+    <div class="hero-scroll">Scroll to discover our story ↓</div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="story">
+    <div>
+      <div class="eyebrow">Who We Are</div>
+      <div class="story-title">Evelyn’s formula started it all.</div>
+      <div class="story-body">SupportRD began in the Dominican Republic with a single mission: create hair solutions that actually work for real people. We built Aria, a talking AI specialist, to guide every step of your hair journey — then expanded into education, smart products, and hands‑free living.</div>
+      <div class="quote">“Allahwazaweje — when you build from faith and focus, the results speak for themselves.”</div>
+    </div>
+    <div class="stats">
+      <div class="stat-card"><div class="stat-val">6+</div><div class="stat-lbl">Core Products</div></div>
+      <div class="stat-card"><div class="stat-val">Aria</div><div class="stat-lbl">AI Specialist</div></div>
+      <div class="stat-card"><div class="stat-val">DR</div><div class="stat-lbl">Origin</div></div>
+      <div class="stat-card"><div class="stat-val">3</div><div class="stat-lbl">Founders</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section team">
+  <div class="eyebrow" style="text-align:center;">The Team</div>
+  <div class="team-grid">
+    <div class="team-card">
+      <div class="team-name">Anthony</div>
+      <div class="team-role">Design & Anthony Blogger</div>
+      <div class="team-bio">Founder of SupportRD’s visual language and storytelling. Builds the AI‑first platform with real‑world UX.</div>
+      <div class="team-tags"><span class="team-tag">Brand</span><span class="team-tag">AI UX</span><span class="team-tag">Story</span></div>
+    </div>
+    <div class="team-card">
+      <div class="team-name">Crystal</div>
+      <div class="team-role">Co‑CEO</div>
+      <div class="team-bio">Operations and growth leader. Keeps the vision sharp and the team moving with precision.</div>
+      <div class="team-tags"><span class="team-tag">Strategy</span><span class="team-tag">Growth</span><span class="team-tag">Operations</span></div>
+    </div>
+    <div class="team-card">
+      <div class="team-name">Evelyn</div>
+      <div class="team-role">Co‑CEO & Shampoo Inventor</div>
+      <div class="team-bio">Creator of the original SupportRD formula and the voice behind our hair science.</div>
+      <div class="team-tags"><span class="team-tag">Hair Science</span><span class="team-tag">Formulation</span><span class="team-tag">Leadership</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="products">
+    <div class="prod-card">
+      <div class="prod-title">Hair Care</div>
+      <div class="prod-desc">Professional products developed by Evelyn — trusted by salons and real families.</div>
+      <a class="prod-link" href="https://supportrd.com" target="_blank">Shop hair care →</a>
+    </div>
+    <div class="prod-card">
+      <div class="prod-title">Aria Specialist</div>
+      <div class="prod-desc">Your talking AI specialist that remembers your products, your routine, and your progress.</div>
+      <a class="prod-link" href="/dashboard">Open Aria →</a>
+    </div>
+  </div>
+
+  <div class="campaigns">
+    <div class="camp-item">
+      <div class="camp-title">Donate to Campaign for the Poor</div>
+      <div class="camp-desc">Help us support local communities with products, education, and care.</div>
+      <a class="camp-link" href="mailto:hello@supportrd.com?subject=Campaign%20for%20the%20Poor%20Donation">Donate by Email →</a>
+    </div>
+    <div class="camp-item">
+      <div class="camp-title">Auto Dissolve Bar Partner</div>
+      <div class="camp-desc">We’re seeking partners to design and ship the Dissolve Soap Bar.</div>
+      <a class="camp-link" href="mailto:hello@supportrd.com?subject=Auto%20Dissolve%20Bar%20Partnership">Partner with Us →</a>
+    </div>
+  </div>
+</section>
+
+<section class="section coding">
+  <div class="coding-inner">
+    <div class="eyebrow">Coding Foundation</div>
+    <div class="story-title">SupportRD builds coders, not just apps.</div>
+    <div class="time-badge">Program launched — March 12, 2026</div>
+    <div class="story-body">We created a learning environment for coders everywhere — built on real apps, real shipping, and AI‑powered execution.</div>
+    <div class="episodes">
+      <div class="ep"><div class="ep-num">01</div><div class="ep-title">Flask Foundations</div></div>
+      <div class="ep"><div class="ep-num">02</div><div class="ep-title">AI Co‑Pilot Builds</div></div>
+      <div class="ep"><div class="ep-num">03</div><div class="ep-title">Full‑Stack Launch</div></div>
+      <div class="ep"><div class="ep-num">04</div><div class="ep-title">Deploy to Production</div></div>
+    </div>
+    <div class="cta-row">
+      <a class="cta" href="https://supportrd.com/blogs/news" target="_blank">Visit the Blog →</a>
+      <a class="cta alt" href="mailto:hello@supportrd.com?subject=Coder%20Foundation%20Contact">Contact Anthony →</a>
+    </div>
+  </div>
+</section>
+
+<div class="footer">SupportRD — Built for Real People</div>
+</body></html>"""
 
 
 # ── DASHBOARD PAGE ────────────────────────────────────────────────────────────
@@ -2994,6 +3110,17 @@ body::before{content:'';position:fixed;inset:0;
 .cl-dest-btn:hover{background:rgba(255,110,180,0.25);border-color:#ff6eb4;color:#ff6eb4;}
 /* Map area */
 .cl-map-wrap{position:relative;flex:1;overflow:hidden;background:linear-gradient(160deg,#1a0a2e 0%,#0d1b2a 100%);}
+.cl-gps-banner{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(48,232,144,0.12);border:1px solid rgba(48,232,144,0.5);color:#bff5d8;border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,0.35);transition:all 0.3s ease;animation:clBannerSlide 0.6s ease;}
+.cl-gps-banner.small{padding:6px 8px;gap:6px;bottom:10px;max-width:140px;}
+.cl-gps-banner-icon{font-size:14px;}
+.cl-gps-banner-text{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;line-height:1.4;}
+.cl-gps-banner.small .cl-gps-banner-text{display:none;}
+.cl-gps-dots{display:flex;gap:4px;}
+.cl-gps-dot{width:6px;height:6px;border-radius:50%;background:#30e890;opacity:0.4;animation:clDot 1s infinite;}
+.cl-gps-dot:nth-child(2){animation-delay:0.2s;}
+.cl-gps-dot:nth-child(3){animation-delay:0.4s;}
+@keyframes clDot{0%,100%{opacity:0.2;transform:scale(0.9);}50%{opacity:1;transform:scale(1.1);}}
+@keyframes clBannerSlide{from{transform:translate(-50%,20px);opacity:0;}to{transform:translate(-50%,0);opacity:1;}}
 .cl-canvas{width:100%;height:100%;display:block;}
 .cl-player{position:absolute;font-size:28px;transition:left 1.2s cubic-bezier(.4,0,.2,1),top 1.2s cubic-bezier(.4,0,.2,1);z-index:10;transform:translate(-50%,-50%);filter:drop-shadow(0 0 8px rgba(255,110,180,0.7));pointer-events:none;}
 .cl-dest-marker{position:absolute;font-size:32px;z-index:9;transform:translate(-50%,-50%);animation:clBounce 1.2s ease-in-out infinite;pointer-events:none;}
@@ -3049,6 +3176,13 @@ body::before{content:'';position:fixed;inset:0;
 .dashboard-footer{background:var(--bg);border-top:1px solid var(--border);padding:16px 28px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:center;}
 .dashboard-footer a{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;cursor:pointer;}
 .dashboard-footer a:hover{color:var(--rose);}
+/* Admin daily toast */
+.admin-toast{position:fixed;right:18px;bottom:18px;background:var(--bg2);border:1px solid rgba(240,160,144,0.25);border-radius:14px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,0.35);z-index:9997;max-width:320px;display:none;}
+.admin-toast-title{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;}
+.admin-toast-body{font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:10px;}
+.admin-toast-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.admin-toast-btn{padding:6px 12px;border-radius:14px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:'Space Grotesk',sans-serif;border:1px solid var(--border2);background:none;color:var(--muted2);}
+.admin-toast-btn.primary{background:var(--rose);color:#000;border-color:var(--rose);}
 
 .aj-tier{display:flex;align-items:flex-start;gap:20px;margin-bottom:28px;position:relative;z-index:2;}
 /* Orb container */
@@ -3390,6 +3524,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
     <div class="nav-tab" onclick="switchPTab('journal')">✦ Journal</div>
     <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
+    <a class="nav-tab" href="/about" style="text-decoration:none;">About</a>
     <div class="nav-tab" onclick="switchPTab('settings')">⚙ Settings</div>
   </div>
   <button class="drive-nav-btn" onclick="switchPTab('drive')" id="drive-nav-btn">
@@ -3435,6 +3570,7 @@ body::before{content:'';position:fixed;inset:0;
       <div class="mob-more-item" onclick="switchPTab('journey');closeMobMore()"><span class="mob-more-item-icon">✦</span>Aria Journey</div>
       <div class="mob-more-item" onclick="switchPTab('journal');closeMobMore()"><span class="mob-more-item-icon">📓</span>Journal</div>
       <div class="mob-more-item" onclick="switchPTab('whatsapp');closeMobMore()"><span class="mob-more-item-icon">💬</span>Aria SMS</div>
+      <a class="mob-more-item" href="/about" style="text-decoration:none;"><span class="mob-more-item-icon">ℹ</span>About</a>
       <div class="mob-more-item" onclick="switchPTab('settings');closeMobMore()"><span class="mob-more-item-icon">⚙</span>Settings</div>
     </div>
     <div style="text-align:center;margin-top:16px;">
@@ -3890,46 +4026,22 @@ body::before{content:'';position:fixed;inset:0;
         <div class="occ-card-sub">Quick — no wash needed</div>
       </div>
 
-      <div class="occ-card occ-action-card" onclick="occPickAction('Next Wash Day','🚿','Applying now, washing on next scheduled wash day')">
+      <div class="occ-card occ-action-card" onclick="occPickAction('Next Wash','🚿','Apply today, wash on your next scheduled wash day')">
         <div class="occ-card-icon">🚿</div>
-        <div class="occ-card-title">Next Wash Day</div>
+        <div class="occ-card-title">Next Wash</div>
         <div class="occ-card-sub">Apply now, wash later</div>
       </div>
 
-      <div class="occ-card occ-action-card" onclick="occPickAction('Shampoo + Laciador','🔁','Shampoo hair, remove buildup, then apply Laciador for softness')">
+      <div class="occ-card occ-action-card" onclick="occPickAction('Shampoo + Add Laciador','🔁','Next wash: shampoo, then add Laciador for softness & protection')">
         <div class="occ-card-icon">🔁</div>
         <div class="occ-card-title">Shampoo + Laciador</div>
-        <div class="occ-card-sub">Wash, remove, rebuild</div>
+        <div class="occ-card-sub">Wash then add Laciador</div>
       </div>
 
-      <div class="occ-card occ-action-card" onclick="occPickAction('Full Professional Wash','💆','Take to a SupportRD salon — deep wash with full product treatment')">
-        <div class="occ-card-icon">💆</div>
-        <div class="occ-card-title">Full Professional Wash</div>
-        <div class="occ-card-sub">Salon deep treatment</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Overnight Treatment','🌙','Apply before bed, let it absorb overnight, rinse in morning')">
-        <div class="occ-card-icon">🌙</div>
-        <div class="occ-card-title">Overnight Treatment</div>
-        <div class="occ-card-sub">Sleep-in formula</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Pre-Event Prep','💄','Quick styling prep before the occasion — product + style')">
-        <div class="occ-card-icon">💄</div>
-        <div class="occ-card-title">Pre-Event Prep</div>
-        <div class="occ-card-sub">Style + product for the event</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Deep Condition Mask','🫙','Apply Mascarilla, leave 15–30 min, rinse and style')">
-        <div class="occ-card-icon">🫙</div>
-        <div class="occ-card-title">Deep Condition Mask</div>
-        <div class="occ-card-sub">15–30 min mask treatment</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Scalp Treatment','💧','Apply Gotero directly to scalp, massage in, leave in')">
-        <div class="occ-card-icon">💧</div>
-        <div class="occ-card-title">Scalp Treatment</div>
-        <div class="occ-card-sub">Scalp focus — leave in</div>
+      <div class="occ-card occ-action-card" onclick="occPickAction('Professional Deep Wash','🧖','Take to a professional for a deep wash with Support products')">
+        <div class="occ-card-icon">🧖</div>
+        <div class="occ-card-title">Professional Deep Wash</div>
+        <div class="occ-card-sub">Salon‑level deep care</div>
       </div>
 
     </div>
@@ -4091,6 +4203,29 @@ body::before{content:'';position:fixed;inset:0;
   <div id="aj-depth-title" style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);margin-bottom:6px;">—</div>
   <div id="aj-depth-msg" style="font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:10px;"></div>
   <div id="aj-next-label" style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"></div>
+</div>
+
+<!-- MILESTONE MOMENTS -->
+<div style="margin-bottom:26px;">
+  <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;">Milestone Moments with Aria</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px;">
+      <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;">Level 1 • Discovery</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.6;">March 12, 2025 — Aria and John discussed upgrading to Premium and bringing Support products into his life.</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px;">
+      <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Level 2 • Use Cases</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.6;">Aria explained when to apply Laciador, how to wash next, and what changes would lift results.</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px;">
+      <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue);margin-bottom:6px;">Level 3 • Inner Circle</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.6;">Aria noted what John’s girlfriend liked and how his family could join the routine.</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px;">
+      <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);margin-bottom:6px;">Level 4 • Professional</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.6;">Aria confirmed he’s ready to earn with SupportRD and become a professional success story.</div>
+    </div>
+  </div>
 </div>
 
 <!-- SESSION TIMELINE -->
@@ -4361,6 +4496,17 @@ body::before{content:'';position:fixed;inset:0;
     <div class="cl-map-wrap" id="cl-map-wrap">
       <canvas id="cl-canvas" class="cl-canvas"></canvas>
 
+      <!-- GPS Safety Lock banner -->
+      <div class="cl-gps-banner" id="cl-gps-banner" style="display:none;">
+        <div class="cl-gps-banner-icon">🛰</div>
+        <div class="cl-gps-banner-text">GPS SAFETY LOCK — Instant refresh active — drive safe</div>
+        <div class="cl-gps-dots">
+          <div class="cl-gps-dot"></div>
+          <div class="cl-gps-dot"></div>
+          <div class="cl-gps-dot"></div>
+        </div>
+      </div>
+
       <!-- Player token (positioned by JS) -->
       <div class="cl-player" id="cl-player">🚗</div>
 
@@ -4419,6 +4565,26 @@ body::before{content:'';position:fixed;inset:0;
     <div class="ppage-title">⚙ Settings</div>
   </div>
   <div class="settings-page">
+
+    <!-- Tools & Perks -->
+    <div class="settings-section" id="st-tools-perks">
+      <div class="settings-section-title">Tools &amp; Perks</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px;">
+          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Submit Upgrade Idea</div>
+          <div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:10px;">Earn 1 free month of Premium if we build your idea.</div>
+          <button class="settings-save-btn" onclick="openUpgradeModal()" style="width:100%;">Submit Idea →</button>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;" id="starter-bag-card">
+          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);">Starter Bag</div>
+          <div style="font-size:12px;color:var(--muted2);line-height:1.6;">Premium members unlock your Starter Bag perks.</div>
+          <button class="settings-save-btn" onclick="dashboardUpgrade()" style="width:100%;">Unlock Starter Bag →</button>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <button class="settings-save-btn" onclick="openPositionsModal()" style="background:var(--gold);color:#000;">🗳 Open Positions &amp; Partnerships →</button>
+      </div>
+    </div>
 
     <!-- Billing -->
     <div class="settings-section">
@@ -4619,7 +4785,37 @@ body::before{content:'';position:fixed;inset:0;
   </div>
 </div>
 
+<!-- POSITIONS & PARTNERSHIPS MODAL -->
+<div id="positions-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:24px;" onclick="if(event.target===this)closePositionsModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:30px 26px;max-width:460px;width:100%;" onclick="event.stopPropagation()">
+    <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;">🗳 Positions &amp; Partnerships</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);margin-bottom:10px;">Support the Movement</div>
+    <div style="font-size:12px;color:var(--muted2);line-height:1.7;margin-bottom:18px;">These are the official partnership and community paths you can support directly from SupportRD.</div>
+    <div style="display:grid;gap:10px;">
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px;">
+        <div style="font-size:11px;color:var(--text);font-weight:700;margin-bottom:6px;">Campaign for the Poor</div>
+        <div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:10px;">Donate or contribute resources to help families and communities.</div>
+        <a href="mailto:hello@supportrd.com?subject=Campaign%20for%20the%20Poor%20Donation" style="display:inline-block;background:var(--gold);color:#000;border-radius:20px;padding:8px 16px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;">Donate by Email →</a>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px;">
+        <div style="font-size:11px;color:var(--text);font-weight:700;margin-bottom:6px;">Auto Dissolve Bar</div>
+        <div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:10px;">Partner with us to design and ship the Dissolve Soap Bar.</div>
+        <a href="mailto:hello@supportrd.com?subject=Auto%20Dissolve%20Bar%20Partnership" style="display:inline-block;background:var(--rose);color:#000;border-radius:20px;padding:8px 16px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;">Partner Contact →</a>
+      </div>
+    </div>
+    <button onclick="closePositionsModal()" style="margin-top:14px;background:none;border:1px solid var(--border2);color:var(--muted);padding:8px 18px;border-radius:20px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">Close</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
+<div class="admin-toast" id="admin-toast">
+  <div class="admin-toast-title">Admin Corner • 5AM Refresh</div>
+  <div class="admin-toast-body" id="admin-toast-body">Daily refresh completed. All pages re-synced.</div>
+  <div class="admin-toast-actions">
+    <button class="admin-toast-btn primary" onclick="adminToastRefresh()">Refresh Now</button>
+    <button class="admin-toast-btn" onclick="adminToastDismiss()">Got it</button>
+  </div>
+</div>
 
 <script>
 const token = localStorage.getItem('srd_token');
@@ -5873,6 +6069,22 @@ async function loadData(){
     const av=document.getElementById('nav-av');
     if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
     if(d.subscribed){ document.getElementById('plan-badge').textContent='PREMIUM'; _isPremium=true; }
+    // Admin / subscription status (for daily toast + premium bypass)
+    let adminBypass = false;
+    try{
+      const r2 = await fetch('/api/subscription/status',{headers:{'X-Auth-Token':token}});
+      if(r2.ok){
+        const s = await r2.json();
+        adminBypass = !!s.admin_bypass;
+        if(adminBypass){
+          _isPremium = true;
+          const pb = document.getElementById('plan-badge');
+          if(pb) pb.textContent = 'PREMIUM';
+        }
+      }
+    }catch(e){}
+    maybeShowAdminToast(adminBypass);
+    renderToolsPerks();
     // Style premium nav tabs
     if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('✦')) t.style.color='var(--gold)'; });
     document.getElementById('st-chats').textContent=d.chat_count||0;
@@ -5888,6 +6100,63 @@ async function loadData(){
     }
     setTimeout(()=>renderScore(calcScore()),400);
   }catch(e){console.error(e);setTimeout(()=>renderScore(calcScore()),400);}
+}
+
+function renderToolsPerks(){
+  const sb = document.getElementById('starter-bag-card');
+  if(!sb) return;
+  const btn = sb.querySelector('button');
+  if(_isPremium){
+    sb.style.opacity = '1';
+    if(btn){
+      btn.textContent = 'Open Starter Bag →';
+      btn.onclick = () => window.open('https://supportrd.com/collections/all','_blank');
+    }
+  } else {
+    sb.style.opacity = '0.7';
+    if(btn){
+      btn.textContent = 'Unlock Starter Bag →';
+      btn.onclick = () => dashboardUpgrade();
+    }
+  }
+}
+
+function refreshAllData(){
+  loadData();
+  loadHistory();
+  loadRealStats();
+  if(_currentTab==='journey') openJourneyPage();
+  if(_currentTab==='progress') openProgressPage();
+  if(_currentTab==='photo') openPhotoPage();
+  if(_currentTab==='journal') openJournalPage();
+  if(_currentTab==='whatsapp') openWhatsappPage();
+}
+
+function adminToastDismiss(){
+  const t = document.getElementById('admin-toast');
+  if(t) t.style.display='none';
+  const dayKey = new Date().toISOString().slice(0,10);
+  localStorage.setItem('srd_admin_toast_'+dayKey,'1');
+}
+
+function adminToastRefresh(){
+  refreshAllData();
+  adminToastDismiss();
+}
+
+function maybeShowAdminToast(isAdmin){
+  if(!isAdmin) return;
+  const now = new Date();
+  const dayKey = now.toISOString().slice(0,10);
+  if(localStorage.getItem('srd_admin_toast_'+dayKey)) return;
+  if(now.getHours() < 5) return;
+  const t = document.getElementById('admin-toast');
+  if(!t) return;
+  const body = document.getElementById('admin-toast-body');
+  if(body){
+    body.textContent = 'Daily refresh ran at 5:00 AM ET. All page data re-synced.';
+  }
+  t.style.display='block';
 }
 
 async function loadHistory(){
@@ -5987,6 +6256,7 @@ let _currentTab = 'overview';
 
 function switchPTab(name){
   _currentTab = name;
+  if(name!=='drive'){ _driveGpsMode=false; clStopSafetyRefresh(); }
 
   // Hide ALL ppages
   document.querySelectorAll('.ppage').forEach(p => p.classList.remove('active'));
@@ -6288,13 +6558,13 @@ function occInit(){
 // ═══════════════════════════════════════════════════════════════
 const DEPTH_LEVELS = [
   { n:'Discovery',                   color:'var(--rose)',  rgb:'240,160,144', icon:'🌱',
-    msg:'Aria is getting to know you. She knows your name, your first products, and the main issue you came here to fix.'},
+    msg:'Aria is just starting to mention your first products and why they matter. This is the spark.'},
   { n:'Use Cases & Upgrades',        color:'var(--gold)',  rgb:'224,176,80',  icon:'🔬',
-    msg:'Aria is inside your routine now. She knows exactly how and when to use each product — and is watching your results to tell you what to upgrade next.'},
+    msg:'Aria is now in depth level 2 — she’s talking use cases, timing, and what you can change to level up.'},
   { n:'Inner Circle',                color:'var(--blue)',  rgb:'96,168,255',  icon:'💫',
-    msg:'This goes beyond your hair. Aria knows who\'s in your life, who notices, and is helping you bring SupportRD to the people you care about.'},
+    msg:'Aria knows what your girlfriend likes, what your friends and family notice, and how to share SupportRD with them.'},
   { n:'Professional — Making Money', color:'var(--green)', rgb:'48,232,144',  icon:'💎',
-    msg:'You have become the story. People ask what you use. Aria is your business partner now — and SupportRD wants to talk to you directly.'},
+    msg:'You are at the final depth: Professional — making money. Aria is your partner for real‑world results.'},
 ];
 
 // Keywords Aria uses at each depth that reveal which level the conversation has reached
@@ -6329,6 +6599,17 @@ async function renderJourneyPage(){
     const d = await r.json();
     sessions = d.history || [];
   }catch(e){ console.warn('Journey load:', e); }
+
+  // If no history yet, show a sample journey so the page feels alive
+  if(!sessions.length){
+    sessions = [
+      {role:'user', content:'John: I want to upgrade to Premium and bring Support products into my life.', ts:'2025-03-12T14:00:00Z'},
+      {role:'assistant', content:'Aria: Great decision. Let\'s start with Formula Exclusiva and Laciador. I\'ll guide you step by step.', ts:'2025-03-12T14:01:00Z'},
+      {role:'assistant', content:'Aria: Here is how to apply it, and how often — you should see results in the first week.', ts:'2025-03-20T15:00:00Z'},
+      {role:'assistant', content:'Aria: Your girlfriend will notice the softness. Tell her about Laciador and how it fits the routine.', ts:'2025-04-02T12:30:00Z'},
+      {role:'assistant', content:'Aria: You can turn this into income — referrals and professional clients are the next level.', ts:'2025-04-20T09:10:00Z'}
+    ];
+  }
 
   // ── 2. Determine depth from Aria's actual RESPONSES (AI signals) ──────────
   // Read all of Aria's messages and check which signal tier she's reached
@@ -6520,6 +6801,7 @@ function _showDriveChatMode(){
   document.getElementById('drive-chat-mode').style.display='flex';
   const gps = document.getElementById('drive-gps-mode');
   gps.style.display='none';
+  clStopSafetyRefresh();
 }
 
 function _showDriveGpsMode(){
@@ -6673,19 +6955,74 @@ async function clInitMap(){
   clSetNarration('Welcome to Adventure GPS! 🍬 I\'m Aria, your co-pilot. Pick a destination and let\'s go!');
 }
 
-function clStartGPS(){
-  if(!navigator.geolocation){ clSetNarration('GPS not available on this device.'); return; }
-  // Get immediate position
-  navigator.geolocation.getCurrentPosition(
-    pos=>{ _clUserLat=pos.coords.latitude; _clUserLng=pos.coords.longitude; clUpdatePlayerPos(); clDrawMap(); },
-    err=>{ clSetNarration('Location access needed for the GPS! Please allow it.'); }
-  );
-  // Then watch continuously
+let _clBurstInterval = null;
+let _clBurstTimeout  = null;
+
+function clShowGpsBanner(){
+  const b = document.getElementById('cl-gps-banner');
+  if(!b) return;
+  b.style.display='flex';
+  b.classList.remove('small');
+  setTimeout(()=>{ b.classList.add('small'); },6000);
+}
+
+function clHideGpsBanner(){
+  const b = document.getElementById('cl-gps-banner');
+  if(!b) return;
+  b.style.display='none';
+  b.classList.remove('small');
+}
+
+function clStartWatch(maxAge){
+  if(_clWatchId) navigator.geolocation.clearWatch(_clWatchId);
   _clWatchId = navigator.geolocation.watchPosition(
     pos=>{ _clUserLat=pos.coords.latitude; _clUserLng=pos.coords.longitude; clUpdatePlayerPos(); clCheckProximity(); clUpdateDirections(); },
     err=>{},
-    {enableHighAccuracy:true, maximumAge:5000, timeout:10000}
+    {enableHighAccuracy:true, maximumAge:maxAge, timeout:10000}
   );
+}
+
+function clStartSafetyRefresh(){
+  if(!navigator.geolocation){ clSetNarration('GPS not available on this device.'); return; }
+  clShowGpsBanner();
+  // Clear any existing watches / bursts
+  if(_clWatchId) navigator.geolocation.clearWatch(_clWatchId);
+  if(_clBurstInterval) clearInterval(_clBurstInterval);
+  if(_clBurstTimeout) clearTimeout(_clBurstTimeout);
+
+  // Phase 1: Burst mode — 30s of forced fresh fixes
+  let bursts = 0;
+  const doFix = () => navigator.geolocation.getCurrentPosition(
+    pos=>{ _clUserLat=pos.coords.latitude; _clUserLng=pos.coords.longitude; clUpdatePlayerPos(); clDrawMap(); },
+    err=>{ clSetNarration('Location access needed for the GPS! Please allow it.'); },
+    {enableHighAccuracy:true, maximumAge:0, timeout:10000}
+  );
+  doFix();
+  _clBurstInterval = setInterval(()=>{ bursts++; doFix(); if(bursts>=9){ clearInterval(_clBurstInterval); _clBurstInterval=null; } },3000);
+
+  // Phase 2: Normal refresh — still maxAge:0 for fresh fixes
+  _clBurstTimeout = setTimeout(()=>{ clStartWatch(0); },30000);
+}
+
+function clStopSafetyRefresh(){
+  if(_clBurstInterval) clearInterval(_clBurstInterval);
+  if(_clBurstTimeout) clearTimeout(_clBurstTimeout);
+  _clBurstInterval = null; _clBurstTimeout = null;
+  clHideGpsBanner();
+  if(_clWatchId) navigator.geolocation.clearWatch(_clWatchId);
+  // After leaving GPS mode, use a more battery-friendly watch
+  if(navigator.geolocation){
+    _clWatchId = navigator.geolocation.watchPosition(
+      pos=>{ _clUserLat=pos.coords.latitude; _clUserLng=pos.coords.longitude; clUpdatePlayerPos(); },
+      err=>{},
+      {enableHighAccuracy:true, maximumAge:2000, timeout:10000}
+    );
+  }
+}
+
+function clStartGPS(){
+  if(!navigator.geolocation){ clSetNarration('GPS not available on this device.'); return; }
+  clStartSafetyRefresh();
 }
 
 // ── Candy Land map drawing ───────────────────────────────────────
@@ -7213,6 +7550,16 @@ function closeUpgradeModal(){
   document.body.style.overflow = '';
 }
 
+function openPositionsModal(){
+  const modal = document.getElementById('positions-modal');
+  if(modal) modal.style.display = 'flex';
+}
+
+function closePositionsModal(){
+  const modal = document.getElementById('positions-modal');
+  if(modal) modal.style.display = 'none';
+}
+
 async function submitUpgradeIdea(){
   const title = (document.getElementById('ui-title')?.value||'').trim();
   const desc  = (document.getElementById('ui-desc')?.value||'').trim();
@@ -7358,8 +7705,8 @@ function myUpgradeIdea() {
   <a onclick="switchPTab('settings')">Settings</a>
   <a href="https://supportrd.com" target="_blank">Shop</a>
   <a href="mailto:hello@supportrd.com">Contact</a>
-  <a onclick="document.getElementById('dash-campaign-modal').style.display='flex'">🗳 Political Position</a>
-  <a onclick="document.getElementById('dash-about-modal').style.display='flex'">About Us</a>
+  <a onclick="openPositionsModal()">🗳 Positions</a>
+  <a href="/about">About Us</a>
   <a onclick="document.getElementById('dash-privacy-modal').style.display='flex'">Privacy Policy</a>
   <a onclick="openUpgradeModal()" style="color:var(--gold);font-weight:700;">💡 Submit an Upgrade — Earn 1 Free Month</a>
 </div>
