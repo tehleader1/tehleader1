@@ -11896,12 +11896,22 @@ def live_feed_status():
     events = db_execute("SELECT * FROM live_feed_events ORDER BY id DESC LIMIT 50", fetchall=True)
     total_events   = db_execute("SELECT COUNT(*) FROM live_feed_events", fetchone=True)[0]
     total_sessions = db_execute("SELECT COUNT(*) FROM live_feed_events WHERE type='session'", fetchone=True)[0]
-    viewers = status["viewers"] if status else 0
+    def _row_get(row, key, idx, default=None):
+        if not row:
+            return default
+        try:
+            return row[key]
+        except Exception:
+            try:
+                return row[idx]
+            except Exception:
+                return default
+    viewers = _row_get(status, "viewers", 6, 0)
     return jsonify({
-        "is_live":       bool(status["is_live"]) if status else False,
-        "session_title": status["session_title"] if status else "",
-        "session_desc":  status["session_desc"]  if status else "",
-        "went_live_at":  status["went_live_at"]  if status else None,
+        "is_live":       bool(_row_get(status, "is_live", 1, 0)),
+        "session_title": _row_get(status, "session_title", 2, ""),
+        "session_desc":  _row_get(status, "session_desc", 3, ""),
+        "went_live_at":  _row_get(status, "went_live_at", 4, None),
         "viewers":       viewers,
         "total_events":  total_events,
         "total_sessions":total_sessions,
