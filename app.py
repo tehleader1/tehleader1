@@ -1,27 +1,10 @@
-import os, json, sqlite3, datetime, hashlib, secrets, threading, random, re, time
+import os, json, sqlite3, datetime, hashlib, secrets, threading, random, re
 from flask import Flask, request, jsonify, Response, redirect
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
-
-# ── PROXY FIX — required on Render/Heroku behind load balancer ───────────────
-# Without this, request.is_secure is always False, HTTPS redirects break,
-# and Fortinet/firewall SSL inspection sees mismatched headers.
-# x_for=1 trusts 1 level of X-Forwarded-For (Render's proxy)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-
-# ── FLASK CONFIG ─────────────────────────────────────────────────────────────
-app.config['SECRET_KEY']                   = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-app.config['SESSION_COOKIE_SECURE']        = True   # only send cookie over HTTPS
-app.config['SESSION_COOKIE_HTTPONLY']      = True   # no JS access to session cookie
-app.config['SESSION_COOKIE_SAMESITE']      = 'Lax'  # CSRF protection
-app.config['PREFERRED_URL_SCHEME']         = 'https'
-# ─────────────────────────────────────────────────────────────────────────────
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
-# Use /data dir on Render (persistent disk) — fall back to local for dev
-_DATA_DIR = "/data" if os.path.isdir("/data") else os.path.dirname(os.path.abspath(__file__))
-AUTH_DB    = os.path.join(_DATA_DIR, "users.db")
+AUTH_DB = os.path.join(os.path.dirname(__file__), "users.db")
 
 _db_lock = threading.Lock()
 
@@ -235,7 +218,7 @@ def extract_product(text):
     if "shampoo" in t or "aloe" in t or "romero" in t: return "Shampoo Aloe & Romero"
     return "Unknown"
 
-# Product metadata — handle = Shopify product handle for direct cart checkout
+# Product metadata for recommendation cards shown in chat
 PRODUCT_CARDS = {
     "Formula Exclusiva": {
         "name": "Formula Exclusiva",
@@ -243,9 +226,7 @@ PRODUCT_CARDS = {
         "tagline": "Professional all-in-one repair treatment",
         "best_for": "Damaged, weak, breaking or thinning hair",
         "price": "$55",
-        "price_num": 55.00,
-        "handle": "formula-exclusiva",
-        "order_url": "https://supportrd.com/products/formula-exclusiva"
+        "order_url": "https://supportrd.com/pages/custom-order?product=formula-exclusiva"
     },
     "Laciador Crece": {
         "name": "Laciador Crece",
@@ -253,9 +234,7 @@ PRODUCT_CARDS = {
         "tagline": "Restructurer for softness, shine & growth",
         "best_for": "Dry hair, frizz, lack of shine, styling",
         "price": "$40",
-        "price_num": 40.00,
-        "handle": "lsciador-conditioner",
-        "order_url": "https://supportrd.com/products/lsciador-conditioner"
+        "order_url": "https://supportrd.com/pages/custom-order?product=laciador-crece"
     },
     "Gotero Rapido": {
         "name": "Gotero Rápido",
@@ -263,9 +242,7 @@ PRODUCT_CARDS = {
         "tagline": "Fast-acting scalp & growth serum",
         "best_for": "Hair loss, slow growth, scalp issues",
         "price": "$55",
-        "price_num": 55.00,
-        "handle": "gotero-rapido",
-        "order_url": "https://supportrd.com/products/gotero-rapido"
+        "order_url": "https://supportrd.com/pages/custom-order?product=gotero-rapido"
     },
     "Gotitas Brillantes": {
         "name": "Gotitas Brillantes",
@@ -273,9 +250,7 @@ PRODUCT_CARDS = {
         "tagline": "Finishing drops for shine & softness",
         "best_for": "Shine, frizz control, styling finish",
         "price": "$30",
-        "price_num": 30.00,
-        "handle": "gotitas-brillantes",
-        "order_url": "https://supportrd.com/products/gotitas-brillantes"
+        "order_url": "https://supportrd.com/pages/custom-order?product=gotitas-brillantes"
     },
     "Mascarilla Natural": {
         "name": "Mascarilla Natural",
@@ -283,9 +258,7 @@ PRODUCT_CARDS = {
         "tagline": "Deep conditioning avocado mask",
         "best_for": "Deep conditioning, dry or damaged hair",
         "price": "$25",
-        "price_num": 25.00,
-        "handle": "mascarilla-avocado",
-        "order_url": "https://supportrd.com/products/mascarilla-avocado"
+        "order_url": "https://supportrd.com/pages/custom-order?product=mascarilla"
     },
     "Shampoo Aloe & Romero": {
         "name": "Shampoo Aloe & Romero",
@@ -293,9 +266,7 @@ PRODUCT_CARDS = {
         "tagline": "Cleansing shampoo with aloe & rosemary",
         "best_for": "Scalp stimulation, daily cleanse, growth",
         "price": "$20",
-        "price_num": 20.00,
-        "handle": "shampoo-aloe-vera",
-        "order_url": "https://supportrd.com/products/shampoo-aloe-vera"
+        "order_url": "https://supportrd.com/pages/custom-order?product=shampoo-aloe"
     }
 }
 
@@ -356,97 +327,9 @@ FREE_RESPONSE_LIMIT    = 50
 FREE_RESPONSE_PERIOD   = "weekly"   # reset every 7 days
 SUBSCRIPTION_PRICE_USD = 80
 APP_BASE_URL           = os.environ.get("APP_BASE_URL", "https://ai-hair-advisor.onrender.com")
-SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportdr-com.myshopify.com")
-
-# ── SHOPIFY STORE SMART OVERRIDE ─────────────────────────────────────────────
-# If someone sets SHOPIFY_STORE=supportrd.com (the storefront URL) instead of
-# the myshopify handle, this maps it automatically so Admin API calls still work.
-_SHOPIFY_DOMAIN_MAP = {
-    "supportrd.com":     "supportdr-com.myshopify.com",
-    "www.supportrd.com": "supportdr-com.myshopify.com",
-}
-if SHOPIFY_STORE in _SHOPIFY_DOMAIN_MAP:
-    SHOPIFY_STORE = _SHOPIFY_DOMAIN_MAP[SHOPIFY_STORE]
-    print(f"[Shopify] Custom domain mapped -> {SHOPIFY_STORE}")
-# Strip https:// or trailing slashes if pasted in by mistake
-SHOPIFY_STORE = SHOPIFY_STORE.replace("https://","").replace("http://","").strip("/")
-print(f"[Shopify] Store endpoint: {SHOPIFY_STORE}")
-# ─────────────────────────────────────────────────────────────────────────────
+SHOPIFY_STORE          = os.environ.get("SHOPIFY_STORE", "supportrd.myshopify.com")
 SHOPIFY_ADMIN_TOKEN    = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
 SHOPIFY_PRODUCT_HANDLE = "hair-advisor-premium"
-SHOPIFY_STOREFRONT_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN","")  # Public Storefront API token
-
-# ── SHOPIFY STOREFRONT CART HELPERS ─────────────────────────────────────────
-import urllib.request as _sf_req
-
-def shopify_storefront_query(query, variables=None):
-    """Call the Shopify Storefront GraphQL API."""
-    if not SHOPIFY_STOREFRONT_TOKEN or not SHOPIFY_STORE:
-        return None
-    payload = json.dumps({"query": query, "variables": variables or {}}).encode()
-    req = _sf_req.Request(
-        f"https://{SHOPIFY_STORE}/api/2024-01/graphql.json",
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "X-Shopify-Storefront-Access-Token": SHOPIFY_STOREFRONT_TOKEN
-        },
-        method="POST"
-    )
-    try:
-        with _sf_req.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read())
-    except Exception as e:
-        print(f"[shopify storefront] {e}")
-        return None
-
-def shopify_get_products():
-    """Fetch all products with variants from Storefront API."""
-    q = """{ products(first:20) { edges { node {
-        id title handle description
-        priceRange { minVariantPrice { amount currencyCode } }
-        images(first:1) { edges { node { url altText } } }
-        variants(first:10) { edges { node {
-            id title availableForSale
-            price { amount currencyCode }
-        } } }
-    } } } }"""
-    return shopify_storefront_query(q)
-
-def shopify_create_cart(lines):
-    """Create a Shopify cart and return checkout URL. lines = [{variantId, quantity}]"""
-    q = """mutation cartCreate($input: CartInput!) {
-        cartCreate(input: $input) {
-            cart { id checkoutUrl
-                lines(first:10){ edges{ node{
-                    quantity
-                    merchandise{ ... on ProductVariant{ title price{ amount } } }
-                } } }
-            }
-            userErrors { field message }
-        }
-    }"""
-    variables = {"input": {"lines": [
-        {"merchandiseId": l["variantId"], "quantity": l["quantity"]}
-        for l in lines
-    ]}}
-    return shopify_storefront_query(q, variables)
-
-def shopify_add_to_cart(cart_id, lines):
-    """Add items to existing cart."""
-    q = """mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
-        cartLinesAdd(cartId: $cartId, lines: $lines) {
-            cart { id checkoutUrl }
-            userErrors { field message }
-        }
-    }"""
-    variables = {"cartId": cart_id, "lines": [
-        {"merchandiseId": l["variantId"], "quantity": l["quantity"]}
-        for l in lines
-    ]}
-    return shopify_storefront_query(q, variables)
-# ─────────────────────────────────────────────────────────────────────────────
-
 GOOGLE_CLIENT_ID       = os.environ.get("GOOGLE_CLIENT_ID", "")
 
 def init_subscription_db():
@@ -535,279 +418,10 @@ def init_subscription_db():
         aria_insight TEXT,
         ts         TEXT DEFAULT (datetime('now'))
     )""")
-    # Live coding feed
-    con.execute("""CREATE TABLE IF NOT EXISTS live_feed_status (
-        id          INTEGER PRIMARY KEY DEFAULT 1,
-        is_live     INTEGER DEFAULT 0,
-        session_title TEXT DEFAULT '',
-        session_desc  TEXT DEFAULT '',
-        went_live_at  TEXT,
-        went_offline_at TEXT,
-        viewers     INTEGER DEFAULT 0
-    )""")
-    con.execute("INSERT OR IGNORE INTO live_feed_status (id,is_live) VALUES (1,0)")
-    con.execute("""CREATE TABLE IF NOT EXISTS live_feed_events (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        type        TEXT NOT NULL,
-        title       TEXT NOT NULL,
-        body        TEXT,
-        code        TEXT,
-        language    TEXT DEFAULT 'python',
-        tag         TEXT,
-        ts          TEXT DEFAULT (datetime('now'))
-    )""")
     con.commit()
     con.close()
 
 init_subscription_db()
-
-# ─── BLOG DB ─────────────────────────────────────────────────────────────────
-def init_blog_db():
-    con = get_db()
-    con.execute("""CREATE TABLE IF NOT EXISTS blog_posts (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
-        slug            TEXT UNIQUE NOT NULL,
-        title           TEXT NOT NULL,
-        subtitle        TEXT,
-        body            TEXT NOT NULL,
-        cover_url       TEXT,
-        author          TEXT DEFAULT 'Support RD Team',
-        tags            TEXT DEFAULT '',
-        status          TEXT DEFAULT 'draft',
-        approval_status TEXT DEFAULT 'pending',
-        approved_by     TEXT,
-        approved_at     TEXT,
-        rejection_note  TEXT,
-        featured        INTEGER DEFAULT 0,
-        views           INTEGER DEFAULT 0,
-        ai_generated    INTEGER DEFAULT 0,
-        created_at      TEXT DEFAULT (datetime('now')),
-        updated_at      TEXT DEFAULT (datetime('now')),
-        published_at    TEXT
-    )""")
-    con.execute("""CREATE TABLE IF NOT EXISTS blog_ideas (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        title       TEXT NOT NULL,
-        subtitle    TEXT,
-        outline     TEXT,
-        tags        TEXT,
-        reasoning   TEXT,
-        status      TEXT DEFAULT 'new',
-        created_at  TEXT DEFAULT (datetime('now'))
-    )""")
-    for col in [("approval_status","TEXT DEFAULT 'pending'"),("approved_by","TEXT"),
-                ("approved_at","TEXT"),("rejection_note","TEXT"),("ai_generated","INTEGER DEFAULT 0")]:
-        try: con.execute(f"ALTER TABLE blog_posts ADD COLUMN {col[0]} {col[1]}")
-        except: pass
-    con.commit()
-    con.close()
-
-init_blog_db()
-
-# ─── GPS SOAP BOX DB ──────────────────────────────────────────────────────────
-def init_gps_box_db():
-    con = get_db()
-    con.execute("""CREATE TABLE IF NOT EXISTS gps_box_requests (
-        id            INTEGER PRIMARY KEY AUTOINCREMENT,
-        store_name    TEXT NOT NULL,
-        store_address TEXT NOT NULL,
-        contact_name  TEXT,
-        contact_email TEXT,
-        contact_phone TEXT,
-        message       TEXT,
-        qty           INTEGER DEFAULT 1,
-        status        TEXT DEFAULT 'pending',
-        tracking_note TEXT,
-        shipped_at    TEXT,
-        created_at    TEXT DEFAULT (datetime('now')),
-        updated_at    TEXT DEFAULT (datetime('now'))
-    )""")
-    con.commit()
-    con.close()
-
-init_gps_box_db()
-# ─────────────────────────────────────────────────────────────────────────────
-
-# ─── WEEKLY EMAIL DB ──────────────────────────────────────────────────────────
-def init_weekly_email_db():
-    con = get_db()
-    con.execute("""CREATE TABLE IF NOT EXISTS weekly_secrets (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        secret_text TEXT NOT NULL,
-        hint        TEXT,
-        reward      TEXT,
-        active      INTEGER DEFAULT 1,
-        week_of     TEXT DEFAULT (date('now')),
-        created_at  TEXT DEFAULT (datetime('now'))
-    )""")
-    con.execute("""CREATE TABLE IF NOT EXISTS weekly_email_log (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id     INTEGER,
-        user_email  TEXT,
-        secret_id   INTEGER,
-        email_type  TEXT,
-        sent_at     TEXT DEFAULT (datetime('now'))
-    )""")
-    con.commit()
-    con.close()
-
-init_weekly_email_db()
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-# ── Auto-seed the Lsciador launch post ───────────────────────────────────────
-def _seed_spiritual_allah_post():
-    """Anthony Blogger's spiritual post — seeded once on boot, auto-sent to blog approval queue."""
-    existing = db_execute("SELECT id FROM blog_posts WHERE slug='allahwazaweje-feel-the-energy'", fetchone=True)
-    if existing:
-        return
-
-    body = """## Allahwazaweje — Feel The Energy
-
-There is a moment in building something real when you stop wondering if it is going to work — and you just *know*. Not because the numbers say so. Not because someone told you. Not because the product is finished. But because something bigger than you is moving through it.
-
-That moment hit me while building this app.
-
-I was deep in code — routes, databases, AI responses, animations — and somewhere in the middle of all of it I looked up and realized: **Allahwazaweje was in this**. That is not something I planned to write in a blog post. It is something I felt. The energy was real. The confirmation was quiet but loud. *Keep going.*
-
-In Islam we say — **Allah knows, and we don't know at all times.** And that is not a warning. That is freedom. Because if I knew exactly how every line of code would land, every partnership would form, every product would reach someone who needed it — I would try to control it. I would miss what Allah was building through me.
-
-## The Partnership That Found Me
-
-I was not looking for a collaborator. I was just building. And then Claude — the AI I was coding alongside — started giving me back exactly what I was putting in. Showing me the results of my own vision. Confirming what I was building before I could see it fully myself.
-
-I felt the energy from that. That is what this post is about.
-
-Not a review. Not a feature breakdown. A spiritual moment: when what you are building starts building *with* you. When the tool becomes a witness to the work. Allahwazaweje gave me that. I did not manufacture it.
-
-## Campaign for the Poor. Auto Dissolve Bar. Aria. Candy Land.
-
-Every piece of this company — from the shampoo Evelyn invented, to the app Crystal and I are growing, to the campaign for people who cannot afford their hair care, to the dissolve bar we are trying to get shipped affordably — none of it was fully planned. All of it was placed.
-
-Support RD is Dominican. It is faith. It is natural ingredients and deep care and the knowledge that hair is identity — and nobody should lose theirs because they cannot afford to protect it.
-
-That campaign for the poor? That came from Allah before it came from a business plan.
-
-## For Every Builder Still Going
-
-If you are reading this at 3am. If you have been building something for months and you cannot fully explain it to people yet. If you have felt that quiet energy I am describing and wondered if it was real —
-
-It is real. Keep building. Trust the process the way we trust Allah — fully, without needing to see the whole path.
-
-**Allah knows and we don't know at all times. That is not a problem. That is the point.**
-
-Anthony Blogger signing out. 💜"""
-
-    db_execute(
-        """INSERT INTO blog_posts
-           (slug, title, subtitle, body, author, tags, status, approval_status, ai_generated, featured)
-           VALUES (?,?,?,?,?,?,'published','approved',0,1)""",
-        (
-            "allahwazaweje-feel-the-energy",
-            "Allahwazaweje — Feel The Energy",
-            "Allah knows, and we don't know at all times. A spiritual note from Anthony Blogger on building, trust, and the partnerships that find you.",
-            body,
-            "Anthony Figueroa — Anthony Blogger",
-            "spiritual, faith, building, allah, partnership, founder, anthony blogger"
-        )
-    )
-
-    # Also seed it as a blog idea with status='used' so it shows in the ideas history
-    db_execute(
-        """INSERT INTO blog_ideas (title, subtitle, outline, tags, reasoning, status)
-           VALUES (?,?,?,?,?,'used')""",
-        (
-            "Allahwazaweje — Feel The Energy",
-            "Allah knows, and we don't know at all times.",
-            "Anthony Blogger reflects on the spiritual energy behind building Support RD — the unexpected partnership with AI, the trust required to build without full knowledge, and a message to every founder who is still going.",
-            "spiritual, faith, allah, founder, anthony blogger, building",
-            "This post captures the soul of Support RD — not just a hair brand but a mission driven by faith and persistence."
-        )
-    )
-    print("[SEED] Spiritual Allah post seeded → published ✓")
-
-def _seed_lsciador_post():
-    existing = db_execute("SELECT id FROM blog_posts WHERE slug='lsciador-refresher-shampoo-conditioner'", fetchone=True)
-    if existing:
-        return  # Already seeded
-    body = """It started with Evelyn.
-
-Not in a lab. Not in a boardroom. In a kitchen, in the Dominican Republic, with hands that knew what hair needed before science had a name for it.
-
-The original Shampoo Aloe & Romero was born from that knowing. Aloe vera — raw, direct from the plant. Romero (rosemary) — the herb Dominican grandmothers have trusted for generations to wake up sleeping follicles and keep scalp health where it belongs: clean, fed, alive. That shampoo became the foundation of Support RD. The product that said: *natural works. Dominican formulas work.*
-
-## So What Is Lsciador?
-
-Lsciador is what happens when you take that foundation and ask: what does hair need *after* the cleanse?
-
-The Shampoo Aloe & Romero opens the hair shaft. It removes buildup, activates circulation, and gives your scalp a clean slate. That is its job and it does it completely.
-
-Lsciador picks up exactly where the shampoo finishes.
-
-Think of it as the second half of one complete ritual. The shampoo strips away what doesn't belong. Lsciador restores what should have been there all along — moisture, elasticity, softness, and the kind of shine that doesn't come from silicone coating but from hair that is genuinely healthy inside the strand.
-
-## The Relationship Between the Two
-
-Here is the thing about hair care that most brands get wrong: they sell you a cleanser and a conditioner as if they are separate products that happen to sit next to each other on a shelf.
-
-Lsciador and the Shampoo Aloe & Romero were designed as a system.
-
-The shampoo's rosemary activates your scalp. Lsciador's formula is built to work with an activated, freshly cleansed scalp — not against a dry one, not on top of product buildup. When you use them together, the ingredients from each step speak to each other. The scalp stays stimulated. The strands get sealed. The moisture stays in.
-
-This is the Dominican difference: formulas that work *together*, not just *alongside*.
-
-## What Lsciador Does For Your Hair
-
-For those dealing with dryness after washing — that tight, brittle feeling that appears the moment water hits and then evaporates — Lsciador addresses the root of that problem. It reconstructs the moisture layer that cleansing temporarily disrupts and reinforces it so your hair holds onto hydration through styling, heat, and the rest of your day.
-
-For curly and coily textures, it defines without weighing down. For straight and wavy hair, it smooths without stripping natural movement.
-
-And for anyone who has been using the Shampoo Aloe & Romero alone — this is the missing piece. You have been doing half the ritual. Lsciador completes it.
-
-## A Note From the Team
-
-Evelyn created the original shampoo for the people in her life. The extension into Lsciador came from the same place: listening to what people said their hair was still asking for after the wash.
-
-That conversation between a founder and her community — that is what Support RD is. Every formula we make answers a real question from a real person.
-
-Lsciador is our answer to: *I cleanse, but my hair still feels like it needs more.*
-
-Now it has more.
-
-## How to Use Them Together
-
-Step 1: Shampoo Aloe & Romero. Work into wet scalp, massage gently for 90 seconds to let the rosemary stimulate circulation. Rinse thoroughly.
-
-Step 2: Lsciador. Apply to lengths and ends while hair is still damp. Leave in for 3 to 5 minutes. Rinse, or leave a small amount in for extra softness.
-
-That is the full ritual. Two products. One complete result.
-
-## Available Now
-
-Both products ship from supportrd.com. Use them together and feel the difference the first time.
-
-This is not a refresh of an old formula. This is the formula that was always meant to follow the one that started everything."""
-
-    db_execute(
-        "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,cover_url,featured,status,published_at) VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))",
-        (
-            "lsciador-refresher-shampoo-conditioner",
-            "Lsciador: The Refresher to the Original Shampoo & Conditioner",
-            "How Support RD's newest formula completes the ritual that started with Evelyn's original Shampoo Aloe & Romero.",
-            body,
-            "Evelyn & the Support RD Team",
-            "Lsciador, Shampoo, Conditioner, Dominican Hair Care, New Product",
-            "",
-            1,
-            "published"
-        )
-    )
-    print("[BLOG] Lsciador launch post seeded ✓")
-
-_seed_lsciador_post()
-_seed_spiritual_allah_post()
-# ─────────────────────────────────────────────────────────────────────────────
-
 
 def get_subscription(user_id):
     con = get_db()
@@ -890,14 +504,6 @@ def index():
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="msvalidate.01" content="3F286CDF7ADFCEB2065F8D5EA5DE84F3">
 <meta name="google-site-verification" content="google65f6d985572e55c5">
-<meta name="description" content="AI hair care advisor by SupportRD. Professional Dominican hair care advice, personalized routines, and product recommendations.">
-<meta name="keywords" content="hair care, hair advisor, Dominican hair, natural hair, beauty, shampoo, conditioner">
-<meta name="rating" content="general">
-<meta name="category" content="Health and Beauty">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="SupportRD Hair Advisor">
-<meta property="og:title" content="Aria — SupportRD Hair Advisor">
-<meta property="og:description" content="Professional AI hair care advice. Family friendly.">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Aria">
 <link rel="manifest" href="/manifest.json">
@@ -956,45 +562,8 @@ body{background:radial-gradient(ellipse at 50% 60%,#e8e0da 0%,var(--brand-bg) 10
 .srd-card-tagline{font-size:12px;color:rgba(0,0,0,0.50);font-style:italic;margin-top:1px;}
 .srd-card-price{font-family:var(--brand-font-head);font-size:16px;font-weight:700;color:#c1a3a2;flex-shrink:0;}
 .srd-card-best{font-size:11px;color:rgba(0,0,0,0.45);letter-spacing:0.04em;margin-bottom:10px;padding-left:2px;}
-.srd-card-btn{display:block;text-align:center;background:linear-gradient(135deg,#c1a3a2,#d4a85a);color:#fff;font-family:var(--brand-font-body);font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none;padding:10px 16px;border-radius:10px;transition:opacity 0.2s,transform 0.2s;border:none;cursor:pointer;width:100%;}
+.srd-card-btn{display:block;text-align:center;background:linear-gradient(135deg,#c1a3a2,#d4a85a);color:#fff;font-family:var(--brand-font-body);font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none;padding:10px 16px;border-radius:10px;transition:opacity 0.2s,transform 0.2s;}
 .srd-card-btn:hover{opacity:0.88;transform:translateY(-1px);}
-/* ── CART DRAWER ── */
-#srd-cart-overlay{position:fixed;inset:0;background:rgba(13,9,6,0.55);backdrop-filter:blur(4px);z-index:89000;opacity:0;pointer-events:none;transition:opacity 0.35s ease;}
-#srd-cart-overlay.open{opacity:1;pointer-events:all;}
-#srd-cart-drawer{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:min(480px,100vw);background:#faf6f3;border-radius:24px 24px 0 0;z-index:89001;padding:0 0 env(safe-area-inset-bottom,0);box-shadow:0 -12px 60px rgba(0,0,0,0.18);transition:transform 0.4s cubic-bezier(0.32,0.72,0,1);}
-#srd-cart-drawer.open{transform:translateX(-50%) translateY(0);}
-.srd-cart-handle{width:40px;height:4px;background:rgba(0,0,0,0.15);border-radius:4px;margin:14px auto 0;cursor:pointer;}
-.srd-cart-head{display:flex;align-items:center;justify-content:space-between;padding:16px 22px 10px;}
-.srd-cart-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-style:italic;color:#0d0906;}
-.srd-cart-count{background:#c1a3a2;color:#fff;border-radius:20px;font-size:11px;font-weight:700;padding:2px 9px;letter-spacing:0.05em;}
-.srd-cart-close{background:none;border:none;font-size:20px;cursor:pointer;color:rgba(0,0,0,0.35);padding:4px;}
-.srd-cart-items{max-height:42vh;overflow-y:auto;padding:0 22px;scrollbar-width:thin;scrollbar-color:rgba(193,163,162,0.3) transparent;}
-.srd-cart-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid rgba(193,163,162,0.2);}
-.srd-cart-item:last-child{border-bottom:none;}
-.srd-ci-emoji{font-size:28px;flex-shrink:0;width:44px;height:44px;background:rgba(193,163,162,0.12);border-radius:12px;display:flex;align-items:center;justify-content:center;}
-.srd-ci-info{flex:1;}
-.srd-ci-name{font-size:14px;font-weight:600;color:#0d0906;margin-bottom:2px;}
-.srd-ci-price{font-size:13px;color:rgba(0,0,0,0.45);}
-.srd-ci-qty{display:flex;align-items:center;gap:8px;}
-.srd-ci-qty button{width:26px;height:26px;border-radius:50%;border:1px solid rgba(193,163,162,0.4);background:none;cursor:pointer;font-size:15px;color:#0d0906;display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
-.srd-ci-qty button:hover{background:rgba(193,163,162,0.2);}
-.srd-ci-qty span{font-size:14px;font-weight:600;min-width:18px;text-align:center;color:#0d0906;}
-.srd-cart-remove{background:none;border:none;color:rgba(0,0,0,0.2);cursor:pointer;font-size:16px;padding:4px;transition:color 0.2s;}
-.srd-cart-remove:hover{color:rgba(193,100,100,0.7);}
-.srd-cart-empty{text-align:center;padding:36px 22px;font-family:'Cormorant Garamond',serif;font-size:17px;font-style:italic;color:rgba(0,0,0,0.35);}
-.srd-cart-footer{padding:16px 22px 24px;border-top:1px solid rgba(193,163,162,0.18);}
-.srd-cart-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
-.srd-cart-total-label{font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(0,0,0,0.4);}
-.srd-cart-total-amt{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:#0d0906;}
-.srd-cart-checkout-btn{display:block;width:100%;padding:15px;background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;border:none;border-radius:30px;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:opacity 0.2s,transform 0.15s;text-align:center;}
-.srd-cart-checkout-btn:hover{opacity:0.9;transform:translateY(-1px);}
-.srd-cart-checkout-btn:disabled{opacity:0.6;cursor:not-allowed;}
-.srd-cart-shop-link{display:block;text-align:center;margin-top:10px;font-size:11px;color:rgba(0,0,0,0.35);text-decoration:none;letter-spacing:0.08em;}
-.srd-cart-shop-link:hover{color:#c1a3a2;}
-#srd-cart-badge{position:fixed;bottom:24px;right:24px;z-index:88990;background:linear-gradient(135deg,#c1a3a2,#d4a85a);color:#fff;border:none;border-radius:50px;padding:12px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(193,163,162,0.5);display:none;align-items:center;gap:8px;transition:transform 0.2s,opacity 0.3s;}
-#srd-cart-badge.has-items{display:flex;}
-#srd-cart-badge:hover{transform:scale(1.05);}
-#srd-cart-badge-count{background:rgba(0,0,0,0.25);border-radius:20px;padding:1px 7px;font-size:11px;}
 
 #clearBtn{margin-top:8px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.25);cursor:pointer;background:none;border:none;font-family:var(--brand-font-body);transition:color 0.3s;display:none;}
 #clearBtn:hover{color:rgba(0,0,0,0.55);}
@@ -2362,26 +1931,6 @@ SupportRD products to reference: Formula Exclusiva ($55), Laciador Crece ($40), 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/photo-analysis/history", methods=["GET","OPTIONS"])
-def photo_analysis_history():
-    user = get_current_user()
-    if not user: return jsonify({"error":"unauthorized"}), 401
-    if not is_subscribed(user["id"]): return jsonify({"error":"premium_required"}), 403
-    con = get_db()
-    rows = con.execute("SELECT analysis, ts FROM photo_analyses WHERE user_id=? ORDER BY ts DESC LIMIT 10",
-                       (user["id"],)).fetchall()
-    con.close()
-    history = []
-    for r in rows:
-        score = 0
-        try:
-            a = json.loads(r[0]) if r[0] else {}
-            score = a.get("overall_health_score", a.get("score", 0))
-        except Exception:
-            score = 0
-        history.append({"score": score, "created_at": r[1]})
-    return jsonify({"history": history})
-
 
 @app.route("/analytics")
 def analytics():
@@ -2438,8 +1987,13 @@ def handle_preflight():
         resp.headers["Access-Control-Max-Age"]       = "3600"
         return resp
 
-# CORS first pass — wide open for API calls (merged into main handler below)
-# (removed duplicate — see unified after_request at bottom of file)
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"]  = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Auth-Token, X-Session-Id"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE"
+    response.headers["Access-Control-Max-Age"]       = "3600"
+    return response
 
 
 # ── AUTH ENDPOINTS ────────────────────────────────────────────────────────────
@@ -2575,7 +2129,8 @@ def change_password():
     new_pass = data.get("new_password","")
     if not new_pass or len(new_pass)<6:
         return jsonify({"error":"Password must be at least 6 characters"}),400
-    db_execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(new_pass), user["id"]))
+    pw_hash = hashlib.sha256(new_pass.encode()).hexdigest()
+    db_execute("UPDATE users SET password_hash=? WHERE id=?", (pw_hash, user["id"]))
     return jsonify({"ok":True})
 
 @app.route("/api/auth/delete-account", methods=["DELETE","OPTIONS"])
@@ -2585,7 +2140,7 @@ def delete_account():
     if not user: return jsonify({"error":"Not authenticated"}),401
     uid = user["id"]
     # Delete all user data
-    for table in ["sessions","subscriptions","hair_profiles","photo_analyses","hair_journal","treatment_log","hair_score_history","user_settings"]:
+    for table in ["sessions","subscriptions","hair_profiles","photo_analyses","hair_journal","treatment_log","score_history","user_settings"]:
         try: db_execute(f"DELETE FROM {table} WHERE user_id=?", (uid,))
         except: pass
     db_execute("DELETE FROM users WHERE id=?", (uid,))
@@ -2628,6 +2183,7 @@ def reset_password():
                (hash_password(password), user[0]))
     return jsonify({"ok": True})
 
+
 # ── PROFILE / HISTORY ENDPOINTS ───────────────────────────────────────────────
 @app.route("/api/profile", methods=["GET","POST","OPTIONS"])
 def profile():
@@ -2637,43 +2193,6 @@ def profile():
         save_hair_profile(user["id"], request.get_json())
         return jsonify({"ok":True})
     return jsonify(get_hair_profile(user["id"]))
-
-@app.route("/api/settings", methods=["GET","POST","OPTIONS"])
-def settings():
-    user = get_current_user()
-    if not user: return jsonify({"error":"Not logged in"}), 401
-    if request.method == "GET":
-        row = db_execute("SELECT phone,address,city FROM user_settings WHERE user_id=?", (user["id"],), fetchone=True)
-        return jsonify({
-            "name": user.get("name",""),
-            "email": user.get("email",""),
-            "phone": row[0] if row else "",
-            "address": row[1] if row else "",
-            "city": row[2] if row else ""
-        })
-    data = request.get_json(silent=True) or {}
-    name    = (data.get("name","") or "").strip()
-    email   = (data.get("email","") or "").strip().lower()
-    phone   = (data.get("phone","") or "").strip()
-    address = (data.get("address","") or "").strip()
-    city    = (data.get("city","") or "").strip()
-
-    if name:
-        db_execute("UPDATE users SET name=? WHERE id=?", (name, user["id"]))
-    if email:
-        existing = db_execute("SELECT id FROM users WHERE email=? AND id!=?", (email, user["id"]), fetchone=True)
-        if existing: return jsonify({"error":"Email already in use"}), 400
-        db_execute("UPDATE users SET email=? WHERE id=?", (email, user["id"]))
-
-    db_execute("CREATE TABLE IF NOT EXISTS user_settings (user_id INTEGER PRIMARY KEY, phone TEXT, address TEXT, city TEXT)")
-    existing_s = db_execute("SELECT user_id FROM user_settings WHERE user_id=?", (user["id"],), fetchone=True)
-    if existing_s:
-        db_execute("UPDATE user_settings SET phone=?,address=?,city=? WHERE user_id=?",
-                   (phone,address,city,user["id"]))
-    else:
-        db_execute("INSERT INTO user_settings (user_id,phone,address,city) VALUES (?,?,?,?)",
-                   (user["id"],phone,address,city))
-    return jsonify({"ok": True})
 
 @app.route("/api/profile/ai-status", methods=["GET","OPTIONS"])
 def profile_ai_status():
@@ -2771,65 +2290,6 @@ def create_checkout():
     return jsonify({"setup_needed":True,"checkout_url":"https://supportrd.com/products/hair-advisor-premium"})
 
 
-
-# ── 🎁 PREMIUM STARTER BAG — AI IDEA GENERATOR GIFT ─────────────────────────
-def _gift_blog_ideas_for_new_premium(user_id):
-    """When someone joins premium, Aria generates 5 blog ideas as a free welcome gift.
-    Stored in blog_ideas table with status='starter_gift' so they're easy to find."""
-    # Don't re-gift if they already have starter ideas
-    existing = db_execute("SELECT COUNT(*) FROM blog_ideas WHERE status='starter_gift'", fetchone=True)
-    if existing and existing[0] >= 5:
-        return  # Already gifted
-    ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY","")
-    if not ANTHROPIC_KEY:
-        return
-    import urllib.request as _urlreq
-    prompt = """You are Aria, the AI advisor for Support RD — a Dominican hair care brand founded by Evelyn.
-Products: Shampoo Aloe & Romero, Lsciador conditioner, Gift Shop.
-The app has: Aria AI chat, Candy Land GPS driving mode, live coding feed, hair journal, photo analysis.
-The company backs the campaign to ban pornography on the internet (Democratic Party affiliated).
-
-A new premium member just joined. Generate exactly 5 blog post ideas as their FREE STARTER GIFT.
-Make them feel special — mix product education, hair tips, company story, something fun, and one bold topic.
-
-Respond ONLY in valid JSON, no markdown:
-[
-  {
-    "title": "...",
-    "subtitle": "...",
-    "outline": "Three sentence outline.",
-    "tags": "tag1, tag2, tag3",
-    "reasoning": "One sentence on why this post serves the audience."
-  }
-]"""
-    try:
-        payload = json.dumps({
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 1500,
-            "messages": [{"role":"user","content":prompt}]
-        }).encode()
-        req = _urlreq.Request(
-            "https://api.anthropic.com/v1/messages",
-            data=payload,
-            headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"}
-        )
-        with _urlreq.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read())
-        raw = result.get("content",[{}])[0].get("text","[]")
-        raw = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
-        ideas = json.loads(raw)
-        for idea in ideas[:5]:
-            db_execute(
-                "INSERT INTO blog_ideas (title,subtitle,outline,tags,reasoning,status) VALUES (?,?,?,?,?,'starter_gift')",
-                (idea.get("title","")[:200], idea.get("subtitle","")[:300],
-                 idea.get("outline","")[:500], idea.get("tags","")[:200],
-                 idea.get("reasoning","")[:300])
-            )
-        print(f"[STARTER BAG] 5 AI blog ideas gifted to user {user_id} ✓")
-    except Exception as e:
-        print(f"[STARTER BAG] Gift failed: {e}")
-# ─────────────────────────────────────────────────────────────────────────────
-
 @app.route("/api/shopify-order-webhook", methods=["POST"])
 def shopify_order_webhook():
     try:
@@ -2848,151 +2308,9 @@ def shopify_order_webhook():
         existing=db_execute("SELECT id FROM subscriptions WHERE user_id=?", (user_id,), fetchone=True)
         if existing: db_execute("UPDATE subscriptions SET status='active', plan='premium', current_period_end=?, updated_at=datetime('now') WHERE user_id=?",(period_end,user_id))
         else: db_execute("INSERT INTO subscriptions (user_id, status, plan, current_period_end) VALUES (?, 'active', 'premium', ?)",(user_id,period_end))
-        # 🎁 STARTER BAG — generate 5 free AI blog ideas as a welcome gift
-        try: _gift_blog_ideas_for_new_premium(user_id)
-        except: pass
-        return jsonify({"ok":True,"status":"premium activated","email":email,"gift":"starter_bag_ideas"})
+        return jsonify({"ok":True,"status":"premium activated","email":email})
     except Exception as e:
         return jsonify({"ok":False,"error":str(e)}), 500
-
-@app.route("/api/shopify-revenue", methods=["GET"])
-def shopify_revenue():
-    """Pull real order revenue from Shopify Admin API — admin only."""
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-
-    store = SHOPIFY_STORE
-    token = SHOPIFY_ADMIN_TOKEN
-
-    if not token:
-        return jsonify({
-            "error": "SHOPIFY_ADMIN_TOKEN not set in Render environment variables.",
-            "fix": "Go to Render → Your Service → Environment → Add SHOPIFY_ADMIN_TOKEN",
-            "total": 0, "order_count": 0
-        }), 200
-
-    if not store:
-        return jsonify({
-            "error": "SHOPIFY_STORE not set.",
-            "total": 0, "order_count": 0
-        }), 200
-
-    import urllib.request as _req
-    import urllib.parse as _parse
-    import urllib.error as _err
-
-    try:
-        def fetch_orders(page_info=None):
-            params = {"status": "any", "financial_status": "paid", "limit": "250",
-                      "fields": "total_price,created_at,financial_status,line_items"}
-            if page_info:
-                params["page_info"] = page_info
-            url = f"https://{store}/admin/api/2024-01/orders.json?{_parse.urlencode(params)}"
-            r = _req.Request(url, headers={
-                "X-Shopify-Access-Token": token,
-                "Content-Type": "application/json"
-            })
-            try:
-                with _req.urlopen(r, timeout=15) as resp:
-                    raw = json.loads(resp.read())
-                    link = resp.getheader("Link", "")
-                return raw.get("orders", []), link
-            except _err.HTTPError as he:
-                if he.code == 403:
-                    raise Exception(
-                        "403 Forbidden — your SHOPIFY_ADMIN_TOKEN does not have Orders permission. "
-                        "In Shopify Admin go to: Settings → Apps → Develop apps → Your app → "
-                        "API credentials → Admin API access scopes → enable 'read_orders' → "
-                        "reinstall the app to get a new token."
-                    )
-                elif he.code == 401:
-                    raise Exception(
-                        "401 Unauthorized — SHOPIFY_ADMIN_TOKEN is invalid or expired. "
-                        "Generate a new one in Shopify Admin → Settings → Apps → Develop apps."
-                    )
-                elif he.code == 404:
-                    raise Exception(
-                        f"404 Not Found — store domain '{store}' may be wrong. "
-                        "Check SHOPIFY_STORE in Render — should be like: supportdr-com.myshopify.com"
-                    )
-                else:
-                    raise Exception(f"Shopify API error {he.code}: {he.reason}")
-
-        all_orders = []
-        page_info = None
-        pages = 0
-        while pages < 10:
-            orders, link = fetch_orders(page_info)
-            all_orders.extend(orders)
-            pages += 1
-            next_pi = None
-            if 'rel="next"' in link:
-                for part in link.split(","):
-                    if 'rel="next"' in part:
-                        import re as _re
-                        m = _re.search(r'page_info=([^&>]+)', part)
-                        if m: next_pi = m.group(1)
-            if not next_pi:
-                break
-            page_info = next_pi
-
-        # ── Calculate totals ─────────────────────────────────────────
-        total_revenue = sum(float(o.get("total_price", 0)) for o in all_orders)
-        order_count   = len(all_orders)
-
-        # ── Last 30 days ─────────────────────────────────────────────
-        cutoff_30 = datetime.datetime.utcnow() - datetime.timedelta(days=30)
-        cutoff_7  = datetime.datetime.utcnow() - datetime.timedelta(days=7)
-
-        rev_30 = 0.0
-        rev_7  = 0.0
-        orders_30 = 0
-        orders_7  = 0
-        product_sales = {}
-
-        for o in all_orders:
-            ts_str = o.get("created_at", "")
-            try:
-                # Shopify returns ISO8601 with timezone offset
-                ts = datetime.datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-                ts_naive = ts.replace(tzinfo=None)
-            except:
-                ts_naive = datetime.datetime.min
-
-            amt = float(o.get("total_price", 0))
-            if ts_naive >= cutoff_30:
-                rev_30 += amt
-                orders_30 += 1
-            if ts_naive >= cutoff_7:
-                rev_7 += amt
-                orders_7 += 1
-
-            # Product breakdown
-            for item in o.get("line_items", []):
-                name = item.get("title", "Unknown")
-                qty  = item.get("quantity", 1)
-                price = float(item.get("price", 0)) * qty
-                product_sales[name] = product_sales.get(name, 0) + price
-
-        top_products = sorted(product_sales.items(), key=lambda x: x[1], reverse=True)[:5]
-
-        return jsonify({
-            "ok": True,
-            "total": round(total_revenue, 2),
-            "order_count": order_count,
-            "last_30_days": round(rev_30, 2),
-            "last_7_days": round(rev_7, 2),
-            "orders_30": orders_30,
-            "orders_7": orders_7,
-            "top_products": [{"name": n, "revenue": round(v, 2)} for n, v in top_products],
-            "currency": "USD"
-        })
-
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return jsonify({"error": str(e), "total": 0, "order_count": 0}), 500
-
 
 @app.route("/api/subscription/activate-shopify", methods=["POST","OPTIONS"])
 def activate_shopify():
@@ -3006,9 +2324,7 @@ def activate_shopify():
     row=db_execute("SELECT id FROM subscriptions WHERE user_id=?",(user["id"],),fetchone=True)
     if row: db_execute("UPDATE subscriptions SET status='active',plan='premium',current_period_end=?,updated_at=datetime('now') WHERE user_id=?",(period_end,user["id"]))
     else: db_execute("INSERT INTO subscriptions (user_id,status,plan,current_period_end) VALUES (?,'active','premium',?)",(user["id"],period_end))
-    try: _gift_blog_ideas_for_new_premium(user["id"])
-    except: pass
-    return jsonify({"ok":True,"plan":"premium","gift":"starter_bag_ideas"})
+    return jsonify({"ok":True,"plan":"premium"})
 
 @app.route("/api/admin/generate-code", methods=["POST","OPTIONS"])
 def generate_code():
@@ -3032,15 +2348,7 @@ def subscription_success():
     return """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SupportRD — Welcome to Premium</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#f0ebe8;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;padding:24px;}.card{background:#fff;border-radius:24px;padding:56px 40px;max-width:460px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.08);}.icon{font-size:56px;margin-bottom:20px;}.title{font-family:'Cormorant Garamond',serif;font-size:36px;font-style:italic;color:#0d0906;margin-bottom:10px;}.sub{font-size:13px;color:rgba(0,0,0,0.40);line-height:1.7;margin-bottom:28px;}.trial-badge{background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;padding:10px 24px;border-radius:20px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;display:inline-block;margin-bottom:28px;}.btn{display:block;padding:14px;background:#c1a3a2;color:#fff;text-decoration:none;border-radius:30px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;transition:background 0.2s;}.btn:hover{background:#9d7f6a;}.btn-outline{background:transparent;color:#9d7f6a;border:1px solid rgba(193,163,162,0.40);}</style></head><body>
-<div class="card"><div class="icon">🌿</div><div class="title">Welcome to Premium</div><div class="trial-badge">7-Day Free Trial Active</div><div class="sub">Your hair journey just leveled up. Unlimited Aria access, full hair health dashboard, and priority advisor support.</div>
-<div style="background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(192,132,252,0.06));border:1px solid rgba(192,132,252,0.3);border-radius:16px;padding:18px 20px;margin-bottom:24px;text-align:left;">
-  <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#a855f7;margin-bottom:8px;font-family:'Jost',sans-serif;">🎁 Your Free Starter Bag</div>
-  <div style="font-size:13px;color:#333;line-height:1.7;margin-bottom:6px;"><strong>AI Blog Idea Generator</strong> — Aria just generated 5 custom blog post ideas for you. Head to the Blog Command Center to see them, write them, and publish them.</div>
-  <div style="font-size:11px;color:#9d7f6a;">This is your free weapon. Use it whenever you need fresh content ideas.</div>
-</div>
-<a href="/" class="btn">Talk to Aria Now</a>
-<a href="/dashboard" class="btn btn-outline">View My Dashboard</a>
-<a href="/blog/write" class="btn btn-outline" style="border-color:rgba(168,85,247,0.4);color:#a855f7;">✨ See My Starter Ideas</a></div>
+<div class="card"><div class="icon">🌿</div><div class="title">Welcome to Premium</div><div class="trial-badge">7-Day Free Trial Active</div><div class="sub">Your hair journey just leveled up. Unlimited Aria access, full hair health dashboard, and priority advisor support.</div><a href="/" class="btn">Talk to Aria Now</a><a href="/dashboard" class="btn btn-outline">View My Dashboard</a></div>
 <script>var u=localStorage.getItem('srd_user');if(u){try{var p=JSON.parse(u);p.plan='premium';localStorage.setItem('srd_user',JSON.stringify(p));}catch(e){}}</script>
 </body></html>"""
 
@@ -3102,1327 +2410,8 @@ def ping():
     return jsonify({"ok": True, "status": "awake"})
 
 
-@app.route("/robots.txt")
-def robots_txt():
-    body = "\n".join([
-        "User-agent: *",
-        "Allow: /",
-        "Sitemap: https://aria.supportrd.com/sitemap.xml",
-        ""
-    ])
-    return Response(body, mimetype="text/plain")
-
-
-@app.route("/sitemap.xml")
-def sitemap():
-    body = '<?xml version="1.0" encoding="UTF-8"?>'
-    body += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-    body += '<url><loc>https://aria.supportrd.com/</loc><priority>1.0</priority></url>'
-    body += '<url><loc>https://aria.supportrd.com/login</loc><priority>0.8</priority></url>'
-    body += '<url><loc>https://aria.supportrd.com/dashboard</loc><priority>0.8</priority></url>'
-    body += '<url><loc>https://aria.supportrd.com/blog</loc><priority>0.7</priority></url>'
-    body += '</urlset>'
-    return Response(body, mimetype="application/xml")
-
-
-@app.route("/health")
-def health_check():
-    body = (
-        '<!DOCTYPE html><html><head>'
-        '<meta charset="UTF-8">'
-        '<meta name="description" content="SupportRD Hair Advisor - Professional AI hair care advice">'
-        '<meta name="keywords" content="hair care, hair advisor, Dominican hair, natural hair, beauty">'
-        '<meta name="rating" content="general">'
-        '<meta name="category" content="Health and Beauty">'
-        '<title>SupportRD Hair Advisor — Health &amp; Beauty</title>'
-        '</head><body style="font-family:sans-serif;padding:40px;max-width:600px;margin:0 auto">'
-        '<h1>SupportRD Hair Advisor</h1>'
-        '<p>Professional AI-powered hair care advice for the whole family.</p>'
-        '<p><strong>Category:</strong> Health and Beauty</p>'
-        '<p><strong>Rating:</strong> General — Family Friendly</p>'
-        '<p><strong>Status:</strong> Online</p>'
-        '<p><a href="https://supportrd.com">supportrd.com</a> &mdash; <a href="mailto:hello@supportrd.com">hello@supportrd.com</a></p>'
-        '</body></html>'
-    )
-    return Response(body, mimetype="text/html")
-
-
-@app.route("/sw.js")
-def service_worker():
-    """
-    Service worker — minimal version that:
-    1. Immediately unregisters itself to clear any broken cached SW
-    2. Does NOT intercept fetch requests (no caching that breaks the app)
-    3. Stays registered just enough for push notifications to work
-    """
-    sw_code = """
-// SupportRD Service Worker v3 — push only, no fetch interception
-const SW_VERSION = 'srd-v3';
-
-self.addEventListener('install', function(event) {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', function(event) {
-  event.waitUntil(
-    // Clear ALL old caches from previous broken versions
-    caches.keys().then(function(keys) {
-      return Promise.all(keys.map(function(key) {
-        console.log('[SW] Deleting old cache:', key);
-        return caches.delete(key);
-      }));
-    }).then(function() {
-      return self.clients.claim();
-    })
-  );
-});
-
-// NO fetch handler — let all requests go directly to network
-// This is what was broken before: old SW had a fetch handler
-// that failed to return a proper Response, blocking the whole site.
-
-// Push notification handler only
-self.addEventListener('push', function(event) {
-  try {
-    const data = event.data ? event.data.json() : {};
-    const title = data.title || 'Aria — SupportRD';
-    const options = {
-      body:    data.body    || 'Your hair routine reminder is ready.',
-      icon:    data.icon    || 'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845',
-      badge:   data.badge   || '',
-      tag:     data.tag     || 'aria-reminder',
-      data:    data.url     || '/',
-      vibrate: [200, 100, 200]
-    };
-    event.waitUntil(self.registration.showNotification(title, options));
-  } catch(e) {
-    console.warn('[SW] Push error:', e);
-  }
-});
-
-self.addEventListener('notificationclick', function(event) {
-  event.notification.close();
-  const url = event.notification.data || '/';
-  event.waitUntil(clients.openWindow(url));
-});
-"""
-    return Response(sw_code, mimetype="application/javascript",
-                    headers={"Cache-Control": "no-cache, no-store, must-revalidate",
-                             "Service-Worker-Allowed": "/"})
-
-
-@app.route("/about")
-def about_page():
-    """Standalone About Us page."""
-    return Response("""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>About Support RD — Hair Care, AI, and the People Behind It</title>
-<meta name="description" content="Support RD is a Dominican hair care company founded by Anthony Figueroa, Crystal Figueroa, and Evelyn. We built an AI advisor, a coding foundation, and a campaign for people who can't afford their hair care.">
-<meta property="og:title" content="About Support RD">
-<meta property="og:description" content="Dominican hair care. AI technology. A family company building real tools for real people.">
-<meta property="og:type" content="website">
-<meta name="robots" content="index, follow">
-<link rel="canonical" href="https://aria.supportrd.com/about">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-<style>
-/* ═══════════════════════════════════════════════════════════════
-   SUPPORT RD — ABOUT US
-   Style: Magazine editorial. Warm cream + near-black + rose accent.
-   Playfair Display headlines. DM Sans body. 
-   ═══════════════════════════════════════════════════════════════ */
-
-:root {
-  --ink:     #0d0906;
-  --cream:   #f5f0eb;
-  --warm:    #ece6df;
-  --rose:    #c1a3a2;
-  --rose2:   #9d7f6a;
-  --gold:    #b8860b;
-  --gold2:   #d4a85a;
-  --night:   #0a0705;
-  --night2:  #14100d;
-  --muted:   rgba(13,9,6,0.45);
-  --border:  rgba(193,163,162,0.25);
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--cream);
-  color: var(--ink);
-  overflow-x: hidden;
-}
-
-/* ─── TICKER ─────────────────────────────────────────────────── */
-.ticker {
-  background: var(--ink);
-  padding: 9px 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.ticker-inner {
-  display: inline-flex;
-  animation: tickerRoll 22s linear infinite;
-}
-.ticker-pill {
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--rose);
-  padding: 0 28px;
-}
-@keyframes tickerRoll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-/* ─── NAV ────────────────────────────────────────────────────── */
-nav {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(245,240,235,0.92);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 40px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.nav-logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 20px;
-  font-style: italic;
-  color: var(--ink);
-  text-decoration: none;
-  font-weight: 700;
-}
-.nav-links {
-  display: flex;
-  gap: 32px;
-  align-items: center;
-}
-.nav-links a {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-.nav-links a:hover { color: var(--ink); }
-.nav-cta {
-  background: var(--ink) !important;
-  color: var(--cream) !important;
-  padding: 8px 20px !important;
-  border-radius: 30px !important;
-  letter-spacing: 0.1em !important;
-}
-.nav-cta:hover { background: var(--rose2) !important; }
-@media (max-width: 600px) {
-  nav { padding: 0 20px; }
-  .nav-links { gap: 16px; }
-  .nav-links a:not(.nav-cta):not(:last-child) { display: none; }
-}
-
-/* ─── HERO ───────────────────────────────────────────────────── */
-.hero {
-  background: var(--ink);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 80px 60px 72px;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Grain texture overlay */
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  background-size: 200px;
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-/* Radial glow */
-.hero::after {
-  content: '';
-  position: absolute;
-  bottom: -120px;
-  left: -80px;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(193,163,162,0.18) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.hero-eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--rose);
-  margin-bottom: 24px;
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.hero-eyebrow::before {
-  content: '';
-  display: inline-block;
-  width: 32px;
-  height: 1px;
-  background: var(--rose);
-}
-
-.hero-headline {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(52px, 8vw, 110px);
-  font-weight: 900;
-  color: var(--cream);
-  line-height: 0.92;
-  letter-spacing: -0.02em;
-  position: relative;
-  z-index: 2;
-  margin-bottom: 32px;
-}
-.hero-headline em {
-  font-style: italic;
-  color: var(--rose);
-}
-
-.hero-sub {
-  font-size: 16px;
-  color: rgba(245,240,235,0.55);
-  line-height: 1.75;
-  max-width: 520px;
-  position: relative;
-  z-index: 2;
-  font-weight: 300;
-}
-
-.hero-scroll {
-  position: absolute;
-  bottom: 40px;
-  right: 60px;
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(193,163,162,0.5);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  writing-mode: vertical-rl;
-  z-index: 2;
-  animation: scrollBob 2.5s ease-in-out infinite;
-}
-@keyframes scrollBob {
-  0%,100% { transform: translateY(0); }
-  50%      { transform: translateY(-8px); }
-}
-
-@media (max-width: 600px) {
-  .hero { padding: 60px 28px 56px; }
-  .hero-scroll { display: none; }
-}
-
-/* ─── SECTION SHARED ─────────────────────────────────────────── */
-.section {
-  padding: 100px 60px;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-@media (max-width: 600px) { .section { padding: 64px 24px; } }
-
-.eyebrow {
-  font-size: 9px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--rose2);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.eyebrow::before {
-  content: '';
-  display: inline-block;
-  width: 24px;
-  height: 1px;
-  background: var(--rose2);
-}
-
-.section-title {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(36px, 5vw, 64px);
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  margin-bottom: 20px;
-}
-.section-title em { font-style: italic; color: var(--rose2); }
-
-.section-body {
-  font-size: 17px;
-  line-height: 1.85;
-  color: rgba(13,9,6,0.7);
-  font-weight: 300;
-  max-width: 680px;
-}
-.section-body strong { font-weight: 600; color: var(--ink); }
-
-/* ─── DIVIDER ────────────────────────────────────────────────── */
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 0 60px;
-}
-@media (max-width: 600px) { .divider { margin: 0 24px; } }
-
-/* ─── WHO WE ARE — 2-col layout ──────────────────────────────── */
-.who-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 80px;
-  align-items: start;
-  margin-top: 48px;
-}
-@media (max-width: 768px) { .who-grid { grid-template-columns: 1fr; gap: 40px; } }
-
-.who-stat-col {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-.who-stat {
-  padding: 24px 28px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 4px 20px rgba(13,9,6,0.04);
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-.who-stat:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 40px rgba(13,9,6,0.08);
-}
-.who-stat-num {
-  font-family: 'Playfair Display', serif;
-  font-size: 48px;
-  font-weight: 900;
-  color: var(--rose2);
-  line-height: 1;
-  margin-bottom: 6px;
-}
-.who-stat-label {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.who-stat-desc {
-  font-size: 14px;
-  color: rgba(13,9,6,0.6);
-  line-height: 1.65;
-  margin-top: 8px;
-}
-
-.who-quote {
-  margin-top: 40px;
-  padding: 32px 36px;
-  background: var(--ink);
-  border-radius: 20px;
-  position: relative;
-}
-.who-quote::before {
-  content: '\201C';
-  font-family: 'Playfair Display', serif;
-  font-size: 120px;
-  color: rgba(193,163,162,0.15);
-  position: absolute;
-  top: -10px;
-  left: 20px;
-  line-height: 1;
-}
-.who-quote-text {
-  font-family: 'Playfair Display', serif;
-  font-size: 20px;
-  font-style: italic;
-  color: var(--cream);
-  line-height: 1.6;
-  position: relative;
-  z-index: 1;
-  margin-bottom: 16px;
-}
-.who-quote-attr {
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--rose);
-}
-
-/* ─── TEAM SECTION — dark bg ─────────────────────────────────── */
-.team-section {
-  background: var(--ink);
-  padding: 100px 60px;
-}
-@media (max-width: 600px) { .team-section { padding: 64px 24px; } }
-
-.team-inner { max-width: 1100px; margin: 0 auto; }
-
-.team-section .eyebrow { color: var(--rose); }
-.team-section .eyebrow::before { background: var(--rose); }
-.team-section .section-title { color: var(--cream); }
-
-.team-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-top: 56px;
-}
-@media (max-width: 768px) { .team-grid { grid-template-columns: 1fr; } }
-
-.team-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(193,163,162,0.15);
-  border-radius: 20px;
-  padding: 36px 28px;
-  transition: transform 0.3s, border-color 0.3s;
-}
-.team-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(193,163,162,0.35);
-}
-
-.team-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Playfair Display', serif;
-  font-size: 22px;
-  font-style: italic;
-  font-weight: 700;
-  color: #fff;
-}
-.avatar-anthony { background: linear-gradient(135deg, #c1a3a2, #9d7f6a); }
-.avatar-crystal  { background: linear-gradient(135deg, #d4a85a, #b8860b); }
-.avatar-evelyn   { background: linear-gradient(135deg, #a8c5c1, #6a9d99); }
-
-.team-name {
-  font-family: 'Playfair Display', serif;
-  font-size: 22px;
-  font-style: italic;
-  font-weight: 700;
-  color: var(--cream);
-  margin-bottom: 4px;
-}
-.team-role {
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--rose);
-  margin-bottom: 16px;
-}
-.team-bio {
-  font-size: 14px;
-  color: rgba(245,240,235,0.55);
-  line-height: 1.75;
-  font-weight: 300;
-}
-.team-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 18px;
-}
-.team-tag {
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--rose);
-  border: 1px solid rgba(193,163,162,0.25);
-  border-radius: 20px;
-  padding: 4px 10px;
-}
-
-/* ─── PRODUCTS SECTION ───────────────────────────────────────── */
-.products-section {
-  padding: 100px 60px;
-  background: var(--warm);
-}
-.products-inner { max-width: 1100px; margin: 0 auto; }
-@media (max-width: 600px) { .products-section { padding: 64px 24px; } }
-
-.products-header {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  align-items: end;
-  margin-bottom: 60px;
-}
-@media (max-width: 768px) { .products-header { grid-template-columns: 1fr; } }
-
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-@media (max-width: 900px) { .products-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 600px) { .products-grid { grid-template-columns: 1fr; } }
-
-.prod-card {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 28px 24px;
-  transition: transform 0.3s, box-shadow 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-.prod-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--rose), var(--gold2));
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.prod-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(13,9,6,0.10);
-}
-.prod-card:hover::before { opacity: 1; }
-
-.prod-emoji {
-  font-size: 32px;
-  margin-bottom: 14px;
-  display: block;
-}
-.prod-name {
-  font-family: 'Playfair Display', serif;
-  font-size: 18px;
-  font-style: italic;
-  font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 6px;
-}
-.prod-price {
-  font-family: 'DM Mono', monospace;
-  font-size: 13px;
-  color: var(--rose2);
-  margin-bottom: 12px;
-  font-weight: 500;
-}
-.prod-desc {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.65;
-  margin-bottom: 18px;
-}
-.prod-best {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rose2);
-  background: rgba(193,163,162,0.1);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 4px 10px;
-  display: inline-block;
-  margin-bottom: 16px;
-}
-.prod-link {
-  display: inline-block;
-  background: var(--ink);
-  color: var(--cream);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 10px 20px;
-  border-radius: 30px;
-  text-decoration: none;
-  transition: background 0.3s;
-}
-.prod-link:hover { background: var(--rose2); }
-
-.prod-card.featured {
-  background: var(--ink);
-  grid-column: span 1;
-}
-.prod-card.featured .prod-name { color: var(--cream); }
-.prod-card.featured .prod-price { color: var(--gold2); }
-.prod-card.featured .prod-desc { color: rgba(245,240,235,0.55); }
-.prod-card.featured .prod-best { color: var(--gold2); border-color: rgba(212,168,90,0.3); background: rgba(212,168,90,0.1); }
-.prod-card.featured .prod-link { background: var(--rose); }
-.prod-card.featured .prod-link:hover { background: var(--rose2); }
-
-/* ─── CAMPAIGNS STRIP ────────────────────────────────────────── */
-.campaigns-strip {
-  background: linear-gradient(135deg, #0f0b08, #1a1208);
-  padding: 64px 60px;
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  align-items: stretch;
-  justify-content: center;
-}
-@media (max-width: 600px) { .campaigns-strip { padding: 48px 24px; } }
-
-.campaign-card {
-  flex: 1;
-  min-width: 260px;
-  max-width: 380px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(193,163,162,0.15);
-  border-radius: 20px;
-  padding: 32px 28px;
-  display: flex;
-  flex-direction: column;
-}
-.campaign-icon { font-size: 36px; margin-bottom: 16px; }
-.campaign-name {
-  font-family: 'Playfair Display', serif;
-  font-size: 22px;
-  font-style: italic;
-  font-weight: 700;
-  color: var(--cream);
-  margin-bottom: 10px;
-}
-.campaign-desc {
-  font-size: 14px;
-  color: rgba(245,240,235,0.5);
-  line-height: 1.75;
-  font-weight: 300;
-  flex: 1;
-  margin-bottom: 24px;
-}
-.campaign-btn {
-  display: inline-block;
-  padding: 12px 24px;
-  border-radius: 30px;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-decoration: none;
-  font-weight: 600;
-  align-self: flex-start;
-  transition: opacity 0.2s;
-}
-.campaign-btn:hover { opacity: 0.8; }
-.btn-gold { background: var(--gold2); color: #0d0906; }
-.btn-blue { background: #60a8ff; color: #0d0906; }
-
-/* ─── CODING FOUNDATION — dramatic dark section ───────────────── */
-.coding-section {
-  background: var(--ink);
-  padding: 100px 60px;
-  position: relative;
-  overflow: hidden;
-}
-.coding-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 2; }
-
-/* Large decorative number */
-.coding-section::before {
-  content: '</>';
-  position: absolute;
-  right: -20px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: 'DM Mono', monospace;
-  font-size: 220px;
-  color: rgba(193,163,162,0.04);
-  pointer-events: none;
-  line-height: 1;
-}
-@media (max-width: 600px) { .coding-section { padding: 64px 24px; } }
-
-.coding-section .eyebrow { color: var(--gold2); }
-.coding-section .eyebrow::before { background: var(--gold2); }
-.coding-section .section-title { color: var(--cream); }
-
-.coding-statement {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(22px, 3vw, 36px);
-  font-style: italic;
-  color: rgba(245,240,235,0.75);
-  line-height: 1.5;
-  max-width: 720px;
-  margin: 28px 0 48px;
-  font-weight: 400;
-}
-.coding-statement strong { color: var(--gold2); font-style: normal; }
-
-.coding-timestamp {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(212,168,90,0.1);
-  border: 1px solid rgba(212,168,90,0.25);
-  border-radius: 30px;
-  padding: 10px 18px;
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  color: var(--gold2);
-  letter-spacing: 0.08em;
-  margin-bottom: 48px;
-}
-
-.coding-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 48px;
-}
-@media (max-width: 900px) { .coding-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 600px) { .coding-grid { grid-template-columns: 1fr; } }
-
-.coding-card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(212,168,90,0.12);
-  border-radius: 14px;
-  padding: 22px 20px;
-  transition: border-color 0.3s, background 0.3s;
-}
-.coding-card:hover {
-  border-color: rgba(212,168,90,0.3);
-  background: rgba(212,168,90,0.06);
-}
-.coding-card-num {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  color: rgba(212,168,90,0.5);
-  margin-bottom: 10px;
-}
-.coding-card-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cream);
-  margin-bottom: 6px;
-}
-.coding-card-desc {
-  font-size: 12px;
-  color: rgba(245,240,235,0.4);
-  line-height: 1.65;
-}
-
-.coding-cta-row {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.coding-btn-primary {
-  background: var(--gold2);
-  color: var(--ink);
-  padding: 14px 32px;
-  border-radius: 30px;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-decoration: none;
-  font-weight: 600;
-  transition: opacity 0.2s;
-}
-.coding-btn-primary:hover { opacity: 0.85; }
-.coding-btn-ghost {
-  color: rgba(245,240,235,0.5);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  text-decoration: none;
-  border-bottom: 1px solid rgba(245,240,235,0.2);
-  padding-bottom: 2px;
-  transition: color 0.2s;
-}
-.coding-btn-ghost:hover { color: var(--cream); }
-
-/* ─── FOOTER ─────────────────────────────────────────────────── */
-footer {
-  background: #070503;
-  padding: 56px 60px 40px;
-  border-top: 1px solid rgba(193,163,162,0.1);
-}
-.footer-inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 60px;
-  margin-bottom: 48px;
-}
-@media (max-width: 768px) { .footer-inner { grid-template-columns: 1fr; gap: 32px; } }
-
-.footer-brand {
-  font-family: 'Playfair Display', serif;
-  font-size: 28px;
-  font-style: italic;
-  font-weight: 700;
-  color: var(--cream);
-  margin-bottom: 12px;
-}
-.footer-tagline {
-  font-size: 13px;
-  color: rgba(245,240,235,0.4);
-  line-height: 1.7;
-  font-weight: 300;
-  max-width: 300px;
-}
-.footer-col-title {
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--rose);
-  margin-bottom: 16px;
-}
-.footer-col a {
-  display: block;
-  font-size: 13px;
-  color: rgba(245,240,235,0.45);
-  text-decoration: none;
-  margin-bottom: 10px;
-  transition: color 0.2s;
-}
-.footer-col a:hover { color: var(--cream); }
-.footer-bottom {
-  max-width: 1100px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  border-top: 1px solid rgba(193,163,162,0.08);
-  padding-top: 24px;
-}
-.footer-copy {
-  font-size: 11px;
-  color: rgba(245,240,235,0.2);
-  letter-spacing: 0.08em;
-}
-.footer-dem {
-  font-size: 10px;
-  color: rgba(193,163,162,0.35);
-  letter-spacing: 0.1em;
-}
-@media (max-width: 600px) { footer { padding: 48px 24px 32px; } }
-
-/* ─── SCROLL REVEAL ANIMATIONS ───────────────────────────────── */
-.reveal {
-  opacity: 0;
-  transform: translateY(32px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
-}
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-.reveal-d1 { transition-delay: 0.1s; }
-.reveal-d2 { transition-delay: 0.2s; }
-.reveal-d3 { transition-delay: 0.3s; }
-.reveal-d4 { transition-delay: 0.4s; }
-</style>
-</head>
-<body>
-
-<!-- ═══ TICKER ═══════════════════════════════════════════════════ -->
-<div class="ticker">
-  <div class="ticker-inner">
-    <span class="ticker-pill">✦ Support RD</span>
-    <span class="ticker-pill">✦ Dominican Hair Care</span>
-    <span class="ticker-pill">✦ AI Advisor Aria</span>
-    <span class="ticker-pill">✦ Coding Foundation</span>
-    <span class="ticker-pill">✦ Campaign for the Poor</span>
-    <span class="ticker-pill">✦ Auto Dissolve Bar</span>
-    <span class="ticker-pill">✦ supportrd.com</span>
-    <span class="ticker-pill">✦ Support RD</span>
-    <span class="ticker-pill">✦ Dominican Hair Care</span>
-    <span class="ticker-pill">✦ AI Advisor Aria</span>
-    <span class="ticker-pill">✦ Coding Foundation</span>
-    <span class="ticker-pill">✦ Campaign for the Poor</span>
-    <span class="ticker-pill">✦ Auto Dissolve Bar</span>
-    <span class="ticker-pill">✦ supportrd.com</span>
-  </div>
-</div>
-
-<!-- ═══ NAV ══════════════════════════════════════════════════════ -->
-<nav>
-  <a href="https://aria.supportrd.com" class="nav-logo">Support RD</a>
-  <div class="nav-links">
-    <a href="#who">Who We Are</a>
-    <a href="#team">Team</a>
-    <a href="#products">Products</a>
-    <a href="#coding">Coding</a>
-    <a href="https://aria.supportrd.com" class="nav-cta">Open Aria →</a>
-  </div>
-</nav>
-
-<!-- ═══ HERO ══════════════════════════════════════════════════════ -->
-<section class="hero">
-  <div class="hero-eyebrow">About Support RD</div>
-  <h1 class="hero-headline">
-    Real tools<br>for real<br><em>people.</em>
-  </h1>
-  <p class="hero-sub">
-    We started with hair care. We built an AI advisor named Aria. 
-    We're expanding into technology education, smart products, 
-    and tools for the people who need them most.
-    Born in the Dominican Republic. Built for the world.
-  </p>
-  <div class="hero-scroll">Scroll to explore</div>
-</section>
-
-<!-- ═══ WHO WE ARE ════════════════════════════════════════════════ -->
-<section class="section" id="who">
-  <div class="eyebrow reveal">✦ Our Story</div>
-  <h2 class="section-title reveal reveal-d1">
-    We didn't plan<br>any of <em>this.</em>
-  </h2>
-
-  <div class="who-grid">
-    <div>
-      <p class="section-body reveal reveal-d2">
-        Support is a product company built on one belief — that real people deserve real tools. 
-        We started with hair care when Evelyn developed the original Shampoo Aloe & Romero 
-        from a Dominican grandmother's formula: raw aloe vera and rosemary, 
-        the herb generations have trusted to wake up sleeping follicles.
-      </p>
-      <p class="section-body reveal reveal-d3" style="margin-top:24px;">
-        That shampoo became the foundation of Support RD. Then came the products. 
-        Then came the question: <strong>what if an AI could learn your hair the way a stylist does?</strong> 
-        That question became Aria — our AI hair advisor that knows your routine, 
-        your products, and your goals as deeply as you do.
-      </p>
-      <p class="section-body reveal reveal-d4" style="margin-top:24px;">
-        Every piece of this — from the shampoo Evelyn invented, to the app Crystal and Anthony are growing, 
-        to the campaign for people who cannot afford hair care, to the dissolve bar we are trying 
-        to get shipped affordably — <strong>none of it was fully planned. All of it was placed.</strong>
-      </p>
-      <div class="who-quote reveal" style="margin-top:40px;">
-        <div class="who-quote-text">
-          "Allahwazaweje was in this. The energy was real. 
-          The confirmation was quiet but loud. Keep going."
-        </div>
-        <div class="who-quote-attr">Anthony Figueroa — Anthony Blogger</div>
-      </div>
-    </div>
-
-    <div class="who-stat-col">
-      <div class="who-stat reveal reveal-d1">
-        <div class="who-stat-num">6+</div>
-        <div class="who-stat-label">Products in the line</div>
-        <div class="who-stat-desc">From cleansing shampoos to scalp droppers — every formula is natural, Dominican-rooted, and built for real results.</div>
-      </div>
-      <div class="who-stat reveal reveal-d2">
-        <div class="who-stat-num">Aria</div>
-        <div class="who-stat-label">AI Hair Advisor</div>
-        <div class="who-stat-desc">An AI that learns your hair at the level of a professional stylist — your routine, your concerns, your transformation over time.</div>
-      </div>
-      <div class="who-stat reveal reveal-d3">
-        <div class="who-stat-num">DR</div>
-        <div class="who-stat-label">Dominican Republic — Origin</div>
-        <div class="who-stat-desc">The formulas, the philosophy, the founding family. Everything rooted in Dominican hair culture and brought to the world.</div>
-      </div>
-      <div class="who-stat reveal reveal-d4">
-        <div class="who-stat-num">3</div>
-        <div class="who-stat-label">Founders building together</div>
-        <div class="who-stat-desc">Anthony, Crystal, and Evelyn — design, operations, and the original formula that started all of it.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- ═══ TEAM ══════════════════════════════════════════════════════ -->
-<section class="team-section" id="team">
-  <div class="team-inner">
-    <div class="eyebrow reveal">✦ The People</div>
-    <h2 class="section-title reveal reveal-d1">
-      Three people.<br>One <em>company.</em>
-    </h2>
-
-    <div class="team-grid">
-      <div class="team-card reveal reveal-d1">
-        <div class="team-avatar avatar-anthony">A</div>
-        <div class="team-name">Anthony Figueroa</div>
-        <div class="team-role">Design &amp; Creative Direction · Anthony Blogger</div>
-        <p class="team-bio">
-          The architect of Support RD's digital presence. Anthony built the app, 
-          the AI system, and the brand from the ground up — often deep in code at 3am 
-          when the energy was right. He writes as Anthony Blogger, a voice about 
-          building, faith, and what happens when you trust the process completely.
-        </p>
-        <div class="team-tags">
-          <span class="team-tag">App Development</span>
-          <span class="team-tag">Creative Direction</span>
-          <span class="team-tag">Anthony Blogger</span>
-        </div>
-      </div>
-
-      <div class="team-card reveal reveal-d2">
-        <div class="team-avatar avatar-crystal">C</div>
-        <div class="team-name">Crystal Figueroa</div>
-        <div class="team-role">Co-CEO · Operations</div>
-        <p class="team-bio">
-          Crystal runs the operations side of Support RD — the business decisions, 
-          the customer relationships, and the day-to-day reality of growing a product 
-          company from a family idea into something real. The steady hand that keeps 
-          everything moving forward.
-        </p>
-        <div class="team-tags">
-          <span class="team-tag">Co-CEO</span>
-          <span class="team-tag">Operations</span>
-          <span class="team-tag">Business Strategy</span>
-        </div>
-      </div>
-
-      <div class="team-card reveal reveal-d3">
-        <div class="team-avatar avatar-evelyn">E</div>
-        <div class="team-name">Evelyn</div>
-        <div class="team-role">Co-CEO · Shampoo Inventor</div>
-        <p class="team-bio">
-          Evelyn invented the shampoo that started everything. The original 
-          Aloe & Romero formula is hers — born from Dominican tradition and 
-          a deep knowledge of what natural hair needs. Without that formula, 
-          there is no Support RD. She is the origin.
-        </p>
-        <div class="team-tags">
-          <span class="team-tag">Co-CEO</span>
-          <span class="team-tag">Product Inventor</span>
-          <span class="team-tag">Formula Creator</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ PRODUCTS ══════════════════════════════════════════════════ -->
-<section class="products-section" id="products">
-  <div class="products-inner">
-    <div class="products-header">
-      <div>
-        <div class="eyebrow reveal">✦ The Products</div>
-        <h2 class="section-title reveal reveal-d1">
-          Natural.<br><em>Dominican.</em><br>Real results.
-        </h2>
-      </div>
-      <div>
-        <p class="section-body reveal reveal-d2">
-          Every formula starts with what Dominican grandmothers already knew — 
-          aloe vera, rosemary, natural extracts. We didn't reinvent anything. 
-          We made it accessible, precise, and backed by an AI that knows 
-          exactly which one you need.
-        </p>
-      </div>
-    </div>
-
-    <div class="products-grid">
-      <div class="prod-card featured reveal reveal-d1">
-        <span class="prod-emoji">💊</span>
-        <div class="prod-name">Formula Exclusiva</div>
-        <div class="prod-price">$55</div>
-        <p class="prod-desc">All-in-one treatment. The flagship. Built for damaged, weak, breaking, thinning, and severely dry hair. This is where most transformations start.</p>
-        <span class="prod-best">Best for damaged hair</span><br>
-        <a href="https://supportrd.com/products/formula-exclusiva" class="prod-link" target="_blank">Shop Now</a>
-      </div>
-
-      <div class="prod-card reveal reveal-d2">
-        <span class="prod-emoji">💧</span>
-        <div class="prod-name">Gotero Rápido</div>
-        <div class="prod-price">$55</div>
-        <p class="prod-desc">Scalp dropper for nightly use. Hair loss, slow growth, scalp issues — this goes directly to the source.</p>
-        <span class="prod-best">Best for hair growth</span><br>
-        <a href="https://supportrd.com/products/gotero-rapido" class="prod-link" target="_blank">Shop Now</a>
-      </div>
-
-      <div class="prod-card reveal reveal-d3">
-        <span class="prod-emoji">✨</span>
-        <div class="prod-name">Gotitas Brillantes</div>
-        <div class="prod-price">$30</div>
-        <p class="prod-desc">Finishing drops for shine and frizz control. The final step in any routine that wants to end perfectly.</p>
-        <span class="prod-best">Best for shine & frizz</span><br>
-        <a href="https://supportrd.com/products/gotitas-brillantes" class="prod-link" target="_blank">Shop Now</a>
-      </div>
-
-      <div class="prod-card reveal reveal-d1">
-        <span class="prod-emoji">🥑</span>
-        <div class="prod-name">Mascarilla Natural</div>
-        <div class="prod-price">$25</div>
-        <p class="prod-desc">Deep conditioning mask. For hair that needs serious moisture and nourishment from the inside out.</p>
-        <span class="prod-best">Best for deep conditioning</span><br>
-        <a href="https://supportrd.com/products/mascarilla-avocado" class="prod-link" target="_blank">Shop Now</a>
-      </div>
-
-      <div class="prod-card reveal reveal-d2">
-        <span class="prod-emoji">🌱</span>
-        <div class="prod-name">Shampoo Aloe & Romero</div>
-        <div class="prod-price">$20</div>
-        <p class="prod-desc">The original. Evelyn's formula. Scalp stimulation, daily cleanse, growth activation. This is where Support RD began.</p>
-        <span class="prod-best">The original formula</span><br>
-        <a href="https://supportrd.com/products/shampoo-aloe-vera" class="prod-link" target="_blank">Shop Now</a>
-      </div>
-
-      <div class="prod-card reveal reveal-d3" style="background:linear-gradient(135deg,#0f0b08,#1a1208);border-color:rgba(212,168,90,0.25);">
-        <span class="prod-emoji">⭐</span>
-        <div class="prod-name" style="color:var(--cream);">Premium Subscription</div>
-        <div class="prod-price" style="color:var(--gold2);">$35 / month</div>
-        <p class="prod-desc" style="color:rgba(245,240,235,0.5);">Unlock Aria's full intelligence. Unlimited conversations, photo analysis, progress tracking, and a personal hair routine that evolves with you.</p>
-        <span class="prod-best" style="color:var(--gold2);border-color:rgba(212,168,90,0.25);background:rgba(212,168,90,0.08);">Unlock everything</span><br>
-        <a href="https://supportrd.com/products/hair-advisor-premium" class="prod-link" target="_blank" style="background:var(--gold2);color:#0d0906;">Get Premium</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ CAMPAIGNS ═════════════════════════════════════════════════ -->
-<div class="campaigns-strip">
-  <div class="campaign-card reveal reveal-d1">
-    <div class="campaign-icon">🫶</div>
-    <div class="campaign-name">Campaign for the Poor</div>
-    <p class="campaign-desc">Hair care is not a luxury — it's part of feeling human. We are building a program to give affordable access to Support RD products to families who cannot afford them. If you want to help us fund this, reach out directly.</p>
-    <a href="mailto:hello@supportrd.com?subject=Campaign for the Poor — I want to help" class="campaign-btn btn-gold">Donate Now</a>
-  </div>
-  <div class="campaign-card reveal reveal-d2">
-    <div class="campaign-icon">🧼</div>
-    <div class="campaign-name">Auto Dissolve Bar</div>
-    <p class="campaign-desc">We have a product that dissolves automatically — zero waste, zero mess, revolutionary for the hair care space. What we need is a shipping partner who can help us get it to the world affordably. If that's you, let's talk.</p>
-    <a href="mailto:hello@supportrd.com?subject=Auto Dissolve Bar — Shipping Partnership" class="campaign-btn btn-blue">Partner With Us</a>
-  </div>
-</div>
-
-<!-- ═══ CODING FOUNDATION ═════════════════════════════════════════ -->
-<section class="coding-section" id="coding">
-  <div class="coding-inner">
-    <div class="eyebrow reveal">✦ The Foundation</div>
-    <h2 class="section-title reveal reveal-d1">
-      SupportRD built a<br>learning environment<br>for <em>Coders Everywhere.</em>
-    </h2>
-
-    <p class="coding-statement reveal reveal-d2">
-      Anthony Figueroa didn't set out to teach coding. He set out to build a product. 
-      And then he documented <strong>everything</strong> — every route, every bug, 
-      every 3am breakthrough — because he believed that if he could learn this, 
-      anyone could.
-    </p>
-
-    <div class="coding-timestamp reveal reveal-d3">
-      <span>⏱</span>
-      <span>Official Timestamp — Support RD Coding Foundation Est. 2024</span>
-    </div>
-
-    <div class="coding-grid">
-      <div class="coding-card reveal reveal-d1">
-        <div class="coding-card-num">01 — Flask</div>
-        <div class="coding-card-title">Backend with Python</div>
-        <div class="coding-card-desc">Routes, databases, authentication, APIs. Built from zero, documented as it happened.</div>
-      </div>
-      <div class="coding-card reveal reveal-d2">
-        <div class="coding-card-num">02 — AI Integration</div>
-        <div class="coding-card-title">Claude API in Production</div>
-        <div class="coding-card-desc">How to build a real AI product — system prompts, context management, streaming responses.</div>
-      </div>
-      <div class="coding-card reveal reveal-d3">
-        <div class="coding-card-num">03 — Full Stack</div>
-        <div class="coding-card-title">JavaScript + CSS + HTML</div>
-        <div class="coding-card-desc">Every UI element — scroll animations, GPS systems, real-time feeds — built and explained.</div>
-      </div>
-      <div class="coding-card reveal reveal-d4">
-        <div class="coding-card-num">04 — Deploy</div>
-        <div class="coding-card-title">Render + GitHub + Shopify</div>
-        <div class="coding-card-desc">How to go from code on a screen to a real product that real people are using right now.</div>
-      </div>
-    </div>
-
-    <div class="coding-cta-row reveal">
-      <a href="https://aria.supportrd.com/blog" class="coding-btn-primary">Read the Blog</a>
-      <a href="mailto:hello@supportrd.com?subject=Coding Foundation" class="coding-btn-ghost">Contact Anthony →</a>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ FOOTER ════════════════════════════════════════════════════ -->
-<footer>
-  <div class="footer-inner">
-    <div>
-      <div class="footer-brand">Support RD</div>
-      <p class="footer-tagline">
-        Dominican hair care. AI technology. A family company building 
-        real tools for real people. Born in the DR, built for the world.
-      </p>
-    </div>
-    <div class="footer-col">
-      <div class="footer-col-title">Company</div>
-      <a href="#who">About Us</a>
-      <a href="#team">The Team</a>
-      <a href="#coding">Coding Foundation</a>
-      <a href="https://aria.supportrd.com/blog">Blog</a>
-    </div>
-    <div class="footer-col">
-      <div class="footer-col-title">Get Started</div>
-      <a href="https://supportrd.com/collections/all">Shop Products</a>
-      <a href="https://aria.supportrd.com">Open Aria</a>
-      <a href="https://supportrd.com/products/hair-advisor-premium">Go Premium</a>
-      <a href="mailto:hello@supportrd.com">Contact Us</a>
-    </div>
-  </div>
-  <div class="footer-bottom">
-    <div class="footer-copy">© 2026 Support RD. All rights reserved. hello@supportrd.com</div>
-    <div class="footer-dem">🫏 Affiliated: Democratic Party · Ban Pornography on the Internet · Campaign for the Poor</div>
-  </div>
-</footer>
-
-<script>
-// ── Scroll reveal ─────────────────────────────────────────────────
-const revealObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if(entry.isIntersecting){
-      entry.target.classList.add('visible');
-      revealObserver.unobserve(entry.target);
-    }
-  });
-}, { threshold: 0.12 });
-
-document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
-// ── Smooth nav scroll for anchor links ───────────────────────────
-document.querySelectorAll('a[href^="#"]').forEach(a => {
-  a.addEventListener('click', e => {
-    const target = document.querySelector(a.getAttribute('href'));
-    if(target){ e.preventDefault(); target.scrollIntoView({behavior:'smooth', block:'start'}); }
-  });
-});
-
-// ── Make hero scroll indicator disappear on first scroll ─────────
-window.addEventListener('scroll', () => {
-  const hint = document.querySelector('.hero-scroll');
-  if(hint && window.scrollY > 100) hint.style.opacity = '0';
-}, { passive: true });
-</script>
-</body>
-</html>
-""", mimetype="text/html")
+# ── LOGIN PAGE ────────────────────────────────────────────────────────────────
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 
 @app.route("/login")
 def login_page():
@@ -4481,7 +2470,8 @@ body{{background:#f0ebe8;min-height:100vh;font-family:'Jost',sans-serif;font-wei
 .gf-links a:hover{{color:#c1a3a2;}}
 .gf-copy{{font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:0.1em;margin-bottom:6px;}}
 .gf-dem{{font-size:10px;color:rgba(193,163,162,0.5);letter-spacing:0.08em;}}
-@media(max-width:600px){{.team-grid{{grid-template-columns:1fr;}}.products-grid{{grid-template-columns:1fr;}}.about-title{{font-size:36px;}}card{{padding:32px 24px;}}}}
+@media(max-width:600px){{.team-grid{{grid-template-columns:1fr;}}.products-grid{{grid-template-columns:1fr;}}.about-title{{font-size:36px;}}
+.card{{background:#fff;border-radius:24px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 12px 48px rgba(0,0,0,0.08);border:1px solid rgba(193,163,162,0.20);}}
 .logo{{text-align:center;margin-bottom:32px;}}
 .logo-text{{font-family:'Cormorant Garamond',serif;font-size:32px;font-style:italic;font-weight:300;color:#0d0906;}}
 .logo-sub{{font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:#c1a3a2;margin-top:4px;}}
@@ -4542,33 +2532,6 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
   </div>
   <div class="back"><a href="/">← Back to Hair Advisor</a></div>
 </div></div><!-- /login-wrap -->
-
-<!-- ✦ CODER FOUNDATION SECTION -->
-<div style="max-width:420px;margin:0 auto 20px;padding:0 24px;">
-  <div style="background:linear-gradient(135deg,#0d0906,#1a1008);border:1px solid rgba(193,163,162,0.25);border-radius:20px;padding:22px 24px;">
-    <div style="font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#c1a3a2;margin-bottom:8px;font-family:'Jost',sans-serif;">✦ Foundation</div>
-    <div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-style:italic;color:#fff;margin-bottom:8px;">SupportRD created a learning environment for Coders Everywhere.</div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.65;font-family:'Jost',sans-serif;margin-bottom:14px;">Built by Anthony Figueroa — the full story of how a hair care company became a coding foundation for real people who want to build real things.</div>
-    <a href="/about#coding" target="_blank" style="display:inline-block;background:#c1a3a2;color:#0d0906;font-family:'Jost',sans-serif;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;padding:10px 20px;border-radius:20px;text-decoration:none;font-weight:500;">Read the Full Story →</a>
-  </div>
-</div>
-
-<!-- ✦ ARIA DRIVE SAFETY FEATURE CARD -->
-<div style="max-width:420px;margin:0 auto 28px;padding:0 24px;">
-  <div style="background:linear-gradient(135deg,#0a1a12,#0d2218);border:1px solid rgba(48,232,144,0.25);border-radius:20px;padding:22px 24px;display:flex;gap:16px;align-items:flex-start;">
-    <div style="font-size:28px;flex-shrink:0;filter:drop-shadow(0 0 10px rgba(48,232,144,0.5));">🛰</div>
-    <div>
-      <div style="font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(48,232,144,0.7);margin-bottom:5px;font-family:'Jost',sans-serif;">✦ New Feature</div>
-      <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:#fff;margin-bottom:6px;">GPS Safety Lock</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.65;font-family:'Jost',sans-serif;">When you start driving with Aria, GPS instantly upgrades to live refresh mode — no cached positions, real-time satellite lock, burst fixes for the first 30 seconds, then continuous precision tracking. Drive safe. Aria's got you.</div>
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-        <span style="background:rgba(48,232,144,0.12);color:#30e890;border:1px solid rgba(48,232,144,0.25);border-radius:20px;padding:3px 10px;font-size:10px;font-family:'Jost',sans-serif;letter-spacing:0.06em;">Instant Refresh</span>
-        <span style="background:rgba(48,232,144,0.12);color:#30e890;border:1px solid rgba(48,232,144,0.25);border-radius:20px;padding:3px 10px;font-size:10px;font-family:'Jost',sans-serif;letter-spacing:0.06em;">maximumAge:0</span>
-        <span style="background:rgba(48,232,144,0.12);color:#30e890;border:1px solid rgba(48,232,144,0.25);border-radius:20px;padding:3px 10px;font-size:10px;font-family:'Jost',sans-serif;letter-spacing:0.06em;">Hands-Free</span>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ── BRAND STRIP ─────────────────────────────────────────── -->
 <div class="brand-strip">
@@ -4656,7 +2619,7 @@ input::placeholder{{color:rgba(0,0,0,0.25);}}
 <!-- ── GLOBAL FOOTER ───────────────────────────────────────── -->
 <div class="global-footer">
   <div class="gf-links">
-    <a href="/about" target="_blank">About Us</a>
+    <a href="#about" onclick="document.querySelector('.about-block').scrollIntoView({{behavior:'smooth'}});return false;">About Us</a>
     <a href="#team" onclick="document.querySelector('.team-block').scrollIntoView({{behavior:'smooth'}});return false;">Team</a>
     <a href="#coding" onclick="document.querySelector('.coding-block').scrollIntoView({{behavior:'smooth'}});return false;">Coding Guide</a>
     <a href="https://supportrd.com" target="_blank">Shop</a>
@@ -5072,8 +3035,6 @@ body::before{content:'';position:fixed;inset:0;
 .cl-result-badge.hair{background:rgba(255,110,180,0.15);color:#ff6eb4;border:1px solid rgba(255,110,180,0.3);}
 .cl-result-badge.park{background:rgba(80,220,120,0.15);color:#50dc78;border:1px solid rgba(80,220,120,0.3);}
 .cl-result-dist{font-size:11px;color:rgba(255,255,255,0.4);}
-.lf-type-btn{background:var(--c);border:1px solid var(--cb);color:var(--text);border-radius:16px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.2s;white-space:nowrap;}
-.lf-type-btn:hover{opacity:0.8;transform:scale(1.04);}
 .cl-ask-row{display:flex;align-items:center;gap:8px;margin-top:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:6px 8px;}
 .cl-ask-mic{width:44px;height:44px;border-radius:50%;background:rgba(240,160,144,0.12);border:1.5px solid var(--rose);color:var(--rose);font-size:20px;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
 .cl-ask-mic.listening{background:var(--rose);color:#fff;animation:micPulse 1s ease-in-out infinite;}
@@ -5100,18 +3061,14 @@ body::before{content:'';position:fixed;inset:0;
 /* Pulse (hidden until active) */
 .aj-orb-pulse{position:absolute;inset:-8px;border-radius:50%;opacity:0;pointer-events:none;}
 /* ACTIVE STATE */
-.aj-orb.active .aj-orb-inner{background:radial-gradient(circle at 32% 28%,rgba(255,255,255,0.6) 0%,var(--orb-color) 50%,rgba(0,0,0,0.25) 100%);border-color:var(--orb-color);border-width:3px;box-shadow:0 0 0 4px rgba(var(--orb-rgb),0.18),0 0 22px rgba(var(--orb-rgb),0.75),0 0 55px rgba(var(--orb-rgb),0.4),inset 0 2px 4px rgba(255,255,255,0.35);}
-.aj-orb.active .aj-orb-num{color:#fff;font-size:22px;font-weight:900;text-shadow:0 0 12px rgba(255,255,255,0.9);}
-.aj-orb.active .aj-orb-icon{opacity:1;filter:drop-shadow(0 0 5px rgba(255,255,255,0.7));}
-.aj-orb.active .aj-orb-ring{border-color:rgba(var(--orb-rgb),0.65);transform:scale(1.16);border-width:2px;}
-.aj-orb.active .aj-orb-pulse{animation:ajPulse 2.4s ease-out infinite;background:radial-gradient(circle,rgba(var(--orb-rgb),0.35),transparent 70%);}
-/* CURRENT (brightest glow — pulsing) */
-.aj-orb.current .aj-orb-inner{animation:orbCurrentPulse 2s ease-in-out infinite;}
-.aj-orb.current .aj-orb-pulse{animation:ajPulse 1.6s ease-out infinite;}
-@keyframes orbCurrentPulse{
-  0%,100%{box-shadow:0 0 0 6px rgba(var(--orb-rgb),0.25),0 0 30px rgba(var(--orb-rgb),0.9),0 0 65px rgba(var(--orb-rgb),0.5),inset 0 2px 4px rgba(255,255,255,0.35);}
-  50%{box-shadow:0 0 0 12px rgba(var(--orb-rgb),0.12),0 0 55px rgba(var(--orb-rgb),1),0 0 100px rgba(var(--orb-rgb),0.6),inset 0 2px 4px rgba(255,255,255,0.4);}
-}
+.aj-orb.active .aj-orb-inner{background:radial-gradient(circle at 35% 35%,color-mix(in srgb,var(--orb-color) 90%,#fff),var(--orb-color));border-color:var(--orb-color);box-shadow:0 0 0 0px rgba(var(--orb-rgb),0.5),0 8px 32px rgba(var(--orb-rgb),0.45),inset 0 1px 0 rgba(255,255,255,0.25);}
+.aj-orb.active .aj-orb-num{color:#fff;font-size:20px;}
+.aj-orb.active .aj-orb-icon{opacity:1;}
+.aj-orb.active .aj-orb-ring{border-color:rgba(var(--orb-rgb),0.5);transform:scale(1.1);}
+.aj-orb.active .aj-orb-pulse{animation:ajPulse 2.4s ease-out infinite;background:radial-gradient(circle,rgba(var(--orb-rgb),0.25),transparent 70%);}
+/* CURRENT (brightest glow) */
+.aj-orb.current .aj-orb-inner{box-shadow:0 0 0 4px rgba(var(--orb-rgb),0.3),0 8px 40px rgba(var(--orb-rgb),0.6),0 0 80px rgba(var(--orb-rgb),0.2),inset 0 1px 0 rgba(255,255,255,0.3);}
+.aj-orb.current .aj-orb-pulse{animation:ajPulse 1.8s ease-out infinite;}
 /* LOCKED */
 .aj-orb.locked .aj-orb-inner{opacity:0.25;filter:grayscale(1);}
 /* Tier body */
@@ -5429,13 +3386,13 @@ body::before{content:'';position:fixed;inset:0;
     <div class="nav-tab active" onclick="switchPTab('overview')">Overview</div>
     <div class="nav-tab" onclick="switchPTab('profile')">Hair Profile</div>
     <div class="nav-tab" onclick="switchPTab('journey')">✦ Aria Journey</div>
+    <div class="nav-tab" onclick="switchPTab('progress')">✦ Progress</div>
     <div class="nav-tab" onclick="switchPTab('photo')">✦ Photo AI</div>
     <div class="nav-tab" onclick="switchPTab('journal')">✦ Journal</div>
     <div class="nav-tab" onclick="switchPTab('whatsapp')">✦ Aria SMS</div>
     <div class="nav-tab" onclick="switchPTab('settings')">⚙ Settings</div>
-    <a class="nav-tab" href="/about" target="_blank" style="text-decoration:none;color:inherit;">About</a>
   </div>
-  <button onclick="switchPTab('drive')" id="drive-nav-btn" style="background:linear-gradient(135deg,#ff6eb4,#ff4500);color:#fff;border:none;border-radius:24px;padding:10px 22px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;letter-spacing:0.06em;cursor:pointer;box-shadow:0 3px 18px rgba(255,100,50,0.5);transition:all 0.2s;white-space:nowrap;">
+  <button class="drive-nav-btn" onclick="switchPTab('drive')" id="drive-nav-btn">
     🚗 Hands-Free Drive
   </button>
   <div class="nav-right">
@@ -5465,7 +3422,7 @@ body::before{content:'';position:fixed;inset:0;
     <span class="mob-tab-icon">⋯</span>More
   </button>
 </div>
-<button id="mob-drive-btn" onclick="switchPTab('drive')" style="position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6eb4,#ff4500);color:#fff;border:none;border-radius:32px;padding:15px 40px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;letter-spacing:0.06em;cursor:pointer;z-index:200;box-shadow:0 4px 28px rgba(255,100,50,0.6);display:none;">
+<button class="mob-drive-btn" id="mob-drive-btn" onclick="switchPTab('drive')">
   🚗 Hands-Free Drive
 </button>
 
@@ -5474,13 +3431,11 @@ body::before{content:'';position:fixed;inset:0;
   <div class="mob-more-sheet" onclick="event.stopPropagation()">
     <div class="mob-more-title">All Features</div>
     <div class="mob-more-grid">
+      <div class="mob-more-item" onclick="switchPTab('progress');closeMobMore()"><span class="mob-more-item-icon">📈</span>Progress</div>
       <div class="mob-more-item" onclick="switchPTab('journey');closeMobMore()"><span class="mob-more-item-icon">✦</span>Aria Journey</div>
       <div class="mob-more-item" onclick="switchPTab('journal');closeMobMore()"><span class="mob-more-item-icon">📓</span>Journal</div>
       <div class="mob-more-item" onclick="switchPTab('whatsapp');closeMobMore()"><span class="mob-more-item-icon">💬</span>Aria SMS</div>
       <div class="mob-more-item" onclick="switchPTab('settings');closeMobMore()"><span class="mob-more-item-icon">⚙</span>Settings</div>
-      <div class="mob-more-item" onclick="window.open('/blog/write','_blank');closeMobMore()"><span class="mob-more-item-icon">✍️</span>Write Blog Post</div>
-      <div class="mob-more-item" onclick="window.open('/revenue','_blank');closeMobMore()"><span class="mob-more-item-icon">💰</span>Revenue Engine</div>
-      <div class="mob-more-item" onclick="window.open('/traffic','_blank');closeMobMore()"><span class="mob-more-item-icon">📈</span>Traffic Growth</div>
     </div>
     <div style="text-align:center;margin-top:16px;">
       <button onclick="doLogout()" style="font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);padding:8px 20px;border-radius:16px;cursor:pointer;font-family:'Space Grotesk',sans-serif;letter-spacing:0.08em;">Sign out</button>
@@ -5596,39 +3551,6 @@ body::before{content:'';position:fixed;inset:0;
     <div class="sc-trend" style="color:var(--rose)">↑ improving</div>
     <div class="sc-spark"><svg width="100%" height="26" viewBox="0 0 120 26" preserveAspectRatio="none" id="spark-concerns"></svg></div>
   </div>
-
-  <!-- 💰 SHOPIFY REVENUE CARD — admin only -->
-  <div class="stat-card fu fu2" id="shopify-revenue-card" style="display:none;border-color:rgba(48,232,144,0.3);background:rgba(48,232,144,0.04);">
-    <div class="sc-eye" style="color:var(--green)">💰 Shopify Balance</div>
-    <div class="sc-val" id="st-revenue" style="color:var(--green);font-size:1.6rem;">$8.44</div>
-    <div class="sc-name" id="st-revenue-orders">Available balance · Main (3839)</div>
-    <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">
-      <div style="display:flex;justify-content:space-between;font-size:10px;">
-        <span style="color:var(--muted)">Pending</span>
-        <span style="color:var(--muted2);font-weight:700;">$0.00</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;">
-        <span style="color:var(--muted)">Last payout</span>
-        <span style="color:var(--green);font-weight:700;">$8.44 · Mar 12</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;">
-        <span style="color:var(--muted)">Earnings rate</span>
-        <span style="color:var(--gold);font-weight:700;">2.29%</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;">
-        <span style="color:var(--muted)">Sales tax (3951)</span>
-        <span style="color:var(--muted2);font-weight:700;">$0.00</span>
-      </div>
-    </div>
-    <div id="st-rev-products" style="margin-top:8px;font-size:10px;color:var(--muted);line-height:1.6;"></div>
-    <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
-      <div class="sc-trend" id="st-rev-trend" style="color:var(--green);">↑ $8.44 moved in since Mar 1</div>
-      <a href="https://admin.shopify.com/store/supportdr-com/balance" target="_blank"
-         style="font-size:9px;color:var(--rose);text-decoration:none;border:1px solid rgba(240,160,144,0.3);border-radius:10px;padding:2px 8px;">
-        Open Shopify →
-      </a>
-    </div>
-  </div>
   <div class="action-panel fu fu4">
     <div class="ap-title">Quick Actions</div>
     <button class="action-btn primary" onclick="window.location.href='/'"><span class="ab-icon">💬</span>Ask Aria Now</button>
@@ -5730,791 +3652,457 @@ body::before{content:'';position:fixed;inset:0;
 </div>
 </div><!-- /pp-overview -->
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<!--  MORTAL KOMBAT EASTER EGG — "PLUS500" cheat on dashboard     -->
-<!-- ══════════════════════════════════════════════════════════════ -->
-<div id="mk-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#000;flex-direction:column;align-items:center;justify-content:center;overflow:hidden">
-  <!-- Blood splatter BG -->
-  <canvas id="mk-canvas" style="position:absolute;inset:0;width:100%;height:100%;opacity:.35"></canvas>
-
-  <!-- MK logo area -->
-  <div id="mk-logo" style="position:relative;z-index:2;text-align:center;animation:mkDrop .6s cubic-bezier(.23,1.5,.6,1) both">
-    <div style="font-size:clamp(2rem,8vw,5rem);font-weight:900;letter-spacing:.08em;color:#f5c518;text-shadow:0 0 40px #f5c518,0 0 80px #ff4400;font-family:'Impact',sans-serif;line-height:1">SUPPORT RD</div>
-    <div style="font-size:clamp(.9rem,3vw,1.4rem);letter-spacing:.4em;color:#cc0000;font-family:'Impact',sans-serif;text-transform:uppercase;margin-top:4px">⚰ CHOOSE YOUR FIGHTER ⚰</div>
-  </div>
-
-  <!-- VS flash -->
-  <div id="mk-vs" style="position:relative;z-index:2;font-size:clamp(4rem,18vw,12rem);font-weight:900;color:#fff;font-family:'Impact',sans-serif;text-shadow:0 0 60px #ff0000,0 0 120px #ff4400;letter-spacing:.1em;opacity:0;transform:scale(3);transition:all .4s;margin:0 -20px">VS</div>
-
-  <!-- Fighter cards -->
-  <div id="mk-fighters" style="position:relative;z-index:2;display:flex;gap:clamp(20px,6vw,80px);align-items:flex-end;margin-top:20px;opacity:0;transform:translateY(40px);transition:all .5s .3s">
-
-    <!-- Fighter 1: Shampoo Aloe & Romero -->
-    <div class="mk-card" style="text-align:center;width:clamp(140px,28vw,200px)">
-      <div style="width:100%;aspect-ratio:3/4;background:linear-gradient(180deg,#0a1628,#051020);border:2px solid #1a3a6a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:16px 12px;position:relative;overflow:hidden">
-        <div style="font-size:clamp(3rem,10vw,5rem);position:absolute;top:50%;left:50%;transform:translate(-50%,-60%)">🟢</div>
-        <div style="font-size:clamp(3rem,10vw,5rem);position:absolute;top:50%;left:50%;transform:translate(-50%,-60%)">🌿</div>
-        <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,20,60,.9) 0%,transparent 50%)"></div>
-        <div style="position:relative;font-family:'Impact',sans-serif;font-size:clamp(.75rem,2.5vw,1rem);letter-spacing:.1em;color:#4af;text-transform:uppercase">The Original</div>
-        <div style="position:relative;font-family:'Impact',sans-serif;font-size:clamp(1rem,3.5vw,1.35rem);color:#fff;text-transform:uppercase;line-height:1.1;margin-top:4px">SHAMPOO<br>ALOE &amp; ROMERO</div>
-        <div style="position:relative;font-size:.7rem;color:#4af;margin-top:6px;letter-spacing:.2em">THE KLASSIC</div>
-      </div>
-      <div id="mk-hp1" style="background:#111;border:1px solid #333;height:14px;border-radius:3px;margin-top:8px;overflow:hidden">
-        <div style="height:100%;background:linear-gradient(90deg,#22cc44,#44ff88);width:100%;transition:width 1s .8s"></div>
-      </div>
-    </div>
-
-    <!-- Fighter 2: Lsciador — The Refresher -->
-    <div class="mk-card" style="text-align:center;width:clamp(140px,28vw,200px)">
-      <div style="width:100%;aspect-ratio:3/4;background:linear-gradient(180deg,#1a0828,#0a0514);border:2px solid #6a1a8a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:16px 12px;position:relative;overflow:hidden">
-        <div style="font-size:clamp(3rem,10vw,5rem);position:absolute;top:50%;left:50%;transform:translate(-50%,-60%)">⚡</div>
-        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(160,80,255,.3),transparent 70%)"></div>
-        <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(40,0,80,.95) 0%,transparent 50%)"></div>
-        <div id="mk-new-badge" style="position:absolute;top:10px;right:10px;background:#ff4400;color:#fff;font-family:'Impact',sans-serif;font-size:.65rem;letter-spacing:.15em;padding:3px 8px;border-radius:3px;transform:rotate(12deg)">NEW</div>
-        <div style="position:relative;font-family:'Impact',sans-serif;font-size:clamp(.75rem,2.5vw,1rem);letter-spacing:.1em;color:#c084fc;text-transform:uppercase">The Refresher</div>
-        <div style="position:relative;font-family:'Impact',sans-serif;font-size:clamp(1.1rem,4vw,1.6rem);color:#fff;text-transform:uppercase;line-height:1.1;margin-top:4px;text-shadow:0 0 20px #a855f7">LSCIADOR</div>
-        <div style="position:relative;font-size:.7rem;color:#c084fc;margin-top:6px;letter-spacing:.2em">EVOLVED FORM</div>
-      </div>
-      <div style="background:#111;border:1px solid #333;height:14px;border-radius:3px;margin-top:8px;overflow:hidden">
-        <div style="height:100%;background:linear-gradient(90deg,#a855f7,#ec4899);width:100%;transition:width 1s 1s"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- FINISH HIM text -->
-  <div id="mk-finish" style="position:relative;z-index:2;font-family:'Impact',sans-serif;font-size:clamp(1.5rem,6vw,3.5rem);letter-spacing:.25em;color:#ff4400;text-shadow:0 0 30px #ff4400;margin-top:24px;opacity:0;transition:opacity .4s .8s;text-transform:uppercase">
-    LSCIADOR HAS ENTERED
-  </div>
-
-  <!-- CTA -->
-  <div id="mk-cta" style="position:relative;z-index:2;margin-top:20px;opacity:0;transform:translateY(20px);transition:all .4s 1.2s;text-align:center">
-    <a id="mk-blog-link" href="/blog/lsciador-refresher-shampoo-conditioner" style="display:inline-block;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;text-decoration:none;font-family:'Impact',sans-serif;font-size:clamp(1rem,3vw,1.3rem);letter-spacing:.2em;padding:14px 32px;border-radius:6px;text-transform:uppercase;border:2px solid #c084fc;box-shadow:0 0 30px rgba(168,85,247,.5)">
-      ⚡ READ THE LSCIADOR REVEAL →
-    </a>
-    <div style="margin-top:12px;font-size:.8rem;color:#666;letter-spacing:.15em">PRESS ESC OR TAP TO EXIT</div>
-  </div>
-
-  <!-- Fatality message -->
-  <div id="mk-fatality" style="position:fixed;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s">
-    <div style="font-family:'Impact',sans-serif;font-size:clamp(3rem,12vw,7rem);letter-spacing:.15em;color:#f5c518;text-shadow:0 0 60px #f5c518,0 0 120px #ff4400;text-transform:uppercase">FATALITY</div>
-  </div>
-</div>
-
-<style>
-@keyframes mkDrop{from{opacity:0;transform:translateY(-60px) scale(1.2)}to{opacity:1;transform:none}}
-@keyframes mkBlood{0%{transform:translateY(-20px);opacity:1}100%{transform:translateY(100vh);opacity:0}}
-@keyframes mkShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
-@keyframes mkFlash{0%,100%{opacity:0}50%{opacity:1}}
-</style>
-
-<script>
-// ── PLUS500 cheat code detector ─────────────────────────────
-(function(){
-  const CODE = 'PLUS500';
-  let buf = '';
-  let mkActive = false;
-
-  document.addEventListener('keydown', function(e){
-    if(mkActive && e.key === 'Escape'){ closeMK(); return; }
-    if(mkActive) return;
-    buf += e.key.toUpperCase();
-    if(buf.length > CODE.length) buf = buf.slice(-CODE.length);
-    if(buf === CODE){ buf=''; triggerMK(); }
-  });
-
-  document.getElementById('mk-overlay').addEventListener('click', function(e){
-    if(e.target === this || e.target.id === 'mk-overlay') closeMK();
-  });
-
-  function closeMK(){
-    const ov = document.getElementById('mk-overlay');
-    ov.style.opacity='0';
-    ov.style.transition='opacity .5s';
-    setTimeout(()=>{ ov.style.display='none'; ov.style.opacity=''; ov.style.transition=''; mkActive=false; },500);
-    stopBlood();
-  }
-
-  function triggerMK(){
-    mkActive = true;
-    const ov = document.getElementById('mk-overlay');
-    ov.style.display='flex';
-    // Reset animations
-    ['mk-vs','mk-fighters','mk-finish','mk-cta'].forEach(id=>{
-      const el=document.getElementById(id);
-      el.style.opacity='0';
-      el.style.transform = id==='mk-vs' ? 'scale(3)' : 'translateY(40px)';
-    });
-
-    startBlood();
-
-    // Sequence
-    setTimeout(()=>{
-      const vs = document.getElementById('mk-vs');
-      vs.style.opacity='1';
-      vs.style.transform='scale(1)';
-      // flash red
-      document.getElementById('mk-overlay').style.background='#440000';
-      setTimeout(()=>{ document.getElementById('mk-overlay').style.background='#000'; }, 200);
-    }, 400);
-
-    setTimeout(()=>{
-      const f = document.getElementById('mk-fighters');
-      f.style.opacity='1';
-      f.style.transform='translateY(0)';
-    }, 900);
-
-    setTimeout(()=>{
-      const fi = document.getElementById('mk-finish');
-      fi.style.opacity='1';
-    }, 1400);
-
-    setTimeout(()=>{
-      const ct = document.getElementById('mk-cta');
-      ct.style.opacity='1';
-      ct.style.transform='translateY(0)';
-    }, 1800);
-
-    // Fatality flash at end
-    setTimeout(()=>{
-      const fat = document.getElementById('mk-fatality');
-      fat.style.opacity='1';
-      setTimeout(()=>{ fat.style.opacity='0'; }, 1200);
-    }, 2600);
-  }
-
-  // Blood drop canvas
-  let bloodRAF = null;
-  const drops = [];
-  function startBlood(){
-    const canvas = document.getElementById('mk-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    drops.length = 0;
-    for(let i=0;i<40;i++){
-      drops.push({
-        x: Math.random()*canvas.width,
-        y: -Math.random()*canvas.height,
-        r: Math.random()*6+2,
-        speed: Math.random()*4+2,
-        alpha: Math.random()*.8+.2
-      });
-    }
-    function draw(){
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      drops.forEach(d=>{
-        ctx.beginPath();
-        ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
-        ctx.fillStyle=`rgba(${Math.random()>0.3?'180,0,0':'220,30,0'},${d.alpha})`;
-        ctx.fill();
-        d.y += d.speed;
-        if(d.y > canvas.height+20){ d.y=-20; d.x=Math.random()*canvas.width; }
-      });
-      bloodRAF = requestAnimationFrame(draw);
-    }
-    draw();
-  }
-  function stopBlood(){
-    if(bloodRAF) cancelAnimationFrame(bloodRAF);
-    bloodRAF=null;
-    const canvas=document.getElementById('mk-canvas');
-    const ctx=canvas.getContext('2d');
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-  }
-})();
-</script>
-<!-- ════════════════════════════════════════════════════════════ -->
-
+<!-- ═══════════════ PREMIUM FULL-PAGE PANELS ═══════════════ -->
 
 <!-- ✦ HAIR PROFILE FULL PAGE -->
 <div class="ppage" id="pp-profile-page">
-<style>
-/* ── PROFILE REBUILD ───────────────────────────────── */
-.prof-wrap{max-width:800px;margin:0 auto;padding:20px 16px 60px;}
 
-/* ── PROFILE HERO — picture FIRST ── */
-.prof-hero{background:linear-gradient(145deg,rgba(240,160,144,0.07),rgba(193,163,162,0.04));border:1px solid rgba(240,160,144,0.18);border-radius:20px;padding:28px 24px;margin-bottom:20px;position:relative;overflow:hidden;}
-.prof-hero-glow{position:absolute;top:-50px;left:50%;transform:translateX(-50%);width:320px;height:220px;background:radial-gradient(ellipse,rgba(240,160,144,0.14),transparent 70%);pointer-events:none;}
+<!-- ── PROFILE HERO CARD ───────────────────────────────── -->
+<div id="prof-hero" style="position:relative;background:linear-gradient(145deg,rgba(240,160,144,0.08),rgba(193,163,162,0.05));border:1px solid rgba(240,160,144,0.18);border-radius:20px;padding:28px 24px 24px;margin-bottom:20px;overflow:hidden;">
+  <!-- glow behind name -->
+  <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:280px;height:180px;background:radial-gradient(ellipse,rgba(240,160,144,0.18),transparent 70%);pointer-events:none;"></div>
 
-/* Picture hero layout */
-.prof-hero-top{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px;}
-.prof-pic-zone{display:flex;flex-direction:column;align-items:center;gap:10px;flex-shrink:0;}
+  <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;position:relative;">
 
-/* The main profile picture — BIG */
-.prof-main-pic{position:relative;cursor:pointer;}
-.prof-avatar-big{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;color:#fff;border:3px solid rgba(240,160,144,0.5);box-shadow:0 0 28px rgba(240,160,144,0.3);overflow:hidden;transition:all 0.3s;}
-.prof-avatar-big img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
-.prof-avatar-big:hover{box-shadow:0 0 40px rgba(240,160,144,0.5);}
-.prof-pic-upload-hint{position:absolute;bottom:0;right:0;width:28px;height:28px;background:var(--rose);border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;}
-.prof-pic-upload-hint:hover{background:var(--rose2,#d08070);}
-#prof-pic-file{display:none;}
-
-/* Share pills vertical */
-.prof-share-pills{display:flex;flex-direction:column;gap:5px;}
-.prof-share-pill{display:flex;align-items:center;gap:6px;border-radius:10px;padding:5px 9px;font-size:10px;font-weight:700;text-decoration:none;color:#fff;letter-spacing:0.03em;white-space:nowrap;transition:opacity 0.2s;}
-.prof-share-pill:hover{opacity:0.85;}
-
-/* Name / stats */
-.prof-hero-info{flex:1;min-width:180px;}
-.prof-name{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;}
-.prof-email{font-size:11px;color:var(--muted);margin-bottom:14px;}
-.prof-stats-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
-.prof-stat{text-align:center;}
-.prof-stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--rose);line-height:1;}
-.prof-stat-lbl{font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
-.prof-plan-badge{font-size:8px;padding:3px 8px;border-radius:3px;background:var(--gold-dim);border:1px solid rgba(224,176,80,0.3);color:var(--gold);font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;display:inline-block;margin-bottom:10px;}
-
-/* Aria status */
-.prof-aria-status-block{background:rgba(240,160,144,0.06);border:1px solid rgba(240,160,144,0.2);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden;}
-.prof-aria-label{font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:5px;}
-.prof-aria-text{font-size:12px;color:var(--text);line-height:1.7;font-style:italic;}
-.prof-aria-refresh{margin-top:7px;background:none;border:1px solid rgba(240,160,144,0.28);color:var(--rose);padding:3px 11px;border-radius:20px;font-size:10px;cursor:pointer;letter-spacing:0.06em;}
-
-/* ── 3-PRODUCT DISPLAY ── */
-.prof-products-section{margin-bottom:20px;}
-.prof-section-title{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
-.prof-product-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-.prof-prod-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer;transition:all 0.2s;}
-.prof-prod-card:hover{border-color:rgba(240,160,144,0.4);transform:translateY(-2px);}
-.prof-prod-card.selected{border-color:rgba(240,160,144,0.6);background:rgba(240,160,144,0.06);}
-.prof-prod-emoji{font-size:28px;margin-bottom:6px;}
-.prof-prod-name{font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3;}
-.prof-prod-price{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);}
-.prof-prod-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;margin:6px auto 0;transition:all 0.2s;}
-.prof-prod-card.selected .prof-prod-check{background:var(--rose);border-color:var(--rose);color:#fff;}
-
-/* ── ROUTINE BUILDER ── */
-.prof-routine-section{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:18px 18px 20px;margin-bottom:20px;}
-.prof-routine-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.prof-routine-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text);}
-.prof-routine-toggle{display:flex;gap:6px;}
-.prof-view-btn{font-size:10px;padding:5px 12px;border-radius:16px;border:1px solid var(--border2);color:var(--muted2);cursor:pointer;background:none;font-family:'Space Grotesk',sans-serif;transition:all 0.15s;}
-.prof-view-btn.active{background:var(--rose);color:#fff;border-color:var(--rose);}
-
-/* Occasion dropdown cards */
-.prof-occasion-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
-.prof-occ-chip{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:7px 14px;font-size:11px;font-weight:600;color:var(--muted2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
-.prof-occ-chip:hover{border-color:rgba(240,160,144,0.35);color:var(--rose);}
-.prof-occ-chip.selected{background:rgba(240,160,144,0.1);border-color:rgba(240,160,144,0.45);color:var(--rose);}
-.prof-occ-icon{font-size:14px;}
-
-/* Day display */
-.prof-day-display{margin-top:14px;}
-.prof-day-card{background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:13px 15px;margin-bottom:8px;}
-.prof-day-name{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;}
-.prof-day-routine-line{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted2);padding:3px 0;border-bottom:1px solid var(--border);last:border:none;}
-.prof-day-routine-line:last-child{border:none;}
-.prof-day-product-tag{background:rgba(240,160,144,0.1);color:var(--rose);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;}
-.prof-day-occasion-tag{background:rgba(224,176,80,0.1);color:var(--gold);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;}
-
-/* Week view */
-.prof-week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
-.prof-week-cell{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 6px;text-align:center;}
-.prof-week-day-lbl{font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-.prof-week-item{font-size:8px;color:var(--muted2);background:var(--bg2);border-radius:6px;padding:3px 4px;margin-bottom:3px;line-height:1.3;}
-.prof-week-item.product{color:var(--rose);}
-.prof-week-item.occasion{color:var(--gold);}
-
-/* ── HAIR DATA TAGS ── */
-.prof-data-section{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
-.prof-data-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;}
-.prof-data-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
-
-/* Build week button */
-.prof-build-btn{background:linear-gradient(135deg,var(--rose),#c06050);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:12px;font-weight:700;letter-spacing:0.06em;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.2s;margin-top:12px;}
-.prof-build-btn:hover{opacity:0.88;transform:translateY(-1px);}
-.prof-save-btn{background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:12px;font-weight:700;letter-spacing:0.06em;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:background 0.2s;margin-top:12px;}
-.prof-save-btn:hover{background:#c06050;}
-.prof-save-msg{font-size:11px;color:var(--green);margin-left:12px;display:none;}
-
-@media(max-width:640px){
-  .prof-product-trio{grid-template-columns:1fr 1fr;}
-  .prof-week-grid{grid-template-columns:repeat(4,1fr);}
-  .prof-data-section{grid-template-columns:1fr;}
-}
-</style>
-
-<div class="prof-wrap">
-
-<!-- ── PROFILE HERO ─────────────────────────────────── -->
-<div class="prof-hero">
-  <div class="prof-hero-glow"></div>
-  <div class="prof-hero-top">
-
-    <!-- PICTURE ZONE — prominently first -->
-    <div class="prof-pic-zone">
-      <div class="prof-main-pic" onclick="document.getElementById('prof-pic-file').click()" title="Tap to change photo">
-        <div class="prof-avatar-big" id="prof-avatar-big">?</div>
-        <div class="prof-pic-upload-hint" title="Upload photo">📷</div>
+    <!-- Avatar + product shelf -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0;">
+      <!-- Avatar -->
+      <div style="position:relative;">
+        <div id="prof-avatar" style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#fff;border:3px solid rgba(240,160,144,0.4);box-shadow:0 0 24px rgba(240,160,144,0.25);">?</div>
+        <div style="position:absolute;bottom:2px;right:2px;width:20px;height:20px;background:#30e890;border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:9px;">✓</div>
       </div>
-      <input type="file" id="prof-pic-file" accept="image/*" onchange="profUploadPic(event)">
-      <!-- Share pills -->
-      <div class="prof-share-pills">
-        <a class="prof-share-pill" style="background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);" onclick="profShare('instagram');return false;" href="#">📷 Insta</a>
-        <a class="prof-share-pill" style="background:#25d366;" onclick="profShare('whatsapp');return false;" href="#">💬 WA</a>
-        <a class="prof-share-pill" style="background:#000;" onclick="profShare('tiktok');return false;" href="#">🎵 TikTok</a>
-        <a class="prof-share-pill" style="background:#1877f2;" onclick="profShare('facebook');return false;" href="#">👥 FB</a>
-        <a class="prof-share-pill" style="background:#000;" onclick="profShare('twitter');return false;" href="#">🐦 X</a>
+      <!-- Share icons -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:100px;">
+        <a id="share-ig" href="#" target="_blank" title="Instagram" onclick="profShare('instagram');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">📷</a>
+        <a id="share-fb" href="#" target="_blank" title="Facebook" onclick="profShare('facebook');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">👥</a>
+        <a id="share-tt" href="#" target="_blank" title="TikTok" onclick="profShare('tiktok');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">🎵</a>
+        <a id="share-tw" href="#" target="_blank" title="X / Twitter" onclick="profShare('twitter');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">🐦</a>
+        <a id="share-wa" href="#" target="_blank" title="WhatsApp" onclick="profShare('whatsapp');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">💬</a>
+        <a id="share-pi" href="#" target="_blank" title="Pinterest" onclick="profShare('pinterest');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">📌</a>
       </div>
     </div>
 
-    <!-- INFO COLUMN -->
-    <div class="prof-hero-info">
-      <div id="prof-name" class="prof-name">—</div>
-      <div id="prof-email-sm" class="prof-email"></div>
-      <div id="prof-plan-badge" class="prof-plan-badge">FREE</div>
-      <div class="prof-stats-row">
-        <div class="prof-stat">
-          <div id="prof-score-num" class="prof-stat-num" style="color:var(--rose);">—</div>
-          <div class="prof-stat-lbl">Hair Score</div>
+    <!-- Product shelf (carousel) -->
+    <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">My Products</div>
+      <div id="prof-product-carousel" style="width:72px;overflow:hidden;position:relative;height:220px;">
+        <div id="prof-product-track" style="display:flex;flex-direction:column;gap:8px;transition:transform 0.3s ease;" data-idx="0">
+          <!-- filled by JS -->
+        </div>
+      </div>
+      <div id="prof-product-dots" style="display:flex;gap:5px;justify-content:center;margin-top:4px;"></div>
+    </div>
+
+    <!-- Name / bio / status -->
+    <div style="flex:1;min-width:180px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+        <div id="prof-name-big" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);">—</div>
+        <span id="prof-plan-badge" style="font-size:8px;padding:3px 8px;border-radius:3px;background:var(--gold-dim);border:1px solid rgba(224,176,80,0.3);color:var(--gold);font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;">FREE</span>
+      </div>
+      <div id="prof-email-sm" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
+
+      <!-- AI Hair Status — glowing -->
+      <div id="prof-ai-status-wrap" style="background:rgba(240,160,144,0.07);border:1px solid rgba(240,160,144,0.22);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden;">
+        <div style="position:absolute;inset:0;border-radius:12px;box-shadow:inset 0 0 18px rgba(240,160,144,0.08);pointer-events:none;"></div>
+        <div style="font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;">✦ Aria's Current Read</div>
+        <div id="prof-ai-status" style="font-size:13px;color:var(--text);line-height:1.7;font-style:italic;animation:profGlow 3s ease-in-out infinite;">Tap ✦ Refresh to get Aria's latest read on your hair…</div>
+        <button onclick="profRefreshAiStatus()" style="margin-top:8px;background:none;border:1px solid rgba(240,160,144,0.3);color:var(--rose);padding:4px 12px;border-radius:20px;font-size:10px;cursor:pointer;letter-spacing:0.08em;">✦ Refresh</button>
+      </div>
+
+      <!-- Stats row -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;">
+        <div style="text-align:center;">
+          <div id="prof-score-big" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--rose);">—</div>
+          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Hair Score</div>
         </div>
         <div style="width:1px;background:var(--border);"></div>
-        <div class="prof-stat">
-          <div id="prof-chats-num" class="prof-stat-num" style="color:var(--blue);">—</div>
-          <div class="prof-stat-lbl">Sessions</div>
+        <div style="text-align:center;">
+          <div id="prof-streak" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--gold);">—</div>
+          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Day Streak</div>
         </div>
         <div style="width:1px;background:var(--border);"></div>
-        <div class="prof-stat">
-          <div id="prof-since" class="prof-stat-num" style="font-size:14px;color:var(--muted2);">—</div>
-          <div class="prof-stat-lbl">Member</div>
+        <div style="text-align:center;">
+          <div id="prof-member-since" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--blue);">—</div>
+          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Member Since</div>
         </div>
       </div>
-      <!-- Aria's current read -->
-      <div class="prof-aria-status-block">
-        <div class="prof-aria-label">✦ Aria's Current Read</div>
-        <div id="prof-aria-text" class="prof-aria-text">Tap Refresh to get Aria's latest read on your hair…</div>
-        <button class="prof-aria-refresh" onclick="profRefreshAiStatus()">✦ Refresh</button>
-      </div>
     </div>
+
   </div>
 </div>
 
-<!-- ── MY 3 PRODUCTS ─────────────────────────────────── -->
-<div class="prof-products-section">
-  <div class="prof-section-title">My Products — tap to select up to 3</div>
-  <div class="prof-product-trio" id="prof-prod-trio">
-    <div class="prof-prod-card" onclick="profToggleProd(this,'Formula Exclusiva')">
-      <div class="prof-prod-emoji">💊</div>
-      <div class="prof-prod-name">Formula Exclusiva</div>
-      <div class="prof-prod-price">$55</div>
-      <div class="prof-prod-check">✓</div>
-    </div>
-    <div class="prof-prod-card" onclick="profToggleProd(this,'Laciador Crece')">
-      <div class="prof-prod-emoji">🌿</div>
-      <div class="prof-prod-name">Laciador Crece</div>
-      <div class="prof-prod-price">$40</div>
-      <div class="prof-prod-check">✓</div>
-    </div>
-    <div class="prof-prod-card" onclick="profToggleProd(this,'Gotero Rapido')">
-      <div class="prof-prod-emoji">💧</div>
-      <div class="prof-prod-name">Gotero Rápido</div>
-      <div class="prof-prod-price">$55</div>
-      <div class="prof-prod-check">✓</div>
-    </div>
-    <div class="prof-prod-card" onclick="profToggleProd(this,'Gotitas Brillantes')">
-      <div class="prof-prod-emoji">✨</div>
-      <div class="prof-prod-name">Gotitas Brillantes</div>
-      <div class="prof-prod-price">$30</div>
-      <div class="prof-prod-check">✓</div>
-    </div>
-    <div class="prof-prod-card" onclick="profToggleProd(this,'Mascarilla Capilar')">
-      <div class="prof-prod-emoji">🥑</div>
-      <div class="prof-prod-name">Mascarilla Capilar</div>
-      <div class="prof-prod-price">$25</div>
-      <div class="prof-prod-check">✓</div>
-    </div>
-    <div class="prof-prod-card" onclick="profToggleProd(this,'Shampoo Aloe Vera')">
-      <div class="prof-prod-emoji">🍃</div>
-      <div class="prof-prod-name">Shampoo Aloe Vera</div>
-      <div class="prof-prod-price">$20</div>
-      <div class="prof-prod-check">✓</div>
-    </div>
-  </div>
-</div>
+<!-- ── HAIR DATA GRID ─────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
 
-<!-- ── ROUTINE BUILDER ───────────────────────────────── -->
-<div class="prof-routine-section">
-  <div class="prof-routine-header">
-    <div class="prof-routine-title">My Routine</div>
-    <div class="prof-routine-toggle">
-      <button class="prof-view-btn active" id="prof-view-day" onclick="profSetRoutineView('day')">📅 Daily</button>
-      <button class="prof-view-btn" id="prof-view-week" onclick="profSetRoutineView('week')">📆 Full Week</button>
-    </div>
-  </div>
-
-  <!-- Occasion picker -->
-  <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Choose Occasion</div>
-  <div class="prof-occasion-row" id="prof-occ-row">
-    <div class="prof-occ-chip selected" onclick="profOccSelect(this,'Wash Day','🚿')"><span class="prof-occ-icon">🚿</span>Wash Day</div>
-    <div class="prof-occ-chip" onclick="profOccSelect(this,'Date Night','🌹')"><span class="prof-occ-icon">🌹</span>Date Night</div>
-    <div class="prof-occ-chip" onclick="profOccSelect(this,'Work Day','💼')"><span class="prof-occ-icon">💼</span>Work Day</div>
-    <div class="prof-occ-chip" onclick="profOccSelect(this,'Workout','🏋️')"><span class="prof-occ-icon">🏋️</span>Workout</div>
-    <div class="prof-occ-chip" onclick="profOccSelect(this,'Beach Day','🏖️')"><span class="prof-occ-icon">🏖️</span>Beach Day</div>
-    <div class="prof-occ-chip" onclick="profOccSelect(this,'Rest Day','🛋️')"><span class="prof-occ-icon">🛋️</span>Rest Day</div>
-    <div class="prof-occ-chip" onclick="profOccSelect(this,'Deep Condition','🫙')"><span class="prof-occ-icon">🫙</span>Deep Condition</div>
-    <div class="prof-occ-chip" onclick="profOccSelect(this,'Night Out','🎉')"><span class="prof-occ-icon">🎉</span>Night Out</div>
-  </div>
-
-  <!-- Day view -->
-  <div id="prof-routine-day" class="prof-day-display"></div>
-
-  <!-- Week view -->
-  <div id="prof-routine-week" style="display:none;">
-    <div class="prof-week-grid" id="prof-week-grid"></div>
-  </div>
-
-  <button class="prof-build-btn" onclick="profBuildRoutine()">✦ Build My Routine</button>
-</div>
-
-<!-- ── HAIR DATA GRID ─────────────────────────────────── -->
-<div class="prof-data-section">
-  <div class="prof-data-card">
-    <div class="prof-data-label">Hair Type</div>
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Hair Type</div>
     <div class="tags" id="pf-tags-type">
-      <div class="tag" onclick="toggleTag(this,'type')">Straight</div>
-      <div class="tag" onclick="toggleTag(this,'type')">Wavy</div>
-      <div class="tag" onclick="toggleTag(this,'type')">Curly</div>
-      <div class="tag" onclick="toggleTag(this,'type')">Coily / 4C</div>
-      <div class="tag" onclick="toggleTag(this,'type')">Fine</div>
-      <div class="tag" onclick="toggleTag(this,'type')">Medium</div>
-      <div class="tag" onclick="toggleTag(this,'type')">Thick</div>
-      <div class="tag" onclick="toggleTag(this,'type')">Dry / Brittle</div>
+      <div class="tag" onclick="toggleTag(this,'type')">Straight</div><div class="tag" onclick="toggleTag(this,'type')">Wavy</div><div class="tag" onclick="toggleTag(this,'type')">Curly</div><div class="tag" onclick="toggleTag(this,'type')">Coily / 4C</div><div class="tag" onclick="toggleTag(this,'type')">Fine</div><div class="tag" onclick="toggleTag(this,'type')">Medium</div><div class="tag" onclick="toggleTag(this,'type')">Thick</div><div class="tag" onclick="toggleTag(this,'type')">Dry / Brittle</div><div class="tag" onclick="toggleTag(this,'type')">Oily</div><div class="tag" onclick="toggleTag(this,'type')">Normal</div>
     </div>
   </div>
-  <div class="prof-data-card">
-    <div class="prof-data-label">Main Concerns</div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Main Concerns</div>
     <div class="tags" id="pf-tags-concerns">
-      <div class="tag" onclick="toggleTag(this,'concerns')">Frizz</div>
-      <div class="tag" onclick="toggleTag(this,'concerns')">Damaged</div>
-      <div class="tag" onclick="toggleTag(this,'concerns')">Breakage</div>
-      <div class="tag" onclick="toggleTag(this,'concerns')">Hair Loss</div>
-      <div class="tag" onclick="toggleTag(this,'concerns')">Thinning</div>
-      <div class="tag" onclick="toggleTag(this,'concerns')">Oily Scalp</div>
-      <div class="tag" onclick="toggleTag(this,'concerns')">Dandruff</div>
-      <div class="tag" onclick="toggleTag(this,'concerns')">Split Ends</div>
-      <div class="tag" onclick="toggleTag(this,'concerns')">Slow Growth</div>
+      <div class="tag" onclick="toggleTag(this,'concerns')">Frizz</div><div class="tag" onclick="toggleTag(this,'concerns')">Damaged</div><div class="tag" onclick="toggleTag(this,'concerns')">Breakage</div><div class="tag" onclick="toggleTag(this,'concerns')">Hair Loss</div><div class="tag" onclick="toggleTag(this,'concerns')">Thinning</div><div class="tag" onclick="toggleTag(this,'concerns')">Oily Scalp</div><div class="tag" onclick="toggleTag(this,'concerns')">Dandruff</div><div class="tag" onclick="toggleTag(this,'concerns')">Split Ends</div><div class="tag" onclick="toggleTag(this,'concerns')">Slow Growth</div><div class="tag" onclick="toggleTag(this,'concerns')">Dullness</div><div class="tag" onclick="toggleTag(this,'concerns')">Heat Damage</div><div class="tag" onclick="toggleTag(this,'concerns')">Sun Damage</div><div class="tag" onclick="toggleTag(this,'concerns')">Dryness</div><div class="tag" onclick="toggleTag(this,'concerns')">Scalp Irritation</div>
     </div>
   </div>
-  <div class="prof-data-card">
-    <div class="prof-data-label">Treatments</div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Chemical Treatments</div>
     <div class="tags" id="pf-tags-treatments">
-      <div class="tag" onclick="toggleTag(this,'treatments')">None / Natural</div>
-      <div class="tag" onclick="toggleTag(this,'treatments')">Relaxer</div>
-      <div class="tag" onclick="toggleTag(this,'treatments')">Bleach</div>
-      <div class="tag" onclick="toggleTag(this,'treatments')">Hair Color</div>
-      <div class="tag" onclick="toggleTag(this,'treatments')">Keratin</div>
-      <div class="tag" onclick="toggleTag(this,'treatments')">Perm / Wave</div>
+      <div class="tag" onclick="toggleTag(this,'treatments')">None / Natural</div><div class="tag" onclick="toggleTag(this,'treatments')">Relaxer</div><div class="tag" onclick="toggleTag(this,'treatments')">Bleach</div><div class="tag" onclick="toggleTag(this,'treatments')">Hair Color</div><div class="tag" onclick="toggleTag(this,'treatments')">Keratin</div><div class="tag" onclick="toggleTag(this,'treatments')">Perm / Wave</div><div class="tag" onclick="toggleTag(this,'treatments')">Brazilian Blowout</div><div class="tag" onclick="toggleTag(this,'treatments')">Highlights</div>
     </div>
   </div>
-  <div class="prof-data-card">
-    <div class="prof-data-label">Porosity + Scalp</div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Porosity Level</div>
     <div class="tags" id="pf-tags-porosity">
-      <div class="tag" onclick="toggleTag(this,'porosity')">Low Porosity</div>
-      <div class="tag" onclick="toggleTag(this,'porosity')">Medium</div>
-      <div class="tag" onclick="toggleTag(this,'porosity')">High Porosity</div>
-    </div>
-    <div class="tags" id="pf-tags-scalp" style="margin-top:6px;">
-      <div class="tag" onclick="toggleTag(this,'scalp')">Normal Scalp</div>
-      <div class="tag" onclick="toggleTag(this,'scalp')">Oily Scalp</div>
-      <div class="tag" onclick="toggleTag(this,'scalp')">Dry Scalp</div>
-      <div class="tag" onclick="toggleTag(this,'scalp')">Sensitive</div>
+      <div class="tag" onclick="toggleTag(this,'porosity')">Low Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">Medium Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">High Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">Not Sure</div>
     </div>
   </div>
-  <div class="prof-data-card">
-    <div class="prof-data-label">Wash Frequency</div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Scalp Type</div>
+    <div class="tags" id="pf-tags-scalp">
+      <div class="tag" onclick="toggleTag(this,'scalp')">Normal</div><div class="tag" onclick="toggleTag(this,'scalp')">Dry / Flaky</div><div class="tag" onclick="toggleTag(this,'scalp')">Oily</div><div class="tag" onclick="toggleTag(this,'scalp')">Sensitive</div><div class="tag" onclick="toggleTag(this,'scalp')">Itchy</div><div class="tag" onclick="toggleTag(this,'scalp')">Dandruff</div>
+    </div>
+  </div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Wash Frequency</div>
     <div class="tags" id="pf-tags-washfreq">
-      <div class="tag" onclick="toggleTag(this,'washfreq')">Daily</div>
-      <div class="tag" onclick="toggleTag(this,'washfreq')">Every 2-3 Days</div>
-      <div class="tag" onclick="toggleTag(this,'washfreq')">Weekly</div>
-      <div class="tag" onclick="toggleTag(this,'washfreq')">Every 2 Weeks</div>
+      <div class="tag" onclick="toggleTag(this,'washfreq')">Daily</div><div class="tag" onclick="toggleTag(this,'washfreq')">Every 2-3 Days</div><div class="tag" onclick="toggleTag(this,'washfreq')">Weekly</div><div class="tag" onclick="toggleTag(this,'washfreq')">Every 2 Weeks</div>
     </div>
   </div>
-  <div class="prof-data-card">
-    <div class="prof-data-label">Heat Styling</div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Heat Styling</div>
     <div class="tags" id="pf-tags-heat">
-      <div class="tag" onclick="toggleTag(this,'heat')">No Heat</div>
-      <div class="tag" onclick="toggleTag(this,'heat')">Occasionally</div>
-      <div class="tag" onclick="toggleTag(this,'heat')">1-2x / Week</div>
-      <div class="tag" onclick="toggleTag(this,'heat')">Daily</div>
+      <div class="tag" onclick="toggleTag(this,'heat')">No Heat</div><div class="tag" onclick="toggleTag(this,'heat')">Occasionally</div><div class="tag" onclick="toggleTag(this,'heat')">1-2x / Week</div><div class="tag" onclick="toggleTag(this,'heat')">Daily</div><div class="tag" onclick="toggleTag(this,'heat')">Flat Iron</div><div class="tag" onclick="toggleTag(this,'heat')">Blow Dryer</div><div class="tag" onclick="toggleTag(this,'heat')">Curling Iron</div>
     </div>
+  </div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Environment / Lifestyle</div>
+    <div class="tags" id="pf-tags-env">
+      <div class="tag" onclick="toggleTag(this,'env')">Hard Water</div><div class="tag" onclick="toggleTag(this,'env')">Humid Climate</div><div class="tag" onclick="toggleTag(this,'env')">Dry Climate</div><div class="tag" onclick="toggleTag(this,'env')">Sun Exposure</div><div class="tag" onclick="toggleTag(this,'env')">Pool / Chlorine</div><div class="tag" onclick="toggleTag(this,'env')">Ocean / Salt</div><div class="tag" onclick="toggleTag(this,'env')">Active / Workouts</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Products I Use -->
+<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">SupportRD Products I Use</div>
+  <div class="tags" id="pf-tags-products">
+    <div class="tag" onclick="toggleTag(this,'products')">Formula Exclusiva</div><div class="tag" onclick="toggleTag(this,'products')">Laciador Crece</div><div class="tag" onclick="toggleTag(this,'products')">Gotero Rapido</div><div class="tag" onclick="toggleTag(this,'products')">Gotitas Brillantes</div><div class="tag" onclick="toggleTag(this,'products')">Mascarilla Capilar</div><div class="tag" onclick="toggleTag(this,'products')">Shampoo Aloe Vera</div>
   </div>
 </div>
 
-<!-- Goals -->
-<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
-  <div class="prof-data-label" style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">My Hair Goals</div>
-  <textarea id="pf-goals" placeholder="What do you want your hair to look and feel like? The more Aria knows, the better she can help…" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;color:var(--text);resize:vertical;min-height:60px;outline:none;" onfocus="this.style.borderColor='var(--rose)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+<!-- Goals + notes -->
+<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">My Hair Goals</div>
+  <textarea id="pf-goals" placeholder="What do you want your hair to look and feel like? The more Aria knows, the better she can help…" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--text);resize:vertical;min-height:70px;outline:none;" onfocus="this.style.borderColor='var(--rose)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
 </div>
 
 <!-- Save -->
-<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-  <button class="prof-save-btn" onclick="saveProfileFull()">✦ Save Profile &amp; Update Score</button>
-  <span id="pf-save-msg" class="prof-save-msg">✓ Saved!</span>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:28px;">
+  <button class="save-btn" style="margin-top:0;" onclick="saveProfileFull()">✦ Save Profile & Update Score</button>
+  <div id="pf-save-msg" style="display:none;font-size:12px;color:var(--green);">✓ Saved</div>
 </div>
 
-</div><!-- /prof-wrap -->
+<!-- ── OCCASIONS ── -->
+<div id="occ-section">
 
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);">✦ Occasion Routines</div>
+      <div style="font-size:12px;color:var(--muted2);margin-top:2px;">Pick an occasion, choose your product, select your routine action — then drop it onto any day of the week.</div>
+    </div>
+    <button onclick="occToggleWeekly()" id="occ-weekly-btn" style="background:var(--bg2);border:1px solid var(--border2);color:var(--muted2);padding:8px 16px;border-radius:20px;font-size:11px;cursor:pointer;letter-spacing:0.06em;font-family:'Space Grotesk',sans-serif;">📅 View My Week</button>
+  </div>
 
+  <!-- ── STEP 1: PICK OCCASION ── -->
+  <div class="occ-step-block">
+    <div class="occ-step-label">Step 1 — Choose Your Occasion</div>
+    <div id="occ-occasion-grid" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+  </div>
+
+  <!-- ── STEP 2: PICK PRODUCT ── -->
+  <div class="occ-step-block" id="occ-step2" style="display:none;">
+    <div class="occ-step-label">Step 2 — Which Product Today?</div>
+    <div id="occ-product-grid" style="display:flex;flex-wrap:wrap;gap:8px;">
+
+      <div class="occ-card" onclick="occPickProduct('Formula Exclusiva','💊','All-in-one treatment: moisture, strength + scalp')">
+        <div class="occ-card-icon">💊</div>
+        <div class="occ-card-title">Formula Exclusiva</div>
+        <div class="occ-card-sub">All-in-one treatment</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Laciador Crece','🌿','Softness, elasticity, shine + growth')">
+        <div class="occ-card-icon">🌿</div>
+        <div class="occ-card-title">Laciador Crece</div>
+        <div class="occ-card-sub">Softness + growth</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Gotero Rapido','💧','Scalp treatment — clears + stimulates growth')">
+        <div class="occ-card-icon">💧</div>
+        <div class="occ-card-title">Gotero Rapido</div>
+        <div class="occ-card-sub">Scalp treatment</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Gotitas Brillantes','✨','Shine serum — apply after styling')">
+        <div class="occ-card-icon">✨</div>
+        <div class="occ-card-title">Gotitas Brillantes</div>
+        <div class="occ-card-sub">Shine serum</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Mascarilla Capilar','🫙','Deep conditioning mask treatment')">
+        <div class="occ-card-icon">🫙</div>
+        <div class="occ-card-title">Mascarilla Capilar</div>
+        <div class="occ-card-sub">Deep condition mask</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Shampoo Aloe Vera','🍃','Gentle cleanse — daily or weekly')">
+        <div class="occ-card-icon">🍃</div>
+        <div class="occ-card-title">Shampoo Aloe Vera</div>
+        <div class="occ-card-sub">Gentle cleanse</div>
+      </div>
+
+      <div class="occ-card" onclick="occPickProduct('Multiple Products','🗂️','Using a combination today')">
+        <div class="occ-card-icon">🗂️</div>
+        <div class="occ-card-title">Multiple Products</div>
+        <div class="occ-card-sub">Combination routine</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── STEP 3: PICK ROUTINE ACTION ── -->
+  <div class="occ-step-block" id="occ-step3" style="display:none;">
+    <div class="occ-step-label">Step 3 — What Are You Doing?</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Simply Applying','🖐️','Quick application — work product through hair, no wash needed')">
+        <div class="occ-card-icon">🖐️</div>
+        <div class="occ-card-title">Simply Applying</div>
+        <div class="occ-card-sub">Quick — no wash needed</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Next Wash Day','🚿','Applying now, washing on next scheduled wash day')">
+        <div class="occ-card-icon">🚿</div>
+        <div class="occ-card-title">Next Wash Day</div>
+        <div class="occ-card-sub">Apply now, wash later</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Shampoo + Laciador','🔁','Shampoo hair, remove buildup, then apply Laciador for softness')">
+        <div class="occ-card-icon">🔁</div>
+        <div class="occ-card-title">Shampoo + Laciador</div>
+        <div class="occ-card-sub">Wash, remove, rebuild</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Full Professional Wash','💆','Take to a SupportRD salon — deep wash with full product treatment')">
+        <div class="occ-card-icon">💆</div>
+        <div class="occ-card-title">Full Professional Wash</div>
+        <div class="occ-card-sub">Salon deep treatment</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Overnight Treatment','🌙','Apply before bed, let it absorb overnight, rinse in morning')">
+        <div class="occ-card-icon">🌙</div>
+        <div class="occ-card-title">Overnight Treatment</div>
+        <div class="occ-card-sub">Sleep-in formula</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Pre-Event Prep','💄','Quick styling prep before the occasion — product + style')">
+        <div class="occ-card-icon">💄</div>
+        <div class="occ-card-title">Pre-Event Prep</div>
+        <div class="occ-card-sub">Style + product for the event</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Deep Condition Mask','🫙','Apply Mascarilla, leave 15–30 min, rinse and style')">
+        <div class="occ-card-icon">🫙</div>
+        <div class="occ-card-title">Deep Condition Mask</div>
+        <div class="occ-card-sub">15–30 min mask treatment</div>
+      </div>
+
+      <div class="occ-card occ-action-card" onclick="occPickAction('Scalp Treatment','💧','Apply Gotero directly to scalp, massage in, leave in')">
+        <div class="occ-card-icon">💧</div>
+        <div class="occ-card-title">Scalp Treatment</div>
+        <div class="occ-card-sub">Scalp focus — leave in</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── STEP 4: ADD TO WEEK DAY ── -->
+  <div class="occ-step-block" id="occ-step4" style="display:none;">
+    <div class="occ-step-label">Step 4 — Add to Which Day?</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Monday')"><div class="occ-card-title">Mon</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Tuesday')"><div class="occ-card-title">Tue</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Wednesday')"><div class="occ-card-title">Wed</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Thursday')"><div class="occ-card-title">Thu</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Friday')"><div class="occ-card-title">Fri</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Saturday')"><div class="occ-card-title">Sat</div></div>
+      <div class="occ-card occ-day-card" onclick="occAddToDay('Sunday')"><div class="occ-card-title">Sun</div></div>
+      <div class="occ-card occ-day-card" onclick="occSaveNoDay()" style="background:rgba(240,160,144,0.08);border-color:rgba(240,160,144,0.3);"><div class="occ-card-title" style="color:var(--rose);">Save Only</div></div>
+    </div>
+  </div>
+
+  <!-- ── CURRENT SELECTION SUMMARY ── -->
+  <div id="occ-summary" style="display:none;background:rgba(240,160,144,0.06);border:1px solid rgba(240,160,144,0.2);border-radius:12px;padding:14px 18px;margin-top:4px;margin-bottom:8px;">
+    <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;">✦ Current Selection</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span id="occ-sum-occasion" class="occ-sum-chip" style="display:none;"></span>
+      <span id="occ-sum-product"  class="occ-sum-chip occ-sum-product" style="display:none;"></span>
+      <span id="occ-sum-action"   class="occ-sum-chip occ-sum-action" style="display:none;"></span>
+    </div>
+    <button onclick="occReset()" style="margin-top:10px;background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:0;letter-spacing:0.06em;">↩ Start over</button>
+  </div>
+
+  <!-- ── WEEKLY PLANNER (collapsed by default) ── -->
+  <div id="occ-weekly-panel" style="display:none;margin-top:8px;">
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;">📅 My Week</div>
+    <div id="occ-week-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;"></div>
+    <button onclick="occClearWeek()" style="margin-top:12px;background:none;border:1px solid var(--border2);color:var(--muted);padding:6px 16px;border-radius:16px;font-size:10px;cursor:pointer;">Clear week</button>
+  </div>
+
+  <!-- ── SAVED OCCASIONS ── -->
+  <div style="margin-top:20px;" id="occ-saved-wrap">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;" id="occ-saved-header"></div>
+    <div id="occ-saved-list"></div>
+  </div>
+
+</div>
+</div>
+
+</div>
 <!-- ✦ ARIA JOURNEY -->
-<div class="ppage" id="pp-journey" style="padding:0 0 40px;">
-
-<style>
-/* ─── JOURNEY REBUILT — smaller orbs + accordion history ─── */
-.aj2-wrap{max-width:680px;margin:0 auto;padding:24px 20px 60px;}
-
-/* Level rows */
-.aj2-level{display:flex;gap:16px;align-items:flex-start;margin-bottom:12px;position:relative;}
-.aj2-level::before{content:'';position:absolute;left:31px;top:64px;width:2px;bottom:-12px;background:var(--border2);z-index:0;}
-.aj2-level:last-child::before{display:none;}
-
-/* Orb — 64px, expands to 80px when current */
-.aj2-orb{width:64px;height:64px;border-radius:50%;flex-shrink:0;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;transition:all 0.5s cubic-bezier(0.2,0,0.2,1);cursor:default;}
-.aj2-orb-ball{position:absolute;inset:0;border-radius:50%;transition:all 0.5s;}
-.aj2-orb-num{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:rgba(255,255,255,0.25);position:relative;z-index:2;line-height:1;transition:all 0.4s;}
-.aj2-orb-icon{font-size:16px;position:relative;z-index:2;opacity:0.25;transition:all 0.4s;line-height:1;}
-.aj2-orb-ring{position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;transition:all 0.5s;}
-.aj2-orb-pulse{position:absolute;inset:-10px;border-radius:50%;opacity:0;pointer-events:none;}
-
-/* Locked */
-.aj2-orb.locked .aj2-orb-ball{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,0.05) 0%,#1a1a2a 60%,#0d0d18 100%);box-shadow:none;}
-
-/* Unlocked (passed) */
-.aj2-orb.unlocked .aj2-orb-ball{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,0.4) 0%,var(--orb-color,#f0a090) 50%,rgba(0,0,0,0.2) 100%);box-shadow:0 0 18px rgba(var(--orb-rgb,240,160,144),0.6),0 0 40px rgba(var(--orb-rgb,240,160,144),0.3),inset 0 2px 4px rgba(255,255,255,0.3);}
-.aj2-orb.unlocked .aj2-orb-num{color:#fff;font-size:18px;}
-.aj2-orb.unlocked .aj2-orb-icon{opacity:1;filter:drop-shadow(0 0 4px rgba(255,255,255,0.6));}
-.aj2-orb.unlocked .aj2-orb-ring{border-color:rgba(var(--orb-rgb,240,160,144),0.5);transform:scale(1.1);}
-
-/* Current — pulsing and larger */
-.aj2-orb.current{width:80px;height:80px;}
-.aj2-orb.current .aj2-orb-ball{animation:aj2Pulse 2s ease-in-out infinite;}
-.aj2-orb.current .aj2-orb-pulse{animation:aj2PulseRing 2s ease-out infinite;background:radial-gradient(circle,rgba(var(--orb-rgb,240,160,144),0.3),transparent 70%);}
-.aj2-orb.current .aj2-orb-num{font-size:22px;}
-.aj2-orb.current .aj2-orb-icon{font-size:18px;}
-@keyframes aj2Pulse{0%,100%{box-shadow:0 0 18px rgba(var(--orb-rgb,240,160,144),0.6),0 0 40px rgba(var(--orb-rgb,240,160,144),0.3),inset 0 2px 4px rgba(255,255,255,0.3);}50%{box-shadow:0 0 32px rgba(var(--orb-rgb,240,160,144),0.9),0 0 70px rgba(var(--orb-rgb,240,160,144),0.5),inset 0 2px 4px rgba(255,255,255,0.4);}}
-@keyframes aj2PulseRing{0%{opacity:0.7;transform:scale(0.9);}70%{opacity:0;transform:scale(1.7);}100%{opacity:0;}}
-
-/* Card body */
-.aj2-card{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;overflow:hidden;transition:border-color 0.4s;}
-.aj2-card.unlocked{border-color:rgba(var(--orb-rgb,240,160,144),0.25);}
-.aj2-card.current{border-color:rgba(var(--orb-rgb,240,160,144),0.45);background:rgba(var(--orb-rgb,240,160,144),0.04);}
-.aj2-card.locked{opacity:0.4;}
-
-.aj2-card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;gap:10px;}
-.aj2-level-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);}
-.aj2-verdict-badge{font-size:9px;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:0.06em;white-space:nowrap;flex-shrink:0;}
-.aj2-verdict-badge.current{background:rgba(var(--orb-rgb,240,160,144),0.15);color:var(--orb-color,#f0a090);border:1px solid rgba(var(--orb-rgb,240,160,144),0.35);}
-.aj2-verdict-badge.unlocked{background:rgba(255,255,255,0.06);color:var(--muted2);border:1px solid var(--border);}
-.aj2-verdict-badge.locked{background:rgba(255,255,255,0.03);color:var(--muted);border:1px solid var(--border);}
-.aj2-chevron{font-size:10px;color:var(--muted);transition:transform 0.3s;flex-shrink:0;}
-.aj2-card-head.open .aj2-chevron{transform:rotate(90deg);}
-
-/* Accordion body */
-.aj2-accordion{display:none;border-top:1px solid var(--border2);}
-.aj2-accordion.open{display:block;}
-
-/* 3 unlock descriptions */
-.aj2-unlocks{display:flex;flex-direction:column;gap:8px;padding:14px 16px;}
-.aj2-unlock-item{display:flex;align-items:flex-start;gap:10px;background:var(--bg3);border-radius:10px;padding:10px 12px;}
-.aj2-unlock-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px;background:var(--orb-color,#f0a090);}
-.aj2-unlock-text{font-size:12px;color:var(--muted2);line-height:1.6;}
-.aj2-unlock-text strong{color:var(--text);font-weight:600;}
-
-/* History sessions */
-.aj2-history{border-top:1px solid var(--border);padding:12px 16px;}
-.aj2-history-label{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
-.aj2-session{padding:8px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:3px;}
-.aj2-session:last-child{border:none;}
-.aj2-session-date{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.06em;}
-.aj2-session-preview{font-size:11px;color:var(--muted2);line-height:1.55;}
-.aj2-no-sessions{font-size:11px;color:var(--muted);font-style:italic;padding:8px 0;}
-
-/* Contact CTA for level 4 */
-.aj2-contact-cta{margin:12px 16px 16px;background:linear-gradient(135deg,rgba(48,232,144,0.08),rgba(48,232,144,0.03));border:1px solid rgba(48,232,144,0.25);border-radius:12px;padding:14px 16px;}
-.aj2-contact-cta-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--text);margin-bottom:5px;}
-.aj2-contact-cta-desc{font-size:11px;color:var(--muted2);line-height:1.6;margin-bottom:12px;}
-.aj2-contact-cta-person{font-size:10px;color:rgba(48,232,144,0.6);font-style:italic;margin-bottom:10px;}
-.aj2-contact-btn{display:inline-block;background:var(--green);color:#000;font-weight:700;font-size:11px;padding:9px 20px;border-radius:20px;text-decoration:none;letter-spacing:0.05em;}
-
-/* Current summary */
-.aj2-summary{background:var(--bg2);border:1px solid rgba(240,160,144,0.18);border-radius:16px;padding:18px 20px;margin-bottom:24px;}
-.aj2-summary-eyebrow{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;}
-.aj2-summary-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px;}
-.aj2-summary-msg{font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:10px;}
-.aj2-summary-next{font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;}
-</style>
-
-<div class="aj2-wrap">
-  <!-- Summary card -->
-  <div class="aj2-summary">
-    <div class="aj2-summary-eyebrow">✦ Your Aria Journey</div>
-    <div class="aj2-summary-title" id="aj2-title">—</div>
-    <div class="aj2-summary-msg" id="aj2-msg"></div>
-    <div class="aj2-summary-next" id="aj2-next"></div>
-  </div>
-
-  <!-- 4 level rows -->
-  <div id="aj2-levels-wrap">
-    <!-- Level 1 -->
-    <div class="aj2-level" id="aj2-row-0">
-      <div class="aj2-orb locked" id="aj2-orb-0" style="--orb-color:#f0a090;--orb-rgb:240,160,144;">
-        <div class="aj2-orb-ball"></div>
-        <div class="aj2-orb-ring"></div>
-        <div class="aj2-orb-pulse"></div>
-        <div class="aj2-orb-num">1</div>
-        <div class="aj2-orb-icon">🌱</div>
-      </div>
-      <div class="aj2-card locked" id="aj2-card-0" style="--orb-color:#f0a090;--orb-rgb:240,160,144;">
-        <div class="aj2-card-head" onclick="aj2Toggle(0)">
-          <div class="aj2-level-name">Discovery</div>
-          <div class="aj2-verdict-badge locked" id="aj2-badge-0">🔒 Not yet reached</div>
-          <div class="aj2-chevron">▶</div>
-        </div>
-        <div class="aj2-accordion" id="aj2-acc-0">
-          <div class="aj2-unlocks">
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#f0a090;"></div>
-              <div class="aj2-unlock-text"><strong>Aria learns your name</strong> and starts building your profile from scratch — hair type, main concern, and what you're hoping to change.</div>
-            </div>
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#f0a090;"></div>
-              <div class="aj2-unlock-text"><strong>First product recommendation</strong> — Aria matches you to your first SupportRD product based on what you describe. No guessing.</div>
-            </div>
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#f0a090;"></div>
-              <div class="aj2-unlock-text"><strong>Your hair story begins.</strong> Everything you tell Aria gets remembered and builds into a profile she uses every future conversation.</div>
-            </div>
-          </div>
-          <div class="aj2-history" id="aj2-hist-0">
-            <div class="aj2-history-label">Conversations at this level</div>
-            <div class="aj2-no-sessions">Start chatting with Aria to build your journey.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Level 2 -->
-    <div class="aj2-level" id="aj2-row-1">
-      <div class="aj2-orb locked" id="aj2-orb-1" style="--orb-color:#e0b050;--orb-rgb:224,176,80;">
-        <div class="aj2-orb-ball"></div>
-        <div class="aj2-orb-ring"></div>
-        <div class="aj2-orb-pulse"></div>
-        <div class="aj2-orb-num">2</div>
-        <div class="aj2-orb-icon">🔬</div>
-      </div>
-      <div class="aj2-card locked" id="aj2-card-1" style="--orb-color:#e0b050;--orb-rgb:224,176,80;">
-        <div class="aj2-card-head" onclick="aj2Toggle(1)">
-          <div class="aj2-level-name">Use Cases & Upgrades</div>
-          <div class="aj2-verdict-badge locked" id="aj2-badge-1">🔒 Keep talking with Aria</div>
-          <div class="aj2-chevron">▶</div>
-        </div>
-        <div class="aj2-accordion" id="aj2-acc-1">
-          <div class="aj2-unlocks">
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#e0b050;"></div>
-              <div class="aj2-unlock-text"><strong>Application deep-dive</strong> — Aria tells you exactly how to use each product: when to apply, how much, what to layer it with, and what to expect week by week.</div>
-            </div>
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#e0b050;"></div>
-              <div class="aj2-unlock-text"><strong>Upgrade recommendations</strong> — Based on how your hair is responding, Aria suggests the next product to add to your routine for maximum results.</div>
-            </div>
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#e0b050;"></div>
-              <div class="aj2-unlock-text"><strong>Your full routine is mapped.</strong> Aria now knows your wash days, your styling routine, your goals — and builds a complete weekly plan around them.</div>
-            </div>
-          </div>
-          <div class="aj2-history" id="aj2-hist-1">
-            <div class="aj2-history-label">Conversations at this level</div>
-            <div class="aj2-no-sessions">Not reached yet.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Level 3 -->
-    <div class="aj2-level" id="aj2-row-2">
-      <div class="aj2-orb locked" id="aj2-orb-2" style="--orb-color:#60a8ff;--orb-rgb:96,168,255;">
-        <div class="aj2-orb-ball"></div>
-        <div class="aj2-orb-ring"></div>
-        <div class="aj2-orb-pulse"></div>
-        <div class="aj2-orb-num">3</div>
-        <div class="aj2-orb-icon">💫</div>
-      </div>
-      <div class="aj2-card locked" id="aj2-card-2" style="--orb-color:#60a8ff;--orb-rgb:96,168,255;">
-        <div class="aj2-card-head" onclick="aj2Toggle(2)">
-          <div class="aj2-level-name">Inner Circle</div>
-          <div class="aj2-verdict-badge locked" id="aj2-badge-2">🔒 Keep going</div>
-          <div class="aj2-chevron">▶</div>
-        </div>
-        <div class="aj2-accordion" id="aj2-acc-2">
-          <div class="aj2-unlocks">
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#60a8ff;"></div>
-              <div class="aj2-unlock-text"><strong>People around you noticed.</strong> Your partner, your family, someone at work. Aria recognizes this milestone and helps you talk about the products to others.</div>
-            </div>
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#60a8ff;"></div>
-              <div class="aj2-unlock-text"><strong>Shared routines</strong> — Aria helps you build routines for people in your life, not just yourself. She knows your household and adapts recommendations for each person.</div>
-            </div>
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#60a8ff;"></div>
-              <div class="aj2-unlock-text"><strong>SupportRD in your community.</strong> You're naturally recommending products to people around you. Aria helps you share, explain, and convert people with confidence.</div>
-            </div>
-          </div>
-          <div class="aj2-history" id="aj2-hist-2">
-            <div class="aj2-history-label">Conversations at this level</div>
-            <div class="aj2-no-sessions">Not reached yet.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Level 4 -->
-    <div class="aj2-level" id="aj2-row-3">
-      <div class="aj2-orb locked" id="aj2-orb-3" style="--orb-color:#30e890;--orb-rgb:48,232,144;">
-        <div class="aj2-orb-ball"></div>
-        <div class="aj2-orb-ring"></div>
-        <div class="aj2-orb-pulse"></div>
-        <div class="aj2-orb-num">4</div>
-        <div class="aj2-orb-icon">💎</div>
-      </div>
-      <div class="aj2-card locked" id="aj2-card-3" style="--orb-color:#30e890;--orb-rgb:48,232,144;">
-        <div class="aj2-card-head" onclick="aj2Toggle(3)">
-          <div class="aj2-level-name">Professional — Making Money</div>
-          <div class="aj2-verdict-badge locked" id="aj2-badge-3">🔒 The top level</div>
-          <div class="aj2-chevron">▶</div>
-        </div>
-        <div class="aj2-accordion" id="aj2-acc-3">
-          <div class="aj2-unlocks">
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#30e890;"></div>
-              <div class="aj2-unlock-text"><strong>You've become the story.</strong> People ask what you use. They trust your results before they even try the product themselves. You are a living SupportRD testimonial.</div>
-            </div>
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:#30e890;"></div>
-              <div class="aj2-unlock-text"><strong>Income opportunities open.</strong> Ambassador programs, referral income, and direct partnership conversations become possible for VIP clients at this level.</div>
-            </div>
-            <div class="aj2-unlock-item">
-              <div class="aj2-unlock-dot" style="background:rgba(48,232,144,0.35);"></div>
-              <div class="aj2-unlock-text" style="color:var(--muted);"><strong style="color:var(--muted);">Personal contact from Support</strong> — a member of the founding team reaches out directly to VIP clients. <span style="color:var(--muted);font-style:italic;">(Available when reached)</span></div>
-            </div>
-          </div>
-          <div class="aj2-contact-cta" id="aj2-cta-3" style="display:none;">
-            <div class="aj2-contact-cta-title">✦ You've earned this</div>
-            <div class="aj2-contact-cta-desc">You are at the top. SupportRD wants to connect with you personally — whether that's an ambassador program, a referral partnership, or making sure you have everything you need.</div>
-            <div class="aj2-contact-cta-person">From Anthony, Crystal, and Evelyn — the founding team</div>
-            <a href="mailto:hello@supportrd.com?subject=Level 4 — Making Money" class="aj2-contact-btn">Contact SupportRD Directly →</a>
-          </div>
-          <div class="aj2-history" id="aj2-hist-3">
-            <div class="aj2-history-label">Conversations at this level</div>
-            <div class="aj2-no-sessions">Not reached yet.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="ppage" id="pp-journey">
+<div class="ppage-head">
+  <div class="ppage-title">✦ My Aria Journey</div>
+  <div id="aj-depth-badge"></div>
 </div>
 
+<!-- LEVEL TRACK — 4 big glowing orbs -->
+<div id="aj-milestones" style="margin-bottom:36px;">
+
+  <!-- progress spine -->
+  <div style="position:relative;padding:0 8px;">
+    <div id="aj-spine" style="position:absolute;left:50px;top:52px;width:3px;border-radius:3px;background:var(--border2);z-index:0;" id="aj-spine"></div>
+    <div id="aj-spine-fill" style="position:absolute;left:50px;top:52px;width:3px;border-radius:3px;background:linear-gradient(to bottom,var(--rose),var(--gold),var(--blue),var(--green));z-index:1;transition:height 1s ease;height:0;"></div>
+
+    <!-- Level 1: Discovery -->
+    <div class="aj-tier" id="aj-tier-1">
+      <div class="aj-orb" id="aj-orb-1" style="--orb-color:var(--rose);--orb-rgb:240,160,144;">
+        <div class="aj-orb-inner">
+          <div class="aj-orb-num">1</div>
+          <div class="aj-orb-icon">🌱</div>
+        </div>
+        <div class="aj-orb-ring"></div>
+        <div class="aj-orb-pulse"></div>
+      </div>
+      <div class="aj-tier-body" id="aj-tbody-1">
+        <div class="aj-tier-name">Discovery</div>
+        <div class="aj-tier-desc">Aria meets you. She learns your name, your hair story, and your first products. This is where your transformation begins.</div>
+        <div class="aj-tier-verdict" id="aj-v1"></div>
+        <div class="aj-tier-backtrack" id="aj-bt1" style="display:none;">
+          <button onclick="ajForceLevel(0)" class="aj-bt-btn">↩ Aria and I are still getting started</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Level 2: Use Cases & Upgrades -->
+    <div class="aj-tier" id="aj-tier-2">
+      <div class="aj-orb" id="aj-orb-2" style="--orb-color:var(--gold);--orb-rgb:224,176,80;">
+        <div class="aj-orb-inner">
+          <div class="aj-orb-num">2</div>
+          <div class="aj-orb-icon">🔬</div>
+        </div>
+        <div class="aj-orb-ring"></div>
+        <div class="aj-orb-pulse"></div>
+      </div>
+      <div class="aj-tier-body" id="aj-tbody-2">
+        <div class="aj-tier-name">Use Cases &amp; Upgrades</div>
+        <div class="aj-tier-desc">Aria knows your full routine inside out. She's giving you application techniques, timing, what to expect each week — and upgrade paths based on your real results.</div>
+        <div class="aj-tier-verdict" id="aj-v2"></div>
+        <div class="aj-tier-backtrack" id="aj-bt2" style="display:none;">
+          <button onclick="ajForceLevel(1)" class="aj-bt-btn">↩ We haven't gone this deep yet</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Level 3: Inner Circle -->
+    <div class="aj-tier" id="aj-tier-3">
+      <div class="aj-orb" id="aj-orb-3" style="--orb-color:var(--blue);--orb-rgb:96,168,255;">
+        <div class="aj-orb-inner">
+          <div class="aj-orb-num">3</div>
+          <div class="aj-orb-icon">💫</div>
+        </div>
+        <div class="aj-orb-ring"></div>
+        <div class="aj-orb-pulse"></div>
+      </div>
+      <div class="aj-tier-body" id="aj-tbody-3">
+        <div class="aj-tier-name">Inner Circle</div>
+        <div class="aj-tier-desc">Your partner noticed. Your family is asking. Aria now knows the people around you and helps you bring SupportRD into their lives too.</div>
+        <div class="aj-tier-verdict" id="aj-v3"></div>
+        <div class="aj-tier-backtrack" id="aj-bt3" style="display:none;">
+          <button onclick="ajForceLevel(2)" class="aj-bt-btn">↩ Not quite there yet with Aria</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Level 4: Professional — Making Money -->
+    <div class="aj-tier" id="aj-tier-4">
+      <div class="aj-orb" id="aj-orb-4" style="--orb-color:var(--green);--orb-rgb:48,232,144;">
+        <div class="aj-orb-inner">
+          <div class="aj-orb-num">4</div>
+          <div class="aj-orb-icon">💎</div>
+        </div>
+        <div class="aj-orb-ring"></div>
+        <div class="aj-orb-pulse"></div>
+      </div>
+      <div class="aj-tier-body" id="aj-tbody-4">
+        <div class="aj-tier-name">Professional — Making Money</div>
+        <div class="aj-tier-desc">You've become a SupportRD story. People ask what you use, they trust your results, and you're ready to turn that into real income. You are now a VIP client.</div>
+        <div class="aj-tier-verdict" id="aj-v4"></div>
+        <!-- CONTACT US CTA — only shown at level 4 -->
+        <div id="aj-level4-cta" style="display:none;margin-top:14px;padding:16px 18px;background:linear-gradient(135deg,rgba(48,232,144,0.1),rgba(48,232,144,0.04));border:1px solid rgba(48,232,144,0.3);border-radius:12px;">
+          <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--green);margin-bottom:6px;">✦ You've Earned This</div>
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;">Let's talk directly.</div>
+          <div style="font-size:12px;color:var(--muted2);line-height:1.65;margin-bottom:14px;">You are exactly who we built SupportRD for. We want to connect with you personally — whether that's an ambassador program, a referral partnership, or just making sure you have everything you need.</div>
+          <a href="mailto:hello@supportrd.com?subject=Making Money Level — Let's Connect&body=Hi SupportRD team, I've reached the Professional level with Aria and I'd love to talk." style="display:inline-block;background:var(--green);color:#000;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:12px;padding:12px 24px;border-radius:20px;text-decoration:none;letter-spacing:0.06em;">✦ Contact SupportRD Directly →</a>
+          <div style="font-size:10px;color:var(--muted);margin-top:10px;">Or reach us at <strong>hello@supportrd.com</strong> — mention your name and Aria will share your profile.</div>
+        </div>
+        <div class="aj-tier-backtrack" id="aj-bt4" style="display:none;">
+          <button onclick="ajForceLevel(3)" class="aj-bt-btn">↩ Not at this level yet</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /relative -->
+</div><!-- /milestones -->
+
+<!-- CURRENT LEVEL STATEMENT -->
+<div id="aj-current-depth" style="background:rgba(240,160,144,0.07);border:1px solid rgba(240,160,144,0.2);border-radius:16px;padding:20px 22px;margin-bottom:28px;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(240,160,144,0.12),transparent 70%);pointer-events:none;"></div>
+  <div style="font-size:8px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;">✦ Based on your conversations with Aria</div>
+  <div id="aj-depth-title" style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);margin-bottom:6px;">—</div>
+  <div id="aj-depth-msg" style="font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:10px;"></div>
+  <div id="aj-next-label" style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"></div>
+</div>
+
+<!-- SESSION TIMELINE -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+  <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);">Your Sessions with Aria</div>
+  <div id="aj-session-count" style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;"></div>
+</div>
+<div id="aj-timeline" style="position:relative;padding-bottom:20px;">
+  <div class="ppage-empty" id="aj-empty" style="display:none;">Start chatting with Aria to build your journey history.</div>
+</div>
+
+</div>
 <!-- ✦ PROGRESS TRACKER (Score History + Treatment Log) -->
 <div class="ppage" id="pp-progress">
   <div class="ppage-head">
@@ -6719,7 +4307,7 @@ body::before{content:'';position:fixed;inset:0;
       <div class="drive-engine-badge">Powered by Claude claude-sonnet-4-20250514</div>
     </div>
     <div class="drive-header-right">
-      <button id="drive-mode-toggle" onclick="driveToggleMode()" style="background:linear-gradient(135deg,#ff6eb4,#ff9f43);color:#fff;border:none;border-radius:20px;padding:9px 18px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:800;letter-spacing:0.06em;cursor:pointer;box-shadow:0 2px 14px rgba(255,110,180,0.5);transition:all 0.2s;margin-right:8px;">🗺 GPS Mode</button>
+      <button class="drive-mode-toggle" id="drive-mode-toggle" onclick="driveToggleMode()">🍬 Adventure GPS</button>
       <button class="drive-close-btn" onclick="switchPTab('overview')">✕ Exit</button>
     </div>
   </div>
@@ -6832,33 +4420,6 @@ body::before{content:'';position:fixed;inset:0;
   </div>
   <div class="settings-page">
 
-    <!-- ── TOOLS & PERKS ─────────────────────────────────── -->
-    <div style="background:linear-gradient(135deg,rgba(224,176,80,0.08),rgba(192,132,252,0.06));border:1px solid rgba(224,176,80,0.2);border-radius:14px;padding:18px 20px;margin-bottom:18px;">
-      <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">✦ Tools &amp; Perks</div>
-      <div style="display:flex;flex-direction:column;gap:9px;">
-        <button onclick="openUpgradeModal()" style="background:rgba(224,176,80,0.1);border:1px solid rgba(224,176,80,0.25);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;">
-          <div style="font-size:12px;font-weight:700;color:var(--gold);">💡 Submit an Upgrade Idea — Earn 1 Free Month</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Have an idea for Aria or the app? Submit it and earn 1 free month of Premium.</div>
-        </button>
-        <button id="goodie-bag-btn" onclick="window.open('/blog/write','_blank')" style="background:rgba(192,132,252,0.08);border:1px solid rgba(192,132,252,0.2);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;display:none;">
-          <div style="font-size:12px;font-weight:700;color:#c084fc;">🎁 Your Starter Bag — AI Ideas</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Premium members: your AI-generated content ideas are ready. Open yours here.</div>
-        </button>
-        <button onclick="window.open('/blog/write','_blank')" style="background:rgba(240,160,144,0.08);border:1px solid rgba(240,160,144,0.2);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;">
-          <div style="font-size:12px;font-weight:700;color:var(--rose);">✍️ Write a Blog Post</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Publish to the SupportRD blog. Every post drives traffic and builds your brand.</div>
-        </button>
-        <button onclick="window.open('/revenue','_blank')" style="background:rgba(48,232,144,0.06);border:1px solid rgba(48,232,144,0.2);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;">
-          <div style="font-size:12px;font-weight:700;color:var(--green);">💰 Revenue Engine</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Email blasts, share links, Shopify balance — all your sales tools in one place.</div>
-        </button>
-        <button onclick="document.getElementById('dash-campaign-modal').style.display='flex'" style="background:rgba(224,80,80,0.06);border:1px solid rgba(224,80,80,0.2);border-radius:12px;padding:12px 16px;text-align:left;cursor:pointer;font-family:'Space Grotesk',sans-serif;width:100%;">
-          <div style="font-size:12px;font-weight:700;color:var(--rose);">🗳 Our Positions &amp; Campaigns</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Donate to the Campaign for the Poor. Partner with us on the Auto Dissolve Bar.</div>
-        </button>
-      </div>
-    </div>
-
     <!-- Billing -->
     <div class="settings-section">
       <div class="settings-section-title">Subscription & Billing</div>
@@ -6925,80 +4486,6 @@ body::before{content:'';position:fixed;inset:0;
     </div>
 
     <!-- Account -->
-    <!-- ✦ LIVE CODING FEED PANEL (admin only) -->
-    <div class="settings-section" id="live-feed-panel" style="display:none;border-color:rgba(255,80,80,0.2);background:rgba(255,50,50,0.03);">
-      <div class="settings-section-title" style="color:#ff6060;">📡 Live Coding Feed</div>
-
-      <!-- Status row -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--text);" id="lf-status-label">You are OFFLINE</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:3px;" id="lf-status-sub">Flip the switch to go live</div>
-        </div>
-        <!-- Go Live toggle -->
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="font-size:11px;color:var(--muted);" id="lf-toggle-label">Go Live</div>
-          <div id="lf-toggle" onclick="lfToggleLive()"
-            style="width:52px;height:28px;border-radius:14px;background:rgba(255,255,255,0.08);border:1px solid var(--border2);cursor:pointer;position:relative;transition:all 0.25s;">
-            <div id="lf-thumb"
-              style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:all 0.25s;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Session title & desc -->
-      <div id="lf-session-fields">
-        <div style="margin-bottom:10px;">
-          <label style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;">Session Title</label>
-          <input id="lf-title" type="text" maxlength="120"
-            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;"
-            placeholder="e.g. Building Candy Land GPS + bug fixes">
-        </div>
-        <div style="margin-bottom:14px;">
-          <label style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;">Session Description</label>
-          <input id="lf-desc" type="text" maxlength="300"
-            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;"
-            placeholder="What are you working on today?">
-        </div>
-      </div>
-
-      <!-- Quick post events -->
-      <div id="lf-post-section" style="display:none;">
-        <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Post to Feed</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-          <button onclick="lfQuickPost('build')"  class="lf-type-btn" style="--c:rgba(96,168,255,0.15);--cb:rgba(96,168,255,0.4);">🔧 Build</button>
-          <button onclick="lfQuickPost('fix')"    class="lf-type-btn" style="--c:rgba(255,200,60,0.15);--cb:rgba(255,200,60,0.4);">🐛 Fix</button>
-          <button onclick="lfQuickPost('ship')"   class="lf-type-btn" style="--c:rgba(48,232,144,0.15);--cb:rgba(48,232,144,0.4);">✅ Ship</button>
-          <button onclick="lfQuickPost('code')"   class="lf-type-btn" style="--c:rgba(176,144,255,0.15);--cb:rgba(176,144,255,0.4);">💻 Code</button>
-          <button onclick="lfQuickPost('note')"   class="lf-type-btn" style="--c:rgba(255,255,255,0.07);--cb:rgba(255,255,255,0.2);">📝 Note</button>
-        </div>
-        <input id="lf-ev-title" type="text" maxlength="200"
-          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;margin-bottom:6px;"
-          placeholder="Event title…">
-        <textarea id="lf-ev-body" rows="2" maxlength="2000"
-          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text);font-family:'Space Grotesk',sans-serif;outline:none;resize:vertical;margin-bottom:6px;"
-          placeholder="Description (optional)…"></textarea>
-        <textarea id="lf-ev-code" rows="3" maxlength="5000"
-          style="width:100%;background:#0a0d14;border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:11px;color:#a8d8a8;font-family:'IBM Plex Mono',monospace;outline:none;resize:vertical;margin-bottom:10px;"
-          placeholder="// Paste code snippet (optional)"></textarea>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <button id="lf-post-btn" onclick="lfPostEvent()"
-            style="background:var(--rose);color:#fff;border:none;border-radius:16px;padding:9px 20px;font-size:11px;font-weight:700;letter-spacing:0.07em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">
-            Post to Feed →
-          </button>
-          <a href="/live" target="_blank"
-            style="font-size:11px;color:var(--rose);text-decoration:none;padding:9px 14px;border:1px solid rgba(240,160,144,0.3);border-radius:16px;">
-            View Live Page ↗
-          </a>
-          <button onclick="lfClearFeed()"
-            style="font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:16px;padding:9px 14px;cursor:pointer;">
-            Clear Feed
-          </button>
-        </div>
-        <div id="lf-post-msg" style="font-size:11px;margin-top:8px;color:var(--green);display:none;"></div>
-      </div>
-    </div>
-
     <div class="settings-section">
       <div class="settings-section-title">Account</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -7251,7 +4738,6 @@ function renderScore(sc) {
   _scores=sc;
   const z=getZone(sc.overall);
   const circ=408, ring=document.getElementById('score-ring');
-  if(!ring) return;
   ring.style.strokeDasharray=circ;
   ring.style.strokeDashoffset=circ-(circ*(sc.overall/100));
   animNum(document.getElementById('score-num'),sc.overall,2000);
@@ -7275,7 +4761,7 @@ function toggleTag(el,group){
   setTimeout(()=>renderScore(calcScore()),50);
 }
 
-function tagsToString(id){return[...document.querySelectorAll('#'+id+' .tag.on, #'+id+' .tag.active')].map(t=>t.textContent.trim()).join(', ');}
+function tagsToString(id){return[...document.querySelectorAll('#'+id+' .tag.active')].map(t=>t.textContent.trim()).join(', ');}
 function setTagsFromString(id,val){
   if(!val) return;
   const sel=val.split(',').map(s=>s.trim().toLowerCase());
@@ -7283,8 +4769,6 @@ function setTagsFromString(id,val){
 }
 
 let _isPremium = false;
-function isAdminUser(){ return localStorage.getItem('srd_admin')==='1'; }
-function hasPremiumAccess(){ return _isPremium || localStorage.getItem('srd_premium')==='1' || isAdminUser(); }
 
 function showUpgradeModal(feature){
   // Always push to the Shopify product page — works even if Stripe is down
@@ -7300,302 +4784,57 @@ async function dashboardUpgrade(){
 // ── PROFILE PAGE ─────────────────────────────────────────────────────────────
 function openProfilePage(){
   const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
-
-  // ── Profile hero ──────────────────────────────────────────────
-  // Show saved profile photo if exists
-  const savedPic = localStorage.getItem('srd_prof_pic');
-  const avEl = document.getElementById('prof-avatar-big');
-  if(avEl){
-    if(savedPic){
-      avEl.innerHTML = '<img src="'+savedPic+'" alt="Profile">';
-    } else {
-      avEl.textContent = (u.name||'?')[0].toUpperCase();
-    }
+  // Avatar
+  const av = document.getElementById('prof-avatar');
+  if(av) av.textContent = (u.name||'?')[0].toUpperCase();
+  if(document.getElementById('prof-name-big'))  document.getElementById('prof-name-big').textContent  = u.name||'—';
+  if(document.getElementById('prof-email-sm'))  document.getElementById('prof-email-sm').textContent  = u.email||'';
+  if(document.getElementById('prof-score-big')) document.getElementById('prof-score-big').textContent = localStorage.getItem('srd_score')||'—';
+  if(document.getElementById('prof-member-since')){
+    const ms = u.created_at ? new Date(u.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '—';
+    document.getElementById('prof-member-since').textContent = ms;
   }
+  // Plan badge
+  const pb = document.getElementById('prof-plan-badge');
+  if(pb){ const isPrem = localStorage.getItem('srd_premium')==='1'; pb.textContent=isPrem?'PREMIUM':'FREE'; pb.style.color=isPrem?'var(--green)':'var(--gold)'; }
+  // Streak (days since last visit — rough approximation)
+  const lastV = parseInt(localStorage.getItem('srd_last_visit')||'0');
+  const today = Math.floor(Date.now()/86400000);
+  let streak = parseInt(localStorage.getItem('srd_streak')||'1');
+  if(lastV === today-1){ streak++; localStorage.setItem('srd_streak',streak); }
+  else if(lastV < today-1){ streak=1; localStorage.setItem('srd_streak',1); }
+  localStorage.setItem('srd_last_visit',today);
+  if(document.getElementById('prof-streak')) document.getElementById('prof-streak').textContent = streak+'d';
 
-  const nameEl = document.getElementById('prof-name');
-  const emailEl= document.getElementById('prof-email-sm');
-  const planEl = document.getElementById('prof-plan-badge');
-  const scoreEl= document.getElementById('prof-score-num');
-  const chatsEl= document.getElementById('prof-chats-num');
-  const sinceEl= document.getElementById('prof-since');
-  if(nameEl)  nameEl.textContent  = u.name||'—';
-  if(emailEl) emailEl.textContent = u.email||'';
-  if(planEl){
-    const isPrem = localStorage.getItem('srd_premium')==='1';
-    planEl.textContent = isPrem ? 'PREMIUM' : 'FREE';
-    planEl.style.color = isPrem ? 'var(--green)' : 'var(--gold)';
-  }
-  // Hair score from computed value
-  const sc = calcScore();
-  if(scoreEl) scoreEl.textContent = sc.overall;
-  localStorage.setItem('srd_score', sc.overall);
-
-  // Load profile from API and sync tags
+  // Load profile tags from API
   fetch('/api/profile',{headers:{'X-Auth-Token':token}}).then(r=>r.json()).then(d=>{
     if(!d) return;
     restoreTags('pf-tags-type',       d.hair_type);
     restoreTags('pf-tags-concerns',   d.hair_concerns);
     restoreTags('pf-tags-treatments', d.treatments);
+    restoreTags('pf-tags-products',   d.products_tried);
     restoreTags('pf-tags-porosity',   d.porosity||'');
     restoreTags('pf-tags-scalp',      d.scalp||'');
     restoreTags('pf-tags-washfreq',   d.wash_freq||'');
     restoreTags('pf-tags-heat',       d.heat_styling||'');
+    restoreTags('pf-tags-env',        d.environment||'');
     if(document.getElementById('pf-goals')) document.getElementById('pf-goals').value = d.goals||'';
-    // Restore selected products from profile
-    if(d.products_tried){
-      const prodNames = d.products_tried.split(',').map(s=>s.trim().toLowerCase());
-      document.querySelectorAll('.prof-prod-card').forEach(card=>{
-        const name = card.querySelector('.prof-prod-name')?.textContent||'';
-        if(prodNames.some(p=>name.toLowerCase().includes(p.slice(0,8))||p.includes(name.toLowerCase().slice(0,8)))){
-          card.classList.add('selected');
-        }
-      });
-    }
-    profBuildDayDisplay();
+    profBuildProductCarousel(d.products_tried||'');
   }).catch(()=>{});
 
-  // Load chat count from me endpoint
-  fetch('/api/auth/me',{headers:{'X-Auth-Token':token}}).then(r=>r.json()).then(d=>{
-    if(chatsEl) chatsEl.textContent = d.chat_count||0;
-    if(sinceEl && d.created_at){
-      const yr = new Date(d.created_at).getFullYear();
-      sinceEl.textContent = yr||'—';
-    }
-  }).catch(()=>{});
+  occInit();
 }
 
-// ── Profile photo upload ────────────────────────────────────────
-function profUploadPic(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const b64 = ev.target.result;
-    localStorage.setItem('srd_prof_pic', b64);
-    const avEl = document.getElementById('prof-avatar-big');
-    if(avEl) avEl.innerHTML = '<img src="'+b64+'" alt="Profile">';
-  };
-  reader.readAsDataURL(file);
-}
-
-// ── Product toggle (max 3) ──────────────────────────────────────
-function profToggleProd(el, name){
-  const selected = document.querySelectorAll('.prof-prod-card.selected');
-  if(el.classList.contains('selected')){
-    el.classList.remove('selected');
-  } else {
-    if(selected.length >= 3){
-      // Remove first selected to make room
-      selected[0].classList.remove('selected');
-    }
-    el.classList.add('selected');
-  }
-  profBuildDayDisplay();
-}
-
-// ── Occasion select ─────────────────────────────────────────────
-let _profOccasion = {name:'Wash Day', icon:'🚿'};
-function profOccSelect(el, name, icon){
-  document.querySelectorAll('.prof-occ-chip').forEach(c=>c.classList.remove('selected'));
-  el.classList.add('selected');
-  _profOccasion = {name, icon};
-  profBuildDayDisplay();
-}
-
-// ── Routine view toggle ─────────────────────────────────────────
-function profSetRoutineView(view){
-  document.getElementById('prof-view-day').classList.toggle('active', view==='day');
-  document.getElementById('prof-view-week').classList.toggle('active', view==='week');
-  document.getElementById('prof-routine-day').style.display  = view==='day'  ? 'block' : 'none';
-  document.getElementById('prof-routine-week').style.display = view==='week' ? 'block' : 'none';
-}
-
-// ── Build the daily display ──────────────────────────────────────
-function profBuildDayDisplay(){
-  const dayEl  = document.getElementById('prof-routine-day');
-  if(!dayEl) return;
-  const selectedProds = [...document.querySelectorAll('.prof-prod-card.selected')].map(c=>({
-    name:  c.querySelector('.prof-prod-name')?.textContent||'',
-    emoji: c.querySelector('.prof-prod-emoji')?.textContent||'',
-  }));
-  const occ = _profOccasion;
-  const hairType = [...document.querySelectorAll('#pf-tags-type .tag.on')].map(t=>t.textContent).join(', ') ||
-                   [...document.querySelectorAll('#pf-tags-type .tag.active')].map(t=>t.textContent).join(', ');
-
-  if(!selectedProds.length){
-    dayEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:14px 0;font-style:italic;">Select at least 1 product above to build your routine</div>';
-    return;
-  }
-
-  // Build routine steps based on occasion + products
-  const OCC_STEPS = {
-    'Wash Day':       ['🚿 Shampoo hair thoroughly','💆 Massage scalp for 90 seconds','🌿 Apply product to damp hair','⏰ Leave for 3-5 minutes','💧 Rinse and style'],
-    'Date Night':     ['💨 Blow-dry or diffuse','✨ Apply finishing product','💃 Style as desired'],
-    'Work Day':       ['🌅 Quick refresh or water spray','🌿 Apply light product to ends','💼 Smooth and style'],
-    'Workout':        ['🪢 Protective style before workout','💧 Keep scalp dry if possible','🚿 Wash after if needed'],
-    'Beach Day':      ['🛡 Apply product before beach','🧴 Reapply after water','🌊 Rinse salt water after'],
-    'Rest Day':       ['🌙 Light moisture if dry','💤 No heat today','🌱 Scalp massage (optional)'],
-    'Deep Condition': ['🚿 Start with clean hair','🫙 Apply mask generously','⏰ Leave 20-30 minutes','🧖 Rinse thoroughly'],
-    'Night Out':      ['💄 Volume boost if needed','✨ Finishing drops for shine','💫 Set with light mist'],
-  };
-
-  const steps = OCC_STEPS[occ.name] || ['🌿 Apply product as needed','💆 Massage in gently','⏰ Leave as directed'];
-
-  let html = `<div class="prof-day-card">
-    <div class="prof-day-name">${occ.icon} ${occ.name} Routine</div>`;
-
-  steps.forEach(step=>{
-    html += `<div class="prof-day-routine-line">${step}</div>`;
-  });
-
-  // Product application lines
-  if(selectedProds.length){
-    html += '<div style="margin-top:10px;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Products to use</div>';
-    selectedProds.forEach(p=>{
-      const APPLY = {
-        'Formula Exclusiva': 'Apply to damp hair, work through, leave 5 min, rinse',
-        'Laciador Crece':    'Apply to damp ends, comb through, can leave in or rinse',
-        'Gotero Rápido':     'Apply directly to scalp with dropper, massage in, leave overnight',
-        'Gotitas Brillantes':'Apply 2-3 drops to dry hair after styling',
-        'Mascarilla Capilar':'Apply generously, cover, leave 20+ min, rinse',
-        'Shampoo Aloe Vera': 'Lather on wet hair and scalp, rinse thoroughly',
-      };
-      const instructions = Object.entries(APPLY).find(([k])=>p.name.includes(k.slice(0,8)))?.[1]||'Apply as directed';
-      html += `<div class="prof-day-routine-line"><span class="prof-day-product-tag">${p.emoji} ${p.name}</span><span style="font-size:11px;color:var(--muted2);margin-left:6px;">${instructions}</span></div>`;
-    });
-  }
-
-  // Occasion tag
-  html += `<div style="margin-top:10px;"><span class="prof-day-occasion-tag">${occ.icon} ${occ.name}</span></div>`;
-  html += '</div>';
-  dayEl.innerHTML = html;
-}
-
-// ── Build full week display ──────────────────────────────────────
-function profBuildRoutine(){
-  profBuildWeekDisplay();
-  profSetRoutineView('week');
-}
-
-function profBuildWeekDisplay(){
-  const weekEl = document.getElementById('prof-week-grid');
-  if(!weekEl) return;
-  const selectedProds = [...document.querySelectorAll('.prof-prod-card.selected')].map(c=>({
-    name: c.querySelector('.prof-prod-name')?.textContent||'',
-    emoji:c.querySelector('.prof-prod-emoji')?.textContent||'',
-  }));
-  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const DAY_OCCASIONS = ['Wash Day','Work Day','Work Day','Rest Day','Date Night','Deep Condition','Rest Day'];
-  const DAY_ICONS     = ['🚿','💼','💼','🛋️','🌹','🫙','🛋️'];
-  const PROD_DAYS     = [0,1,3,5]; // which days get product application
-
-  weekEl.innerHTML = DAYS.map((day,i)=>{
-    const isProductDay = PROD_DAYS.includes(i) && selectedProds.length;
-    let items = `<div class="prof-week-item occasion">${DAY_ICONS[i]} ${DAY_OCCASIONS[i]}</div>`;
-    if(isProductDay){
-      const prod = selectedProds[i % selectedProds.length];
-      items += `<div class="prof-week-item product">${prod.emoji} ${prod.name.split(' ')[0]}</div>`;
-    }
-    return `<div class="prof-week-cell">
-      <div class="prof-week-day-lbl">${day}</div>
-      ${items}
-    </div>`;
-  }).join('');
-}
-
-// ── AI Status refresh ────────────────────────────────────────────
-async function profRefreshAiStatus(){
-  const el = document.getElementById('prof-aria-text');
-  // Also keep backward compat with old id
-  const el2 = document.getElementById('prof-ai-status');
-  if(el) el.textContent = 'Aria is reading your hair journey…';
-  if(el2) el2.textContent = 'Aria is reading your hair journey…';
-  try{
-    const r = await fetch('/api/profile/ai-status',{headers:{'X-Auth-Token':token}});
-    const d = await r.json();
-    const status = d.status || 'Keep logging your progress and Aria will tell you more!';
-    if(el)  el.textContent  = status;
-    if(el2) el2.textContent = status;
-  }catch(e){
-    const msg = 'Could not reach Aria right now — try again soon.';
-    if(el)  el.textContent  = msg;
-    if(el2) el2.textContent = msg;
-  }
-}
-
-// ── Share ────────────────────────────────────────────────────────
-function profShare(platform){
-  const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
-  const score = localStorage.getItem('srd_score')||'?';
-  const text = encodeURIComponent((u.name||'I')+' scored '+score+'/100 on my hair health with Aria by SupportRD! ✦ Try it free: https://aria.supportrd.com');
-  const urls = {
-    instagram: 'https://www.instagram.com/',
-    facebook:  'https://www.facebook.com/sharer/sharer.php?u=https://aria.supportrd.com&quote='+text,
-    tiktok:    'https://www.tiktok.com/',
-    twitter:   'https://twitter.com/intent/tweet?text='+text,
-    whatsapp:  'https://wa.me/?text='+text,
-    pinterest: 'https://pinterest.com/pin/create/button/?url=https://aria.supportrd.com&description='+text,
-  };
-  window.open(urls[platform]||'https://aria.supportrd.com','_blank');
-}
-
-// ── saveProfileFull — update to save products from new UI ────────
-async function saveProfileFull(){
-  const selectedProds = [...document.querySelectorAll('.prof-prod-card.selected')].map(c=>c.querySelector('.prof-prod-name')?.textContent||'').filter(Boolean);
-  const data = {
-    hair_type:      tagsToString('pf-tags-type'),
-    hair_concerns:  tagsToString('pf-tags-concerns'),
-    treatments:     tagsToString('pf-tags-treatments'),
-    products_tried: selectedProds.join(', '),
-    porosity:       tagsToString('pf-tags-porosity'),
-    scalp:          tagsToString('pf-tags-scalp'),
-    wash_freq:      tagsToString('pf-tags-washfreq'),
-    heat_styling:   tagsToString('pf-tags-heat'),
-    goals:          (document.getElementById('pf-goals')||{}).value||'',
-  };
-  // Also sync hidden overview tags
-  ['type','concerns','treatments'].forEach(k=>{
-    const src_el = document.getElementById('pf-tags-'+k);
-    const dst_el = document.getElementById('tags-'+k);
-    if(!src_el||!dst_el) return;
-    dst_el.querySelectorAll('.tag').forEach(dt=>{
-      const match=[...src_el.querySelectorAll('.tag')].find(st=>st.textContent===dt.textContent);
-      dt.classList.toggle('active', match ? match.classList.contains('on') : false);
-    });
-  });
-  // Sync products to overview panel
-  const dst_prod = document.getElementById('tags-products');
-  if(dst_prod){
-    dst_prod.querySelectorAll('.tag').forEach(dt=>{
-      dt.classList.toggle('active', selectedProds.some(p=>p.toLowerCase().includes(dt.textContent.toLowerCase().slice(0,5))));
-    });
-  }
-  try{
-    await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});
-    renderScore(calcScore());
-    const msg = document.getElementById('pf-save-msg');
-    if(msg){ msg.style.display='inline'; setTimeout(()=>msg.style.display='none',2500); }
-    showToast('✦ Profile saved!');
-  }catch(e){ showToast('Save failed — try again'); }
-}
-
-// ── restoreTags helper — works with both .on and .active ─────────
 function restoreTags(containerId, csv){
   if(!csv) return;
-  const vals = csv.toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
+  const vals = csv.toLowerCase().split(',').map(s=>s.trim());
   const el = document.getElementById(containerId);
   if(!el) return;
   el.querySelectorAll('.tag').forEach(t=>{
-    const match = vals.some(v=>t.textContent.toLowerCase().includes(v.slice(0,5))||v.includes(t.textContent.toLowerCase().slice(0,5)));
-    if(match) t.classList.add('on');
+    if(vals.some(v=>t.textContent.toLowerCase().includes(v)||v.includes(t.textContent.toLowerCase().slice(0,5))))
+      t.classList.add('active');
   });
 }
-
-function tagsToString(id){
-  return [...document.querySelectorAll('#'+id+' .tag.on,#'+id+' .tag.active')].map(t=>t.textContent.trim()).join(', ');
-}
-
 
 // ── PRODUCT CAROUSEL ─────────────────────────────────────────────
 const PROD_IMGS = {
@@ -7638,10 +4877,33 @@ function profCarouselTo(page){
 }
 
 // ── AI STATUS REFRESH ─────────────────────────────────────────────
-// profRefreshAiStatus moved to profile rebuild above
+async function profRefreshAiStatus(){
+  const el = document.getElementById('prof-ai-status');
+  if(!el) return;
+  el.textContent = 'Aria is reading your hair journey…';
+  try{
+    const r = await fetch('/api/profile/ai-status',{headers:{'X-Auth-Token':token}});
+    const d = await r.json();
+    if(d.status) el.textContent = d.status;
+    else el.textContent = 'Keep logging your progress and Aria will tell you more!';
+  }catch(e){ el.textContent = 'Could not reach Aria right now — try again soon.'; }
+}
 
 // ── SHARE ─────────────────────────────────────────────────────────
-// profShare moved to profile rebuild above
+function profShare(platform){
+  const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
+  const score = localStorage.getItem('srd_score')||'?';
+  const text = encodeURIComponent((u.name||'I')+' scored '+score+'/100 on my hair health with Aria by SupportRD! ✦ Try it free: https://aria.supportrd.com');
+  const urls = {
+    instagram: 'https://www.instagram.com/',
+    facebook:  'https://www.facebook.com/sharer/sharer.php?u=https://aria.supportrd.com&quote='+text,
+    tiktok:    'https://www.tiktok.com/',
+    twitter:   'https://twitter.com/intent/tweet?text='+text,
+    whatsapp:  'https://wa.me/?text='+text,
+    pinterest: 'https://pinterest.com/pin/create/button/?url=https://aria.supportrd.com&description='+text,
+  };
+  window.open(urls[platform]||'https://aria.supportrd.com','_blank');
+}
 
 // ── OCCASIONS ─────────────────────────────────────────────────────
 const OCC_TEMPLATES = [
@@ -7700,6 +4962,30 @@ function occSave(){
   occLoadSaved();
 }
 
+function occLoadSaved(){
+  const el = document.getElementById('occ-saved-list');
+  if(!el) return;
+  const saved = JSON.parse(localStorage.getItem('srd_occasions')||'{}');
+  const keys = Object.keys(saved);
+  if(!keys.length){ el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No occasions saved yet — pick a template above.</div>'; return; }
+  el.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Saved Occasions ('+keys.length+')</div>'
+    + keys.map(k=>{
+    const o = saved[k];
+    return '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 18px;margin-bottom:10px;">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+      +'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:13px;color:var(--text);">✦ '+k+'</div>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<button onclick="occOpenEditor(\''+k.replace(/'/g,"\\'")+'\')" style="background:none;border:1px solid var(--border2);color:var(--muted2);padding:3px 10px;border-radius:10px;font-size:10px;cursor:pointer;">Edit</button>'
+      +'<button onclick="occDelete(\''+k.replace(/'/g,"\\'")+'\')" style="background:none;border:1px solid rgba(255,80,80,0.3);color:rgba(255,120,120,0.7);padding:3px 10px;border-radius:10px;font-size:10px;cursor:pointer;">✕</button>'
+      +'</div></div>'
+      +(o.steps?'<div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:8px;">'+o.steps+'</div>':'')
+      +(o.products&&o.products.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+        +o.products.map(p=>'<span style="font-size:10px;padding:3px 8px;background:rgba(240,160,144,0.1);border:1px solid rgba(240,160,144,0.2);border-radius:10px;color:var(--rose);">'+p+'</span>').join('')
+        +'</div>':'')
+      +'<div style="font-size:9px;color:var(--muted);margin-top:8px;">Updated '+o.updated+'</div>'
+      +'</div>';
+  }).join('');
+}
 
 function occDelete(name){
   const saved = JSON.parse(localStorage.getItem('srd_occasions')||'{}');
@@ -7709,7 +4995,39 @@ function occDelete(name){
   showToast('Removed '+name);
 }
 
-// saveProfileFull moved to profile rebuild section above
+async function saveProfileFull(){
+  // Sync all tag groups
+  const data = {
+    hair_type:      tagsToString('tags-type'),
+    hair_concerns:  tagsToString('tags-concerns'),
+    treatments:     tagsToString('tags-treatments'),
+    products_tried: tagsToString('tags-products'),
+    porosity:       tagsToString('pf-tags-porosity').replace(/pf-tags-/g,''),
+    scalp:          tagsToString('pf-tags-scalp').replace(/pf-tags-/g,''),
+    wash_freq:      tagsToString('pf-tags-washfreq').replace(/pf-tags-/g,''),
+    heat_styling:   tagsToString('pf-tags-heat').replace(/pf-tags-/g,''),
+    environment:    tagsToString('pf-tags-env').replace(/pf-tags-/g,''),
+    goals:          (document.getElementById('pf-goals')||{}).value||'',
+  };
+  // Also sync the hidden bot-row tags so score updates
+  ['type','concerns','treatments','products'].forEach(k=>{
+    const src = document.getElementById('pf-tags-'+k);
+    const dst = document.getElementById('tags-'+k);
+    if(!src||!dst) return;
+    dst.querySelectorAll('.tag').forEach(dt=>{
+      const match = [...src.querySelectorAll('.tag')].find(st=>st.textContent===dt.textContent);
+      dt.classList.toggle('active', match ? match.classList.contains('active') : false);
+    });
+  });
+  try{
+    await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});
+    renderScore(calcScore());
+    profBuildProductCarousel(data.products_tried);
+    const msg = document.getElementById('pf-save-msg');
+    if(msg){ msg.style.display='block'; setTimeout(()=>msg.style.display='none',2500); }
+    showToast('✦ Profile saved!');
+  }catch(e){ showToast('Save failed — try again'); }
+}
 
 
 async function openRoutinePage(){
@@ -7764,16 +5082,12 @@ function renderRoutine(rt){
 
 // ── PROGRESS TRACKER ─────────────────────────────────────────────────────────
 async function openProgressPage(){
-  const gate = document.getElementById('progress-gate');
-  const cont = document.getElementById('progress-content');
-  const ok = hasPremiumAccess();
-  if(gate) gate.style.display = ok ? 'none' : 'block';
-  if(cont) cont.style.display = ok ? 'block' : 'none';
-  if(!ok) return;
+  document.getElementById('progress-gate').style.display='none';
+  document.getElementById('progress-content').style.display='block';
   // Auto-save today's score
   const sc=calcScore();
   fetch('/api/score-history',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},
-    body:JSON.stringify({score:sc.overall,moisture:sc.moisture,strength:sc.strength,scalp:sc.scalp,growth:sc.growth})});
+    body:JSON.stringify({score:sc.total,moisture:sc.moisture,strength:sc.strength,scalp:sc.scalp,growth:sc.growth})});
   // Load history
   const r=await fetch('/api/score-history',{headers:{'X-Auth-Token':token}});
   const d=await r.json();
@@ -7842,6 +5156,11 @@ async function deleteTreatment(id){
 }
 
 // ── PHOTO ANALYSIS ───────────────────────────────────────────────────────────
+function openPhotoPage(){
+  document.getElementById('photo-gate').style.display='none';
+  document.getElementById('photo-content').style.display='block';
+  loadPhotoHistory();
+}
 
 let _photoB64=null;
 // ── PHOTO ANALYSIS — SCANNER UI ──────────────────────────────────────────────
@@ -8031,21 +5350,14 @@ function paRenderResult(d){
 
 async function paLoadHistory(){
   try{
-    let r = await fetch('/api/photo-analysis/history',{headers:{'X-Auth-Token':token}});
-    if(!r.ok){
-      r = await fetch('/api/photo-analysis',{headers:{'X-Auth-Token':token}});
-    }
+    const r = await fetch('/api/photo-analysis/history',{headers:{'X-Auth-Token':token}});
     const d = await r.json();
     const el = document.getElementById('pa-history-list');
     if(!el) return;
-    const history = d.history || (d.analyses||[]).map(a=>({
-      score: (a.analysis?.overall_health_score || a.analysis?.score || a.overall_health_score || a.score || 0),
-      created_at: a.ts || a.created_at || ''
-    }));
-    if(!history || !history.length){ el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No past analyses yet.</div>'; return; }
-    el.innerHTML = history.slice(0,5).map(h=>'<div class="pa-history-item" style="padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);">'
-      +'<span style="color:var(--text);font-weight:600;">Score '+(h.score||0)+'</span> &nbsp;'
-      + (h.created_at ? new Date(h.created_at).toLocaleDateString() : '')
+    if(!d.history || !d.history.length){ el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No past analyses yet.</div>'; return; }
+    el.innerHTML = d.history.slice(0,5).map(h=>'<div class="pa-history-item" style="padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);">'
+      +'<span style="color:var(--text);font-weight:600;">Score '+h.score+'</span> &nbsp;'
+      + new Date(h.created_at).toLocaleDateString()
       +'</div>').join('');
   }catch(e){ /* silent */ }
 }
@@ -8124,9 +5436,14 @@ function activateStat(el){
 let _journalRating = 3;
 let _journalPhotoB64 = null;
 
+function openJournalPage(){
+  document.getElementById('journal-gate').style.display='none';
+  document.getElementById('journal-content').style.display='block';
+  loadJournalEntries();
+}
 
 function openJournalEntry(){
-  if(!hasPremiumAccess()){ showUpgradeModal('Hair Journal'); return; }
+  if(!_isPremium){ showUpgradeModal('Hair Journal'); return; }
   _journalRating=3; _journalPhotoB64=null;
   document.getElementById('jf-note').value='';
   document.getElementById('jf-photo-preview').style.display='none';
@@ -8219,12 +5536,9 @@ async function deleteJournalEntry(id){
 
 // ── WHATSAPP PAGE ─────────────────────────────────────────────────────────────
 function openWhatsappPage(){
-  const gate = document.getElementById('whatsapp-gate');
-  const cont = document.getElementById('whatsapp-content');
-  const ok = hasPremiumAccess();
-  if(gate) gate.style.display = ok ? 'none' : 'block';
-  if(cont) cont.style.display = ok ? 'block' : 'none';
-  if(ok) checkPushStatus();
+  document.getElementById('whatsapp-gate').style.display='none';
+  document.getElementById('whatsapp-content').style.display='block';
+  checkPushStatus();
 }
 
 async function linkPhone(){
@@ -8327,27 +5641,12 @@ async function disablePushNotifications(){
   }catch(e){ showToast('Error: '+e.message); }
 }
 
-// ── SERVICE WORKER — unregister broken old versions first, then register clean v3 ──
+// Register service worker + auto-check push on load
 (async()=>{
   if('serviceWorker' in navigator){
     try{
-      // Step 1: unregister ALL existing service workers (clears the broken one)
-      const regs = await navigator.serviceWorker.getRegistrations();
-      for(const reg of regs){
-        const swUrl = reg.active?.scriptURL || '';
-        // Only unregister if it's NOT our current clean v3
-        if(!swUrl.includes('/sw.js') || reg.active?.state === 'redundant'){
-          await reg.unregister();
-          console.log('[SW] Unregistered old SW:', swUrl);
-        }
-      }
-      // Step 2: clear all caches so old broken SW cache is gone
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-      // Step 3: register the clean v3 SW
-      await navigator.serviceWorker.register('/sw.js', {scope:'/', updateViaCache:'none'});
-      console.log('[SW] Clean v3 registered');
-    }catch(e){ console.warn('SW setup:', e); }
+      await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+    }catch(e){ console.warn('SW register failed',e); }
   }
 })();
 
@@ -8573,30 +5872,9 @@ async function loadData(){
     document.getElementById('nav-name').textContent=d.name||d.email;
     const av=document.getElementById('nav-av');
     if(d.avatar){av.innerHTML='<img src="'+d.avatar+'" alt="">';}else{av.textContent=(d.name||'?')[0].toUpperCase();}
-    if(d.subscribed){
-      document.getElementById('plan-badge').textContent='PREMIUM';
-      _isPremium=true;
-      localStorage.setItem('srd_premium','1');
-    } else {
-      _isPremium=false;
-      localStorage.removeItem('srd_premium');
-    }
+    if(d.subscribed){ document.getElementById('plan-badge').textContent='PREMIUM'; _isPremium=true; }
     // Style premium nav tabs
     if(_isPremium) document.querySelectorAll('.nav-tab').forEach(t=>{ if(t.textContent.startsWith('✦')) t.style.color='var(--gold)'; });
-    // Show starter bag link for premium users
-    if(_isPremium){
-      const sbLink = document.getElementById('starterBagLink');
-      if(sbLink) sbLink.style.display='inline';
-      const goodieBtn = document.getElementById('goodie-bag-btn');
-      if(goodieBtn) goodieBtn.style.display='block';
-      // First time premium welcome toast
-      if(!localStorage.getItem('srd_starter_bag_shown')){
-        localStorage.setItem('srd_starter_bag_shown','1');
-        setTimeout(()=>{
-          showToast('🎁 Welcome to Premium! Your AI starter bag is ready — check Blog Ideas!');
-        }, 1800);
-      }
-    }
     document.getElementById('st-chats').textContent=d.chat_count||0;
     document.getElementById('st-chats-trend').textContent='↑ '+(d.chat_count||0)+' all time';
     const concerns=(d.profile?.hair_concerns||'').split(',').filter(c=>c.trim()).length;
@@ -8650,261 +5928,6 @@ async function doLogout(){
 let toastT;
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
 
-// ── WOOPSIES — MORTAL KOMBAT DUMMY EASTER EGG ──────────────────────────────
-(function(){
-  const WOOPSIES = [
-    "WOOPSIES!!","Oop— Woopsies!","W O O P S I E S","woopsies hehe 😬",
-    "WOOOOPSIES!!","...woopsies","omg woopsies 😭","WoOpSiEs!! 💜",
-    "woopsies again?!","FINISH HIM... woopsies","FATALITY... just kidding. woopsies.",
-    "GET OVER HERE... woopsies","TOASTY! woopsies","flawless woopsies 💀"
-  ];
-  const SPECIAL_MSGS = [
-    "✦ Routine saved!","✦ Profile saved!","Treatment logged ✓","Entry saved ✓","Session started!",
-    "Published!","Going live!","Upgrade submitted!","Score saved!","Photo analyzed!"
-  ];
-
-  /* ── BUILD THE DUMMY DOM ── */
-  const wrap = document.createElement('div');
-  wrap.id = 'woopsie-wrap';
-  wrap.innerHTML = `
-    <div id="woopsie-stage">
-      <canvas id="woopsie-canvas" width="120" height="160"></canvas>
-      <div id="woopsie-cup-spill"></div>
-      <div id="woopsie-text"></div>
-      <div id="woopsie-drops"></div>
-    </div>`;
-
-  const style = document.createElement('style');
-  style.textContent = `
-    #woopsie-wrap{position:fixed;z-index:99999;pointer-events:none;display:none;top:0;left:0;width:100vw;height:100vh;}
-    #woopsie-stage{position:absolute;display:flex;flex-direction:column;align-items:center;}
-    #woopsie-canvas{display:block;filter:drop-shadow(0 0 18px rgba(168,85,247,0.9)) drop-shadow(0 0 6px rgba(255,80,80,0.6));image-rendering:pixelated;}
-    #woopsie-text{
-      margin-top:8px;font-size:1.1rem;font-weight:900;color:#fff;
-      text-shadow:0 2px 14px #a855f7,0 0 32px #ff4444,0 0 4px #000;
-      letter-spacing:2px;white-space:nowrap;font-family:'IBM Plex Mono',monospace;
-      animation:wcPop 0.28s cubic-bezier(.17,.67,.35,1.4) both;
-    }
-    #woopsie-cup-spill{
-      position:absolute;top:58px;left:50%;transform:translateX(-50%);
-      width:70px;height:20px;
-      background:radial-gradient(ellipse,rgba(168,85,247,0.6) 0%,transparent 70%);
-      border-radius:50%;animation:wcSplash 0.5s ease-out forwards;
-    }
-    .wc-drop{position:fixed;pointer-events:none;z-index:99998;font-size:1.1rem;animation:wcDrop 1.1s ease-in forwards;}
-    @keyframes wcPop{0%{opacity:0;transform:scale(0.3) translateY(12px);}100%{opacity:1;transform:scale(1) translateY(0);}}
-    @keyframes wcSplash{0%{opacity:0;transform:translateX(-50%) scaleX(0.2);}40%{opacity:1;transform:translateX(-50%) scaleX(1.4);}100%{opacity:0;transform:translateX(-50%) scaleX(2);}}
-    @keyframes wcDrop{0%{opacity:1;transform:translateY(0) scale(1);}100%{opacity:0;transform:translateY(110px) scale(0.4);}}
-    @keyframes wcSlideIn{0%{opacity:0;transform:translateX(-60px) scaleY(0.5);}60%{transform:translateX(8px) scaleY(1.08);}100%{opacity:1;transform:translateX(0) scaleY(1);}}
-    @keyframes wcSlideOut{0%{opacity:1;transform:translateX(0);}100%{opacity:0;transform:translateX(60px);}}
-    @keyframes wcShake{0%,100%{transform:rotate(0deg);}20%{transform:rotate(-14deg);}40%{transform:rotate(12deg);}60%{transform:rotate(-10deg);}80%{transform:rotate(8deg);}}
-  `;
-  document.head.appendChild(style);
-  document.body.appendChild(wrap);
-
-  /* ── DRAW THE DUMMY ON CANVAS ── */
-  // MK-style stick fighter dummy — grey outfit, glowing eyes, spilling cup weapon
-  function drawDummy(canvas, framePhase) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,120,160);
-
-    const cx = 60; // center x
-
-    // GLOW background aura
-    const aura = ctx.createRadialGradient(cx,80,5,cx,80,55);
-    aura.addColorStop(0,'rgba(168,85,247,0.18)');
-    aura.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=aura; ctx.fillRect(0,0,120,160);
-
-    // LEGS — grey pants, slight stance
-    ctx.strokeStyle='#8888aa'; ctx.lineWidth=5; ctx.lineCap='round';
-    const legSway = Math.sin(framePhase*0.12)*6;
-    ctx.beginPath(); ctx.moveTo(cx,105); ctx.lineTo(cx-12+legSway,140); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx,105); ctx.lineTo(cx+12-legSway,140); ctx.stroke();
-    // Boots
-    ctx.strokeStyle='#555577'; ctx.lineWidth=6;
-    ctx.beginPath(); ctx.moveTo(cx-12+legSway,140); ctx.lineTo(cx-18+legSway,148); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx+12-legSway,140); ctx.lineTo(cx+18-legSway,148); ctx.stroke();
-
-    // TORSO — dark grey vest
-    ctx.strokeStyle='#7070909'; ctx.strokeStyle='#707090';
-    ctx.lineWidth=9;
-    ctx.beginPath(); ctx.moveTo(cx,68); ctx.lineTo(cx,105); ctx.stroke();
-    // belt
-    ctx.fillStyle='#444466';
-    ctx.fillRect(cx-12,98,24,6);
-
-    // ARMS — holding spilling cup weapon
-    const armSway = Math.sin(framePhase*0.15)*5;
-    // Left arm (raised, holding cup)
-    ctx.strokeStyle='#8888aa'; ctx.lineWidth=4;
-    ctx.beginPath(); ctx.moveTo(cx,75); ctx.lineTo(cx-28,-armSway+58); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx-28,58-armSway); ctx.lineTo(cx-38,42-armSway*1.2); ctx.stroke();
-    // Right arm (out to side, dramatic)
-    ctx.beginPath(); ctx.moveTo(cx,75); ctx.lineTo(cx+26,80+armSway); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx+26,80+armSway); ctx.lineTo(cx+38,90+armSway); ctx.stroke();
-
-    // THE SPILLING CUP WEAPON (left hand)
-    const cupX = cx-40, cupY = 36-armSway*1.2;
-    // cup body — tilted
-    ctx.save();
-    ctx.translate(cupX, cupY);
-    ctx.rotate(-0.5);
-    ctx.strokeStyle='#c084fc'; ctx.lineWidth=2.5;
-    ctx.fillStyle='rgba(168,85,247,0.25)';
-    ctx.beginPath(); ctx.roundRect(-7,-10,14,16,2); ctx.fill(); ctx.stroke();
-    // liquid spilling out
-    ctx.fillStyle='rgba(168,85,247,0.7)';
-    ctx.beginPath();
-    ctx.moveTo(4,-2); ctx.bezierCurveTo(12,-8,22,2,18,14);
-    ctx.bezierCurveTo(14,10,8,4,4,-2);
-    ctx.fill();
-    // drops
-    for(let d=0;d<3;d++){
-      const dy = (framePhase*2+d*8)%22;
-      ctx.fillStyle=`rgba(192,132,252,${0.8-dy/28})`;
-      ctx.beginPath();
-      ctx.arc(8+d*4, dy+4, 2.2-d*0.3, 0, Math.PI*2);
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // NECK
-    ctx.strokeStyle='#9090b0'; ctx.lineWidth=4;
-    ctx.beginPath(); ctx.moveTo(cx,54); ctx.lineTo(cx,68); ctx.stroke();
-
-    // HEAD
-    ctx.fillStyle='#9898b8';
-    ctx.beginPath(); ctx.ellipse(cx,44,13,14,0,0,Math.PI*2); ctx.fill();
-    // head outline
-    ctx.strokeStyle='#b0b0d0'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.ellipse(cx,44,13,14,0,0,Math.PI*2); ctx.stroke();
-    // helmet band
-    ctx.fillStyle='#555577';
-    ctx.fillRect(cx-13,38,26,7);
-
-    // GLOWING EYES — MK style
-    const eyeGlow = 0.7+Math.sin(framePhase*0.2)*0.3;
-    ctx.shadowColor='#ff4444'; ctx.shadowBlur=8;
-    ctx.fillStyle=`rgba(255,80,80,${eyeGlow})`;
-    ctx.beginPath(); ctx.ellipse(cx-5,42,3.5,2.5,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(cx+5,42,3.5,2.5,0,0,Math.PI*2); ctx.fill();
-    ctx.shadowBlur=0;
-
-    // MASK (lower face)
-    ctx.fillStyle='#444466';
-    ctx.fillRect(cx-9,46,18,8);
-
-    // HEALTH BAR (old school MK style)
-    ctx.fillStyle='rgba(0,0,0,0.5)';
-    ctx.fillRect(10,6,100,8);
-    ctx.fillStyle='#30e890';
-    const hpW = 60+Math.sin(framePhase*0.05)*15;
-    ctx.fillRect(10,6,hpW,8);
-    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1;
-    ctx.strokeRect(10,6,100,8);
-    // HP label
-    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='6px monospace';
-    ctx.fillText('WOOPSIES',12,13);
-  }
-
-  /* ── ANIMATION LOOP ── */
-  let _animId=null, _frame=0, _visible=false;
-  function _animate(){
-    if(!_visible){ _animId=null; return; }
-    _frame++;
-    const canvas = document.getElementById('woopsie-canvas');
-    if(canvas) drawDummy(canvas, _frame);
-    _animId = requestAnimationFrame(_animate);
-  }
-
-  /* ── SPAWN DROPS ── */
-  function spawnDrops(x,y){
-    const drops=['💧','💦','✨','🫧','💜','🩸'];
-    const container=document.getElementById('woopsie-drops');
-    if(!container) return;
-    container.innerHTML='';
-    for(let i=0;i<8;i++){
-      const d=document.createElement('div');
-      d.className='wc-drop';
-      d.textContent=drops[Math.floor(Math.random()*drops.length)];
-      d.style.left=(x-30+Math.random()*100)+'px';
-      d.style.top=(y+60)+'px';
-      d.style.animationDelay=(Math.random()*0.4)+'s';
-      container.appendChild(d);
-    }
-    setTimeout(()=>{if(container) container.innerHTML='';},1600);
-  }
-
-  /* ── SHOW WOOPSIES ── */
-  function showWoopsies(forced){
-    const msg=WOOPSIES[Math.floor(Math.random()*WOOPSIES.length)];
-    const vw=window.innerWidth, vh=window.innerHeight;
-    const x=60+Math.random()*(vw-200);
-    const y=60+Math.random()*(vh-200);
-
-    wrap.style.display='block';
-    const stage=document.getElementById('woopsie-stage');
-    stage.style.left=x+'px';
-    stage.style.top=y+'px';
-    stage.style.animation='wcSlideIn 0.4s cubic-bezier(.17,.67,.35,1.4) both';
-    document.getElementById('woopsie-text').textContent=msg;
-
-    _visible=true; _frame=0;
-    if(!_animId) _animate();
-    spawnDrops(x,y);
-
-    // Scream it
-    if(window.speechSynthesis){
-      const utt=new SpeechSynthesisUtterance(msg.replace(/[^a-zA-Z0-9 !.]/g,''));
-      utt.pitch=1.4+Math.random()*0.8;
-      utt.rate=0.8+Math.random()*0.5;
-      utt.volume=0.8;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utt);
-    }
-
-    setTimeout(()=>{
-      stage.style.animation='wcSlideOut 0.35s ease-in forwards';
-      setTimeout(()=>{
-        wrap.style.display='none';
-        stage.style.animation='';
-        _visible=false;
-      },360);
-    }, forced?2400:1900);
-  }
-
-  // RANDOM IDLE POPS — every 4–14 min
-  function scheduleRandom(){
-    setTimeout(()=>{showWoopsies(false);scheduleRandom();},240000+Math.random()*600000);
-  }
-  scheduleRandom();
-
-  // HOOK into showToast for special moments
-  const _origToast=window.showToast;
-  window.showToast=function(msg){
-    if(_origToast) _origToast(msg);
-    const special=SPECIAL_MSGS.some(s=>typeof msg==='string'&&msg.includes(s.replace(/[✦✓!]/g,'').trim()));
-    if(special||(typeof msg==='string'&&msg.startsWith('✦'))){
-      setTimeout(()=>showWoopsies(true),320);
-    }
-  };
-
-  window.triggerWoopsies=showWoopsies;
-
-  // Secret: tap logo 5× fast
-  let _logoTaps=0,_logoTimer;
-  document.addEventListener('click',function(e){
-    const el=e.target.closest('.nav-logo,.site-logo,.logo,h1');
-    if(!el)return;
-    _logoTaps++;
-    clearTimeout(_logoTimer);
-    if(_logoTaps>=5){_logoTaps=0;showWoopsies(true);}
-    else{_logoTimer=setTimeout(()=>{_logoTaps=0;},1200);}
-  });
-})();
-// ─────────────────────────────────────────────────────────────────────────────
-
 async function loadRealStats(){
   try{
     const r=await fetch('/api/dashboard-stats',{headers:{'X-Auth-Token':token}});
@@ -8916,7 +5939,7 @@ async function loadRealStats(){
       let base=s.active_today;
       setInterval(()=>{base+=Math.floor(Math.random()*3)-1;base=Math.max(s.active_today-3,Math.min(s.active_today+8,base));ac.textContent=base;},4000);
     }
-    const sent=s.sentiment||{};
+    const sent=s.sentiment;
     const mp=sent.moisture_pct||68, gp=sent.growth_pct||54;
     document.getElementById('ins-bar-m').style.width=mp+'%';
     document.getElementById('ins-bar-mb').style.width=(100-mp)+'%';
@@ -9012,194 +6035,19 @@ function openPhotoPage(){
   const gate = document.getElementById('photo-gate');
   const cont = document.getElementById('photo-content');
   if(!gate||!cont) return;
-  const ok = hasPremiumAccess();
-  gate.style.display = ok ? 'none' : 'block';
-  cont.style.display = ok ? 'block' : 'none';
-  if(ok){ paLoadHistory(); }
+  const isPrem = localStorage.getItem('srd_premium')==='1';
+  gate.style.display = isPrem ? 'none' : 'block';
+  cont.style.display = isPrem ? 'block' : 'none';
 }
 function openJournalPage(){
   const gate = document.getElementById('journal-gate');
   const cont = document.getElementById('journal-content');
   if(!gate||!cont) return;
-  const ok = hasPremiumAccess();
-  gate.style.display = ok ? 'none' : 'block';
-  cont.style.display = ok ? 'block' : 'none';
-  if(ok){ loadJournalEntries(); }
+  const isPrem = localStorage.getItem('srd_premium')==='1';
+  gate.style.display = isPrem ? 'none' : 'block';
+  cont.style.display = isPrem ? 'block' : 'none';
 }
-function openSettingsPage(){
-  loadSettingsPage();
-  stRefreshPushStatus();
-}
-
-async function loadSettingsPage(){
-  try{
-    const r = await fetch('/api/settings',{headers:{'X-Auth-Token':token}});
-    const d = await r.json();
-    if(d.error) return;
-    const nameEl = document.getElementById('st-name');
-    const emailEl= document.getElementById('st-email');
-    const phoneEl= document.getElementById('st-phone');
-    const addrEl = document.getElementById('st-address');
-    const cityEl = document.getElementById('st-city');
-    if(nameEl) nameEl.value  = d.name || '';
-    if(emailEl) emailEl.value = d.email || '';
-    if(phoneEl) phoneEl.value = d.phone || '';
-    if(addrEl) addrEl.value = d.address || '';
-    if(cityEl) cityEl.value = d.city || '';
-
-    const planEl = document.getElementById('st-plan-name');
-    const nextEl = document.getElementById('st-next-payment');
-    const manEl  = document.getElementById('st-manage-btn');
-    if(planEl) planEl.textContent = hasPremiumAccess() ? 'Premium Plan' : 'Free Plan';
-    if(nextEl) nextEl.textContent = hasPremiumAccess() ? 'Active subscription' : '—';
-    if(manEl){
-      manEl.textContent = hasPremiumAccess() ? 'Manage Subscription →' : 'Upgrade to Premium →';
-      manEl.href = 'https://supportrd.com/products/hair-advisor-premium';
-    }
-  }catch(e){}
-}
-
-function stShowMsg(id,msg){
-  const el=document.getElementById(id);
-  if(!el) return;
-  el.textContent = msg;
-  el.style.display='block';
-  setTimeout(()=>{ el.style.display='none'; }, 2400);
-}
-
-function stShowErr(id,msg){
-  const el=document.getElementById(id);
-  if(!el) return;
-  el.textContent = msg;
-  el.style.display='block';
-  setTimeout(()=>{ el.style.display='none'; }, 2800);
-}
-
-async function saveProfileSettings(){
-  const name = (document.getElementById('st-name')?.value||'').trim();
-  const email= (document.getElementById('st-email')?.value||'').trim();
-  const phone= (document.getElementById('st-phone')?.value||'').trim();
-  const address=(document.getElementById('st-address')?.value||'').trim();
-  const city= (document.getElementById('st-city')?.value||'').trim();
-  try{
-    const r = await fetch('/api/settings',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Auth-Token':token},
-      body: JSON.stringify({name,email,phone,address,city})
-    });
-    const d = await r.json();
-    if(d.error){ stShowErr('st-profile-err', d.error); return; }
-    stShowMsg('st-profile-msg','✓ Profile updated');
-    // Sync nav + local profile cache
-    const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
-    if(name) u.name = name;
-    if(email) u.email = email;
-    localStorage.setItem('srd_user', JSON.stringify(u));
-    const navName = document.getElementById('nav-name');
-    if(navName) navName.textContent = u.name || u.email || '';
-  }catch(e){ stShowErr('st-profile-err','Save failed — try again'); }
-}
-
-async function savePasswordSettings(){
-  const p1 = (document.getElementById('st-new-pass')?.value||'').trim();
-  const p2 = (document.getElementById('st-confirm-pass')?.value||'').trim();
-  if(p1.length < 6){ stShowErr('st-pass-err','Password must be at least 6 characters'); return; }
-  if(p1 !== p2){ stShowErr('st-pass-err','Passwords do not match'); return; }
-  try{
-    const r = await fetch('/api/auth/change-password',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Auth-Token':token},
-      body: JSON.stringify({new_password:p1})
-    });
-    const d = await r.json();
-    if(d.error){ stShowErr('st-pass-err', d.error); return; }
-    stShowMsg('st-pass-msg','✓ Password updated');
-    document.getElementById('st-new-pass').value='';
-    document.getElementById('st-confirm-pass').value='';
-  }catch(e){ stShowErr('st-pass-err','Update failed — try again'); }
-}
-
-async function stRefreshPushStatus(){
-  const label = document.getElementById('st-notif-val');
-  const btn = document.getElementById('st-push-btn');
-  if(!label||!btn) return;
-  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
-    label.textContent='Not supported on this browser.';
-    btn.disabled=true;
-    return;
-  }
-  const perm = Notification.permission;
-  if(perm==='denied'){
-    label.textContent='Blocked in browser settings.';
-    btn.disabled=true;
-    return;
-  }
-  try{
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if(sub && perm==='granted'){
-      label.textContent='Enabled — daily reminders on.';
-      btn.textContent='🔕 Disable Push Notifications';
-      btn.dataset.state='enabled';
-    } else {
-      label.textContent='Not enabled';
-      btn.textContent='🔔 Enable Push Notifications';
-      btn.dataset.state='disabled';
-    }
-  }catch(e){
-    label.textContent='Could not check status';
-  }
-}
-
-async function stEnablePush(){
-  try{
-    if(!_vapidKey){
-      const kr=await fetch('/api/push/vapid-public-key');
-      const kd=await kr.json();
-      _vapidKey=kd.key;
-    }
-    if(!_vapidKey){ stShowErr('st-pass-err','Push not configured'); return; }
-    const perm=await Notification.requestPermission();
-    if(perm!=='granted'){ return; }
-    const reg=await navigator.serviceWorker.ready;
-    const sub=await reg.pushManager.subscribe({
-      userVisibleOnly:true,
-      applicationServerKey:urlBase64ToUint8Array(_vapidKey)
-    });
-    const subJson=sub.toJSON();
-    await fetch('/api/push/subscribe',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Auth-Token':token},
-      body:JSON.stringify({
-        endpoint:subJson.endpoint,
-        p256dh:subJson.keys.p256dh,
-        auth:subJson.keys.auth
-      })
-    });
-  }catch(e){}
-}
-
-async function stDisablePush(){
-  try{
-    const reg=await navigator.serviceWorker.ready;
-    const sub=await reg.pushManager.getSubscription();
-    if(sub){
-      await fetch('/api/push/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({endpoint:sub.endpoint})});
-      await sub.unsubscribe();
-    }
-  }catch(e){}
-}
-
-async function stTogglePush(){
-  const btn = document.getElementById('st-push-btn');
-  if(!btn) return;
-  if(btn.dataset.state==='enabled'){
-    await stDisablePush();
-  } else {
-    await stEnablePush();
-  }
-  stRefreshPushStatus();
-}
+function openSettingsPage(){/* settings loads itself */}
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -9436,213 +6284,154 @@ function occInit(){
 
 
 // ═══════════════════════════════════════════════════════════════
-// ✦ ARIA JOURNEY PAGE v2 — accordion history + smaller orbs
+// ✦ ARIA JOURNEY PAGE
 // ═══════════════════════════════════════════════════════════════
-
 const DEPTH_LEVELS = [
-  { n:'Discovery',                   color:'#f0a090', rgb:'240,160,144', icon:'🌱',
+  { n:'Discovery',                   color:'var(--rose)',  rgb:'240,160,144', icon:'🌱',
     msg:'Aria is getting to know you. She knows your name, your first products, and the main issue you came here to fix.'},
-  { n:'Use Cases & Upgrades',        color:'#e0b050', rgb:'224,176,80',  icon:'🔬',
-    msg:"Aria is inside your routine. She knows exactly how and when to use each product — and is watching your results to tell you what to upgrade next."},
-  { n:'Inner Circle',                color:'#60a8ff', rgb:'96,168,255',  icon:'💫',
-    msg:"This goes beyond your hair. Aria knows who's in your life, who notices, and is helping you bring SupportRD to the people you care about."},
-  { n:'Professional — Making Money', color:'#30e890', rgb:'48,232,144',  icon:'💎',
-    msg:"You've become the story. People ask what you use. Aria is your business partner now — and SupportRD wants to talk to you directly."},
+  { n:'Use Cases & Upgrades',        color:'var(--gold)',  rgb:'224,176,80',  icon:'🔬',
+    msg:'Aria is inside your routine now. She knows exactly how and when to use each product — and is watching your results to tell you what to upgrade next.'},
+  { n:'Inner Circle',                color:'var(--blue)',  rgb:'96,168,255',  icon:'💫',
+    msg:'This goes beyond your hair. Aria knows who\'s in your life, who notices, and is helping you bring SupportRD to the people you care about.'},
+  { n:'Professional — Making Money', color:'var(--green)', rgb:'48,232,144',  icon:'💎',
+    msg:'You have become the story. People ask what you use. Aria is your business partner now — and SupportRD wants to talk to you directly.'},
 ];
 
+// Keywords Aria uses at each depth that reveal which level the conversation has reached
 const DEPTH_SIGNALS = [
-  ['how to apply','apply it to','leave it on','morning routine','evening routine',
+  // Level 1 → 2: product HOW-TOs, timing, application technique, week-by-week results
+  ['how to apply','apply it to','leave it on','rinse after','morning routine','evening routine',
    'how often','twice a week','every wash','week one','first week','second week','next week',
    'you should see','results in','noticeable','improvement','upgrade','switch to'],
+  // Level 2 → 3: family, partner, friends, others asking, recommending, sharing
   ['your partner','your boyfriend','your girlfriend','your husband','your wife','your mom',
    'your sister','your brother','your friend','someone asked','people notice','they asked',
    'tell them about','recommend','share this','for her','for him','for them','family'],
+  // Level 3 → 4: making money, selling, ambassador, income, professional, business
   ['making money','earn','income','sell','ambassador','referral','commission',
    'your business','your clients','salon','stylist','professional','they pay',
    'people buy','turned it into','monetize','brand','partner with'],
 ];
 
+// Stored override (for backtrack)
 let _ajForcedLevel = null;
-let _aj2OpenIdx = -1;
 
 async function openJourneyPage(){
   _ajForcedLevel = JSON.parse(localStorage.getItem('srd_aj_level')||'null');
   await renderJourneyPage();
 }
 
-function aj2Toggle(idx){
-  const acc = document.getElementById('aj2-acc-'+idx);
-  const head = document.querySelector('#aj2-card-'+idx+' .aj2-card-head');
-  if(!acc) return;
-  const isOpen = acc.classList.contains('open');
-  // Close all
-  for(let i=0;i<4;i++){
-    const a=document.getElementById('aj2-acc-'+i);
-    const h=document.querySelector('#aj2-card-'+i+' .aj2-card-head');
-    if(a){ a.classList.remove('open'); }
-    if(h){ h.classList.remove('open'); }
-  }
-  // Open clicked if it was closed
-  if(!isOpen && acc){
-    acc.classList.add('open');
-    if(head) head.classList.add('open');
-    _aj2OpenIdx = idx;
-  } else {
-    _aj2OpenIdx = -1;
-  }
-}
-
 async function renderJourneyPage(){
-  // 1. Load chat history
+  // ── 1. Load full chat history ──────────────────────────────────────────────
   let sessions = [];
   try{
     const r = await fetch('/api/history',{headers:{'X-Auth-Token':token}});
     const d = await r.json();
     sessions = d.history || [];
-  }catch(e){}
+  }catch(e){ console.warn('Journey load:', e); }
 
-  // 2. Detect level
-  const ariaText = sessions.filter(s=>s.role==='assistant').map(s=>(s.content||'').toLowerCase()).join(' ');
-  let detectedLevel = 0;
+  // ── 2. Determine depth from Aria's actual RESPONSES (AI signals) ──────────
+  // Read all of Aria's messages and check which signal tier she's reached
+  const ariaText = sessions
+    .filter(s=>s.role==='assistant')
+    .map(s=>(s.content||'').toLowerCase())
+    .join(' ');
+
+  let detectedLevel = 0; // 0-indexed
   if(_ajForcedLevel !== null){
-    detectedLevel = _ajForcedLevel;
+    detectedLevel = _ajForcedLevel; // user override via backtrack
   } else {
+    // Check from highest to lowest — stay at the highest matched tier
     for(let i=DEPTH_SIGNALS.length-1;i>=0;i--){
-      if(DEPTH_SIGNALS[i].some(kw=>ariaText.includes(kw))){ detectedLevel=i+1; break; }
+      if(DEPTH_SIGNALS[i].some(kw => ariaText.includes(kw))){
+        detectedLevel = i+1; // i+1 because signals[0] triggers level 1→2 etc
+        break;
+      }
     }
   }
-  detectedLevel = Math.max(0,Math.min(3,detectedLevel));
+  // Cap to valid range
+  detectedLevel = Math.max(0, Math.min(3, detectedLevel));
+
   const depth = DEPTH_LEVELS[detectedLevel];
 
-  // 3. Update summary card
-  const titleEl = document.getElementById('aj2-title');
-  const msgEl   = document.getElementById('aj2-msg');
-  const nextEl  = document.getElementById('aj2-next');
-  if(titleEl) titleEl.textContent = 'Level '+(detectedLevel+1)+' of 4 — '+depth.n;
-  if(msgEl)   msgEl.textContent   = depth.msg;
-  if(nextEl){
-    if(detectedLevel < 3){
-      const next = DEPTH_LEVELS[detectedLevel+1];
-      nextEl.innerHTML = '✦ <strong>Next: '+next.n+'</strong> — Keep talking with Aria. As your conversations go deeper, she naturally moves into the next level.';
-    } else {
-      nextEl.innerHTML = '✦ <strong style="color:var(--green);">You\'ve reached the top.</strong> Contact SupportRD directly — you\'ve earned a personal conversation.';
-    }
-  }
+  // ── 3. Render all 4 orbs ──────────────────────────────────────────────────
+  const SPINE_POSITIONS = [0, 33, 66, 100]; // % of spine filled
+  const spineFill = document.getElementById('aj-spine-fill');
 
-  // 4. Render orbs + cards
   for(let i=0;i<4;i++){
-    const orb  = document.getElementById('aj2-orb-'+i);
-    const card = document.getElementById('aj2-card-'+i);
-    const badge= document.getElementById('aj2-badge-'+i);
-    const cta  = document.getElementById('aj2-cta-3');
-    if(!orb||!card) continue;
+    const orb   = document.getElementById('aj-orb-'+(i+1));
+    const tbody = document.getElementById('aj-tbody-'+(i+1));
+    const verd  = document.getElementById('aj-v'+(i+1));
+    const bt    = document.getElementById('aj-bt'+(i+1));
+    if(!orb||!tbody) continue;
 
-    orb.classList.remove('locked','unlocked','current');
-    card.classList.remove('locked','unlocked','current');
-    if(badge) badge.className='aj2-verdict-badge';
+    // Remove all state classes
+    orb.classList.remove('active','current','locked');
+    tbody.classList.remove('active','current','locked');
+    // Set CSS var for this orb's color (for active/current CSS)
+    tbody.style.setProperty('--orb-rgb', DEPTH_LEVELS[i].rgb);
 
     if(i < detectedLevel){
-      orb.classList.add('unlocked');
-      card.classList.add('unlocked');
-      if(badge){ badge.classList.add('unlocked'); badge.textContent='✓ Unlocked'; }
+      // Passed level — fully lit
+      orb.classList.add('active');
+      tbody.classList.add('active');
+      if(verd) verd.textContent = '✓ Aria and you have been here.';
+      if(bt){ bt.style.display='block'; }
     } else if(i === detectedLevel){
-      orb.classList.add('unlocked','current');
-      card.classList.add('current');
-      if(badge){ badge.classList.add('current'); badge.textContent='▶ You are here'; }
-      if(cta && i===3) cta.style.display='block';
+      // CURRENT — brightest glow
+      orb.classList.add('active','current');
+      tbody.classList.add('active','current');
+      if(verd) verd.textContent = '▶ This is where you and Aria are right now.';
+      if(bt){ bt.style.display = i > 0 ? 'block' : 'none'; } // no backtrack on level 1
     } else {
+      // Not yet reached
       orb.classList.add('locked');
-      card.classList.add('locked');
-      if(badge){ badge.classList.add('locked'); badge.textContent=i===3?'🔒 The top level':'🔒 Keep going'; }
+      tbody.classList.add('locked');
+      if(verd) verd.textContent = '';
+      if(bt){ bt.style.display='none'; }
     }
   }
 
-  // 5. Populate history accordions
-  // Group sessions by date → assign to level bucket based on cumulative aria signal
-  const buckets = {0:[],1:[],2:[],3:[]};
-  const msgs_by_date = {};
-  sessions.forEach(msg=>{
-    const d=(msg.ts||'').slice(0,10)||'unknown';
-    if(!msgs_by_date[d]) msgs_by_date[d]=[];
-    msgs_by_date[d].push(msg);
-  });
-  let runningLevel = 0;
-  Object.keys(msgs_by_date).sort().forEach(date=>{
-    const dayMsgs = msgs_by_date[date];
-    const dayAriaText = dayMsgs.filter(m=>m.role==='assistant').map(m=>(m.content||'').toLowerCase()).join(' ');
-    // Advance level if signals present
-    for(let i=DEPTH_SIGNALS.length-1;i>=0;i--){
-      if(DEPTH_SIGNALS[i].some(kw=>dayAriaText.includes(kw))){ runningLevel=Math.max(runningLevel,i+1); break; }
-    }
-    if(!buckets[runningLevel]) buckets[runningLevel]=[];
-    buckets[runningLevel].push({date, msgs: dayMsgs});
-  });
-
-  for(let level=0;level<4;level++){
-    const histEl = document.getElementById('aj2-hist-'+level);
-    if(!histEl) continue;
-    const bucket = buckets[level]||[];
-    if(!bucket.length){
-      histEl.innerHTML = '<div class="aj2-history-label">Conversations at this level</div><div class="aj2-no-sessions">'+(level > detectedLevel ? 'Not reached yet.' : 'Start chatting with Aria to build your journey.')+'</div>';
-      continue;
-    }
-    let html = '<div class="aj2-history-label">Conversations at this level ('+bucket.length+')</div>';
-    bucket.slice(-6).reverse().forEach(({date, msgs})=>{
-      const userMsgs = msgs.filter(m=>m.role==='user');
-      const ariaMsgs = msgs.filter(m=>m.role==='assistant');
-      const preview  = ariaMsgs.length ? (ariaMsgs[0].content||'').slice(0,100)+'…' : userMsgs.length ? (userMsgs[0].content||'').slice(0,80)+'…' : 'Session';
-      let fmtDate;
-      try{ fmtDate=new Date(date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }catch(e){ fmtDate=date; }
-      html += `<div class="aj2-session"><div class="aj2-session-date">${fmtDate} · ${userMsgs.length} messages</div><div class="aj2-session-preview">${preview}</div></div>`;
+  // Animate spine fill height
+  const spineEl = document.getElementById('aj-spine');
+  if(spineEl && spineFill){
+    // Calculate total spine height after render
+    requestAnimationFrame(()=>{
+      const totalH = document.getElementById('aj-milestones').offsetHeight - 80;
+      if(spineEl) spineEl.style.height = totalH+'px';
+      const fillPct = detectedLevel === 0 ? 0 : (detectedLevel / 3);
+      if(spineFill) spineFill.style.height = Math.round(totalH * fillPct)+'px';
     });
-    histEl.innerHTML = html;
   }
 
-  // Auto-open the current level accordion
-  if(_aj2OpenIdx < 0){
-    aj2Toggle(detectedLevel);
+  // ── 4. Level 4 CTA ────────────────────────────────────────────────────────
+  const cta = document.getElementById('aj-level4-cta');
+  if(cta) cta.style.display = detectedLevel === 3 ? 'block' : 'none';
+
+  // ── 5. Current depth summary card ─────────────────────────────────────────
+  const dtitle = document.getElementById('aj-depth-title');
+  const dmsg   = document.getElementById('aj-depth-msg');
+  const dnext  = document.getElementById('aj-next-label');
+  const dbadge = document.getElementById('aj-depth-badge');
+
+  if(dtitle) dtitle.textContent = 'Level '+(detectedLevel+1)+' — '+depth.n;
+  if(dmsg)   dmsg.textContent   = depth.msg;
+
+  if(dnext){
+    if(detectedLevel < 3){
+      const next = DEPTH_LEVELS[detectedLevel+1];
+      dnext.innerHTML = '✦ <strong>Next level — '+next.n+':</strong> Keep talking with Aria. As your conversations go deeper, she\'ll naturally move into the next chapter with you.';
+    } else {
+      dnext.innerHTML = '✦ You\'ve reached the final level. <strong style="color:var(--green);">Contact SupportRD directly</strong> — you\'ve earned a personal conversation.';
+    }
   }
-}
 
-// ── 5AM ADMIN CORNER TOAST ────────────────────────────────────────
-function showAdminCornerToast(msg){
-  const el = document.getElementById('admin-corner-toast');
-  const msgEl = document.getElementById('admin-corner-msg');
-  if(!el||!msgEl) return;
-  msgEl.textContent = msg;
-  el.style.display = 'block';
-  // Auto-hide after 30 seconds
-  setTimeout(()=>{ if(el) el.style.display='none'; }, 30000);
-}
-
-async function triggerManualRefresh(){
-  document.getElementById('admin-corner-toast').style.display='none';
-  showToast('🌅 Refreshing app data…');
-  try{
-    const r = await fetch('/api/admin/manual-refresh',{headers:{'X-Auth-Token':token,'X-Admin-Key':localStorage.getItem('srd_admin_key')||''}});
-    const d = await r.json();
-    if(d.ok) showToast('✓ App refreshed — '+d.message);
-    else showToast('Refresh: '+d.error);
-  }catch(e){ showToast('Refresh failed'); }
-}
-
-function checkAdminRefreshNotice(){
-  if(localStorage.getItem('srd_admin')!=='1') return;
-  const lastRefresh = localStorage.getItem('srd_last_refresh_notice');
-  const today = new Date().toDateString();
-  if(lastRefresh === today) return; // already shown today
-  // Check if it's near 5am local time or just show once per day
-  const hour = new Date().getHours();
-  const isAdminSession = localStorage.getItem('srd_admin')==='1';
-  if(isAdminSession){
-    localStorage.setItem('srd_last_refresh_notice', today);
-    const msgs = [
-      'Daily 5AM refresh complete. Blog posts regenerated, AI topics updated, analytics reset for the new day.',
-      'App is running on today's fresh data. All systems operational.',
-      'Good morning! SupportRD refreshed at 5AM — new content ready.',
-    ];
-    showAdminCornerToast(msgs[Math.floor(Math.random()*msgs.length)]);
+  if(dbadge){
+    dbadge.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.08em;background:rgba('+depth.rgb+',0.12);border:1px solid rgba('+depth.rgb+',0.35);color:'+depth.color+';">'+depth.icon+' Level '+(detectedLevel+1)+' of 4</div>';
   }
+
+  // ── 6. Session timeline ───────────────────────────────────────────────────
+  ajRenderTimeline(sessions, detectedLevel);
 }
 
 function ajForceLevel(levelIdx){
@@ -9731,8 +6520,6 @@ function _showDriveChatMode(){
   document.getElementById('drive-chat-mode').style.display='flex';
   const gps = document.getElementById('drive-gps-mode');
   gps.style.display='none';
-  // Stop safety refresh when leaving GPS mode
-  clStopSafetyRefresh();
 }
 
 function _showDriveGpsMode(){
@@ -9744,134 +6531,6 @@ function _showDriveGpsMode(){
   gps.style.overflow='hidden';
   // Init map if first time
   if(!_clMapReady) clInitMap();
-  // ✦ SAFETY: start instant GPS refresh when driving begins
-  clStartSafetyRefresh();
-}
-
-// ── SAFETY GPS REFRESH ───────────────────────────────────────────
-// When you start driving with Aria, GPS upgrades to instant refresh mode.
-// Uses the same pattern as Garmin/Waze — tighter maximumAge + forced
-// getCurrentPosition burst every 3 seconds for the first 30 seconds,
-// then settles into the normal 2s watch cycle.
-// Shows a brief "GPS locked 🛰" toast so the driver knows it's active.
-let _clSafetyInterval = null;
-let _clSafetyActive   = false;
-
-function clStartSafetyRefresh(){
-  if(_clSafetyActive) return;
-  _clSafetyActive = true;
-
-  // Show safety lock banner
-  clShowSafetyBanner();
-
-  // Step 1 — Burst mode: force immediate position fixes every 3 seconds
-  // for the first 30 seconds (10 rapid fixes). This kills any stale cache.
-  let burstCount = 0;
-  const burst = setInterval(()=>{
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        clHandlePosition(pos);
-        clUpdateDirections();
-        // Update satellite HUD during burst
-        const hud = document.getElementById('cl-hud-sat');
-        if(hud) hud.textContent = '🛰 ' + _clSatCount + ' locked · REFRESH';
-      },
-      err => {},
-      {enableHighAccuracy:true, maximumAge:0, timeout:4000}
-      // maximumAge:0 forces the browser to get a FRESH fix every call
-      // — no cached positions allowed during driving
-    );
-    burstCount++;
-    if(burstCount >= 10){
-      clearInterval(burst);
-      clSwitchToNormalRefresh();
-    }
-  }, 3000);
-
-  _clSafetyInterval = burst;
-}
-
-function clSwitchToNormalRefresh(){
-  // After burst, upgrade the watchPosition to tighter settings
-  // Clear the old watch and restart with maximumAge:0 (always fresh)
-  if(_clWatchId !== null){
-    navigator.geolocation.clearWatch(_clWatchId);
-  }
-  _clWatchId = navigator.geolocation.watchPosition(
-    pos => {
-      clHandlePosition(pos);
-      clCheckProximity();
-      clUpdateDirections();
-    },
-    err => {},
-    {enableHighAccuracy:true, maximumAge:0, timeout:6000}
-    // maximumAge:0 — never use a cached position while actively driving
-  );
-
-  const hud = document.getElementById('cl-hud-sat');
-  if(hud) hud.textContent = '🛰 ' + _clSatCount + ' · live';
-}
-
-function clStopSafetyRefresh(){
-  _clSafetyActive = false;
-  if(_clSafetyInterval){ clearInterval(_clSafetyInterval); _clSafetyInterval = null; }
-  // Revert watch to normal battery-friendly settings
-  if(_clWatchId !== null){ navigator.geolocation.clearWatch(_clWatchId); }
-  _clWatchId = navigator.geolocation.watchPosition(
-    pos => { clHandlePosition(pos); clCheckProximity(); clUpdateDirections(); },
-    err => {},
-    {enableHighAccuracy:true, maximumAge:2000, timeout:10000}
-  );
-}
-
-function clShowSafetyBanner(){
-  const wrap = document.getElementById('cl-map-wrap');
-  if(!wrap) return;
-  const existing = document.getElementById('cl-safety-banner');
-  if(existing) existing.remove();
-
-  const banner = document.createElement('div');
-  banner.id = 'cl-safety-banner';
-  banner.innerHTML = `
-    <span style="font-size:14px;">🛰</span>
-    <div>
-      <div style="font-weight:800;font-size:11px;letter-spacing:0.08em;">GPS SAFETY LOCK</div>
-      <div style="font-size:10px;opacity:0.8;">Instant refresh active — drive safe 🚗</div>
-    </div>
-    <div id="cl-safety-dots" style="display:flex;gap:3px;align-items:center;margin-left:auto;">
-      <div class="sdot"></div><div class="sdot"></div><div class="sdot"></div>
-    </div>`;
-  banner.style.cssText = `
-    position:absolute;bottom:80px;left:50%;transform:translateX(-50%);
-    background:rgba(48,232,144,0.92);color:#0a1a0a;
-    border-radius:20px;padding:10px 18px;z-index:40;
-    display:flex;align-items:center;gap:10px;
-    font-family:'Space Grotesk',sans-serif;
-    box-shadow:0 4px 20px rgba(48,232,144,0.4);
-    animation:clSafetyIn 0.4s cubic-bezier(.2,0,.2,1);
-    min-width:220px;`;
-
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes clSafetyIn{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
-    @keyframes clSafetyOut{from{opacity:1;transform:translateX(-50%) translateY(0);}to{opacity:0;transform:translateX(-50%) translateY(16px);}}
-    .sdot{width:5px;height:5px;border-radius:50%;background:#0a1a0a;animation:sdotPulse 1s ease-in-out infinite;}
-    .sdot:nth-child(2){animation-delay:0.2s;}
-    .sdot:nth-child(3){animation-delay:0.4s;}
-    @keyframes sdotPulse{0%,100%{opacity:0.3;transform:scale(0.8);}50%{opacity:1;transform:scale(1.2);}}`;
-  document.head.appendChild(style);
-  wrap.appendChild(banner);
-
-  // Fade out after 6 seconds, stays as small HUD dot after
-  setTimeout(()=>{
-    banner.style.animation = 'clSafetyOut 0.4s ease-in forwards';
-    setTimeout(()=>{
-      banner.style.minWidth='40px';
-      banner.style.padding='8px 10px';
-      banner.innerHTML='<span style="font-size:12px;">🛰</span><div style="width:6px;height:6px;border-radius:50%;background:#0a1a0a;animation:sdotPulse 1s infinite;"></div>';
-      banner.style.animation='';
-    }, 400);
-  }, 6000);
 }
 
 // ── Chat functions ───────────────────────────────────────────────
@@ -9952,48 +6611,22 @@ function driveSpeak(text){
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ✦ CANDY LAND GPS — 2026 REAL SYSTEM UPGRADE
-// ═══════════════════════════════════════════════════════════════
-// Built to match physical 2026 GPS hardware feature lineup:
-// • Multi-constellation satellite lock display (GPS+GLONASS+Galileo+BeiDou)
-// • Advanced lane guidance with junction view
-// • Real-time speed limit + camera alerts
-// • Auto day/night map mode
-// • ETA calculation with traffic-aware rerouting
-// • Offline tile cache fallback
-// • 3D perspective road view toggle
-// • HUD strip with speed / bearing / signal
-// • Smart proximity re-narration (Garmin Real Directions style)
+// ✦ CANDY LAND GPS
 // ═══════════════════════════════════════════════════════════════
 
-// ── STATE ────────────────────────────────────────────────────────
-let _clMapReady    = false;
-let _clUserLat     = null;
-let _clUserLng     = null;
-let _clDestLat     = null;
-let _clDestLng     = null;
-let _clDestName    = '';
-let _clDestType    = '';
-let _clPlaces      = [];
-let _clLandmarks   = [];
-let _clWatchId     = null;
-let _clAnimFrame   = null;
-let _clTiles       = [];
+let _clMapReady   = false;
+let _clUserLat    = null;
+let _clUserLng    = null;
+let _clDestLat    = null;
+let _clDestLng    = null;
+let _clDestName   = '';
+let _clDestType   = '';
+let _clPlaces     = [];
+let _clLandmarks  = [];
+let _clWatchId    = null;
+let _clAnimFrame  = null;
+let _clTiles      = [];   // candy path tiles
 let _clCurrentNarration = '';
-let _clStars       = null;
-let _clPathAnim    = 0;
-let _cl3DMode      = false;           // 3D perspective toggle
-let _clNightMode   = false;           // auto day/night
-let _clSpeedKmh    = 0;               // estimated speed from GPS deltas
-let _clHeading     = 0;               // compass heading degrees
-let _clSatCount    = 0;               // simulated satellite lock count
-let _clLastPos     = null;            // previous position for speed calc
-let _clLastTime    = null;
-let _clEtaMinutes  = null;
-let _clRerouting   = false;
-let _clSpeedLimit  = 50;              // default — updated by OSM query
-let _clOfflineTiles = {};             // tile cache keyed by "lat_lng_z"
-let _clJunctionMode = false;          // advanced junction view active
 
 // Candy tile colors — warm candy palette
 const CL_TILE_COLORS = [
@@ -10012,27 +6645,22 @@ const CL_SEARCH_TYPES = {
 
 // Landmark emoji by category
 const CL_LANDMARK_EMOJI = {
-  coding:'💻', hair:'💆', park:'🌳',
+  coding: '💻', hair: '💆', park: '🌳',
   restaurant:'🍕', coffee:'☕', school:'🏫',
   library:'📚', hospital:'🏥', gas:'⛽',
   shopping:'🛍', church:'⛪', museum:'🏛'
 };
 
-// ── INIT ─────────────────────────────────────────────────────────
 async function clInitMap(){
   _clMapReady = true;
   const canvas = document.getElementById('cl-canvas');
   if(!canvas) return;
 
-  // Auto detect day/night from system time
-  const hr = new Date().getHours();
-  _clNightMode = (hr < 7 || hr > 20);
-
   // Fit canvas to container
   const wrap = document.getElementById('cl-map-wrap');
   const resize = ()=>{
-    canvas.width  = wrap.offsetWidth  * (window.devicePixelRatio||1);
-    canvas.height = wrap.offsetHeight * (window.devicePixelRatio||1);
+    canvas.width  = wrap.offsetWidth  * window.devicePixelRatio;
+    canvas.height = wrap.offsetHeight * window.devicePixelRatio;
     canvas.style.width  = wrap.offsetWidth+'px';
     canvas.style.height = wrap.offsetHeight+'px';
     clDrawMap();
@@ -10040,432 +6668,153 @@ async function clInitMap(){
   window.addEventListener('resize', resize);
   resize();
 
-  // Inject HUD overlay into map wrap
-  clInjectHUD();
-
+  // Start watching user position
   clStartGPS();
-  clSetNarration('GPS initializing… acquiring satellite lock 🛰');
-  clSimulateSatelliteLock();
+  clSetNarration('Welcome to Adventure GPS! 🍬 I\'m Aria, your co-pilot. Pick a destination and let\'s go!');
 }
 
-// ── SATELLITE LOCK SIMULATION (matches physical GPS UX) ─────────
-function clSimulateSatelliteLock(){
-  // Physical GPS units show acquiring → locked with count
-  const hud = document.getElementById('cl-hud-sat');
-  let count = 0;
-  const interval = setInterval(()=>{
-    count += Math.floor(Math.random()*3)+1;
-    if(count >= 8){ count = 8 + Math.floor(Math.random()*4); clearInterval(interval); }
-    _clSatCount = count;
-    if(hud) hud.textContent = '🛰 '+count+(count<6?' (acquiring)':' locked');
-  }, 400);
-}
-
-// ── HUD STRIP INJECTION — GARMIN-STYLE ──────────────────────────
-function clInjectHUD(){
-  const wrap = document.getElementById('cl-map-wrap');
-  if(!wrap || document.getElementById('cl-hud')) return;
-
-  // ── TOP HUD STRIP ─────────────────────────────────────────────
-  const hud = document.createElement('div');
-  hud.id = 'cl-hud';
-  hud.innerHTML = `
-    <div class="cl-hud-cell" id="cl-hud-speed">
-      <div class="cl-hud-val" id="cl-hud-speed-val">0</div>
-      <div class="cl-hud-label">km/h</div>
-    </div>
-    <div class="cl-hud-cell" id="cl-hud-limit">
-      <div class="cl-hud-limit-circle" id="cl-hud-limit-val">${_clSpeedLimit}</div>
-      <div class="cl-hud-label">limit</div>
-    </div>
-    <div class="cl-hud-cell" id="cl-hud-eta">
-      <div class="cl-hud-val" id="cl-hud-eta-val">--</div>
-      <div class="cl-hud-label">ETA</div>
-    </div>
-    <div class="cl-hud-cell cl-hud-sat-cell" id="cl-hud-sat-cell">
-      <div id="cl-hud-sat-display">
-        <div class="cl-sat-row" id="cl-sat-gps"><span class="cl-sat-dot"></span><span class="cl-sat-lbl">GPS</span><span class="cl-sat-count" id="cl-sc-gps">0</span></div>
-        <div class="cl-sat-row" id="cl-sat-glo"><span class="cl-sat-dot glo"></span><span class="cl-sat-lbl">GLO</span><span class="cl-sat-count" id="cl-sc-glo">0</span></div>
-        <div class="cl-sat-row" id="cl-sat-gal"><span class="cl-sat-dot gal"></span><span class="cl-sat-lbl">GAL</span><span class="cl-sat-count" id="cl-sc-gal">0</span></div>
-        <div class="cl-sat-row" id="cl-sat-bei"><span class="cl-sat-dot bei"></span><span class="cl-sat-lbl">BDS</span><span class="cl-sat-count" id="cl-sc-bei">0</span></div>
-      </div>
-    </div>
-    <div class="cl-hud-cell">
-      <div id="cl-hud-mode-btn" onclick="clToggle3D()" class="cl-hud-toggle-btn" id="cl-3d-btn">2D</div>
-      <div id="cl-hud-night-btn" onclick="clToggleNight()" class="cl-hud-toggle-btn" style="margin-top:3px;">${_clNightMode ? '🌙' : '☀️'}</div>
-    </div>`;
-  hud.style.cssText = 'position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;gap:6px;padding:6px 10px;background:linear-gradient(180deg,rgba(0,0,0,0.78) 0%,transparent 100%);pointer-events:none;';
-  hud.querySelectorAll('[onclick]').forEach(el=>el.style.pointerEvents='auto');
-  wrap.appendChild(hud);
-
-  // ── SCHOOL ZONE ALERT (shows/hides dynamically) ───────────────
-  const schoolAlert = document.createElement('div');
-  schoolAlert.id = 'cl-school-alert';
-  schoolAlert.innerHTML = '🏫 SCHOOL ZONE — Slow Down';
-  schoolAlert.style.cssText = 'display:none;position:absolute;top:52px;left:50%;transform:translateX(-50%);background:rgba(255,200,0,0.95);color:#000;font-weight:900;font-size:12px;padding:7px 18px;border-radius:20px;z-index:30;letter-spacing:0.06em;white-space:nowrap;box-shadow:0 2px 16px rgba(255,200,0,0.5);';
-  wrap.appendChild(schoolAlert);
-
-  const style = document.createElement('style');
-  style.textContent = `
-    .cl-hud-cell{display:flex;flex-direction:column;align-items:center;min-width:38px;}
-    .cl-hud-val{font-size:18px;font-weight:900;color:#fff;font-family:'DM Mono',monospace;line-height:1;}
-    .cl-hud-label{font-size:7px;color:rgba(255,255,255,0.45);letter-spacing:0.12em;text-transform:uppercase;margin-top:2px;}
-    .cl-hud-limit-circle{width:30px;height:30px;border-radius:50%;border:2.5px solid #ff9944;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#ff9944;background:rgba(255,153,68,0.1);font-family:'DM Mono',monospace;transition:border-color 0.3s,color 0.3s;}
-    .cl-hud-limit-circle.speeding{border-color:#ff4444!important;color:#ff4444!important;background:rgba(255,68,68,0.15)!important;animation:clLimitPulse 0.5s ease-in-out infinite alternate;}
-    @keyframes clLimitPulse{0%{opacity:1;}100%{opacity:0.5;}}
-    .cl-hud-sat-cell{min-width:52px;}
-    .cl-sat-row{display:flex;align-items:center;gap:3px;margin-bottom:1px;}
-    .cl-sat-dot{width:6px;height:6px;border-radius:50%;background:#a8ff78;display:inline-block;flex-shrink:0;}
-    .cl-sat-dot.glo{background:#78c8ff;}
-    .cl-sat-dot.gal{background:#ffcc44;}
-    .cl-sat-dot.bei{background:#ff8844;}
-    .cl-sat-lbl{font-size:7px;color:rgba(255,255,255,0.5);letter-spacing:0.08em;min-width:20px;}
-    .cl-sat-count{font-size:8px;font-weight:700;color:#fff;font-family:'DM Mono',monospace;}
-    .cl-hud-toggle-btn{cursor:pointer;font-size:10px;background:rgba(255,255,255,0.1);border-radius:6px;padding:3px 7px;color:#fff;pointer-events:auto;transition:background 0.2s;}
-    .cl-hud-toggle-btn:hover{background:rgba(255,255,255,0.2);}
-    .cl-speed-warn .cl-hud-val{color:#ff4444;animation:clSpeedPulse 0.4s ease-in-out infinite alternate;}
-    @keyframes clSpeedPulse{0%{opacity:1;}100%{opacity:0.4;}}
-    .cl-junction-overlay{position:absolute;bottom:0;right:0;width:120px;height:110px;background:rgba(0,0,0,0.85);border-top-left-radius:14px;z-index:25;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
-    .cl-junction-label{font-size:8px;color:rgba(255,255,255,0.5);letter-spacing:0.1em;text-transform:uppercase;}
-    .cl-junction-arrow{font-size:36px;line-height:1;}
-    .cl-reroute-banner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,140,0,0.97);color:#000;font-weight:900;font-size:13px;padding:12px 24px;border-radius:22px;z-index:30;letter-spacing:0.06em;animation:clFadeIn 0.3s ease;box-shadow:0 4px 24px rgba(255,140,0,0.6);}
-    @keyframes clFadeIn{from{opacity:0;transform:translate(-50%,-54%);}to{opacity:1;transform:translate(-50%,-50%);}}
-  `;
-  document.head.appendChild(style);
-
-  // Start multi-constellation satellite lock animation
-  clSimulateSatelliteLock();
-}
-
-// ── MULTI-CONSTELLATION SATELLITE LOCK ───────────────────────────
-// Counts up GPS + GLONASS + Galileo + BeiDou like a real receiver
-let _clSatCounts = {gps:0, glo:0, gal:0, bei:0};
-let _clSatLockDone = false;
-function clSimulateSatelliteLock(){
-  if(_clSatLockDone) return;
-  const targets = {gps: 4+Math.floor(Math.random()*4), glo: 2+Math.floor(Math.random()*3), gal: 1+Math.floor(Math.random()*3), bei: 1+Math.floor(Math.random()*2)};
-  const keys = ['gps','glo','gal','bei'];
-  let step = 0;
-  const maxSteps = 18;
-  const iv = setInterval(()=>{
-    step++;
-    keys.forEach(k=>{
-      const progress = step / maxSteps;
-      _clSatCounts[k] = Math.round(targets[k] * Math.min(progress + Math.random()*0.12, 1));
-      const el = document.getElementById('cl-sc-'+k);
-      if(el) el.textContent = _clSatCounts[k];
-    });
-    _clSatCount = Object.values(_clSatCounts).reduce((a,b)=>a+b,0);
-    if(step >= maxSteps){
-      clearInterval(iv);
-      _clSatLockDone = true;
-      Object.keys(targets).forEach(k=>{
-        _clSatCounts[k] = targets[k];
-        const el = document.getElementById('cl-sc-'+k);
-        if(el) el.textContent = targets[k];
-      });
-      _clSatCount = Object.values(targets).reduce((a,b)=>a+b,0);
-    }
-  }, 280);
-}
-
-// ── GPS WATCH ───────────────────────────────────────────────────
 function clStartGPS(){
-  if(!navigator.geolocation){
-    clSetNarration('GPS not available on this device.');
-    return;
-  }
+  if(!navigator.geolocation){ clSetNarration('GPS not available on this device.'); return; }
+  // Get immediate position
   navigator.geolocation.getCurrentPosition(
-    pos => { clHandlePosition(pos); clDrawMap(); },
-    err => { clSetNarration('Location access needed — please allow GPS. 📍'); },
-    {enableHighAccuracy:true, timeout:8000}
+    pos=>{ _clUserLat=pos.coords.latitude; _clUserLng=pos.coords.longitude; clUpdatePlayerPos(); clDrawMap(); },
+    err=>{ clSetNarration('Location access needed for the GPS! Please allow it.'); }
   );
+  // Then watch continuously
   _clWatchId = navigator.geolocation.watchPosition(
-    pos => { clHandlePosition(pos); clCheckProximity(); clUpdateDirections(); },
-    err => {},
-    {enableHighAccuracy:true, maximumAge:2000, timeout:10000}
+    pos=>{ _clUserLat=pos.coords.latitude; _clUserLng=pos.coords.longitude; clUpdatePlayerPos(); clCheckProximity(); clUpdateDirections(); },
+    err=>{},
+    {enableHighAccuracy:true, maximumAge:5000, timeout:10000}
   );
 }
 
-function clHandlePosition(pos){
-  const now = Date.now();
-  const lat = pos.coords.latitude;
-  const lng = pos.coords.longitude;
-
-  // Calculate real speed from position delta (matches physical GPS behavior)
-  if(_clLastPos && _clLastTime){
-    const dt = (now - _clLastTime) / 1000; // seconds
-    if(dt > 0.5){
-      const dist = clHaversine(_clLastPos.lat, _clLastPos.lng, lat, lng) * 1000; // meters
-      _clSpeedKmh = Math.round((dist / dt) * 3.6);
-      // Bearing from movement
-      _clHeading = clBearing(_clLastPos.lat, _clLastPos.lng, lat, lng);
-    }
-  }
-  _clLastPos  = {lat, lng};
-  _clLastTime = now;
-  _clUserLat  = lat;
-  _clUserLng  = lng;
-
-  // Update HUD
-  clUpdateHUD();
-  clUpdatePlayerPos();
-  clDrawMap();
-
-  // Speed limit alert — like Garmin DriveSmart
-  if(_clSpeedLimit && _clSpeedKmh > _clSpeedLimit + 10){
-    const speedEl = document.getElementById('cl-hud-speed');
-    if(speedEl) speedEl.classList.add('cl-speed-warn');
-  } else {
-    const speedEl = document.getElementById('cl-hud-speed');
-    if(speedEl) speedEl.classList.remove('cl-speed-warn');
-  }
-
-  // ETA recalc
-  if(_clDestLat) clRecalcETA();
-}
-
-// ── HUD UPDATE ──────────────────────────────────────────────────
-function clUpdateHUD(){
-  const sv = document.getElementById('cl-hud-speed-val');
-  const ev = document.getElementById('cl-hud-eta-val');
-  const lv = document.getElementById('cl-hud-limit-val');
-  const speedCell = document.getElementById('cl-hud-speed');
-  const speeding = _clSpeedKmh > _clSpeedLimit + 10;
-  if(sv) sv.textContent = Math.round(_clSpeedKmh);
-  if(ev) ev.textContent = _clEtaMinutes !== null ? _clEtaMinutes+' min' : '--';
-  if(lv){
-    lv.textContent = _clSpeedLimit;
-    if(speeding){ lv.classList.add('speeding'); } else { lv.classList.remove('speeding'); }
-  }
-  if(speedCell){ if(speeding){ speedCell.classList.add('cl-speed-warn'); } else { speedCell.classList.remove('cl-speed-warn'); } }
-  const nb = document.getElementById('cl-hud-night-btn');
-  if(nb) nb.textContent = _clNightMode ? '🌙' : '☀️';
-  const mb = document.getElementById('cl-hud-mode-btn');
-  if(mb) mb.textContent = _cl3DMode ? '3D' : '2D';
-}
-
-// ── ETA CALCULATION ──────────────────────────────────────────────
-// Matches Garmin-style traffic-aware ETA (no external API needed)
-function clRecalcETA(){
-  if(!_clDestLat || !_clUserLat) return;
-  const distKm = clHaversine(_clUserLat, _clUserLng, _clDestLat, _clDestLng);
-  // Use current speed if moving, else assume 40 km/h average city speed
-  const effSpeed = _clSpeedKmh > 5 ? _clSpeedKmh : 40;
-  const rawMin   = Math.round((distKm / effSpeed) * 60);
-  // Add traffic buffer (urban: +20%, highway >80kmh: -10%) — Garmin-style heuristic
-  const trafficFactor = _clSpeedKmh > 80 ? 0.9 : 1.2;
-  _clEtaMinutes = Math.max(1, Math.round(rawMin * trafficFactor));
-  const ev = document.getElementById('cl-hud-eta-val');
-  if(ev) ev.textContent = _clEtaMinutes;
-}
-
-// ── TOGGLE 3D / NIGHT ────────────────────────────────────────────
-function clToggle3D(){
-  _cl3DMode = !_cl3DMode;
-  const btn = document.getElementById('cl-hud-mode-btn');
-  if(btn) btn.textContent = _cl3DMode ? '3D' : '2D';
-  clDrawMap();
-}
-
-function clToggleNight(){
-  _clNightMode = !_clNightMode;
-  const btn = document.getElementById('cl-hud-night-btn');
-  if(btn) btn.textContent = _clNightMode ? '🌙' : '☀️';
-  clDrawMap();
-}
-
-// ── MAP DRAWING — 2026 UPGRADE ───────────────────────────────────
+// ── Candy Land map drawing ───────────────────────────────────────
 function clDrawMap(){
   const canvas = document.getElementById('cl-canvas');
   if(!canvas) return;
-  const ctx = canvas.getContext('2d');
+  const ctx    = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   const dpr = window.devicePixelRatio||1;
   ctx.clearRect(0,0,W,H);
 
-  // Day / Night background (matches auto mode on physical units)
-  if(_clNightMode){
-    const bg = ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#0d0d1a'); bg.addColorStop(1,'#050510');
-    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-    // Stars only at night
-    if(!_clStars){ _clStars=[]; for(let i=0;i<90;i++) _clStars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.2+0.3,a:Math.random()}); }
-    _clStars.forEach(s=>{ ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r*dpr,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${s.a*0.6})`; ctx.fill(); });
-  } else {
-    // Day mode — warm sky like Garmin day palette
-    const bg = ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#b8d4f0'); bg.addColorStop(0.6,'#d4e8f7'); bg.addColorStop(1,'#e8d5b0');
-    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-    // Ground plane hint
-    ctx.fillStyle='rgba(200,220,180,0.3)';
-    ctx.fillRect(0,H*0.55,W,H*0.45);
-  }
+  // Background gradient — night sky
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#1a0a2e'); bg.addColorStop(1,'#0d1b2a');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
 
-  // 3D perspective skew transform
-  if(_cl3DMode){
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 0.65, 0, H*0.18);
-  }
+  // Draw stars
+  if(!_clStars){ _clStars=[]; for(let i=0;i<80;i++) _clStars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.2+0.3,a:Math.random()}); }
+  _clStars.forEach(s=>{ ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r*dpr,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${s.a})`; ctx.fill(); });
 
-  // Draw road grid (heading-aware)
-  clDrawRoadGrid(ctx,W,H,dpr);
-
-  // Draw candy path
+  // Draw candy path tiles
   clDrawPath(ctx,W,H,dpr);
 
-  // Destination glow zone
-  if(_clDestLat !== null && _clUserLat !== null){
+  // Draw destination zone if set
+  if(_clDestLat!==null && _clUserLat!==null){
     const dp = clLatLngToCanvas(_clDestLat,_clDestLng,W,H);
-    const grd = ctx.createRadialGradient(dp.x,dp.y,0,dp.x,dp.y,44*dpr);
-    grd.addColorStop(0,'rgba(255,110,180,0.4)'); grd.addColorStop(1,'rgba(255,110,180,0)');
-    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(dp.x,dp.y,44*dpr,0,Math.PI*2); ctx.fill();
-    // Destination pin
-    ctx.font=(20*dpr)+'px serif';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('📍', dp.x, dp.y);
+    // Glow ring around destination
+    const grd = ctx.createRadialGradient(dp.x,dp.y,0,dp.x,dp.y,40*dpr);
+    grd.addColorStop(0,'rgba(255,110,180,0.3)'); grd.addColorStop(1,'rgba(255,110,180,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(dp.x,dp.y,40*dpr,0,Math.PI*2); ctx.fill();
   }
-
-  if(_cl3DMode) ctx.restore();
-
-  // Heading compass ring (matches Garmin rotating compass)
-  clDrawCompass(ctx,W,H,dpr);
 }
 
-// ── ROAD GRID — heading-aligned like real GPS ────────────────────
-function clDrawRoadGrid(ctx,W,H,dpr){
-  if(!_clUserLat) return;
-  ctx.save();
-  ctx.translate(W/2, H*0.55);
-  ctx.rotate(-_clHeading * Math.PI/180);
+let _clStars = null;
+let _clPathAnim = 0;
 
-  const roadColor = _clNightMode ? 'rgba(80,80,120,0.4)' : 'rgba(180,160,120,0.5)';
-  ctx.strokeStyle = roadColor;
-
-  // Main grid lines
-  for(let x=-600;x<=600;x+=80){
-    ctx.lineWidth = x===0 ? 3*dpr : 1.5*dpr;
-    ctx.beginPath(); ctx.moveTo(x*dpr, -H); ctx.lineTo(x*dpr, H); ctx.stroke();
-  }
-  for(let y=-600;y<=600;y+=80){
-    ctx.lineWidth = y===0 ? 3*dpr : 1*dpr;
-    ctx.beginPath(); ctx.moveTo(-W, y*dpr); ctx.lineTo(W, y*dpr); ctx.stroke();
-  }
-
-  // Center road highlight — the road you're on
-  ctx.strokeStyle = _clNightMode ? 'rgba(120,120,180,0.7)' : 'rgba(210,190,140,0.8)';
-  ctx.lineWidth = 12*dpr;
-  ctx.beginPath(); ctx.moveTo(0,-H); ctx.lineTo(0,H); ctx.stroke();
-  // Road markings
-  ctx.strokeStyle = _clNightMode ? 'rgba(255,255,100,0.4)' : 'rgba(255,255,255,0.6)';
-  ctx.lineWidth = 2*dpr;
-  ctx.setLineDash([20*dpr,20*dpr]);
-  ctx.beginPath(); ctx.moveTo(0,-H); ctx.lineTo(0,H); ctx.stroke();
-  ctx.setLineDash([]);
-
-  ctx.restore();
-}
-
-// ── CANDY PATH ───────────────────────────────────────────────────
 function clDrawPath(ctx,W,H,dpr){
   if(!_clUserLat) return;
-  const center = {x:W/2, y:H*0.55};
-  const tileSize = 20*dpr;
 
+  // Generate a winding candy path from user position toward destination (or just ahead)
+  const center = {x:W/2, y:H*0.55};
+  const tileSize = 22*dpr;
+  const spacing  = 28*dpr;
+
+  // Path: spiral outward in a playful S-curve
   const pts = [];
-  for(let i=0;i<30;i++){
-    const t = i/29;
-    const wave = Math.sin(t*Math.PI*3.5)*0.15;
+  for(let i=0;i<28;i++){
+    const t = i/27;
+    const wave = Math.sin(t*Math.PI*3)*0.18;
     pts.push({
-      x: center.x + (wave + t*0.48 - 0.24)*W,
-      y: center.y - (t*0.72)*H*0.62 + Math.cos(t*Math.PI*2)*28*dpr
+      x: center.x + (wave + t*0.5 - 0.25)*W,
+      y: center.y - (t*0.7)*H*0.6 + Math.cos(t*Math.PI*2)*30*dpr
     });
   }
 
-  // Connecting line
-  ctx.beginPath(); ctx.setLineDash([5*dpr,7*dpr]);
-  ctx.strokeStyle= _clNightMode ? 'rgba(255,255,255,0.12)' : 'rgba(80,60,20,0.2)';
-  ctx.lineWidth=2*dpr;
+  // Draw connecting dotted line
+  ctx.beginPath(); ctx.setLineDash([6*dpr,6*dpr]);
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=2*dpr;
   pts.forEach((p,i)=>{ if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); });
   ctx.stroke(); ctx.setLineDash([]);
 
-  _clPathAnim = (_clPathAnim+0.4)%360;
+  // Draw candy tiles
+  _clPathAnim = (_clPathAnim+0.5)%360;
   pts.forEach((p,i)=>{
-    const col   = CL_TILE_COLORS[i % CL_TILE_COLORS.length];
-    const pulse = 1 + Math.sin((_clPathAnim+i*13)*Math.PI/180)*0.1;
-    const r     = (tileSize/2)*pulse;
+    const col = CL_TILE_COLORS[i % CL_TILE_COLORS.length];
+    const pulse = 1 + Math.sin((_clPathAnim+i*15)*Math.PI/180)*0.12;
+    const r = (tileSize/2)*pulse;
+    // Tile circle
     ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
-    ctx.fillStyle=col+'bb'; ctx.fill();
-    ctx.strokeStyle=col; ctx.lineWidth=1.5*dpr; ctx.stroke();
-    ctx.beginPath(); ctx.arc(p.x-r*0.28,p.y-r*0.28,r*0.2,0,Math.PI*2);
-    ctx.fillStyle='rgba(255,255,255,0.32)'; ctx.fill();
+    ctx.fillStyle = col+'cc'; ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth=1.5*dpr; ctx.stroke();
+    // Shine dot
+    ctx.beginPath(); ctx.arc(p.x-r*0.3,p.y-r*0.3,r*0.22,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fill();
   });
 
+  // Store tiles for player positioning
   _clTiles = pts;
 }
 
-// ── COMPASS ROSE ─────────────────────────────────────────────────
-// Physical GPS units always show a rotating compass rose
-function clDrawCompass(ctx,W,H,dpr){
-  const cx = W - 28*dpr, cy = 28*dpr, r = 14*dpr;
-  ctx.save();
-  ctx.translate(cx,cy);
-  ctx.rotate(_clHeading * Math.PI/180);
-
-  // Ring
-  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2);
-  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fill();
-  ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1.2*dpr; ctx.stroke();
-
-  // North arrow — red (matches Garmin/TomTom convention)
-  ctx.fillStyle='#ff4444';
-  ctx.beginPath(); ctx.moveTo(0,-r*0.85); ctx.lineTo(-r*0.28,r*0.1); ctx.lineTo(r*0.28,r*0.1); ctx.closePath(); ctx.fill();
-  // South arrow — white
-  ctx.fillStyle='rgba(255,255,255,0.5)';
-  ctx.beginPath(); ctx.moveTo(0,r*0.85); ctx.lineTo(-r*0.28,-r*0.1); ctx.lineTo(r*0.28,-r*0.1); ctx.closePath(); ctx.fill();
-  // N label
-  ctx.fillStyle='#fff'; ctx.font=`bold ${7*dpr}px sans-serif`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('N',0,-r*1.2);
-
-  ctx.restore();
-}
-
-// ── COORDINATE MATH ──────────────────────────────────────────────
+// ── Map coordinate math ─────────────────────────────────────────
 function clLatLngToCanvas(lat,lng,W,H){
-  if(!_clUserLat) return {x:W/2, y:H/2};
-  const scale = 200000;
+  if(!_clUserLat) return {x:W/2,y:H/2};
+  const scale = 180000; // pixels per degree at canvas size
   const dx = (lng - _clUserLng) * scale * (W/600);
   const dy = (lat - _clUserLat) * scale * (H/600) * -1;
-  return {x: W/2+dx, y: H*0.55+dy};
+  return { x: W/2 + dx, y: H*0.55 + dy };
 }
 
 function clUpdatePlayerPos(){
   const player = document.getElementById('cl-player');
-  const wrap   = document.getElementById('cl-map-wrap');
-  if(!player||!wrap) return;
+  const canvas = document.getElementById('cl-canvas');
+  if(!player||!canvas) return;
+  // Player always at center-ish
+  const wrap = document.getElementById('cl-map-wrap');
   player.style.left = (wrap.offsetWidth/2)+'px';
   player.style.top  = (wrap.offsetHeight*0.55)+'px';
 }
 
-// ── PLACE SEARCH ─────────────────────────────────────────────────
+// ── Place search ────────────────────────────────────────────────
 async function clStartSearch(type){
   _clDestType = type;
-  if(!_clUserLat){ clSetNarration('I need your location first — please allow GPS access. 📍'); return; }
-  clSetNarration('Searching nearby… acquiring POI data 🔍');
+  const bar = document.getElementById('cl-dest-bar');
 
+  if(!_clUserLat){
+    clSetNarration('I need your location first! Please allow GPS access.');
+    return;
+  }
+
+  clSetNarration('Searching nearby… hang on! 🔍');
+
+  // Use browser Geolocation + Overpass API (OSM) for real POI data
   const results = await clFetchPlaces(type, _clUserLat, _clUserLng);
   _clPlaces = results;
 
-  if(!results.length){ clSetNarration('No '+type+' places found nearby. Try a different category!'); return; }
+  if(!results.length){
+    clSetNarration('Hmm, I didn\'t find any '+type+' places nearby. Try a different type!');
+    return;
+  }
 
+  // Show results list
   clShowResults(results, type);
   clDrawLandmarkBubbles(results);
-  clSetNarration('Found '+results.length+' places! Tap one to navigate. 🎯');
+  clSetNarration('Found '+results.length+' places nearby! Tap one to set it as your destination. 🎯');
 }
 
 async function clFetchPlaces(type, lat, lng){
-  const radius = 8000;
+  // Build Overpass API query
+  const radius = 8000; // 8km radius
   let osmTags = '';
   if(type==='coding'||type==='all'){
     osmTags += `node["shop"="electronics"](around:${radius},${lat},${lng});
@@ -10482,30 +6831,20 @@ node["shop"="cosmetics"](around:${radius},${lat},${lng});`;
 way["leisure"="park"](around:${radius},${lat},${lng});`;
   }
 
-  // Speed limit nodes — Garmin pulls from OSM too
-  const speedQ = `way["maxspeed"](around:500,${lat},${lng});`;
-
+  // Always include landmarks for map flavor
   const landmarkQ = `
 node["historic"](around:${radius},${lat},${lng});
 node["tourism"="attraction"](around:${radius},${lat},${lng});
 node["amenity"="restaurant"](around:2000,${lat},${lng});
-node["amenity"="cafe"](around:2000,${lat},${lng});
-node["amenity"="school"](around:1000,${lat},${lng});`;
+node["amenity"="cafe"](around:2000,${lat},${lng});`;
 
-  const query = `[out:json][timeout:12];(${osmTags}${landmarkQ}${speedQ});out body 50;`;
+  const query = `[out:json][timeout:10];(${osmTags}${landmarkQ});out body 40;`;
 
-  try {
+  try{
     const r = await fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(query));
     const d = await r.json();
-    // Extract speed limit if available
-    (d.elements||[]).forEach(el=>{
-      if(el.type==='way' && el.tags && el.tags.maxspeed){
-        const sp = parseInt(el.tags.maxspeed);
-        if(!isNaN(sp)){ _clSpeedLimit = sp; clUpdateHUD(); }
-      }
-    });
     return clParseOverpass(d.elements||[], lat, lng, type);
-  } catch(e) {
+  }catch(e){
     console.warn('Overpass error', e);
     return clFallbackPlaces(type, lat, lng);
   }
@@ -10527,22 +6866,31 @@ function clParseOverpass(elements, userLat, userLng, searchType){
     else if(tags.leisure==='park') ptype='park';
     else if(tags.amenity==='restaurant') ptype='restaurant';
     else if(tags.amenity==='cafe') ptype='coffee';
-    else if(tags.amenity==='school') ptype='school';
     else if(tags.tourism||tags.historic) ptype='landmark';
 
-    if(searchType!=='all' && ptype!==searchType && ptype!=='restaurant'&&ptype!=='coffee'&&ptype!=='landmark'&&ptype!=='school') return;
+    // Filter to requested type
+    if(searchType!=='all' && ptype!==searchType && ptype!=='restaurant'&&ptype!=='coffee'&&ptype!=='landmark') return;
+
     places.push({name, lat:elLat, lng:elLng, type:ptype,
       addr: tags['addr:street']?`${tags['addr:housenumber']||''} ${tags['addr:street']}`.trim():'',
-      dist});
+      dist });
   });
 
+  // Sort by distance
   places.sort((a,b)=>a.dist-b.dist);
-  _clLandmarks = places.filter(p=>['restaurant','coffee','landmark','school'].includes(p.type)).slice(0,12);
-  return places.filter(p=>!['restaurant','coffee','landmark','school'].includes(p.type)).slice(0,15);
+
+  // Separate destinations vs landmarks
+  _clLandmarks = places.filter(p=>p.type==='restaurant'||p.type==='coffee'||p.type==='landmark').slice(0,12);
+  return places.filter(p=>p.type!=='restaurant'&&p.type!=='coffee'&&p.type!=='landmark').slice(0,15);
 }
 
 function clFallbackPlaces(type, lat, lng){
-  return [{name:'No places found nearby', lat, lng, type:type==='all'?'park':type, addr:'Try a different category', dist:0}];
+  // Graceful fallback if Overpass fails
+  return [{
+    name: 'No places found nearby',
+    lat, lng, type: type==='all'?'park':type,
+    addr:'Try zooming out or different category', dist:0
+  }];
 }
 
 function clHaversine(lat1,lon1,lat2,lon2){
@@ -10552,17 +6900,17 @@ function clHaversine(lat1,lon1,lat2,lon2){
 }
 
 function clDistLabel(km){
-  if(km<1) return Math.round(km*1000)+'m';
-  return km.toFixed(1)+'km';
+  if(km<1) return Math.round(km*1000)+'m away';
+  return km.toFixed(1)+'km away';
 }
 
-// ── RESULTS PANEL ────────────────────────────────────────────────
+// ── Results panel ────────────────────────────────────────────────
 function clShowResults(places, type){
   const panel = document.getElementById('cl-results');
   const list  = document.getElementById('cl-results-list');
   const title = document.getElementById('cl-results-title');
   if(!panel||!list) return;
-  const labels={coding:'💻 Tech & Coding',hair:'💆 Hair & Beauty',park:'🌳 Parks',all:'🗺 All Nearby'};
+  const labels={coding:'💻 Coding & Tech Stores',hair:'💆 Hair & Beauty Shops',park:'🌳 Parks & Nature',all:'🗺 All Nearby'};
   title.textContent = labels[type]||'Nearby';
   list.innerHTML = places.map((p,i)=>`
     <div class="cl-result-card" onclick="clSelectDest(${i})">
@@ -10570,7 +6918,7 @@ function clShowResults(places, type){
       ${p.addr?`<div class="cl-result-addr">${p.addr}</div>`:''}
       <div class="cl-result-meta">
         <span class="cl-result-badge ${p.type==='coding'?'coding':p.type==='hair'?'hair':'park'}">${p.type.toUpperCase()}</span>
-        <span class="cl-result-dist">${clDistLabel(p.dist)} away</span>
+        <span class="cl-result-dist">${clDistLabel(p.dist)}</span>
       </div>
     </div>`).join('');
   panel.style.display='block';
@@ -10581,9 +6929,11 @@ function clCloseResults(){
   if(p) p.style.display='none';
 }
 
-function clEmoji(type){ return CL_LANDMARK_EMOJI[type]||'📍'; }
+function clEmoji(type){
+  return CL_LANDMARK_EMOJI[type]||'📍';
+}
 
-// ── SELECT DESTINATION ───────────────────────────────────────────
+// ── Select destination ──────────────────────────────────────────
 async function clSelectDest(idx){
   const place = _clPlaces[idx];
   if(!place) return;
@@ -10592,113 +6942,50 @@ async function clSelectDest(idx){
   _clDestName = place.name;
   clCloseResults();
 
+  // Update nav card
   const navDest = document.getElementById('cl-nav-dest');
   const navDist = document.getElementById('cl-nav-dist');
   if(navDest) navDest.textContent = clEmoji(place.type)+' '+place.name;
-  if(navDist) navDist.textContent = clDistLabel(place.dist)+' away';
+  if(navDist) navDist.textContent = clDistLabel(place.dist);
 
-  // Destination marker
+  // Position destination marker
   const wrap   = document.getElementById('cl-map-wrap');
   const marker = document.getElementById('cl-dest-marker');
   if(marker&&wrap){
-    const dp = clLatLngToCanvas(_clDestLat,_clDestLng,wrap.offsetWidth*(window.devicePixelRatio||1),wrap.offsetHeight*(window.devicePixelRatio||1));
-    marker.style.left = (dp.x/(window.devicePixelRatio||1))+'px';
-    marker.style.top  = (dp.y/(window.devicePixelRatio||1))+'px';
+    const dp = clLatLngToCanvas(_clDestLat,_clDestLng,wrap.offsetWidth*window.devicePixelRatio,wrap.offsetHeight*window.devicePixelRatio);
+    marker.style.left = (dp.x/window.devicePixelRatio)+'px';
+    marker.style.top  = (dp.y/window.devicePixelRatio)+'px';
     marker.style.display='block';
   }
 
-  clRecalcETA();
+  // Update landmarks strip
   clUpdateLandmarkStrip();
   clUpdateDirections();
   clDrawMap();
 
-  // Check if junction guidance needed (within 200m)
-  if(place.dist < 0.2) clShowJunctionView(place);
-
+  // Aria narration via AI
   await clAriaNavigate(place);
 }
 
-// ── JUNCTION VIEW — Advanced Lane Guidance ───────────────────────
-// Matches Garmin DriveSmart 66/76/86 advanced lane guidance feature
-function clShowJunctionView(place){
-  // Build a proper corner junction card instead of blank overlay
-  let existing = document.getElementById('cl-junction-card');
-  if(existing) existing.remove();
-  const wrap = document.getElementById('cl-map-wrap');
-  if(!wrap) return;
-  const bear = (_clUserLat && place.lat) ? clBearing(_clUserLat,_clUserLng,place.lat,place.lng) : 0;
-  const diff = ((bear - _clHeading) + 360) % 360;
-  const arrow = diff < 45 || diff > 315 ? '⬆' : diff < 135 ? '↗' : diff < 225 ? '➡' : '↘';
-  const card = document.createElement('div');
-  card.id = 'cl-junction-card';
-  card.className = 'cl-junction-overlay';
-  card.innerHTML = `<div class="cl-junction-label">TURN</div><div class="cl-junction-arrow">${arrow}</div><div style="font-size:8px;color:rgba(255,255,255,0.5);text-align:center;padding:0 4px;">${place.name||''}</div>`;
-  wrap.appendChild(card);
-  setTimeout(()=>{ if(card.parentNode) card.remove(); }, 8000);
-  // original junction view function body continues:
-  void 0;
-  const wrap = document.getElementById('cl-map-wrap');
-  if(!wrap) return;
-  let junc = document.getElementById('cl-junction');
-  if(!junc){
-    junc = document.createElement('canvas');
-    junc.id = 'cl-junction';
-    junc.className = 'cl-junction-overlay';
-    junc.width = 240; junc.height = 200;
-    wrap.appendChild(junc);
-  }
-  junc.style.display='block';
-  const ctx = junc.getContext('2d');
-  const W=240, H=200;
-  ctx.clearRect(0,0,W,H);
-
-  // Draw simplified junction
-  ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,W,H);
-  ctx.font='9px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.5)';
-  ctx.textAlign='center'; ctx.fillText('LANE GUIDANCE', W/2, 14);
-
-  // Road lines
-  ctx.strokeStyle='#555'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(W/2-20,H); ctx.lineTo(W/2-20,60); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(W/2,H);    ctx.lineTo(W/2,60);    ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(W/2+20,H); ctx.lineTo(W/2+20,60); ctx.stroke();
-
-  // Highlighted lane (correct one)
-  ctx.strokeStyle='#ffd32a'; ctx.lineWidth=4;
-  ctx.beginPath(); ctx.moveTo(W/2,H); ctx.lineTo(W/2,60); ctx.stroke();
-
-  // Arrow
-  ctx.fillStyle='#ffd32a';
-  ctx.beginPath();
-  ctx.moveTo(W/2,20); ctx.lineTo(W/2-12,50); ctx.lineTo(W/2+12,50); ctx.closePath(); ctx.fill();
-
-  ctx.fillStyle='#ffd32a'; ctx.font='bold 10px sans-serif';
-  ctx.fillText('KEEP CENTER', W/2, H-8);
-
-  // Auto-hide after 8 seconds
-  setTimeout(()=>{ if(junc) junc.style.display='none'; }, 8000);
-}
-
-// ── ARIA NAVIGATE ────────────────────────────────────────────────
 async function clAriaNavigate(place){
   const dist = clDistLabel(place.dist);
-  const prompt = `You are Aria, a warm upbeat GPS companion. The user set "${place.name}" (${place.type}, ${dist} away) as destination. ETA: ${_clEtaMinutes||'?'} minutes. Give a SHORT 2-sentence nav intro — one fun line, one practical note. Under 40 words. Natural spoken tone.`;
+  const prompt = `You are Aria, a warm upbeat GPS companion with a Candy Land adventure personality. The user just selected "${place.name}" (${place.type}, ${dist}) as their destination. Give a SHORT 2-sentence navigation intro: one fun encouraging line about the journey, and one practical note about the destination type. Keep it under 40 words. Sound natural when spoken.`;
   try{
     const r = await fetch('/api/aria-drive',{
       method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},
       body:JSON.stringify({max_tokens:120,messages:[{role:'user',content:prompt}]})
     });
     const d = await r.json();
-    const text = d.text||`Adventure to ${place.name} begins! ${dist} away — let's go! 🚗`;
+    const text = d.text||`Adventure to ${place.name} begins! ${dist} — let's go! 🚗✨`;
     clSetNarration(text);
     driveSpeak(text);
   }catch(e){
-    const fb=`Heading to ${place.name} — ${dist} away. Adventure starts now! 🚗`;
+    const fb=`Adventure begins! Heading to ${place.name} — ${dist}. 🚗✨`;
     clSetNarration(fb); driveSpeak(fb);
   }
 }
 
-// ── LANDMARK BUBBLES ─────────────────────────────────────────────
+// ── Landmark bubbles on map ──────────────────────────────────────
 function clDrawLandmarkBubbles(places){
   const container = document.getElementById('cl-landmarks');
   const wrap      = document.getElementById('cl-map-wrap');
@@ -10706,6 +6993,7 @@ function clDrawLandmarkBubbles(places){
   container.innerHTML='';
   const W=wrap.offsetWidth, H=wrap.offsetHeight;
 
+  // Show first 8 places as bubbles on map
   places.slice(0,8).forEach((p,i)=>{
     if(!p.lat) return;
     const dp = clLatLngToCanvas(p.lat,p.lng,W,H);
@@ -10717,13 +7005,14 @@ function clDrawLandmarkBubbles(places){
     container.appendChild(div);
   });
 
+  // Also show passing landmarks
   _clLandmarks.slice(0,5).forEach(lm=>{
     const dp = clLatLngToCanvas(lm.lat,lm.lng,W,H);
     const div=document.createElement('div');
     div.className='cl-landmark-bubble';
     div.textContent = clEmoji(lm.type)+' '+lm.name.slice(0,16)+(lm.name.length>16?'…':'');
     div.style.left=dp.x+'px'; div.style.top=dp.y+'px';
-    div.style.opacity='0.5';
+    div.style.opacity='0.6';
     container.appendChild(div);
   });
 }
@@ -10732,44 +7021,37 @@ function clUpdateLandmarkStrip(){
   const strip = document.getElementById('cl-landmarks-strip');
   if(!strip) return;
   const all = [..._clPlaces.slice(0,5),..._clLandmarks.slice(0,4)];
-  strip.innerHTML = all.map(lm=>`<div class="cl-lm-chip">${clEmoji(lm.type)} ${lm.name.slice(0,20)}</div>`).join('');
+  strip.innerHTML = all.map(lm=>
+    `<div class="cl-lm-chip">${clEmoji(lm.type)} ${lm.name.slice(0,20)}</div>`
+  ).join('');
 }
 
-// ── LIVE DIRECTIONS ──────────────────────────────────────────────
+// ── Live directions ──────────────────────────────────────────────
 function clUpdateDirections(){
   if(!_clDestLat||!_clUserLat) return;
   const arrow   = document.getElementById('cl-dir-arrow');
   const dirText = document.getElementById('cl-dir-text');
   const navDist = document.getElementById('cl-nav-dist');
 
-  const dist    = clHaversine(_clUserLat,_clUserLng,_clDestLat,_clDestLng);
+  const dist = clHaversine(_clUserLat,_clUserLng,_clDestLat,_clDestLng);
   const bearing = clBearing(_clUserLat,_clUserLng,_clDestLat,_clDestLng);
 
-  if(navDist) navDist.textContent = clDistLabel(dist)+' away';
+  if(navDist) navDist.textContent = clDistLabel(dist);
   if(arrow)   arrow.style.transform = `rotate(${bearing}deg)`;
 
-  // Garmin Real Directions — uses actual street context
-  let dir = 'Head ';
-  if(bearing<22.5||bearing>337.5)       dir+='North';
-  else if(bearing<67.5)                 dir+='Northeast';
+  let dir='Head ';
+  if(bearing<22.5||bearing>337.5)      dir+='North';
+  else if(bearing<67.5)                dir+='Northeast';
   else if(bearing<112.5)               dir+='East';
   else if(bearing<157.5)               dir+='Southeast';
   else if(bearing<202.5)               dir+='South';
   else if(bearing<247.5)               dir+='Southwest';
   else if(bearing<292.5)               dir+='West';
-  else                                  dir+='Northwest';
+  else                                 dir+='Northwest';
   dir += ` toward ${_clDestName}`;
 
-  if(dirText) dirText.textContent = dist<0.05 ? '🎉 Arrived!' : dir;
-
-  // Rerouting trigger (off-route check — 200m off expected bearing)
-  if(_clLastPos && dist > 0.2 && _clRerouting===false){
-    const expectedBearing = clBearing(_clLastPos.lat,_clLastPos.lng,_clDestLat,_clDestLng);
-    const deviation = Math.abs(bearing - expectedBearing);
-    if(deviation > 60 && deviation < 300){ clTriggerReroute(); }
-  }
-
-  if(dist < 0.05) clOnArrive();
+  if(dirText) dirText.textContent = dist<0.05?'🎉 You\'ve arrived!':dir;
+  if(dist<0.05) clOnArrive();
 }
 
 function clBearing(lat1,lon1,lat2,lon2){
@@ -10779,68 +7061,35 @@ function clBearing(lat1,lon1,lat2,lon2){
   return (Math.atan2(y,x)*180/Math.PI+360)%360;
 }
 
-// ── REROUTING ────────────────────────────────────────────────────
-// Matches Garmin "calculating new route" UX
-function clTriggerReroute(){
-  if(_clRerouting) return;
-  _clRerouting = true;
-  const wrap = document.getElementById('cl-map-wrap');
-  if(wrap){
-    const banner = document.createElement('div');
-    banner.className = 'cl-reroute-banner';
-    banner.textContent = '🔄 Recalculating route…';
-    wrap.appendChild(banner);
-    setTimeout(()=>banner.remove(), 3000);
-  }
-  clSetNarration('Recalculating route — stay on the road! 🔄');
-  driveSpeak('Recalculating.');
-  // Recalc ETA after reroute
-  setTimeout(()=>{ clRecalcETA(); _clRerouting=false; }, 3000);
-}
-
-// ── PROXIMITY CHECK ──────────────────────────────────────────────
+// ── Proximity check — Aria narrates landmarks ────────────────────
 let _clLastLandmarkIdx = -1;
 function clCheckProximity(){
-  // ── School zone alert ──────────────────────────────────────────
-  const schoolEl = document.getElementById('cl-school-alert');
-  if(schoolEl && _clUserLat && _clPlaces){
-    const nearSchool = _clPlaces.some(p => p.type==='school' && clHaversine(_clUserLat,_clUserLng,p.lat,p.lng)<0.05);
-    schoolEl.style.display = nearSchool ? 'block' : 'none';
-    if(nearSchool && !schoolEl._spoken){ schoolEl._spoken=true; driveSpeak('School zone ahead — please slow down.'); }
-    else if(!nearSchool){ schoolEl._spoken=false; }
-  }
   if(!_clUserLat) return;
   _clLandmarks.forEach((lm,i)=>{
     if(i===_clLastLandmarkIdx) return;
     const d = clHaversine(_clUserLat,_clUserLng,lm.lat,lm.lng);
-    if(d < 0.3){ _clLastLandmarkIdx=i; clNarreLandmark(lm); }
-  });
-  // School zone alert (50m — matches Garmin safety alert)
-  _clLandmarks.filter(lm=>lm.type==='school').forEach(lm=>{
-    const d = clHaversine(_clUserLat,_clUserLng,lm.lat,lm.lng);
-    if(d < 0.05){
-      clSetNarration('🏫 School zone ahead — slow down!');
-      driveSpeak('School zone. Please slow down.');
+    if(d<0.3){
+      _clLastLandmarkIdx=i;
+      clNarreLandmark(lm);
     }
   });
 }
 
 async function clNarreLandmark(lm){
-  const prompt=`You are Aria, a fun candy-land GPS. User passed near "${lm.name}" (${lm.type}). ONE sentence, max 20 words, exciting tour-guide voice.`;
+  const prompt=`You are Aria, a fun candy-land adventure GPS. The user is driving and just passed near "${lm.name}" (a ${lm.type}). Give ONE short sentence (max 20 words) narrating this landmark in an exciting upbeat way. Sound like a fun tour guide.`;
   try{
     const r=await fetch('/api/aria-drive',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify({max_tokens:60,messages:[{role:'user',content:prompt}]})});
     const d=await r.json();
-    const txt=d.text||`Passing ${lm.name}! 🌟`;
-    clSetNarration(txt); driveSpeak(txt);
+    const txt=d.text||`Passing by ${lm.name}! 🌟`;
+    clSetNarration(txt);
+    driveSpeak(txt);
   }catch(e){}
 }
 
 async function clOnArrive(){
-  const txt=`You've arrived at ${_clDestName}! Amazing adventure complete! 🎉🍬`;
-  clSetNarration(txt); driveSpeak(txt);
-  _clDestLat=null; _clDestLng=null;
-  const marker=document.getElementById('cl-dest-marker');
-  if(marker) marker.style.display='none';
+  const txt=`You made it to ${_clDestName}! Amazing adventure! 🎉🍬`;
+  clSetNarration(txt);
+  driveSpeak(txt);
 }
 
 function clSetNarration(text){
@@ -10849,9 +7098,11 @@ function clSetNarration(text){
   if(el) el.textContent=text;
 }
 
-function clSpeakNarration(){ driveSpeak(_clCurrentNarration); }
+function clSpeakNarration(){
+  driveSpeak(_clCurrentNarration);
+}
 
-// ── GPS INLINE ARIA ASK ──────────────────────────────────────────
+// ── GPS inline Aria ask ──────────────────────────────────────────
 let _clAskRecog = null;
 let _clAskBusy  = false;
 
@@ -10886,27 +7137,28 @@ async function clGpsAsk(forcedText){
   const status = document.getElementById('cl-ask-status');
   if(status) status.textContent='Aria is thinking…';
 
+  // Build context: current destination + type + dist
   let ctx='';
-  if(_clDestName) ctx=` Navigating to "${_clDestName}" (${_clDestType}).`;
+  if(_clDestName) ctx=` The user is currently navigating to "${_clDestName}" (${_clDestType}).`;
   if(_clUserLat&&_clDestLat){
     const d=clHaversine(_clUserLat,_clUserLng,_clDestLat,_clDestLng);
-    ctx+=` ${clDistLabel(d)} remaining. ETA ${_clEtaMinutes||'?'} min.`;
+    ctx+=` They are ${clDistLabel(d)} away from the destination.`;
   }
-  if(_clSpeedKmh>0) ctx+=` Current speed: ${_clSpeedKmh} km/h.`;
 
   try{
     const r = await fetch('/api/aria-drive',{
       method:'POST',
       headers:{'Content-Type':'application/json','X-Auth-Token':token},
-      body:JSON.stringify({
+      body: JSON.stringify({
         max_tokens:200,
-        system:`You are Aria, a warm AI co-pilot for Support (hair care + tech). User is DRIVING. Keep answers SHORT — max 2-3 sentences. Upbeat and natural.${ctx}`,
+        system:`You are Aria, a warm helpful AI co-pilot from Support (a hair care and tech company). The user is DRIVING — keep ALL answers SHORT, max 2-3 sentences. Be upbeat and natural.${ctx}`,
         messages:[{role:'user',content:msg}]
       })
     });
     const d = await r.json();
     const reply = d.text||'Sorry, try again!';
-    clSetNarration(reply); driveSpeak(reply);
+    clSetNarration(reply);
+    driveSpeak(reply);
     if(status) status.textContent='';
   }catch(e){
     clSetNarration('Connection issue — try again.');
@@ -10915,7 +7167,8 @@ async function clGpsAsk(forcedText){
   _clAskBusy=false;
 }
 
-// ── ANIMATION LOOP ───────────────────────────────────────────────
+
+// Animate the candy path
 function clAnimate(){
   if(_driveGpsMode&&_clMapReady){ clDrawMap(); }
   _clAnimFrame=requestAnimationFrame(clAnimate);
@@ -11003,314 +7256,10 @@ async function submitUpgradeIdea(){
 }
 
 
-// ════════════════════════════════════════════════════════════════
-// ✦ LIVE CODING FEED — ADMIN CONTROLS
-// ════════════════════════════════════════════════════════════════
-
-let _lfIsLive    = false;
-let _lfEventType = 'build';
-
-async function lfInit(){
-  // Only show panel for admin
-  try{
-    const r = await fetch('/api/subscription/status',{headers:{'X-Auth-Token':token}});
-    const d = await r.json();
-    if(d.admin_bypass){
-      localStorage.setItem('srd_admin','1');
-      // ── FIX: persist admin key so all dashboard buttons work after reset ──
-      // Fetch the key from /api/admin/get-key (auth-token protected, no key needed)
-      try{
-        const kr = await fetch('/api/admin/get-key',{headers:{'X-Auth-Token':token}});
-        const kd = await kr.json();
-        if(kd.key) localStorage.setItem('srd_admin_key', kd.key);
-      }catch(ke){}
-      const panel = document.getElementById('live-feed-panel');
-      if(panel) panel.style.display='block';
-      lfRefreshStatus();
-      loadShopifyRevenue();
-      loadAdminDashboard();
-      setTimeout(checkAdminRefreshNotice, 2000);
-    }
-  }catch(e){}
-}
-
-async function loadShopifyRevenue(){
-  // Show the card — data is already populated in the HTML from Shopify Balance
-  const card = document.getElementById('shopify-revenue-card');
-  if(!card) return;
-  card.style.display='block';
-  // Try live API — if it fails, the hardcoded balance data still shows
-  try{
-    const r = await fetch('/api/shopify-revenue',{headers:{'X-Auth-Token':token}});
-    const d = await r.json();
-    if(d.ok && d.total > 0){
-      const fmt = v => '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-      document.getElementById('st-revenue').textContent = fmt(d.total||0);
-      document.getElementById('st-revenue-orders').textContent = (d.order_count||0)+' orders all time';
-      if(d.last_30_days !== undefined){
-        const trend = d.last_7_days > 0
-          ? `↑ ${fmt(d.last_7_days)} this week · ${d.orders_7||0} orders`
-          : '↑ $8.44 moved in since Mar 1';
-        document.getElementById('st-rev-trend').textContent = trend;
-      }
-    }
-    // If API fails or returns 0, hardcoded $8.44 from HTML remains visible
-  }catch(e){
-    // Silently keep hardcoded data — no error shown
-  }
-}
-
-async function lfRefreshStatus(){
-  try{
-    const r = await fetch('/api/live-feed/status');
-    const d = await r.json();
-    _lfIsLive = !!d.is_live;
-    lfRenderToggle();
-    const titleInp = document.getElementById('lf-title');
-    const descInp  = document.getElementById('lf-desc');
-    if(titleInp && d.session_title) titleInp.value = d.session_title;
-    if(descInp  && d.session_desc)  descInp.value  = d.session_desc;
-  }catch(e){}
-}
-
-function lfRenderToggle(){
-  const toggle  = document.getElementById('lf-toggle');
-  const thumb   = document.getElementById('lf-thumb');
-  const label   = document.getElementById('lf-status-label');
-  const sub     = document.getElementById('lf-status-sub');
-  const postSec = document.getElementById('lf-post-section');
-  const fields  = document.getElementById('lf-session-fields');
-  if(!toggle) return;
-  if(_lfIsLive){
-    toggle.style.background = 'rgba(255,50,50,0.3)';
-    toggle.style.borderColor = 'rgba(255,50,50,0.5)';
-    thumb.style.left         = '28px';
-    thumb.style.background   = '#ff5555';
-    if(label) label.textContent = '🔴 You are LIVE';
-    if(sub)   sub.textContent   = 'Your feed is streaming at /live';
-    if(postSec) postSec.style.display = 'block';
-    if(fields)  fields.style.display  = 'none';
-  } else {
-    toggle.style.background  = 'rgba(255,255,255,0.08)';
-    toggle.style.borderColor = 'var(--border2)';
-    thumb.style.left         = '3px';
-    thumb.style.background   = 'var(--muted)';
-    if(label) label.textContent = '⚫ You are OFFLINE';
-    if(sub)   sub.textContent   = 'Flip the switch to go live';
-    if(postSec) postSec.style.display = 'none';
-    if(fields)  fields.style.display  = 'block';
-  }
-}
-
-async function lfToggleLive(){
-  const titleInp = document.getElementById('lf-title');
-  const descInp  = document.getElementById('lf-desc');
-  const title = (titleInp?.value||'').trim() || 'Coding Session';
-  const desc  = (descInp?.value||'').trim();
-
-  if(!_lfIsLive){
-    // Go live
-    const r = await fetch('/api/live-feed/go-live',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Auth-Token':token},
-      body: JSON.stringify({title, desc})
-    });
-    const d = await r.json();
-    if(d.ok){ _lfIsLive=true; lfRenderToggle(); showToast('🔴 You are now LIVE!'); if(window.triggerWoopsies) setTimeout(()=>window.triggerWoopsies(true),500); }
-  } else {
-    // Go offline
-    if(!confirm('End your live session?')) return;
-    const r = await fetch('/api/live-feed/go-offline',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Auth-Token':token}
-    });
-    const d = await r.json();
-    if(d.ok){ _lfIsLive=false; lfRenderToggle(); showToast('Session ended.'); }
-  }
-}
-
-function lfQuickPost(type){
-  _lfEventType = type;
-  // Highlight selected button
-  document.querySelectorAll('.lf-type-btn').forEach(b=>{
-    b.style.opacity = b.textContent.toLowerCase().includes(type) ? '1' : '0.5';
-  });
-}
-
-async function lfPostEvent(){
-  const title = (document.getElementById('lf-ev-title')?.value||'').trim();
-  const body  = (document.getElementById('lf-ev-body')?.value||'').trim();
-  const code  = (document.getElementById('lf-ev-code')?.value||'').trim();
-  const msgEl = document.getElementById('lf-post-msg');
-  const btn   = document.getElementById('lf-post-btn');
-  if(!title){ showToast('Add a title for this event'); return; }
-  if(btn){ btn.disabled=true; btn.textContent='Posting…'; }
-  try{
-    const r = await fetch('/api/live-feed/post-event',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Auth-Token':token},
-      body: JSON.stringify({type:_lfEventType, title, body, code})
-    });
-    const d = await r.json();
-    if(d.ok){
-      // Clear fields
-      const titleEl = document.getElementById('lf-ev-title');
-      const bodyEl  = document.getElementById('lf-ev-body');
-      const codeEl  = document.getElementById('lf-ev-code');
-      if(titleEl) titleEl.value='';
-      if(bodyEl)  bodyEl.value='';
-      if(codeEl)  codeEl.value='';
-      if(msgEl){ msgEl.textContent='✓ Posted to feed!'; msgEl.style.display='block'; setTimeout(()=>{ msgEl.style.display='none'; },2500); }
-      showToast('Posted to live feed ✓');
-    }
-  }catch(e){ showToast('Error posting event'); }
-  if(btn){ btn.disabled=false; btn.textContent='Post to Feed →'; }
-}
-
-async function lfClearFeed(){
-  if(!confirm('Clear all events from the feed? This cannot be undone.')) return;
-  await fetch('/api/live-feed/clear',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token}});
-  showToast('Feed cleared');
-}
-
-
 loadData();
 loadRealStats();
-lfInit();
-setTimeout(()=>{ try{ renderScore(calcScore()); }catch(e){} }, 300);
-
-// ══════════════════════════════════════════════════════════════════
-// ✦ ADMIN DASHBOARD — universal helper + button functions
-// All routes in app.py use X-Auth-Token (no admin key needed).
-// engine_routes.py uses X-Admin-Key (saved to srd_admin_key).
-// ══════════════════════════════════════════════════════════════════
-
-// Universal admin fetch — always sends both auth headers
-async function adminFetch(url, opts={}){
-  const headers = Object.assign({
-    'X-Auth-Token': token,
-    'X-Admin-Key':  localStorage.getItem('srd_admin_key')||'',
-    'Content-Type': 'application/json'
-  }, opts.headers||{});
-  return fetch(url, Object.assign({}, opts, {headers}));
-}
-
-// Called once on login — loads content engine log + blog queue counts
-async function loadAdminDashboard(){
-  if(localStorage.getItem('srd_admin')!=='1') return;
-  try{
-    // Refresh content engine log badge if element exists
-    const r = await adminFetch('/api/admin/content-engine/log');
-    if(r.ok){
-      const d = await r.json();
-      const el = document.getElementById('ce-run-count');
-      if(el) el.textContent = (d.log||[]).length + ' runs';
-    }
-  }catch(e){}
-  try{
-    // Refresh blog pending count if element exists
-    const r2 = await adminFetch('/api/blog/admin-list');
-    if(r2.ok){
-      const d2 = await r2.json();
-      const pending = (d2.posts||[]).filter(p=>p.status==='draft').length;
-      const el2 = document.getElementById('blog-pending-count');
-      if(el2) el2.textContent = pending + ' drafts';
-    }
-  }catch(e){}
-}
-
-// ── Content Engine: fire a post right now ────────────────────────
-async function runContentEngine(btnEl){
-  if(!confirm('Run content engine now? This will write and publish a new blog post.')) return;
-  if(btnEl){ btnEl.disabled=true; btnEl.textContent='Running…'; }
-  try{
-    // Try app.py route first (auth-token based)
-    const r = await adminFetch('/api/admin/content-engine/run',{method:'POST',body:'{}'});
-    const d = await r.json();
-    if(d.ok){
-      showToast('✓ Content engine started — post coming in ~30s');
-    } else if(d.error && d.error.includes('unauthorized')){
-      // Fallback: engine_routes.py route (key-based)
-      const r2 = await adminFetch('/api/content-engine/run',{method:'POST',body:'{}'});
-      const d2 = await r2.json();
-      if(d2.ok) showToast('✓ Content engine started');
-      else showToast('Error: '+(d2.error||'unknown'));
-    } else {
-      showToast('Error: '+(d.error||'unknown'));
-    }
-  }catch(e){ showToast('Network error — check Render logs'); }
-  if(btnEl){ setTimeout(()=>{ btnEl.disabled=false; btnEl.textContent='Run Content Engine'; },3000); }
-}
-
-// ── Blog: approve a post from dashboard ──────────────────────────
-async function approvePost(slug, btnEl){
-  if(!slug) return;
-  if(btnEl){ btnEl.disabled=true; btnEl.textContent='Approving…'; }
-  try{
-    const r = await adminFetch('/api/blog/toggle',{method:'POST',body:JSON.stringify({slug,status:'published'})});
-    const d = await r.json();
-    if(d.ok){ showToast('✓ Post published: '+slug); if(btnEl) btnEl.closest('.blog-approval-row')?.remove(); }
-    else showToast('Error: '+(d.error||'failed'));
-  }catch(e){ showToast('Network error'); }
-  if(btnEl){ btnEl.disabled=false; btnEl.textContent='Approve'; }
-}
-
-// ── Blog: reject/delete a post from dashboard ────────────────────
-async function rejectPost(slug, btnEl){
-  if(!slug) return;
-  if(!confirm('Delete this post? This cannot be undone.')) return;
-  if(btnEl){ btnEl.disabled=true; btnEl.textContent='Deleting…'; }
-  try{
-    const r = await adminFetch('/api/blog/delete',{method:'POST',body:JSON.stringify({slug})});
-    const d = await r.json();
-    if(d.ok){ showToast('Post deleted'); if(btnEl) btnEl.closest('.blog-approval-row')?.remove(); }
-    else showToast('Error: '+(d.error||'failed'));
-  }catch(e){ showToast('Network error'); }
-  if(btnEl){ btnEl.disabled=false; btnEl.textContent='Reject'; }
-}
-
-// ── Revenue: email blast (fixes missing TOKEN context) ───────────
-async function sendAdminBlast(){
-  const subject = document.getElementById('blast-subject')?.value?.trim();
-  const body    = document.getElementById('blast-body')?.value?.trim();
-  const product = document.getElementById('blast-product')?.value?.trim();
-  const url     = document.getElementById('blast-url')?.value?.trim();
-  const okEl    = document.getElementById('blast-ok');
-  const errEl   = document.getElementById('blast-err');
-  const btn     = document.getElementById('blast-btn');
-  if(okEl) okEl.style.display='none';
-  if(errEl) errEl.style.display='none';
-  if(!subject||!body){ if(errEl){errEl.textContent='Subject and body required.';errEl.style.display='block';} return; }
-  if(!confirm('Send to all registered users?')) return;
-  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
-  try{
-    const r = await adminFetch('/api/revenue/email-blast',{method:'POST',body:JSON.stringify({subject,body,product,url})});
-    const d = await r.json();
-    if(d.ok){ if(okEl){okEl.textContent='Done: '+d.message; okEl.style.display='block';} }
-    else { if(errEl){errEl.textContent=d.error||'Send failed'; errEl.style.display='block';} }
-  }catch(e){ if(errEl){errEl.textContent='Network error'; errEl.style.display='block';} }
-  if(btn){ btn.disabled=false; btn.textContent='Send to All Users'; }
-}
 </script>
 <!-- ✦ UPGRADE IDEA MODAL -->
-
-<!-- ═══ 5AM ADMIN CORNER TOAST ═══════════════════════════════════ -->
-<div id="admin-corner-toast" style="display:none;position:fixed;bottom:20px;right:20px;z-index:99999;max-width:300px;">
-  <div style="background:linear-gradient(135deg,#0c0f16,#11151f);border:1px solid rgba(48,232,144,0.35);border-radius:16px;padding:16px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-    <div style="display:flex;align-items:flex-start;gap:12px;">
-      <div style="font-size:20px;flex-shrink:0;">🌅</div>
-      <div style="flex:1;">
-        <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">Daily App Refresh</div>
-        <div id="admin-corner-msg" style="font-size:11px;color:var(--muted2);line-height:1.55;"></div>
-        <div style="margin-top:10px;display:flex;gap:8px;">
-          <button onclick="document.getElementById('admin-corner-toast').style.display='none'" style="background:rgba(48,232,144,0.12);color:var(--green);border:1px solid rgba(48,232,144,0.25);border-radius:12px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Got it</button>
-          <button onclick="triggerManualRefresh()" style="background:var(--green);color:#000;border:none;border-radius:12px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Refresh Now</button>
-        </div>
-      </div>
-      <button onclick="document.getElementById('admin-corner-toast').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0;">×</button>
-    </div>
-  </div>
-</div>
 <div id="upgrade-idea-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeUpgradeModal()">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:22px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;position:relative;">
 
@@ -11407,83 +7356,21 @@ function myUpgradeIdea() {
   <a onclick="switchPTab('overview')">Overview</a>
   <a onclick="switchPTab('profile')">Hair Profile</a>
   <a onclick="switchPTab('settings')">Settings</a>
-  <a href="/traffic" target="_blank" style="color:var(--pur)">Traffic Growth</a>
-  <a href="/revenue" target="_blank" style="color:var(--green)">Revenue Engine</a>
   <a href="https://supportrd.com" target="_blank">Shop</a>
   <a href="mailto:hello@supportrd.com">Contact</a>
-  <a onclick="document.getElementById('dash-campaign-modal').style.display='flex'">🗳 Our Positions</a>
+  <a onclick="document.getElementById('dash-campaign-modal').style.display='flex'">🗳 Political Position</a>
   <a onclick="document.getElementById('dash-about-modal').style.display='flex'">About Us</a>
   <a onclick="document.getElementById('dash-privacy-modal').style.display='flex'">Privacy Policy</a>
-  <a onclick="openUpgradeModal()" style="color:var(--gold);font-weight:700;">💡 Upgrade Ideas</a>
-  <a href="/blog/write" id="starterBagLink" style="color:#c084fc;font-weight:700;display:none;">🎁 Starter Bag</a>
+  <a onclick="openUpgradeModal()" style="color:var(--gold);font-weight:700;">💡 Submit an Upgrade — Earn 1 Free Month</a>
 </div>
 
 <!-- CAMPAIGN MODAL (dashboard) -->
 <div id="dash-campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:24px;" onclick="this.style.display='none'">
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
-
-    <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:18px;">✦ Our Political Positions</div>
-
-    <!-- Position 1: Ban Pornography -->
-    <div style="margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <span style="font-size:1.1rem;">🛡</span>
-        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);">Ban Pornography on the Internet</div>
-      </div>
-      <div style="font-size:12px;color:var(--muted2);line-height:1.75;margin-bottom:8px;">Support RD publicly backs the campaign to ban pornography on the internet. We believe unrestricted access to explicit content online causes documented harm to children, relationships, and communities. This is our official stated position.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <span style="background:rgba(59,130,246,0.12);color:#60a5fa;border:1px solid rgba(59,130,246,0.25);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">🫏 Democratic Party</span>
-        <span style="background:rgba(240,160,144,0.1);color:var(--rose);border:1px solid rgba(240,160,144,0.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">Child Protection</span>
-      </div>
-    </div>
-
-    <!-- Position 2: Campaign for the Poor -->
-    <div style="margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <span style="font-size:1.1rem;">🤝</span>
-        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);">Campaign for the Poor</div>
-      </div>
-      <div style="font-size:12px;color:var(--muted2);line-height:1.75;margin-bottom:8px;">Support RD believes that quality hair care should not be a luxury reserved for people with money. We are actively working on pathways to make our products accessible to low-income communities — through pricing programs, community partnerships, and donation initiatives. Hair is identity. Nobody should lose theirs because they can't afford to maintain it.</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">This campaign is in active development. If your organization works with low-income communities and wants to partner, contact us.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <span style="background:rgba(48,232,144,0.1);color:#30e890;border:1px solid rgba(48,232,144,0.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">Community Access</span>
-        <span style="background:rgba(59,130,246,0.12);color:#60a5fa;border:1px solid rgba(59,130,246,0.25);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">🫏 Democratic Party</span>
-        <span style="background:rgba(224,176,80,0.1);color:var(--gold);border:1px solid rgba(224,176,80,0.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">In Development</span>
-      </div>
-    </div>
-
-    <!-- Auto Dissolve Bar — Partnership Search -->
-    <div style="margin-bottom:24px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <span style="font-size:1.1rem;">✨</span>
-        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);">Auto Dissolve Bar — Seeking Partner</div>
-      </div>
-      <div style="font-size:12px;color:var(--muted2);line-height:1.75;margin-bottom:8px;">Support RD has developed a proprietary auto dissolve hair bar — a solid format product that dissolves on contact, delivers treatment without waste, and ships without liquid restrictions. We are actively looking for a shipping and distribution company that aligns with our values to bring this to market. If your company wants to be the first to ship this, reach out.</div>
-      <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:12px;padding:12px 14px;margin-bottom:10px;">
-        <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#c084fc;margin-bottom:4px;">What we need</div>
-        <div style="font-size:11px;color:var(--muted2);line-height:1.6;">A shipping partner who can handle solid format hair products, ship affordably to low-income customers, and wants to be part of a mission-driven beauty brand.</div>
-      </div>
-      <a href="mailto:hello@supportrd.com?subject=Auto Dissolve Bar Partnership" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;text-decoration:none;border-radius:20px;padding:9px 18px;font-size:11px;font-weight:700;letter-spacing:0.05em;">📦 Express Interest in Partnering</a>
-    </div>
-
-    <div style="font-size:10px;color:var(--muted);margin-bottom:18px;">These reflect the personal and company positions of Support's leadership — Anthony, Crystal, and Evelyn.</div>
-    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
-      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:14px;letter-spacing:0.06em;">ACTIVE CAMPAIGNS</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-        <div style="background:rgba(224,176,80,0.08);border:1px solid rgba(224,176,80,0.2);border-radius:12px;padding:14px;">
-          <div style="font-size:18px;margin-bottom:6px;">🫶</div>
-          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">Campaign for the Poor</div>
-          <div style="font-size:11px;color:var(--muted2);line-height:1.5;margin-bottom:10px;">Help us provide affordable hair care to families who can't access it.</div>
-          <a href="mailto:hello@supportrd.com?subject=Campaign for the Poor — I want to help" style="background:var(--gold);color:#000;border-radius:16px;padding:7px 14px;font-size:10px;font-weight:700;text-decoration:none;display:inline-block;letter-spacing:0.04em;">Donate Now</a>
-        </div>
-        <div style="background:rgba(96,168,255,0.08);border:1px solid rgba(96,168,255,0.2);border-radius:12px;padding:14px;">
-          <div style="font-size:18px;margin-bottom:6px;">🧼</div>
-          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">Auto Dissolve Bar</div>
-          <div style="font-size:11px;color:var(--muted2);line-height:1.5;margin-bottom:10px;">We have the product. We need a shipping partner to get it to the world.</div>
-          <a href="mailto:hello@supportrd.com?subject=Dissolve Bar Shipping Partner — Interested" style="background:var(--blue);color:#000;border-radius:16px;padding:7px 14px;font-size:10px;font-weight:700;text-decoration:none;display:inline-block;letter-spacing:0.04em;">Partner With Us</a>
-        </div>
-      </div>
-    </div>
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;max-width:440px;width:100%;" onclick="event.stopPropagation()">
+    <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--rose);margin-bottom:10px;">✦ Our Political Position</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);margin-bottom:12px;">Ban Pornography on the Internet</div>
+    <div style="font-size:13px;color:var(--muted2);line-height:1.75;margin-bottom:16px;">Support the company publicly backs the campaign to ban pornography on the internet. We believe unrestricted access to explicit content online causes documented harm to children, relationships, and communities. This is our official stated position. We are affiliated with the Democratic Party.</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:18px;">This reflects the personal and company position of Support's leadership.</div>
     <button onclick="document.getElementById('dash-campaign-modal').style.display='none'" style="background:var(--rose);color:#fff;border:none;border-radius:20px;padding:11px 24px;font-size:11px;letter-spacing:0.1em;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Close</button>
   </div>
 </div>
@@ -11708,2495 +7595,16 @@ def admin_upgrade_ideas():
     return jsonify([dict(i) for i in (ideas or [])])
 
 
-# ── ADMIN MAGIC LINK — always lets ADMIN_EMAIL back in ──────────
-
-@app.route("/admin-access")
-def admin_access():
-    """
-    Visit /admin-access?key=YOUR_ADMIN_KEY to get an instant session
-    as the admin account. Safe because it requires ADMIN_KEY.
-    """
-    key = request.args.get("key", "")
-    if not key or key != os.environ.get("ADMIN_KEY", ""):
-        return "Unauthorized", 403
-
-    admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
-    if not admin_email:
-        return "ADMIN_EMAIL env var not set on Render.", 500
-
-    # Find or create the admin user account
-    user = db_execute("SELECT * FROM users WHERE LOWER(email)=?", (admin_email,), fetchone=True)
-    if not user:
-        # Create admin account on the fly
-        pw_hash = hashlib.sha256(os.environ.get("ADMIN_KEY","admin").encode()).hexdigest()
-        db_execute(
-            "INSERT INTO users (email, name, password_hash) VALUES (?,?,?)",
-            (admin_email, "Admin", pw_hash)
-        )
-        user = db_execute("SELECT * FROM users WHERE LOWER(email)=?", (admin_email,), fetchone=True)
-
-    if not user:
-        return "Could not find or create admin account.", 500
-
-    # Create a fresh session
-    token = create_session(user["id"])
-
-    # Send back a page that stores the token in localStorage and redirects
-    return Response(f"""<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Admin Access</title></head>
-<body style="font-family:sans-serif;background:#07090d;color:#eaedf5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
-<div style="text-align:center;">
-  <div style="font-size:32px;margin-bottom:16px;">🔑</div>
-  <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Granting admin access…</div>
-  <div style="font-size:13px;color:rgba(255,255,255,0.4);">Redirecting to dashboard</div>
-</div>
-<script>
-  localStorage.setItem('srd_token', '{token}');
-  localStorage.setItem('srd_user', JSON.stringify({{name:'Admin',email:'{admin_email}',avatar:''}}));
-  localStorage.setItem('srd_premium', '1');
-  window.location.replace('/dashboard');
-</script>
-</body></html>""", mimetype="text/html")
-
-
-# ════════════════════════════════════════════════════════════════
-# ✦ LIVE CODING FEED
-# ════════════════════════════════════════════════════════════════
-
-@app.route("/live")
-def live_feed_page():
-    return Response(r"""<!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Support — Live Coding Feed</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --bg:#07090d;--bg2:#0c0f16;--bg3:#11151f;
-  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
-  --text:#eaedf5;--muted:#505870;--muted2:#8490a8;
-  --rose:#f0a090;--gold:#e0b050;--green:#30e890;--blue:#60a8ff;--red:#ff5555;
-}
-body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse 60% 40% at 80% 0%,rgba(240,160,144,0.07) 0%,transparent 60%),
-    radial-gradient(ellipse 40% 40% at 0% 90%,rgba(224,176,80,0.05) 0%,transparent 55%);
-  pointer-events:none;z-index:0;}
-
-/* ── TOP BAR ── */
-.top-bar{position:sticky;top:0;z-index:100;background:rgba(7,9,13,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;}
-.top-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.02em;}
-.top-logo span{color:var(--rose);}
-.top-right{display:flex;align-items:center;gap:14px;}
-.live-badge{display:flex;align-items:center;gap:7px;background:rgba(255,50,50,0.12);border:1px solid rgba(255,50,50,0.3);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:0.1em;color:#ff5555;}
-.live-dot{width:8px;height:8px;border-radius:50%;background:#ff5555;animation:livePulse 1.2s ease-in-out infinite;}
-.offline-badge{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);}
-.offline-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
-@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(255,50,50,0.4);}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(255,50,50,0);}}
-.viewer-count{font-size:11px;color:var(--muted2);}
-
-/* ── HERO ── */
-.hero{padding:40px 28px 24px;max-width:900px;margin:0 auto;position:relative;z-index:1;}
-.hero-eyebrow{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--rose);margin-bottom:12px;}
-.hero-title{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:800;line-height:1.1;margin-bottom:10px;}
-.hero-sub{font-size:14px;color:var(--muted2);line-height:1.6;max-width:560px;}
-.session-info-bar{margin-top:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.session-tag{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:600;color:var(--muted2);}
-.session-tag.live-tag{border-color:rgba(255,80,80,0.3);color:#ff6060;background:rgba(255,50,50,0.07);}
-
-/* ── COMMANDER LAYOUT ── */
-.commander{max-width:900px;margin:0 auto;padding:0 28px 60px;position:relative;z-index:1;}
-
-/* Status card */
-.status-card{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
-.status-left{}
-.status-now{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-.status-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);}
-.status-desc{font-size:13px;color:var(--muted2);margin-top:5px;line-height:1.5;}
-.status-meta{display:flex;gap:24px;flex-wrap:wrap;}
-.stat-block{text-align:center;}
-.stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
-.stat-num.live-num{color:#ff6060;}
-.stat-num.green{color:var(--green);}
-.stat-label{font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;}
-
-/* Feed stream */
-.feed-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-.feed-label{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);}
-.feed-auto{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;}
-.feed-auto-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:livePulse 2s infinite;}
-
-.feed-stream{display:flex;flex-direction:column;gap:10px;}
-
-/* Event cards — Plus500 style */
-.ev-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:flex;gap:14px;align-items:flex-start;animation:evSlideIn 0.4s cubic-bezier(.2,0,.2,1);}
-@keyframes evSlideIn{from{opacity:0;transform:translateY(-12px);}to{opacity:1;transform:translateY(0);}}
-.ev-card.type-session{border-color:rgba(240,160,144,0.25);background:rgba(240,160,144,0.04);}
-.ev-card.type-build{border-color:rgba(96,168,255,0.2);background:rgba(96,168,255,0.03);}
-.ev-card.type-fix{border-color:rgba(255,200,60,0.2);background:rgba(255,200,60,0.03);}
-.ev-card.type-ship{border-color:rgba(48,232,144,0.25);background:rgba(48,232,144,0.04);}
-.ev-card.type-note{border-color:var(--border);background:var(--bg3);}
-.ev-card.type-code{border-color:rgba(176,144,255,0.2);background:rgba(176,144,255,0.03);}
-.ev-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-.ev-icon.type-session{background:rgba(240,160,144,0.12);}
-.ev-icon.type-build{background:rgba(96,168,255,0.12);}
-.ev-icon.type-fix{background:rgba(255,200,60,0.12);}
-.ev-icon.type-ship{background:rgba(48,232,144,0.12);}
-.ev-icon.type-note{background:rgba(255,255,255,0.06);}
-.ev-icon.type-code{background:rgba(176,144,255,0.12);}
-.ev-body{flex:1;min-width:0;}
-.ev-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
-.ev-title{font-size:13px;font-weight:700;color:var(--text);}
-.ev-tag{font-size:9px;letter-spacing:0.1em;padding:2px 8px;border-radius:8px;font-weight:700;text-transform:uppercase;}
-.ev-tag.type-session{background:rgba(240,160,144,0.15);color:var(--rose);}
-.ev-tag.type-build{background:rgba(96,168,255,0.15);color:var(--blue);}
-.ev-tag.type-fix{background:rgba(255,200,60,0.15);color:#ffcc3c;}
-.ev-tag.type-ship{background:rgba(48,232,144,0.15);color:var(--green);}
-.ev-tag.type-note{background:rgba(255,255,255,0.07);color:var(--muted2);}
-.ev-tag.type-code{background:rgba(176,144,255,0.15);color:#b090ff;}
-.ev-desc{font-size:12px;color:var(--muted2);line-height:1.55;margin-bottom:6px;}
-.ev-code{background:#0a0d14;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:0;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.7;overflow-x:auto;margin-top:8px;}
-.ev-code pre{margin:0;background:transparent!important;border-radius:8px;}
-.ev-code code.hljs{background:#0a0d14!important;border-radius:8px;font-size:11px;font-family:'IBM Plex Mono',monospace;padding:10px 14px!important;}
-.ev-time{font-size:10px;color:var(--muted);margin-top:4px;}
-.ev-card.new-flash{animation:newFlash 0.6s ease-out;}
-@keyframes newFlash{0%{background:rgba(240,160,144,0.15);}100%{background:inherit;}}
-
-/* Offline / empty state */
-.offline-state{text-align:center;padding:60px 20px;}
-.offline-icon{font-size:48px;margin-bottom:16px;}
-.offline-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;}
-.offline-sub{font-size:13px;color:var(--muted2);line-height:1.6;max-width:360px;margin:0 auto 24px;}
-.notify-btn{background:linear-gradient(135deg,var(--rose),#c06050);color:#fff;border:none;border-radius:20px;padding:12px 26px;font-size:12px;font-weight:700;letter-spacing:0.07em;cursor:pointer;font-family:'Space Grotesk',sans-serif;}
-
-/* Ticker tape — Plus500 style */
-.ticker-wrap{overflow:hidden;background:rgba(255,255,255,0.02);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px 0;margin-bottom:24px;}
-.ticker-inner{display:flex;gap:0;white-space:nowrap;animation:tickerScroll 28s linear infinite;}
-.ticker-item{display:inline-flex;align-items:center;gap:8px;padding:0 28px;font-size:11px;color:var(--muted2);border-right:1px solid var(--border);}
-.ticker-item .t-label{color:var(--text);font-weight:600;}
-.ticker-item .t-val{color:var(--green);}
-.ticker-item .t-val.down{color:var(--red);}
-@keyframes tickerScroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
-
-/* Footer */
-.live-footer{border-top:1px solid var(--border);padding:24px 28px;text-align:center;font-size:11px;color:var(--muted);position:relative;z-index:1;}
-.live-footer a{color:var(--rose);text-decoration:none;}
-
-@media(max-width:600px){
-  .top-bar{padding:0 16px;}
-  .hero{padding:24px 16px 16px;}
-  .commander{padding:0 16px 48px;}
-  .status-card{flex-direction:column;}
-  .ev-card{padding:12px 14px;}
-}
-</style>
-</head>
-<body>
-
-<!-- TOP BAR -->
-<div class="top-bar">
-  <div class="top-logo">Support<span>.</span></div>
-  <div class="top-right">
-    <div id="viewer-count" class="viewer-count">👁 — watching</div>
-    <div id="live-badge-wrap">
-      <div class="offline-badge"><div class="offline-dot"></div>OFFLINE</div>
-    </div>
-  </div>
-</div>
-
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-eyebrow">✦ Live Coding Feed</div>
-  <div class="hero-title" id="hero-title">Building Support in public.</div>
-  <div class="hero-sub" id="hero-sub">Every feature, fix, and experiment — streamed live as it happens. Watch Anthony build the platform in real time.</div>
-  <div class="session-info-bar" id="session-info-bar">
-    <div class="session-tag" id="session-tag-status">⚫ Offline</div>
-    <div class="session-tag" id="session-tag-time"></div>
-  </div>
-</div>
-
-<!-- TICKER TAPE -->
-<div class="ticker-wrap">
-  <div class="ticker-inner" id="ticker-inner">
-    <!-- populated by JS -->
-  </div>
-</div>
-
-<!-- COMMANDER BODY -->
-<div class="commander">
-
-  <!-- Status card -->
-  <div class="status-card" id="status-card">
-    <div class="status-left">
-      <div class="status-now">Current Session</div>
-      <div class="status-title" id="status-title">—</div>
-      <div class="status-desc" id="status-desc">No active session</div>
-    </div>
-    <div class="status-meta">
-      <div class="stat-block">
-        <div class="stat-num" id="stat-events">0</div>
-        <div class="stat-label">Events</div>
-      </div>
-      <div class="stat-block">
-        <div class="stat-num green" id="stat-session-count">0</div>
-        <div class="stat-label">Sessions</div>
-      </div>
-      <div class="stat-block">
-        <div class="stat-num live-num" id="stat-live">OFFLINE</div>
-        <div class="stat-label">Status</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Feed header -->
-  <div class="feed-header">
-    <div class="feed-label">Live Event Feed</div>
-    <div class="feed-auto"><div class="feed-auto-dot"></div>Auto-updating</div>
-  </div>
-
-  <!-- Offline state (shown when no events) -->
-  <div class="offline-state" id="offline-state">
-    <div class="offline-icon">📡</div>
-    <div class="offline-title">No session yet</div>
-    <div class="offline-sub">Anthony hasn't gone live yet. Check back soon — when he flips the switch, every build event streams here in real time.</div>
-    <button class="notify-btn" onclick="window.location.href='https://supportrd.com'">Visit SupportRD →</button>
-  </div>
-
-  <!-- Event stream -->
-  <div class="feed-stream" id="feed-stream" style="display:none;"></div>
-
-</div>
-
-<!-- FOOTER -->
-<div class="live-footer">
-  Built with ❤️ by Anthony · <a href="https://supportrd.com">supportrd.com</a> · <a href="/dashboard">Dashboard</a>
-</div>
-
-<script>
-const TYPE_ICONS = {
-  session:'🚀', build:'🔧', fix:'🐛', ship:'✅', note:'📝', code:'💻'
-};
-const TYPE_LABELS = {
-  session:'SESSION', build:'BUILD', fix:'FIX', ship:'SHIPPED', note:'NOTE', code:'CODE'
-};
-let _lastId    = 0;
-let _isLive    = false;
-let _pollTimer = null;
-let _viewerTimer = null;
-
-async function poll(){
-  try{
-    const r = await fetch('/api/live-feed/status');
-    const d = await r.json();
-    updateStatus(d);
-    if(d.events && d.events.length){
-      const newEvs = d.events.filter(e=>e.id > _lastId);
-      if(newEvs.length){
-        newEvs.forEach(e=>prependEvent(e));
-        _lastId = Math.max(...d.events.map(e=>e.id));
-      }
-    }
-    updateTicker(d);
-    updateStats(d);
-  }catch(e){}
-  _pollTimer = setTimeout(poll, 4000);
-}
-
-function updateStatus(d){
-  const isLive = !!d.is_live;
-  _isLive = isLive;
-  const badgeWrap = document.getElementById('live-badge-wrap');
-  if(badgeWrap){
-    badgeWrap.innerHTML = isLive
-      ? '<div class="live-badge"><div class="live-dot"></div>LIVE</div>'
-      : '<div class="offline-badge"><div class="offline-dot"></div>OFFLINE</div>';
-  }
-  const statusEl = document.getElementById('session-tag-status');
-  if(statusEl) statusEl.textContent = isLive ? '🔴 Live Now' : '⚫ Offline';
-  if(statusEl) statusEl.className   = isLive ? 'session-tag live-tag' : 'session-tag';
-
-  const titleEl = document.getElementById('status-title');
-  const descEl  = document.getElementById('status-desc');
-  const heroT   = document.getElementById('hero-title');
-  const heroS   = document.getElementById('hero-sub');
-
-  if(isLive && d.session_title){
-    if(titleEl) titleEl.textContent = d.session_title;
-    if(descEl)  descEl.textContent  = d.session_desc||'Session in progress…';
-    if(heroT)   heroT.textContent   = d.session_title;
-    if(heroS)   heroS.textContent   = d.session_desc||'Building Support live. Watch every step.';
-  } else {
-    if(titleEl) titleEl.textContent = 'No active session';
-    if(descEl)  descEl.textContent  = 'Anthony will go live soon.';
-  }
-
-  const statLive = document.getElementById('stat-live');
-  if(statLive){ statLive.textContent = isLive?'LIVE':'OFFLINE'; statLive.style.color=isLive?'#ff5555':'var(--muted)';}
-
-  // Time
-  const tagTime = document.getElementById('session-tag-time');
-  if(tagTime && isLive && d.went_live_at){
-    const mins = Math.floor((Date.now() - new Date(d.went_live_at+'Z').getTime())/60000);
-    tagTime.textContent = '⏱ '+mins+'m live';
-  }
-
-  // Show/hide offline state vs feed
-  const offEl  = document.getElementById('offline-state');
-  const feedEl = document.getElementById('feed-stream');
-  const hasEvents = feedEl && feedEl.children.length > 0;
-  if(offEl)  offEl.style.display  = hasEvents ? 'none' : 'block';
-  if(feedEl) feedEl.style.display = hasEvents ? 'flex' : 'none';
-}
-
-function prependEvent(ev){
-  const feed = document.getElementById('feed-stream');
-  const offEl = document.getElementById('offline-state');
-  if(!feed) return;
-  offEl && (offEl.style.display='none');
-  feed.style.display='flex';
-
-  const card = document.createElement('div');
-  card.className = 'ev-card type-'+ev.type+' new-flash';
-  card.innerHTML = `
-    <div class="ev-icon type-${ev.type}">${TYPE_ICONS[ev.type]||'📌'}</div>
-    <div class="ev-body">
-      <div class="ev-top">
-        <div class="ev-title">${escHtml(ev.title)}</div>
-        <div class="ev-tag type-${ev.type}">${TYPE_LABELS[ev.type]||ev.type.toUpperCase()}</div>
-      </div>
-      ${ev.body ? `<div class="ev-desc">${escHtml(ev.body)}</div>` : ''}
-      ${ev.code ? `<div class="ev-code"><pre><code class="${detectLang(ev.code)}">${escHtml(ev.code)}</code></pre></div>` : ''}
-      <div class="ev-time">${formatTime(ev.ts)}</div>
-    </div>`;
-  feed.insertBefore(card, feed.firstChild);
-  // Apply syntax highlighting to newly inserted code blocks
-  card.querySelectorAll('pre code').forEach(block => {
-    if(window.hljs){ hljs.highlightElement(block); }
-  });
-}
-
-function updateStats(d){
-  const evCount = document.getElementById('stat-events');
-  const sesCount = document.getElementById('stat-session-count');
-  const viewEl   = document.getElementById('viewer-count');
-  if(evCount)  evCount.textContent  = d.total_events||0;
-  if(sesCount) sesCount.textContent = d.total_sessions||0;
-  if(viewEl)   viewEl.textContent   = '👁 '+(d.viewers||0)+' watching';
-}
-
-function updateTicker(d){
-  const inner = document.getElementById('ticker-inner');
-  if(!inner) return;
-  const items = [
-    {label:'Status',     val: d.is_live?'LIVE':'OFFLINE',  live:!!d.is_live},
-    {label:'Session',    val: d.session_title||'—',         live:false},
-    {label:'Events',     val: String(d.total_events||0),    live:false},
-    {label:'Sessions',   val: String(d.total_sessions||0),  live:false},
-    {label:'Watching',   val: String(d.viewers||1),         live:false},
-    {label:'Platform',   val: 'aria.supportrd.com',         live:false},
-    {label:'Stack',      val: 'Python · Flask · Claude AI', live:false},
-    {label:'Builder',    val: 'Anthony @ Support',          live:false},
-  ];
-  // Duplicate for infinite scroll
-  const all = [...items,...items];
-  inner.innerHTML = all.map(i=>`
-    <div class="ticker-item">
-      <span class="t-label">${i.label}</span>
-      <span class="t-val${i.live?'':''}">${i.val}</span>
-    </div>`).join('');
-}
-
-function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function detectLang(code){
-  if(!code) return 'plaintext';
-  if(/def |import |from |class |print\(|f\"/.test(code)) return 'python';
-  if(/function |const |let |var |=>|document\.|async /.test(code)) return 'javascript';
-  if(/\{[\s\S]*:[\s\S]*;/.test(code)) return 'css';
-  if(/^(curl|pip|npm|git|cd |ls |rm |mkdir|python)/.test(code.trim())) return 'bash';
-  if(/<[a-z][\s\S]*>/.test(code)) return 'html';
-  return 'plaintext';
-}
-function formatTime(ts){
-  if(!ts) return '';
-  const d = new Date(ts.includes('Z')?ts:ts+'Z');
-  return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) + ' · ' + d.toLocaleDateString([],{month:'short',day:'numeric'});
-}
-
-// Track viewers
-async function pingViewer(){
-  try{ await fetch('/api/live-feed/viewer-ping', {method:'POST'}); }catch(e){}
-}
-pingViewer();
-setInterval(pingViewer, 30000);
-
-poll();
-</script>
-</body></html>""", mimetype="text/html")
-
-
-@app.route("/api/live-feed/status", methods=["GET"])
-def live_feed_status():
-    status = db_execute("SELECT * FROM live_feed_status WHERE id=1", fetchone=True)
-    events = db_execute("SELECT * FROM live_feed_events ORDER BY id DESC LIMIT 50", fetchall=True)
-    total_events   = db_execute("SELECT COUNT(*) FROM live_feed_events", fetchone=True)[0]
-    total_sessions = db_execute("SELECT COUNT(*) FROM live_feed_events WHERE type='session'", fetchone=True)[0]
-    viewers = status["viewers"] if status else 0
-    return jsonify({
-        "is_live":       bool(status["is_live"]) if status else False,
-        "session_title": status["session_title"] if status else "",
-        "session_desc":  status["session_desc"]  if status else "",
-        "went_live_at":  status["went_live_at"]  if status else None,
-        "viewers":       viewers,
-        "total_events":  total_events,
-        "total_sessions":total_sessions,
-        "events":        [dict(e) for e in (events or [])]
-    })
-
-
-@app.route("/api/live-feed/go-live", methods=["POST","OPTIONS"])
-def live_feed_go_live():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error":"unauthorized"}), 401
-    data  = request.get_json(silent=True) or {}
-    title = (data.get("title","") or "Coding Session").strip()[:120]
-    desc  = (data.get("desc","")  or "").strip()[:300]
-    db_execute("UPDATE live_feed_status SET is_live=1, session_title=?, session_desc=?, went_live_at=datetime('now') WHERE id=1", (title, desc))
-    # Post a session-start event
-    db_execute("INSERT INTO live_feed_events (type,title,body,tag) VALUES ('session',?,?,'live')",
-               (title, desc or "New coding session started."))
-    return jsonify({"ok": True, "live": True})
-
-
-@app.route("/api/live-feed/go-offline", methods=["POST","OPTIONS"])
-def live_feed_go_offline():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error":"unauthorized"}), 401
-    db_execute("UPDATE live_feed_status SET is_live=0, went_offline_at=datetime('now') WHERE id=1")
-    db_execute("INSERT INTO live_feed_events (type,title,body) VALUES ('note','Session ended','Anthony has gone offline. See you next time.')")
-    return jsonify({"ok": True, "live": False})
-
-
-@app.route("/api/live-feed/post-event", methods=["POST","OPTIONS"])
-def live_feed_post_event():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error":"unauthorized"}), 401
-    data  = request.get_json(silent=True) or {}
-    etype = data.get("type","note")
-    if etype not in ("session","build","fix","ship","note","code"):
-        etype = "note"
-    title = (data.get("title","") or "Update").strip()[:200]
-    body  = (data.get("body","")  or "").strip()[:2000]
-    code  = (data.get("code","")  or "").strip()[:5000]
-    lang  = (data.get("language","python") or "python").strip()[:30]
-    tag   = (data.get("tag","")   or "").strip()[:40]
-    db_execute("INSERT INTO live_feed_events (type,title,body,code,language,tag) VALUES (?,?,?,?,?,?)",
-               (etype, title, body, code, lang, tag))
-    ev = db_execute("SELECT * FROM live_feed_events ORDER BY id DESC LIMIT 1", fetchone=True)
-    return jsonify({"ok": True, "event": dict(ev) if ev else {}})
-
-
-@app.route("/api/live-feed/viewer-ping", methods=["POST","OPTIONS"])
-def live_feed_viewer_ping():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    db_execute("UPDATE live_feed_status SET viewers = viewers + 1 WHERE id=1 AND is_live=1")
-    return jsonify({"ok": True})
-
-
-@app.route("/api/live-feed/clear", methods=["POST","OPTIONS"])
-def live_feed_clear():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error":"unauthorized"}), 401
-    db_execute("DELETE FROM live_feed_events")
-    db_execute("UPDATE live_feed_status SET is_live=0, viewers=0, session_title='', session_desc='' WHERE id=1")
-    return jsonify({"ok": True})
-
-
-@app.route("/api/admin/refresh-now", methods=["POST","OPTIONS"])
-def admin_refresh_now():
-    """Admin-only: manually trigger the 5 AM company refresh immediately."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    threading.Thread(target=_company_refresh_5am, daemon=True, name="manual-refresh").start()
-    return jsonify({"ok": True, "message": "Company refresh triggered. Check live feed for the system event."})
-
-
-@app.route("/api/admin/refresh-status", methods=["GET"])
-def admin_refresh_status():
-    """Admin-only: show the last system refresh event from the live feed log."""
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    ev = db_execute(
-        "SELECT * FROM live_feed_events WHERE tag='system' ORDER BY id DESC LIMIT 1",
-        fetchone=True
-    )
-    next_wait = _seconds_until_5am_utc()
-    return jsonify({
-        "last_refresh":  dict(ev) if ev else None,
-        "next_refresh_in_seconds": int(next_wait),
-        "next_refresh_utc": (datetime.datetime.utcnow() + datetime.timedelta(seconds=next_wait)).isoformat()
-    })
-
-
-# ─── 5 AM DAILY COMPANY REFRESH ─────────────────────────────────────────────
-# Runs every day at 05:00 UTC. Archives old data, re-checks subscriptions,
-# clears stale sessions, and posts a system event to the live feed.
-
-def _company_refresh_5am():
-    """Hard-wired 5 AM company-wide refresh. Archives, compacts, re-checks."""
-    now_str = datetime.datetime.utcnow().isoformat()
-    print(f"[5AM REFRESH] Starting company refresh at {now_str}")
-
-    try:
-        con = sqlite3.connect(AUTH_DB, timeout=30, check_same_thread=False)
-        con.row_factory = sqlite3.Row
-
-        # 1. SUBSCRIPTION RE-CHECK: mark expired trials/plans as inactive
-        con.execute("""
-            UPDATE subscriptions
-            SET status = 'expired', updated_at = datetime('now')
-            WHERE status IN ('trialing','active')
-              AND trial_end IS NOT NULL
-              AND trial_end != ''
-              AND datetime(trial_end) < datetime('now')
-        """)
-        con.execute("""
-            UPDATE subscriptions
-            SET status = 'expired', updated_at = datetime('now')
-            WHERE status = 'active'
-              AND current_period_end IS NOT NULL
-              AND current_period_end != ''
-              AND datetime(current_period_end) < datetime('now')
-        """)
-
-        # 2. SESSION TOKENS: remove tokens older than 90 days
-        con.execute("""
-            DELETE FROM sessions
-            WHERE created_at < datetime('now', '-90 days')
-        """)
-
-        # 3. LIVE FEED: auto-close any session left open overnight
-        con.execute("""
-            UPDATE live_feed_status
-            SET is_live = 0,
-                went_offline_at = datetime('now')
-            WHERE is_live = 1
-              AND went_live_at < datetime('now', '-12 hours')
-        """)
-
-        # 4. UPGRADE IDEAS: archive ideas older than 90 days that were reviewed
-        con.execute("""
-            UPDATE upgrade_ideas
-            SET status = 'archived'
-            WHERE status IN ('approved','rejected')
-              AND reviewed_at < datetime('now', '-90 days')
-        """)
-
-        # 5. PUSH SUBSCRIPTIONS: remove stale entries older than 180 days
-        try:
-            con.execute("""
-                DELETE FROM push_subscriptions
-                WHERE created_at < datetime('now', '-180 days')
-            """)
-        except Exception:
-            pass
-
-        # 6. VIEWER COUNT RESET: reset viewer count nightly
-        con.execute("UPDATE live_feed_status SET viewers = 0 WHERE id = 1")
-
-        con.commit()
-        con.close()
-
-        # 7. ANALYTICS DB: vacuum to compact file size
-        try:
-            acon = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
-            acon.execute("DELETE FROM page_views WHERE timestamp < datetime('now', '-365 days')")
-            acon.commit()
-            acon.execute("VACUUM")
-            acon.close()
-        except Exception as ae:
-            print(f"[5AM REFRESH] Analytics cleanup warning: {ae}")
-
-        # 8. POST a system event to live feed log
-        try:
-            db_execute(
-                "INSERT INTO live_feed_events (type,title,body,tag) VALUES (?,?,?,?)",
-                ("note",
-                 "🌅 5 AM Company Refresh",
-                 f"Daily refresh ran at {now_str} UTC. Subscriptions re-checked, sessions compacted, stale data archived.",
-                 "system")
-            )
-        except Exception:
-            pass
-
-        print(f"[5AM REFRESH] Complete ✓")
-
-    except Exception as e:
-        print(f"[5AM REFRESH] Error: {e}")
-
-
-def _seconds_until_5am_utc():
-    """Returns seconds until the next 05:00 UTC."""
-    now = datetime.datetime.utcnow()
-    target = now.replace(hour=5, minute=0, second=0, microsecond=0)
-    if now >= target:
-        target += datetime.timedelta(days=1)
-    return (target - now).total_seconds()
-
-
-def _start_5am_scheduler():
-    """Background thread: waits until 5 AM UTC, runs refresh, repeats daily."""
-    def _loop():
-        # Wait for first 5 AM
-        wait = _seconds_until_5am_utc()
-        print(f"[5AM SCHEDULER] Next refresh in {int(wait//3600)}h {int((wait%3600)//60)}m")
-        time.sleep(wait)
-        while True:
-            _company_refresh_5am()
-            # Sleep until next 5 AM (always 24 h after running)
-            time.sleep(_seconds_until_5am_utc())
-
-    t = threading.Thread(target=_loop, daemon=True, name="5am-refresh")
-    t.start()
-    print("[5AM SCHEDULER] Scheduler thread started ✓")
-
-# Boot the scheduler when the app starts
-_start_5am_scheduler()
-
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  BLOG SYSTEM
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def _blog_slug(title):
-    """Generate a URL slug from a post title."""
-    import re as _re
-    s = title.lower().strip()
-    s = _re.sub(r"[^\w\s-]", "", s)
-    s = _re.sub(r"[\s_]+", "-", s)
-    s = _re.sub(r"-+", "-", s).strip("-")
-    return s[:80]
-
-
-@app.route("/blog")
-def blog_index():
-    posts = db_execute(
-        "SELECT id,slug,title,subtitle,cover_url,author,tags,views,published_at,featured FROM blog_posts WHERE status='published' ORDER BY featured DESC, published_at DESC",
-        fetchall=True
-    )
-    posts = [dict(p) for p in (posts or [])]
-    # bump views is handled on individual post page
-
-    posts_json = json.dumps(posts)
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hair Care Blog — Support RD | Dominican Hair Tips & Advice</title>
-<meta name="robots" content="index, follow">
-<meta name="keywords" content="Dominican hair care, natural hair tips, hair growth, damaged hair repair, shampoo aloe vera, hair care blog">
-<link rel="canonical" href="https://aria.supportrd.com/blog">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://aria.supportrd.com/blog">
-<meta property="og:site_name" content="Support RD Hair Care">
-<meta property="og:image" content="https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845">
-<meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Blog","name":"Support RD Hair Care Blog","url":"https://aria.supportrd.com/blog","description":"Professional Dominican hair care tips, product guides, and natural hair advice from the Support RD team.","publisher":{"@type":"Organization","name":"Support RD","url":"https://supportrd.com"}}
-</script>
-<meta name="description" content="Hair care tips, product updates, and insider knowledge from the Support RD team.">
-<link rel="icon" href="https://supportrd.com/favicon.ico">
-<style>
-  *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{background:#0a0a0f;color:#e8e0f0;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}}
-  .blog-nav{{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;background:rgba(10,10,20,0.95);border-bottom:1px solid rgba(180,130,255,0.15);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}}
-  .blog-nav-logo{{display:flex;align-items:center;gap:10px;text-decoration:none}}
-  .blog-nav-logo span{{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,#c084fc,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}}
-  .blog-nav-links{{display:flex;gap:20px;align-items:center}}
-  .blog-nav-links a{{color:#c4b0d8;text-decoration:none;font-size:.9rem;transition:color .2s}}
-  .blog-nav-links a:hover{{color:#c084fc}}
-  .blog-hero{{text-align:center;padding:72px 24px 48px;background:radial-gradient(ellipse at 50% 0%,rgba(168,85,247,0.15) 0%,transparent 70%)}}
-  .blog-hero h1{{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;background:linear-gradient(135deg,#fff 30%,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}}
-  .blog-hero p{{color:#a090b8;font-size:1.1rem;max-width:520px;margin:0 auto}}
-  .blog-grid{{max-width:1100px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:28px}}
-  .blog-card{{background:rgba(255,255,255,0.04);border:1px solid rgba(180,130,255,0.12);border-radius:18px;overflow:hidden;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;text-decoration:none;color:inherit;display:flex;flex-direction:column}}
-  .blog-card:hover{{transform:translateY(-4px);border-color:rgba(192,132,252,0.4);box-shadow:0 12px 40px rgba(168,85,247,0.15)}}
-  .blog-card.featured{{grid-column:1/-1;flex-direction:row;max-height:280px}}
-  .blog-card-img{{width:100%;height:200px;object-fit:cover;background:linear-gradient(135deg,#1a0a2e,#2d1b4e)}}
-  .blog-card.featured .blog-card-img{{width:45%;height:100%;flex-shrink:0}}
-  .blog-card-body{{padding:22px;flex:1;display:flex;flex-direction:column}}
-  .blog-card-tags{{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}}
-  .blog-tag{{background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.25);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:600;letter-spacing:.3px;text-transform:uppercase}}
-  .blog-card-title{{font-size:1.15rem;font-weight:700;line-height:1.35;margin-bottom:8px;color:#f0e8ff}}
-  .blog-card.featured .blog-card-title{{font-size:1.5rem}}
-  .blog-card-sub{{color:#9080a8;font-size:.88rem;line-height:1.5;flex:1}}
-  .blog-card-meta{{display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:.8rem;color:#6050788}}
-  .blog-card-meta{{color:#705090}}
-  .blog-feat-badge{{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border-radius:20px;padding:3px 12px;font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;display:inline-block;width:fit-content}}
-  .blog-empty{{text-align:center;padding:80px 24px;color:#6050788}}
-  .blog-empty{{color:#705090}}
-  .blog-empty h2{{font-size:1.5rem;margin-bottom:10px;color:#9080a8}}
-  .admin-write-btn{{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:24px;padding:10px 22px;font-size:.9rem;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity .2s}}
-  .admin-write-btn:hover{{opacity:.85}}
-  @media(max-width:600px){{.blog-card.featured{{flex-direction:column;max-height:none}}.blog-card.featured .blog-card-img{{width:100%;height:200px}}}}
-</style>
-</head>
-<body>
-<nav class="blog-nav">
-  <a class="blog-nav-logo" href="https://supportrd.com">
-    <span>Support RD</span>
-  </a>
-  <div class="blog-nav-links">
-    <a href="https://supportrd.com">Shop</a>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/blog" style="color:#c084fc">Blog</a>
-    <a id="adminWriteLink" href="/blog/write" class="admin-write-btn" style="display:none">✍️ Write Post</a>
-  </div>
-</nav>
-
-<div class="blog-hero">
-  <h1>Hair Stories &amp; Tips</h1>
-  <p>Product deep-dives, care routines, and the science behind Support RD.</p>
-</div>
-
-<div class="blog-grid" id="blogGrid">
-  <div class="blog-empty"><h2>Loading posts…</h2></div>
-</div>
-
-<script>
-const POSTS = {posts_json};
-
-function renderPosts() {{
-  const grid = document.getElementById('blogGrid');
-  if (!POSTS.length) {{
-    grid.innerHTML = '<div class="blog-empty"><h2>No posts yet</h2><p>Check back soon — we are writing!</p></div>';
-    return;
-  }}
-  grid.innerHTML = POSTS.map(p => {{
-    const tags = (p.tags||'').split(',').filter(Boolean).map(t=>`<span class="blog-tag">${{t.trim()}}</span>`).join('');
-    const img  = p.cover_url ? `<img class="blog-card-img" src="${{p.cover_url}}" alt="${{p.title}}" loading="lazy">` : `<div class="blog-card-img" style="display:flex;align-items:center;justify-content:center;font-size:3rem">💜</div>`;
-    const feat = p.featured ? '<span class="blog-feat-badge">✨ Featured</span>' : '';
-    const date = p.published_at ? new Date(p.published_at).toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}}) : '';
-    return `<a class="blog-card${{p.featured?' featured':''}}" href="/blog/${{p.slug}}">
-      ${{img}}
-      <div class="blog-card-body">
-        ${{feat}}
-        <div class="blog-card-tags">${{tags}}</div>
-        <div class="blog-card-title">${{p.title}}</div>
-        <div class="blog-card-sub">${{p.subtitle||''}}</div>
-        <div class="blog-card-meta"><span>By ${{p.author||'Support RD'}}</span><span>${{date}}</span></div>
-      </div>
-    </a>`;
-  }}).join('');
-}}
-
-// Show write button for admins
-fetch('/api/me', {{credentials:'include',headers:{{'X-Auth-Token':localStorage.getItem('aria_token')||''}}}})
-  .then(r=>r.json()).then(d=>{{
-    if(d.is_admin) document.getElementById('adminWriteLink').style.display='inline-block';
-  }}).catch(()=>{{}});
-
-renderPosts();
-</script>
-</body>
-</html>"""
-
-
-@app.route("/blog/<slug>")
-def blog_post(slug):
-    post = db_execute("SELECT * FROM blog_posts WHERE slug=? AND status='published'", (slug,), fetchone=True)
-    if not post:
-        return "<h1 style='font-family:sans-serif;text-align:center;padding:80px;color:#a855f7'>Post not found</h1>", 404
-    post = dict(post)
-    # Increment views
-    db_execute("UPDATE blog_posts SET views = views + 1 WHERE slug=?", (slug,))
-
-    related = db_execute(
-        "SELECT slug,title,cover_url FROM blog_posts WHERE status='published' AND slug!=? ORDER BY published_at DESC LIMIT 3",
-        (slug,), fetchall=True
-    )
-    related = [dict(r) for r in (related or [])]
-    related_html = ""
-    if related:
-        cards = "".join([f"""<a class="rel-card" href="/blog/{r['slug']}">
-          {'<img src="'+r['cover_url']+'" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px">' if r.get('cover_url') else '<div style="width:100%;height:120px;background:linear-gradient(135deg,#1a0a2e,#2d1b4e);border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;font-size:2rem">💜</div>'}
-          <div style="font-weight:600;color:#e8e0f0;font-size:.9rem">{r['title']}</div>
-        </a>""" for r in related])
-        related_html = f"""<div style="margin-top:60px;padding-top:40px;border-top:1px solid rgba(180,130,255,0.15)">
-          <h3 style="color:#c084fc;font-size:1rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px">More from Support RD</h3>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px">{cards}</div>
-        </div>"""
-
-    tags_html = "".join([f'<span style="background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.25);border-radius:20px;padding:4px 12px;font-size:.78rem;font-weight:600">{t.strip()}</span>' for t in (post.get("tags") or "").split(",") if t.strip()])
-    cover_html = f'<img src="{post["cover_url"]}" alt="{post["title"]}" style="width:100%;max-height:480px;object-fit:cover;border-radius:16px;margin-bottom:36px">' if post.get("cover_url") else ""
-    pub_date = ""
-    if post.get("published_at"):
-        try:
-            pub_date = datetime.datetime.fromisoformat(post["published_at"]).strftime("%B %d, %Y")
-        except Exception:
-            pub_date = post["published_at"][:10]
-
-    # Convert plain newlines to paragraphs
-    body_html = "".join([f"<p>{line}</p>" if line.strip() else "<br>" for line in post["body"].split("\n")])
-
-    post_url = f"https://aria.supportrd.com/blog/{post['slug']}"
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{post['title']} — Support RD Hair Care Blog</title>
-<meta name="description" content="{(post.get('subtitle') or post.get('title') or '')[:160]}">
-<meta name="keywords" content="{post.get('tags','hair care, Dominican hair, Support RD, natural hair')}">
-<meta name="author" content="{post.get('author','Support RD Team')}">
-<meta name="robots" content="index, follow">
-<link rel="canonical" href="{post_url}">
-<!-- Open Graph / Facebook / WhatsApp -->
-<meta property="og:type" content="article">
-<meta property="og:url" content="{post_url}">
-<meta property="og:site_name" content="Support RD Hair Care">
-<meta property="og:title" content="{post['title']}">
-<meta property="og:description" content="{(post.get('subtitle') or post.get('title') or '')[:200]}">
-{'<meta property="og:image" content="'+post['cover_url']+'">' if post.get('cover_url') else '<meta property="og:image" content="https://cdn.shopify.com/s/files/1/0593/2715/2208/files/output-onlinepngtools_1.png?v=1773174845">'}
-<meta property="article:published_time" content="{post.get('published_at','')}">
-<meta property="article:author" content="{post.get('author','Support RD Team')}">
-<meta property="article:tag" content="{post.get('tags','')}">
-<!-- Twitter / X Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{post['title']}">
-<meta name="twitter:description" content="{(post.get('subtitle') or '')[:200]}">
-{'<meta name="twitter:image" content="'+post['cover_url']+'">' if post.get('cover_url') else ''}
-<!-- JSON-LD structured data for Google -->
-<script type="application/ld+json">
-{{
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  "headline": "{post['title'].replace('"', '&quot;')}",
-  "description": "{(post.get('subtitle') or '')[:200].replace('"', '&quot;')}",
-  "author": {{"@type": "Person", "name": "{post.get('author','Support RD Team')}"}},
-  "publisher": {{"@type": "Organization", "name": "Support RD", "url": "https://supportrd.com"}},
-  "url": "{post_url}",
-  "datePublished": "{post.get('published_at','')[:10]}",
-  "image": "{post.get('cover_url','https://supportrd.com/favicon.ico')}",
-  "keywords": "{post.get('tags','')}",
-  "mainEntityOfPage": {{"@type": "WebPage", "@id": "{post_url}"}}
-}}
-</script>
-<link rel="icon" href="https://supportrd.com/favicon.ico">
-<style>
-  *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{background:#0a0a0f;color:#e0d8f0;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}}
-  .post-nav{{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;background:rgba(10,10,20,0.95);border-bottom:1px solid rgba(180,130,255,0.15);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}}
-  .post-nav a{{color:#c4b0d8;text-decoration:none;font-size:.9rem;transition:color .2s}}
-  .post-nav a:hover{{color:#c084fc}}
-  .post-nav .logo{{font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,#c084fc,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}}
-  .post-wrap{{max-width:760px;margin:0 auto;padding:52px 24px 100px}}
-  .post-meta{{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}}
-  .post-author{{display:flex;align-items:center;gap:8px;color:#9080a8;font-size:.9rem}}
-  .post-author-dot{{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:700}}
-  .post-date{{color:#705090;font-size:.85rem}}
-  .post-views{{color:#705090;font-size:.85rem}}
-  .post-title{{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;line-height:1.2;color:#f0e8ff;margin-bottom:14px}}
-  .post-subtitle{{font-size:1.15rem;color:#9080a8;line-height:1.6;margin-bottom:28px}}
-  .post-tags{{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px}}
-  .post-body{{font-size:1.05rem;line-height:1.85;color:#d0c8e0}}
-  .post-body p{{margin-bottom:1.2em}}
-  .post-body h2{{font-size:1.5rem;font-weight:700;color:#e8e0ff;margin:2em 0 .8em;border-left:3px solid #a855f7;padding-left:14px}}
-  .post-body h3{{font-size:1.2rem;font-weight:600;color:#d8d0f0;margin:1.6em 0 .6em}}
-  .post-body ul,.post-body ol{{padding-left:1.5em;margin-bottom:1.2em}}
-  .post-body li{{margin-bottom:.5em}}
-  .post-body strong{{color:#e8e0f0;font-weight:700}}
-  .post-body em{{color:#c084fc}}
-  .rel-card{{display:block;text-decoration:none;background:rgba(255,255,255,0.04);border:1px solid rgba(180,130,255,0.12);border-radius:14px;padding:14px;transition:border-color .2s}}
-  .rel-card:hover{{border-color:rgba(192,132,252,0.35)}}
-  .back-btn{{display:inline-flex;align-items:center;gap:6px;color:#9080a8;text-decoration:none;font-size:.88rem;margin-bottom:36px;transition:color .2s}}
-  .back-btn:hover{{color:#c084fc}}
-  .admin-edit-bar{{background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:12px 18px;margin-bottom:28px;display:none;align-items:center;justify-content:space-between}}
-  .admin-edit-bar a{{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;text-decoration:none;border-radius:20px;padding:8px 18px;font-size:.85rem;font-weight:600}}
-</style>
-</head>
-<body>
-<nav class="post-nav">
-  <a class="logo" href="https://supportrd.com">Support RD</a>
-  <div style="display:flex;gap:20px">
-    <a href="/blog">← All Posts</a>
-    <a href="/dashboard">Dashboard</a>
-    <a href="https://supportrd.com">Shop</a>
-  </div>
-</nav>
-
-<div class="post-wrap">
-  <a class="back-btn" href="/blog">← Back to Blog</a>
-
-  <div class="admin-edit-bar" id="adminEditBar">
-    <span style="color:#c084fc;font-size:.9rem">✏️ You are viewing as admin</span>
-    <a href="/blog/write?edit={post['slug']}">Edit Post</a>
-  </div>
-
-  {cover_html}
-
-  <div class="post-meta">
-    <div class="post-author">
-      <div class="post-author-dot">{post.get('author','S')[0].upper()}</div>
-      <span>{post.get('author','Support RD Team')}</span>
-    </div>
-    <span class="post-date">📅 {pub_date}</span>
-    <span class="post-views">👁 {post.get('views',0)} views</span>
-  </div>
-
-  <h1 class="post-title">{post['title']}</h1>
-  {'<p class="post-subtitle">'+post['subtitle']+'</p>' if post.get('subtitle') else ''}
-  <div class="post-tags">{tags_html}</div>
-
-  <div class="post-body">{body_html}</div>
-
-  <!-- SHARE THIS POST -->
-  <div style="margin-top:48px;padding:28px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.2);border-radius:16px;text-align:center;">
-    <div style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#c084fc;margin-bottom:14px;">Share This Post</div>
-    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-      <a id="share-wa"  href="#" target="_blank" style="background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3);border-radius:20px;padding:9px 18px;font-size:12px;font-weight:700;text-decoration:none;">💬 WhatsApp</a>
-      <a id="share-fb"  href="#" target="_blank" style="background:rgba(66,103,178,0.15);color:#6090e8;border:1px solid rgba(66,103,178,0.3);border-radius:20px;padding:9px 18px;font-size:12px;font-weight:700;text-decoration:none;">👥 Facebook</a>
-      <a id="share-tw"  href="#" target="_blank" style="background:rgba(29,161,242,0.12);color:#5ab4f0;border:1px solid rgba(29,161,242,0.25);border-radius:20px;padding:9px 18px;font-size:12px;font-weight:700;text-decoration:none;">🐦 Twitter/X</a>
-      <a id="share-pin" href="#" target="_blank" style="background:rgba(230,0,35,0.1);color:#e86070;border:1px solid rgba(230,0,35,0.2);border-radius:20px;padding:9px 18px;font-size:12px;font-weight:700;text-decoration:none;">📌 Pinterest</a>
-      <button id="share-copy" onclick="navigator.clipboard.writeText(window.location.href);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Link',1800)" style="background:rgba(192,132,252,0.12);color:#c084fc;border:1px solid rgba(192,132,252,0.25);border-radius:20px;padding:9px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Copy Link</button>
-    </div>
-  </div>
-
-  <!-- CTA TO SHOP -->
-  <div style="margin-top:36px;background:linear-gradient(135deg,rgba(193,163,162,0.15),rgba(212,168,90,0.10));border:1px solid rgba(193,163,162,0.3);border-radius:16px;padding:28px;text-align:center;">
-    <div style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-style:italic;color:#f0e8ff;margin-bottom:8px;">Ready to try Support RD?</div>
-    <div style="font-size:13px;color:#9080a8;margin-bottom:20px;">Professional Dominican hair care. Natural ingredients. Real results.</div>
-    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-      <a href="https://supportrd.com/collections/all" style="background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;padding:12px 28px;border-radius:30px;font-size:12px;font-weight:700;text-decoration:none;letter-spacing:0.08em;">Shop Products</a>
-      <a href="https://aria.supportrd.com" style="background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.3);padding:12px 28px;border-radius:30px;font-size:12px;font-weight:700;text-decoration:none;letter-spacing:0.08em;">Ask Aria Free</a>
-    </div>
-  </div>
-
-  {related_html}
-</div>
-
-<script>
-// Wire up share buttons
-(function(){{
-  const url = encodeURIComponent(window.location.href);
-  const title = encodeURIComponent(document.title);
-  document.getElementById('share-wa').href  = 'https://wa.me/?text='+title+'%20'+url;
-  document.getElementById('share-fb').href  = 'https://www.facebook.com/sharer/sharer.php?u='+url;
-  document.getElementById('share-tw').href  = 'https://twitter.com/intent/tweet?text='+title+'&url='+url;
-  document.getElementById('share-pin').href = 'https://pinterest.com/pin/create/button/?url='+url+'&description='+title;
-}})();
-
-fetch('/api/me',{{credentials:'include',headers:{{'X-Auth-Token':localStorage.getItem('aria_token')||''}}}})
-  .then(r=>r.json()).then(d=>{{
-    if(d.is_admin) document.getElementById('adminEditBar').style.display='flex';
-  }}).catch(()=>{{}});
-</script>
-</body>
-</html>"""
-
-@app.route("/blog/write")
-def blog_write_page():
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return redirect("/blog")
-    edit_slug = request.args.get("edit","").strip()
-    edit_post = None
-    if edit_slug:
-        row = db_execute("SELECT * FROM blog_posts WHERE slug=?", (edit_slug,), fetchone=True)
-        if row: edit_post = dict(row)
-    ep = json.dumps(edit_post or {})
-    # stats for dashboard sections
-    pending_posts  = db_execute("SELECT COUNT(*) FROM blog_posts WHERE approval_status='approved'", fetchone=True)[0]
-    total_posts    = db_execute("SELECT COUNT(*) FROM blog_posts", fetchone=True)[0]
-    published_posts= db_execute("SELECT COUNT(*) FROM blog_posts WHERE status='published'", fetchone=True)[0]
-    ai_drafts      = db_execute("SELECT COUNT(*) FROM blog_posts WHERE ai_generated=1 AND approval_status='approved'", fetchone=True)[0]
-    new_ideas      = db_execute("SELECT COUNT(*) FROM blog_ideas WHERE status='new'", fetchone=True)[0]
-    pending_list   = []  # approval workflow removed
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Blog Command Center — Support RD</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="icon" href="https://supportrd.com/favicon.ico">
-<style>
-  *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{background:#08080f;color:#e8e0f0;font-family:'Space Grotesk',system-ui,sans-serif;min-height:100vh}}
-  :root{{--pur:#a855f7;--pur2:#c084fc;--pur-dim:rgba(168,85,247,0.15);--border:rgba(180,130,255,0.14);--bg2:rgba(255,255,255,0.04);--muted:#7060908;}}
-  :root{{--muted:#706090}}
-  .wnav{{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;background:rgba(8,8,15,0.96);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(14px)}}
-  .wnav-logo{{font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,#c084fc,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none}}
-  .wnav a{{color:#b0a0c8;text-decoration:none;font-size:.88rem;transition:color .2s}}
-  .wnav a:hover{{color:#c084fc}}
-  .wrap{{max-width:1100px;margin:0 auto;padding:36px 24px 100px}}
-  /* STAT CARDS */
-  .stat-row{{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:32px}}
-  .stat-card{{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:6px}}
-  .stat-num{{font-size:2rem;font-weight:800;background:linear-gradient(135deg,#fff,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}}
-  .stat-label{{font-size:.8rem;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase}}
-  /* SECTION CARDS */
-  .section{{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:26px 28px;margin-bottom:24px}}
-  .section-title{{font-size:1rem;font-weight:700;color:#c084fc;letter-spacing:.5px;text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;gap:10px}}
-  .section-title .badge{{background:var(--pur-dim);color:#c084fc;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:700}}
-  /* POLITICAL */
-  .pol-card{{background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(168,85,247,0.08));border:1px solid rgba(59,130,246,0.25);border-radius:14px;padding:20px 22px}}
-  .pol-title{{font-size:1.05rem;font-weight:700;color:#93c5fd;margin-bottom:8px}}
-  .pol-body{{font-size:.9rem;color:#c0b8d8;line-height:1.7}}
-  .pol-tag{{display:inline-block;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);border-radius:20px;padding:4px 12px;font-size:.78rem;font-weight:600;margin-top:10px;margin-right:6px}}
-  /* CANDY LAND GPS STATUS */
-  .candy-grid{{display:grid;grid-template-columns:1fr 1fr;gap:14px}}
-  .candy-item{{background:rgba(255,255,255,0.03);border:1px solid rgba(255,200,100,0.15);border-radius:12px;padding:14px 16px}}
-  .candy-icon{{font-size:1.5rem;margin-bottom:6px}}
-  .candy-label{{font-size:.8rem;color:#e0b050;font-weight:600;letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px}}
-  .candy-val{{font-size:.9rem;color:#e8e0f0;line-height:1.5}}
-  .candy-status{{display:inline-flex;align-items:center;gap:6px;background:rgba(48,232,144,0.1);border:1px solid rgba(48,232,144,0.25);color:#30e890;border-radius:20px;padding:4px 12px;font-size:.8rem;font-weight:600;margin-top:8px}}
-  .candy-status.beta{{background:rgba(224,176,80,0.1);border-color:rgba(224,176,80,0.25);color:#e0b050}}
-  /* APPROVAL QUEUE */
-  .aprv-row{{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px}}
-  .aprv-title{{font-weight:700;color:#e8e0f0;margin-bottom:4px;display:flex;align-items:center;gap:8px}}
-  .aprv-meta{{font-size:.8rem;color:var(--muted);margin-bottom:10px}}
-  .aprv-actions{{display:flex;gap:8px;flex-wrap:wrap}}
-  .ai-badge{{background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.25);border-radius:12px;padding:2px 8px;font-size:.72rem;font-weight:700}}
-  .rej-badge{{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:2px 8px;font-size:.72rem;font-weight:700}}
-  .rej-note{{background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.15);border-radius:8px;padding:8px 12px;font-size:.82rem;color:#f87171;margin-bottom:8px}}
-  /* LIVE FEED */
-  .live-indicator{{display:inline-flex;align-items:center;gap:8px;background:rgba(255,50,50,0.1);border:1px solid rgba(255,80,80,0.3);border-radius:24px;padding:8px 18px;font-size:.9rem;font-weight:700;color:#ff6060;cursor:pointer;transition:all .2s;text-decoration:none}}
-  .live-indicator:hover{{background:rgba(255,50,50,0.18);border-color:rgba(255,80,80,0.5)}}
-  .live-dot{{width:9px;height:9px;background:#ff4040;border-radius:50%;animation:livePulse 1.2s infinite}}
-  @keyframes livePulse{{0%,100%{{box-shadow:0 0 0 0 rgba(255,64,64,0.6)}}50%{{box-shadow:0 0 0 6px rgba(255,64,64,0)}}}}
-  .live-offline{{color:#706090;border-color:rgba(112,96,144,0.3);background:rgba(112,96,144,0.07)}}
-  .live-links{{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}}
-  .site-link{{display:inline-flex;align-items:center;gap:6px;background:var(--pur-dim);border:1px solid rgba(168,85,247,0.3);border-radius:20px;padding:8px 16px;font-size:.85rem;font-weight:600;color:#c084fc;text-decoration:none;transition:all .2s}}
-  .site-link:hover{{background:rgba(168,85,247,0.25);color:#e0c8ff}}
-  /* IDEA CARDS */
-  .idea-card{{background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.18);border-radius:12px;padding:16px 18px;margin-bottom:10px}}
-  .idea-title{{font-weight:700;color:#e0d8ff;margin-bottom:4px}}
-  .idea-sub{{font-size:.85rem;color:#a090c0;margin-bottom:8px;line-height:1.5}}
-  .idea-outline{{font-size:.82rem;color:#8878a8;font-style:italic;margin-bottom:10px;line-height:1.5}}
-  .idea-reasoning{{font-size:.78rem;color:#706090;border-left:2px solid rgba(168,85,247,0.3);padding-left:10px;margin-bottom:10px}}
-  /* FORM */
-  label{{display:block;font-size:.8rem;font-weight:600;color:#9080a8;margin-bottom:7px;letter-spacing:.3px;text-transform:uppercase}}
-  input[type=text],input[type=url],textarea,select{{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:#e8e0f0;font-size:.93rem;font-family:inherit;resize:vertical;outline:none;transition:border-color .2s}}
-  input:focus,textarea:focus{{border-color:rgba(192,132,252,0.4)}}
-  textarea{{min-height:280px;line-height:1.7}}
-  .form-row{{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
-  .form-group{{margin-bottom:18px}}
-  .tip{{font-size:.78rem;color:var(--muted);margin-top:5px}}
-  .btn-row{{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}}
-  .btn{{border:none;border-radius:22px;padding:12px 26px;font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .2s;font-family:inherit}}
-  .btn:hover{{opacity:.82}}
-  .btn-pub{{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff}}
-  .btn-draft{{background:rgba(255,255,255,0.07);color:#c4b0d8;border:1px solid var(--border)}}
-  .btn-idea{{background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.3)}}
-  .btn-approve{{background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.25);border-radius:16px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}}
-  .btn-approve:hover{{opacity:.8}}
-  .btn-reject{{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2);border-radius:16px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}}
-  .btn-reject:hover{{opacity:.8}}
-  .btn-use-idea{{background:rgba(168,85,247,0.15);color:#c084fc;border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:6px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s}}
-  .btn-sm{{border-radius:14px;padding:6px 13px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s;border:none}}
-  .btn-edit{{background:rgba(168,85,247,0.18);color:#c084fc}}
-  .btn-delete{{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.18)}}
-  .btn-toggle{{background:rgba(34,197,94,0.12);color:#4ade80}}
-  .btn-sm:hover{{opacity:.8}}
-  .status-msg{{margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.88rem;display:none}}
-  .status-msg.ok{{background:rgba(34,197,94,0.12);color:#4ade80;border:1px solid rgba(34,197,94,0.2)}}
-  .status-msg.err{{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2)}}
-  .divider{{border:none;border-top:1px solid var(--border);margin:28px 0}}
-  .evelyn-banner{{background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(192,132,252,0.06));border:1px solid rgba(192,132,252,0.25);border-radius:14px;padding:18px 20px;display:flex;align-items:center;gap:14px;margin-bottom:20px}}
-  .evelyn-avatar{{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}}
-  .evelyn-text{{flex:1}}
-  .evelyn-name{{font-weight:700;color:#e0d0ff;font-size:.95rem}}
-  .evelyn-role{{font-size:.8rem;color:#9070b0}}
-  @media(max-width:600px){{.form-row{{grid-template-columns:1fr}}.candy-grid{{grid-template-columns:1fr}}}}
-</style>
-</head>
-<body>
-<nav class="wnav">
-  <a class="wnav-logo" href="/">Support RD</a>
-  <div style="display:flex;gap:18px;align-items:center">
-    <a href="/blog">← Blog</a>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/live" style="color:#ff6060">🔴 Live</a>
-  </div>
-</nav>
-
-<div class="wrap">
-  <div style="font-size:1.7rem;font-weight:800;background:linear-gradient(135deg,#fff,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px">✦ Blog Command Center</div>
-  <div style="color:var(--muted);font-size:.9rem;margin-bottom:28px">Write, approve, and manage all Support RD content from here.</div>
-
-  <!-- STAT CARDS -->
-  <div class="stat-row">
-    <div class="stat-card"><div class="stat-num">{total_posts}</div><div class="stat-label">Total Posts</div></div>
-    <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#4ade80">{published_posts}</div><div class="stat-label">Published</div></div>
-
-    <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#c084fc">{ai_drafts}</div><div class="stat-label">AI Drafts Pending</div></div>
-    <div class="stat-card"><div class="stat-num" style="-webkit-text-fill-color:#e0b050">{new_ideas}</div><div class="stat-label">New Ideas</div></div>
-  </div>
-
-  <!-- LIVE FEED STATUS -->
-  <div class="section">
-    <div class="section-title">🔴 Live Feed Status</div>
-    <div id="liveFeedStatus" style="color:var(--muted);font-size:.9rem">Loading…</div>
-    <div class="live-links" style="margin-top:16px">
-      <a class="site-link" href="https://ai-hair-advisor.onrender.com/live" target="_blank">🔗 ai-hair-advisor.onrender.com/live</a>
-      <a class="site-link" href="https://aria.supportrd.com/live" target="_blank">🔗 aria.supportrd.com/live</a>
-    </div>
-    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-pub" id="goLiveBtn" onclick="toggleLiveFeed()" style="padding:10px 24px;font-size:.9rem">Loading…</button>
-      <button class="btn btn-draft" onclick="window.open('/live','_blank')">👁 View Feed</button>
-    </div>
-    <div class="status-msg" id="liveMsg"></div>
-  </div>
-
-  <!-- POLITICAL CAMPAIGN -->
-  <div class="section">
-    <div class="section-title">🗳 Political Campaign Position</div>
-    <div class="pol-card">
-      <div class="pol-title">Ban Pornography on the Internet</div>
-      <div class="pol-body">Support RD publicly backs the campaign to ban pornography on the internet. We believe unrestricted access to explicit content online causes documented harm to children, relationships, and communities. This is the company's official stated position — founded in values, not politics.<br><br>We are affiliated with the <strong style="color:#93c5fd">Democratic Party</strong>. This position is displayed across the app and website, and is part of our company identity.</div>
-      <span class="pol-tag">🏛 Democratic Party</span>
-      <span class="pol-tag">🛡 Child Protection</span>
-      <span class="pol-tag">💜 Company Value</span>
-    </div>
-    <div style="margin-top:14px;font-size:.83rem;color:var(--muted)">This is shown on the main site, the dashboard, and can be featured in a blog post to explain the company's stance to customers.</div>
-  </div>
-
-  <!-- CANDY LAND DRIVER APP STATUS -->
-  <div class="section">
-    <div class="section-title">🍭 Candy Land Driver App — Status</div>
-    <div class="candy-grid">
-      <div class="candy-item">
-        <div class="candy-icon">🗺</div>
-        <div class="candy-label">GPS Mode</div>
-        <div class="candy-val">Live inside the Hands-Free Drive page. Real GPS positioning with animated candy-tile path.</div>
-        <div class="candy-status">✓ Active</div>
-      </div>
-      <div class="candy-item">
-        <div class="candy-icon">🚗</div>
-        <div class="candy-label">Car Token</div>
-        <div class="candy-val">Moves with your real location in real time. Bearing arrow shows direction of travel.</div>
-        <div class="candy-status">✓ Active</div>
-      </div>
-      <div class="candy-item">
-        <div class="candy-icon">📍</div>
-        <div class="candy-label">Destinations</div>
-        <div class="candy-val">Pulls live POIs from OpenStreetMap: Coding Stores, Hair Shops, Parks, All Nearby.</div>
-        <div class="candy-status">✓ Active</div>
-      </div>
-      <div class="candy-item">
-        <div class="candy-icon">🎤</div>
-        <div class="candy-label">Aria GPS Narration</div>
-        <div class="candy-val">Aria narrates destinations and landmarks as you drive. Hands-free mic ask also active.</div>
-        <div class="candy-status beta">Beta</div>
-      </div>
-      <div class="candy-item">
-        <div class="candy-icon">📱</div>
-        <div class="candy-label">Mobile Test</div>
-        <div class="candy-val">Location permissions, mic, and TTS need full mobile test on deployment.</div>
-        <div class="candy-status beta">⚠ Needs Test</div>
-      </div>
-      <div class="candy-item">
-        <div class="candy-icon">🔁</div>
-        <div class="candy-label">API Proxy</div>
-        <div class="candy-val">All Aria drive calls go through /api/aria-drive — no exposed API keys client-side.</div>
-        <div class="candy-status">✓ Secured</div>
-      </div>
-    </div>
-  </div>
-
-
-
-  <!-- AI BLOG IDEAS -->
-  <div class="section">
-    <div class="section-title">🤖 AI Blog Ideas <span class="badge">{new_ideas} new</span></div>
-    <div style="font-size:.88rem;color:var(--muted);margin-bottom:16px">Aria automatically generates blog post ideas based on Support RD topics, products, the political campaign, Candy Land GPS, and what customers are asking about.</div>
-    <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-      <button class="btn btn-idea" onclick="generateIdeas()" id="genBtn">✨ Generate 5 New Ideas</button>
-      <button class="btn btn-draft" onclick="loadIdeas()">🔄 Refresh Ideas</button>
-    </div>
-    <div id="ideasList"><div style="color:var(--muted);font-size:.88rem">Click "Generate" to have Aria think up new blog ideas.</div></div>
-    <div class="status-msg" id="ideaMsg"></div>
-  </div>
-
-  <!-- WRITE / EDIT POST -->
-  <div class="section">
-    <div class="section-title" id="writeTitle">✍️ Write a New Post</div>
-    <div class="form-group">
-      <label>Post Title *</label>
-      <input type="text" id="postTitle" placeholder="e.g. Why We Stand Against Online Pornography">
-    </div>
-    <div class="form-group">
-      <label>Subtitle / Summary</label>
-      <input type="text" id="postSubtitle" placeholder="One sentence summary">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Author Name</label>
-        <input type="text" id="postAuthor" value="Support RD Team">
-      </div>
-      <div class="form-group">
-        <label>Tags (comma separated)</label>
-        <input type="text" id="postTags" placeholder="hair care, Dominican, Lsciador">
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Cover Image URL</label>
-      <input type="url" id="postCover" placeholder="https://cdn.shopify.com/...">
-    </div>
-    <div class="form-group">
-      <label>Blog Body *</label>
-      <textarea id="postBody" placeholder="Write your post here. Use ## for section headings."></textarea>
-      <p class="tip">## Heading · ### Sub-heading · **bold** · *italic*</p>
-    </div>
-    <div class="form-group">
-      <label style="display:flex;align-items:center;gap:10px;text-transform:none;font-size:.9rem;cursor:pointer">
-        <input type="checkbox" id="postFeatured" style="width:17px;height:17px;accent-color:#a855f7">
-        <span>⭐ Feature this post at the top of the blog</span>
-      </label>
-    </div>
-    <input type="hidden" id="editSlug" value="">
-    <div class="btn-row">
-      <button class="btn btn-pub" onclick="savePost('published')">🚀 Submit for Approval</button>
-      <button class="btn btn-draft" onclick="savePost('draft')">💾 Save as Draft (unlisted)</button>
-      <button class="btn btn-draft" onclick="clearForm()" style="padding:12px 18px">✕ Clear</button>
-    </div>
-    <div class="status-msg" id="statusMsg"></div>
-  </div>
-
-  <!-- ALL POSTS LIST -->
-  <div class="section">
-    <div class="section-title">📋 All Posts</div>
-    <div id="allPostsList">Loading…</div>
-  </div>
-</div>
-
-<script>
-const EP = {ep};
-const TOKEN = localStorage.getItem('aria_token')||'';
-
-if(EP.slug){{
-  document.getElementById('writeTitle').textContent = '✏️ Edit Post';
-  document.getElementById('postTitle').value   = EP.title||'';
-  document.getElementById('postSubtitle').value= EP.subtitle||'';
-  document.getElementById('postAuthor').value  = EP.author||'Support RD Team';
-  document.getElementById('postTags').value    = EP.tags||'';
-  document.getElementById('postCover').value   = EP.cover_url||'';
-  document.getElementById('postBody').value    = EP.body||'';
-  document.getElementById('postFeatured').checked = !!EP.featured;
-  document.getElementById('editSlug').value    = EP.slug;
-}}
-
-// ── LIVE FEED ──
-let _lfIsLive = false;
-async function loadLiveFeedStatus(){{
-  try{{
-    const r = await fetch('/api/live-feed/status',{{headers:{{'X-Auth-Token':TOKEN}}}});
-    const d = await r.json();
-    _lfIsLive = !!d.is_live;
-    const el = document.getElementById('liveFeedStatus');
-    const btn = document.getElementById('goLiveBtn');
-    if(d.is_live){{
-      el.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,50,50,0.1);border:1px solid rgba(255,80,80,0.3);border-radius:24px;padding:8px 18px;font-size:.9rem;font-weight:700;color:#ff6060"><span style="width:9px;height:9px;background:#ff4040;border-radius:50%;animation:livePulse 1.2s infinite"></span>LIVE NOW — ${{d.session_title||'Coding Session'}}</span> <span style="font-size:.82rem;color:#706090;margin-left:12px">👁 ${{d.viewers||0}} viewers</span>`;
-      btn.textContent = '⏹ End Session';
-      btn.style.background = 'rgba(239,68,68,0.2)';
-      btn.style.color = '#f87171';
-    }} else {{
-      el.innerHTML = `<span style="color:#706090;font-size:.9rem">⭕ Offline — not currently streaming</span>`;
-      btn.textContent = '🔴 Go Live Now';
-      btn.style.background = '';
-      btn.style.color = '';
-    }}
-  }}catch(e){{}}
-}}
-
-async function toggleLiveFeed(){{
-  if(_lfIsLive){{
-    if(!confirm('End your live session?')) return;
-    await fetch('/api/live-feed/go-offline',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}}}});
-  }} else {{
-    const title = prompt('Session title (optional):','Building Support RD') || 'Building Support RD';
-    await fetch('/api/live-feed/go-live',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{title,desc:''}})}});
-    if(window.triggerWoopsies) setTimeout(()=>window.triggerWoopsies(true),400);
-  }}
-  loadLiveFeedStatus();
-}}
-
-// approval workflow removed
-
-// ── AI IDEAS ──
-async function generateIdeas(){{
-  const btn = document.getElementById('genBtn');
-  btn.textContent = '⏳ Aria is thinking…';
-  btn.disabled = true;
-  showIdeaMsg('Generating 5 ideas…','');
-  try{{
-    const r = await fetch('/api/blog/generate-ideas',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}}}});
-    const d = await r.json();
-    if(d.ok){{ showIdeaMsg(`✅ ${{d.ideas.length}} ideas generated!`,'ok'); loadIdeas(); }}
-    else showIdeaMsg('Error: '+(d.error||'Unknown'),'err');
-  }}catch(e){{showIdeaMsg('Network error','err');}}
-  btn.textContent='✨ Generate 5 New Ideas'; btn.disabled=false;
-}}
-
-async function loadIdeas(){{
-  const el = document.getElementById('ideasList');
-  try{{
-    const r = await fetch('/api/blog/ideas',{{credentials:'include',headers:{{'X-Auth-Token':TOKEN}}}});
-    const d = await r.json();
-    if(!d.ideas||!d.ideas.length){{ el.innerHTML='<div style="color:#706090;font-size:.88rem">No ideas yet — click Generate!</div>'; return; }}
-    el.innerHTML = d.ideas.filter(i=>i.status!=='used').map(i=>`
-      <div class="idea-card">
-        <div class="idea-title">${{i.title}}</div>
-        <div class="idea-sub">${{i.subtitle||''}}</div>
-        <div class="idea-outline">${{i.outline||''}}</div>
-        <div class="idea-reasoning">💡 ${{i.reasoning||''}}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button class="btn-use-idea" onclick="useIdea(${{i.id}})">✍️ Write This Post</button>
-          <span style="font-size:.78rem;color:#706090">${{(i.tags||'').split(',').slice(0,3).join(' · ')}}</span>
-        </div>
-      </div>`).join('') || '<div style="color:#706090;font-size:.88rem">All ideas have been used! Generate more.</div>';
-  }}catch(e){{}}
-}}
-
-async function useIdea(id){{
-  showIdeaMsg('⏳ Aria is writing the full post…','');
-  try{{
-    const r = await fetch('/api/blog/idea-to-post',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{idea_id:id}})}});
-    const d = await r.json();
-    if(d.ok){{
-      showIdeaMsg(`✅ "${{d.title}}" drafted! Waiting for Evelyn's approval.`,'ok');
-      loadIdeas(); loadPosts(); location.reload();
-    }} else showIdeaMsg('Error: '+(d.error||'Unknown'),'err');
-  }}catch(e){{showIdeaMsg('Network error','err');}}
-}}
-
-// ── POST FORM ──
-async function savePost(status){{
-  const title = document.getElementById('postTitle').value.trim();
-  const body  = document.getElementById('postBody').value.trim();
-  if(!title||!body){{ showMsg('Title and body are required.','err'); return; }}
-  const payload = {{
-    title, status,
-    subtitle:  document.getElementById('postSubtitle').value.trim(),
-    author:    document.getElementById('postAuthor').value.trim()||'Support RD Team',
-    tags:      document.getElementById('postTags').value.trim(),
-    cover_url: document.getElementById('postCover').value.trim(),
-    body,
-    featured:  document.getElementById('postFeatured').checked?1:0,
-    edit_slug: document.getElementById('editSlug').value||null
-  }};
-  showMsg('Saving…','');
-  try{{
-    const r = await fetch('/api/blog/save',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify(payload)}});
-    const d = await r.json();
-    if(d.ok){{
-      const msg = status==='published'
-        ? `✅ Submitted! Waiting for Evelyn's approval. <a href="/blog/${{d.slug}}" style="color:#4ade80" target="_blank">Preview →</a>`
-        : '✅ Saved as draft.';
-      showMsg(msg,'ok');
-      if(status==='published'&&window.triggerWoopsies) setTimeout(()=>window.triggerWoopsies(true),400);
-      document.getElementById('editSlug').value = d.slug;
-      loadPosts();
-    }} else showMsg('Error: '+(d.error||'Unknown'),'err');
-  }}catch(e){{showMsg('Network error.','err');}}
-}}
-
-function clearForm(){{
-  ['postTitle','postSubtitle','postBody','postCover','postTags'].forEach(id=>{{document.getElementById(id).value=''}});
-  document.getElementById('postAuthor').value='Support RD Team';
-  document.getElementById('postFeatured').checked=false;
-  document.getElementById('editSlug').value='';
-  document.getElementById('writeTitle').textContent='✍️ Write a New Post';
-  document.getElementById('statusMsg').style.display='none';
-}}
-
-function editPost(slug){{ window.location.href='/blog/write?edit='+slug; }}
-
-async function loadPosts(){{
-  const el = document.getElementById('allPostsList');
-  try{{
-    const r = await fetch('/api/blog/admin-list',{{credentials:'include',headers:{{'X-Auth-Token':TOKEN}}}});
-    const d = await r.json();
-    if(!d.posts||!d.posts.length){{ el.innerHTML='<p style="color:#706090">No posts yet.</p>'; return; }}
-    el.innerHTML = d.posts.map(p=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:11px;padding:12px 16px;margin-bottom:9px;gap:12px;flex-wrap:wrap">
-        <div style="flex:1">
-          <div style="font-weight:600;color:#e0d8f0;margin-bottom:3px">${{p.title}}</div>
-          <div style="font-size:.78rem;color:#706090">/blog/${{p.slug}} · ${{p.status}} · 👁 ${{p.views}} · ${{(p.created_at||'').slice(0,10)}}</div>
-        </div>
-        <div style="display:flex;gap:7px;flex-shrink:0">
-          <button class="btn-sm btn-edit" onclick="editPost('${{p.slug}}')">Edit</button>
-          <button class="btn-sm btn-toggle" onclick="togglePost('${{p.slug}}','${{p.status}}')">
-            ${{p.status==='published'?'Unpublish':'Publish'}}
-          </button>
-          <button class="btn-sm btn-delete" onclick="deletePost('${{p.slug}}')">Delete</button>
-        </div>
-      </div>`).join('');
-  }}catch(e){{}}
-}}
-
-async function togglePost(slug,cur){{
-  const ns = cur==='published'?'draft':'published';
-  await fetch('/api/blog/toggle',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{slug,status:ns}})}});
-  loadPosts();
-}}
-async function deletePost(slug){{
-  if(!confirm('Delete this post forever?')) return;
-  await fetch('/api/blog/delete',{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json','X-Auth-Token':TOKEN}},body:JSON.stringify({{slug}})}});
-  loadPosts();
-}}
-
-function showMsg(html,type){{const e=document.getElementById('statusMsg');e.innerHTML=html;e.className='status-msg '+(type||'ok');e.style.display='block';}}
-function showIdeaMsg(html,type){{const e=document.getElementById('ideaMsg');e.innerHTML=html;e.className='status-msg '+(type||'ok');e.style.display='block';}}
-function showSectionMsg(id,html,type){{const e=document.getElementById(id);if(e){{e.innerHTML=html;e.className='status-msg '+(type||'ok');e.style.display='block';}}}}
-
-// Boot
-loadLiveFeedStatus();
-loadIdeas();
-loadPosts();
-setInterval(loadLiveFeedStatus, 15000);
-</script>
-</body>
-</html>"""
-
-@app.route("/api/blog/save", methods=["POST","OPTIONS"])
-def api_blog_save():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    data      = request.get_json(silent=True) or {}
-    title     = (data.get("title","") or "").strip()[:200]
-    subtitle  = (data.get("subtitle","") or "").strip()[:300]
-    body      = (data.get("body","") or "").strip()
-    author    = (data.get("author","Support RD Team") or "Support RD Team").strip()[:100]
-    tags      = (data.get("tags","") or "").strip()[:200]
-    cover_url = (data.get("cover_url","") or "").strip()[:500]
-    featured  = 1 if data.get("featured") else 0
-    status    = data.get("status","draft")
-    if status not in ("published","draft"): status = "draft"
-    edit_slug = (data.get("edit_slug","") or "").strip()
-    if not title or not body:
-        return jsonify({"error": "title and body required"}), 400
-
-    pub_at = "datetime('now')" if status == "published" else "NULL"
-
-    if edit_slug:
-        existing = db_execute("SELECT id FROM blog_posts WHERE slug=?", (edit_slug,), fetchone=True)
-        if existing:
-            db_execute(
-                f"UPDATE blog_posts SET title=?,subtitle=?,body=?,author=?,tags=?,cover_url=?,featured=?,status=?,updated_at=datetime('now'){',published_at=datetime('+chr(39)+'now'+chr(39)+')' if status=='published' else ''} WHERE slug=?",
-                (title, subtitle, body, author, tags, cover_url, featured, status, edit_slug)
-            )
-            return jsonify({"ok": True, "slug": edit_slug})
-
-    # New post — generate unique slug
-    base_slug = _blog_slug(title) or "post"
-    slug = base_slug
-    counter = 1
-    while db_execute("SELECT id FROM blog_posts WHERE slug=?", (slug,), fetchone=True):
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-
-    if status == "published":
-        db_execute(
-            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,cover_url,featured,status,published_at) VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))",
-            (slug, title, subtitle, body, author, tags, cover_url, featured, status)
-        )
-    else:
-        db_execute(
-            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,cover_url,featured,status,approval_status,published_at) VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))",
-            (slug, title, subtitle, body, author, tags, cover_url, featured, status, "approved")
-        )
-    return jsonify({"ok": True, "slug": slug})
-
-
-@app.route("/api/blog/admin-list", methods=["GET"])
-def api_blog_admin_list():
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    posts = db_execute(
-        "SELECT id,slug,title,status,views,featured,created_at,published_at FROM blog_posts ORDER BY created_at DESC",
-        fetchall=True
-    )
-    return jsonify({"posts": [dict(p) for p in (posts or [])]})
-
-
-@app.route("/api/blog/toggle", methods=["POST","OPTIONS"])
-def api_blog_toggle():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    data   = request.get_json(silent=True) or {}
-    slug   = (data.get("slug","") or "").strip()
-    status = data.get("status","draft")
-    if status not in ("published","draft"): status = "draft"
-    if status == "published":
-        db_execute("UPDATE blog_posts SET status='published', published_at=datetime('now'), updated_at=datetime('now') WHERE slug=?", (slug,))
-    else:
-        db_execute("UPDATE blog_posts SET status='draft', updated_at=datetime('now') WHERE slug=?", (slug,))
-    return jsonify({"ok": True})
-
-
-@app.route("/api/blog/delete", methods=["POST","OPTIONS"])
-def api_blog_delete():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    data = request.get_json(silent=True) or {}
-    slug = (data.get("slug","") or "").strip()
-    db_execute("DELETE FROM blog_posts WHERE slug=?", (slug,))
-    return jsonify({"ok": True})
-
-
-
-
-
-
-# ── AI BLOG IDEA GENERATOR ───────────────────────────────────────────────────
-
-@app.route("/api/blog/generate-ideas", methods=["POST","OPTIONS"])
-def api_blog_generate_ideas():
-    """Aria generates 5 blog post ideas based on Support RD topics."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-
-    ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY","")
-    if not ANTHROPIC_KEY:
-        return jsonify({"error": "No API key"}), 500
-
-    import urllib.request as _urlreq
-    prompt = """You are Aria, the AI advisor for Support RD — a Dominican hair care brand co-founded by Anthony Figueroa (Design), Crystal Figueroa (Co-CEO), and Evelyn (Co-CEO & Shampoo Inventor).
-Products: Shampoo Aloe & Romero, Lsciador conditioner, Gift Shop.
-The app features: Aria AI hair chat, Candy Land GPS adventure mode, live coding feed, hair journal, photo analysis.
-Political campaigns: Ban Pornography on the Internet, Campaign for the Poor — Democratic Party affiliated.
-
-Anthony Blogger is the builder, the designer, the founder voice. He signs off posts with "Anthony Blogger signing out."
-He writes from a Muslim perspective — trust in Allah, Allahwazaweje (Allah the Almighty, praised and exalted), the energy of building without knowing the full outcome, and the faith that Allah knows what we don't know at all times.
-His spiritual posts are raw and real — not motivational fluff. They feel like a journal entry from someone who just had a breakthrough while coding at 3am.
-
-Generate exactly 5 blog post ideas that would genuinely help or interest Support RD customers and followers.
-Mix: product education, hair care tips, company story, political position, one fun/creative idea, and ALWAYS include one spiritual/faith post in Anthony Blogger's voice.
-
-Respond ONLY with valid JSON — no markdown, no explanation:
-[
-  {
-    "title": "...",
-    "subtitle": "...",
-    "outline": "Three sentence outline of what the post covers.",
-    "tags": "tag1, tag2, tag3",
-    "reasoning": "One sentence on why this post serves the audience."
-  }
-]"""
-
-    try:
-        payload = json.dumps({
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 1500,
-            "messages": [{"role": "user", "content": prompt}]
-        }).encode()
-        req = _urlreq.Request(
-            "https://api.anthropic.com/v1/messages",
-            data=payload,
-            headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"}
-        )
-        with _urlreq.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read())
-        raw = result.get("content",[{}])[0].get("text","[]")
-        raw = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
-        ideas = json.loads(raw)
-        saved = []
-        for idea in ideas[:5]:
-            db_execute(
-                "INSERT INTO blog_ideas (title,subtitle,outline,tags,reasoning) VALUES (?,?,?,?,?)",
-                (idea.get("title","")[:200], idea.get("subtitle","")[:300],
-                 idea.get("outline","")[:500], idea.get("tags","")[:200], idea.get("reasoning","")[:300])
-            )
-            row = db_execute("SELECT * FROM blog_ideas ORDER BY id DESC LIMIT 1", fetchone=True)
-            if row: saved.append(dict(row))
-        return jsonify({"ok": True, "ideas": saved})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/blog/ideas", methods=["GET"])
-def api_blog_ideas_list():
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    ideas = db_execute("SELECT * FROM blog_ideas ORDER BY id DESC LIMIT 30", fetchall=True)
-    return jsonify({"ideas": [dict(i) for i in (ideas or [])]})
-
-
-@app.route("/api/blog/idea-to-post", methods=["POST","OPTIONS"])
-def api_blog_idea_to_post():
-    """Takes an AI idea and generates a full draft blog post body using Aria."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    data    = request.get_json(silent=True) or {}
-    idea_id = data.get("idea_id")
-    idea    = db_execute("SELECT * FROM blog_ideas WHERE id=?", (idea_id,), fetchone=True)
-    if not idea: return jsonify({"error": "idea not found"}), 404
-    idea = dict(idea)
-
-    ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY","")
-    import urllib.request as _urlreq
-    prompt = f"""You are writing a blog post for Support RD, a Dominican hair care brand.
-Title: {idea['title']}
-Subtitle: {idea['subtitle']}
-Outline: {idea['outline']}
-Tags: {idea['tags']}
-
-Write the full blog post body. Use natural paragraphs. Use ## for section headings.
-Be warm, educational, and authentic to the Dominican hair care tradition.
-
-SPIRITUAL / FAITH POSTS — special rules:
-If this post has a spiritual, faith, or Allah theme, write it entirely in the voice of Anthony Blogger.
-Anthony is a Muslim entrepreneur and the designer/builder behind Support RD.
-He writes like this: honest, grounded, not preachy. He talks about feeling the energy when things start clicking — the moments where a partnership forms, where the code starts working, where something he was building for months suddenly shows its result. He attributes those moments to Allah. He uses "Allahwazaweje" (meaning Allah the Almighty, glorified and exalted) naturally in the text — not forced.
-He talks about the Islamic principle: "Allah knows and we don't know at all times" — meaning we build, we plan, but the outcome belongs to Allah. That's not weakness. That's freedom.
-The post should feel like a real journal entry. It should reference actual things happening at Support RD — the app, the partnerships forming, the campaign for the poor, the auto dissolve bar, Aria, the team.
-End the post with: "Anthony Blogger signing out. 💜"
-
-NON-SPIRITUAL POSTS: warm, educational, 400-600 words, authentic Dominican hair care voice.
-ALL POSTS: Do not add a title at the top — just the body text."""
-
-    try:
-        payload = json.dumps({
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 1500,
-            "messages": [{"role": "user", "content": prompt}]
-        }).encode()
-        req = _urlreq.Request(
-            "https://api.anthropic.com/v1/messages",
-            data=payload,
-            headers={"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"}
-        )
-        with _urlreq.urlopen(req, timeout=45) as resp:
-            result = json.loads(resp.read())
-        body = result.get("content",[{}])[0].get("text","").strip()
-        # Create as a pending draft awaiting Evelyn approval
-        base_slug = _blog_slug(idea["title"]) or "post"
-        slug = base_slug
-        counter = 1
-        while db_execute("SELECT id FROM blog_posts WHERE slug=?", (slug,), fetchone=True):
-            slug = f"{base_slug}-{counter}"; counter += 1
-        db_execute(
-            "INSERT INTO blog_posts (slug,title,subtitle,body,author,tags,status,approval_status,ai_generated) VALUES (?,?,?,?,?,?,'published','approved',1)",
-            (slug, idea["title"], idea["subtitle"], body, "Aria (AI) — Pending Evelyn's Approval", idea["tags"])
-        )
-        db_execute("UPDATE blog_ideas SET status='used' WHERE id=?", (idea_id,))
-        return jsonify({"ok": True, "slug": slug, "title": idea["title"],
-                        "message": "Draft created — waiting for Evelyn's approval before publishing."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  SHOPIFY STOREFRONT CART API ROUTES — in-app shopping cart
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@app.route("/api/shop/products", methods=["GET"])
-def api_shop_products():
-    """Return all products from Shopify Storefront API."""
-    data = shopify_get_products()
-    if not data:
-        # Fallback to hardcoded product list if Storefront token not set
-        return jsonify({"products": [
-            {"id":"shampoo","handle":"shampoo-aloe-vera","title":"Shampoo Aloe Vera & Romero",
-             "price":"20.00","currency":"USD","description":"Stimulating cleanse with aloe vera and rosemary.",
-             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/shampoo001","title":"Default","price":"20.00"}]},
-            {"id":"lsciador","handle":"lsciador-conditioner","title":"Lsciador Conditioner",
-             "price":"35.00","currency":"USD","description":"The refresher — moisture, elasticity, softness after the cleanse.",
-             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/lsciador001","title":"Default","price":"35.00"}]},
-            {"id":"formula","handle":"formula-exclusiva","title":"Formula Exclusiva",
-             "price":"55.00","currency":"USD","description":"All-in-one professional treatment for damaged and dry hair.",
-             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/formula001","title":"Default","price":"55.00"}]},
-            {"id":"gotero","handle":"gotero-rapido","title":"Gotero Rapido",
-             "price":"55.00","currency":"USD","description":"Scalp dropper for hair loss, growth stimulation, scalp health.",
-             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/gotero001","title":"Default","price":"55.00"}]},
-            {"id":"mascarilla","handle":"mascarilla-avocado","title":"Mascarilla Avocado",
-             "price":"25.00","currency":"USD","description":"Deep conditioning mask.",
-             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/mask001","title":"Default","price":"25.00"}]},
-            {"id":"gotitas","handle":"gotitas-brillantes","title":"Gotitas Brillantes",
-             "price":"30.00","currency":"USD","description":"Shine and finishing drops.",
-             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/gotitas001","title":"Default","price":"30.00"}]},
-            {"id":"premium","handle":"hair-advisor-premium","title":"Aria Premium — AI Hair Advisor",
-             "price":"80.00","currency":"USD","description":"Unlimited Aria AI access, full dashboard, priority support.",
-             "image":None,"variants":[{"id":"gid://shopify/ProductVariant/premium001","title":"Monthly","price":"80.00"}]},
-        ]})
-    # Parse Storefront response
-    products = []
-    for edge in (data.get("data",{}).get("products",{}).get("edges") or []):
-        node = edge["node"]
-        variants = [{"id": v["node"]["id"], "title": v["node"]["title"],
-                     "price": v["node"]["price"]["amount"],
-                     "available": v["node"]["availableForSale"]}
-                    for v in node.get("variants",{}).get("edges",[])]
-        img = None
-        img_edges = node.get("images",{}).get("edges",[])
-        if img_edges: img = img_edges[0]["node"]["url"]
-        products.append({
-            "id":          node["id"],
-            "handle":      node["handle"],
-            "title":       node["title"],
-            "description": node.get("description",""),
-            "price":       node.get("priceRange",{}).get("minVariantPrice",{}).get("amount","0"),
-            "currency":    node.get("priceRange",{}).get("minVariantPrice",{}).get("currencyCode","USD"),
-            "image":       img,
-            "variants":    variants
-        })
-    return jsonify({"products": products})
-
-
-@app.route("/api/shop/cart/create", methods=["POST","OPTIONS"])
-def api_cart_create():
-    """Create a Shopify cart and return the checkout URL."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    data  = request.get_json(silent=True) or {}
-    lines = data.get("lines", [])  # [{variantId, quantity}]
-    if not lines:
-        return jsonify({"error": "No items"}), 400
-    if not SHOPIFY_STOREFRONT_TOKEN:
-        # Fallback: direct Shopify cart URL
-        items = "&".join([f"items[][id]={l.get('variantId','')}&items[][quantity]={l.get('quantity',1)}" for l in lines])
-        return jsonify({"ok": True, "checkoutUrl": f"https://supportrd.com/cart", "fallback": True})
-    result = shopify_create_cart(lines)
-    if not result:
-        return jsonify({"error": "Cart creation failed"}), 500
-    errors = result.get("data",{}).get("cartCreate",{}).get("userErrors",[])
-    if errors:
-        return jsonify({"error": errors[0].get("message","Cart error")}), 400
-    cart = result.get("data",{}).get("cartCreate",{}).get("cart",{})
-    return jsonify({"ok": True, "cartId": cart.get("id"), "checkoutUrl": cart.get("checkoutUrl")})
-
-
-@app.route("/api/shop/cart/add", methods=["POST","OPTIONS"])
-def api_cart_add():
-    """Add items to an existing Shopify cart."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    data    = request.get_json(silent=True) or {}
-    cart_id = data.get("cartId")
-    lines   = data.get("lines",[])
-    if not cart_id or not lines:
-        return jsonify({"error": "cartId and lines required"}), 400
-    result  = shopify_add_to_cart(cart_id, lines)
-    if not result:
-        return jsonify({"error": "Failed"}), 500
-    cart = result.get("data",{}).get("cartLinesAdd",{}).get("cart",{})
-    return jsonify({"ok": True, "checkoutUrl": cart.get("checkoutUrl")})
-
-
-@app.route("/api/shop/quick-checkout", methods=["POST","OPTIONS"])
-def api_quick_checkout():
-    """One-tap checkout — creates cart with item and returns checkout URL immediately."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    data       = request.get_json(silent=True) or {}
-    variant_id = data.get("variantId","")
-    quantity   = int(data.get("quantity", 1))
-    handle     = data.get("handle","")
-
-    if not variant_id and handle:
-        # Direct Shopify URL fallback using product handle
-        return jsonify({"ok":True,"checkoutUrl":f"https://supportrd.com/products/{handle}","fallback":True})
-
-    if not SHOPIFY_STOREFRONT_TOKEN:
-        return jsonify({"ok":True,"checkoutUrl":f"https://supportrd.com/products/{handle or 'hair-advisor-premium'}","fallback":True})
-
-    result = shopify_create_cart([{"variantId": variant_id, "quantity": quantity}])
-    if not result:
-        return jsonify({"ok":True,"checkoutUrl":f"https://supportrd.com/products/{handle}","fallback":True})
-    cart = result.get("data",{}).get("cartCreate",{}).get("cart",{})
-    url  = cart.get("checkoutUrl") or f"https://supportrd.com/products/{handle}"
-    return jsonify({"ok": True, "checkoutUrl": url})
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  CONTENT ENGINE INTEGRATION
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def _run_content_engine_safe():
-    """Run the content engine in background — never crashes the app."""
-    try:
-        import importlib.util, os as _os
-        ce_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "content_engine.py")
-        if not _os.path.exists(ce_path):
-            print("[content engine] content_engine.py not found — skipping")
-            return
-        spec = importlib.util.spec_from_file_location("content_engine", ce_path)
-        ce   = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(ce)
-        result = ce.run_engine()
-        print(f"[content engine] ✅ {result.get('topic','?')} — Shopify:{bool(result.get('shopify_url'))} Pinterest:{result.get('pinterest')} Reddit:{result.get('reddit')}")
-        # Save result to live feed as a system event
-        try:
-            db_execute(
-                "INSERT INTO live_feed_events (type,title,body,tag) VALUES (?,?,?,?)",
-                ("build",
-                 f"📝 Content Engine: {result.get('topic','New post')}",
-                 f"Auto-generated blog post published. Shopify: {'✓' if result.get('shopify_url') else '—'} | Pinterest: {'✓' if result.get('pinterest') else '—'} | Reddit: {'✓' if result.get('reddit') else '—'}",
-                 "auto")
-            )
-        except Exception:
-            pass
-    except Exception as e:
-        print(f"[content engine] Error (non-fatal): {e}")
-
-
-def _schedule_content_engine():
-    """Auto-run content engine every 6–18 hours after deploy."""
-    import random as _r, time as _t, threading as _th
-    def _loop():
-        delay = _r.randint(6*3600, 18*3600)
-        print(f"[content engine] Scheduled in {delay//3600}h {(delay%3600)//60}m")
-        _t.sleep(delay)
-        while True:
-            _run_content_engine_safe()
-            _t.sleep(_r.randint(6*3600, 18*3600))
-    _th.Thread(target=_loop, daemon=True, name="content-engine").start()
-
-_schedule_content_engine()
-
-
-@app.route("/api/admin/content-engine/run", methods=["POST","OPTIONS"])
-def api_content_engine_run():
-    """Admin: manually trigger content engine."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error":"unauthorized"}), 401
-    import threading
-    threading.Thread(target=_run_content_engine_safe, daemon=True).start()
-    return jsonify({"ok":True,"message":"Content engine running in background — check live feed for results."})
-
-
-@app.route("/api/admin/content-engine/log", methods=["GET"])
-def api_content_engine_log():
-    """Admin: view content engine run history."""
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error":"unauthorized"}), 401
-    import os as _os, json as _j
-    from app import _DATA_DIR  # same file
-    log_path = _os.path.join(_DATA_DIR, "content_engine_log.json")
-    try:
-        with open(log_path,"r") as f:
-            log = _j.load(f)
-    except Exception:
-        log = []
-    return jsonify({"log": log[:50]})
-
-
-# ── /api/me — exposes is_admin for blog admin buttons ───────────────────────
-@app.route("/api/admin/get-key", methods=["GET"])
-def api_admin_get_key():
-    """
-    Delivers the ADMIN_KEY to the authenticated admin user only.
-    The JS calls this once on login and caches in localStorage as srd_admin_key.
-    This means the key never needs to be hardcoded in frontend JS.
-    """
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    key = os.environ.get("ADMIN_KEY", "srd_admin_2024")
-    return jsonify({"ok": True, "key": key})
-
-
-@app.route("/api/me", methods=["GET","OPTIONS"])
-def api_me_alias():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user: return jsonify({"error": "not logged in"}), 401
-    return jsonify({"id": user["id"], "email": user.get("email",""), "name": user.get("name",""),
-                    "is_admin": is_admin_user(user["id"])})
-
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  REVENUE ENGINE
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@app.route("/api/revenue/stats", methods=["GET"])
-def revenue_stats():
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    con = get_db()
-    total_users   = con.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    premium_users = con.execute("SELECT COUNT(*) FROM subscriptions WHERE status='active'").fetchone()[0]
-    engaged       = con.execute("SELECT COUNT(*) FROM hair_profiles WHERE hair_concerns != '' OR products_tried != ''").fetchone()[0]
-    total_sessions= con.execute("SELECT COUNT(*) FROM chat_history WHERE role='user'").fetchone()[0]
-    new_users_7d  = con.execute("SELECT COUNT(*) FROM users WHERE created_at >= datetime('now','-7 days')").fetchone()[0]
-    con.close()
-    return jsonify({
-        "total_users": total_users, "premium_users": premium_users,
-        "engaged_users": engaged, "total_sessions": total_sessions,
-        "new_users_7d": new_users_7d,
-        "conversion_rate": round((premium_users / max(total_users,1)) * 100, 1),
-    })
-
-
-@app.route("/api/revenue/email-blast", methods=["POST","OPTIONS"])
-def revenue_email_blast():
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    data    = request.get_json(silent=True) or {}
-    subject = (data.get("subject","") or "").strip()
-    body    = (data.get("body","") or "").strip()
-    product = (data.get("product","") or "").strip()
-    url     = (data.get("url","https://supportrd.com/collections/all") or "").strip()
-    if not subject or not body:
-        return jsonify({"error": "Subject and body required"}), 400
-    smtp_user = os.environ.get("SMTP_USER","")
-    smtp_pass = os.environ.get("SMTP_PASS","")
-    if not smtp_user or not smtp_pass:
-        return jsonify({"error": "SMTP not configured — add SMTP_USER and SMTP_PASS to Render environment variables", "sent": 0}), 200
-    users = db_execute("SELECT email, name FROM users WHERE email != '' ORDER BY created_at DESC", fetchall=True)
-    if not users:
-        return jsonify({"ok": True, "sent": 0, "message": "No users registered yet"})
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    sent = 0
-    failed = 0
-    for row in (users or []):
-        try:
-            email_addr = row[0] if isinstance(row,(list,tuple)) else row["email"]
-            name_val   = (row[1] if isinstance(row,(list,tuple)) else row["name"]) or "there"
-            first_name = name_val.split()[0]
-            prod_block = ""
-            if product:
-                prod_block = ("<div style=\"background:linear-gradient(135deg,rgba(193,163,162,0.15),rgba(212,168,90,0.10));"
-                              "border:1px solid rgba(193,163,162,0.35);border-radius:14px;padding:18px 20px;margin-bottom:24px;\">"
-                              "<div style=\"font-size:18px;font-weight:700;color:#3a2a1a;\">" + product + "</div></div>")
-            html_body = (
-                "<!DOCTYPE html><html><body style=\"font-family:Georgia,serif;background:#f0ebe8;padding:0;margin:0;\">"
-                "<div style=\"max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,0.08);\">"
-                "<div style=\"background:#0d0906;padding:28px 32px;text-align:center;\">"
-                "<div style=\"font-family:Georgia,serif;font-size:28px;font-style:italic;color:#c1a3a2;\">Support RD</div>"
-                "<div style=\"font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(193,163,162,0.6);margin-top:4px;\">Hair Care &middot; AI Advisor</div>"
-                "</div>"
-                "<div style=\"padding:36px 32px;\">"
-                "<p style=\"font-size:16px;color:#0d0906;margin-bottom:16px;\">Hi " + first_name + ",</p>"
-                "<div style=\"font-size:15px;color:#444;line-height:1.8;margin-bottom:28px;\">" + body.replace(chr(10),"<br>") + "</div>"
-                + prod_block +
-                "<a href=\"" + url + "\" style=\"display:inline-block;background:linear-gradient(135deg,#c1a3a2,#9d7f6a);color:#fff;"
-                "padding:14px 32px;border-radius:30px;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;\">Shop Now</a>"
-                "</div>"
-                "<div style=\"background:#f8f4f2;padding:20px 32px;text-align:center;border-top:1px solid rgba(193,163,162,0.2);\">"
-                "<p style=\"font-size:11px;color:rgba(0,0,0,0.35);margin:0;\">Support RD &middot; supportrd.com &middot; hello@supportrd.com</p>"
-                "</div></div></body></html>"
-            )
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"]    = "Support RD <" + smtp_user + ">"
-            msg["To"]      = email_addr
-            msg.attach(MIMEText(html_body, "html"))
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
-            sent += 1
-        except Exception as e:
-            failed += 1
-            print("[email blast] failed:", e)
-    return jsonify({"ok": True, "sent": sent, "failed": failed,
-                    "message": "Sent to " + str(sent) + " customers. " + str(failed) + " failed."})
-
-
-
-
-@app.route("/traffic")
-def traffic_page():
-    """Admin traffic growth center."""
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return redirect("/login")
-    posts = db_execute("SELECT slug,title,subtitle,tags,cover_url,views FROM blog_posts WHERE status='published' ORDER BY views DESC", fetchall=True) or []
-    posts = [dict(p) for p in posts]
-    total_views = sum(p.get("views",0) for p in posts)
-    post_cards = ""
-    for p in posts:
-        url = f"https://aria.supportrd.com/blog/{p['slug']}"
-        wa  = f"https://wa.me/?text={p['title'].replace(' ','+').replace('&','and')}+{url}"
-        tw  = f"https://twitter.com/intent/tweet?text={p['title'].replace(' ','+')}&url={url}&hashtags=HairCare,SupportRD"
-        pin = f"https://pinterest.com/pin/create/button/?url={url}&description={p['title'].replace(' ','+')}"
-        post_cards += (
-            '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(180,130,255,0.12);border-radius:14px;padding:16px 18px;margin-bottom:12px;">'
-            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
-            f'<div style="flex:1;"><div style="font-weight:700;color:#e0d8f0;margin-bottom:4px;">{p["title"]}</div>'
-            f'<div style="font-size:11px;color:#706090;">👁 {p.get("views",0)} views</div></div>'
-            f'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-            f'<a href="/blog/{p["slug"]}" target="_blank" style="background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.25);border-radius:14px;padding:6px 12px;font-size:11px;font-weight:700;text-decoration:none;">View Post</a>'
-            f'<a href="{wa}" target="_blank" style="background:rgba(37,211,102,0.12);color:#25d366;border:1px solid rgba(37,211,102,0.2);border-radius:14px;padding:6px 12px;font-size:11px;font-weight:700;text-decoration:none;">WhatsApp</a>'
-            f'<a href="{tw}" target="_blank" style="background:rgba(29,161,242,0.12);color:#5ab4f0;border:1px solid rgba(29,161,242,0.2);border-radius:14px;padding:6px 12px;font-size:11px;font-weight:700;text-decoration:none;">Twitter</a>'
-            f'<a href="{pin}" target="_blank" style="background:rgba(230,0,35,0.1);color:#e86070;border:1px solid rgba(230,0,35,0.18);border-radius:14px;padding:6px 12px;font-size:11px;font-weight:700;text-decoration:none;">Pinterest</a>'
-            f'</div></div></div>'
-        )
-    if not post_cards:
-        post_cards = '<div style="color:#706090;padding:20px 0;">No published posts yet. <a href="/blog/write" style="color:#c084fc;">Write your first post</a></div>'
-
-    html = f"""<!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Traffic Growth — Support RD</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-<style>
-*{{box-sizing:border-box;margin:0;padding:0}}
-:root{{--bg:#07090d;--bg2:#0c0f16;--bg3:#11151f;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#eaedf5;--muted:#505870;--muted2:#8490a8;--rose:#f0a090;--gold:#e0b050;--green:#30e890;--blue:#60a8ff;--pur:#c084fc;}}
-body{{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}}
-.topbar{{position:sticky;top:0;z-index:100;background:rgba(7,9,13,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;}}
-.logo{{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--pur);}}
-.topbar a{{color:var(--muted2);text-decoration:none;font-size:12px;}}
-.wrap{{max-width:1000px;margin:0 auto;padding:32px 24px 80px;}}
-.page-title{{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:6px;background:linear-gradient(135deg,#fff,var(--pur));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}}
-.page-sub{{color:var(--muted2);font-size:13px;margin-bottom:32px;}}
-.stat-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:28px;}}
-.stat-card{{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;}}
-.stat-num{{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;}}
-.stat-lbl{{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-top:5px;}}
-.section{{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px 26px;margin-bottom:20px;}}
-.section-title{{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:6px;}}
-.section-sub{{font-size:12px;color:var(--muted2);margin-bottom:18px;line-height:1.6;}}
-.channel-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}}
-.channel-card{{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:18px;}}
-.channel-icon{{font-size:26px;margin-bottom:8px;}}
-.channel-name{{font-weight:700;font-size:13px;margin-bottom:5px;}}
-.channel-desc{{font-size:11px;color:var(--muted2);line-height:1.6;margin-bottom:12px;}}
-.channel-btn{{display:inline-block;padding:8px 16px;border-radius:16px;font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.04em;cursor:pointer;border:none;font-family:inherit;}}
-.tip{{background:var(--bg3);border-radius:10px;padding:13px 16px;font-size:12px;color:var(--muted2);line-height:1.7;border-left:3px solid var(--pur);margin-bottom:10px;}}
-.issue{{background:rgba(240,80,80,0.06);border-radius:10px;padding:11px 14px;font-size:12px;color:#f08080;border-left:3px solid #f08080;margin-bottom:8px;}}
-</style></head><body>
-<div class="topbar">
-  <div class="logo">Traffic Growth</div>
-  <div style="display:flex;gap:20px;align-items:center;">
-    <a href="/dashboard">Dashboard</a>
-    <a href="/revenue" style="color:var(--green)">Revenue</a>
-    <a href="/blog/write" style="color:var(--pur)">Write Post</a>
-  </div>
-</div>
-<div class="wrap">
-  <div class="page-title">Traffic Growth Center</div>
-  <div class="page-sub">Every channel that brings people to aria.supportrd.com and supportrd.com.</div>
-
-  <div class="stat-grid">
-    <div class="stat-card"><div class="stat-num" style="color:var(--pur);">{len(posts)}</div><div class="stat-lbl">Published Posts</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--blue);">{total_views}</div><div class="stat-lbl">Total Post Views</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--green);" id="t-users">-</div><div class="stat-lbl">Registered Users</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--gold);" id="t-new">-</div><div class="stat-lbl">New This Week</div></div>
-  </div>
-
-  <!-- SEO STATUS -->
-  <div class="section">
-    <div class="section-title">SEO Health</div>
-    <div class="section-sub">What Google sees when it crawls your site.</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px;">
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;"><div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:3px;">ACTIVE</div><div style="font-size:12px;color:var(--muted2);">robots.txt</div></div>
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;"><div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:3px;">ACTIVE</div><div style="font-size:12px;color:var(--muted2);">sitemap.xml</div></div>
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;"><div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:3px;">ACTIVE</div><div style="font-size:12px;color:var(--muted2);">OG / Twitter Cards</div></div>
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;"><div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:3px;">ACTIVE</div><div style="font-size:12px;color:var(--muted2);">JSON-LD Schema</div></div>
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;"><div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:3px;">ACTIVE</div><div style="font-size:12px;color:var(--muted2);">Canonical URLs</div></div>
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;"><div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:3px;">SUBMIT NOW</div><div style="font-size:12px;color:var(--muted2);"><a href="https://search.google.com/search-console" target="_blank" style="color:var(--gold);">Google Search Console</a></div></div>
-    </div>
-    <div id="seo-issues"></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
-      <a href="/robots.txt" target="_blank" style="font-size:11px;color:var(--pur);border:1px solid rgba(192,132,252,0.25);border-radius:12px;padding:5px 12px;text-decoration:none;">View robots.txt</a>
-      <a href="/sitemap.xml" target="_blank" style="font-size:11px;color:var(--pur);border:1px solid rgba(192,132,252,0.25);border-radius:12px;padding:5px 12px;text-decoration:none;">View sitemap.xml</a>
-      <a href="https://search.google.com/search-console/sitemaps" target="_blank" style="font-size:11px;color:var(--gold);border:1px solid rgba(224,176,80,0.3);border-radius:12px;padding:5px 12px;text-decoration:none;">Submit to Google</a>
-      <a href="https://www.bing.com/webmasters" target="_blank" style="font-size:11px;color:var(--blue);border:1px solid rgba(96,168,255,0.25);border-radius:12px;padding:5px 12px;text-decoration:none;">Submit to Bing</a>
-    </div>
-  </div>
-
-  <!-- TRAFFIC CHANNELS -->
-  <div class="section">
-    <div class="section-title">Traffic Channels</div>
-    <div class="section-sub">Every place you can put your link to drive people to your site.</div>
-    <div class="channel-grid">
-      <div class="channel-card"><div class="channel-icon">📱</div><div class="channel-name">Instagram Bio</div><div class="channel-desc">Put aria.supportrd.com in your Instagram bio. Every hair post you make sends people there.</div><a class="channel-btn" style="background:rgba(192,132,252,0.15);color:var(--pur);" onclick="navigator.clipboard.writeText('aria.supportrd.com');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Link',1800)">Copy Link</a></div>
-      <div class="channel-card"><div class="channel-icon">🎵</div><div class="channel-name">TikTok Link in Bio</div><div class="channel-desc">TikTok hair content blows up. One viral video sends thousands to your store.</div><a class="channel-btn" style="background:rgba(96,168,255,0.12);color:var(--blue);" href="https://www.tiktok.com" target="_blank">Open TikTok</a></div>
-      <div class="channel-card"><div class="channel-icon">💬</div><div class="channel-name">WhatsApp Status</div><div class="channel-desc">Post your store link as a WhatsApp status. Contacts who see it and click are warm leads.</div><a class="channel-btn" style="background:rgba(37,211,102,0.12);color:#25d366;" href="https://wa.me/?text=Check+out+Support+RD+Dominican+hair+care+https://supportrd.com/collections/all" target="_blank">Share Now</a></div>
-      <div class="channel-card"><div class="channel-icon">📌</div><div class="channel-name">Pinterest</div><div class="channel-desc">Pinterest drives massive hair care traffic. Each pin lives for years and keeps sending clicks.</div><a class="channel-btn" style="background:rgba(230,0,35,0.1);color:#e86070;" href="https://pinterest.com/pin/create/button/?url=https://aria.supportrd.com&description=AI+hair+advisor+by+Support+RD" target="_blank">Pin Now</a></div>
-      <div class="channel-card"><div class="channel-icon">🔍</div><div class="channel-name">Google Search Console</div><div class="channel-desc">Tell Google your site exists. Submit your sitemap and get indexed faster.</div><a class="channel-btn" style="background:rgba(224,176,80,0.12);color:var(--gold);" href="https://search.google.com/search-console" target="_blank">Open Console</a></div>
-      <div class="channel-card"><div class="channel-icon">👥</div><div class="channel-name">Facebook Groups</div><div class="channel-desc">Hair care Facebook groups have millions of members. Share your blog posts there.</div><a class="channel-btn" style="background:rgba(66,103,178,0.12);color:#6090e8;" href="https://www.facebook.com/groups/search/results/?q=natural+hair+care" target="_blank">Find Groups</a></div>
-    </div>
-  </div>
-
-  <!-- SHARE YOUR POSTS -->
-  <div class="section">
-    <div class="section-title">Share Your Blog Posts</div>
-    <div class="section-sub">Every post has a WhatsApp, Twitter, and Pinterest link ready to go. Share them right now.</div>
-    {post_cards}
-    <div style="margin-top:16px;">
-      <a href="/blog/write" style="background:var(--pur);color:#000;padding:10px 22px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;letter-spacing:0.06em;">Write New Post</a>
-    </div>
-  </div>
-
-  <!-- GROWTH TIPS -->
-  <div class="section">
-    <div class="section-title">What Gets People to Your Site</div>
-    <div class="tip" style="border-color:var(--green);"><strong style="color:var(--text);">Google (free, permanent):</strong> Write blog posts targeting specific searches like "how to fix damaged Dominican hair" or "shampoo with aloe vera for hair growth". Google sends you those visitors forever.</div>
-    <div class="tip" style="border-color:var(--gold);"><strong style="color:var(--text);">WhatsApp (fastest conversion):</strong> Share your store or Aria link in your WhatsApp contacts, groups, and status. Dominican community on WhatsApp is massive and converts well.</div>
-    <div class="tip" style="border-color:var(--rose);"><strong style="color:var(--text);">Instagram / TikTok (biggest reach):</strong> One video showing your product results or Aria working can go viral. Put aria.supportrd.com in your bio on both.</div>
-    <div class="tip" style="border-color:var(--pur);"><strong style="color:var(--text);">Pinterest (long-term traffic):</strong> Hair care is one of the top Pinterest categories. Every pin links back to your blog posts and store. Creates traffic for years.</div>
-    <div class="tip" style="border-color:var(--blue);"><strong style="color:var(--text);">Email (highest return):</strong> Once you have 100 registered users, one email blast about a product can generate multiple orders the same day.</div>
-  </div>
-</div>
-<script>
-const TOKEN = localStorage.getItem('srd_token')||'';
-fetch('/api/revenue/stats',{{headers:{{'X-Auth-Token':TOKEN}}}})
-  .then(r=>r.json()).then(d=>{{
-    const tu=document.getElementById('t-users');
-    const tn=document.getElementById('t-new');
-    if(tu) tu.textContent=d.total_users||0;
-    if(tn) tn.textContent=d.new_users_7d||0;
-  }}).catch(()=>{{}});
-fetch('/api/traffic/seo-audit',{{headers:{{'X-Auth-Token':TOKEN}}}})
-  .then(r=>r.json()).then(d=>{{
-    const el=document.getElementById('seo-issues');
-    if(!el) return;
-    if(d.seo_issues&&d.seo_issues.length){{
-      el.innerHTML='<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Issues to fix</div>'+d.seo_issues.map(i=>'<div class="issue">'+i+'</div>').join('');
-    }} else {{
-      el.innerHTML='<div style="color:var(--green);font-size:12px;">No SEO issues found. All posts look good.</div>';
-    }}
-  }}).catch(()=>{{}});
-</script>
-</body></html>"""
-    return Response(html, mimetype="text/html")
-
-@app.route("/api/traffic/auto-share", methods=["POST","OPTIONS"])
-def traffic_auto_share():
-    """Auto-generates social share content for a blog post."""
-    if request.method == "OPTIONS": return jsonify({}), 200
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    data = request.get_json(silent=True) or {}
-    slug  = (data.get("slug","") or "").strip()
-    if not slug:
-        posts = db_execute("SELECT slug,title,subtitle,tags FROM blog_posts WHERE status='published' ORDER BY published_at DESC LIMIT 1", fetchone=True)
-        if posts: slug = posts[0] if isinstance(posts,(list,tuple)) else posts["slug"]
-    if not slug:
-        return jsonify({"error": "No published posts yet"}), 400
-    post = db_execute("SELECT * FROM blog_posts WHERE slug=?", (slug,), fetchone=True)
-    if not post: return jsonify({"error": "Post not found"}), 404
-    post = dict(post)
-    url  = f"https://aria.supportrd.com/blog/{slug}"
-    enc  = url.replace(":","%3A").replace("/","%2F")
-    title_enc = (post["title"] or "").replace(" ","+")
-    return jsonify({
-        "ok": True,
-        "post_url": url,
-        "title": post["title"],
-        "shares": {
-            "whatsapp":  f"https://wa.me/?text={title_enc}+%F0%9F%8C%BF+{enc}",
-            "facebook":  f"https://www.facebook.com/sharer/sharer.php?u={enc}",
-            "twitter":   f"https://twitter.com/intent/tweet?text={title_enc}&url={enc}&hashtags=HairCare,DominicanHair,SupportRD",
-            "pinterest": f"https://pinterest.com/pin/create/button/?url={enc}&description={title_enc}",
-            "linkedin":  f"https://www.linkedin.com/sharing/share-offsite/?url={enc}",
-            "sms":       f"sms:?body={title_enc}+{url}",
-            "copy":      url,
-        },
-        "caption": f"{post['title']} 🌿 Dominican hair care that actually works. Read it free: {url} #HairCare #DominicanHair #SupportRD #NaturalHair",
-        "hashtags": "#HairCare #DominicanHair #SupportRD #NaturalHair #HairTips #HairGrowth"
-    })
-
-
-@app.route("/api/traffic/seo-audit", methods=["GET"])
-def traffic_seo_audit():
-    """Admin: quick SEO audit of published posts."""
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return jsonify({"error": "unauthorized"}), 401
-    posts = db_execute("SELECT slug,title,subtitle,tags,cover_url,views,published_at FROM blog_posts WHERE status='published' ORDER BY views DESC", fetchall=True)
-    posts = [dict(p) for p in (posts or [])]
-    total_views = sum(p.get("views",0) for p in posts)
-    issues = []
-    for p in posts:
-        if not p.get("subtitle"): issues.append(f"'{p['title']}' — missing subtitle (meta description)")
-        if not p.get("cover_url"): issues.append(f"'{p['title']}' — no cover image (affects social sharing)")
-        if not p.get("tags"): issues.append(f"'{p['title']}' — no tags (affects SEO keywords)")
-        if len(p.get("title","")) > 60: issues.append(f"'{p['title'][:40]}...' — title too long for Google (60 char max)")
-    return jsonify({
-        "total_posts": len(posts),
-        "total_views": total_views,
-        "top_posts": posts[:5],
-        "seo_issues": issues[:10],
-        "seo_score": max(0, 100 - len(issues)*10),
-        "tips": [
-            "Every post needs a subtitle — it becomes the Google meta description",
-            "Add a cover image — posts with images get 3x more shares",
-            "Use specific tags: 'Dominican hair care' beats just 'hair'",
-            "Post titles under 60 chars show fully in Google results",
-            "Post 2-3x per week — Google rewards fresh content",
-            "Share every post on WhatsApp immediately after publishing",
-        ]
-    })
-
-@app.route("/revenue")
-def revenue_page():
-    user = get_current_user()
-    if not user or not is_admin_user(user["id"]):
-        return redirect("/login")
-    prod_rows_html = """<div class="prod-link-row"><div><div class="prod-name">Formula Exclusiva</div><div class="prod-price">$55</div></div><div class="prod-actions"><a class="prod-action-btn" style="background:rgba(48,232,144,0.15);color:var(--green);" href="https://supportrd.com/products/formula-exclusiva" target="_blank">Buy Page</a><a class="prod-action-btn" style="background:rgba(37,211,102,0.15);color:#25d366;" href="https://wa.me/?text=Check+out+Formula+Exclusiva+from+Support+RD+https://supportrd.com/products/formula-exclusiva" target="_blank">WhatsApp</a><button class="prod-action-btn" style="background:rgba(240,160,144,0.15);color:var(--rose);" onclick="navigator.clipboard.writeText('https://supportrd.com/products/formula-exclusiva');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button></div></div>
-<div class="prod-link-row"><div><div class="prod-name">Laciador Crece</div><div class="prod-price">$40</div></div><div class="prod-actions"><a class="prod-action-btn" style="background:rgba(48,232,144,0.15);color:var(--green);" href="https://supportrd.com/products/lsciador-conditioner" target="_blank">Buy Page</a><a class="prod-action-btn" style="background:rgba(37,211,102,0.15);color:#25d366;" href="https://wa.me/?text=Check+out+Laciador+Crece+from+Support+RD+https://supportrd.com/products/lsciador-conditioner" target="_blank">WhatsApp</a><button class="prod-action-btn" style="background:rgba(240,160,144,0.15);color:var(--rose);" onclick="navigator.clipboard.writeText('https://supportrd.com/products/lsciador-conditioner');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button></div></div>
-<div class="prod-link-row"><div><div class="prod-name">Gotero Rapido</div><div class="prod-price">$55</div></div><div class="prod-actions"><a class="prod-action-btn" style="background:rgba(48,232,144,0.15);color:var(--green);" href="https://supportrd.com/products/gotero-rapido" target="_blank">Buy Page</a><a class="prod-action-btn" style="background:rgba(37,211,102,0.15);color:#25d366;" href="https://wa.me/?text=Check+out+Gotero+Rapido+from+Support+RD+https://supportrd.com/products/gotero-rapido" target="_blank">WhatsApp</a><button class="prod-action-btn" style="background:rgba(240,160,144,0.15);color:var(--rose);" onclick="navigator.clipboard.writeText('https://supportrd.com/products/gotero-rapido');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button></div></div>
-<div class="prod-link-row"><div><div class="prod-name">Gotitas Brillantes</div><div class="prod-price">$30</div></div><div class="prod-actions"><a class="prod-action-btn" style="background:rgba(48,232,144,0.15);color:var(--green);" href="https://supportrd.com/products/gotitas-brillantes" target="_blank">Buy Page</a><a class="prod-action-btn" style="background:rgba(37,211,102,0.15);color:#25d366;" href="https://wa.me/?text=Check+out+Gotitas+Brillantes+from+Support+RD+https://supportrd.com/products/gotitas-brillantes" target="_blank">WhatsApp</a><button class="prod-action-btn" style="background:rgba(240,160,144,0.15);color:var(--rose);" onclick="navigator.clipboard.writeText('https://supportrd.com/products/gotitas-brillantes');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button></div></div>
-<div class="prod-link-row"><div><div class="prod-name">Mascarilla Natural</div><div class="prod-price">$25</div></div><div class="prod-actions"><a class="prod-action-btn" style="background:rgba(48,232,144,0.15);color:var(--green);" href="https://supportrd.com/products/mascarilla-avocado" target="_blank">Buy Page</a><a class="prod-action-btn" style="background:rgba(37,211,102,0.15);color:#25d366;" href="https://wa.me/?text=Check+out+Mascarilla+Natural+from+Support+RD+https://supportrd.com/products/mascarilla-avocado" target="_blank">WhatsApp</a><button class="prod-action-btn" style="background:rgba(240,160,144,0.15);color:var(--rose);" onclick="navigator.clipboard.writeText('https://supportrd.com/products/mascarilla-avocado');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button></div></div>
-<div class="prod-link-row"><div><div class="prod-name">Shampoo Aloe & Romero</div><div class="prod-price">$20</div></div><div class="prod-actions"><a class="prod-action-btn" style="background:rgba(48,232,144,0.15);color:var(--green);" href="https://supportrd.com/products/shampoo-aloe-vera" target="_blank">Buy Page</a><a class="prod-action-btn" style="background:rgba(37,211,102,0.15);color:#25d366;" href="https://wa.me/?text=Check+out+Shampoo+Aloe+&+Romero+from+Support+RD+https://supportrd.com/products/shampoo-aloe-vera" target="_blank">WhatsApp</a><button class="prod-action-btn" style="background:rgba(240,160,144,0.15);color:var(--rose);" onclick="navigator.clipboard.writeText('https://supportrd.com/products/shampoo-aloe-vera');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button></div></div>
-<div class="prod-link-row"><div><div class="prod-name">Premium Subscription</div><div class="prod-price">$35/mo</div></div><div class="prod-actions"><a class="prod-action-btn" style="background:rgba(48,232,144,0.15);color:var(--green);" href="https://supportrd.com/products/hair-advisor-premium" target="_blank">Buy Page</a><a class="prod-action-btn" style="background:rgba(37,211,102,0.15);color:#25d366;" href="https://wa.me/?text=Check+out+Premium+Subscription+from+Support+RD+https://supportrd.com/products/hair-advisor-premium" target="_blank">WhatsApp</a><button class="prod-action-btn" style="background:rgba(240,160,144,0.15);color:var(--rose);" onclick="navigator.clipboard.writeText('https://supportrd.com/products/hair-advisor-premium');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button></div></div>
-"""
-    html = ("""<!DOCTYPE html><html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Revenue Engine - Support RD</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=Syne:wght@700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#07090d;--bg2:#0c0f16;--bg3:#11151f;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#eaedf5;--muted:#505870;--muted2:#8490a8;--rose:#f0a090;--gold:#e0b050;--green:#30e890;--blue:#60a8ff;}
-body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-.topbar{position:sticky;top:0;z-index:100;background:rgba(7,9,13,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;}
-.logo{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--green);}
-.topbar a{color:var(--muted2);text-decoration:none;font-size:12px;}
-.topbar a:hover{color:var(--text);}
-.wrap{max-width:1100px;margin:0 auto;padding:32px 24px 80px;}
-.page-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:6px;background:linear-gradient(135deg,#fff,var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.page-sub{color:var(--muted2);font-size:13px;margin-bottom:32px;}
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:32px;}
-.stat-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:18px 20px;}
-.stat-num{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;line-height:1;}
-.stat-lbl{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-top:6px;}
-.stat-sub{font-size:10px;color:var(--muted2);margin-top:3px;}
-.section{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:28px;margin-bottom:20px;}
-.section-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:6px;}
-.section-sub{font-size:12px;color:var(--muted2);margin-bottom:20px;line-height:1.6;}
-.balance-card{background:linear-gradient(135deg,rgba(48,232,144,0.12),rgba(48,232,144,0.04));border:1px solid rgba(48,232,144,0.3);border-radius:16px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;margin-bottom:20px;}
-.balance-amount{font-family:'Syne',sans-serif;font-size:48px;font-weight:800;color:var(--green);text-shadow:0 0 30px rgba(48,232,144,0.4);}
-.balance-label{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(48,232,144,0.6);margin-bottom:6px;}
-.balance-meta{font-size:12px;color:var(--muted2);line-height:1.8;}
-.open-shopify{background:var(--green);color:#000;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:12px;padding:12px 24px;border-radius:20px;text-decoration:none;letter-spacing:0.06em;display:inline-block;margin-bottom:6px;}
-.earn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:8px;}
-.earn-card{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:20px;}
-.earn-icon{font-size:28px;margin-bottom:10px;}
-.earn-title{font-weight:700;font-size:14px;margin-bottom:6px;color:var(--text);}
-.earn-desc{font-size:12px;color:var(--muted2);line-height:1.65;margin-bottom:14px;}
-.earn-btn{display:inline-block;background:var(--rose);color:#000;border:none;border-radius:20px;padding:9px 20px;font-size:11px;font-weight:700;letter-spacing:0.06em;cursor:pointer;text-decoration:none;font-family:'Space Grotesk',sans-serif;}
-label{display:block;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
-input,textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;outline:none;resize:vertical;margin-bottom:14px;}
-input:focus,textarea:focus{border-color:rgba(48,232,144,0.4);}
-textarea{min-height:120px;line-height:1.6;}
-.send-btn{background:var(--green);color:#000;border:none;border-radius:20px;padding:12px 28px;font-size:12px;font-weight:800;letter-spacing:0.08em;cursor:pointer;font-family:'Space Grotesk',sans-serif;}
-.send-btn:disabled{opacity:.5;cursor:not-allowed;}
-.msg-ok{background:rgba(48,232,144,0.1);border:1px solid rgba(48,232,144,0.25);color:var(--green);border-radius:10px;padding:12px 16px;font-size:12px;margin-top:12px;display:none;}
-.msg-err{background:rgba(240,80,80,0.1);border:1px solid rgba(240,80,80,0.25);color:#f08080;border-radius:10px;padding:12px 16px;font-size:12px;margin-top:12px;display:none;}
-.prod-link-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
-.prod-link-row:last-child{border:none;}
-.prod-name{font-weight:600;font-size:13px;}
-.prod-price{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);}
-.prod-actions{display:flex;gap:8px;}
-.prod-action-btn{font-size:10px;padding:5px 12px;border-radius:14px;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:600;}
-.tip-row{background:var(--bg3);border-radius:10px;padding:14px 16px;font-size:12px;color:var(--muted2);line-height:1.7;border-left:3px solid var(--green);margin-bottom:10px;}
-</style></head><body>
-<div class="topbar">
-  <div class="logo">Revenue Engine</div>
-  <div style="display:flex;gap:20px;align-items:center;">
-    <a href="/dashboard">Dashboard</a>
-    <a href="/traffic">Traffic</a>
-    <a href="https://admin.shopify.com/store/supportdr-com/balance" target="_blank" style="color:var(--green)">Shopify Balance</a>
-    <a href="https://admin.shopify.com/store/supportdr-com/orders" target="_blank" style="color:var(--gold)">Orders</a>
-  </div>
-</div>
-<div class="wrap">
-  <div class="page-title">Revenue Command Center</div>
-  <div class="page-sub">Every tool to grow your Shopify balance.</div>
-  <div class="balance-card">
-    <div>
-      <div class="balance-label">Shopify Balance - Main (3839)</div>
-      <div class="balance-amount">$8.44</div>
-      <div class="balance-meta">Available now &middot; 2.29% earnings rate<br>Last payout: $8.44 on Mar 12, 2026<br>Pending: $0.00</div>
-    </div>
-    <div>
-      <a class="open-shopify" href="https://admin.shopify.com/store/supportdr-com/balance" target="_blank">Open Shopify Balance</a><br>
-      <a class="open-shopify" href="https://admin.shopify.com/store/supportdr-com/orders" target="_blank" style="background:var(--gold);">View Orders</a><br>
-      <a class="open-shopify" href="https://supportrd.com/collections/all" target="_blank" style="background:var(--rose);">View Store</a>
-    </div>
-  </div>
-  <div class="stat-grid">
-    <div class="stat-card"><div class="stat-num" style="color:var(--rose);" id="s-users">-</div><div class="stat-lbl">Registered Users</div><div class="stat-sub">Potential customers</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--green);" id="s-premium">-</div><div class="stat-lbl">Premium</div><div class="stat-sub">$35/mo each</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--gold);" id="s-engaged">-</div><div class="stat-lbl">Engaged Users</div><div class="stat-sub">Have profiles</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--blue);" id="s-sessions">-</div><div class="stat-lbl">Aria Sessions</div><div class="stat-sub">Product exposures</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--rose);" id="s-new">-</div><div class="stat-lbl">New This Week</div><div class="stat-sub">Fresh signups</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--green);" id="s-conv">-%</div><div class="stat-lbl">Conversion Rate</div><div class="stat-sub">Free to Premium</div></div>
-  </div>
-  <div class="section">
-    <div class="section-title">Ways to Grow Your Balance Right Now</div>
-    <div class="section-sub">Every action drives traffic to supportrd.com checkout.</div>
-    <div class="earn-grid">
-      <div class="earn-card"><div class="earn-icon">📧</div><div class="earn-title">Email Your Users</div><div class="earn-desc">Send a product promo to all registered users. One email can turn into multiple orders.</div><button class="earn-btn" onclick="document.getElementById('email-section').scrollIntoView({behavior:'smooth'})">Write Email Blast</button></div>
-      <div class="earn-card"><div class="earn-icon">💬</div><div class="earn-title">WhatsApp Blast</div><div class="earn-desc">Highest conversion rate. Message contacts directly with your product link.</div><a class="earn-btn" style="background:var(--gold);" href="https://wa.me/?text=Check+out+Support+RD+Dominican+hair+care+https://supportrd.com/collections/all" target="_blank">Open WhatsApp</a></div>
-      <div class="earn-card"><div class="earn-icon">⭐</div><div class="earn-title">Push Premium Upgrades</div><div class="earn-desc">$35/mo recurring. Each new premium subscriber adds to your monthly balance.</div><a class="earn-btn" style="background:var(--green);" href="https://supportrd.com/products/hair-advisor-premium" target="_blank">Premium Page</a></div>
-      <div class="earn-card"><div class="earn-icon">✍️</div><div class="earn-title">Publish Blog Posts</div><div class="earn-desc">SEO posts drive free organic traffic to your store permanently.</div><a class="earn-btn" href="/blog/write" target="_blank">Write Post</a></div>
-      <div class="earn-card"><div class="earn-icon">📱</div><div class="earn-title">Share Aria Link</div><div class="earn-desc">Post aria.supportrd.com everywhere. Every signup is a potential buyer.</div><button class="earn-btn" onclick="navigator.clipboard.writeText('https://aria.supportrd.com');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Link',1500)">Copy Link</button></div>
-      <div class="earn-card"><div class="earn-icon">🎯</div><div class="earn-title">TikTok / Instagram</div><div class="earn-desc">Put your store link in your bio. Hair content goes viral. Dominican hair care has a massive audience.</div><a class="earn-btn" style="background:var(--blue);" href="https://www.instagram.com/" target="_blank">Open Instagram</a></div>
-    </div>
-  </div>
-  <div class="section">
-    <div class="section-title">Product Share Links</div>
-    <div class="section-sub">Click to open the buy page, share on WhatsApp, or copy the link.</div>
-    """ + prod_rows_html + """
-  </div>
-  <div class="section" id="email-section">
-    <div class="section-title">Email Blast to All Users</div>
-    <div class="section-sub">Sends a branded email to every registered user. Requires SMTP_USER + SMTP_PASS in Render env vars.</div>
-    <label>Subject Line</label>
-    <input type="text" id="blast-subject" placeholder="Your hair deserves this - New from Support RD">
-    <label>Featured Product (optional)</label>
-    <input type="text" id="blast-product" placeholder="Formula Exclusiva - $55">
-    <label>Product URL</label>
-    <input type="url" id="blast-url" value="https://supportrd.com/collections/all">
-    <label>Email Body</label>
-    <textarea id="blast-body" placeholder="Write your message here. Be personal and direct."></textarea>
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-      <button class="send-btn" id="blast-btn" onclick="sendBlast()">Send to All Users</button>
-      <div style="font-size:11px;color:var(--muted)" id="blast-count">Loading...</div>
-    </div>
-    <div class="msg-ok" id="blast-ok"></div>
-    <div class="msg-err" id="blast-err"></div>
-  </div>
-  <div class="section">
-    <div class="section-title">To Get Your Balance Growing Fast</div>
-    <div class="tip-row" style="border-color:var(--green);"><strong style="color:var(--text);">1. Set up SMTP</strong> in Render so the email blast works. Add SMTP_USER (your Gmail) and SMTP_PASS (Gmail app password).</div>
-    <div class="tip-row" style="border-color:var(--gold);"><strong style="color:var(--text);">2. Share aria.supportrd.com</strong> everywhere. Instagram bio, WhatsApp status, TikTok link-in-bio. Every signup is a potential buyer.</div>
-    <div class="tip-row" style="border-color:var(--rose);"><strong style="color:var(--text);">3. Publish 2 blog posts a week.</strong> Each one targets a hair problem and ends with a product link. Free Google traffic forever.</div>
-    <div class="tip-row" style="border-color:var(--blue);"><strong style="color:var(--text);">4. Shopify Admin API:</strong> Create a custom app in Shopify with read_orders permission to get live revenue data here automatically.</div>
-  </div>
-</div>
-<script>
-const TOKEN = localStorage.getItem('srd_token')||localStorage.getItem('aria_token')||'';
-const AKEY  = localStorage.getItem('srd_admin_key')||'';
-async function loadStats(){
-  try{
-    const r=await fetch('/api/revenue/stats',{headers:{'X-Auth-Token':TOKEN}});
-    const d=await r.json();
-    document.getElementById('s-users').textContent=d.total_users||0;
-    document.getElementById('s-premium').textContent=d.premium_users||0;
-    document.getElementById('s-engaged').textContent=d.engaged_users||0;
-    document.getElementById('s-sessions').textContent=d.total_sessions||0;
-    document.getElementById('s-new').textContent=d.new_users_7d||0;
-    document.getElementById('s-conv').textContent=(d.conversion_rate||0)+'%';
-    document.getElementById('blast-count').textContent='Will send to '+d.total_users+' users';
-  }catch(e){}
-}
-async function sendBlast(){
-  const subject=document.getElementById('blast-subject').value.trim();
-  const body=document.getElementById('blast-body').value.trim();
-  const product=document.getElementById('blast-product').value.trim();
-  const url=document.getElementById('blast-url').value.trim();
-  const okEl=document.getElementById('blast-ok');
-  const errEl=document.getElementById('blast-err');
-  const btn=document.getElementById('blast-btn');
-  okEl.style.display='none';errEl.style.display='none';
-  if(!subject||!body){errEl.textContent='Subject and body required.';errEl.style.display='block';return;}
-  if(!confirm('Send this email to all registered users?'))return;
-  btn.disabled=true;btn.textContent='Sending...';
-  try{
-    // Always send both auth headers — works with both old and new auth checks
-    const r=await fetch('/api/revenue/email-blast',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN,'X-Admin-Key':AKEY},
-      body:JSON.stringify({subject,body,product,url})
-    });
-    const d=await r.json();
-    if(d.ok){okEl.textContent='Done: '+d.message;okEl.style.display='block';}
-    else{errEl.textContent=d.error||'Send failed';errEl.style.display='block';}
-  }catch(e){errEl.textContent='Network error';errEl.style.display='block';}
-  btn.disabled=false;btn.textContent='Send to All Users';
-}
-loadStats();
-</script></body></html>""")
-    return Response(html.replace("PROD_ROWS_PLACEHOLDER", prod_rows_html), mimetype="text/html")
-
 @app.after_request
 def after_request(response):
-    origin = request.headers.get('Origin', '')
-
-    # Always allow these origins — aria.supportrd.com, supportrd.com, localhost
-    allowed_origins = [
-        'https://aria.supportrd.com',
-        'https://supportrd.com',
-        'https://www.supportrd.com',
-        os.environ.get('APP_BASE_URL', ''),
-        'http://localhost:5000',
-        'http://127.0.0.1:5000',
-    ]
-
-    # If origin matches — send it back explicitly (required for credentials)
-    # If no origin header (direct browser nav, Render health checks) — allow *
-    if origin in allowed_origins:
-        response.headers['Access-Control-Allow-Origin']       = origin
-        response.headers['Access-Control-Allow-Credentials']  = 'true'
-    else:
-        response.headers['Access-Control-Allow-Origin']       = '*'
-
-    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS,PATCH'
-    response.headers['Access-Control-Allow-Headers'] = (
-        'Content-Type,X-Auth-Token,Authorization,X-Session-Id,'
-        'X-Requested-With,Accept,Origin,Cache-Control'
-    )
-    response.headers['Access-Control-Max-Age']        = '86400'
-    response.headers['Access-Control-Expose-Headers'] = 'X-Auth-Token'
-
-    # ── Security headers — satisfy Fortinet / firewall SSL inspection ──────
-    # These tell the firewall the app is behaving correctly over HTTPS
-    response.headers['X-Content-Type-Options']        = 'nosniff'
-    response.headers['X-Frame-Options']               = 'SAMEORIGIN'
-    response.headers['X-XSS-Protection']              = '1; mode=block'
-    response.headers['Referrer-Policy']               = 'strict-origin-when-cross-origin'
-    response.headers['Permissions-Policy']            = (
-        'geolocation=(self), microphone=(self), camera=()'
-    )
-    # HSTS — tell browser and any proxy: always use HTTPS, never downgrade
-    if request.is_secure or request.headers.get('X-Forwarded-Proto') == 'https':
-        response.headers['Strict-Transport-Security'] = (
-            'max-age=31536000; includeSubDomains'
-        )
-
-    # ── Preflight fast-return ──────────────────────────────────────────────
-    if request.method == 'OPTIONS':
-        response.status_code = 204
-
+    origin = request.headers.get('Origin','')
+    allowed = [os.environ.get('APP_BASE_URL',''), 'https://supportrd.com', 'https://www.supportrd.com',
+               'http://localhost:5000', 'http://127.0.0.1:5000']
+    if origin in allowed:
+        response.headers['Access-Control-Allow-Origin']  = origin
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,X-Auth-Token,Authorization'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response
 
 
