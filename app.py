@@ -11907,6 +11907,16 @@ def live_feed_status():
             except Exception:
                 return default
     viewers = _row_get(status, "viewers", 6, 0)
+    event_cols = ["id","type","title","body","code","language","tag","ts"]
+    def _event_to_dict(row):
+        if row is None:
+            return {}
+        try:
+            return dict(row)
+        except Exception:
+            if isinstance(row, (list, tuple)):
+                return {event_cols[i]: row[i] if i < len(row) else None for i in range(len(event_cols))}
+            return {}
     return jsonify({
         "is_live":       bool(_row_get(status, "is_live", 1, 0)),
         "session_title": _row_get(status, "session_title", 2, ""),
@@ -11915,7 +11925,7 @@ def live_feed_status():
         "viewers":       viewers,
         "total_events":  total_events,
         "total_sessions":total_sessions,
-        "events":        [dict(e) for e in (events or [])]
+        "events":        [_event_to_dict(e) for e in (events or [])]
     })
 
 
