@@ -819,13 +819,24 @@ def get_subscription(user_id):
             "status","plan","trial_start","trial_end","current_period_end","created_at","updated_at"]
     return dict(zip(cols, row))
 
+def _get_admin_emails():
+    """Resolve admin emails from env, with a safe fallback for local/dev."""
+    raw_list = os.environ.get("ADMIN_EMAILS", "").strip()
+    if raw_list:
+        return {e.strip().lower() for e in raw_list.split(",") if e.strip()}
+    single = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    if single:
+        return {single}
+    # Local/dev fallback to keep dashboards usable when env isn't set
+    return {"agentsupport@supportrd.com"}
+
 def is_admin_user(user_id):
-    """Returns True if this user's email matches the ADMIN_EMAIL env var."""
-    admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
-    if not admin_email:
+    """Returns True if this user's email is in the admin list."""
+    admins = _get_admin_emails()
+    if not admins:
         return False
     row = db_execute("SELECT email FROM users WHERE id=?", (user_id,), fetchone=True)
-    if row and row[0].strip().lower() == admin_email:
+    if row and row[0].strip().lower() in admins:
         return True
     return False
 
