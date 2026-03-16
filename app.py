@@ -724,7 +724,7 @@ Anthony Blogger signing out. 💜"""
             "This post captures the soul of Support RD — not just a hair brand but a mission driven by faith and persistence."
         )
     )
-    print("[SEED] Spiritual Allah post seeded → published ✓")
+    print("[SEED] Spiritual Allah post seeded -> published (OK)")
 
 def _seed_lsciador_post():
     existing = db_execute("SELECT id FROM blog_posts WHERE slug='lsciador-refresher-shampoo-conditioner'", fetchone=True)
@@ -802,7 +802,7 @@ This is not a refresh of an old formula. This is the formula that was always mea
             "published"
         )
     )
-    print("[BLOG] Lsciador launch post seeded ✓")
+    print("[BLOG] Lsciador launch post seeded (OK)")
 
 _seed_lsciador_post()
 _seed_spiritual_allah_post()
@@ -2770,7 +2770,7 @@ Respond ONLY in valid JSON, no markdown:
                  idea.get("outline","")[:500], idea.get("tags","")[:200],
                  idea.get("reasoning","")[:300])
             )
-        print(f"[STARTER BAG] 5 AI blog ideas gifted to user {user_id} ✓")
+        print(f"[STARTER BAG] 5 AI blog ideas gifted to user {user_id} (OK)")
     except Exception as e:
         print(f"[STARTER BAG] Gift failed: {e}")
 # ─────────────────────────────────────────────────────────────────────────────
@@ -12094,7 +12094,7 @@ def _company_refresh_5am():
         except Exception:
             pass
 
-        print(f"[5AM REFRESH] Complete ✓")
+        print(f"[5AM REFRESH] Complete (OK)")
 
     except Exception as e:
         print(f"[5AM REFRESH] Error: {e}")
@@ -12123,7 +12123,7 @@ def _start_5am_scheduler():
 
     t = threading.Thread(target=_loop, daemon=True, name="5am-refresh")
     t.start()
-    print("[5AM SCHEDULER] Scheduler thread started ✓")
+    print("[5AM SCHEDULER] Scheduler thread started (OK)")
 
 # Boot the scheduler when the app starts
 _start_5am_scheduler()
