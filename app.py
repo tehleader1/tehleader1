@@ -3811,17 +3811,28 @@ body::before{content:'';position:fixed;inset:0;
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0;">
       <!-- Avatar -->
       <div style="position:relative;">
-        <div id="prof-avatar" style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#fff;border:3px solid rgba(240,160,144,0.4);box-shadow:0 0 24px rgba(240,160,144,0.25);">?</div>
+        <div id="prof-avatar" style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--rose),#c06050);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#fff;border:3px solid rgba(240,160,144,0.4);box-shadow:0 0 24px rgba(240,160,144,0.25);overflow:hidden;">?</div>
         <div style="position:absolute;bottom:2px;right:2px;width:20px;height:20px;background:#30e890;border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:9px;">✓</div>
       </div>
+      <input type="file" id="prof-avatar-input" accept="image/*" style="display:none" onchange="profAvatarChange(event)">
+      <button onclick="document.getElementById('prof-avatar-input').click()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted2);padding:6px 12px;border-radius:14px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">Upload Photo</button>
       <!-- Share icons -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:100px;">
-        <a id="share-ig" href="#" target="_blank" title="Instagram" onclick="profShare('instagram');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">📷</a>
-        <a id="share-fb" href="#" target="_blank" title="Facebook" onclick="profShare('facebook');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">👥</a>
-        <a id="share-tt" href="#" target="_blank" title="TikTok" onclick="profShare('tiktok');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">🎵</a>
-        <a id="share-tw" href="#" target="_blank" title="X / Twitter" onclick="profShare('twitter');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">🐦</a>
-        <a id="share-wa" href="#" target="_blank" title="WhatsApp" onclick="profShare('whatsapp');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">💬</a>
-        <a id="share-pi" href="#" target="_blank" title="Pinterest" onclick="profShare('pinterest');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;text-decoration:none;">📌</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:120px;">
+        <a id="share-ig" href="#" target="_blank" title="Instagram" onclick="profShare('instagram');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;text-decoration:none;"><img alt="IG" src="https://cdn.simpleicons.org/instagram/ffffff" style="width:14px;height:14px;"></a>
+        <a id="share-fb" href="#" target="_blank" title="Facebook" onclick="profShare('facebook');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;text-decoration:none;"><img alt="FB" src="https://cdn.simpleicons.org/facebook/ffffff" style="width:14px;height:14px;"></a>
+        <a id="share-tt" href="#" target="_blank" title="TikTok" onclick="profShare('tiktok');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;text-decoration:none;"><img alt="TT" src="https://cdn.simpleicons.org/tiktok/ffffff" style="width:14px;height:14px;"></a>
+        <a id="share-tw" href="#" target="_blank" title="X / Twitter" onclick="profShare('twitter');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;text-decoration:none;"><img alt="X" src="https://cdn.simpleicons.org/x/ffffff" style="width:14px;height:14px;"></a>
+        <a id="share-wa" href="#" target="_blank" title="WhatsApp" onclick="profShare('whatsapp');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;text-decoration:none;"><img alt="WA" src="https://cdn.simpleicons.org/whatsapp/ffffff" style="width:14px;height:14px;"></a>
+        <a id="share-pi" href="#" target="_blank" title="Pinterest" onclick="profShare('pinterest');return false;" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;text-decoration:none;"><img alt="PI" src="https://cdn.simpleicons.org/pinterest/ffffff" style="width:14px;height:14px;"></a>
+      </div>
+      <div style="margin-top:6px;width:140px;">
+        <input id="prof-link-ig" placeholder="Instagram link" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 8px;font-size:10px;color:var(--text);margin-bottom:6px;">
+        <input id="prof-link-fb" placeholder="Facebook link" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 8px;font-size:10px;color:var(--text);margin-bottom:6px;">
+        <input id="prof-link-tt" placeholder="TikTok link" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 8px;font-size:10px;color:var(--text);margin-bottom:6px;">
+        <input id="prof-link-tw" placeholder="X link" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 8px;font-size:10px;color:var(--text);margin-bottom:6px;">
+        <input id="prof-link-wa" placeholder="WhatsApp link" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 8px;font-size:10px;color:var(--text);margin-bottom:6px;">
+        <input id="prof-link-pi" placeholder="Pinterest link" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 8px;font-size:10px;color:var(--text);">
+        <button onclick="saveProfileLinks()" style="margin-top:6px;width:100%;background:var(--rose);color:#000;border:none;border-radius:12px;padding:6px 10px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">Save Links</button>
       </div>
     </div>
 
@@ -3860,11 +3871,6 @@ body::before{content:'';position:fixed;inset:0;
         </div>
         <div style="width:1px;background:var(--border);"></div>
         <div style="text-align:center;">
-          <div id="prof-streak" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--gold);">—</div>
-          <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Day Streak</div>
-        </div>
-        <div style="width:1px;background:var(--border);"></div>
-        <div style="text-align:center;">
           <div id="prof-member-since" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--blue);">—</div>
           <div style="font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Member Since</div>
         </div>
@@ -3874,85 +3880,13 @@ body::before{content:'';position:fixed;inset:0;
   </div>
 </div>
 
-<!-- ── HAIR DATA GRID ─────────────────────────────────────── -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Hair Type</div>
-    <div class="tags" id="pf-tags-type">
-      <div class="tag" onclick="toggleTag(this,'type')">Straight</div><div class="tag" onclick="toggleTag(this,'type')">Wavy</div><div class="tag" onclick="toggleTag(this,'type')">Curly</div><div class="tag" onclick="toggleTag(this,'type')">Coily / 4C</div><div class="tag" onclick="toggleTag(this,'type')">Fine</div><div class="tag" onclick="toggleTag(this,'type')">Medium</div><div class="tag" onclick="toggleTag(this,'type')">Thick</div><div class="tag" onclick="toggleTag(this,'type')">Dry / Brittle</div><div class="tag" onclick="toggleTag(this,'type')">Oily</div><div class="tag" onclick="toggleTag(this,'type')">Normal</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Main Concerns</div>
-    <div class="tags" id="pf-tags-concerns">
-      <div class="tag" onclick="toggleTag(this,'concerns')">Frizz</div><div class="tag" onclick="toggleTag(this,'concerns')">Damaged</div><div class="tag" onclick="toggleTag(this,'concerns')">Breakage</div><div class="tag" onclick="toggleTag(this,'concerns')">Hair Loss</div><div class="tag" onclick="toggleTag(this,'concerns')">Thinning</div><div class="tag" onclick="toggleTag(this,'concerns')">Oily Scalp</div><div class="tag" onclick="toggleTag(this,'concerns')">Dandruff</div><div class="tag" onclick="toggleTag(this,'concerns')">Split Ends</div><div class="tag" onclick="toggleTag(this,'concerns')">Slow Growth</div><div class="tag" onclick="toggleTag(this,'concerns')">Dullness</div><div class="tag" onclick="toggleTag(this,'concerns')">Heat Damage</div><div class="tag" onclick="toggleTag(this,'concerns')">Sun Damage</div><div class="tag" onclick="toggleTag(this,'concerns')">Dryness</div><div class="tag" onclick="toggleTag(this,'concerns')">Scalp Irritation</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Chemical Treatments</div>
-    <div class="tags" id="pf-tags-treatments">
-      <div class="tag" onclick="toggleTag(this,'treatments')">None / Natural</div><div class="tag" onclick="toggleTag(this,'treatments')">Relaxer</div><div class="tag" onclick="toggleTag(this,'treatments')">Bleach</div><div class="tag" onclick="toggleTag(this,'treatments')">Hair Color</div><div class="tag" onclick="toggleTag(this,'treatments')">Keratin</div><div class="tag" onclick="toggleTag(this,'treatments')">Perm / Wave</div><div class="tag" onclick="toggleTag(this,'treatments')">Brazilian Blowout</div><div class="tag" onclick="toggleTag(this,'treatments')">Highlights</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Porosity Level</div>
-    <div class="tags" id="pf-tags-porosity">
-      <div class="tag" onclick="toggleTag(this,'porosity')">Low Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">Medium Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">High Porosity</div><div class="tag" onclick="toggleTag(this,'porosity')">Not Sure</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Scalp Type</div>
-    <div class="tags" id="pf-tags-scalp">
-      <div class="tag" onclick="toggleTag(this,'scalp')">Normal</div><div class="tag" onclick="toggleTag(this,'scalp')">Dry / Flaky</div><div class="tag" onclick="toggleTag(this,'scalp')">Oily</div><div class="tag" onclick="toggleTag(this,'scalp')">Sensitive</div><div class="tag" onclick="toggleTag(this,'scalp')">Itchy</div><div class="tag" onclick="toggleTag(this,'scalp')">Dandruff</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Wash Frequency</div>
-    <div class="tags" id="pf-tags-washfreq">
-      <div class="tag" onclick="toggleTag(this,'washfreq')">Daily</div><div class="tag" onclick="toggleTag(this,'washfreq')">Every 2-3 Days</div><div class="tag" onclick="toggleTag(this,'washfreq')">Weekly</div><div class="tag" onclick="toggleTag(this,'washfreq')">Every 2 Weeks</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Heat Styling</div>
-    <div class="tags" id="pf-tags-heat">
-      <div class="tag" onclick="toggleTag(this,'heat')">No Heat</div><div class="tag" onclick="toggleTag(this,'heat')">Occasionally</div><div class="tag" onclick="toggleTag(this,'heat')">1-2x / Week</div><div class="tag" onclick="toggleTag(this,'heat')">Daily</div><div class="tag" onclick="toggleTag(this,'heat')">Flat Iron</div><div class="tag" onclick="toggleTag(this,'heat')">Blow Dryer</div><div class="tag" onclick="toggleTag(this,'heat')">Curling Iron</div>
-    </div>
-  </div>
-
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Environment / Lifestyle</div>
-    <div class="tags" id="pf-tags-env">
-      <div class="tag" onclick="toggleTag(this,'env')">Hard Water</div><div class="tag" onclick="toggleTag(this,'env')">Humid Climate</div><div class="tag" onclick="toggleTag(this,'env')">Dry Climate</div><div class="tag" onclick="toggleTag(this,'env')">Sun Exposure</div><div class="tag" onclick="toggleTag(this,'env')">Pool / Chlorine</div><div class="tag" onclick="toggleTag(this,'env')">Ocean / Salt</div><div class="tag" onclick="toggleTag(this,'env')">Active / Workouts</div>
-    </div>
-  </div>
-
-</div>
-
-<!-- Products I Use -->
-<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">SupportRD Products I Use</div>
-  <div class="tags" id="pf-tags-products">
-    <div class="tag" onclick="toggleTag(this,'products')">Formula Exclusiva</div><div class="tag" onclick="toggleTag(this,'products')">Laciador Crece</div><div class="tag" onclick="toggleTag(this,'products')">Gotero Rapido</div><div class="tag" onclick="toggleTag(this,'products')">Gotitas Brillantes</div><div class="tag" onclick="toggleTag(this,'products')">Mascarilla Capilar</div><div class="tag" onclick="toggleTag(this,'products')">Shampoo Aloe Vera</div>
-  </div>
-</div>
-
-<!-- Goals + notes -->
-<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">My Hair Goals</div>
-  <textarea id="pf-goals" placeholder="What do you want your hair to look and feel like? The more Aria knows, the better she can help…" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--text);resize:vertical;min-height:70px;outline:none;" onfocus="this.style.borderColor='var(--rose)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-</div>
-
-<!-- Save -->
-<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:28px;">
-  <button class="save-btn" style="margin-top:0;" onclick="saveProfileFull()">✦ Save Profile & Update Score</button>
-  <div id="pf-save-msg" style="display:none;font-size:12px;color:var(--green);">✓ Saved</div>
+<!-- ── PROFILE PRODUCT SHOWCASE ───────────────────────────── -->
+<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:18px;margin-bottom:20px;">
+  <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">✦ My SupportRD Products</div>
+  <div style="font-size:12px;color:var(--muted2);margin-bottom:12px;">Three products you use right now — tap “Click for more” to swap the lineup.</div>
+  <div id="prof-showcase-list" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
+  <button onclick="profNextShowcase()" style="margin-top:12px;background:var(--rose);color:#000;border:none;border-radius:18px;padding:8px 16px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">Click for more →</button>
+  <div id="pf-save-msg" style="display:none;font-size:12px;color:var(--green);margin-top:10px;">✓ Saved</div>
 </div>
 
 <!-- ── OCCASIONS ── -->
@@ -3966,107 +3900,56 @@ body::before{content:'';position:fixed;inset:0;
     <button onclick="occToggleWeekly()" id="occ-weekly-btn" style="background:var(--bg2);border:1px solid var(--border2);color:var(--muted2);padding:8px 16px;border-radius:20px;font-size:11px;cursor:pointer;letter-spacing:0.06em;font-family:'Space Grotesk',sans-serif;">📅 View My Week</button>
   </div>
 
-  <!-- ── STEP 1: PICK OCCASION ── -->
-  <div class="occ-step-block">
-    <div class="occ-step-label">Step 1 — Choose Your Occasion</div>
-    <div id="occ-occasion-grid" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
-  </div>
-
-  <!-- ── STEP 2: PICK PRODUCT ── -->
-  <div class="occ-step-block" id="occ-step2" style="display:none;">
-    <div class="occ-step-label">Step 2 — Which Product Today?</div>
-    <div id="occ-product-grid" style="display:flex;flex-wrap:wrap;gap:8px;">
-
-      <div class="occ-card" onclick="occPickProduct('Formula Exclusiva','💊','All-in-one treatment: moisture, strength + scalp')">
-        <div class="occ-card-icon">💊</div>
-        <div class="occ-card-title">Formula Exclusiva</div>
-        <div class="occ-card-sub">All-in-one treatment</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Laciador Crece','🌿','Softness, elasticity, shine + growth')">
-        <div class="occ-card-icon">🌿</div>
-        <div class="occ-card-title">Laciador Crece</div>
-        <div class="occ-card-sub">Softness + growth</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Gotero Rapido','💧','Scalp treatment — clears + stimulates growth')">
-        <div class="occ-card-icon">💧</div>
-        <div class="occ-card-title">Gotero Rapido</div>
-        <div class="occ-card-sub">Scalp treatment</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Gotitas Brillantes','✨','Shine serum — apply after styling')">
-        <div class="occ-card-icon">✨</div>
-        <div class="occ-card-title">Gotitas Brillantes</div>
-        <div class="occ-card-sub">Shine serum</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Mascarilla Capilar','🫙','Deep conditioning mask treatment')">
-        <div class="occ-card-icon">🫙</div>
-        <div class="occ-card-title">Mascarilla Capilar</div>
-        <div class="occ-card-sub">Deep condition mask</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Shampoo Aloe Vera','🍃','Gentle cleanse — daily or weekly')">
-        <div class="occ-card-icon">🍃</div>
-        <div class="occ-card-title">Shampoo Aloe Vera</div>
-        <div class="occ-card-sub">Gentle cleanse</div>
-      </div>
-
-      <div class="occ-card" onclick="occPickProduct('Multiple Products','🗂️','Using a combination today')">
-        <div class="occ-card-icon">🗂️</div>
-        <div class="occ-card-title">Multiple Products</div>
-        <div class="occ-card-sub">Combination routine</div>
-      </div>
-
+  <!-- ── OCCASION DROPDOWNS ── -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px;">
+    <div>
+      <div class="occ-step-label">Occasion</div>
+      <select id="occ-dd-occasion" onchange="occUpdateSummary()" style="width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:10px;font-size:12px;">
+        <option value="">Select an occasion…</option>
+      </select>
+    </div>
+    <div>
+      <div class="occ-step-label">Product</div>
+      <select id="occ-dd-product" onchange="occUpdateSummary()" style="width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:10px;font-size:12px;">
+        <option value="">Select a product…</option>
+      </select>
+    </div>
+    <div>
+      <div class="occ-step-label">Routine Action</div>
+      <select id="occ-dd-action" onchange="occUpdateSummary()" style="width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:10px;font-size:12px;">
+        <option value="">Select your routine…</option>
+        <option>Simply Applying</option>
+        <option>Next Wash</option>
+        <option>Next take out shampoo + add Laciador</option>
+        <option>Next take to a professional deep wash</option>
+        <option>Deep condition mask + rinse</option>
+        <option>Scalp treatment focus</option>
+      </select>
+    </div>
+    <div>
+      <div class="occ-step-label">Routine Length</div>
+      <select id="occ-dd-length" onchange="occToggleLength()" style="width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:10px;font-size:12px;">
+        <option value="1">1 Day</option>
+        <option value="7">7 Days (Weekly)</option>
+      </select>
+    </div>
+    <div id="occ-dd-day-wrap">
+      <div class="occ-step-label">Day</div>
+      <select id="occ-dd-day" onchange="occUpdateSummary()" style="width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:10px;font-size:12px;">
+        <option value="">Select a day…</option>
+        <option>Monday</option>
+        <option>Tuesday</option>
+        <option>Wednesday</option>
+        <option>Thursday</option>
+        <option>Friday</option>
+        <option>Saturday</option>
+        <option>Sunday</option>
+      </select>
     </div>
   </div>
-
-  <!-- ── STEP 3: PICK ROUTINE ACTION ── -->
-  <div class="occ-step-block" id="occ-step3" style="display:none;">
-    <div class="occ-step-label">Step 3 — What Are You Doing?</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Simply Applying','🖐️','Quick application — work product through hair, no wash needed')">
-        <div class="occ-card-icon">🖐️</div>
-        <div class="occ-card-title">Simply Applying</div>
-        <div class="occ-card-sub">Quick — no wash needed</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Next Wash','🚿','Apply today, wash on your next scheduled wash day')">
-        <div class="occ-card-icon">🚿</div>
-        <div class="occ-card-title">Next Wash</div>
-        <div class="occ-card-sub">Apply now, wash later</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Shampoo + Add Laciador','🔁','Next wash: shampoo, then add Laciador for softness & protection')">
-        <div class="occ-card-icon">🔁</div>
-        <div class="occ-card-title">Shampoo + Laciador</div>
-        <div class="occ-card-sub">Wash then add Laciador</div>
-      </div>
-
-      <div class="occ-card occ-action-card" onclick="occPickAction('Professional Deep Wash','🧖','Take to a professional for a deep wash with Support products')">
-        <div class="occ-card-icon">🧖</div>
-        <div class="occ-card-title">Professional Deep Wash</div>
-        <div class="occ-card-sub">Salon‑level deep care</div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── STEP 4: ADD TO WEEK DAY ── -->
-  <div class="occ-step-block" id="occ-step4" style="display:none;">
-    <div class="occ-step-label">Step 4 — Add to Which Day?</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Monday')"><div class="occ-card-title">Mon</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Tuesday')"><div class="occ-card-title">Tue</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Wednesday')"><div class="occ-card-title">Wed</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Thursday')"><div class="occ-card-title">Thu</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Friday')"><div class="occ-card-title">Fri</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Saturday')"><div class="occ-card-title">Sat</div></div>
-      <div class="occ-card occ-day-card" onclick="occAddToDay('Sunday')"><div class="occ-card-title">Sun</div></div>
-      <div class="occ-card occ-day-card" onclick="occSaveNoDay()" style="background:rgba(240,160,144,0.08);border-color:rgba(240,160,144,0.3);"><div class="occ-card-title" style="color:var(--rose);">Save Only</div></div>
-    </div>
+  <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
+    <button onclick="occSaveFromDropdowns()" style="background:var(--rose);color:#000;border:none;border-radius:18px;padding:8px 16px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">Save Routine</button>
+    <div style="font-size:11px;color:var(--muted2);">Use 1 Day for a single event or 7 Days to auto‑fill your week.</div>
   </div>
 
   <!-- ── CURRENT SELECTION SUMMARY ── -->
@@ -4989,41 +4872,49 @@ function openProfilePage(){
   const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
   // Avatar
   const av = document.getElementById('prof-avatar');
-  if(av) av.textContent = (u.name||'?')[0].toUpperCase();
+  if(av){
+    const stored = localStorage.getItem('srd_profile_photo');
+    if(stored){
+      av.innerHTML = '<img src="'+stored+'" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+    } else {
+      av.textContent = (u.name||'?')[0].toUpperCase();
+    }
+  }
   if(document.getElementById('prof-name-big'))  document.getElementById('prof-name-big').textContent  = u.name||'—';
   if(document.getElementById('prof-email-sm'))  document.getElementById('prof-email-sm').textContent  = u.email||'';
   if(document.getElementById('prof-score-big')) document.getElementById('prof-score-big').textContent = localStorage.getItem('srd_score')||'—';
   if(document.getElementById('prof-member-since')){
-    const ms = u.created_at ? new Date(u.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '—';
+    const created = u.created_at || localStorage.getItem('srd_member_since');
+    const ms = created ? new Date(created).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
     document.getElementById('prof-member-since').textContent = ms;
+    if(!u.created_at && !localStorage.getItem('srd_member_since')){
+      localStorage.setItem('srd_member_since', new Date().toISOString());
+    }
   }
   // Plan badge
   const pb = document.getElementById('prof-plan-badge');
   if(pb){ const isPrem = localStorage.getItem('srd_premium')==='1'; pb.textContent=isPrem?'PREMIUM':'FREE'; pb.style.color=isPrem?'var(--green)':'var(--gold)'; }
-  // Streak (days since last visit — rough approximation)
-  const lastV = parseInt(localStorage.getItem('srd_last_visit')||'0');
-  const today = Math.floor(Date.now()/86400000);
-  let streak = parseInt(localStorage.getItem('srd_streak')||'1');
-  if(lastV === today-1){ streak++; localStorage.setItem('srd_streak',streak); }
-  else if(lastV < today-1){ streak=1; localStorage.setItem('srd_streak',1); }
-  localStorage.setItem('srd_last_visit',today);
-  if(document.getElementById('prof-streak')) document.getElementById('prof-streak').textContent = streak+'d';
 
-  // Load profile tags from API
+  // Load saved social links
+  const links = JSON.parse(localStorage.getItem('srd_profile_links')||'{}');
+  const map = {ig:'prof-link-ig',fb:'prof-link-fb',tt:'prof-link-tt',tw:'prof-link-tw',wa:'prof-link-wa',pi:'prof-link-pi'};
+  Object.keys(map).forEach(k=>{
+    const el = document.getElementById(map[k]);
+    if(el) el.value = links[k]||'';
+  });
+
+  // Load profile for AI read + product showcase
   fetch('/api/profile',{headers:{'X-Auth-Token':token}}).then(r=>r.json()).then(d=>{
     if(!d) return;
-    restoreTags('pf-tags-type',       d.hair_type);
-    restoreTags('pf-tags-concerns',   d.hair_concerns);
-    restoreTags('pf-tags-treatments', d.treatments);
-    restoreTags('pf-tags-products',   d.products_tried);
-    restoreTags('pf-tags-porosity',   d.porosity||'');
-    restoreTags('pf-tags-scalp',      d.scalp||'');
-    restoreTags('pf-tags-washfreq',   d.wash_freq||'');
-    restoreTags('pf-tags-heat',       d.heat_styling||'');
-    restoreTags('pf-tags-env',        d.environment||'');
-    if(document.getElementById('pf-goals')) document.getElementById('pf-goals').value = d.goals||'';
-    profBuildProductCarousel(d.products_tried||'');
+    profSetAiStatus(d);
+    localStorage.setItem('srd_profile_products', d.products_tried||'');
+    profBuildShowcase(d.products_tried||'');
   }).catch(()=>{});
+
+  // If no API status yet, show a quick read
+  if(document.getElementById('prof-ai-status')){
+    document.getElementById('prof-ai-status').textContent = profBuildQuickRead();
+  }
 
   occInit();
 }
@@ -5039,7 +4930,7 @@ function restoreTags(containerId, csv){
   });
 }
 
-// ── PRODUCT CAROUSEL ─────────────────────────────────────────────
+// ── PROFILE SHOWCASE ─────────────────────────────────────────────
 const PROD_IMGS = {
   'Formula Exclusiva':  'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/formula.jpg',
   'Laciador Crece':     'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/laciador.jpg',
@@ -5049,34 +4940,81 @@ const PROD_IMGS = {
   'Shampoo Aloe Vera':  'https://cdn.shopify.com/s/files/1/0593/2715/2208/files/shampoo.jpg',
 };
 const PROD_COLORS = ['var(--rose)','var(--gold)','var(--blue)','var(--green)','var(--purple)','#c06050'];
+let _showcaseOffset = 0;
 
-function profBuildProductCarousel(csv){
-  const track = document.getElementById('prof-product-track');
-  const dots  = document.getElementById('prof-product-dots');
-  if(!track||!dots) return;
-  const names = csv ? csv.split(',').map(s=>s.trim()).filter(Boolean) : [];
-  if(!names.length){
-    track.innerHTML = '<div style="width:72px;height:90px;background:var(--bg2);border:1px dashed var(--border2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">✦</div>';
-    dots.innerHTML=''; return;
-  }
-  // 3 visible at a time, scroll with dots
-  const pages = Math.ceil(names.length/3);
-  track.innerHTML = names.map((n,i)=>{
-    const col = PROD_COLORS[i%PROD_COLORS.length];
-    return '<div style="width:72px;height:90px;border-radius:10px;background:'+col+';background:linear-gradient(160deg,'+col+',rgba(0,0,0,0.4));border:1px solid rgba(255,255,255,0.1);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:6px;overflow:hidden;flex-shrink:0;">'
-      +'<div style="font-size:7px;text-align:center;color:#fff;font-family:\'IBM Plex Mono\',monospace;letter-spacing:0.06em;line-height:1.3;">'+n+'</div></div>';
+function profBuildShowcase(csv){
+  const list = document.getElementById('prof-showcase-list');
+  if(!list) return;
+  const raw = csv ? csv.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  const base = raw.length ? raw : Object.keys(PROD_IMGS);
+  if(_showcaseOffset >= base.length) _showcaseOffset = 0;
+  const items = base.slice(_showcaseOffset, _showcaseOffset+3);
+  const view = items.length ? items : base.slice(0,3);
+  list.innerHTML = view.map((name,i)=>{
+    const img = PROD_IMGS[name] || '';
+    const col = PROD_COLORS[(i+_showcaseOffset)%PROD_COLORS.length];
+    return '<div style="display:flex;gap:14px;align-items:center;background:linear-gradient(140deg,rgba(240,160,144,0.08),rgba(0,0,0,0.3));border:1px solid var(--border2);border-radius:14px;padding:12px;">'
+      +'<div style="width:140px;height:90px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:'+col+';">'
+      +(img ? '<img src="'+img+'" alt="'+name+'" style="width:100%;height:100%;object-fit:cover;">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;">✦</div>')
+      +'</div>'
+      +'<div style="flex:1;">'
+      +'<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;color:var(--text);">'+name+'</div>'
+      +'<div style="font-size:11px;color:var(--muted2);margin-top:4px;">SupportRD product in your routine.</div>'
+      +'</div>'
+      +'</div>';
   }).join('');
-  dots.innerHTML = Array.from({length:pages},(_,i)=>'<div onclick="profCarouselTo('+i+')" style="width:6px;height:6px;border-radius:50%;background:'+(i===0?'var(--rose)':'var(--border2)')+';cursor:pointer;transition:background 0.2s;" id="prof-dot-'+i+'"></div>').join('');
 }
 
-function profCarouselTo(page){
-  const track = document.getElementById('prof-product-track');
-  if(!track) return;
-  const itemH = 98; // 90px + 8px gap
-  track.style.transform = 'translateY(-'+(page*3*itemH)+'px)';
-  document.querySelectorAll('[id^="prof-dot-"]').forEach((d,i)=>{
-    d.style.background = i===page ? 'var(--rose)' : 'var(--border2)';
-  });
+function profNextShowcase(){
+  const saved = (localStorage.getItem('srd_profile_products')||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const base = saved.length ? saved : Object.keys(PROD_IMGS);
+  _showcaseOffset += 3;
+  if(_showcaseOffset >= base.length) _showcaseOffset = 0;
+  profBuildShowcase(saved.join(','));
+  const msg = document.getElementById('pf-save-msg');
+  if(msg){ msg.style.display='block'; setTimeout(()=>{ msg.style.display='none'; },1200); }
+}
+
+function profAvatarChange(evt){
+  const file = evt.target.files && evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const url = e.target.result;
+    localStorage.setItem('srd_profile_photo', url);
+    const av = document.getElementById('prof-avatar');
+    if(av) av.innerHTML = '<img src="'+url+'" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveProfileLinks(){
+  const links = {
+    ig: (document.getElementById('prof-link-ig')||{}).value||'',
+    fb: (document.getElementById('prof-link-fb')||{}).value||'',
+    tt: (document.getElementById('prof-link-tt')||{}).value||'',
+    tw: (document.getElementById('prof-link-tw')||{}).value||'',
+    wa: (document.getElementById('prof-link-wa')||{}).value||'',
+    pi: (document.getElementById('prof-link-pi')||{}).value||'',
+  };
+  localStorage.setItem('srd_profile_links', JSON.stringify(links));
+  showToast('Links saved');
+}
+
+function profBuildQuickRead(){
+  const score = parseInt(localStorage.getItem('srd_score')||'0',10);
+  if(score>=85) return 'Status: Strong growth + shine. Keep consistency and protect your ends this week.';
+  if(score>=70) return 'Status: Healthy progress. Focus on moisture balance and gentle styling.';
+  if(score>=50) return 'Status: Repair phase. Prioritize scalp care and reduce heat this week.';
+  return 'Status: Reset needed. Start with wash + deep condition and keep it simple for 7 days.';
+}
+
+function profSetAiStatus(profile){
+  const el = document.getElementById('prof-ai-status');
+  if(!el) return;
+  const concerns = (profile.hair_concerns||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const focus = concerns[0] ? concerns[0].toLowerCase() : 'overall hair health';
+  el.textContent = 'Current status: focused on '+focus+'. Next step: keep your routine consistent and track results.';
 }
 
 // ── AI STATUS REFRESH ─────────────────────────────────────────────
@@ -5088,12 +5026,25 @@ async function profRefreshAiStatus(){
     const r = await fetch('/api/profile/ai-status',{headers:{'X-Auth-Token':token}});
     const d = await r.json();
     if(d.status) el.textContent = d.status;
-    else el.textContent = 'Keep logging your progress and Aria will tell you more!';
-  }catch(e){ el.textContent = 'Could not reach Aria right now — try again soon.'; }
+    else el.textContent = profBuildQuickRead();
+  }catch(e){ el.textContent = profBuildQuickRead(); }
 }
 
 // ── SHARE ─────────────────────────────────────────────────────────
 function profShare(platform){
+  const links = JSON.parse(localStorage.getItem('srd_profile_links')||'{}');
+  const direct = {
+    instagram: links.ig,
+    facebook:  links.fb,
+    tiktok:    links.tt,
+    twitter:   links.tw,
+    whatsapp:  links.wa,
+    pinterest: links.pi,
+  };
+  if(direct[platform]){
+    window.open(direct[platform], '_blank');
+    return;
+  }
   const u = JSON.parse(localStorage.getItem('srd_user')||'{}');
   const score = localStorage.getItem('srd_score')||'?';
   const text = encodeURIComponent((u.name||'I')+' scored '+score+'/100 on my hair health with Aria by SupportRD! ✦ Try it free: https://aria.supportrd.com');
@@ -5225,7 +5176,8 @@ async function saveProfileFull(){
   try{
     await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':token},body:JSON.stringify(data)});
     renderScore(calcScore());
-    profBuildProductCarousel(data.products_tried);
+    localStorage.setItem('srd_profile_products', data.products_tried||'');
+    profBuildShowcase(data.products_tried);
     const msg = document.getElementById('pf-save-msg');
     if(msg){ msg.style.display='block'; setTimeout(()=>msg.style.display='none',2500); }
     showToast('✦ Profile saved!');
@@ -6396,60 +6348,48 @@ const OCC_LIST = [
   {n:'Halloween',           icon:'🎃', cat:'Seasonal'},
 ];
 
-let _occ = {occasion:null, product:null, action:null, actionDesc:null};
+let _occ = {occasion:null, product:null, action:null, day:null, length:'1'};
 
-function occBuildGrid(){
-  const grid = document.getElementById('occ-occasion-grid');
-  if(!grid) return;
-  // Group by category
-  const cats = {};
-  OCC_LIST.forEach(o=>{ cats[o.cat]=cats[o.cat]||[]; cats[o.cat].push(o); });
-  let html = '';
-  Object.entries(cats).forEach(([cat, items])=>{
-    html += '<div style="width:100%;margin-top:8px;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">'+cat+'</div>';
-    items.forEach(o=>{
-      html += '<div class="occ-card" onclick="occPickOccasion(\''+o.n.replace(/'/g,"\\'")+'\')" style="min-width:90px;padding:10px 10px;">'
-        +'<div class="occ-card-icon">'+o.icon+'</div>'
-        +'<div class="occ-card-title" style="font-size:10px;">'+o.n+'</div>'
-        +'</div>';
-    });
-  });
-  grid.innerHTML = html;
+function occInit(){
+  const occSel = document.getElementById('occ-dd-occasion');
+  const prodSel = document.getElementById('occ-dd-product');
+  if(occSel){
+    const cats = {};
+    OCC_LIST.forEach(o=>{ cats[o.cat]=cats[o.cat]||[]; cats[o.cat].push(o); });
+    occSel.innerHTML = '<option value="">Select an occasion…</option>'
+      + Object.entries(cats).map(([cat, items])=>{
+        return '<optgroup label="'+cat+'">'+items.map(o=>'<option value="'+o.n+'">'+o.n+'</option>').join('')+'</optgroup>';
+      }).join('');
+  }
+  if(prodSel){
+    const names = Object.keys(PROD_IMGS).concat(['Multiple Products']);
+    prodSel.innerHTML = '<option value="">Select a product…</option>'
+      + names.map(n=>'<option value="'+n+'">'+n+'</option>').join('');
+  }
+  occToggleLength();
+  occLoadSaved();
+  occUpdateSummary();
 }
 
-function occPickOccasion(name){
-  _occ.occasion = name;
-  // Highlight selected
-  document.querySelectorAll('#occ-occasion-grid .occ-card').forEach(c=>{
-    c.classList.toggle('selected', c.querySelector('.occ-card-title')&&c.querySelector('.occ-card-title').textContent===name);
-  });
-  occUpdateSummary();
-  document.getElementById('occ-step2').style.display='block';
-  document.getElementById('occ-step2').scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-
-function occPickProduct(name, icon, desc){
-  _occ.product = name;
-  document.querySelectorAll('#occ-product-grid .occ-card').forEach(c=>{
-    c.classList.toggle('selected', c.querySelector('.occ-card-title')&&c.querySelector('.occ-card-title').textContent===name);
-  });
-  occUpdateSummary();
-  document.getElementById('occ-step3').style.display='block';
-  document.getElementById('occ-step3').scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-
-function occPickAction(name, icon, desc){
-  _occ.action = name;
-  _occ.actionDesc = desc;
-  document.querySelectorAll('.occ-action-card').forEach(c=>{
-    c.classList.toggle('selected', c.querySelector('.occ-card-title')&&c.querySelector('.occ-card-title').textContent===name);
-  });
-  occUpdateSummary();
-  document.getElementById('occ-step4').style.display='block';
-  document.getElementById('occ-step4').scrollIntoView({behavior:'smooth',block:'nearest'});
+function occToggleLength(){
+  const len = (document.getElementById('occ-dd-length')||{}).value || '1';
+  const wrap = document.getElementById('occ-dd-day-wrap');
+  if(wrap) wrap.style.display = len==='7' ? 'none' : 'block';
+  if(len==='7'){
+    const panel = document.getElementById('occ-weekly-panel');
+    const btn   = document.getElementById('occ-weekly-btn');
+    if(panel){ panel.style.display = 'block'; }
+    if(btn){ btn.textContent = '📅 Hide My Week'; }
+    occRenderWeek();
+  }
 }
 
 function occUpdateSummary(){
+  _occ.occasion = (document.getElementById('occ-dd-occasion')||{}).value || null;
+  _occ.product  = (document.getElementById('occ-dd-product')||{}).value || null;
+  _occ.action   = (document.getElementById('occ-dd-action')||{}).value || null;
+  _occ.day      = (document.getElementById('occ-dd-day')||{}).value || null;
+  _occ.length   = (document.getElementById('occ-dd-length')||{}).value || '1';
   const wrap = document.getElementById('occ-summary');
   if(wrap) wrap.style.display = (_occ.occasion||_occ.product||_occ.action) ? 'block':'none';
   const s1 = document.getElementById('occ-sum-occasion');
@@ -6460,41 +6400,50 @@ function occUpdateSummary(){
   if(s3){ s3.style.display=_occ.action?'inline':'none'; s3.textContent='⚡ '+(_occ.action||''); }
 }
 
-function occAddToDay(day){
-  if(!_occ.occasion||!_occ.product||!_occ.action){ showToast('Complete all 3 steps first'); return; }
-  const week = JSON.parse(localStorage.getItem('srd_week')||'{}');
-  if(!week[day]) week[day]=[];
-  week[day].push({..._occ, saved: new Date().toLocaleDateString()});
-  localStorage.setItem('srd_week', JSON.stringify(week));
-  occSaveOccasion();
-  showToast('✦ Added to '+day+'!');
-  occReset();
-  occRenderWeek();
-}
-
-function occSaveNoDay(){
-  if(!_occ.occasion||!_occ.product||!_occ.action){ showToast('Complete all 3 steps first'); return; }
-  occSaveOccasion();
-  showToast('✦ Occasion saved!');
-  occReset();
-}
-
 function occSaveOccasion(){
   const saved = JSON.parse(localStorage.getItem('srd_occasions2')||'[]');
-  // Don't duplicate exact same combo
-  const exists = saved.some(s=>s.occasion===_occ.occasion&&s.product===_occ.product&&s.action===_occ.action);
+  const exists = saved.some(s=>s.occasion===_occ.occasion&&s.product===_occ.product&&s.action===_occ.action&&s.length===_occ.length);
   if(!exists) saved.unshift({..._occ, saved: new Date().toLocaleDateString()});
   if(saved.length > 30) saved.pop();
   localStorage.setItem('srd_occasions2', JSON.stringify(saved));
   occLoadSaved();
 }
 
+function occSaveFromDropdowns(){
+  occUpdateSummary();
+  if(!_occ.occasion||!_occ.product||!_occ.action){
+    showToast('Select occasion, product, and routine first');
+    return;
+  }
+  const week = JSON.parse(localStorage.getItem('srd_week')||'{}');
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  if(_occ.length==='7'){
+    DAYS.forEach(day=>{
+      if(!week[day]) week[day]=[];
+      week[day].push({..._occ, day, saved: new Date().toLocaleDateString()});
+    });
+    localStorage.setItem('srd_week', JSON.stringify(week));
+    occSaveOccasion();
+    showToast('✦ Added to all 7 days!');
+    occRenderWeek();
+  } else {
+    if(!_occ.day){ showToast('Pick a day for your 1-day routine'); return; }
+    if(!week[_occ.day]) week[_occ.day]=[];
+    week[_occ.day].push({..._occ, saved: new Date().toLocaleDateString()});
+    localStorage.setItem('srd_week', JSON.stringify(week));
+    occSaveOccasion();
+    showToast('✦ Added to '+_occ.day+'!');
+    occRenderWeek();
+  }
+}
+
 function occReset(){
-  _occ = {occasion:null,product:null,action:null,actionDesc:null};
-  document.querySelectorAll('.occ-card').forEach(c=>c.classList.remove('selected'));
-  ['occ-step2','occ-step3','occ-step4','occ-summary'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.style.display='none';
+  ['occ-dd-occasion','occ-dd-product','occ-dd-action','occ-dd-day'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = '';
   });
+  _occ = {occasion:null, product:null, action:null, day:null, length:(document.getElementById('occ-dd-length')||{}).value||'1'};
+  occUpdateSummary();
 }
 
 function occToggleWeekly(){
@@ -6559,12 +6508,6 @@ function occDeleteSaved(i){
   localStorage.setItem('srd_occasions2',JSON.stringify(saved));
   occLoadSaved();
 }
-
-function occInit(){
-  occBuildGrid();
-  occLoadSaved();
-}
-
 
 // ═══════════════════════════════════════════════════════════════
 // ✦ ARIA JOURNEY PAGE
