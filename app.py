@@ -545,7 +545,8 @@ def init_subscription_db():
         went_offline_at TEXT,
         viewers     INTEGER DEFAULT 0
     )""")
-    con.execute("INSERT OR IGNORE INTO live_feed_status (id,is_live) VALUES (1,0)")
+    con.execute("INSERT OR IGNORE INTO live_feed_status (id,is_live) VALUES (1,1)")
+    con.execute("UPDATE live_feed_status SET is_live=1 WHERE id=1")
     con.execute("""CREATE TABLE IF NOT EXISTS live_feed_events (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         type        TEXT NOT NULL,
