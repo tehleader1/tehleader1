@@ -2575,8 +2575,7 @@ def change_password():
     new_pass = data.get("new_password","")
     if not new_pass or len(new_pass)<6:
         return jsonify({"error":"Password must be at least 6 characters"}),400
-    pw_hash = hashlib.sha256(new_pass.encode()).hexdigest()
-    db_execute("UPDATE users SET password_hash=? WHERE id=?", (pw_hash, user["id"]))
+    db_execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(new_pass), user["id"]))
     return jsonify({"ok":True})
 
 @app.route("/api/auth/delete-account", methods=["DELETE","OPTIONS"])
@@ -2628,17 +2627,6 @@ def reset_password():
     db_execute("UPDATE users SET password_hash=?, reset_token=NULL, reset_token_expires=NULL WHERE id=?",
                (hash_password(password), user[0]))
     return jsonify({"ok": True})
-
-@app.route("/api/auth/change-password", methods=["POST","OPTIONS"])
-def change_password():
-    user = get_current_user()
-    if not user: return jsonify({"error":"Not logged in"}), 401
-    data = request.get_json(silent=True) or {}
-    new_pw = (data.get("new_password","") or "").strip()
-    if len(new_pw) < 6: return jsonify({"error":"Password must be at least 6 characters"}), 400
-    db_execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(new_pw), user["id"]))
-    return jsonify({"ok": True})
-
 
 # ── PROFILE / HISTORY ENDPOINTS ───────────────────────────────────────────────
 @app.route("/api/profile", methods=["GET","POST","OPTIONS"])
