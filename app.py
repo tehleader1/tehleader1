@@ -11799,9 +11799,10 @@ function updateStatus(d){
   // Show/hide offline state vs feed
   const offEl  = document.getElementById('offline-state');
   const feedEl = document.getElementById('feed-stream');
-  const hasEvents = feedEl && feedEl.children.length > 0;
-  if(offEl)  offEl.style.display  = hasEvents ? 'none' : 'block';
-  if(feedEl) feedEl.style.display = hasEvents ? 'flex' : 'none';
+  const hasEvents = (d.events && d.events.length > 0) || (feedEl && feedEl.children.length > 0);
+  const showOffline = !isLive && !hasEvents;
+  if(offEl)  offEl.style.display  = showOffline ? 'block' : 'none';
+  if(feedEl) feedEl.style.display = showOffline ? 'none' : 'flex';
 }
 
 function prependEvent(ev){
