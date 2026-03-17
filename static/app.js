@@ -97,7 +97,7 @@ rec.start()
 }
 
 //////////////////////////////////////////////////////
-// ENGINE VIEW
+// ENGINE STATUS (DASHBOARD)
 //////////////////////////////////////////////////////
 
 async function loadEngine(){
@@ -114,7 +114,58 @@ Reddit Posts: ${data.reddit_posts}<br>
 Traffic Today: ${data.traffic_today}<br>
 AI Tasks Running: ${data.ai_tasks_running}
 
+<button onclick="openEngine()">View Engine</button>
+
 `
+
+}
+
+//////////////////////////////////////////////////////
+// ENGINE POPUP
+//////////////////////////////////////////////////////
+
+function openEngine(){
+
+document.getElementById("enginePopup").style.display="flex"
+
+loadBlog()
+
+}
+
+function closeEngine(){
+
+document.getElementById("enginePopup").style.display="none"
+
+}
+
+//////////////////////////////////////////////////////
+// LOAD BLOG POSTS
+//////////////////////////////////////////////////////
+
+async function loadBlog(){
+
+let r = await fetch("/api/engine/blog")
+let posts = await r.json()
+
+let html=""
+
+posts.forEach(p=>{
+
+html += `
+<div class="blogPost">
+
+<h3>${p.title}</h3>
+
+<p>${p.date}</p>
+
+<a href="${p.url}" target="_blank">Open</a>
+
+</div>
+`
+
+})
+
+document.getElementById("blogList").innerHTML = html
 
 }
 
