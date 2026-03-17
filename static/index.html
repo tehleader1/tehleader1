@@ -21,10 +21,10 @@
     </div>
     <div class="status">
       <div class="big-menu">
-        <button class="menu-btn">Post</button>
-        <button class="menu-btn">Aria Sphere</button>
-        <button class="menu-btn">Gift Shop</button>
-        <button class="menu-btn">Occasion Editor</button>
+        <button class="menu-btn" id="menuPost">Post</button>
+        <button class="menu-btn" id="menuAria">Aria Sphere</button>
+        <button class="menu-btn" id="menuGift">Gift Shop</button>
+        <button class="menu-btn" id="menuOccasion">Occasion Editor</button>
       </div>
       <button class="btn primary" id="installBtn" style="display:none">Install + Subscribe</button>
     </div>
@@ -36,7 +36,10 @@
     <button class="theme-arrow" id="themeNext" aria-label="Next theme">›</button>
   </div>
 
-  <section class="sub-banner glass">
+  <button class="theme-side left" id="themePrevSide" aria-label="Previous theme"></button>
+  <button class="theme-side right" id="themeNextSide" aria-label="Next theme"></button>
+
+  <section class="sub-banner glass" id="subscriptionBanner">
     <div class="sub-left">
       <div class="sub-title">Unlock FULL Features</div>
       <div class="sub-copy">Standard $50/mo. Professional $35/mo (no code puzzles).</div>
@@ -48,9 +51,10 @@
     <div class="occasion-title">Occasion Editor</div>
     <div class="occasion-directions">Northwest · North · Northeast</div>
     <div class="occasion-boxes">
-      <button class="occasion-box">Normal Action</button>
-      <button class="occasion-box">Apply Product</button>
-      <button class="occasion-box">Enjoy Your Product</button>
+      <button class="occasion-box" id="occasionOpen">Normal Action</button>
+      <button class="occasion-box" id="occasionOpen2">Apply Product</button>
+      <button class="occasion-box" id="occasionOpen3">Enjoy Your Product</button>
+      <button class="occasion-box big" id="giftShopOpen">Gift Shop</button>
     </div>
     <div class="week-boxes">
       <div class="week">Day 1</div>
@@ -76,7 +80,7 @@
       <div class="post-top">
         <div class="post-user">You · Santiago, Dominican Republic</div>
         <div class="post-actions">
-          <button class="chip">Hands Free</button>
+          <button class="chip" id="handsFree">Hands Free</button>
           <button class="chip" id="driveMode">Driving Hands-Free</button>
           <button class="chip">Camera</button>
         </div>
@@ -204,19 +208,19 @@
       <span class="pill">Movable slick apps</span>
     </div>
     <div class="apps-grid" id="appsGrid">
-      <div class="app-card">Partnership · Dissolve Fast Bar</div>
-      <div class="app-card">Coder Check‑In · Snapshot Updater</div>
-      <div class="app-card">Coder Foundation</div>
-      <div class="app-card">Donate to the Poor · Dissolve Bar</div>
-      <div class="app-card">Settings</div>
-      <div class="app-card">Campaign · Message Anthony</div>
+      <button class="app-card" data-app="Partnership · Dissolve Fast Bar">Partnership · Dissolve Fast Bar</button>
+      <button class="app-card" data-app="Coder Check‑In · Snapshot Updater">Coder Check‑In · Snapshot Updater</button>
+      <button class="app-card" data-app="Coder Foundation">Coder Foundation</button>
+      <button class="app-card" data-app="Donate to the Poor · Dissolve Bar">Donate to the Poor · Dissolve Bar</button>
+      <button class="app-card" data-app="Settings">Settings</button>
+      <button class="app-card" data-app="Campaign · Message Anthony">Campaign · Message Anthony</button>
     </div>
     <div class="blog-strip">
       <h3>Blog Posts (SEO)</h3>
       <div class="blog-list">
-        <div class="blog-post">Repair story: Heat damage recovery</div>
-        <div class="blog-post">Protein balance for bounce</div>
-        <div class="blog-post">All‑in‑one product success stories</div>
+        <button class="blog-post" data-post="0">Repair story: Heat damage recovery</button>
+        <button class="blog-post" data-post="1">Protein balance for bounce</button>
+        <button class="blog-post" data-post="2">All‑in‑one product success stories</button>
       </div>
     </div>
   </section>
@@ -234,6 +238,95 @@
       <div class="seo-line"></div>
       <div class="seo-line"></div>
     </div>
+  </div>
+</div>
+
+<div id="blogModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2 id="blogTitle">Blog Post</h2>
+      <div class="modal-actions">
+        <button class="btn ghost" id="blogPrev">Prev</button>
+        <button class="btn ghost" id="blogNext">Next</button>
+        <button class="btn ghost" id="closeBlog">Close</button>
+      </div>
+    </div>
+    <p id="blogBody">Loading...</p>
+  </div>
+</div>
+
+<div id="giftModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Gift Shop</h2>
+      <button class="btn ghost" id="closeGift">Close</button>
+    </div>
+    <p>Big Gift Shop access. Premium drops, bundles, and limited kits.</p>
+    <button class="btn">Open Gift Shop</button>
+  </div>
+</div>
+
+<div id="occasionModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Occasion Editor</h2>
+      <button class="btn ghost" id="closeOccasion">Close</button>
+    </div>
+    <div class="occasion-boxes">
+      <button class="occasion-box">Normal Action</button>
+      <button class="occasion-box">Apply Product</button>
+      <button class="occasion-box">Enjoy Your Product</button>
+    </div>
+    <div class="week-boxes">
+      <div class="week">Day 1</div>
+      <div class="week">Day 2</div>
+      <div class="week">Day 3</div>
+      <div class="week">Day 4</div>
+      <div class="week">Day 5</div>
+      <div class="week">Day 6</div>
+      <div class="week">Day 7</div>
+    </div>
+  </div>
+</div>
+
+<div id="subscriptionModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Subscription</h2>
+      <button class="btn ghost" id="closeSubscription">Close</button>
+    </div>
+    <p>Standard $50/mo. Professional $35/mo (no code puzzles). Full features unlocked.</p>
+    <button class="btn primary">Subscribe Now</button>
+  </div>
+</div>
+
+<div id="appModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2 id="appTitle">App</h2>
+      <button class="btn ghost" id="closeApp">Close</button>
+    </div>
+    <p id="appBody">App details here.</p>
+  </div>
+</div>
+
+<div id="gpsModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>GPS Map</h2>
+      <button class="btn ghost" id="closeGps">Close</button>
+    </div>
+    <div class="map-box">Live map view (placeholder)</div>
+  </div>
+</div>
+
+<div id="handsFreeModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Hands‑Free Mode</h2>
+      <button class="btn ghost" id="closeHands">Close</button>
+    </div>
+    <p>Hands‑free mode active. Voice commands only.</p>
   </div>
 </div>
 

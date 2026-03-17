@@ -11,11 +11,18 @@ const THEMES = [
 
 const DEFAULT_THEME = "aurora"
 
+const BLOG_POSTS = [
+  {title:"Repair story: Heat damage recovery", body:"A real repair journey: moisture stacking, trimming, and a 4-week recovery arc."},
+  {title:"Protein balance for bounce", body:"How to layer protein and hydration so curls keep their spring."},
+  {title:"All‑in‑one product success stories", body:"Fast routines using the all‑in‑one product for shine, softness, and reduced breakage."}
+]
+
 const state = {
   scanHistory: [],
   routineHistory: [],
   drivingMode: false,
-  themeIndex: 0
+  themeIndex: 0,
+  blogIndex: 0
 }
 
 function loadHistory(){
@@ -223,6 +230,7 @@ async function findSalons(){
         return
       }
       qs("#salonResults").innerHTML = salons.map(s=>`<div>${s.name} - ${s.distance} mi</div>`).join("")
+      openModal("gpsModal")
       toast("ARIA GPS ready")
     }catch{
       qs("#salonResults").textContent = "Salon lookup failed."
@@ -233,8 +241,72 @@ async function findSalons(){
 }
 
 function setupModals(){
-  qs("#openSeo").addEventListener("click", ()=>qs("#seoModal").style.display = "flex")
-  qs("#closeSeo").addEventListener("click", ()=>qs("#seoModal").style.display = "none")
+  bindOpen("openSeo", "seoModal")
+  bindClose("closeSeo", "seoModal")
+  bindOpen("giftShopOpen", "giftModal")
+  bindClose("closeGift", "giftModal")
+  bindOpen("menuGift", "giftModal")
+  bindOpen("menuOccasion", "occasionModal")
+  bindOpen("occasionOpen", "occasionModal")
+  bindOpen("occasionOpen2", "occasionModal")
+  bindOpen("occasionOpen3", "occasionModal")
+  bindClose("closeOccasion", "occasionModal")
+  bindOpen("subscriptionBanner", "subscriptionModal")
+  bindClose("closeSubscription", "subscriptionModal")
+  bindClose("closeBlog", "blogModal")
+  bindClose("closeApp", "appModal")
+  bindClose("closeGps", "gpsModal")
+  bindClose("closeHands", "handsFreeModal")
+
+  qsa(".blog-post").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      state.blogIndex = Number(btn.dataset.post)
+      renderBlog()
+      openModal("blogModal")
+    })
+  })
+
+  qs("#blogPrev").addEventListener("click", ()=>{
+    state.blogIndex = (state.blogIndex - 1 + BLOG_POSTS.length) % BLOG_POSTS.length
+    renderBlog()
+  })
+
+  qs("#blogNext").addEventListener("click", ()=>{
+    state.blogIndex = (state.blogIndex + 1) % BLOG_POSTS.length
+    renderBlog()
+  })
+
+  qsa(".app-card").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      qs("#appTitle").textContent = btn.dataset.app
+      qs("#appBody").textContent = "Open module: " + btn.dataset.app
+      openModal("appModal")
+    })
+  })
+}
+
+function openModal(id){
+  qs("#" + id).style.display = "flex"
+}
+
+function bindOpen(triggerId, modalId){
+  const el = qs("#" + triggerId)
+  if(el){
+    el.addEventListener("click", ()=>openModal(modalId))
+  }
+}
+
+function bindClose(triggerId, modalId){
+  const el = qs("#" + triggerId)
+  if(el){
+    el.addEventListener("click", ()=>qs("#" + modalId).style.display = "none")
+  }
+}
+
+function renderBlog(){
+  const post = BLOG_POSTS[state.blogIndex]
+  qs("#blogTitle").textContent = post.title
+  qs("#blogBody").textContent = post.body
 }
 
 function setupPwa(){
@@ -277,6 +349,7 @@ function setupAriaSphere(){
 
 function setupDriveMode(){
   const btn = qs("#driveMode")
+  const hands = qs("#handsFree")
   btn.addEventListener("click", ()=>{
     state.drivingMode = !state.drivingMode
     btn.classList.toggle("active", state.drivingMode)
@@ -285,6 +358,7 @@ function setupDriveMode(){
       qs("#tipBox").style.display = "none"
     }
   })
+  hands.addEventListener("click", ()=>openModal("handsFreeModal"))
 }
 
 function setupLoginGate(){
@@ -306,6 +380,8 @@ function setupLoginGate(){
 function setupThemes(){
   const prev = qs("#themePrev")
   const next = qs("#themeNext")
+  const prevSide = qs("#themePrevSide")
+  const nextSide = qs("#themeNextSide")
   const label = qs("#themeLabel")
 
   const saved = localStorage.getItem("theme")
@@ -314,15 +390,20 @@ function setupThemes(){
   state.themeIndex = index >= 0 ? index : 0
   applyTheme(state.themeIndex)
 
-  prev.addEventListener("click", ()=>{
+  function goPrev(){
     state.themeIndex = (state.themeIndex - 1 + THEMES.length) % THEMES.length
     applyTheme(state.themeIndex)
-  })
+  }
 
-  next.addEventListener("click", ()=>{
+  function goNext(){
     state.themeIndex = (state.themeIndex + 1) % THEMES.length
     applyTheme(state.themeIndex)
-  })
+  }
+
+  prev.addEventListener("click", goPrev)
+  next.addEventListener("click", goNext)
+  prevSide.addEventListener("click", goPrev)
+  nextSide.addEventListener("click", goNext)
 
   function applyTheme(idx){
     const theme = THEMES[idx]
@@ -351,4 +432,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
   qs("#cameraStart").addEventListener("click", startCamera)
   qs("#scanHairBtn").addEventListener("click", scanHair)
   qs("#findSalons").addEventListener("click", findSalons)
+  qs("#menuPost").addEventListener("click", ()=>qs("#centerStage").scrollIntoView({behavior:"smooth"}))
+  qs("#menuAria").addEventListener("click", ()=>qs("#aria").scrollIntoView({behavior:"smooth"}))
 })
