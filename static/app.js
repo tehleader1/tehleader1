@@ -1,94 +1,103 @@
-//////////////////////////////////////////////////////
-// DRAG DASHBOARD
-//////////////////////////////////////////////////////
+////////////////////////////////////////
+// NAVIGATION
+////////////////////////////////////////
 
-new Sortable(document.getElementById("dashboard"),{
-animation:150
+function showPanel(panel){
+
+document.querySelectorAll(".panel").forEach(p=>{
+p.style.display="none"
 })
 
-//////////////////////////////////////////////////////
-// LOAD PRODUCTS
-//////////////////////////////////////////////////////
+document.getElementById(panel).style.display="block"
+
+document.querySelectorAll(".navItem").forEach(n=>{
+n.classList.remove("active")
+})
+
+document.getElementById("nav-"+panel).classList.add("active")
+
+}
+
+////////////////////////////////////////
+// PRODUCTS
+////////////////////////////////////////
 
 async function loadProducts(){
 
 let r = await fetch("/api/products")
 let data = await r.json()
 
-let html = ""
+let html=""
 
 data.forEach(p=>{
 
-html += `
-<div>
+html+=`
+<div class="product">
 
-<img src="${p.image}" width="100%">
+<img src="${p.image}">
 
 <h3>${p.title}</h3>
 
 <p>$${p.price}</p>
 
-<button onclick="buy('${p.variant}')">Buy</button>
+<button onclick="buy('${p.variant}')">
+Buy
+</button>
 
 </div>
 `
 
 })
 
-document.getElementById("products").innerHTML = html
+document.getElementById("products").innerHTML=html
 
 }
 
-//////////////////////////////////////////////////////
-
-async function buy(id){
+async function buy(v){
 
 let r = await fetch("/api/checkout",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({variant:id})
+body:JSON.stringify({variant:v})
 })
 
-let data = await r.json()
+let d = await r.json()
 
-window.open(data.url)
+window.open(d.url)
 
 }
 
-//////////////////////////////////////////////////////
-// CAMERA SCAN
-//////////////////////////////////////////////////////
+////////////////////////////////////////
+// CAMERA
+////////////////////////////////////////
 
 function startCamera(){
 
 navigator.mediaDevices.getUserMedia({video:true})
 .then(stream=>{
-document.getElementById("camera").srcObject = stream
+document.getElementById("camera").srcObject=stream
 })
 
 }
 
-//////////////////////////////////////////////////////
-// VOICE AI
-//////////////////////////////////////////////////////
+////////////////////////////////////////
+// VOICE
+////////////////////////////////////////
 
 function startVoice(){
 
 const rec = new webkitSpeechRecognition()
 
-rec.onstart = ()=>{
+rec.onstart=()=>{
 document.getElementById("voiceIndicator").style.display="block"
 }
 
-rec.onresult = e=>{
-
-let text = e.results[0][0].transcript
-
-alert("ARIA heard: " + text)
-
+rec.onresult=e=>{
+let t=e.results[0][0].transcript
+alert("ARIA heard: "+t)
 }
 
-rec.onend = ()=>{
+rec.onend=()=>{
 document.getElementById("voiceIndicator").style.display="none"
 }
 
@@ -96,51 +105,20 @@ rec.start()
 
 }
 
-//////////////////////////////////////////////////////
-// ENGINE STATUS (DASHBOARD)
-//////////////////////////////////////////////////////
-
-async function loadEngine(){
-
-let r = await fetch("/api/engine/status")
-let data = await r.json()
-
-document.getElementById("engineData").innerHTML = `
-
-SEO Posts Today: ${data.seo_posts_today}<br>
-Shopify Products: ${data.shopify_products}<br>
-Pinterest Pins: ${data.pinterest_pins}<br>
-Reddit Posts: ${data.reddit_posts}<br>
-Traffic Today: ${data.traffic_today}<br>
-AI Tasks Running: ${data.ai_tasks_running}
-
-<button onclick="openEngine()">View Engine</button>
-
-`
-
-}
-
-//////////////////////////////////////////////////////
-// ENGINE POPUP
-//////////////////////////////////////////////////////
+////////////////////////////////////////
+// ENGINE BLOG
+////////////////////////////////////////
 
 function openEngine(){
 
 document.getElementById("enginePopup").style.display="flex"
-
 loadBlog()
 
 }
 
 function closeEngine(){
-
 document.getElementById("enginePopup").style.display="none"
-
 }
-
-//////////////////////////////////////////////////////
-// LOAD BLOG POSTS
-//////////////////////////////////////////////////////
 
 async function loadBlog(){
 
@@ -150,26 +128,26 @@ let posts = await r.json()
 let html=""
 
 posts.forEach(p=>{
-
-html += `
+html+=`
 <div class="blogPost">
 
 <h3>${p.title}</h3>
-
 <p>${p.date}</p>
 
-<a href="${p.url}" target="_blank">Open</a>
+<a href="${p.url}" target="_blank">
+Read Story
+</a>
 
 </div>
 `
-
 })
 
-document.getElementById("blogList").innerHTML = html
+document.getElementById("blogList").innerHTML=html
 
 }
 
-//////////////////////////////////////////////////////
+////////////////////////////////////////
 
 loadProducts()
-loadEngine()
+
+showPanel("feed")
