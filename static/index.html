@@ -141,59 +141,25 @@
   <button class="theme-side left" id="themePrevSide" aria-label="Previous theme"></button>
   <button class="theme-side right" id="themeNextSide" aria-label="Next theme"></button>
 
-  <section class="panel glass" id="dashboard">
+  <section id="appsDock" class="panel glass">
     <div class="panel-head">
       <div>
-        <h2>Drag-and-Drop Widget Area</h2>
-        <p>Cards lift. Glass blur. Instant view of engine depth.</p>
+        <h2>Selectable Apps</h2>
+        <p>One line tab. Drag to reorder. Swap apps with dropdown.</p>
       </div>
-      <div class="engine-glow">Engine View: Live</div>
-    </div>
-    <div id="widgetGrid" class="widget-grid">
-      <div class="widget" data-widget="feed">
-        <h3>Hair Scan History</h3>
-        <div id="scanHistory" class="mini-list">No scans yet.</div>
-      </div>
-      <div class="widget" data-widget="routine">
-        <h3>AI Routine History</h3>
-        <div id="routineMini" class="mini-list">No routines yet.</div>
-      </div>
-      <div class="widget" data-widget="products">
-        <h3>Shopify Products</h3>
-        <div id="productsMini" class="mini-list">Loading products...</div>
-      </div>
-      <div class="widget" data-widget="seo">
-        <h3>SEO Engine Viewer</h3>
-        <p>Public marketing feed viewable to the world.</p>
-        <button class="btn ghost" id="openSeo">Open Viewer</button>
-      </div>
-      <div class="widget" data-widget="reorder">
-        <h3>Auto Reorder</h3>
-        <div id="reorderMini" class="mini-list">Checking reorders...</div>
+      <div class="dock-controls">
+        <select id="appSwapSelect">
+          <option value="">Replace Selected App…</option>
+        </select>
       </div>
     </div>
-  </section>
-
-  <section id="bottomLayer" class="panel glass">
-    <div class="panel-head">
-      <h2>Selectable Apps</h2>
-      <span class="pill">Live coder feed + tools</span>
-    </div>
-    <div class="apps-grid" id="appsGrid">
+    <div class="apps-row" id="appsRow">
       <button class="app-card" data-app="Blog">Blog</button>
       <button class="app-card" data-app="Snapshot Coder Idea">Snapshot Coder Idea</button>
       <button class="app-card" data-app="Live Coder Suggestions">Live Coder Suggestions</button>
       <button class="app-card" data-app="Donate to the Poor · Auto Dissolve Bar" data-link="https://supportrd.com/products/auto-dissolve-soap-bar">Donate to the Poor · Auto Dissolve Bar</button>
-      <button class="app-card" data-app="Settings">Settings (name, email, reset password)</button>
+      <button class="app-card" data-app="Settings">Settings</button>
       <button class="app-card" data-app="Contact Anthony">Contact Anthony · Developer</button>
-    </div>
-    <div class="blog-strip">
-      <h3>Blog Posts (SEO)</h3>
-      <div class="blog-list">
-        <button class="blog-post" data-post="0">Repair story: Heat damage recovery</button>
-        <button class="blog-post" data-post="1">Protein balance for bounce</button>
-        <button class="blog-post" data-post="2">All‑in‑one product success stories</button>
-      </div>
     </div>
   </section>
 </div>

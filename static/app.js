@@ -146,6 +146,36 @@ function setupModals(){
   })
 }
 
+function setupAppsDock(){
+  const row = qs("#appsRow")
+  const select = qs("#appSwapSelect")
+  if(!row || !select) return
+
+  const allApps = [
+    "Blog",
+    "Snapshot Coder Idea",
+    "Live Coder Suggestions",
+    "Donate to the Poor · Auto Dissolve Bar",
+    "Settings",
+    "Contact Anthony · Developer"
+  ]
+
+  select.innerHTML = '<option value=\"\">Replace Selected App…</option>' + allApps.map(a=>`<option value=\"${a}\">${a}</option>`).join("")
+
+  let activeCard = null
+  row.querySelectorAll(".app-card").forEach(card=>{
+    card.addEventListener("click", ()=>{
+      row.querySelectorAll(".app-card").forEach(c=>c.classList.remove("active"))
+      card.classList.add("active")
+      activeCard = card
+    })
+  })
+
+  select.addEventListener("change", ()=>{
+    if(!activeCard || !select.value) return
+    activeCard.textContent = select.value
+    activeCard.dataset.app = select.value.replace(" · Developer","Contact Anthony")
+    if(select.value.includes("Donate")){\n      activeCard.dataset.link = LINKS.donate\n    } else {\n      activeCard.dataset.link = \"\"\n    }\n    select.value = \"\"\n    toast(\"App replaced\")\n  })\n\n+  // drag to reorder\n+  let dragEl = null\n+  row.addEventListener(\"pointerdown\", e=>{\n+    const card = e.target.closest(\".app-card\")\n+    if(!card) return\n+    dragEl = card\n+    card.classList.add(\"dragging\")\n+    card.setPointerCapture(e.pointerId)\n+  })\n+  row.addEventListener(\"pointermove\", e=>{\n+    if(!dragEl) return\n+    const el = document.elementFromPoint(e.clientX, e.clientY)\n+    const target = el && el.closest(\".app-card\")\n+    if(target && target !== dragEl && target.parentElement === row){\n+      const rect = target.getBoundingClientRect()\n+      const insertBefore = e.clientX < rect.left + rect.width / 2\n+      row.insertBefore(dragEl, insertBefore ? target : target.nextSibling)\n+    }\n+  })\n+  row.addEventListener(\"pointerup\", ()=>{\n+    if(!dragEl) return\n+    dragEl.classList.remove(\"dragging\")\n+    dragEl = null\n+  })\n+}\n+\n window.addEventListener("DOMContentLoaded", ()=>{
 function openModal(id){
   qs("#" + id).style.display = "flex"
 }
@@ -497,5 +527,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
   setupSettings()
   setupPwa()
   setupFamilyMode()
+  setupAppsDock()
   loadProducts()
 })
