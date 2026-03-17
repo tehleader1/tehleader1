@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>SupportRD AI</title>
+
+<link rel="stylesheet" href="/static/style.css">
+
+<script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
+
+</head>
+
+<body>
+
+<div id="app">
+
+<header>
+
+<h1>SupportRD</h1>
+
+<div id="userStatus">
+Trial Mode
+</div>
+
+<button id="loginButton" onclick="login()">
+Login
+</button>
+
+</header>
+
+<nav id="mainNav">
+
+<button onclick="showPanel('feed')">Feed</button>
+
+<button onclick="showPanel('aria')">ARIA</button>
+
+<button onclick="showPanel('scan')">Hair Scan</button>
+
+<button onclick="showPanel('shop')">Shop</button>
+
+<button onclick="showPanel('salons')">Salons</button>
+
+</nav>
+
+<!-- FEED -->
+
+<section class="panel" id="feed">
+
+<h2>Community Feed</h2>
+
+<p>Share your hair journey.</p>
+
+<textarea placeholder="Post your routine or results"></textarea>
+
+<button>Share</button>
+
+</section>
+
+<!-- ARIA -->
+
+<section class="panel" id="aria" style="display:none">
+
+<h2>ARIA AI Assistant</h2>
+
+<input id="ariaInput" placeholder="Ask ARIA about your hair">
+
+<button onclick="askAria()">Ask ARIA</button>
+
+<div id="ariaReply"></div>
+
+</section>
+
+<!-- HAIR SCAN -->
+
+<section class="panel" id="scan" style="display:none">
+
+<h2>Hair Scan AI</h2>
+
+<video id="camera" autoplay></video>
+
+<div class="scanButtons">
+
+<button onclick="startCamera()">
+Start Camera
+</button>
+
+<button onclick="scanHair()">
+Analyze Hair
+</button>
+
+</div>
+
+<div id="scanResults"></div>
+
+</section>
+
+<!-- SHOP -->
+
+<section class="panel" id="shop" style="display:none">
+
+<h2>Shop</h2>
+
+<div id="products"></div>
+
+</section>
+
+<!-- SALONS -->
+
+<section class="panel" id="salons" style="display:none">
+
+<h2>Nearby Hair Salons</h2>
+
+<button onclick="findSalons()">
+Find Salons Near Me
+</button>
+
+<div id="salonResults"></div>
+
+</section>
+
+</div>
+
+<script src="/static/auth.js"></script>
+<script src="/static/app.js"></script>
+
+<script>
+
+function showPanel(panel){
+
+document.querySelectorAll(".panel").forEach(p=>{
+
+p.style.display="none"
+
+})
+
+document.getElementById(panel).style.display="block"
+
+}
+
+</script>
+
+</body>
+
+</html>
