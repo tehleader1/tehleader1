@@ -1,0 +1,9 @@
+{
+  "name": "SupportRD AI",
+  "short_name": "SupportRD",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07080b",
+  "theme_color": "#0b0c10",
+  "icons": []
+}

@@ -1,147 +1,245 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>SupportRD AI</title>
-
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
-
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
-
 </head>
-
 <body>
-
+<div class="bg-layers"></div>
 <div id="app">
+  <header class="topbar glass">
+    <div class="brand">
+      <div class="logo">SupportRD</div>
+      <div class="tagline">All-in-one hair intelligence dashboard. Everything in one page.</div>
+    </div>
+    <div class="status">
+      <span class="pill">Trial Mode</span>
+      <button class="btn primary" id="installBtn" style="display:none">Install App</button>
+    </div>
+  </header>
 
-<header>
+  <section class="hero glass">
+    <div class="hero-left">
+      <h1>Glass dashboard with visible engine depth.</h1>
+      <p>Instant-loading layout, floating navigation, and a live view of the systems running under the hood.</p>
+      <div class="hero-actions">
+        <button class="btn" id="loginButton" onclick="login()">Login</button>
+        <button class="btn ghost" id="voiceToggle">ARIA Voice Trigger</button>
+      </div>
+    </div>
+    <div class="hero-cards">
+      <div class="mini glass">
+        <h3>Free / Pro Subscription</h3>
+        <p>Upgrade path with pro perks and auto reorder.</p>
+        <div class="toggle">
+          <span>Free</span>
+          <div class="switch" id="subSwitch"><span></span></div>
+          <span>Pro</span>
+        </div>
+      </div>
+      <div class="mini glass">
+        <h3>Social Login ID</h3>
+        <p id="socialId">Not connected</p>
+        <div class="socials">
+          <button class="social">Google</button>
+          <button class="social">Microsoft</button>
+          <button class="social">Apple</button>
+          <button class="social">Yahoo</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<h1>SupportRD</h1>
+  <nav class="locked-nav glass">
+    <button class="locked-btn">Home <span class="lock">Locked</span></button>
+    <button class="locked-btn">Shop <span class="lock">Locked</span></button>
+    <button class="locked-btn">Scan <span class="lock">Locked</span></button>
+    <button class="locked-btn">Aria AI <span class="lock">Locked</span></button>
+  </nav>
 
-<div id="userStatus">
-Trial Mode
+  <section id="dashboard" class="panel glass">
+    <div class="panel-head">
+      <div>
+        <h2>Drag-and-Drop Widget Area</h2>
+        <p>Reorder tiles. Cards lift on touch. Glass blur on every layer.</p>
+      </div>
+      <div class="engine-glow">Engine View: Live</div>
+    </div>
+    <div id="widgetGrid" class="widget-grid">
+      <div class="widget" data-widget="feed">
+        <h3>Feed</h3>
+        <p>Share your hair journey.</p>
+        <textarea placeholder="Post your routine or results"></textarea>
+        <button class="btn">Share</button>
+      </div>
+      <div class="widget" data-widget="products">
+        <h3>Products</h3>
+        <p>Shopify store purchasing.</p>
+        <div id="productsMini" class="mini-list">Loading products...</div>
+      </div>
+      <div class="widget" data-widget="community">
+        <h3>Community</h3>
+        <p>Events, wins, and challenges.</p>
+        <ul class="list">
+          <li>90-day growth challenge</li>
+          <li>Wash day routine live</li>
+          <li>Salon spotlight</li>
+        </ul>
+      </div>
+      <div class="widget" data-widget="events">
+        <h3>Events</h3>
+        <p>Upcoming sessions and scans.</p>
+        <ul class="list">
+          <li>Friday: ARIA Q&A</li>
+          <li>Sunday: Hair scan check-in</li>
+        </ul>
+      </div>
+      <div class="widget" data-widget="analytics">
+        <h3>Analytics</h3>
+        <p>Depth view of usage and product impact.</p>
+        <div class="analytics">
+          <div><span>Moisture</span><strong>82%</strong></div>
+          <div><span>Damage</span><strong>Low</strong></div>
+          <div><span>Growth</span><strong>+14%</strong></div>
+        </div>
+      </div>
+      <div class="widget" data-widget="routine">
+        <h3>Hair Routine</h3>
+        <p>AI routine history.</p>
+        <div id="routineMini" class="mini-list">No routines yet.</div>
+      </div>
+      <div class="widget" data-widget="reorder">
+        <h3>Auto Reorder</h3>
+        <p>Smart reminders and one-click reorders.</p>
+        <div id="reorderMini" class="mini-list">Checking reorders...</div>
+      </div>
+      <div class="widget" data-widget="seo">
+        <h3>SEO Engine Viewer</h3>
+        <p>Marketing engine content viewable to the world.</p>
+        <button class="btn ghost" id="openSeo">Open Viewer</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="aria" class="panel glass">
+    <div class="panel-head">
+      <h2>ARIA AI Inside Dashboard</h2>
+      <span class="pill">Voice ready</span>
+    </div>
+    <div class="aria-chat">
+      <div id="ariaLog" class="chat-log"></div>
+      <div class="chat-input">
+        <input id="ariaInput" placeholder="Ask ARIA about your hair">
+        <button class="btn" id="ariaSend">Ask ARIA</button>
+        <button class="btn ghost" id="routineGen">AI Routine Generator</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="scan" class="panel glass">
+    <div class="panel-head">
+      <h2>Hair Scan Camera</h2>
+      <span class="pill">Camera / Hair analysis</span>
+    </div>
+    <video id="camera" autoplay playsinline></video>
+    <div class="scanButtons">
+      <button class="btn" id="cameraStart">Start Camera</button>
+      <button class="btn ghost" id="scanHairBtn">Analyze Hair</button>
+    </div>
+    <div id="scanResults" class="results"></div>
+    <div class="history">
+      <h3>Hair Scan History</h3>
+      <div id="scanHistory" class="mini-list">No scans yet.</div>
+    </div>
+  </section>
+
+  <section id="shop" class="panel glass">
+    <div class="panel-head">
+      <h2>Shopify Store</h2>
+      <span class="pill">AI product matching</span>
+    </div>
+    <div id="products" class="product-grid"></div>
+  </section>
+
+  <section id="salons" class="panel glass">
+    <div class="panel-head">
+      <h2>Salon Locator GPS</h2>
+      <span class="pill">Hands-free ARIA GPS</span>
+    </div>
+    <button class="btn" id="findSalons">Find Salons Near Me</button>
+    <div id="salonResults" class="mini-list">Waiting for location.</div>
+  </section>
+
+  <section id="marketing" class="panel glass">
+    <div class="panel-head">
+      <h2>Marketing + SEO Engine</h2>
+      <span class="pill">Public view</span>
+    </div>
+    <div class="marketing-grid">
+      <div class="marketing-card">
+        <h3>Trending Content</h3>
+        <div id="trendingList" class="mini-list">Loading engine…</div>
+      </div>
+      <div class="marketing-card">
+        <h3>Auto Reorder Suggestions</h3>
+        <div id="reorderList" class="mini-list">Loading engine…</div>
+      </div>
+    </div>
+    <button class="btn ghost" id="openBlog">Open Blog Popup</button>
+  </section>
+
+  <div class="floating-nav glass">
+    <button class="nav-btn locked">Home</button>
+    <button class="nav-btn locked">Shop</button>
+    <button class="nav-btn locked">Scan</button>
+    <button class="nav-btn locked">Aria AI</button>
+  </div>
 </div>
 
-<button id="loginButton" onclick="login()">
-Login
-</button>
-
-</header>
-
-<nav id="mainNav">
-
-<button onclick="showPanel('feed')">Feed</button>
-
-<button onclick="showPanel('aria')">ARIA</button>
-
-<button onclick="showPanel('scan')">Hair Scan</button>
-
-<button onclick="showPanel('shop')">Shop</button>
-
-<button onclick="showPanel('salons')">Salons</button>
-
-</nav>
-
-<!-- FEED -->
-
-<section class="panel" id="feed">
-
-<h2>Community Feed</h2>
-
-<p>Share your hair journey.</p>
-
-<textarea placeholder="Post your routine or results"></textarea>
-
-<button>Share</button>
-
-</section>
-
-<!-- ARIA -->
-
-<section class="panel" id="aria" style="display:none">
-
-<h2>ARIA AI Assistant</h2>
-
-<input id="ariaInput" placeholder="Ask ARIA about your hair">
-
-<button onclick="askAria()">Ask ARIA</button>
-
-<div id="ariaReply"></div>
-
-</section>
-
-<!-- HAIR SCAN -->
-
-<section class="panel" id="scan" style="display:none">
-
-<h2>Hair Scan AI</h2>
-
-<video id="camera" autoplay></video>
-
-<div class="scanButtons">
-
-<button onclick="startCamera()">
-Start Camera
-</button>
-
-<button onclick="scanHair()">
-Analyze Hair
-</button>
-
+<div id="seoModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>SEO Engine Viewer</h2>
+      <button class="btn ghost" id="closeSeo">Close</button>
+    </div>
+    <p>This is the public-facing marketing engine view. Clean glass finish with visible system depth.</p>
+    <div class="seo-preview">
+      <div class="seo-line"></div>
+      <div class="seo-line"></div>
+      <div class="seo-line"></div>
+    </div>
+  </div>
 </div>
 
-<div id="scanResults"></div>
-
-</section>
-
-<!-- SHOP -->
-
-<section class="panel" id="shop" style="display:none">
-
-<h2>Shop</h2>
-
-<div id="products"></div>
-
-</section>
-
-<!-- SALONS -->
-
-<section class="panel" id="salons" style="display:none">
-
-<h2>Nearby Hair Salons</h2>
-
-<button onclick="findSalons()">
-Find Salons Near Me
-</button>
-
-<div id="salonResults"></div>
-
-</section>
-
+<div id="blogModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Blog Popup</h2>
+      <button class="btn ghost" id="closeBlog">Close</button>
+    </div>
+    <div class="blog">
+      <div class="blog-post">
+        <h3>Hydration Layers That Work</h3>
+        <p>Short, high impact content built from the SEO engine.</p>
+      </div>
+      <div class="blog-post">
+        <h3>Protein Balance Guide</h3>
+        <p>What to use and when, powered by ARIA.</p>
+      </div>
+    </div>
+  </div>
 </div>
+
+<div id="toast" class="toast"></div>
 
 <script src="/static/auth.js"></script>
 <script src="/static/app.js"></script>
-
-<script>
-
-function showPanel(panel){
-
-document.querySelectorAll(".panel").forEach(p=>{
-
-p.style.display="none"
-
-})
-
-document.getElementById(panel).style.display="block"
-
-}
-
-</script>
-
 </body>
-
 </html>
