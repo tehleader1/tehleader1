@@ -21,94 +21,88 @@
     </div>
     <div class="status">
       <div class="big-menu">
-        <button class="menu-btn" id="menuPost">Post</button>
-        <button class="menu-btn" id="menuAria">Aria Sphere</button>
-        <button class="menu-btn" id="menuGift">Gift Shop</button>
         <button class="menu-btn" id="menuOccasion">Occasion Editor</button>
+        <button class="menu-btn" id="menuGift">Gift Shop</button>
+        <button class="menu-btn" id="menuSubscription">Subscription</button>
       </div>
       <button class="btn primary" id="installBtn" style="display:none">Install + Subscribe</button>
     </div>
   </header>
 
-  <div class="theme-arrows">
-    <button class="theme-arrow" id="themePrev" aria-label="Previous theme">‹</button>
-    <div class="theme-label" id="themeLabel">Aurora</div>
-    <button class="theme-arrow" id="themeNext" aria-label="Next theme">›</button>
-  </div>
-
-  <button class="theme-side left" id="themePrevSide" aria-label="Previous theme"></button>
-  <button class="theme-side right" id="themeNextSide" aria-label="Next theme"></button>
-
-  <section class="sub-banner glass" id="subscriptionBanner">
-    <div class="sub-left">
-      <div class="sub-title">Unlock FULL Features</div>
-      <div class="sub-copy">Standard $50/mo. Professional $35/mo (no code puzzles).</div>
-    </div>
-    <button class="btn">Activate Subscription</button>
-  </section>
-
-  <section class="occasion-head glass">
-    <div class="occasion-title">Occasion Editor</div>
-    <div class="occasion-directions">Northwest · North · Northeast</div>
-    <div class="occasion-boxes">
-      <button class="occasion-box" id="occasionOpen">Normal Action</button>
-      <button class="occasion-box" id="occasionOpen2">Apply Product</button>
-      <button class="occasion-box" id="occasionOpen3">Enjoy Your Product</button>
-      <button class="occasion-box big" id="giftShopOpen">Gift Shop</button>
-    </div>
-    <div class="week-boxes">
-      <div class="week">Day 1</div>
-      <div class="week">Day 2</div>
-      <div class="week">Day 3</div>
-      <div class="week">Day 4</div>
-      <div class="week">Day 5</div>
-      <div class="week">Day 6</div>
-      <div class="week">Day 7</div>
-    </div>
-  </section>
-
   <section class="center-stage glass" id="centerStage">
     <div class="center-head">
       <div>
-        <h2>Community Feed</h2>
-        <p>Post your hair update to SupportRD.com and all socials.</p>
+        <h2>Live Center Panel</h2>
+        <p>Post, GPS, and Hands‑Free — all in one place.</p>
       </div>
       <button class="aria-sphere" id="ariaSphere" aria-label="Open ARIA"></button>
     </div>
 
-    <div class="post-card">
-      <div class="post-top">
-        <div class="post-user">You · Santiago, Dominican Republic</div>
-        <div class="post-actions">
-          <button class="chip" id="handsFree">Hands Free</button>
-          <button class="chip" id="driveMode">Driving Hands-Free</button>
-          <button class="chip">Camera</button>
+    <div class="center-tabs">
+      <button class="tab-btn active" data-tab="post">Post</button>
+      <button class="tab-btn" data-tab="gps">GPS</button>
+      <button class="tab-btn" data-tab="handsfree">Hands‑Free</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-post">
+      <div class="post-card">
+        <div class="post-top">
+          <div class="post-user">You · Santiago, Dominican Republic</div>
+          <div class="post-actions">
+            <button class="chip">Live Status</button>
+            <button class="chip">Send to All Socials</button>
+          </div>
+        </div>
+
+        <div class="post-input">
+          <textarea id="postInput" placeholder="Add a new post"></textarea>
+          <div class="smoke">Add a new post</div>
+        </div>
+
+        <div class="scan-row">
+          <div class="scan-pill">Moisture Check</div>
+          <div class="scan-pill">Tangles</div>
+          <div class="scan-pill">Dry</div>
+          <div class="scan-pill">Oily</div>
+          <div class="scan-pill">Damage</div>
+          <div class="scan-pill">No Bounce</div>
+          <div class="scan-pill">Color Loss</div>
+          <div class="scan-pill">All‑in‑one Product</div>
+        </div>
+
+        <div class="post-bottom">
+          <button class="btn">Post to All Socials</button>
+          <button class="btn ghost">Payment with Evelyn</button>
+          <button class="btn ghost">Contact Evelyn Directly</button>
         </div>
       </div>
+    </div>
 
-      <div class="post-input">
-        <textarea id="postInput" placeholder="Add a new post"></textarea>
-        <div class="smoke">Add a new post</div>
+    <div class="tab-panel" id="tab-gps">
+      <div class="gps-wrap">
+        <div class="map-box">Live GPS Directions (salons + coding stores)</div>
+        <div class="gps-actions">
+          <button class="btn" id="findSalons">Find Salons Near Me</button>
+          <button class="btn ghost" id="gpsHandsFree">Hands‑Free ARIA</button>
+        </div>
+        <div id="salonResults" class="mini-list">Waiting for location.</div>
       </div>
+    </div>
 
-      <div class="scan-row">
-        <div class="scan-pill">Moisture Check</div>
-        <div class="scan-pill">Tangles</div>
-        <div class="scan-pill">Dry</div>
-        <div class="scan-pill">Oily</div>
-        <div class="scan-pill">Damage</div>
-        <div class="scan-pill">No Bounce</div>
-        <div class="scan-pill">Color Loss</div>
-        <div class="scan-pill">All‑in‑one Product</div>
-      </div>
-
-      <div class="post-bottom">
-        <button class="btn">Post to All Socials</button>
-        <button class="btn ghost">Payment with Evelyn</button>
-        <button class="btn ghost">Contact Evelyn Directly</button>
+    <div class="tab-panel" id="tab-handsfree">
+      <div class="handsfree-wrap">
+        <div class="aria-large">ARIA</div>
+        <button class="btn ghost" id="voiceToggle">Start Voice</button>
+        <div class="history">
+          <h3>Recorded History</h3>
+          <div id="ariaHistory" class="mini-list">No history yet.</div>
+        </div>
       </div>
     </div>
   </section>
+
+  <button class="theme-side left" id="themePrevSide" aria-label="Previous theme"></button>
+  <button class="theme-side right" id="themeNextSide" aria-label="Next theme"></button>
 
   <section class="panel glass" id="dashboard">
     <div class="panel-head">
@@ -127,11 +121,6 @@
         <h3>AI Routine History</h3>
         <div id="routineMini" class="mini-list">No routines yet.</div>
       </div>
-      <div class="widget" data-widget="aria">
-        <h3>ARIA Voice AI</h3>
-        <p>Always-on when not in driving mode.</p>
-        <button class="btn ghost" id="voiceToggle">Start Voice</button>
-      </div>
       <div class="widget" data-widget="products">
         <h3>Shopify Products</h3>
         <div id="productsMini" class="mini-list">Loading products...</div>
@@ -148,72 +137,18 @@
     </div>
   </section>
 
-  <section id="aria" class="panel glass">
-    <div class="panel-head">
-      <h2>ARIA AI Inside Dashboard</h2>
-      <span class="pill">Voice ready</span>
-    </div>
-    <div class="aria-chat">
-      <div id="ariaLog" class="chat-log"></div>
-      <div class="chat-input">
-        <input id="ariaInput" placeholder="Ask ARIA about your hair">
-        <button class="btn" id="ariaSend">Ask ARIA</button>
-        <button class="btn ghost" id="routineGen">AI Routine Generator</button>
-      </div>
-      <div id="tipBox" class="tip-box" style="display:none">
-        <div class="tip-title">Tip SupportRD team</div>
-        <div class="tip-names">Anthony Figueroa · Developer · Crystal Figueroa (Co‑Owner) · Ramlin (Labor Claps)</div>
-        <div class="tip-actions">
-          <button class="btn">$5 Tip</button>
-          <button class="btn ghost">$10 Tip</button>
-          <button class="btn ghost">Custom</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="scan" class="panel glass">
-    <div class="panel-head">
-      <h2>Hair Scan Camera</h2>
-      <span class="pill">Camera / Hair analysis</span>
-    </div>
-    <video id="camera" autoplay playsinline></video>
-    <div class="scanButtons">
-      <button class="btn" id="cameraStart">Start Camera</button>
-      <button class="btn ghost" id="scanHairBtn">Analyze Hair</button>
-    </div>
-    <div id="scanResults" class="results"></div>
-  </section>
-
-  <section id="shop" class="panel glass">
-    <div class="panel-head">
-      <h2>Gift Shop</h2>
-      <span class="pill">AI product matching</span>
-    </div>
-    <div id="products" class="product-grid"></div>
-  </section>
-
-  <section id="salons" class="panel glass">
-    <div class="panel-head">
-      <h2>Salon Locator GPS</h2>
-      <span class="pill">Hands-free ARIA GPS</span>
-    </div>
-    <button class="btn" id="findSalons">Find Salons Near Me</button>
-    <div id="salonResults" class="mini-list">Waiting for location.</div>
-  </section>
-
   <section id="bottomLayer" class="panel glass">
     <div class="panel-head">
-      <h2>Partner Apps + Live Coders</h2>
-      <span class="pill">Movable slick apps</span>
+      <h2>Selectable Apps</h2>
+      <span class="pill">Live coder feed + tools</span>
     </div>
     <div class="apps-grid" id="appsGrid">
-      <button class="app-card" data-app="Partnership · Dissolve Fast Bar">Partnership · Dissolve Fast Bar</button>
-      <button class="app-card" data-app="Coder Check‑In · Snapshot Updater">Coder Check‑In · Snapshot Updater</button>
-      <button class="app-card" data-app="Coder Foundation">Coder Foundation</button>
-      <button class="app-card" data-app="Donate to the Poor · Dissolve Bar">Donate to the Poor · Dissolve Bar</button>
-      <button class="app-card" data-app="Settings">Settings</button>
-      <button class="app-card" data-app="Campaign · Message Anthony">Campaign · Message Anthony</button>
+      <button class="app-card" data-app="Blog">Blog</button>
+      <button class="app-card" data-app="Snapshot Coder Idea">Snapshot Coder Idea</button>
+      <button class="app-card" data-app="Live Coder Suggestions">Live Coder Suggestions</button>
+      <button class="app-card" data-app="Donate to the Poor · Auto Dissolve Bar">Donate to the Poor · Auto Dissolve Bar</button>
+      <button class="app-card" data-app="Settings">Settings (name, email, reset password)</button>
+      <button class="app-card" data-app="Contact Anthony">Contact Anthony · Developer</button>
     </div>
     <div class="blog-strip">
       <h3>Blog Posts (SEO)</h3>
@@ -307,26 +242,6 @@
       <button class="btn ghost" id="closeApp">Close</button>
     </div>
     <p id="appBody">App details here.</p>
-  </div>
-</div>
-
-<div id="gpsModal" class="modal">
-  <div class="modal-card glass">
-    <div class="modal-head">
-      <h2>GPS Map</h2>
-      <button class="btn ghost" id="closeGps">Close</button>
-    </div>
-    <div class="map-box">Live map view (placeholder)</div>
-  </div>
-</div>
-
-<div id="handsFreeModal" class="modal">
-  <div class="modal-card glass">
-    <div class="modal-head">
-      <h2>Hands‑Free Mode</h2>
-      <button class="btn ghost" id="closeHands">Close</button>
-    </div>
-    <p>Hands‑free mode active. Voice commands only.</p>
   </div>
 </div>
 

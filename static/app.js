@@ -22,16 +22,19 @@ const state = {
   routineHistory: [],
   drivingMode: false,
   themeIndex: 0,
-  blogIndex: 0
+  blogIndex: 0,
+  ariaHistory: []
 }
 
 function loadHistory(){
   try{
     state.scanHistory = JSON.parse(localStorage.getItem("scanHistory") || "[]")
     state.routineHistory = JSON.parse(localStorage.getItem("routineHistory") || "[]")
+    state.ariaHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
   }catch{
     state.scanHistory = []
     state.routineHistory = []
+    state.ariaHistory = []
   }
 }
 
@@ -51,6 +54,13 @@ function renderHistory(){
   routineEl.innerHTML = state.routineHistory.length
     ? state.routineHistory.map(x=>`<div>${x}</div>`).join("")
     : "No routines yet."
+
+  const ariaEl = qs("#ariaHistory")
+  if(ariaEl){
+    ariaEl.innerHTML = state.ariaHistory.length
+      ? state.ariaHistory.map(x=>`<div>${x}</div>`).join("")
+      : "No history yet."
+  }
 }
 
 function toast(msg){
@@ -61,41 +71,9 @@ function toast(msg){
   el._t = setTimeout(()=>{el.style.display="none"}, 2200)
 }
 
-function setupDragAndDrop(){
-  const grid = qs("#widgetGrid")
-  let dragEl = null
-
-  grid.addEventListener("pointerdown", e=>{
-    const card = e.target.closest(".widget")
-    if(!card) return
-    dragEl = card
-    card.classList.add("dragging")
-    card.setPointerCapture(e.pointerId)
-  })
-
-  grid.addEventListener("pointermove", e=>{
-    if(!dragEl) return
-    const el = document.elementFromPoint(e.clientX, e.clientY)
-    const target = el && el.closest(".widget")
-    if(target && target !== dragEl && target.parentElement === grid){
-      const rect = target.getBoundingClientRect()
-      const insertBefore = e.clientY < rect.top + rect.height / 2
-      grid.insertBefore(dragEl, insertBefore ? target : target.nextSibling)
-    }
-  })
-
-  grid.addEventListener("pointerup", ()=>{
-    if(!dragEl) return
-    dragEl.classList.remove("dragging")
-    dragEl = null
-  })
-}
-
 async function askAria(message){
-  const input = qs("#ariaInput")
-  const msg = message || input.value.trim()
+  const msg = message.trim()
   if(!msg) return
-  input.value = ""
   appendChat("You", msg)
   try{
     const r = await fetch("/api/aria", {
@@ -105,60 +83,37 @@ async function askAria(message){
     })
     const d = await r.json()
     appendChat("ARIA", d.reply || "No reply")
-    showTipIfAllowed()
   }catch{
     appendChat("ARIA", "AI unavailable")
   }
 }
 
 function appendChat(who, text){
-  const log = qs("#ariaLog")
-  const div = document.createElement("div")
-  div.className = "chat-bubble"
-  div.innerHTML = `<strong>${who}</strong>${text}`
-  log.appendChild(div)
-  log.scrollTop = log.scrollHeight
+  state.ariaHistory.unshift(`${who}: ${text}`)
+  if(state.ariaHistory.length > 6) state.ariaHistory.pop()
+  localStorage.setItem("ariaHistory", JSON.stringify(state.ariaHistory))
+  renderHistory()
 }
 
-function showTipIfAllowed(){
-  const tip = qs("#tipBox")
-  if(state.drivingMode){
-    tip.style.display = "none"
-    return
-  }
-  tip.style.display = "block"
-}
-
-function setupVoice(){
-  const toggle = qs("#voiceToggle")
-  let recognition = null
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  if(SpeechRecognition){
-    recognition = new SpeechRecognition()
-    recognition.continuous = false
-    recognition.interimResults = false
-    recognition.lang = "en-US"
-    recognition.onresult = (e)=>{
-      const text = e.results[0][0].transcript
-      askAria(text)
-    }
-    recognition.onstart = ()=>toast("Listening...")
-    recognition.onend = ()=>toast("Voice off")
-  }
-
-  toggle.addEventListener("click", ()=>{
-    if(!recognition){
-      toast("Voice not supported")
-      return
-    }
-    recognition.start()
+function setupTabs(){
+  qsa(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
+      btn.classList.add("active")
+      const id = btn.dataset.tab
+      qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
+      qs(`#tab-${id}`).classList.add("active")
+    })
   })
 }
 
 async function startCamera(){
   try{
     const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-    qs("#camera").srcObject = stream
+    const vid = qs("#camera")
+    if(vid){
+      vid.srcObject = stream
+    }
   }catch{
     toast("Camera blocked")
   }
@@ -168,38 +123,21 @@ async function scanHair(){
   try{
     const r = await fetch("/api/hair-scan", {method:"POST"})
     const d = await r.json()
-    const html = `Curl type: ${d.curl_type}<br>Damage: ${d.damage}<br>Hydration: ${d.hydration}<br><br>Routine:<br>${d.routine.join("<br>")}`
-    qs("#scanResults").innerHTML = html
     const stamp = new Date().toLocaleString()
     saveHistory("scanHistory", `Scan ${stamp}: ${d.curl_type}, ${d.hydration}`)
     renderHistory()
   }catch{
-    qs("#scanResults").textContent = "Scan failed"
+    toast("Scan failed")
   }
 }
 
 async function loadProducts(){
-  const list = qs("#products")
   const mini = qs("#productsMini")
   try{
     const r = await fetch("/api/products")
     const products = await r.json()
-    if(!products.length){
-      list.innerHTML = "<p class=\"mini-list\">No products available.</p>"
-      mini.textContent = "No products yet."
-      return
-    }
-    list.innerHTML = products.map(p=>`
-      <div class="product">
-        <img src="${p.image}" alt="${p.title}">
-        <h4>${p.title}</h4>
-        <p>$${p.price}</p>
-        <button class="btn">Buy</button>
-      </div>
-    `).join("")
-    mini.innerHTML = products.slice(0,3).map(p=>`<div>${p.title}</div>`).join("")
+    mini.textContent = products.length ? products.slice(0,3).map(p=>p.title).join(" · ") : "No products yet."
   }catch{
-    list.innerHTML = "<p class=\"mini-list\">Unable to load products.</p>"
     mini.textContent = "Unable to load products."
   }
 }
@@ -230,7 +168,6 @@ async function findSalons(){
         return
       }
       qs("#salonResults").innerHTML = salons.map(s=>`<div>${s.name} - ${s.distance} mi</div>`).join("")
-      openModal("gpsModal")
       toast("ARIA GPS ready")
     }catch{
       qs("#salonResults").textContent = "Salon lookup failed."
@@ -241,22 +178,16 @@ async function findSalons(){
 }
 
 function setupModals(){
-  bindOpen("openSeo", "seoModal")
-  bindClose("closeSeo", "seoModal")
-  bindOpen("giftShopOpen", "giftModal")
-  bindClose("closeGift", "giftModal")
   bindOpen("menuGift", "giftModal")
   bindOpen("menuOccasion", "occasionModal")
-  bindOpen("occasionOpen", "occasionModal")
-  bindOpen("occasionOpen2", "occasionModal")
-  bindOpen("occasionOpen3", "occasionModal")
+  bindOpen("menuSubscription", "subscriptionModal")
+  bindClose("closeGift", "giftModal")
   bindClose("closeOccasion", "occasionModal")
-  bindOpen("subscriptionBanner", "subscriptionModal")
   bindClose("closeSubscription", "subscriptionModal")
+  bindOpen("openSeo", "seoModal")
+  bindClose("closeSeo", "seoModal")
   bindClose("closeBlog", "blogModal")
   bindClose("closeApp", "appModal")
-  bindClose("closeGps", "gpsModal")
-  bindClose("closeHands", "handsFreeModal")
 
   qsa(".blog-post").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -329,60 +260,17 @@ function setupPwa(){
   }
 }
 
-function setupRoutineGen(){
-  qs("#routineGen").addEventListener("click", async ()=>{
-    await askAria("Generate a simple hair routine based on hydration and damage signals.")
-    const stamp = new Date().toLocaleString()
-    saveHistory("routineHistory", `Routine ${stamp}: Generated by ARIA`)
-    renderHistory()
-  })
-}
-
 function setupAriaSphere(){
   const sphere = qs("#ariaSphere")
   sphere.addEventListener("click", ()=>{
     sphere.classList.add("spin")
     setTimeout(()=>sphere.classList.remove("spin"), 500)
-    qs("#aria").scrollIntoView({behavior:"smooth", block:"start"})
   })
-}
-
-function setupDriveMode(){
-  const btn = qs("#driveMode")
-  const hands = qs("#handsFree")
-  btn.addEventListener("click", ()=>{
-    state.drivingMode = !state.drivingMode
-    btn.classList.toggle("active", state.drivingMode)
-    toast(state.drivingMode ? "Driving hands-free mode" : "Hands-free mode")
-    if(state.drivingMode){
-      qs("#tipBox").style.display = "none"
-    }
-  })
-  hands.addEventListener("click", ()=>openModal("handsFreeModal"))
-}
-
-function setupLoginGate(){
-  const overlay = qs("#loginOverlay")
-  const now = Date.now()
-  let firstSeen = localStorage.getItem("firstSeen")
-  if(!firstSeen){
-    localStorage.setItem("firstSeen", String(now))
-    firstSeen = String(now)
-  }
-  const days = (now - Number(firstSeen)) / (1000*60*60*24)
-  if(days > 2){
-    overlay.style.display = "flex"
-  }else{
-    overlay.style.display = "none"
-  }
 }
 
 function setupThemes(){
-  const prev = qs("#themePrev")
-  const next = qs("#themeNext")
   const prevSide = qs("#themePrevSide")
   const nextSide = qs("#themeNextSide")
-  const label = qs("#themeLabel")
 
   const saved = localStorage.getItem("theme")
   const startTheme = saved || DEFAULT_THEME
@@ -400,15 +288,12 @@ function setupThemes(){
     applyTheme(state.themeIndex)
   }
 
-  prev.addEventListener("click", goPrev)
-  next.addEventListener("click", goNext)
   prevSide.addEventListener("click", goPrev)
   nextSide.addEventListener("click", goNext)
 
   function applyTheme(idx){
     const theme = THEMES[idx]
     document.body.className = `theme-${theme.id}`
-    label.textContent = theme.label
     localStorage.setItem("theme", theme.id)
   }
 }
@@ -416,22 +301,19 @@ function setupThemes(){
 window.addEventListener("DOMContentLoaded", ()=>{
   loadHistory()
   renderHistory()
-  setupDragAndDrop()
-  setupVoice()
+  setupTabs()
   setupModals()
   setupPwa()
-  setupRoutineGen()
   setupAriaSphere()
-  setupDriveMode()
-  setupLoginGate()
   setupThemes()
   loadProducts()
   loadMarketing()
 
-  qs("#ariaSend").addEventListener("click", ()=>askAria())
-  qs("#cameraStart").addEventListener("click", startCamera)
-  qs("#scanHairBtn").addEventListener("click", scanHair)
   qs("#findSalons").addEventListener("click", findSalons)
-  qs("#menuPost").addEventListener("click", ()=>qs("#centerStage").scrollIntoView({behavior:"smooth"}))
-  qs("#menuAria").addEventListener("click", ()=>qs("#aria").scrollIntoView({behavior:"smooth"}))
+  qs("#gpsHandsFree").addEventListener("click", ()=>{
+    qs("#tab-handsfree").classList.add("active")
+    qsa(".tab-panel").forEach(p=>p.id !== "tab-handsfree" && p.classList.remove("active"))
+    qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
+    qsa(".tab-btn").find?.(b=>b.dataset.tab==="handsfree")
+  })
 })
