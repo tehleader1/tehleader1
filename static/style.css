@@ -43,15 +43,16 @@ body.family-mode .aria-sphere{box-shadow:0 0 12px rgba(124,243,209,0.35);}
 .center-icon img{width:100%;height:100%;object-fit:cover;}
 
 .center-hero{position:relative;padding:14px 16px;border-radius:16px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.2);overflow:hidden;}
-.center-hero::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 220'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23ffd59a'/><stop offset='0.55' stop-color='%23ff9f7a'/><stop offset='1' stop-color='%2355c9ff'/></linearGradient></defs><rect width='800' height='220' fill='url(%23g)'/><circle cx='690' cy='60' r='38' fill='%23fff1b8'/><path d='M0 160 C200 130 400 170 800 130 L800 220 L0 220 Z' fill='%234fd1a6'/><path d='M0 180 C210 150 420 190 800 150 L800 220 L0 220 Z' fill='%2374e0b8' opacity='0.8'/><path d='M110 160 l25 -70 c6 -18 16 -22 22 0 l25 70 z' fill='%235b3b22'/><path d='M97 95 C120 60 160 60 185 95 C155 80 125 80 97 95 Z' fill='%232a5a2e'/><path d='M600 165 l18 -50 c5 -14 12 -18 17 0 l18 50 z' fill='%235b3b22'/><path d='M590 115 C610 85 640 85 660 115 C640 100 610 100 590 115 Z' fill='%232a5a2e'/><path d='M330 150 l30 -40 l30 40 z' fill='%236b4b2c'/><rect x='328' y='150' width='64' height='38' fill='%23755635'/></svg>");
-  background-size:cover;
-  opacity:0.45;
-  z-index:0;
-}
+  .center-hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:url("/static/images/tropical-hero.jpg");
+    background-size:cover;
+    background-position:center;
+    opacity:0.55;
+    z-index:0;
+  }
 .center-hero h2,
 .center-hero p{position:relative;z-index:1;}
 .center-head{display:flex;justify-content:space-between;align-items:center;gap:12px;} 
