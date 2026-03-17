@@ -1,44 +1,29 @@
 from flask import Flask, jsonify, request, send_from_directory
-import sqlite3
 import os
 import requests
 
 app = Flask(__name__, static_folder="static")
 
-DATABASE = "users.db"
-
 SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE")
 SHOPIFY_STOREFRONT_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN")
 
-################################################
-# DATABASE
-################################################
-
-def db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-################################################
+#############################################
 # SHOPIFY PRODUCTS
-################################################
+#############################################
 
-def shopify_products():
+def get_products():
 
     if not SHOPIFY_STORE or not SHOPIFY_STOREFRONT_TOKEN:
         return []
 
     query = """
     {
-      products(first:12){
+      products(first:10){
         edges{
           node{
             title
-            handle
             images(first:1){
-              edges{
-                node{url}
-              }
+              edges{node{url}}
             }
             variants(first:1){
               edges{
@@ -63,7 +48,6 @@ def shopify_products():
     )
 
     data = r.json()
-
     products = []
 
     for p in data["data"]["products"]["edges"]:
@@ -72,35 +56,50 @@ def shopify_products():
         v = node["variants"]["edges"][0]["node"]
 
         products.append({
-            "title": node["title"],
-            "price": v["price"]["amount"],
-            "variant": v["id"],
-            "image": node["images"]["edges"][0]["node"]["url"]
+            "title":node["title"],
+            "price":v["price"]["amount"],
+            "variant":v["id"],
+            "image":node["images"]["edges"][0]["node"]["url"]
         })
 
     return products
 
-################################################
+#############################################
 # API
-################################################
+#############################################
 
 @app.route("/api/products")
-def products():
-    return jsonify(shopify_products())
+def api_products():
+    return jsonify(get_products())
 
 @app.route("/api/checkout", methods=["POST"])
 def checkout():
 
-    data = request.json
-    variant = data["variant"]
+    variant = request.json["variant"]
 
-    checkout = f"https://{SHOPIFY_STORE}/cart/{variant}:1"
+    return jsonify({
+        "url": f"https://{SHOPIFY_STORE}/cart/{variant}:1"
+    })
 
-    return jsonify({"url":checkout})
+#############################################
+# ENGINE STATUS (GLASS VIEW)
+#############################################
 
-################################################
-# PWA FILES
-################################################
+@app.route("/api/engine/status")
+def engine_status():
+
+    return jsonify({
+        "seo_posts_today":12,
+        "shopify_products":54,
+        "pinterest_pins":8,
+        "reddit_posts":3,
+        "traffic_today":241,
+        "ai_tasks_running":4
+    })
+
+#############################################
+# STATIC FILES
+#############################################
 
 @app.route("/manifest.json")
 def manifest():
@@ -110,9 +109,9 @@ def manifest():
 def sw():
     return send_from_directory("static","sw.js")
 
-################################################
+#############################################
 # DASHBOARD
-################################################
+#############################################
 
 @app.route("/")
 def dashboard():
@@ -137,20 +136,45 @@ def dashboard():
 
 <div id="nav">
 
-<button>Home</button>
-<button>Shop</button>
-<button>Scan</button>
-<button>Aria</button>
+<button onclick="showPanel('feed')">Home</button>
+<button onclick="showPanel('shop')">Shop</button>
+<button onclick="showPanel('scan')">Scan</button>
+<button onclick="startVoice()">ARIA</button>
 
 </div>
 
 <div id="dashboard">
 
-<div class="widget" id="feed">Community Feed</div>
-<div class="widget" id="products">Products</div>
-<div class="widget">Hair Routine</div>
-<div class="widget">Events</div>
+<div class="widget" id="feed">
+<h2>Community Feed</h2>
+</div>
 
+<div class="widget" id="shop">
+<h2>Shop</h2>
+<div id="products"></div>
+</div>
+
+<div class="widget" id="scan">
+
+<h2>Hair Scan</h2>
+
+<video id="camera" autoplay></video>
+<button onclick="startCamera()">Start Scan</button>
+
+</div>
+
+<div class="widget" id="engine">
+
+<h2>Marketing Engine</h2>
+
+<div id="engineData"></div>
+
+</div>
+
+</div>
+
+<div id="voiceIndicator">
+ARIA Listening...
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -160,7 +184,7 @@ def dashboard():
 </html>
 """
 
-################################################
+#############################################
 
 if __name__ == "__main__":
     app.run()
