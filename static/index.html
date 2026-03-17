@@ -7,7 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
@@ -17,113 +17,123 @@
   <header class="topbar glass">
     <div class="brand">
       <div class="logo">SupportRD</div>
-      <div class="tagline">All-in-one hair intelligence dashboard. Everything in one page.</div>
+      <div class="tagline">One page. Live engine depth. All systems visible.</div>
     </div>
     <div class="status">
-      <span class="pill">Trial Mode</span>
-      <button class="btn primary" id="installBtn" style="display:none">Install App</button>
+      <div class="big-menu">
+        <button class="menu-btn">Post</button>
+        <button class="menu-btn">Aria Sphere</button>
+        <button class="menu-btn">Gift Shop</button>
+        <button class="menu-btn">Occasion Editor</button>
+      </div>
+      <button class="btn primary" id="installBtn" style="display:none">Install + Subscribe</button>
     </div>
   </header>
 
-  <section class="hero glass">
-    <div class="hero-left">
-      <h1>Glass dashboard with visible engine depth.</h1>
-      <p>Instant-loading layout, floating navigation, and a live view of the systems running under the hood.</p>
-      <div class="hero-actions">
-        <button class="btn" id="loginButton" onclick="login()">Login</button>
-        <button class="btn ghost" id="voiceToggle">ARIA Voice Trigger</button>
-      </div>
+  <section class="sub-banner glass">
+    <div class="sub-left">
+      <div class="sub-title">Unlock FULL Features</div>
+      <div class="sub-copy">Standard $50/mo. Professional $35/mo (no code puzzles).</div>
     </div>
-    <div class="hero-cards">
-      <div class="mini glass">
-        <h3>Free / Pro Subscription</h3>
-        <p>Upgrade path with pro perks and auto reorder.</p>
-        <div class="toggle">
-          <span>Free</span>
-          <div class="switch" id="subSwitch"><span></span></div>
-          <span>Pro</span>
+    <button class="btn">Activate Subscription</button>
+  </section>
+
+  <section class="occasion-head glass">
+    <div class="occasion-title">Occasion Editor</div>
+    <div class="occasion-directions">Northwest · North · Northeast</div>
+    <div class="occasion-boxes">
+      <button class="occasion-box">Normal Action</button>
+      <button class="occasion-box">Apply Product</button>
+      <button class="occasion-box">Enjoy Your Product</button>
+    </div>
+    <div class="week-boxes">
+      <div class="week">Day 1</div>
+      <div class="week">Day 2</div>
+      <div class="week">Day 3</div>
+      <div class="week">Day 4</div>
+      <div class="week">Day 5</div>
+      <div class="week">Day 6</div>
+      <div class="week">Day 7</div>
+    </div>
+  </section>
+
+  <section class="center-stage glass" id="centerStage">
+    <div class="center-head">
+      <div>
+        <h2>Community Feed</h2>
+        <p>Post your hair update to SupportRD.com and all socials.</p>
+      </div>
+      <button class="aria-sphere" id="ariaSphere" aria-label="Open ARIA"></button>
+    </div>
+
+    <div class="post-card">
+      <div class="post-top">
+        <div class="post-user">You · Santiago, Dominican Republic</div>
+        <div class="post-actions">
+          <button class="chip">Hands Free</button>
+          <button class="chip" id="driveMode">Driving Hands-Free</button>
+          <button class="chip">Camera</button>
         </div>
       </div>
-      <div class="mini glass">
-        <h3>Social Login ID</h3>
-        <p id="socialId">Not connected</p>
-        <div class="socials">
-          <button class="social">Google</button>
-          <button class="social">Microsoft</button>
-          <button class="social">Apple</button>
-          <button class="social">Yahoo</button>
-        </div>
+
+      <div class="post-input">
+        <textarea id="postInput" placeholder="Add a new post"></textarea>
+        <div class="smoke">Add a new post</div>
+      </div>
+
+      <div class="scan-row">
+        <div class="scan-pill">Moisture Check</div>
+        <div class="scan-pill">Tangles</div>
+        <div class="scan-pill">Dry</div>
+        <div class="scan-pill">Oily</div>
+        <div class="scan-pill">Damage</div>
+        <div class="scan-pill">No Bounce</div>
+        <div class="scan-pill">Color Loss</div>
+        <div class="scan-pill">All‑in‑one Product</div>
+      </div>
+
+      <div class="post-bottom">
+        <button class="btn">Post to All Socials</button>
+        <button class="btn ghost">Payment with Evelyn</button>
+        <button class="btn ghost">Contact Evelyn Directly</button>
       </div>
     </div>
   </section>
 
-  <nav class="locked-nav glass">
-    <button class="locked-btn">Home <span class="lock">Locked</span></button>
-    <button class="locked-btn">Shop <span class="lock">Locked</span></button>
-    <button class="locked-btn">Scan <span class="lock">Locked</span></button>
-    <button class="locked-btn">Aria AI <span class="lock">Locked</span></button>
-  </nav>
-
-  <section id="dashboard" class="panel glass">
+  <section class="panel glass" id="dashboard">
     <div class="panel-head">
       <div>
         <h2>Drag-and-Drop Widget Area</h2>
-        <p>Reorder tiles. Cards lift on touch. Glass blur on every layer.</p>
+        <p>Cards lift. Glass blur. Instant view of engine depth.</p>
       </div>
       <div class="engine-glow">Engine View: Live</div>
     </div>
     <div id="widgetGrid" class="widget-grid">
       <div class="widget" data-widget="feed">
-        <h3>Feed</h3>
-        <p>Share your hair journey.</p>
-        <textarea placeholder="Post your routine or results"></textarea>
-        <button class="btn">Share</button>
-      </div>
-      <div class="widget" data-widget="products">
-        <h3>Products</h3>
-        <p>Shopify store purchasing.</p>
-        <div id="productsMini" class="mini-list">Loading products...</div>
-      </div>
-      <div class="widget" data-widget="community">
-        <h3>Community</h3>
-        <p>Events, wins, and challenges.</p>
-        <ul class="list">
-          <li>90-day growth challenge</li>
-          <li>Wash day routine live</li>
-          <li>Salon spotlight</li>
-        </ul>
-      </div>
-      <div class="widget" data-widget="events">
-        <h3>Events</h3>
-        <p>Upcoming sessions and scans.</p>
-        <ul class="list">
-          <li>Friday: ARIA Q&A</li>
-          <li>Sunday: Hair scan check-in</li>
-        </ul>
-      </div>
-      <div class="widget" data-widget="analytics">
-        <h3>Analytics</h3>
-        <p>Depth view of usage and product impact.</p>
-        <div class="analytics">
-          <div><span>Moisture</span><strong>82%</strong></div>
-          <div><span>Damage</span><strong>Low</strong></div>
-          <div><span>Growth</span><strong>+14%</strong></div>
-        </div>
+        <h3>Hair Scan History</h3>
+        <div id="scanHistory" class="mini-list">No scans yet.</div>
       </div>
       <div class="widget" data-widget="routine">
-        <h3>Hair Routine</h3>
-        <p>AI routine history.</p>
+        <h3>AI Routine History</h3>
         <div id="routineMini" class="mini-list">No routines yet.</div>
       </div>
-      <div class="widget" data-widget="reorder">
-        <h3>Auto Reorder</h3>
-        <p>Smart reminders and one-click reorders.</p>
-        <div id="reorderMini" class="mini-list">Checking reorders...</div>
+      <div class="widget" data-widget="aria">
+        <h3>ARIA Voice AI</h3>
+        <p>Always-on when not in driving mode.</p>
+        <button class="btn ghost" id="voiceToggle">Start Voice</button>
+      </div>
+      <div class="widget" data-widget="products">
+        <h3>Shopify Products</h3>
+        <div id="productsMini" class="mini-list">Loading products...</div>
       </div>
       <div class="widget" data-widget="seo">
         <h3>SEO Engine Viewer</h3>
-        <p>Marketing engine content viewable to the world.</p>
+        <p>Public marketing feed viewable to the world.</p>
         <button class="btn ghost" id="openSeo">Open Viewer</button>
+      </div>
+      <div class="widget" data-widget="reorder">
+        <h3>Auto Reorder</h3>
+        <div id="reorderMini" class="mini-list">Checking reorders...</div>
       </div>
     </div>
   </section>
@@ -140,6 +150,14 @@
         <button class="btn" id="ariaSend">Ask ARIA</button>
         <button class="btn ghost" id="routineGen">AI Routine Generator</button>
       </div>
+      <div id="tipBox" class="tip-box" style="display:none">
+        <div class="tip-title">Tip Evelyn for Support</div>
+        <div class="tip-actions">
+          <button class="btn">$5 Tip</button>
+          <button class="btn ghost">$10 Tip</button>
+          <button class="btn ghost">Custom</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -154,15 +172,11 @@
       <button class="btn ghost" id="scanHairBtn">Analyze Hair</button>
     </div>
     <div id="scanResults" class="results"></div>
-    <div class="history">
-      <h3>Hair Scan History</h3>
-      <div id="scanHistory" class="mini-list">No scans yet.</div>
-    </div>
   </section>
 
   <section id="shop" class="panel glass">
     <div class="panel-head">
-      <h2>Shopify Store</h2>
+      <h2>Gift Shop</h2>
       <span class="pill">AI product matching</span>
     </div>
     <div id="products" class="product-grid"></div>
@@ -177,30 +191,28 @@
     <div id="salonResults" class="mini-list">Waiting for location.</div>
   </section>
 
-  <section id="marketing" class="panel glass">
+  <section id="bottomLayer" class="panel glass">
     <div class="panel-head">
-      <h2>Marketing + SEO Engine</h2>
-      <span class="pill">Public view</span>
+      <h2>Partner Apps + Live Coders</h2>
+      <span class="pill">Movable slick apps</span>
     </div>
-    <div class="marketing-grid">
-      <div class="marketing-card">
-        <h3>Trending Content</h3>
-        <div id="trendingList" class="mini-list">Loading engine…</div>
-      </div>
-      <div class="marketing-card">
-        <h3>Auto Reorder Suggestions</h3>
-        <div id="reorderList" class="mini-list">Loading engine…</div>
+    <div class="apps-grid" id="appsGrid">
+      <div class="app-card">Partnership · Dissolve Fast Bar</div>
+      <div class="app-card">Coder Check‑In · Snapshot Updater</div>
+      <div class="app-card">Coder Foundation</div>
+      <div class="app-card">Donate to the Poor · Dissolve Bar</div>
+      <div class="app-card">Settings</div>
+      <div class="app-card">Campaign · Message Anthony</div>
+    </div>
+    <div class="blog-strip">
+      <h3>Blog Posts (SEO)</h3>
+      <div class="blog-list">
+        <div class="blog-post">Repair story: Heat damage recovery</div>
+        <div class="blog-post">Protein balance for bounce</div>
+        <div class="blog-post">All‑in‑one product success stories</div>
       </div>
     </div>
-    <button class="btn ghost" id="openBlog">Open Blog Popup</button>
   </section>
-
-  <div class="floating-nav glass">
-    <button class="nav-btn locked">Home</button>
-    <button class="nav-btn locked">Shop</button>
-    <button class="nav-btn locked">Scan</button>
-    <button class="nav-btn locked">Aria AI</button>
-  </div>
 </div>
 
 <div id="seoModal" class="modal">
@@ -209,7 +221,7 @@
       <h2>SEO Engine Viewer</h2>
       <button class="btn ghost" id="closeSeo">Close</button>
     </div>
-    <p>This is the public-facing marketing engine view. Clean glass finish with visible system depth.</p>
+    <p>Keyword list + TikTok repair stories engine (live).</p>
     <div class="seo-preview">
       <div class="seo-line"></div>
       <div class="seo-line"></div>
@@ -218,21 +230,26 @@
   </div>
 </div>
 
-<div id="blogModal" class="modal">
-  <div class="modal-card glass">
-    <div class="modal-head">
-      <h2>Blog Popup</h2>
-      <button class="btn ghost" id="closeBlog">Close</button>
+<div id="loginOverlay" class="login-overlay">
+  <div class="login-shell">
+    <div class="login-top">
+      <div class="logo">SupportRD</div>
+      <div class="tagline">2026 entrance dashboard</div>
     </div>
-    <div class="blog">
-      <div class="blog-post">
-        <h3>Hydration Layers That Work</h3>
-        <p>Short, high impact content built from the SEO engine.</p>
+    <div class="login-center">
+      <h2>Welcome back</h2>
+      <p>Login with your social ID to unlock full features.</p>
+      <div class="socials">
+        <button class="social">Google</button>
+        <button class="social">Microsoft</button>
+        <button class="social">Apple</button>
+        <button class="social">Yahoo</button>
       </div>
-      <div class="blog-post">
-        <h3>Protein Balance Guide</h3>
-        <p>What to use and when, powered by ARIA.</p>
-      </div>
+    </div>
+    <div class="login-bottom">
+      <div class="login-card">Coder Foundation</div>
+      <div class="login-card">Donate to the Poor · Dissolve Bar</div>
+      <div class="login-card">Campaign · Message Anthony</div>
     </div>
   </div>
 </div>

@@ -3,7 +3,8 @@ const qsa = (sel) => Array.from(document.querySelectorAll(sel))
 
 const state = {
   scanHistory: [],
-  routineHistory: []
+  routineHistory: [],
+  drivingMode: false
 }
 
 function loadHistory(){
@@ -39,24 +40,7 @@ function toast(msg){
   el.textContent = msg
   el.style.display = "block"
   clearTimeout(el._t)
-  el._t = setTimeout(()=>{el.style.display="none"}, 2000)
-}
-
-function setupLockedNav(){
-  qsa(".locked-btn, .nav-btn.locked").forEach(btn=>{
-    btn.addEventListener("click", e=>{
-      e.preventDefault()
-      toast("Locked navigation in demo")
-    })
-  })
-}
-
-function setupSubToggle(){
-  const sw = qs("#subSwitch")
-  sw.addEventListener("click", ()=>{
-    sw.classList.toggle("active")
-    toast(sw.classList.contains("active") ? "Pro enabled" : "Free enabled")
-  })
+  el._t = setTimeout(()=>{el.style.display="none"}, 2200)
 }
 
 function setupDragAndDrop(){
@@ -103,6 +87,7 @@ async function askAria(message){
     })
     const d = await r.json()
     appendChat("ARIA", d.reply || "No reply")
+    showTipIfAllowed()
   }catch{
     appendChat("ARIA", "AI unavailable")
   }
@@ -115,6 +100,15 @@ function appendChat(who, text){
   div.innerHTML = `<strong>${who}</strong>${text}`
   log.appendChild(div)
   log.scrollTop = log.scrollHeight
+}
+
+function showTipIfAllowed(){
+  const tip = qs("#tipBox")
+  if(state.drivingMode){
+    tip.style.display = "none"
+    return
+  }
+  tip.style.display = "block"
 }
 
 function setupVoice(){
@@ -196,14 +190,9 @@ async function loadMarketing(){
   try{
     const r = await fetch("/api/engine/marketing")
     const d = await r.json()
-    const trending = d.trending || []
     const reorders = d.reorders || []
-    qs("#trendingList").innerHTML = trending.length ? trending.map(x=>`<div>${x}</div>`).join("") : "No trending content."
-    qs("#reorderList").innerHTML = reorders.length ? reorders.map(x=>`<div>${x}</div>`).join("") : "No reorder suggestions."
     qs("#reorderMini").innerHTML = reorders.length ? reorders.map(x=>`<div>${x}</div>`).join("") : "No reorder suggestions."
   }catch{
-    qs("#trendingList").textContent = "Engine unavailable"
-    qs("#reorderList").textContent = "Engine unavailable"
     qs("#reorderMini").textContent = "Engine unavailable"
   }
 }
@@ -235,8 +224,6 @@ async function findSalons(){
 function setupModals(){
   qs("#openSeo").addEventListener("click", ()=>qs("#seoModal").style.display = "flex")
   qs("#closeSeo").addEventListener("click", ()=>qs("#seoModal").style.display = "none")
-  qs("#openBlog").addEventListener("click", ()=>qs("#blogModal").style.display = "flex")
-  qs("#closeBlog").addEventListener("click", ()=>qs("#blogModal").style.display = "none")
 }
 
 function setupPwa(){
@@ -268,16 +255,54 @@ function setupRoutineGen(){
   })
 }
 
+function setupAriaSphere(){
+  const sphere = qs("#ariaSphere")
+  sphere.addEventListener("click", ()=>{
+    sphere.classList.add("spin")
+    setTimeout(()=>sphere.classList.remove("spin"), 500)
+    qs("#aria").scrollIntoView({behavior:"smooth", block:"start"})
+  })
+}
+
+function setupDriveMode(){
+  const btn = qs("#driveMode")
+  btn.addEventListener("click", ()=>{
+    state.drivingMode = !state.drivingMode
+    btn.classList.toggle("active", state.drivingMode)
+    toast(state.drivingMode ? "Driving hands-free mode" : "Hands-free mode")
+    if(state.drivingMode){
+      qs("#tipBox").style.display = "none"
+    }
+  })
+}
+
+function setupLoginGate(){
+  const overlay = qs("#loginOverlay")
+  const now = Date.now()
+  let firstSeen = localStorage.getItem("firstSeen")
+  if(!firstSeen){
+    localStorage.setItem("firstSeen", String(now))
+    firstSeen = String(now)
+  }
+  const days = (now - Number(firstSeen)) / (1000*60*60*24)
+  if(days > 2){
+    overlay.style.display = "flex"
+  }else{
+    overlay.style.display = "none"
+  }
+}
+
 window.addEventListener("DOMContentLoaded", ()=>{
   loadHistory()
   renderHistory()
-  setupLockedNav()
-  setupSubToggle()
   setupDragAndDrop()
   setupVoice()
   setupModals()
   setupPwa()
   setupRoutineGen()
+  setupAriaSphere()
+  setupDriveMode()
+  setupLoginGate()
   loadProducts()
   loadMarketing()
 
