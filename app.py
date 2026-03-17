@@ -1,20 +1,19 @@
 from flask import Flask, jsonify, request, send_from_directory
 import os
 import requests
-import datetime
 
 app = Flask(__name__, static_folder="static")
 
-####################################################
-# ENVIRONMENT
-####################################################
+#################################################
+# SHOPIFY CONFIG
+#################################################
 
 SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "")
 SHOPIFY_STOREFRONT_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
 
-####################################################
-# SHOPIFY PRODUCTS
-####################################################
+#################################################
+# SHOPIFY PRODUCT LOADER
+#################################################
 
 def get_products():
 
@@ -85,9 +84,9 @@ def get_products():
         return []
 
 
-####################################################
+#################################################
 # API ROUTES
-####################################################
+#################################################
 
 @app.route("/api/products")
 def api_products():
@@ -106,26 +105,9 @@ def checkout():
     })
 
 
-####################################################
-# MARKETING ENGINE STATUS
-####################################################
-
-@app.route("/api/engine/status")
-def engine_status():
-
-    return jsonify({
-        "seo_posts_today": 12,
-        "shopify_products": 54,
-        "pinterest_pins": 8,
-        "reddit_posts": 3,
-        "traffic_today": 241,
-        "ai_tasks_running": 4
-    })
-
-
-####################################################
-# BLOG ENGINE (VISIBLE TO USERS)
-####################################################
+#################################################
+# BLOG ENGINE
+#################################################
 
 @app.route("/api/engine/blog")
 def engine_blog():
@@ -155,9 +137,9 @@ def engine_blog():
     return jsonify(posts)
 
 
-####################################################
-# PWA FILES
-####################################################
+#################################################
+# PWA SUPPORT
+#################################################
 
 @app.route("/manifest.json")
 def manifest():
@@ -169,9 +151,9 @@ def service_worker():
     return send_from_directory("static", "sw.js")
 
 
-####################################################
+#################################################
 # MAIN DASHBOARD
-####################################################
+#################################################
 
 @app.route("/")
 def dashboard():
@@ -184,9 +166,9 @@ def dashboard():
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link rel="manifest" href="/manifest.json">
+<title>SupportRD</title>
 
-<title>SupportRD Dashboard</title>
+<link rel="manifest" href="/manifest.json">
 
 <link rel="stylesheet" href="/static/style.css">
 
@@ -194,27 +176,24 @@ def dashboard():
 
 <body>
 
-<div id="nav">
+<div id="app">
 
-<button onclick="showPanel('feed')">Home</button>
-<button onclick="showPanel('shop')">Shop</button>
-<button onclick="showPanel('scan')">Scan</button>
-<button onclick="startVoice()">ARIA</button>
-
+<div class="header">
+SupportRD
 </div>
 
-<div id="dashboard">
 
-<div class="widget" id="feed">
+<div class="panel" id="feed">
 
-<h2>Community Feed</h2>
+<h2>Community</h2>
 
-<p>Users can share routines, tips, and results.</p>
+<p>Share routines, results, and hair journeys.</p>
 
 </div>
 
 
-<div class="widget" id="shop">
+
+<div class="panel" id="shop" style="display:none">
 
 <h2>Shop</h2>
 
@@ -223,33 +202,69 @@ def dashboard():
 </div>
 
 
-<div class="widget" id="scan">
+
+<div class="panel" id="scan" style="display:none">
 
 <h2>Hair Scan</h2>
 
 <video id="camera" autoplay></video>
 
-<button onclick="startCamera()">Start Scan</button>
+<br><br>
+
+<button onclick="startCamera()">
+Start Scan
+</button>
 
 </div>
 
 
-<div class="widget" id="engine">
 
-<h2>Marketing Engine</h2>
+<div class="panel" id="engine" style="display:none">
 
-<div id="engineData"></div>
+<h2>Growth Stories</h2>
+
+<p>Your ideas are spreading today.</p>
+
+<button onclick="openEngine()">
+View Stories
+</button>
 
 </div>
 
 </div>
+
+
+
+<div id="nav">
+
+<div id="nav-feed" class="navItem active" onclick="showPanel('feed')">
+<span class="navIcon">🏠</span>
+Home
+</div>
+
+<div id="nav-shop" class="navItem" onclick="showPanel('shop')">
+<span class="navIcon">🛍</span>
+Shop
+</div>
+
+<div id="nav-scan" class="navItem" onclick="showPanel('scan')">
+<span class="navIcon">📷</span>
+Scan
+</div>
+
+<div class="navItem" onclick="startVoice()">
+<span class="navIcon">✨</span>
+ARIA
+</div>
+
+</div>
+
 
 
 <div id="voiceIndicator">
-
 ARIA Listening...
-
 </div>
+
 
 
 <div id="enginePopup">
@@ -258,7 +273,7 @@ ARIA Listening...
 
 <button onclick="closeEngine()">Close</button>
 
-<h2>SEO Blog Engine</h2>
+<h2>Hair Stories</h2>
 
 <div id="blogList"></div>
 
@@ -267,7 +282,6 @@ ARIA Listening...
 </div>
 
 
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <script src="/static/app.js"></script>
 
@@ -277,9 +291,9 @@ ARIA Listening...
 """
 
 
-####################################################
+#################################################
 # RUN SERVER
-####################################################
+#################################################
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
