@@ -502,6 +502,10 @@ function setupFamilyMode(){
     document.body.classList.toggle("family-mode", on)
     localStorage.setItem("familyMode", on ? "on" : "off")
     toast(on ? "Family Friendly Mode On" : "Family Friendly Mode Off")
+    if(on){
+      // Route to primary family-friendly page
+      window.location.href = "https://supportrd.com"
+    }
   })
 }
 
@@ -513,20 +517,29 @@ window.addEventListener("DOMContentLoaded", ()=>{
     ariaEl.innerHTML = state.ariaHistory.length ? state.ariaHistory.map(x=>`<div>${x}</div>`).join("") : "No history yet."
   }
 
-  setupTabs()
-  setupThemeArrows()
-  setupModals()
-  setupPaymentChooser()
-  setupPostActions()
-  setupScanUpload()
-  setupGPS()
-  setupAria()
-  setupSEOLogs()
-  setupReel()
-  setupCamera()
-  setupSettings()
-  setupPwa()
-  setupFamilyMode()
-  setupAppsDock()
-  loadProducts()
+  const safe = (fn)=>{ try{ fn() }catch(e){ console.error(e) } }
+  safe(setupTabs)
+  safe(setupThemeArrows)
+  safe(setupModals)
+  safe(setupPaymentChooser)
+  safe(setupPostActions)
+  safe(setupScanUpload)
+  safe(setupGPS)
+  safe(setupAria)
+  safe(setupSEOLogs)
+  safe(setupReel)
+  safe(setupCamera)
+  safe(setupSettings)
+  safe(setupPwa)
+  safe(setupFamilyMode)
+  safe(setupAppsDock)
+  safe(loadProducts)
+
+  // Fallback: open any data-link button
+  document.body.addEventListener("click", (e)=>{
+    const el = e.target.closest("[data-link]")
+    if(el && el.dataset.link){
+      window.open(el.dataset.link, "_blank")
+    }
+  })
 })
