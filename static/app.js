@@ -461,6 +461,20 @@ async function loadProducts(){
   }
 }
 
+function setupFamilyMode(){
+  const toggle = qs("#familyToggle")
+  if(!toggle) return
+  const saved = localStorage.getItem("familyMode") === "on"
+  toggle.checked = saved
+  document.body.classList.toggle("family-mode", saved)
+  toggle.addEventListener("change", ()=>{
+    const on = toggle.checked
+    document.body.classList.toggle("family-mode", on)
+    localStorage.setItem("familyMode", on ? "on" : "off")
+    toast(on ? "Family Friendly Mode On" : "Family Friendly Mode Off")
+  })
+}
+
 window.addEventListener("DOMContentLoaded", ()=>{
   const savedHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
   state.ariaHistory = savedHistory
@@ -482,5 +496,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
   setupCamera()
   setupSettings()
   setupPwa()
+  setupFamilyMode()
   loadProducts()
 })
