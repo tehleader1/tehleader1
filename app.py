@@ -1,93 +1,45 @@
-import os
-import json
+from flask import Flask, jsonify, request, send_from_directory
 import sqlite3
-import datetime
-import hashlib
-import secrets
+import os
 import requests
 
-from flask import Flask, request, jsonify, render_template_string
+app = Flask(__name__, static_folder="static")
 
-app = Flask(__name__)
+DATABASE = "users.db"
 
-AUTH_DB="users.db"
+SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE")
+SHOPIFY_STOREFRONT_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN")
 
-SHOPIFY_STORE=os.environ.get("SHOPIFY_STORE","")
-SHOPIFY_STOREFRONT_TOKEN=os.environ.get("SHOPIFY_STOREFRONT_TOKEN","")
-
-###################################
+################################################
 # DATABASE
-###################################
+################################################
 
-def get_db():
-    con=sqlite3.connect(AUTH_DB)
-    con.row_factory=sqlite3.Row
-    return con
+def db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-def init_db():
+################################################
+# SHOPIFY PRODUCTS
+################################################
 
-    con=get_db()
+def shopify_products():
 
-    con.execute("""
-    CREATE TABLE IF NOT EXISTS users(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE,
-    name TEXT,
-    password_hash TEXT,
-    created_at TEXT
-    )
-    """)
-
-    con.commit()
-    con.close()
-
-init_db()
-
-###################################
-# AUTH
-###################################
-
-def hash_password(pw):
-    return hashlib.sha256(pw.encode()).hexdigest()
-
-@app.route("/api/auth/register",methods=["POST"])
-def register():
-
-    data=request.json
-
-    email=data["email"]
-    pw=hash_password(data["password"])
-
-    con=get_db()
-    con.execute(
-    "INSERT INTO users(email,password_hash,created_at) VALUES(?,?,?)",
-    (email,pw,datetime.datetime.utcnow().isoformat())
-    )
-
-    con.commit()
-    con.close()
-
-    return jsonify({"ok":True})
-
-###################################
-# SHOPIFY
-###################################
-
-def shopify_get_products():
-
-    if not SHOPIFY_STOREFRONT_TOKEN:
+    if not SHOPIFY_STORE or not SHOPIFY_STOREFRONT_TOKEN:
         return []
 
-    query="""
+    query = """
     {
-      products(first:10){
+      products(first:12){
         edges{
           node{
-            id
             title
             handle
-            description
-            images(first:1){edges{node{url}}}
+            images(first:1){
+              edges{
+                node{url}
+              }
+            }
             variants(first:1){
               edges{
                 node{
@@ -102,7 +54,7 @@ def shopify_get_products():
     }
     """
 
-    r=requests.post(
+    r = requests.post(
         f"https://{SHOPIFY_STORE}/api/2024-01/graphql.json",
         json={"query":query},
         headers={
@@ -110,196 +62,105 @@ def shopify_get_products():
         }
     )
 
-    data=r.json()
+    data = r.json()
 
-    products=[]
+    products = []
 
     for p in data["data"]["products"]["edges"]:
-        node=p["node"]
-        v=node["variants"]["edges"][0]["node"]
+
+        node = p["node"]
+        v = node["variants"]["edges"][0]["node"]
 
         products.append({
-            "id":v["id"],
-            "title":node["title"],
-            "price":v["price"]["amount"],
-            "handle":node["handle"]
+            "title": node["title"],
+            "price": v["price"]["amount"],
+            "variant": v["id"],
+            "image": node["images"]["edges"][0]["node"]["url"]
         })
 
     return products
 
-@app.route("/api/shop/products")
-def shop_products():
+################################################
+# API
+################################################
 
-    return jsonify({
-        "products":shopify_get_products()
-    })
+@app.route("/api/products")
+def products():
+    return jsonify(shopify_products())
 
-###################################
-# CART
-###################################
+@app.route("/api/checkout", methods=["POST"])
+def checkout():
 
-@app.route("/api/shop/cart",methods=["POST"])
-def shop_cart():
+    data = request.json
+    variant = data["variant"]
 
-    data=request.json
+    checkout = f"https://{SHOPIFY_STORE}/cart/{variant}:1"
 
-    variant=data["variantId"]
+    return jsonify({"url":checkout})
 
-    checkout=f"https://{SHOPIFY_STORE}/cart/{variant}:1"
+################################################
+# PWA FILES
+################################################
 
-    return jsonify({
-        "ok":True,
-        "checkoutUrl":checkout
-    })
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory("static","manifest.json")
 
-###################################
+@app.route("/sw.js")
+def sw():
+    return send_from_directory("static","sw.js")
+
+################################################
 # DASHBOARD
-###################################
+################################################
 
 @app.route("/")
 def dashboard():
 
-    return render_template_string("""
+    return """
+<!DOCTYPE html>
 <html>
 
 <head>
 
-<style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-body{
-background:#0b0b0b;
-color:white;
-font-family:system-ui;
-margin:0;
-}
+<link rel="manifest" href="/manifest.json">
 
-#grid{
-display:grid;
-grid-template-columns:240px 1fr 400px;
-height:100vh;
-}
+<title>SupportRD</title>
 
-#sidebar{
-background:#111;
-padding:20px;
-}
-
-#main{
-padding:20px;
-overflow:auto;
-}
-
-#shop{
-background:#111;
-padding:20px;
-}
-
-.product{
-border:1px solid #333;
-padding:10px;
-margin-bottom:10px;
-}
-
-button{
-padding:6px 10px;
-}
-
-</style>
+<link rel="stylesheet" href="/static/style.css">
 
 </head>
 
 <body>
 
-<div id="grid">
+<div id="nav">
 
-<div id="sidebar">
-
-<h2>ARIA</h2>
-
-<button onclick="loadProducts()">Shop</button>
-
-</div>
-
-<div id="main">
-
-<h2>Feed</h2>
-
-<div id="feed"></div>
+<button>Home</button>
+<button>Shop</button>
+<button>Scan</button>
+<button>Aria</button>
 
 </div>
 
-<div id="shop">
+<div id="dashboard">
 
-<h2>Products</h2>
-
-<div id="products"></div>
-
-</div>
-
-</div>
-
-<script>
-
-async function loadProducts(){
-
-let r=await fetch("/api/shop/products")
-let d=await r.json()
-
-document.getElementById("products").innerHTML=
-d.products.map(p=>`
-<div class="product">
-
-<b>${p.title}</b>
-
-<br>
-
-$${p.price}
-
-<br><br>
-
-<button onclick="buy('${p.id}')">
-Buy
-</button>
+<div class="widget" id="feed">Community Feed</div>
+<div class="widget" id="products">Products</div>
+<div class="widget">Hair Routine</div>
+<div class="widget">Events</div>
 
 </div>
-`).join("")
 
-}
-
-async function buy(id){
-
-let r=await fetch("/api/shop/cart",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({variantId:id})
-})
-
-let d=await r.json()
-
-window.open(d.checkoutUrl)
-
-}
-
-loadProducts()
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="/static/app.js"></script>
 
 </body>
-
 </html>
-""")
+"""
 
-###################################
-# ENGINE ROUTES
-###################################
+################################################
 
-try:
-    from engine_routes import register_engine_routes
-    register_engine_routes(app)
-except:
-    pass
-
-###################################
-
-if __name__=="__main__":
+if __name__ == "__main__":
     app.run()
