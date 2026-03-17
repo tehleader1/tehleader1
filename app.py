@@ -1,4 +1,4 @@
-from flask import Flask,jsonify,request,Response,send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 import os
 import requests
 import time
@@ -6,29 +6,44 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from openai import OpenAI
 
 from engine_routes import engine
-from content_engine import trending_products,reorder_suggestions
+from content_engine import trending_products, reorder_suggestions
 
-app=Flask(__name__,static_folder="static")
+app = Flask(__name__, static_folder="static")
 
 app.register_blueprint(engine)
 
 #################################################
-# API KEYS
+# ENVIRONMENT
 #################################################
 
-OPENAI_KEY=os.environ.get("OPENAI_API_KEY")
-client=OpenAI(api_key=OPENAI_KEY)
+OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
 
-SHOPIFY_STORE=os.environ.get("SHOPIFY_STORE","")
-SHOPIFY_TOKEN=os.environ.get("SHOPIFY_STOREFRONT_TOKEN","")
+client = None
+if OPENAI_KEY:
+    client = OpenAI(api_key=OPENAI_KEY)
+
+SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "")
+SHOPIFY_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
 
 #################################################
 # CACHE
 #################################################
 
-PRODUCT_CACHE=[]
-PRODUCT_CACHE_TIME=0
-CACHE_TTL=300
+PRODUCT_CACHE = []
+PRODUCT_CACHE_TIME = 0
+CACHE_TTL = 300
+
+#################################################
+# HEALTH CHECKS
+#################################################
+
+@app.route("/health")
+def health():
+    return {"status": "healthy"}
+
+@app.route("/api/ping")
+def ping():
+    return {"status": "ok"}
 
 #################################################
 # PRODUCTS
@@ -36,97 +51,101 @@ CACHE_TTL=300
 
 def get_products():
 
-    global PRODUCT_CACHE,PRODUCT_CACHE_TIME
+    global PRODUCT_CACHE, PRODUCT_CACHE_TIME
 
-    if time.time()-PRODUCT_CACHE_TIME<CACHE_TTL:
+    now = time.time()
+
+    if PRODUCT_CACHE and now - PRODUCT_CACHE_TIME < CACHE_TTL:
         return PRODUCT_CACHE
 
-    query="""
+    if not SHOPIFY_STORE:
+        return []
+
+    query = """
     {
-    products(first:10){
-    edges{
-    node{
-    title
-    images(first:1){
-    edges{node{url}}
-    }
-    variants(first:1){
-    edges{node{id price{amount}}}
-    }
-    }
-    }
-    }
+      products(first:10){
+        edges{
+          node{
+            title
+            images(first:1){
+              edges{node{url}}
+            }
+            variants(first:1){
+              edges{node{id price{amount}}}
+            }
+          }
+        }
+      }
     }
     """
 
     try:
 
-        r=requests.post(
+        r = requests.post(
+            f"https://{SHOPIFY_STORE}/api/2024-01/graphql.json",
+            json={"query": query},
+            headers={
+                "X-Shopify-Storefront-Access-Token": SHOPIFY_TOKEN
+            },
+            timeout=6
+        )
 
-        f"https://{SHOPIFY_STORE}/api/2024-01/graphql.json",
+        data = r.json()
 
-        json={"query":query},
-
-        headers={
-        "X-Shopify-Storefront-Access-Token":SHOPIFY_TOKEN
-        })
-
-        data=r.json()
-
-        products=[]
+        products = []
 
         for p in data["data"]["products"]["edges"]:
 
-            node=p["node"]
-            v=node["variants"]["edges"][0]["node"]
+            node = p["node"]
+            v = node["variants"]["edges"][0]["node"]
 
             products.append({
-
-            "title":node["title"],
-            "price":v["price"]["amount"],
-            "variant":v["id"],
-            "image":node["images"]["edges"][0]["node"]["url"]
-
+                "title": node["title"],
+                "price": v["price"]["amount"],
+                "variant": v["id"],
+                "image": node["images"]["edges"][0]["node"]["url"]
             })
 
-        PRODUCT_CACHE=products
-        PRODUCT_CACHE_TIME=time.time()
+        PRODUCT_CACHE = products
+        PRODUCT_CACHE_TIME = now
 
         return products
 
     except:
-
         return []
 
 @app.route("/api/products")
 def products():
-
     return jsonify(get_products())
 
 #################################################
 # ARIA AI
 #################################################
 
-@app.route("/api/aria",methods=["POST"])
+@app.route("/api/aria", methods=["POST"])
 def aria():
 
-    msg=request.json.get("message")
+    if not client:
+        return {"reply": "AI unavailable"}
 
-    response=client.chat.completions.create(
+    msg = request.json.get("message")
 
-    model="gpt-4o-mini",
+    try:
 
-    messages=[
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are ARIA, an AI hair expert."},
+                {"role": "user", "content": msg}
+            ]
+        )
 
-    {"role":"system","content":"You are ARIA hair care AI assistant."},
+        reply = response.choices[0].message.content
 
-    {"role":"user","content":msg}
+        return {"reply": reply}
 
-    ])
-
-    reply=response.choices[0].message.content
-
-    return jsonify({"reply":reply})
+    except:
+        return {"reply": "AI error"}
 
 #################################################
 # MARKETING ENGINE
@@ -135,15 +154,15 @@ def aria():
 @app.route("/api/engine/marketing")
 def marketing():
 
-    products=get_products()
+    products = get_products()
 
-    return jsonify({
+    return {
 
-    "trending":trending_products(products),
+        "trending": trending_products(products),
 
-    "reorders":reorder_suggestions(products)
+        "reorders": reorder_suggestions(products)
 
-    })
+    }
 
 #################################################
 # BACKGROUND ENGINE
@@ -151,40 +170,39 @@ def marketing():
 
 def engine_loop():
 
-    print("AI engine running")
+    try:
+        get_products()
+    except:
+        pass
 
-    get_products()
 
-scheduler=BackgroundScheduler()
+scheduler = BackgroundScheduler()
 
-scheduler.add_job(engine_loop,"interval",minutes=30)
+scheduler.add_job(
+    engine_loop,
+    "interval",
+    minutes=30
+)
 
 scheduler.start()
 
 #################################################
-# DASHBOARD
+# STATIC FILES
 #################################################
 
 @app.route("/")
 def home():
-
-    return send_from_directory("static","index.html")
-
-#################################################
-# PWA FILES
-#################################################
+    return send_from_directory("static", "index.html")
 
 @app.route("/manifest.json")
 def manifest():
-
-    return send_from_directory("static","manifest.json")
+    return send_from_directory("static", "manifest.json")
 
 @app.route("/sw.js")
 def sw():
-
-    return send_from_directory("static","sw.js")
+    return send_from_directory("static", "sw.js")
 
 #################################################
 
-if __name__=="__main__":
-    app.run(host="0.0.0.0",port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
