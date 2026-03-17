@@ -112,3 +112,9 @@ body:hover .theme-side{opacity:0.6;box-shadow:0 0 40px rgba(124,243,209,0.35);}
 @media (max-width:900px){.topbar{flex-direction:column;align-items:flex-start;}.theme-side{display:none;} .center-stage{min-height:auto;}}
 
 .custom-iframe{width:100%;height:80vh;border:none;border-radius:16px;background:white;}
+
+.scan-upload{position:relative;overflow:hidden;}
+.scan-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+
+.scan-preview{margin:10px 0;display:none;}
+.scan-preview img{width:100%;border-radius:14px;border:1px solid rgba(255,255,255,0.2);}

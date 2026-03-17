@@ -31,6 +31,37 @@ function toast(msg){
   el._t = setTimeout(()=>{el.style.display="none"}, 2200)
 }
 
+function beep(freq = 880, duration = 120){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = "sine"
+    osc.frequency.value = freq
+    gain.gain.value = 0.08
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    setTimeout(()=>{osc.stop(); ctx.close()}, duration)
+  }catch{}
+}
+
+async function askAria(msg){
+  if(!msg) return
+  appendAria(`You: ${msg}`)
+  try{
+    const r = await fetch("/api/aria",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message: msg})
+    })
+    const d = await r.json()
+    appendAria(`ARIA: ${d.reply || "AI unavailable"}`)
+  }catch{
+    appendAria("ARIA: AI unavailable")
+  }
+}
+
 function setupTabs(){
   qsa(".tab-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -167,9 +198,23 @@ function setupPostActions(){
       const tag = btn.dataset.aria
       const textarea = qs("#postInput")
       textarea.value = `Hair check: ${tag}. Please recommend routine and product match.`
-      toast(`ARIA queued: ${tag}`)
-      appendAria(`User flagged ${tag}. Give routine.`)
+      beep(960, 140)
+      askAria(`My issue is ${tag}. Suggest a routine and product.`)
     })
+  })
+}
+
+function setupScanUpload(){
+  const input = qs("#scanUpload")
+  const preview = qs("#scanPreview")
+  if(!input || !preview) return
+  input.addEventListener("change", ()=>{
+    const file = input.files[0]
+    if(!file) return
+    const url = URL.createObjectURL(file)
+    preview.innerHTML = `<img src="${url}" alt="Scan">`
+    preview.style.display = "block"
+    toast("3D scan photo attached")
   })
 }
 
@@ -207,7 +252,27 @@ async function findSalons(){
 }
 
 function setupAria(){
-  qs("#voiceToggle").addEventListener("click", ()=>toast("ARIA listening"))
+  const btn = qs("#voiceToggle")
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+
+  btn.addEventListener("click", ()=>{
+    beep(720, 120)
+    if(!SpeechRecognition){
+      toast("Voice not supported")
+      return
+    }
+    const rec = new SpeechRecognition()
+    rec.lang = qs("#ariaLanguage")?.value || "en-US"
+    rec.interimResults = false
+    rec.maxAlternatives = 1
+    rec.onstart = ()=>toast("ARIA listening...")
+    rec.onresult = (e)=>{
+      const text = e.results[0][0].transcript
+      askAria(text)
+    }
+    rec.onerror = ()=>toast("Voice error")
+    rec.start()
+  })
 }
 
 function appendAria(text){
@@ -310,6 +375,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   setupModals()
   setupPaymentChooser()
   setupPostActions()
+  setupScanUpload()
   setupGPS()
   setupAria()
   setupSEOLogs()
