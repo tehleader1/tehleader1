@@ -3,36 +3,38 @@ import os
 import requests
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
+from openai import OpenAI
 
 app = Flask(__name__, static_folder="static")
 
 #################################################
-# SHOPIFY CONFIG
+# API KEYS
 #################################################
+
+OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_KEY)
 
 SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "")
 SHOPIFY_STOREFRONT_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
 
 #################################################
-# SIMPLE CACHE SYSTEM
+# CACHE SYSTEM
 #################################################
 
 PRODUCT_CACHE = []
 PRODUCT_CACHE_TIME = 0
 CACHE_TTL = 300
 
-
 #################################################
-# HEALTH CHECK (RENDER)
+# HEALTH CHECK
 #################################################
 
 @app.route("/api/ping")
 def ping():
     return {"status": "ok"}
 
-
 #################################################
-# SHOPIFY PRODUCT LOADER
+# SHOPIFY PRODUCTS
 #################################################
 
 def get_products():
@@ -114,10 +116,6 @@ def get_products():
         return []
 
 
-#################################################
-# API ROUTES
-#################################################
-
 @app.route("/api/products")
 def api_products():
     return jsonify(get_products())
@@ -131,6 +129,45 @@ def checkout():
     checkout_url = f"https://{SHOPIFY_STORE}/cart/{variant}:1"
 
     return jsonify({"url": checkout_url})
+
+#################################################
+# ARIA AI ASSISTANT
+#################################################
+
+@app.route("/api/aria", methods=["POST"])
+def aria():
+
+    user_message = request.json.get("message")
+
+    try:
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are ARIA, a friendly AI hair care assistant. Give short practical hair advice and recommend routines."
+                },
+                {
+                    "role": "user",
+                    "content": user_message
+                }
+            ]
+        )
+
+        reply = response.choices[0].message.content
+
+        return jsonify({
+            "reply": reply
+        })
+
+    except Exception as e:
+
+        print("ARIA error:", e)
+
+        return jsonify({
+            "reply": "Sorry, ARIA is having trouble right now."
+        })
 
 
 #################################################
@@ -164,35 +201,19 @@ def engine_blog():
 
     return jsonify(posts)
 
-
 #################################################
-# BACKGROUND MARKETING ENGINE
+# BACKGROUND ENGINE
 #################################################
 
 def marketing_engine():
 
-    print("Running background marketing engine...")
+    print("Running background marketing engine")
 
     try:
-
-        # refresh product cache
         get_products()
-
-        # here you could also call:
-        # generate blog content
-        # run SEO updates
-        # post to Pinterest / Reddit etc
-
-        print("Marketing engine cycle complete")
-
     except Exception as e:
+        print("Engine error:", e)
 
-        print("Marketing engine error:", e)
-
-
-#################################################
-# START SCHEDULER
-#################################################
 
 scheduler = BackgroundScheduler()
 
@@ -203,7 +224,6 @@ scheduler.add_job(
 )
 
 scheduler.start()
-
 
 #################################################
 # PWA FILES
@@ -218,9 +238,8 @@ def manifest():
 def service_worker():
     return send_from_directory("static", "sw.js")
 
-
 #################################################
-# DASHBOARD HTML
+# DASHBOARD PAGE
 #################################################
 
 DASHBOARD_HTML = """
@@ -250,7 +269,6 @@ SupportRD
 <div class="panel" id="feed">
 
 <h2>Community</h2>
-
 <p>Share routines, results, and hair journeys.</p>
 
 </div>
@@ -258,7 +276,6 @@ SupportRD
 <div class="panel" id="shop" style="display:none">
 
 <h2>Shop</h2>
-
 <div id="products"></div>
 
 </div>
@@ -266,7 +283,6 @@ SupportRD
 <div class="panel" id="scan" style="display:none">
 
 <h2>Hair Scan</h2>
-
 <video id="camera" autoplay></video>
 
 <br><br>
@@ -277,15 +293,17 @@ Start Scan
 
 </div>
 
-<div class="panel" id="engine" style="display:none">
+<div class="panel" id="aria" style="display:none">
 
-<h2>Growth Stories</h2>
+<h2>ARIA AI</h2>
 
-<p>Your ideas are spreading today.</p>
+<input id="ariaInput" placeholder="Ask ARIA about your hair..." />
 
-<button onclick="openEngine()">
-View Stories
+<button onclick="askAria()">
+Ask
 </button>
+
+<div id="ariaReply"></div>
 
 </div>
 
@@ -308,27 +326,9 @@ Shop
 Scan
 </div>
 
-<div class="navItem" onclick="startVoice()">
+<div id="nav-aria" class="navItem" onclick="showPanel('aria')">
 <span class="navIcon">✨</span>
 ARIA
-</div>
-
-</div>
-
-<div id="voiceIndicator">
-ARIA Listening...
-</div>
-
-<div id="enginePopup">
-
-<div id="enginePopupContent">
-
-<button onclick="closeEngine()">Close</button>
-
-<h2>Hair Stories</h2>
-
-<div id="blogList"></div>
-
 </div>
 
 </div>
@@ -340,10 +340,6 @@ ARIA Listening...
 </html>
 """
 
-
-#################################################
-# MAIN PAGE
-#################################################
 
 @app.route("/")
 def dashboard():
