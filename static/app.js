@@ -1,55 +1,16 @@
-function showPanel(panel){
+async function askAria(){
 
-document.querySelectorAll(".panel").forEach(p=>{
-p.style.display="none"
-})
+let msg=document.getElementById("ariaInput").value
 
-document.getElementById(panel).style.display="block"
-
-}
-
-async function loadProducts(){
-
-let r = await fetch("/api/products")
-let data = await r.json()
-
-let html=""
-
-data.forEach(p=>{
-
-html+=`
-<div class="product">
-
-<img src="${p.image}">
-
-<h3>${p.title}</h3>
-
-<p>$${p.price}</p>
-
-<button onclick="buy('${p.variant}')">
-Buy
-</button>
-
-</div>
-`
-
-})
-
-document.getElementById("products").innerHTML=html
-
-}
-
-async function buy(v){
-
-let r = await fetch("/api/checkout",{
+let r=await fetch("/api/aria",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({variant:v})
+body:JSON.stringify({message:msg})
 })
 
-let d = await r.json()
+let d=await r.json()
 
-window.open(d.url)
+document.getElementById("ariaReply").innerText=d.reply
 
 }
 
@@ -62,19 +23,36 @@ document.getElementById("camera").srcObject=stream
 
 }
 
-async function askAria(){
+async function scanHair(){
 
-let input = document.getElementById("ariaInput").value
+let r=await fetch("/api/hair-scan",{method:"POST"})
+let d=await r.json()
 
-let r = await fetch("/api/aria",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({message:input})
+document.getElementById("scanResults").innerText=
+"Damage:"+d.damage+" Hydration:"+d.hydration
+
+}
+
+async function loadProducts(){
+
+let r=await fetch("/api/products")
+let p=await r.json()
+
+let html=""
+
+p.forEach(x=>{
+
+html+=`
+<div>
+<img src="${x.image}" width="120">
+<p>${x.title}</p>
+<p>$${x.price}</p>
+</div>
+`
+
 })
 
-let data = await r.json()
-
-document.getElementById("ariaReply").innerText = data.reply
+document.getElementById("products").innerHTML=html
 
 }
 
