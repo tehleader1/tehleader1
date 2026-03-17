@@ -17,12 +17,13 @@ const BLOG_POSTS = [
   {title:"All‑in‑one product success stories", body:"Fast routines using the all‑in‑one product for shine, softness, and reduced breakage."}
 ]
 
-const state = {
-  themeIndex: 0,
-  blogIndex: 0,
-  ariaHistory: [],
-  socialLinks: {}
-}
+  const state = {
+    themeIndex: 0,
+    blogIndex: 0,
+    ariaHistory: [],
+    socialLinks: {},
+    hairScore: 0
+  }
 
 function toast(msg){
   const el = qs("#toast")
@@ -47,6 +48,24 @@ function beep(freq = 880, duration = 120){
   }catch{}
 }
 
+function initHairScore(){
+  const saved = Number(localStorage.getItem("hairScore") || "")
+  if(Number.isFinite(saved) && saved > 0){
+    state.hairScore = Math.min(100, Math.max(1, saved))
+    return
+  }
+  state.hairScore = 55 + Math.floor(Math.random() * 35)
+  localStorage.setItem("hairScore", String(state.hairScore))
+}
+
+function bumpHairScore(delta){
+  const next = Math.min(100, Math.max(0, state.hairScore + delta))
+  if(next !== state.hairScore){
+    state.hairScore = next
+    localStorage.setItem("hairScore", String(state.hairScore))
+  }
+}
+
 async function askAria(msg){
   if(!msg) return
   appendAria(`You: ${msg}`)
@@ -58,6 +77,7 @@ async function askAria(msg){
     })
     const d = await r.json()
     appendAria(`ARIA: ${d.reply || "AI unavailable"}`)
+    bumpHairScore(1)
   }catch{
     appendAria("ARIA: AI unavailable")
   }
@@ -118,224 +138,91 @@ function setupModals(){
   qs("#blogPrev").addEventListener("click", ()=>{state.blogIndex = (state.blogIndex - 1 + BLOG_POSTS.length) % BLOG_POSTS.length; renderBlog()})
   qs("#blogNext").addEventListener("click", ()=>{state.blogIndex = (state.blogIndex + 1) % BLOG_POSTS.length; renderBlog()})
 
-  qsa(".app-card").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const link = btn.dataset.link
-      if(link){
-        window.open(link, "_blank")
-        return
-      }
-      const name = btn.dataset.app
-      if(name === "Settings"){
-        openModal("settingsModal")
-        return
-      }
-      if(name === "Blog"){
-        state.blogIndex = 0
-        renderBlog()
-        openModal("blogModal")
-        return
-      }
-      renderApp(name)
-      openModal("appModal")
+    qsa("#appsRow .app-card").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const name = btn.dataset.app
+        if(name && name.includes("Donate")){
+          renderApp(name)
+          openModal("appModal")
+          return
+        }
+        const link = btn.dataset.link
+        if(link){
+          window.open(link, "_blank")
+          return
+        }
+        if(name === "Settings"){
+          openModal("settingsModal")
+          return
+        }
+        if(name === "Blog"){
+          state.blogIndex = 0
+          renderBlog()
+          openModal("blogModal")
+          return
+        }
+        if(name === "Gift Shop"){
+          openModal("giftModal")
+          return
+        }
+        if(name === "TV Reel"){
+          openModal("reelModal")
+          return
+        }
+        if(name === "SEO Engine Viewer"){
+          openModal("seoModal")
+          return
+        }
+        if(name === "Camera"){
+          openModal("cameraModal")
+          return
+        }
+        if(name === "Occasion Editor"){
+          openModal("occasionModal")
+          return
+        }
+        if(name === "Subscription Banner"){
+          openModal("subscriptionModal")
+          return
+        }
+        bumpHairScore(1)
+        renderApp(name)
+        openModal("appModal")
+      })
     })
-  })
 
   qsa(".gift-card .btn").forEach(btn=>{
     btn.addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
   })
 }
 
-function setupAppsDock(){
-  const row = qs("#appsRow")
-  const select = qs("#appSwapSelect")
-  if(!row || !select) return
-
-  const allApps = [
-    "Blog",
-    "Snapshot Coder Idea",
-    "Live Coder Suggestions",
-    "Donate to the Poor · Auto Dissolve Bar",
-    "Settings",
-    "Contact Anthony · Developer"
-  ]
-
-  select.innerHTML = '<option value=\"\">Replace Selected App…</option>' + allApps.map(a=>`<option value=\"${a}\">${a}</option>`).join("")
-
-  let activeCard = null
-  row.querySelectorAll(".app-card").forEach(card=>{
-    card.addEventListener("click", ()=>{
-      row.querySelectorAll(".app-card").forEach(c=>c.classList.remove("active"))
-      card.classList.add("active")
-      activeCard = card
-    })
-  })
-
-  select.addEventListener("change", ()=>{
-    if(!activeCard || !select.value) return
-    activeCard.textContent = select.value
-    activeCard.dataset.app = select.value.replace(" · Developer","Contact Anthony")
-    if(select.value.includes("Donate")){\n      activeCard.dataset.link = LINKS.donate\n    } else {\n      activeCard.dataset.link = \"\"\n    }\n    select.value = \"\"\n    toast(\"App replaced\")\n  })\n\n+  // drag to reorder\n+  let dragEl = null\n+  row.addEventListener(\"pointerdown\", e=>{\n+    const card = e.target.closest(\".app-card\")\n+    if(!card) return\n+    dragEl = card\n+    card.classList.add(\"dragging\")\n+    card.setPointerCapture(e.pointerId)\n+  })\n+  row.addEventListener(\"pointermove\", e=>{\n+    if(!dragEl) return\n+    const el = document.elementFromPoint(e.clientX, e.clientY)\n+    const target = el && el.closest(\".app-card\")\n+    if(target && target !== dragEl && target.parentElement === row){\n+      const rect = target.getBoundingClientRect()\n+      const insertBefore = e.clientX < rect.left + rect.width / 2\n+      row.insertBefore(dragEl, insertBefore ? target : target.nextSibling)\n+    }\n+  })\n+  row.addEventListener(\"pointerup\", ()=>{\n+    if(!dragEl) return\n+    dragEl.classList.remove(\"dragging\")\n+    dragEl = null\n+  })\n+}\n+\n window.addEventListener("DOMContentLoaded", ()=>{
-function openModal(id){
-  qs("#" + id).style.display = "flex"
-}
-
-function bindOpen(triggerId, modalId){
-  const el = qs("#" + triggerId)
-  if(el){
-    el.addEventListener("click", ()=>openModal(modalId))
-  }
-}
-
-function bindClose(triggerId, modalId){
-  const el = qs("#" + triggerId)
-  if(el){
-    el.addEventListener("click", ()=>qs("#" + modalId).style.display = "none")
-  }
-}
-
-function renderBlog(){
-  const post = BLOG_POSTS[state.blogIndex]
-  qs("#blogTitle").textContent = post.title
-  qs("#blogBody").textContent = post.body
-}
-
-function setupPaymentChooser(){
-  const select = qs("#paymentSelect")
-  const view = qs("#paymentView")
-
-  function render(){
-    const val = select.value
-    if(val === "evelyn"){
-      view.innerHTML = `<p>Custom order with Evelyn.</p><button class="btn" id="openCustomOrder">Open Custom Order</button>`
-      qs("#openCustomOrder").addEventListener("click", ()=>openModal("customOrderModal"))
-      return
-    }
-    if(val === "premium"){
-      view.innerHTML = `<p>$35 PREMIUM subscription.</p><button class="btn" id="goPremium">Pay $35</button>`
-      qs("#goPremium").addEventListener("click", ()=>window.open(LINKS.premium, "_blank"))
-      return
-    }
-    if(val === "pro"){
-      view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><button class="btn" id="goPro">Pay $50</button>`
-      qs("#goPro").addEventListener("click", ()=>window.open(LINKS.pro, "_blank"))
-      return
-    }
-    view.innerHTML = `<p>Thanks for supporting. Tips go through custom order.</p><button class="btn" id="goTip">Send Tip</button>`
-    qs("#goTip").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
-  }
-
-  select.addEventListener("change", render)
-  render()
-}
-
-function setupPostActions(){
-  qs("#postSocials").addEventListener("click", ()=>{
-    const links = Object.values(state.socialLinks).filter(Boolean)
-    if(!links.length){
-      toast("No social links saved yet")
-      return
-    }
-    links.forEach((l)=>window.open(l, "_blank"))
-    toast("Post sent to all socials")
-  })
-  qs("#sendSocials").addEventListener("click", ()=>toast("Live status prepared for socials"))
-  qs("#liveStatus").addEventListener("click", ()=>toast("Live status set"))
-  qs("#contactEvelyn").addEventListener("click", ()=>openModal("customOrderModal"))
-  qs("#adCta").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
-
-  const paySelect = qs("#paySelect")
-  paySelect.addEventListener("change", ()=>{
-    openModal("subscriptionModal")
-    const mapping = {
-      "Payment with Evelyn": "evelyn",
-      "Tip to Developer": "tip5",
-      "Payment to Crystal": "tip10",
-      "Tip to Ramlin (Labor)": "tip20"
-    }
-    const target = mapping[paySelect.value] || "evelyn"
-    qs("#paymentSelect").value = target
-    qs("#paymentSelect").dispatchEvent(new Event("change"))
-  })
-
-  qsa(".scan-pill").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const tag = btn.dataset.aria
-      const textarea = qs("#postInput")
-      textarea.value = `Hair check: ${tag}. Please recommend routine and product match.`
-      beep(960, 140)
-      askAria(`My issue is ${tag}. Suggest a routine and product.`)
-    })
-  })
-}
-
-function setupScanUpload(){
-  const input = qs("#scanUpload")
-  const preview = qs("#scanPreview")
-  if(!input || !preview) return
-  input.addEventListener("change", ()=>{
-    const file = input.files[0]
-    if(!file) return
-    const url = URL.createObjectURL(file)
-    preview.innerHTML = `<img src="${url}" alt="Scan">`
-    preview.style.display = "block"
-    toast("3D scan photo attached")
-  })
-}
-
-function setupGPS(){
-  const map = qs("#gpsMap")
-  if(map){
-    map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-74.1%2C40.6%2C-73.7%2C40.9&layer=mapnik"
-  }
-
-  qs("#findSalons").addEventListener("click", ()=>{
-    qs("#salonResults").textContent = "Finding nearby salons..."
-    navigator.geolocation.getCurrentPosition((pos)=>{
-      const lat = pos.coords.latitude
-      const lon = pos.coords.longitude
-      if(map){
-        const bbox = `${lon-0.1}%2C${lat-0.08}%2C${lon+0.1}%2C${lat+0.08}`
-        map.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`
-      }
-      findSalons(lat, lon)
-    }, ()=>{
-      qs("#salonResults").textContent = "Location blocked."
-    })
-  })
-
-  qs("#gpsHandsFree").addEventListener("click", ()=>{
-    qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
-    qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
-    qs(".tab-btn[data-tab='handsfree']").classList.add("active")
-    qs("#tab-handsfree").classList.add("active")
-  })
-}
-
-async function findSalons(lat, lon){
-  try{
-    const r = await fetch("/api/salons",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({lat, lon})
-    })
-    const salons = await r.json()
-    if(!salons.length){
-      qs("#salonResults").textContent = "No salons found."
-      return
-    }
-    qs("#salonResults").innerHTML = salons.map(s=>`<div>${s.name} - ${s.distance} mi</div>`).join("")
-  }catch{
-    qs("#salonResults").textContent = "Salon lookup failed."
-  }
-}
-
 function setupAria(){
   const btn = qs("#voiceToggle")
+  const sphere = qs("#ariaSphere")
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+  const greetings = [
+    "Hello, how may I help you today with your hair issues?",
+    "Hi there! How can I help you with your hair today?",
+    "Hey! Tell me what’s going on with your hair and I’ll help.",
+    "Welcome back. What hair concern can I solve right now?",
+    "Hi! I’m ARIA — how can I support your hair routine today?"
+  ]
 
-  btn.addEventListener("click", ()=>{
-    beep(720, 120)
+  function greet(){
+    const greetText = greetings[Math.floor(Math.random() * greetings.length)]
+    appendAria(`ARIA: ${greetText}`)
+    try{
+      const utter = new SpeechSynthesisUtterance(greetText)
+      utter.rate = 1
+      utter.pitch = 1
+      utter.lang = qs("#ariaLanguage")?.value || "en-US"
+      window.speechSynthesis.cancel()
+      window.speechSynthesis.speak(utter)
+    }catch{}
+  }
+
+  function startListening(){
+    greet()
     if(!SpeechRecognition){
       toast("Voice not supported")
       return
@@ -351,165 +238,236 @@ function setupAria(){
     }
     rec.onerror = ()=>toast("Voice error")
     rec.start()
-  })
-}
-
-function appendAria(text){
-  state.ariaHistory.unshift(text)
-  if(state.ariaHistory.length > 6) state.ariaHistory.pop()
-  localStorage.setItem("ariaHistory", JSON.stringify(state.ariaHistory))
-  const ariaEl = qs("#ariaHistory")
-  if(ariaEl){
-    ariaEl.innerHTML = state.ariaHistory.map(x=>`<div>${x}</div>`).join("")
   }
-}
 
-function setupSEOLogs(){
-  const stream = qs("#logStream")
-  let timer = null
-
-  qs("#openSeo").addEventListener("click", ()=>{
-    if(timer) clearInterval(timer)
-    stream.innerHTML = ""
-    timer = setInterval(()=>{
-      const line = `[${new Date().toLocaleTimeString()}] render: build ok · cache hit · seo feed synced`
-      const div = document.createElement("div")
-      div.textContent = line
-      stream.appendChild(div)
-      stream.scrollTop = stream.scrollHeight
-    }, 800)
-  })
-
-  qs("#closeSeo").addEventListener("click", ()=>{
-    if(timer) clearInterval(timer)
-  })
-}
-
-function setupReel(){
-  qs("#openReel").addEventListener("click", ()=>openModal("reelModal"))
-}
-
-function setupCamera(){
-  let stream = null
-  qs("#cameraChip").addEventListener("click", ()=>openModal("cameraModal"))
-  qs("#startCamera").addEventListener("click", async ()=>{
-    try{
-      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-      qs("#cameraView").srcObject = stream
-    }catch{
-      toast("Camera blocked")
-    }
-  })
-  qs("#stopCamera").addEventListener("click", ()=>{
-    if(stream){
-      stream.getTracks().forEach(t=>t.stop())
-      stream = null
-    }
-  })
-}
-
-function setupSettings(){
-  const saved = JSON.parse(localStorage.getItem("socialLinks") || "{}")
-  state.socialLinks = saved
-  qs("#setName").value = saved.name || ""
-  qs("#setEmail").value = saved.email || ""
-  qs("#setPhone").value = saved.phone || ""
-  qs("#setIG").value = saved.ig || ""
-  qs("#setTikTok").value = saved.tiktok || ""
-  qs("#setFB").value = saved.fb || ""
-  qs("#setYT").value = saved.yt || ""
-  qs("#setX").value = saved.x || ""
-
-  qs("#saveSettings").addEventListener("click", ()=>{
-    const data = {
-      name: qs("#setName").value.trim(),
-      email: qs("#setEmail").value.trim(),
-      phone: qs("#setPhone").value.trim(),
-      ig: qs("#setIG").value.trim(),
-      tiktok: qs("#setTikTok").value.trim(),
-      fb: qs("#setFB").value.trim(),
-      yt: qs("#setYT").value.trim(),
-      x: qs("#setX").value.trim()
-    }
-    state.socialLinks = data
-    localStorage.setItem("socialLinks", JSON.stringify(data))
-    toast("Settings saved")
-  })
+  if(btn){ btn.addEventListener("click", startListening) }
+  if(sphere){ sphere.addEventListener("click", startListening) }
 }
 
 function renderApp(name){
   const body = qs("#appBody")
+  if(!body) return
+  if(name && name.includes("Donate")){
+    body.innerHTML = `
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+        <div style="width:140px;height:120px;border-radius:18px;background:linear-gradient(135deg,#f7e7c9,#e4b97e);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.25);">
+          <svg width="110" height="80" viewBox="0 0 110 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="18" width="94" height="44" rx="14" fill="#f2d8a6" stroke="#d3aa6c" stroke-width="3"/>
+            <rect x="16" y="26" width="78" height="28" rx="12" fill="#f7e6c9"/>
+            <circle cx="40" cy="40" r="6" fill="#d0b184"/>
+            <circle cx="66" cy="40" r="6" fill="#d0b184"/>
+          </svg>
+        </div>
+        <div style="flex:1;min-width:220px;">
+          <div style="font-weight:700;margin-bottom:6px;">Donate to the Poor · Auto Dissolve Bar</div>
+          <div style="color:var(--muted);margin-bottom:10px;">
+            Movement: every bar supports local care packages and hygiene support. Your purchase helps fund soap, shampoo, and essentials.
+          </div>
+          <button class="btn" id="donateLinkBtn">Open Donation</button>
+        </div>
+      </div>
+    `
+    qs("#donateLinkBtn").addEventListener("click", ()=>window.open(LINKS.donate, "_blank"))
+    return
+  }
   if(name === "Contact Anthony"){
     body.innerHTML = `Email: AgentAnthony@supportdr.com<br>Phone: 7043452867`
     return
   }
   if(name === "Snapshot Coder Idea"){
-    body.innerHTML = `<div style="margin-bottom:10px;">Paste your recent work and let ARIA score progress, blockers, and next steps.</div><textarea id="coderInput" style="width:100%;min-height:140px;"></textarea><button class="btn" id="coderAnalyze">Analyze with ARIA (GPT‑5.2 Codex)</button>`
+    body.innerHTML = `<div style="margin-bottom:10px;">Paste your recent work and let ARIA score progress, blockers, and next steps.</div><textarea id="coderInput" style="width:100%;min-height:140px;"></textarea><button class="btn" id="coderAnalyze">Analyze with ARIA (GPT 5.2 Codex)</button>`
     qs("#coderAnalyze").addEventListener("click", ()=>toast("ARIA analysis queued"))
     return
   }
   if(name === "Live Coder Suggestions"){
-    body.innerHTML = `Add your recent history here to get guidance and roadmap ideas.`
+    body.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px;">30‑Day Subscription Build Plan</div>
+      <ul style="margin:0 0 10px 16px;color:var(--muted);">
+        <li>Week 1: onboarding flow, account linking, analytics baseline.</li>
+        <li>Week 2: routine generator improvements + scan history.</li>
+        <li>Week 3: social posting automation + SEO blog cadence.</li>
+        <li>Week 4: growth experiments + retention and push/PWA upgrades.</li>
+      </ul>
+      <div style="color:var(--muted);">Drop your progress logs and ARIA will propose next sprint items.</div>
+    `
+    return
+  }
+  if(name === "Live Hair Score"){
+    const score = Math.round(state.hairScore || 0)
+    const circumference = 2 * Math.PI * 70
+    const dash = Math.round(circumference * (score / 100))
+    body.innerHTML = `
+      <div class="score-card">
+        <div class="score-ring" id="scoreRing">
+          <svg viewBox="0 0 160 160">
+            <defs>
+              <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#00e2ff"/>
+                <stop offset="0.5" stop-color="#7c7cff"/>
+                <stop offset="1" stop-color="#ffb657"/>
+              </linearGradient>
+            </defs>
+            <circle cx="80" cy="80" r="70" stroke="rgba(255,255,255,0.15)" stroke-width="12" fill="none"/>
+            <circle cx="80" cy="80" r="70" stroke="url(#scoreGrad)" stroke-width="12" fill="none" stroke-linecap="round"
+              stroke-dasharray="${dash} ${Math.round(circumference - dash)}"/>
+          </svg>
+          <div class="score-value"><div>${score}%</div><span>Live Hair Score</span></div>
+        </div>
+        <div class="score-legend">
+          <div class="tag">SupportRD Live · Plus500‑style momentum</div>
+          <div style="color:var(--muted);margin-bottom:10px;">Tap the score to reveal your ARIA level and unlocks.</div>
+          <div class="score-bars">
+            <div>Consistency</div>
+            <div class="score-bar"><span style="width:${Math.min(100, score + 10)}%"></span></div>
+            <div>Care Routine</div>
+            <div class="score-bar"><span style="width:${Math.max(20, score - 8)}%"></span></div>
+            <div>Progress</div>
+            <div class="score-bar"><span style="width:${Math.min(100, score + 4)}%"></span></div>
+          </div>
+        </div>
+      </div>
+      <div id="scoreLevels" style="display:none;margin-top:14px;">
+        <div style="font-weight:700;margin-bottom:8px;">ARIA Levels</div>
+        <div class="levels-grid" style="display:grid;gap:8px;">
+          <div class="level-card" data-level="intro">Introduction</div>
+          <div class="level-card" data-level="breakdown">Breaking Down Topics</div>
+          <div class="level-card" data-level="inner">Inner Circle</div>
+          <div class="level-card" data-level="pro">Professional · Making Money</div>
+        </div>
+        <div id="proDetails" style="margin-top:10px;color:var(--muted);display:none;">
+          Professional access unlocked. Direct contact: AgentAnthony@supportdr.com · 7043452867.
+          Sally Ruberry has reached professional level due to her outstanding hair managing skills and wants to discuss business.
+        </div>
+      </div>
+    `
+    const ring = qs("#scoreRing")
+    const levels = qs("#scoreLevels")
+    if(ring){
+      ring.addEventListener("click", ()=>{
+        levels.style.display = levels.style.display === "none" ? "block" : "none"
+      })
+    }
+    const level = score >= 90 ? "pro" : score >= 75 ? "inner" : score >= 45 ? "breakdown" : "intro"
+    qsa(".level-card").forEach(card=>{
+      if(card.dataset.level === level){
+        card.style.background = "linear-gradient(135deg, rgba(0,226,255,0.25), rgba(124,124,255,0.25))"
+        card.style.border = "1px solid rgba(0,226,255,0.6)"
+        card.style.color = "#fff"
+      } else {
+        card.style.background = "rgba(255,255,255,0.06)"
+        card.style.border = "1px solid rgba(255,255,255,0.12)"
+      }
+    })
+    const pro = qs("#proDetails")
+    if(pro && level === "pro"){ pro.style.display = "block" }
+    return
+  }
+  if(name === "Shopify Products"){
+    body.innerHTML = `Open the full catalog and custom order flow from SupportRD.<br><button class="btn" id="openCustomShop">Open Custom Order</button>`
+    qs("#openCustomShop").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
     return
   }
   body.textContent = name
 }
 
-function setupPwa(){
-  let deferredPrompt = null
-  window.addEventListener("beforeinstallprompt", (e)=>{
-    e.preventDefault()
-    deferredPrompt = e
-    qs("#installBtn").style.display = "inline-flex"
+function setupAppsDock(){
+  const row = qs("#appsRow")
+  const library = qs("#appsLibrary")
+  const select = qs("#appSwapSelect")
+  if(!row || !select) return
+
+  const allApps = [
+    "Blog",
+    "Snapshot Coder Idea",
+    "Live Coder Suggestions",
+    "Donate to the Poor · Auto Dissolve Bar",
+    "Settings",
+    "Contact Anthony · Developer",
+    "Gift Shop",
+    "TV Reel",
+    "Shopify Products",
+    "SEO Engine Viewer",
+    "Camera",
+    "Occasion Editor",
+    "Subscription Banner",
+    "Live Hair Score"
+  ]
+
+  select.innerHTML = '<option value="">Replace Selected App…</option>' + allApps.map(a=>`<option value="${a}">${a}</option>`).join("")
+
+  let activeCard = null
+  row.querySelectorAll(".app-card").forEach(card=>{
+    card.addEventListener("click", ()=>{
+      row.querySelectorAll(".app-card").forEach(c=>c.classList.remove("active"))
+      card.classList.add("active")
+      activeCard = card
+    })
   })
 
-  qs("#installBtn").addEventListener("click", async ()=>{
-    if(!deferredPrompt) return
-    deferredPrompt.prompt()
-    deferredPrompt = null
-    qs("#installBtn").style.display = "none"
-  })
-
-  if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("/sw.js")
-  }
-}
-
-async function loadProducts(){
-  const mini = qs("#productsMini")
-  if(!mini) return
-  try{
-    const r = await fetch("/api/products")
-    const products = await r.json()
-    if(!products.length){
-      mini.textContent = "Set SHOPIFY_STORE + STOREFRONT token to load products."
-      return
+  function applyAppToCard(card, name, linkOverride){
+    card.textContent = name
+    card.dataset.app = name.replace(" · Developer","Contact Anthony")
+    if(linkOverride !== undefined){
+      card.dataset.link = linkOverride
+    } else if(name.includes("Donate")){
+      card.dataset.link = LINKS.donate
+    } else {
+      card.dataset.link = ""
     }
-    mini.innerHTML = products.slice(0,3).map(p=>`<div>${p.title} · $${p.price}</div>`).join("")
-  }catch{
-    mini.textContent = "Shopify products unavailable."
   }
-}
 
-function setupFamilyMode(){
-  const toggle = qs("#familyToggle")
-  if(!toggle) return
-  const saved = localStorage.getItem("familyMode") === "on"
-  toggle.checked = saved
-  document.body.classList.toggle("family-mode", saved)
-  toggle.addEventListener("change", ()=>{
-    const on = toggle.checked
-    document.body.classList.toggle("family-mode", on)
-    localStorage.setItem("familyMode", on ? "on" : "off")
-    toast(on ? "Family Friendly Mode On" : "Family Friendly Mode Off")
-    if(on){
-      // Route to primary family-friendly page
-      window.location.href = "https://supportrd.com"
-    }
+  select.addEventListener("change", ()=>{
+    if(!activeCard || !select.value) return
+    applyAppToCard(activeCard, select.value)
+    select.value = ""
+    toast("App replaced")
   })
-}
 
-window.addEventListener("DOMContentLoaded", ()=>{
+  let dragEl = null
+  function wireCard(card, source){
+    card.setAttribute("draggable","true")
+    card.addEventListener("dragstart", e=>{
+      dragEl = source === "row" ? card : null
+      e.dataTransfer.effectAllowed = "move"
+      e.dataTransfer.setData("text/plain", JSON.stringify({
+        app: card.dataset.app,
+        link: card.dataset.link || "",
+        source
+      }))
+      card.classList.add("dragging")
+    })
+    card.addEventListener("dragend", ()=>{
+      card.classList.remove("dragging")
+      dragEl = null
+    })
+    card.addEventListener("dragover", e=>{
+      e.preventDefault()
+      card.classList.add("drag-over")
+    })
+    card.addEventListener("dragleave", ()=>card.classList.remove("drag-over"))
+    card.addEventListener("drop", e=>{
+      e.preventDefault()
+      card.classList.remove("drag-over")
+      let payload = {}
+      try{ payload = JSON.parse(e.dataTransfer.getData("text/plain") || "{}") }catch{}
+      if(!payload.app) return
+      if(payload.source === "row" && dragEl && dragEl !== card && card.parentElement === row){
+        row.insertBefore(dragEl, card)
+        toast("Apps reordered")
+        return
+      }
+      if(payload.source === "library"){
+        applyAppToCard(card, payload.app, payload.link || "")
+        toast("App replaced")
+      }
+    })
+  }
+
+  row.querySelectorAll(".app-card").forEach(card=>wireCard(card, "row"))
+  if(library){
+    library.querySelectorAll(".app-card").forEach(card=>wireCard(card, "library"))
+  }
+}\nwindow.addEventListener("DOMContentLoaded", ()=>{
   const savedHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
   state.ariaHistory = savedHistory
   const ariaEl = qs("#ariaHistory")
@@ -531,8 +489,9 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupCamera)
   safe(setupSettings)
   safe(setupPwa)
-  safe(setupFamilyMode)
-  safe(setupAppsDock)
+    safe(setupFamilyMode)
+    safe(initHairScore)
+    safe(setupAppsDock)
   safe(loadProducts)
 
   // Fallback: open any data-link button
