@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hair Reel</title>
+</head>
+<body>
+{% comment %} SupportRD Hair Feed — TikTok-style vertical video player {% endcomment %}
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+.srd-feed-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.srd-feed-player {
+  position: relative;
+  width: 220px;
+  min-width: 220px;
+  height: 390px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #0a0a0a;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.srd-feed-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 18px;
+}
+
+.srd-feed-top {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.srd-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: #fff;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.srd-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff3b5c;
+  animation: srdPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes srdPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,59,92,0.5); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(255,59,92,0); }
+}
+
+.srd-feed-count {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.6);
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.srd-feed-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 32px 14px 14px;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+  z-index: 10;
+}
+
+.srd-feed-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: #ff3b5c;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.srd-feed-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.4;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.srd-progress-wrap {
+  width: 100%;
+  height: 2px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.srd-progress-bar {
+  height: 100%;
+  background: #ff3b5c;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s linear;
+}
+
+.srd-feed-dots {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.srd-feed-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  transition: all 0.3s;
+}
+
+.srd-feed-dot.active {
+  background: #ff3b5c;
+  width: 16px;
+  border-radius: 2px;
+}
+
+.srd-feed-actions {
+  position: absolute;
+  right: 10px;
+  bottom: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 10;
+}
+
+.srd-feed-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.srd-feed-action-icon {
+  width: 32px;
+  height: 32px;
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.srd-feed-action-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 8px;
+  color: rgba(255,255,255,0.6);
+}
+
+.srd-feed-click {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  cursor: pointer;
+}
+
+.srd-feed-loading {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+  background-size: 200% 200%;
+  animation: srdShimmer 1.5s infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  z-index: 20;
+  transition: opacity 0.4s;
+}
+
+@keyframes srdShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.srd-feed-loading svg {
+  opacity: 0.3;
+  animation: srdSpin 1s linear infinite;
+}
+
+@keyframes srdSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .srd-feed-player {
+    width: 180px;
+    min-width: 180px;
+    height: 320px;
+  }
+}
+</style>
+
+<div class="srd-feed-wrap">
+  <div class="srd-feed-player" id="srdFeedPlayer">
+    <div class="srd-feed-loading" id="srdFeedLoading">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      </svg>
+    </div>
+    <video id="srdFeedVideo" class="srd-feed-video" muted playsinline autoplay loop preload="auto"></video>
+    <div class="srd-feed-click" id="srdFeedClick"></div>
+    <div class="srd-feed-top">
+      <div class="srd-live-badge"><div class="srd-live-dot"></div>Hair Feed</div>
+      <div class="srd-feed-count" id="srdFeedCount">1 / 1</div>
+    </div>
+    <div class="srd-feed-actions">
+      <div class="srd-feed-action" id="srdFeedNext"><div class="srd-feed-action-icon">▶</div><div class="srd-feed-action-label">Next</div></div>
+      <div class="srd-feed-action" id="srdFeedMute"><div class="srd-feed-action-icon" id="srdMuteIcon">🔇</div><div class="srd-feed-action-label">Sound</div></div>
+    </div>
+    <div class="srd-feed-bottom">
+      <div class="srd-feed-tag" id="srdFeedTag">#haircare</div>
+      <div class="srd-feed-title" id="srdFeedTitle">Hair tips loading...</div>
+      <div class="srd-progress-wrap"><div class="srd-progress-bar" id="srdProgressBar"></div></div>
+      <div class="srd-feed-dots" id="srdFeedDots"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var VIDEOS = [
+    { src: 'https://cdn.coverr.co/videos/coverr-a-woman-getting-her-hair-done-3747/1080p.mp4', title: 'Professional blowout technique for silky smooth hair', tag: '#hairtransformation', link: '' },
+    { src: 'https://cdn.coverr.co/videos/coverr-woman-having-her-hair-styled-1584/1080p.mp4', title: 'Moisture routine for dry damaged hair — watch the difference', tag: '#hairrepair', link: '' },
+    { src: 'https://cdn.coverr.co/videos/coverr-woman-combing-her-hair-6129/1080p.mp4', title: 'Detangling natural hair without breakage — the right way', tag: '#naturalhair', link: '' },
+    { src: 'https://cdn.coverr.co/videos/coverr-woman-with-curly-hair-8120/1080p.mp4', title: 'Curl definition secrets — no frizz, all bounce', tag: '#curlyhair', link: '' }
+  ];
+
+  VIDEOS.sort(function(){ return Math.random() - 0.5; });
+
+  var current = 0;
+  var isMuted = true;
+  var progressTimer = null;
+  var video    = document.getElementById('srdFeedVideo');
+  var loading  = document.getElementById('srdFeedLoading');
+  var count    = document.getElementById('srdFeedCount');
+  var tag      = document.getElementById('srdFeedTag');
+  var title    = document.getElementById('srdFeedTitle');
+  var bar      = document.getElementById('srdProgressBar');
+  var dots     = document.getElementById('srdFeedDots');
+  var muteIcon = document.getElementById('srdMuteIcon');
+  var clickEl  = document.getElementById('srdFeedClick');
+
+  VIDEOS.forEach(function(_, i){
+    var d = document.createElement('div');
+    d.className = 'srd-feed-dot' + (i === 0 ? ' active' : '');
+    d.setAttribute('data-i', i);
+    dots.appendChild(d);
+  });
+
+  function updateDots(){
+    dots.querySelectorAll('.srd-feed-dot').forEach(function(d, i){
+      d.className = 'srd-feed-dot' + (i === current ? ' active' : '');
+    });
+  }
+
+  function startProgress(duration){
+    clearInterval(progressTimer);
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+    var start = Date.now();
+    var dur = duration * 1000;
+    progressTimer = setInterval(function(){
+      var pct = Math.min(100, ((Date.now() - start) / dur) * 100);
+      bar.style.transition = 'width 0.3s linear';
+      bar.style.width = pct + '%';
+      if(pct >= 100){
+        clearInterval(progressTimer);
+        nextVideo();
+      }
+    }, 300);
+  }
+
+  function loadVideo(idx){
+    var v = VIDEOS[idx];
+    loading.style.opacity = '1';
+    loading.style.pointerEvents = 'all';
+
+    video.src = v.src;
+    video.muted = isMuted;
+    tag.textContent = v.tag;
+    title.textContent = v.title;
+    count.textContent = (idx + 1) + ' / ' + VIDEOS.length;
+    updateDots();
+
+    video.load();
+    video.play().then(function(){
+      loading.style.opacity = '0';
+      loading.style.pointerEvents = 'none';
+      var dur = Math.min(video.duration || 12, 12);
+      startProgress(dur);
+    }).catch(function(){
+      loading.style.opacity = '0';
+      loading.style.pointerEvents = 'none';
+    });
+
+    if(v.link){
+      clickEl.onclick = function(){ window.open(v.link, '_blank'); };
+      clickEl.style.cursor = 'pointer';
+    } else {
+      clickEl.onclick = null;
+      clickEl.style.cursor = 'default';
+    }
+  }
+
+  function nextVideo(){
+    current = (current + 1) % VIDEOS.length;
+    loadVideo(current);
+  }
+
+  document.getElementById('srdFeedNext').addEventListener('click', function(e){
+    e.stopPropagation();
+    clearInterval(progressTimer);
+    nextVideo();
+  });
+
+  document.getElementById('srdFeedMute').addEventListener('click', function(e){
+    e.stopPropagation();
+    isMuted = !isMuted;
+    video.muted = isMuted;
+    muteIcon.textContent = isMuted ? '🔇' : '🔊';
+  });
+
+  video.addEventListener('ended', nextVideo);
+  loadVideo(0);
+})();
+</script>
+</body>
+</html>
