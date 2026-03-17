@@ -1,0 +1,379 @@
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+
+<style>
+.srd-order * { box-sizing: border-box; margin: 0; padding: 0; }
+
+.srd-order {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  background: #f0ebe8;
+  padding: 64px 24px 80px;
+  font-family: 'Jost', sans-serif;
+}
+
+.srd-order-header {
+  max-width: 560px;
+  margin: 0 auto 48px;
+  text-align: center;
+}
+.srd-order-eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #c1a3a2;
+  margin-bottom: 12px;
+}
+.srd-order-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(36px, 6vw, 52px);
+  color: #0d0906;
+  line-height: 1.1;
+  margin-bottom: 14px;
+}
+.srd-order-title span { color: #c1a3a2; }
+.srd-order-sub {
+  font-size: 13px;
+  font-weight: 300;
+  color: rgba(13,9,6,0.45);
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+}
+
+.srd-order-card {
+  max-width: 680px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 24px;
+  border: 1px solid rgba(193,163,162,0.18);
+  box-shadow: 0 8px 48px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+
+.srd-order-section { padding: 32px 36px 0; }
+.srd-order-section:last-of-type { padding-bottom: 36px; }
+
+.srd-section-label {
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #c1a3a2;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.srd-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(193,163,162,0.2);
+}
+
+.srd-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.srd-form-grid.single { grid-template-columns: 1fr; }
+@media(max-width: 560px){ .srd-form-grid { grid-template-columns: 1fr; } }
+
+.srd-field { display: flex; flex-direction: column; gap: 5px; }
+.srd-field.full { grid-column: 1 / -1; }
+
+.srd-field label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(13,9,6,0.38);
+  font-weight: 300;
+}
+.srd-field input,
+.srd-field select,
+.srd-field textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid rgba(193,163,162,0.28);
+  border-radius: 10px;
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  color: #0d0906;
+  background: #faf8f6;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.srd-field input:focus,
+.srd-field select:focus,
+.srd-field textarea:focus { border-color: #c1a3a2; background: #fff; }
+.srd-field textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+.srd-field select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c1a3a2' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px;
+  padding-right: 36px;
+}
+
+.srd-products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+@media(max-width:480px){ .srd-products-grid { grid-template-columns: 1fr; } }
+
+.srd-product-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid rgba(193,163,162,0.22);
+  border-radius: 12px;
+  background: #faf8f6;
+  gap: 10px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.srd-product-row.active { border-color: #c1a3a2; background: #fff; }
+.srd-product-info { flex: 1; min-width: 0; }
+.srd-product-name { font-size: 12px; font-weight: 300; color: #0d0906; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em; }
+.srd-product-price { font-size: 10px; color: #c1a3a2; margin-top: 2px; font-family: 'Cormorant Garamond', serif; font-style: italic; }
+.srd-qty-wrap { display: flex; align-items: center; gap: 0; border: 1px solid rgba(193,163,162,0.28); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.srd-qty-btn { width: 28px; height: 28px; border: none; background: transparent; color: #c1a3a2; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; font-family: 'Jost', sans-serif; font-weight: 200; line-height: 1; }
+.srd-qty-btn:hover { background: rgba(193,163,162,0.1); }
+.srd-qty-num { width: 28px; text-align: center; font-size: 12px; color: #0d0906; font-family: 'Jost', sans-serif; font-weight: 300; border-left: 1px solid rgba(193,163,162,0.18); border-right: 1px solid rgba(193,163,162,0.18); line-height: 28px; }
+
+.srd-order-divider { height: 1px; background: rgba(193,163,162,0.12); margin: 28px 36px 0; }
+
+.srd-summary { background: #faf8f6; border-radius: 12px; padding: 16px 18px; margin-top: 16px; display: none; }
+.srd-summary.visible { display: block; }
+.srd-summary-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: rgba(13,9,6,0.55); padding: 4px 0; font-weight: 300; }
+.srd-summary-row span:last-child { color: #0d0906; font-weight: 400; }
+.srd-summary-total { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(193,163,162,0.2); margin-top: 8px; padding-top: 10px; }
+.srd-summary-total-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(13,9,6,0.4); }
+.srd-summary-total-price { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 24px; color: #c1a3a2; }
+
+.srd-order-footer { padding: 24px 36px 36px; border-top: 1px solid rgba(193,163,162,0.12); }
+.srd-submit-btn {
+  width: 100%;
+  padding: 15px;
+  background: #0d0906;
+  color: #faf8f6;
+  border: none;
+  border-radius: 30px;
+  font-family: 'Jost', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  margin-bottom: 10px;
+}
+.srd-submit-btn:hover { background: #c1a3a2; transform: translateY(-1px); }
+.srd-submit-btn:disabled { background: rgba(13,9,6,0.2); cursor: not-allowed; transform: none; }
+.srd-form-note { text-align: center; font-size: 10px; color: rgba(13,9,6,0.28); letter-spacing: 0.06em; line-height: 1.6; }
+
+.srd-success { display: none; padding: 60px 36px; text-align: center; }
+.srd-success.visible { display: block; }
+.srd-success-icon { font-size: 32px; margin-bottom: 16px; color: #c1a3a2; }
+.srd-success-title { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 28px; color: #0d0906; margin-bottom: 10px; }
+.srd-success-msg { font-size: 13px; font-weight: 300; color: rgba(13,9,6,0.45); line-height: 1.7; }
+
+.srd-error-msg { display: none; color: #b94040; font-size: 11px; text-align: center; margin-top: 8px; letter-spacing: 0.04em; }
+</style>
+
+<div class="srd-order">
+  <div class="srd-order-header">
+    <div class="srd-order-eyebrow">SupportRD — Custom Order</div>
+    <div class="srd-order-title">Request your<br><span>personal order.</span></div>
+    <div class="srd-order-sub">Fill in your details below and we'll prepare your order.<br>You'll receive a secure payment link before anything ships.</div>
+  </div>
+
+  <div class="srd-order-card">
+    <div id="srd-order-form">
+      <div class="srd-order-section">
+        <div class="srd-section-label">Products</div>
+        <div class="srd-products-grid" id="srd-products-grid">
+          <div class="srd-product-row" data-product="Formula Exclusiva" data-price="55">
+            <div class="srd-product-info"><div class="srd-product-name">Formula Exclusiva</div><div class="srd-product-price">$55</div></div>
+            <div class="srd-qty-wrap"><button class="srd-qty-btn" onclick="srdQty(this,-1)">−</button><div class="srd-qty-num">0</div><button class="srd-qty-btn" onclick="srdQty(this,1)">+</button></div>
+          </div>
+          <div class="srd-product-row" data-product="Laciador Crece" data-price="40">
+            <div class="srd-product-info"><div class="srd-product-name">Laciador Crece</div><div class="srd-product-price">$40</div></div>
+            <div class="srd-qty-wrap"><button class="srd-qty-btn" onclick="srdQty(this,-1)">−</button><div class="srd-qty-num">0</div><button class="srd-qty-btn" onclick="srdQty(this,1)">+</button></div>
+          </div>
+          <div class="srd-product-row" data-product="Gotero Rapido" data-price="55">
+            <div class="srd-product-info"><div class="srd-product-name">Gotero Rapido</div><div class="srd-product-price">$55</div></div>
+            <div class="srd-qty-wrap"><button class="srd-qty-btn" onclick="srdQty(this,-1)">−</button><div class="srd-qty-num">0</div><button class="srd-qty-btn" onclick="srdQty(this,1)">+</button></div>
+          </div>
+          <div class="srd-product-row" data-product="Gotitas Brillantes" data-price="30">
+            <div class="srd-product-info"><div class="srd-product-name">Gotitas Brillantes</div><div class="srd-product-price">$30</div></div>
+            <div class="srd-qty-wrap"><button class="srd-qty-btn" onclick="srdQty(this,-1)">−</button><div class="srd-qty-num">0</div><button class="srd-qty-btn" onclick="srdQty(this,1)">+</button></div>
+          </div>
+          <div class="srd-product-row" data-product="Mascarilla Capilar" data-price="25">
+            <div class="srd-product-info"><div class="srd-product-name">Mascarilla Capilar</div><div class="srd-product-price">$25</div></div>
+            <div class="srd-qty-wrap"><button class="srd-qty-btn" onclick="srdQty(this,-1)">−</button><div class="srd-qty-num">0</div><button class="srd-qty-btn" onclick="srdQty(this,1)">+</button></div>
+          </div>
+          <div class="srd-product-row" data-product="Shampoo Aloe Vera" data-price="20">
+            <div class="srd-product-info"><div class="srd-product-name">Shampoo Aloe Vera</div><div class="srd-product-price">$20</div></div>
+            <div class="srd-qty-wrap"><button class="srd-qty-btn" onclick="srdQty(this,-1)">−</button><div class="srd-qty-num">0</div><button class="srd-qty-btn" onclick="srdQty(this,1)">+</button></div>
+          </div>
+        </div>
+        <div class="srd-summary" id="srd-summary"><div id="srd-summary-items"></div><div class="srd-summary-total"><div class="srd-summary-total-label">Estimated Total</div><div class="srd-summary-total-price" id="srd-total">$0</div></div></div>
+      </div>
+      <div class="srd-order-divider"></div>
+      <div class="srd-order-section">
+        <div class="srd-section-label">Your Details</div>
+        <div class="srd-form-grid">
+          <div class="srd-field"><label>First Name *</label><input type="text" id="srd-fname" placeholder="Maria" required></div>
+          <div class="srd-field"><label>Last Name *</label><input type="text" id="srd-lname" placeholder="Rodriguez" required></div>
+          <div class="srd-field"><label>Email Address *</label><input type="email" id="srd-email" placeholder="maria@email.com" required></div>
+          <div class="srd-field"><label>Phone Number *</label><input type="tel" id="srd-phone" placeholder="+1 (829) 000-0000" required></div>
+        </div>
+      </div>
+      <div class="srd-order-divider"></div>
+      <div class="srd-order-section">
+        <div class="srd-section-label">Shipping Details</div>
+        <div class="srd-form-grid">
+          <div class="srd-field full"><label>Street Address *</label><input type="text" id="srd-address" placeholder="123 Calle Principal" required></div>
+          <div class="srd-field"><label>City *</label><input type="text" id="srd-city" placeholder="Santo Domingo" required></div>
+          <div class="srd-field"><label>State / Province</label><input type="text" id="srd-state" placeholder="Distrito Nacional"></div>
+          <div class="srd-field"><label>ZIP / Postal Code</label><input type="text" id="srd-zip" placeholder="10101"></div>
+          <div class="srd-field"><label>Country *</label><select id="srd-country" required><option value="">Select country...</option><option>United States</option><option>Dominican Republic</option><option>Puerto Rico</option><option>Canada</option><option>Mexico</option><option>Colombia</option><option>Venezuela</option><option>Cuba</option><option>Haiti</option><option>Jamaica</option><option>Trinidad and Tobago</option><option>Panama</option><option>Costa Rica</option><option>Guatemala</option><option>Honduras</option><option>El Salvador</option><option>Nicaragua</option><option>Spain</option><option>United Kingdom</option><option>France</option><option>Other</option></select></div>
+        </div>
+      </div>
+      <div class="srd-order-divider"></div>
+      <div class="srd-order-section" style="padding-bottom:28px;">
+        <div class="srd-section-label">Delivery Preference</div>
+        <div class="srd-form-grid">
+          <div class="srd-field"><label>Delivery Timeframe *</label><select id="srd-delivery" required><option value="">Select timeframe...</option><option value="standard">Standard (7–14 business days)</option><option value="express">Express (3–5 business days)</option><option value="urgent">Urgent (1–2 business days)</option></select></div>
+          <div class="srd-field"><label>How did you hear about us?</label><select id="srd-source"><option value="">Select...</option><option>Instagram</option><option>TikTok</option><option>Facebook</option><option>Friend / Referral</option><option>Aria AI Advisor</option><option>Google Search</option><option>Other</option></select></div>
+          <div class="srd-field full"><label>Special Instructions / Notes</label><textarea id="srd-notes" placeholder="Any special requests, allergies, hair concerns, or notes for your order..."></textarea></div>
+        </div>
+      </div>
+      <div class="srd-order-footer">
+        <button class="srd-submit-btn" id="srd-submit-btn" onclick="srdSubmitOrder()">Send My Order Request</button>
+        <div class="srd-error-msg" id="srd-error-msg"></div>
+        <div class="srd-form-note">No payment required now · You'll receive a secure invoice link · Ships after payment confirmed</div>
+      </div>
+    </div>
+    <div class="srd-success" id="srd-success">
+      <div class="srd-success-icon">✦</div>
+      <div class="srd-success-title">Order Request Received</div>
+      <div class="srd-success-msg">Thank you! We'll review your order and send you a secure payment link within 24 hours.<br><br>Keep an eye on your inbox at <strong id="srd-confirm-email"></strong></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function srdQty(btn, delta) {
+  var row = btn.closest('.srd-product-row');
+  var numEl = row.querySelector('.srd-qty-num');
+  var val = parseInt(numEl.textContent) + delta;
+  val = Math.max(0, Math.min(20, val));
+  numEl.textContent = val;
+  row.classList.toggle('active', val > 0);
+  srdUpdateSummary();
+}
+
+function srdUpdateSummary() {
+  var rows = document.querySelectorAll('.srd-product-row');
+  var items = [], total = 0;
+  rows.forEach(function(row) {
+    var qty = parseInt(row.querySelector('.srd-qty-num').textContent);
+    if (qty > 0) {
+      var name = row.getAttribute('data-product');
+      var price = parseInt(row.getAttribute('data-price'));
+      items.push({ name: name, qty: qty, price: price });
+      total += qty * price;
+    }
+  });
+  var summary = document.getElementById('srd-summary');
+  var itemsEl = document.getElementById('srd-summary-items');
+  var totalEl = document.getElementById('srd-total');
+  if (items.length === 0) { summary.classList.remove('visible'); return; }
+  summary.classList.add('visible');
+  itemsEl.innerHTML = items.map(function(item) {
+    return '<div class="srd-summary-row"><span>' + item.name + ' × ' + item.qty + '</span><span>$' + (item.qty * item.price) + '</span></div>';
+  }).join('');
+  totalEl.textContent = '$' + total;
+}
+
+function srdSubmitOrder() {
+  var btn   = document.getElementById('srd-submit-btn');
+  var errEl = document.getElementById('srd-error-msg');
+  errEl.style.display = 'none';
+
+  var rows = document.querySelectorAll('.srd-product-row');
+  var orderItems = [], total = 0;
+  rows.forEach(function(row) {
+    var qty = parseInt(row.querySelector('.srd-qty-num').textContent);
+    if (qty > 0) {
+      var name  = row.getAttribute('data-product');
+      var price = parseInt(row.getAttribute('data-price'));
+      orderItems.push({ name: name, qty: qty, price: price, subtotal: qty * price });
+      total += qty * price;
+    }
+  });
+
+  if (orderItems.length === 0) {
+    errEl.textContent = 'Please select at least one product.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  var fname    = document.getElementById('srd-fname').value.trim();
+  var lname    = document.getElementById('srd-lname').value.trim();
+  var email    = document.getElementById('srd-email').value.trim();
+  var phone    = document.getElementById('srd-phone').value.trim();
+  var address  = document.getElementById('srd-address').value.trim();
+  var city     = document.getElementById('srd-city').value.trim();
+  var state    = document.getElementById('srd-state').value.trim();
+  var zip      = document.getElementById('srd-zip').value.trim();
+  var country  = document.getElementById('srd-country').value;
+  var delivery = document.getElementById('srd-delivery').value;
+  var source   = document.getElementById('srd-source').value;
+  var notes    = document.getElementById('srd-notes').value.trim();
+
+  if (!fname || !lname || !email || !phone || !address || !city || !country || !delivery) {
+    errEl.textContent = 'Please fill in all required fields marked with *.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  fetch('https://ai-hair-advisor.onrender.com/api/custom-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name:     fname + ' ' + lname,
+      email:    email,
+      phone:    phone,
+      address:  address + ', ' + city + (state ? ', ' + state : '') + (zip ? ' ' + zip : '') + ', ' + country,
+      delivery: delivery,
+      source:   source,
+      notes:    notes,
+      items:    orderItems,
+      total:    total
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      document.getElementById('srd-order-form').style.display = 'none';
+      document.getElementById('srd-success').classList.add('visible');
+      document.getElementById('srd-confirm-email').textContent = email;
+    } else {
+      throw new Error(d.error || 'Server error');
+    }
+  })
+  .catch(function(err) {
+    btn.textContent = 'Send My Order Request';
+    btn.disabled = false;
+    errEl.textContent = 'Something went wrong. Please try again or WhatsApp us at 829-233-2670.';
+    errEl.style.display = 'block';
+  });
+}
+</script>

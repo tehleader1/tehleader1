@@ -29,13 +29,25 @@
     </div>
   </header>
 
+  <section class="ad-banner">
+    <div class="ad-badge">NEW</div>
+    <div class="ad-copy">
+      <strong>SupportRD Live Advisor</strong>
+      <span>Instant routines · real products · live guidance</span>
+    </div>
+    <button class="btn" id="adCta">Explore Products</button>
+  </section>
+
   <section class="center-stage glass" id="centerStage">
     <div class="center-head">
       <div>
         <h2>Live Center Panel</h2>
         <p>Post, GPS, and Hands‑Free — all in one place.</p>
       </div>
-      <button class="aria-sphere" id="ariaSphere" aria-label="Open ARIA"></button>
+      <div class="center-actions">
+        <button class="chip" id="openReel">TV Reel</button>
+        <button class="aria-sphere" id="ariaSphere" aria-label="Open ARIA"></button>
+      </div>
     </div>
 
     <div class="center-tabs">
@@ -49,8 +61,8 @@
         <div class="post-top">
           <div class="post-user">You · Santiago, Dominican Republic</div>
           <div class="post-actions">
-            <button class="chip">Live Status</button>
-            <button class="chip">Send to All Socials</button>
+            <button class="chip" id="liveStatus">Live Status</button>
+            <button class="chip" id="sendSocials">Send to All Socials</button>
           </div>
         </div>
 
@@ -60,27 +72,33 @@
         </div>
 
         <div class="scan-row">
-          <div class="scan-pill">Moisture Check</div>
-          <div class="scan-pill">Tangles</div>
-          <div class="scan-pill">Dry</div>
-          <div class="scan-pill">Oily</div>
-          <div class="scan-pill">Damage</div>
-          <div class="scan-pill">No Bounce</div>
-          <div class="scan-pill">Color Loss</div>
-          <div class="scan-pill">All‑in‑one Product</div>
+          <button class="scan-pill" data-aria="Moisture check">Moisture Check</button>
+          <button class="scan-pill" data-aria="Tangles">Tangles</button>
+          <button class="scan-pill" data-aria="Dry">Dry</button>
+          <button class="scan-pill" data-aria="Oily">Oily</button>
+          <button class="scan-pill" data-aria="Damage">Damage</button>
+          <button class="scan-pill" data-aria="No bounce">No Bounce</button>
+          <button class="scan-pill" data-aria="Color loss">Color Loss</button>
+          <button class="scan-pill" data-aria="All-in-one product">All‑in‑one Product</button>
         </div>
 
         <div class="post-bottom">
-          <button class="btn">Post to All Socials</button>
-          <button class="btn ghost">Payment with Evelyn</button>
-          <button class="btn ghost">Contact Evelyn Directly</button>
+          <button class="btn" id="postSocials">Post to All Socials</button>
+          <button class="btn ghost" id="payEvelyn">Payment with Evelyn</button>
+          <button class="btn ghost" id="contactEvelyn">Contact Evelyn Directly</button>
         </div>
       </div>
     </div>
 
     <div class="tab-panel" id="tab-gps">
       <div class="gps-wrap">
-        <div class="map-box">Live GPS Directions (salons + coding stores)</div>
+        <div class="map-box">
+          <div class="map-line"></div>
+          <div class="map-line short"></div>
+          <div class="map-line"></div>
+          <div class="map-line short"></div>
+          <span>Live GPS Directions · salons + coding stores</span>
+        </div>
         <div class="gps-actions">
           <button class="btn" id="findSalons">Find Salons Near Me</button>
           <button class="btn ghost" id="gpsHandsFree">Hands‑Free ARIA</button>
@@ -92,7 +110,14 @@
     <div class="tab-panel" id="tab-handsfree">
       <div class="handsfree-wrap">
         <div class="aria-large">ARIA</div>
-        <button class="btn ghost" id="voiceToggle">Start Voice</button>
+        <div class="aria-tools">
+          <button class="btn ghost" id="voiceToggle">Tap Here to Talk</button>
+          <select id="ariaLanguage">
+            <option value="en-US">English</option>
+            <option value="es-ES">Español</option>
+            <option value="fr-FR">Français</option>
+          </select>
+        </div>
         <div class="history">
           <h3>Recorded History</h3>
           <div id="ariaHistory" class="mini-list">No history yet.</div>
@@ -146,7 +171,7 @@
       <button class="app-card" data-app="Blog">Blog</button>
       <button class="app-card" data-app="Snapshot Coder Idea">Snapshot Coder Idea</button>
       <button class="app-card" data-app="Live Coder Suggestions">Live Coder Suggestions</button>
-      <button class="app-card" data-app="Donate to the Poor · Auto Dissolve Bar">Donate to the Poor · Auto Dissolve Bar</button>
+      <button class="app-card" data-app="Donate to the Poor · Auto Dissolve Bar" data-link="https://supportrd.com/products/auto-dissolve-soap-bar">Donate to the Poor · Auto Dissolve Bar</button>
       <button class="app-card" data-app="Settings">Settings (name, email, reset password)</button>
       <button class="app-card" data-app="Contact Anthony">Contact Anthony · Developer</button>
     </div>
@@ -167,12 +192,7 @@
       <h2>SEO Engine Viewer</h2>
       <button class="btn ghost" id="closeSeo">Close</button>
     </div>
-    <p>Keyword list + TikTok repair stories engine (live).</p>
-    <div class="seo-preview">
-      <div class="seo-line"></div>
-      <div class="seo-line"></div>
-      <div class="seo-line"></div>
-    </div>
+    <div class="log-stream" id="logStream"></div>
   </div>
 </div>
 
@@ -196,8 +216,24 @@
       <h2>Gift Shop</h2>
       <button class="btn ghost" id="closeGift">Close</button>
     </div>
-    <p>Big Gift Shop access. Premium drops, bundles, and limited kits.</p>
-    <button class="btn">Open Gift Shop</button>
+    <p>Gifts you can find everywhere — including competition stores.</p>
+    <div class="gift-grid">
+      <div class="gift-card">
+        <div class="gift-name">CR Natural Full Line</div>
+        <div class="gift-price">$125</div>
+        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+      </div>
+      <div class="gift-card">
+        <div class="gift-name">Dove · Gift Bundle</div>
+        <div class="gift-price">Custom Order</div>
+        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+      </div>
+      <div class="gift-card">
+        <div class="gift-name">L’Oréal · Gift Set</div>
+        <div class="gift-price">Custom Order</div>
+        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -208,9 +244,25 @@
       <button class="btn ghost" id="closeOccasion">Close</button>
     </div>
     <div class="occasion-boxes">
-      <button class="occasion-box">Normal Action</button>
-      <button class="occasion-box">Apply Product</button>
-      <button class="occasion-box">Enjoy Your Product</button>
+      <select class="occasion-select">
+        <option>Normal Action</option>
+        <option>Getting Up</option>
+        <option>Wash Day</option>
+        <option>Training</option>
+        <option>Travel</option>
+      </select>
+      <select class="occasion-select">
+        <option>Apply Product</option>
+        <option>Shampoo</option>
+        <option>Laciador</option>
+        <option>Mask</option>
+      </select>
+      <select class="occasion-select">
+        <option>Enjoy Product</option>
+        <option>Big Fight</option>
+        <option>Date Night</option>
+        <option>Photo Day</option>
+      </select>
     </div>
     <div class="week-boxes">
       <div class="week">Day 1</div>
@@ -230,8 +282,18 @@
       <h2>Subscription</h2>
       <button class="btn ghost" id="closeSubscription">Close</button>
     </div>
-    <p>Standard $50/mo. Professional $35/mo (no code puzzles). Full features unlocked.</p>
-    <button class="btn primary">Subscribe Now</button>
+    <div class="payment-chooser">
+      <label>Choose Payment</label>
+      <select id="paymentSelect">
+        <option value="evelyn">With Evelyn Custom Order</option>
+        <option value="premium">$35 PREMIUM</option>
+        <option value="pro">$50 PROFESSIONAL</option>
+        <option value="tip5">$5 Tip</option>
+        <option value="tip10">$10 Tip</option>
+        <option value="tip20">$20 Tip</option>
+      </select>
+      <div id="paymentView"></div>
+    </div>
   </div>
 </div>
 
@@ -241,31 +303,28 @@
       <h2 id="appTitle">App</h2>
       <button class="btn ghost" id="closeApp">Close</button>
     </div>
-    <p id="appBody">App details here.</p>
+    <div id="appBody">App details here.</div>
   </div>
 </div>
 
-<div id="loginOverlay" class="login-overlay">
-  <div class="login-shell">
-    <div class="login-top">
-      <div class="logo">SupportRD</div>
-      <div class="tagline">2026 entrance dashboard</div>
+<div id="customOrderModal" class="modal">
+  <div class="modal-card glass" style="max-height:90vh;overflow:auto;">
+    <div class="modal-head">
+      <h2>Custom Order</h2>
+      <button class="btn ghost" id="closeCustomOrder">Close</button>
     </div>
-    <div class="login-center">
-      <h2>Welcome back</h2>
-      <p>Login with your social ID to unlock full features.</p>
-      <div class="socials">
-        <button class="social">Google</button>
-        <button class="social">Microsoft</button>
-        <button class="social">Apple</button>
-        <button class="social">Yahoo</button>
-      </div>
+    <!-- Custom order embed -->
+    <iframe class="custom-iframe" src="/static/custom-order.html" title="Custom Order"></iframe>
+  </div>
+</div>
+
+<div id="reelModal" class="modal">
+  <div class="modal-card glass" style="max-height:90vh;overflow:auto;">
+    <div class="modal-head">
+      <h2>Hair TV Reel</h2>
+      <button class="btn ghost" id="closeReel">Close</button>
     </div>
-    <div class="login-bottom">
-      <div class="login-card">Coder Foundation</div>
-      <div class="login-card">Donate to the Poor · Dissolve Bar</div>
-      <div class="login-card">Campaign · Message Anthony</div>
-    </div>
+    <div id="reelEmbed">Reel content loading…</div>
   </div>
 </div>
 

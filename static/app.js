@@ -1,15 +1,15 @@
 const qs = (sel) => document.querySelector(sel)
 const qsa = (sel) => Array.from(document.querySelectorAll(sel))
 
-const THEMES = [
-  {id:"aurora", label:"Aurora"},
-  {id:"ice", label:"Ice"},
-  {id:"ember", label:"Ember"},
-  {id:"carbon", label:"Carbon"},
-  {id:"nebula", label:"Nebula"}
-]
-
+const THEMES = ["aurora","ice","ember","carbon","nebula"]
 const DEFAULT_THEME = "aurora"
+
+const LINKS = {
+  premium: "https://supportrd.com/products/hair-advisor-premium",
+  pro: "https://supportrd.com/products/professional-hair-advisor",
+  donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
+  custom: "https://supportrd.com/pages/custom-order"
+}
 
 const BLOG_POSTS = [
   {title:"Repair story: Heat damage recovery", body:"A real repair journey: moisture stacking, trimming, and a 4-week recovery arc."},
@@ -18,49 +18,9 @@ const BLOG_POSTS = [
 ]
 
 const state = {
-  scanHistory: [],
-  routineHistory: [],
-  drivingMode: false,
   themeIndex: 0,
   blogIndex: 0,
   ariaHistory: []
-}
-
-function loadHistory(){
-  try{
-    state.scanHistory = JSON.parse(localStorage.getItem("scanHistory") || "[]")
-    state.routineHistory = JSON.parse(localStorage.getItem("routineHistory") || "[]")
-    state.ariaHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
-  }catch{
-    state.scanHistory = []
-    state.routineHistory = []
-    state.ariaHistory = []
-  }
-}
-
-function saveHistory(key, item){
-  state[key].unshift(item)
-  if(state[key].length > 6) state[key].pop()
-  localStorage.setItem(key, JSON.stringify(state[key]))
-}
-
-function renderHistory(){
-  const scanEl = qs("#scanHistory")
-  scanEl.innerHTML = state.scanHistory.length
-    ? state.scanHistory.map(x=>`<div>${x}</div>`).join("")
-    : "No scans yet."
-
-  const routineEl = qs("#routineMini")
-  routineEl.innerHTML = state.routineHistory.length
-    ? state.routineHistory.map(x=>`<div>${x}</div>`).join("")
-    : "No routines yet."
-
-  const ariaEl = qs("#ariaHistory")
-  if(ariaEl){
-    ariaEl.innerHTML = state.ariaHistory.length
-      ? state.ariaHistory.map(x=>`<div>${x}</div>`).join("")
-      : "No history yet."
-  }
 }
 
 function toast(msg){
@@ -69,30 +29,6 @@ function toast(msg){
   el.style.display = "block"
   clearTimeout(el._t)
   el._t = setTimeout(()=>{el.style.display="none"}, 2200)
-}
-
-async function askAria(message){
-  const msg = message.trim()
-  if(!msg) return
-  appendChat("You", msg)
-  try{
-    const r = await fetch("/api/aria", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({message: msg})
-    })
-    const d = await r.json()
-    appendChat("ARIA", d.reply || "No reply")
-  }catch{
-    appendChat("ARIA", "AI unavailable")
-  }
-}
-
-function appendChat(who, text){
-  state.ariaHistory.unshift(`${who}: ${text}`)
-  if(state.ariaHistory.length > 6) state.ariaHistory.pop()
-  localStorage.setItem("ariaHistory", JSON.stringify(state.ariaHistory))
-  renderHistory()
 }
 
 function setupTabs(){
@@ -107,87 +43,35 @@ function setupTabs(){
   })
 }
 
-async function startCamera(){
-  try{
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-    const vid = qs("#camera")
-    if(vid){
-      vid.srcObject = stream
-    }
-  }catch{
-    toast("Camera blocked")
-  }
-}
+function setupThemeArrows(){
+  const prev = qs("#themePrevSide")
+  const next = qs("#themeNextSide")
+  const saved = localStorage.getItem("theme") || DEFAULT_THEME
+  state.themeIndex = Math.max(0, THEMES.indexOf(saved))
+  applyTheme()
 
-async function scanHair(){
-  try{
-    const r = await fetch("/api/hair-scan", {method:"POST"})
-    const d = await r.json()
-    const stamp = new Date().toLocaleString()
-    saveHistory("scanHistory", `Scan ${stamp}: ${d.curl_type}, ${d.hydration}`)
-    renderHistory()
-  }catch{
-    toast("Scan failed")
-  }
-}
+  prev.addEventListener("click", ()=>{state.themeIndex = (state.themeIndex - 1 + THEMES.length) % THEMES.length; applyTheme()})
+  next.addEventListener("click", ()=>{state.themeIndex = (state.themeIndex + 1) % THEMES.length; applyTheme()})
 
-async function loadProducts(){
-  const mini = qs("#productsMini")
-  try{
-    const r = await fetch("/api/products")
-    const products = await r.json()
-    mini.textContent = products.length ? products.slice(0,3).map(p=>p.title).join(" · ") : "No products yet."
-  }catch{
-    mini.textContent = "Unable to load products."
+  function applyTheme(){
+    document.body.className = `theme-${THEMES[state.themeIndex]}`
+    localStorage.setItem("theme", THEMES[state.themeIndex])
   }
-}
-
-async function loadMarketing(){
-  try{
-    const r = await fetch("/api/engine/marketing")
-    const d = await r.json()
-    const reorders = d.reorders || []
-    qs("#reorderMini").innerHTML = reorders.length ? reorders.map(x=>`<div>${x}</div>`).join("") : "No reorder suggestions."
-  }catch{
-    qs("#reorderMini").textContent = "Engine unavailable"
-  }
-}
-
-async function findSalons(){
-  qs("#salonResults").textContent = "Finding nearby salons..."
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    try{
-      const r = await fetch("/api/salons",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({lat:pos.coords.latitude,lon:pos.coords.longitude})
-      })
-      const salons = await r.json()
-      if(!salons.length){
-        qs("#salonResults").textContent = "No salons found."
-        return
-      }
-      qs("#salonResults").innerHTML = salons.map(s=>`<div>${s.name} - ${s.distance} mi</div>`).join("")
-      toast("ARIA GPS ready")
-    }catch{
-      qs("#salonResults").textContent = "Salon lookup failed."
-    }
-  }, ()=>{
-    qs("#salonResults").textContent = "Location blocked."
-  })
 }
 
 function setupModals(){
-  bindOpen("menuGift", "giftModal")
   bindOpen("menuOccasion", "occasionModal")
+  bindOpen("menuGift", "giftModal")
   bindOpen("menuSubscription", "subscriptionModal")
-  bindClose("closeGift", "giftModal")
   bindClose("closeOccasion", "occasionModal")
+  bindClose("closeGift", "giftModal")
   bindClose("closeSubscription", "subscriptionModal")
   bindOpen("openSeo", "seoModal")
   bindClose("closeSeo", "seoModal")
   bindClose("closeBlog", "blogModal")
   bindClose("closeApp", "appModal")
+  bindClose("closeCustomOrder", "customOrderModal")
+  bindClose("closeReel", "reelModal")
 
   qsa(".blog-post").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -197,22 +81,23 @@ function setupModals(){
     })
   })
 
-  qs("#blogPrev").addEventListener("click", ()=>{
-    state.blogIndex = (state.blogIndex - 1 + BLOG_POSTS.length) % BLOG_POSTS.length
-    renderBlog()
-  })
-
-  qs("#blogNext").addEventListener("click", ()=>{
-    state.blogIndex = (state.blogIndex + 1) % BLOG_POSTS.length
-    renderBlog()
-  })
+  qs("#blogPrev").addEventListener("click", ()=>{state.blogIndex = (state.blogIndex - 1 + BLOG_POSTS.length) % BLOG_POSTS.length; renderBlog()})
+  qs("#blogNext").addEventListener("click", ()=>{state.blogIndex = (state.blogIndex + 1) % BLOG_POSTS.length; renderBlog()})
 
   qsa(".app-card").forEach(btn=>{
     btn.addEventListener("click", ()=>{
-      qs("#appTitle").textContent = btn.dataset.app
-      qs("#appBody").textContent = "Open module: " + btn.dataset.app
+      const link = btn.dataset.link
+      if(link){
+        window.open(link, "_blank")
+        return
+      }
+      renderApp(btn.dataset.app)
       openModal("appModal")
     })
+  })
+
+  qsa(".gift-card .btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
   })
 }
 
@@ -240,6 +125,158 @@ function renderBlog(){
   qs("#blogBody").textContent = post.body
 }
 
+function setupPaymentChooser(){
+  const select = qs("#paymentSelect")
+  const view = qs("#paymentView")
+
+  function render(){
+    const val = select.value
+    if(val === "evelyn"){
+      view.innerHTML = `<p>Custom order with Evelyn.</p><button class="btn" id="openCustomOrder">Open Custom Order</button>`
+      qs("#openCustomOrder").addEventListener("click", ()=>openModal("customOrderModal"))
+      return
+    }
+    if(val === "premium"){
+      view.innerHTML = `<p>$35 PREMIUM subscription.</p><button class="btn" id="goPremium">Pay $35</button>`
+      qs("#goPremium").addEventListener("click", ()=>window.open(LINKS.premium, "_blank"))
+      return
+    }
+    if(val === "pro"){
+      view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><button class="btn" id="goPro">Pay $50</button>`
+      qs("#goPro").addEventListener("click", ()=>window.open(LINKS.pro, "_blank"))
+      return
+    }
+    view.innerHTML = `<p>Thanks for supporting. Tips go through custom order.</p><button class="btn" id="goTip">Send Tip</button>`
+    qs("#goTip").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
+  }
+
+  select.addEventListener("change", render)
+  render()
+}
+
+function setupPostActions(){
+  qs("#postSocials").addEventListener("click", ()=>toast("Post sent to all socials"))
+  qs("#sendSocials").addEventListener("click", ()=>toast("Live status prepared for socials"))
+  qs("#liveStatus").addEventListener("click", ()=>toast("Live status set"))
+  qs("#payEvelyn").addEventListener("click", ()=>openModal("subscriptionModal"))
+  qs("#contactEvelyn").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
+  qs("#adCta").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
+
+  qsa(".scan-pill").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const tag = btn.dataset.aria
+      const textarea = qs("#postInput")
+      textarea.value = `Hair check: ${tag}. Please recommend routine and product match.`
+      toast(`ARIA queued: ${tag}`)
+      appendAria(`User flagged ${tag}. Give routine.`)
+    })
+  })
+}
+
+function setupGPS(){
+  qs("#findSalons").addEventListener("click", findSalons)
+  qs("#gpsHandsFree").addEventListener("click", ()=>{
+    qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
+    qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
+    qs(".tab-btn[data-tab='handsfree']").classList.add("active")
+    qs("#tab-handsfree").classList.add("active")
+  })
+}
+
+async function findSalons(){
+  qs("#salonResults").textContent = "Finding nearby salons..."
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    try{
+      const r = await fetch("/api/salons",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({lat:pos.coords.latitude,lon:pos.coords.longitude})
+      })
+      const salons = await r.json()
+      if(!salons.length){
+        qs("#salonResults").textContent = "No salons found."
+        return
+      }
+      qs("#salonResults").innerHTML = salons.map(s=>`<div>${s.name} - ${s.distance} mi</div>`).join("")
+    }catch{
+      qs("#salonResults").textContent = "Salon lookup failed."
+    }
+  }, ()=>{
+    qs("#salonResults").textContent = "Location blocked."
+  })
+}
+
+function setupAria(){
+  qs("#voiceToggle").addEventListener("click", ()=>toast("ARIA listening"))
+}
+
+function appendAria(text){
+  state.ariaHistory.unshift(text)
+  if(state.ariaHistory.length > 6) state.ariaHistory.pop()
+  localStorage.setItem("ariaHistory", JSON.stringify(state.ariaHistory))
+  const ariaEl = qs("#ariaHistory")
+  if(ariaEl){
+    ariaEl.innerHTML = state.ariaHistory.map(x=>`<div>${x}</div>`).join("")
+  }
+}
+
+function setupSEOLogs(){
+  const stream = qs("#logStream")
+  let timer = null
+
+  qs("#openSeo").addEventListener("click", ()=>{
+    if(timer) clearInterval(timer)
+    stream.innerHTML = ""
+    timer = setInterval(()=>{
+      const line = `[${new Date().toLocaleTimeString()}] render: build ok · cache hit · seo feed synced`
+      const div = document.createElement("div")
+      div.textContent = line
+      stream.appendChild(div)
+      stream.scrollTop = stream.scrollHeight
+    }, 800)
+  })
+
+  qs("#closeSeo").addEventListener("click", ()=>{
+    if(timer) clearInterval(timer)
+  })
+}
+
+function setupReel(){
+  qs("#openReel").addEventListener("click", async ()=>{
+    openModal("reelModal")
+    try{
+      const r = await fetch("/static/reel.html")
+      if(!r.ok) throw new Error("missing")
+      const html = await r.text()
+      qs("#reelEmbed").innerHTML = html
+    }catch{
+      qs("#reelEmbed").textContent = "Reel file not loaded yet."
+    }
+  })
+}
+
+function renderApp(name){
+  const body = qs("#appBody")
+  if(name === "Contact Anthony"){
+    body.innerHTML = `Email: AgentAnthony@supportdr.com<br>Phone: 7043452867`
+    return
+  }
+  if(name === "Settings"){
+    body.innerHTML = `Name, email, reset password controls coming soon.`
+    return
+  }
+  if(name === "Snapshot Coder Idea"){
+    body.innerHTML = `<textarea id="coderInput" style="width:100%;min-height:120px;"></textarea><button class="btn" id="coderAnalyze">Analyze with ARIA (GPT‑5.2 Codex)</button>`
+    qs("#coderAnalyze").addEventListener("click", ()=>toast("ARIA analysis queued"))
+    return
+  }
+  if(name === "Live Coder Suggestions"){
+    body.innerHTML = `Add your recent history here to get guidance.`
+    return
+  }
+  body.textContent = name
+}
+
 function setupPwa(){
   let deferredPrompt = null
   window.addEventListener("beforeinstallprompt", (e)=>{
@@ -260,60 +297,22 @@ function setupPwa(){
   }
 }
 
-function setupAriaSphere(){
-  const sphere = qs("#ariaSphere")
-  sphere.addEventListener("click", ()=>{
-    sphere.classList.add("spin")
-    setTimeout(()=>sphere.classList.remove("spin"), 500)
-  })
-}
-
-function setupThemes(){
-  const prevSide = qs("#themePrevSide")
-  const nextSide = qs("#themeNextSide")
-
-  const saved = localStorage.getItem("theme")
-  const startTheme = saved || DEFAULT_THEME
-  const index = THEMES.findIndex(t=>t.id === startTheme)
-  state.themeIndex = index >= 0 ? index : 0
-  applyTheme(state.themeIndex)
-
-  function goPrev(){
-    state.themeIndex = (state.themeIndex - 1 + THEMES.length) % THEMES.length
-    applyTheme(state.themeIndex)
-  }
-
-  function goNext(){
-    state.themeIndex = (state.themeIndex + 1) % THEMES.length
-    applyTheme(state.themeIndex)
-  }
-
-  prevSide.addEventListener("click", goPrev)
-  nextSide.addEventListener("click", goNext)
-
-  function applyTheme(idx){
-    const theme = THEMES[idx]
-    document.body.className = `theme-${theme.id}`
-    localStorage.setItem("theme", theme.id)
-  }
-}
-
 window.addEventListener("DOMContentLoaded", ()=>{
-  loadHistory()
-  renderHistory()
-  setupTabs()
-  setupModals()
-  setupPwa()
-  setupAriaSphere()
-  setupThemes()
-  loadProducts()
-  loadMarketing()
+  const saved = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
+  state.ariaHistory = saved
+  const ariaEl = qs("#ariaHistory")
+  if(ariaEl){
+    ariaEl.innerHTML = state.ariaHistory.length ? state.ariaHistory.map(x=>`<div>${x}</div>`).join("") : "No history yet."
+  }
 
-  qs("#findSalons").addEventListener("click", findSalons)
-  qs("#gpsHandsFree").addEventListener("click", ()=>{
-    qs("#tab-handsfree").classList.add("active")
-    qsa(".tab-panel").forEach(p=>p.id !== "tab-handsfree" && p.classList.remove("active"))
-    qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
-    qsa(".tab-btn").find?.(b=>b.dataset.tab==="handsfree")
-  })
+  setupTabs()
+  setupThemeArrows()
+  setupModals()
+  setupPaymentChooser()
+  setupPostActions()
+  setupGPS()
+  setupAria()
+  setupSEOLogs()
+  setupReel()
+  setupPwa()
 })
