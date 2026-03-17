@@ -20,7 +20,8 @@ const BLOG_POSTS = [
 const state = {
   themeIndex: 0,
   blogIndex: 0,
-  ariaHistory: []
+  ariaHistory: [],
+  socialLinks: {}
 }
 
 function toast(msg){
@@ -103,6 +104,8 @@ function setupModals(){
   bindClose("closeApp", "appModal")
   bindClose("closeCustomOrder", "customOrderModal")
   bindClose("closeReel", "reelModal")
+  bindClose("closeSettings", "settingsModal")
+  bindClose("closeCamera", "cameraModal")
 
   qsa(".blog-post").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -122,7 +125,18 @@ function setupModals(){
         window.open(link, "_blank")
         return
       }
-      renderApp(btn.dataset.app)
+      const name = btn.dataset.app
+      if(name === "Settings"){
+        openModal("settingsModal")
+        return
+      }
+      if(name === "Blog"){
+        state.blogIndex = 0
+        renderBlog()
+        openModal("blogModal")
+        return
+      }
+      renderApp(name)
       openModal("appModal")
     })
   })
@@ -186,12 +200,33 @@ function setupPaymentChooser(){
 }
 
 function setupPostActions(){
-  qs("#postSocials").addEventListener("click", ()=>toast("Post sent to all socials"))
+  qs("#postSocials").addEventListener("click", ()=>{
+    const links = Object.values(state.socialLinks).filter(Boolean)
+    if(!links.length){
+      toast("No social links saved yet")
+      return
+    }
+    links.forEach((l)=>window.open(l, "_blank"))
+    toast("Post sent to all socials")
+  })
   qs("#sendSocials").addEventListener("click", ()=>toast("Live status prepared for socials"))
   qs("#liveStatus").addEventListener("click", ()=>toast("Live status set"))
-  qs("#payEvelyn").addEventListener("click", ()=>openModal("subscriptionModal"))
-  qs("#contactEvelyn").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
+  qs("#contactEvelyn").addEventListener("click", ()=>openModal("customOrderModal"))
   qs("#adCta").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
+
+  const paySelect = qs("#paySelect")
+  paySelect.addEventListener("change", ()=>{
+    openModal("subscriptionModal")
+    const mapping = {
+      "Payment with Evelyn": "evelyn",
+      "Tip to Developer": "tip5",
+      "Payment to Crystal": "tip10",
+      "Tip to Ramlin (Labor)": "tip20"
+    }
+    const target = mapping[paySelect.value] || "evelyn"
+    qs("#paymentSelect").value = target
+    qs("#paymentSelect").dispatchEvent(new Event("change"))
+  })
 
   qsa(".scan-pill").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -219,7 +254,26 @@ function setupScanUpload(){
 }
 
 function setupGPS(){
-  qs("#findSalons").addEventListener("click", findSalons)
+  const map = qs("#gpsMap")
+  if(map){
+    map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-74.1%2C40.6%2C-73.7%2C40.9&layer=mapnik"
+  }
+
+  qs("#findSalons").addEventListener("click", ()=>{
+    qs("#salonResults").textContent = "Finding nearby salons..."
+    navigator.geolocation.getCurrentPosition((pos)=>{
+      const lat = pos.coords.latitude
+      const lon = pos.coords.longitude
+      if(map){
+        const bbox = `${lon-0.1}%2C${lat-0.08}%2C${lon+0.1}%2C${lat+0.08}`
+        map.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`
+      }
+      findSalons(lat, lon)
+    }, ()=>{
+      qs("#salonResults").textContent = "Location blocked."
+    })
+  })
+
   qs("#gpsHandsFree").addEventListener("click", ()=>{
     qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
     qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
@@ -228,27 +282,22 @@ function setupGPS(){
   })
 }
 
-async function findSalons(){
-  qs("#salonResults").textContent = "Finding nearby salons..."
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    try{
-      const r = await fetch("/api/salons",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({lat:pos.coords.latitude,lon:pos.coords.longitude})
-      })
-      const salons = await r.json()
-      if(!salons.length){
-        qs("#salonResults").textContent = "No salons found."
-        return
-      }
-      qs("#salonResults").innerHTML = salons.map(s=>`<div>${s.name} - ${s.distance} mi</div>`).join("")
-    }catch{
-      qs("#salonResults").textContent = "Salon lookup failed."
+async function findSalons(lat, lon){
+  try{
+    const r = await fetch("/api/salons",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({lat, lon})
+    })
+    const salons = await r.json()
+    if(!salons.length){
+      qs("#salonResults").textContent = "No salons found."
+      return
     }
-  }, ()=>{
-    qs("#salonResults").textContent = "Location blocked."
-  })
+    qs("#salonResults").innerHTML = salons.map(s=>`<div>${s.name} - ${s.distance} mi</div>`).join("")
+  }catch{
+    qs("#salonResults").textContent = "Salon lookup failed."
+  }
 }
 
 function setupAria(){
@@ -307,16 +356,54 @@ function setupSEOLogs(){
 }
 
 function setupReel(){
-  qs("#openReel").addEventListener("click", async ()=>{
-    openModal("reelModal")
+  qs("#openReel").addEventListener("click", ()=>openModal("reelModal"))
+}
+
+function setupCamera(){
+  let stream = null
+  qs("#cameraChip").addEventListener("click", ()=>openModal("cameraModal"))
+  qs("#startCamera").addEventListener("click", async ()=>{
     try{
-      const r = await fetch("/static/reel.html")
-      if(!r.ok) throw new Error("missing")
-      const html = await r.text()
-      qs("#reelEmbed").innerHTML = html
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+      qs("#cameraView").srcObject = stream
     }catch{
-      qs("#reelEmbed").textContent = "Reel file not loaded yet."
+      toast("Camera blocked")
     }
+  })
+  qs("#stopCamera").addEventListener("click", ()=>{
+    if(stream){
+      stream.getTracks().forEach(t=>t.stop())
+      stream = null
+    }
+  })
+}
+
+function setupSettings(){
+  const saved = JSON.parse(localStorage.getItem("socialLinks") || "{}")
+  state.socialLinks = saved
+  qs("#setName").value = saved.name || ""
+  qs("#setEmail").value = saved.email || ""
+  qs("#setPhone").value = saved.phone || ""
+  qs("#setIG").value = saved.ig || ""
+  qs("#setTikTok").value = saved.tiktok || ""
+  qs("#setFB").value = saved.fb || ""
+  qs("#setYT").value = saved.yt || ""
+  qs("#setX").value = saved.x || ""
+
+  qs("#saveSettings").addEventListener("click", ()=>{
+    const data = {
+      name: qs("#setName").value.trim(),
+      email: qs("#setEmail").value.trim(),
+      phone: qs("#setPhone").value.trim(),
+      ig: qs("#setIG").value.trim(),
+      tiktok: qs("#setTikTok").value.trim(),
+      fb: qs("#setFB").value.trim(),
+      yt: qs("#setYT").value.trim(),
+      x: qs("#setX").value.trim()
+    }
+    state.socialLinks = data
+    localStorage.setItem("socialLinks", JSON.stringify(data))
+    toast("Settings saved")
   })
 }
 
@@ -326,17 +413,13 @@ function renderApp(name){
     body.innerHTML = `Email: AgentAnthony@supportdr.com<br>Phone: 7043452867`
     return
   }
-  if(name === "Settings"){
-    body.innerHTML = `Name, email, reset password controls coming soon.`
-    return
-  }
   if(name === "Snapshot Coder Idea"){
-    body.innerHTML = `<textarea id="coderInput" style="width:100%;min-height:120px;"></textarea><button class="btn" id="coderAnalyze">Analyze with ARIA (GPT‑5.2 Codex)</button>`
+    body.innerHTML = `<div style="margin-bottom:10px;">Paste your recent work and let ARIA score progress, blockers, and next steps.</div><textarea id="coderInput" style="width:100%;min-height:140px;"></textarea><button class="btn" id="coderAnalyze">Analyze with ARIA (GPT‑5.2 Codex)</button>`
     qs("#coderAnalyze").addEventListener("click", ()=>toast("ARIA analysis queued"))
     return
   }
   if(name === "Live Coder Suggestions"){
-    body.innerHTML = `Add your recent history here to get guidance.`
+    body.innerHTML = `Add your recent history here to get guidance and roadmap ideas.`
     return
   }
   body.textContent = name
@@ -362,9 +445,25 @@ function setupPwa(){
   }
 }
 
+async function loadProducts(){
+  const mini = qs("#productsMini")
+  if(!mini) return
+  try{
+    const r = await fetch("/api/products")
+    const products = await r.json()
+    if(!products.length){
+      mini.textContent = "Set SHOPIFY_STORE + STOREFRONT token to load products."
+      return
+    }
+    mini.innerHTML = products.slice(0,3).map(p=>`<div>${p.title} · $${p.price}</div>`).join("")
+  }catch{
+    mini.textContent = "Shopify products unavailable."
+  }
+}
+
 window.addEventListener("DOMContentLoaded", ()=>{
-  const saved = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
-  state.ariaHistory = saved
+  const savedHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
+  state.ariaHistory = savedHistory
   const ariaEl = qs("#ariaHistory")
   if(ariaEl){
     ariaEl.innerHTML = state.ariaHistory.length ? state.ariaHistory.map(x=>`<div>${x}</div>`).join("") : "No history yet."
@@ -380,5 +479,8 @@ window.addEventListener("DOMContentLoaded", ()=>{
   setupAria()
   setupSEOLogs()
   setupReel()
+  setupCamera()
+  setupSettings()
   setupPwa()
+  loadProducts()
 })
