@@ -1,0 +1,43 @@
+body{
+margin:0;
+font-family:system-ui;
+background:#0a0a0a;
+color:white;
+}
+
+#nav{
+display:flex;
+gap:10px;
+padding:15px;
+background:#111;
+position:sticky;
+top:0;
+z-index:1000;
+}
+
+#nav button{
+background:#222;
+color:white;
+border:none;
+padding:10px 16px;
+cursor:pointer;
+}
+
+#dashboard{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:20px;
+padding:20px;
+}
+
+.widget{
+background:#151515;
+border:1px solid #333;
+padding:20px;
+cursor:grab;
+min-height:150px;
+}
+
+.widget img{
+width:100%;
+}
