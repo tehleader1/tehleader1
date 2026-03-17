@@ -8,7 +8,7 @@ from openai import OpenAI
 app = Flask(__name__, static_folder="static")
 
 #################################################
-# API KEYS
+# ENVIRONMENT
 #################################################
 
 OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
@@ -18,12 +18,23 @@ SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "")
 SHOPIFY_STOREFRONT_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
 
 #################################################
-# CACHE SYSTEM
+# CACHE
 #################################################
 
 PRODUCT_CACHE = []
 PRODUCT_CACHE_TIME = 0
 CACHE_TTL = 300
+
+#################################################
+# FREE TRIAL CONFIG
+#################################################
+
+FREE_FEATURES = {
+    "aria": True,
+    "gps": True,
+    "scan": False,
+    "shop": False
+}
 
 #################################################
 # HEALTH CHECK
@@ -34,7 +45,7 @@ def ping():
     return {"status": "ok"}
 
 #################################################
-# SHOPIFY PRODUCTS
+# PRODUCTS
 #################################################
 
 def get_products():
@@ -52,7 +63,7 @@ def get_products():
 
     query = """
     {
-      products(first:12){
+      products(first:10){
         edges{
           node{
             title
@@ -111,91 +122,83 @@ def get_products():
 
         return products
 
-    except Exception as e:
-        print("Shopify error:", e)
+    except:
         return []
 
-
 @app.route("/api/products")
-def api_products():
+def products():
     return jsonify(get_products())
 
-
-@app.route("/api/checkout", methods=["POST"])
-def checkout():
-
-    variant = request.json.get("variant")
-
-    checkout_url = f"https://{SHOPIFY_STORE}/cart/{variant}:1"
-
-    return jsonify({"url": checkout_url})
-
 #################################################
-# ARIA AI ASSISTANT
+# ARIA AI
 #################################################
 
 @app.route("/api/aria", methods=["POST"])
 def aria():
 
-    user_message = request.json.get("message")
+    user = request.json.get("message")
 
-    try:
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role":"system",
+                "content":"You are ARIA, an AI hair care expert. Provide short practical advice."
+            },
+            {
+                "role":"user",
+                "content":user
+            }
+        ]
+    )
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are ARIA, a friendly AI hair care assistant. Give short practical hair advice and recommend routines."
-                },
-                {
-                    "role": "user",
-                    "content": user_message
-                }
-            ]
-        )
+    reply = response.choices[0].message.content
 
-        reply = response.choices[0].message.content
+    return jsonify({"reply":reply})
 
-        return jsonify({
-            "reply": reply
-        })
+#################################################
+# HAIR SCAN AI (BETA)
+#################################################
 
-    except Exception as e:
+@app.route("/api/hair-scan", methods=["POST"])
+def hair_scan():
 
-        print("ARIA error:", e)
+    # placeholder AI scan result
 
-        return jsonify({
-            "reply": "Sorry, ARIA is having trouble right now."
-        })
+    return jsonify({
 
+        "damage":"medium",
+        "hydration":"low",
+        "curl_type":"3B",
+
+        "recommendations":[
+            "Deep conditioning twice weekly",
+            "Use argan oil",
+            "Avoid heat styling"
+        ]
+
+    })
+
+#################################################
+# FREE TRIAL CHECK
+#################################################
+
+@app.route("/api/features")
+def features():
+    return jsonify(FREE_FEATURES)
 
 #################################################
 # BLOG CONTENT
 #################################################
 
-@app.route("/api/engine/blog")
-def engine_blog():
+@app.route("/api/blog")
+def blog():
 
     posts = [
 
-        {
-            "title": "How to Repair Damaged Hair Naturally",
-            "date": "2026-03-10",
-            "url": "/blog/hair-repair"
-        },
-
-        {
-            "title": "Dominican Hair Mask Routine",
-            "date": "2026-03-11",
-            "url": "/blog/dominican-hair-mask"
-        },
-
-        {
-            "title": "Best Oils For Hair Growth",
-            "date": "2026-03-12",
-            "url": "/blog/hair-growth-oils"
-        }
+        {"title":"Repair Damaged Hair Naturally","url":"/blog/repair"},
+        {"title":"Dominican Hair Mask Routine","url":"/blog/mask"},
+        {"title":"Top Oils For Hair Growth","url":"/blog/oils"}
 
     ]
 
@@ -207,13 +210,12 @@ def engine_blog():
 
 def marketing_engine():
 
-    print("Running background marketing engine")
+    print("AI engine cycle")
 
     try:
         get_products()
-    except Exception as e:
-        print("Engine error:", e)
-
+    except:
+        pass
 
 scheduler = BackgroundScheduler()
 
@@ -231,15 +233,14 @@ scheduler.start()
 
 @app.route("/manifest.json")
 def manifest():
-    return send_from_directory("static", "manifest.json")
-
+    return send_from_directory("static","manifest.json")
 
 @app.route("/sw.js")
-def service_worker():
-    return send_from_directory("static", "sw.js")
+def sw():
+    return send_from_directory("static","sw.js")
 
 #################################################
-# DASHBOARD PAGE
+# MAIN DASHBOARD
 #################################################
 
 DASHBOARD_HTML = """
@@ -252,9 +253,9 @@ DASHBOARD_HTML = """
 
 <title>SupportRD</title>
 
-<link rel="manifest" href="/manifest.json">
-
 <link rel="stylesheet" href="/static/style.css">
+
+<script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 
 </head>
 
@@ -262,93 +263,64 @@ DASHBOARD_HTML = """
 
 <div id="app">
 
-<div class="header">
-SupportRD
-</div>
+<h1>SupportRD</h1>
 
-<div class="panel" id="feed">
+<div id="login">
 
-<h2>Community</h2>
-<p>Share routines, results, and hair journeys.</p>
+<button onclick="login()">Login / Sign Up</button>
 
 </div>
 
-<div class="panel" id="shop" style="display:none">
-
-<h2>Shop</h2>
-<div id="products"></div>
-
-</div>
-
-<div class="panel" id="scan" style="display:none">
-
-<h2>Hair Scan</h2>
-<video id="camera" autoplay></video>
-
-<br><br>
-
-<button onclick="startCamera()">
-Start Scan
-</button>
-
-</div>
-
-<div class="panel" id="aria" style="display:none">
+<div class="panel">
 
 <h2>ARIA AI</h2>
 
-<input id="ariaInput" placeholder="Ask ARIA about your hair..." />
+<input id="ariaInput">
 
-<button onclick="askAria()">
-Ask
-</button>
+<button onclick="askAria()">Ask ARIA</button>
 
 <div id="ariaReply"></div>
 
 </div>
 
-</div>
+<div class="panel">
 
-<div id="nav">
+<h2>Hair Scan</h2>
 
-<div id="nav-feed" class="navItem active" onclick="showPanel('feed')">
-<span class="navIcon">🏠</span>
-Home
-</div>
+<video id="camera" autoplay></video>
 
-<div id="nav-shop" class="navItem" onclick="showPanel('shop')">
-<span class="navIcon">🛍</span>
-Shop
-</div>
+<button onclick="startCamera()">Start Scan</button>
 
-<div id="nav-scan" class="navItem" onclick="showPanel('scan')">
-<span class="navIcon">📷</span>
-Scan
-</div>
+<button onclick="scanHair()">Analyze</button>
 
-<div id="nav-aria" class="navItem" onclick="showPanel('aria')">
-<span class="navIcon">✨</span>
-ARIA
-</div>
+<div id="scanResults"></div>
 
 </div>
 
+<div class="panel">
+
+<h2>Shop</h2>
+
+<div id="products"></div>
+
+</div>
+
+</div>
+
+<script src="/static/auth.js"></script>
 <script src="/static/app.js"></script>
 
 </body>
-
 </html>
 """
 
-
 @app.route("/")
-def dashboard():
-    return Response(DASHBOARD_HTML, mimetype="text/html")
-
+def home():
+    return Response(DASHBOARD_HTML,mimetype="text/html")
 
 #################################################
-# RUN SERVER
+# RUN
 #################################################
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0",port=5000)
