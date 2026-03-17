@@ -292,6 +292,26 @@ function setupLoginGate(){
   }
 }
 
+function setupThemes(){
+  const buttons = qsa(".theme-btn")
+  const current = localStorage.getItem("theme") || "aurora"
+  applyTheme(current)
+  buttons.forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const theme = btn.dataset.theme
+      applyTheme(theme)
+      localStorage.setItem("theme", theme)
+    })
+  })
+}
+
+function applyTheme(theme){
+  document.body.className = `theme-${theme}`
+  qsa(".theme-btn").forEach(btn=>{
+    btn.classList.toggle("active", btn.dataset.theme === theme)
+  })
+}
+
 window.addEventListener("DOMContentLoaded", ()=>{
   loadHistory()
   renderHistory()
@@ -303,6 +323,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   setupAriaSphere()
   setupDriveMode()
   setupLoginGate()
+  setupThemes()
   loadProducts()
   loadMarketing()
 
