@@ -1,59 +1,45 @@
-async function askAria(){
-
-let msg=document.getElementById("ariaInput").value
-
-let r=await fetch("/api/aria",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({message:msg})
-})
-
-let d=await r.json()
-
-document.getElementById("ariaReply").innerText=d.reply
-
-}
-
-function startCamera(){
-
-navigator.mediaDevices.getUserMedia({video:true})
-.then(stream=>{
-document.getElementById("camera").srcObject=stream
-})
-
-}
-
 async function scanHair(){
 
 let r=await fetch("/api/hair-scan",{method:"POST"})
 let d=await r.json()
 
-document.getElementById("scanResults").innerText=
-"Damage:"+d.damage+" Hydration:"+d.hydration
+let html=""
+
+html+="Curl type:"+d.curl_type+"<br>"
+html+="Damage:"+d.damage+"<br>"
+html+="Hydration:"+d.hydration+"<br><br>"
+
+html+="Routine:<br>"
+
+d.routine.forEach(x=>{
+html+=x+"<br>"
+})
+
+document.getElementById("scanResults").innerHTML=html
 
 }
 
-async function loadProducts(){
+async function findSalons(){
 
-let r=await fetch("/api/products")
-let p=await r.json()
+navigator.geolocation.getCurrentPosition(async pos=>{
 
-let html=""
+let lat=pos.coords.latitude
+let lon=pos.coords.longitude
 
-p.forEach(x=>{
+let r=await fetch("/api/salons",{
 
-html+=`
-<div>
-<img src="${x.image}" width="120">
-<p>${x.title}</p>
-<p>$${x.price}</p>
-</div>
-`
+method:"POST",
+
+headers:{"Content-Type":"application/json"},
+
+body:JSON.stringify({lat:lat,lon:lon})
 
 })
 
-document.getElementById("products").innerHTML=html
+let salons=await r.json()
+
+console.log(salons)
+
+})
 
 }
-
-loadProducts()
