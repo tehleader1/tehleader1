@@ -1,6 +1,8 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, Response
 import os
 import requests
+import time
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__, static_folder="static")
 
@@ -12,10 +14,36 @@ SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "")
 SHOPIFY_STOREFRONT_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
 
 #################################################
+# SIMPLE CACHE SYSTEM
+#################################################
+
+PRODUCT_CACHE = []
+PRODUCT_CACHE_TIME = 0
+CACHE_TTL = 300
+
+
+#################################################
+# HEALTH CHECK (RENDER)
+#################################################
+
+@app.route("/api/ping")
+def ping():
+    return {"status": "ok"}
+
+
+#################################################
 # SHOPIFY PRODUCT LOADER
 #################################################
 
 def get_products():
+
+    global PRODUCT_CACHE
+    global PRODUCT_CACHE_TIME
+
+    now = time.time()
+
+    if PRODUCT_CACHE and now - PRODUCT_CACHE_TIME < CACHE_TTL:
+        return PRODUCT_CACHE
 
     if not SHOPIFY_STORE or not SHOPIFY_STOREFRONT_TOKEN:
         return []
@@ -26,7 +54,6 @@ def get_products():
         edges{
           node{
             title
-            handle
             images(first:1){
               edges{
                 node{
@@ -58,7 +85,7 @@ def get_products():
             headers={
                 "X-Shopify-Storefront-Access-Token": SHOPIFY_STOREFRONT_TOKEN
             },
-            timeout=10
+            timeout=8
         )
 
         data = r.json()
@@ -76,6 +103,9 @@ def get_products():
                 "variant": v["id"],
                 "image": node["images"]["edges"][0]["node"]["url"]
             })
+
+        PRODUCT_CACHE = products
+        PRODUCT_CACHE_TIME = now
 
         return products
 
@@ -100,13 +130,11 @@ def checkout():
 
     checkout_url = f"https://{SHOPIFY_STORE}/cart/{variant}:1"
 
-    return jsonify({
-        "url": checkout_url
-    })
+    return jsonify({"url": checkout_url})
 
 
 #################################################
-# BLOG ENGINE
+# BLOG CONTENT
 #################################################
 
 @app.route("/api/engine/blog")
@@ -138,7 +166,47 @@ def engine_blog():
 
 
 #################################################
-# PWA SUPPORT
+# BACKGROUND MARKETING ENGINE
+#################################################
+
+def marketing_engine():
+
+    print("Running background marketing engine...")
+
+    try:
+
+        # refresh product cache
+        get_products()
+
+        # here you could also call:
+        # generate blog content
+        # run SEO updates
+        # post to Pinterest / Reddit etc
+
+        print("Marketing engine cycle complete")
+
+    except Exception as e:
+
+        print("Marketing engine error:", e)
+
+
+#################################################
+# START SCHEDULER
+#################################################
+
+scheduler = BackgroundScheduler()
+
+scheduler.add_job(
+    func=marketing_engine,
+    trigger="interval",
+    minutes=30
+)
+
+scheduler.start()
+
+
+#################################################
+# PWA FILES
 #################################################
 
 @app.route("/manifest.json")
@@ -152,13 +220,10 @@ def service_worker():
 
 
 #################################################
-# MAIN DASHBOARD
+# DASHBOARD HTML
 #################################################
 
-@app.route("/")
-def dashboard():
-
-    return """
+DASHBOARD_HTML = """
 <!DOCTYPE html>
 <html>
 
@@ -182,7 +247,6 @@ def dashboard():
 SupportRD
 </div>
 
-
 <div class="panel" id="feed">
 
 <h2>Community</h2>
@@ -191,8 +255,6 @@ SupportRD
 
 </div>
 
-
-
 <div class="panel" id="shop" style="display:none">
 
 <h2>Shop</h2>
@@ -200,8 +262,6 @@ SupportRD
 <div id="products"></div>
 
 </div>
-
-
 
 <div class="panel" id="scan" style="display:none">
 
@@ -217,8 +277,6 @@ Start Scan
 
 </div>
 
-
-
 <div class="panel" id="engine" style="display:none">
 
 <h2>Growth Stories</h2>
@@ -232,8 +290,6 @@ View Stories
 </div>
 
 </div>
-
-
 
 <div id="nav">
 
@@ -259,13 +315,9 @@ ARIA
 
 </div>
 
-
-
 <div id="voiceIndicator">
 ARIA Listening...
 </div>
-
-
 
 <div id="enginePopup">
 
@@ -281,14 +333,21 @@ ARIA Listening...
 
 </div>
 
-
-
 <script src="/static/app.js"></script>
 
 </body>
 
 </html>
 """
+
+
+#################################################
+# MAIN PAGE
+#################################################
+
+@app.route("/")
+def dashboard():
+    return Response(DASHBOARD_HTML, mimetype="text/html")
 
 
 #################################################
