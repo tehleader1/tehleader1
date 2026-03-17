@@ -1,10 +1,21 @@
 const qs = (sel) => document.querySelector(sel)
 const qsa = (sel) => Array.from(document.querySelectorAll(sel))
 
+const THEMES = [
+  {id:"aurora", label:"Aurora"},
+  {id:"ice", label:"Ice"},
+  {id:"ember", label:"Ember"},
+  {id:"carbon", label:"Carbon"},
+  {id:"nebula", label:"Nebula"}
+]
+
+const DEFAULT_THEME = "aurora"
+
 const state = {
   scanHistory: [],
   routineHistory: [],
-  drivingMode: false
+  drivingMode: false,
+  themeIndex: 0
 }
 
 function loadHistory(){
@@ -293,23 +304,32 @@ function setupLoginGate(){
 }
 
 function setupThemes(){
-  const buttons = qsa(".theme-btn")
-  const current = localStorage.getItem("theme") || "aurora"
-  applyTheme(current)
-  buttons.forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const theme = btn.dataset.theme
-      applyTheme(theme)
-      localStorage.setItem("theme", theme)
-    })
-  })
-}
+  const prev = qs("#themePrev")
+  const next = qs("#themeNext")
+  const label = qs("#themeLabel")
 
-function applyTheme(theme){
-  document.body.className = `theme-${theme}`
-  qsa(".theme-btn").forEach(btn=>{
-    btn.classList.toggle("active", btn.dataset.theme === theme)
+  const saved = localStorage.getItem("theme")
+  const startTheme = saved || DEFAULT_THEME
+  const index = THEMES.findIndex(t=>t.id === startTheme)
+  state.themeIndex = index >= 0 ? index : 0
+  applyTheme(state.themeIndex)
+
+  prev.addEventListener("click", ()=>{
+    state.themeIndex = (state.themeIndex - 1 + THEMES.length) % THEMES.length
+    applyTheme(state.themeIndex)
   })
+
+  next.addEventListener("click", ()=>{
+    state.themeIndex = (state.themeIndex + 1) % THEMES.length
+    applyTheme(state.themeIndex)
+  })
+
+  function applyTheme(idx){
+    const theme = THEMES[idx]
+    document.body.className = `theme-${theme.id}`
+    label.textContent = theme.label
+    localStorage.setItem("theme", theme.id)
+  }
 }
 
 window.addEventListener("DOMContentLoaded", ()=>{
