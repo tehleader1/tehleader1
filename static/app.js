@@ -264,45 +264,35 @@ function bumpHairScore(delta){
   }
 
   let cachedAriaVoice = null
-    function setAriaFlow(state){
-      const overlay = qs("#listeningOverlay")
-      const textEl = qs("#ariaFlowText")
-      const transcriptEl = qs("#ariaTranscript")
-      const gpsActive = qs("#tab-gps")?.classList.contains("active")
-      document.body.classList.toggle("gps-active", !!gpsActive)
-      document.body.classList.toggle("aria-speaking", state === "speaking")
-      if(!overlay || !textEl) return
-      if(state === "listening"){
-        document.body.classList.add("listening")
-        textEl.textContent = "Listening…"
-        if(transcriptEl){ transcriptEl.textContent = "Say something about your hair…" }
-      }else if(state === "processing"){
-        document.body.classList.add("listening")
-        textEl.textContent = "Processing…"
-        if(transcriptEl){ transcriptEl.textContent = "Analyzing your words…" }
-      }else if(state === "speaking"){
-        document.body.classList.add("listening")
-        textEl.textContent = "ARIA Speaking…"
-        if(transcriptEl){ transcriptEl.textContent = "Replying with hair guidance…" }
-      }else{
-        document.body.classList.remove("listening")
-        document.body.classList.remove("aria-speaking")
-        document.body.classList.remove("gps-active")
-      }
-    }else if(state === "processing"){
-        document.body.classList.add("listening")
-        textEl.textContent = "Processing…"
-        if(transcriptEl){ transcriptEl.textContent = "Analyzing your words…" }
-      }else if(state === "speaking"){
-        document.body.classList.add("listening")
-        textEl.textContent = "ARIA Speaking…"
-        if(transcriptEl){ transcriptEl.textContent = "Replying with hair guidance…" }
-      }else{
-        document.body.classList.remove("listening")
-      }
-    }
-  
-  async function speakReply(text){
+    
+function setAriaFlow(state){
+  const overlay = qs("#listeningOverlay")
+  const textEl = qs("#ariaFlowText")
+  const transcriptEl = qs("#ariaTranscript")
+  const gpsActive = qs("#tab-gps")?.classList.contains("active")
+  document.body.classList.toggle("gps-active", !!gpsActive)
+  document.body.classList.toggle("aria-speaking", state === "speaking")
+  if(!overlay || !textEl) return
+  if(state === "listening"){
+    document.body.classList.add("listening")
+    textEl.textContent = "Listening…"
+    if(transcriptEl){ transcriptEl.textContent = "Say something about your hair…" }
+  }else if(state === "processing"){
+    document.body.classList.add("listening")
+    textEl.textContent = "Processing…"
+    if(transcriptEl){ transcriptEl.textContent = "Analyzing your words…" }
+  }else if(state === "speaking"){
+    document.body.classList.add("listening")
+    textEl.textContent = "ARIA Speaking…"
+    if(transcriptEl){ transcriptEl.textContent = "Replying with hair guidance…" }
+  }else{
+    document.body.classList.remove("listening")
+    document.body.classList.remove("aria-speaking")
+    document.body.classList.remove("gps-active")
+  }
+}
+
+async function speakReply(text){
     const transcriptEl = qs("#ariaTranscript")
     try{
       setAriaFlow("speaking")
