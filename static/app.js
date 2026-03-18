@@ -513,6 +513,14 @@ function setupSEOLogs(){
 function setupReel(){
   const btn = qs("#openReel")
   if(btn){ btn.addEventListener("click", ()=>openModal("reelModal")) }
+  const panel = qs("#reelPanel")
+  const toggle = qs("#toggleReel")
+  if(panel && toggle){
+    toggle.addEventListener("click", ()=>{
+      panel.classList.toggle("hidden")
+      toggle.textContent = panel.classList.contains("hidden") ? "Show" : "Hide"
+    })
+  }
 }
 
 function setupCamera(){
