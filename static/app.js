@@ -156,7 +156,7 @@ function setupInfoTray(){
       "Donate": "Donations support hygiene kits and hair care outreach programs.",
       "About Us": "SupportRD delivers live hair guidance, routines, and product matching.",
       "Terms": "Use of this app is subject to standard terms and service policies.",
-      "FAQ": "FAQ: Use the ARIA sphere to talk, scan with Hair Analysis, and manage routines in Occasion Editor.",
+      "FAQ": "FAQ — Quick Tips:\n1) Dry hair: add a weekly deep conditioner + leave-in moisture.\n2) Frizz: seal with light oil and reduce heat.\n3) No bounce: add protein every 7–10 days.\n4) Oily scalp: clarify 1x weekly and avoid heavy oils at roots.\n5) Damage: trim split ends + heat protect.\n6) Tangly hair: detangle on damp hair with slip + wide-tooth comb.\n7) Color loss: use color-safe shampoo + cool rinses.\n\nWebsite Tips:\n• ARIA Sphere: hold to talk for voice guidance.\n• Hair Analysis: upload scan to get better feedback.\n• Occasion Editor: tap a day to set that routine.\n• Info Tray: tap buttons for policies and help.",
       "Contact": "Email: AgentAnthony@supportdr.com · Phone: 704‑345‑2867"
     }
     openMiniWindow(label, infoMap[label] || "More information coming soon.")
