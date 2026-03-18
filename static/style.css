@@ -29,6 +29,20 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 .menu-btn{background:rgba(255,255,255,0.08);color:var(--text);border:1px solid rgba(255,255,255,0.18);padding:10px 14px;border-radius:12px;font-weight:600;} 
 .status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;} 
 .toggle-wrap{display:flex;align-items:center;}
+.big-menu{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  padding:10px 14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:
+    linear-gradient(120deg, rgba(0,0,0,0.35), rgba(0,0,0,0.1)),
+    url("/static/images/Hija de Felix.jpeg") center/cover no-repeat;
+  box-shadow:0 16px 40px rgba(0,0,0,0.35);
+}
+.big-menu .menu-btn{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);background:rgba(6,10,12,0.55);}
 .login-actions-top{display:flex;gap:8px;align-items:center;}
 
 body.family-mode{filter:saturate(0.92) brightness(1.03);}
@@ -66,7 +80,19 @@ body.family-mode .aria-sphere{box-shadow:0 0 12px rgba(124,243,209,0.35);}
 .center-hero h2,
 .center-hero p{position:relative;z-index:1;}
 .center-head{display:flex;justify-content:space-between;align-items:center;gap:12px;} 
-.center-actions{display:flex;gap:10px;align-items:center;} 
+.center-actions{display:flex;gap:10px;align-items:center;}
+.aria-badge{
+  min-width:220px;
+  padding:16px 18px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.28);
+  background:
+    linear-gradient(120deg, rgba(0,0,0,0.45), rgba(0,0,0,0.1)),
+    url("/static/images/Have healthy hair.jpeg") center/cover no-repeat;
+  box-shadow:0 16px 40px rgba(0,0,0,0.35);
+}
+.aria-title{font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;}
+.aria-sub{font-size:11px;color:rgba(255,255,255,0.8);}
 
 .aria-sphere{width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,0.4);background:radial-gradient(circle at 30% 30%,var(--accent),rgba(104,166,255,0.2));box-shadow:0 0 18px rgba(124,243,209,0.6);cursor:pointer;transition:transform .4s ease;}
 .aria-sphere.spin{transform:rotate(360deg) scale(1.05);}
