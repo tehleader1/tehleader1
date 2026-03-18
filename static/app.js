@@ -24,6 +24,7 @@ const LINKS = {
   donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
   custom: "https://supportrd.com/pages/custom-order"
 }
+const LOGIN_URL = "https://supportrd.com/account/login"
 
 const BLOG_POSTS = [
   {title:"Repair story: Heat damage recovery", body:"Week 1: moisture stacking, trim, and protective styling.\n\nWeek 2: deep conditioning twice a week, gentle detangle, scalp oil.\n\nWeek 3: protein balance and low‑heat styling.\n\nWeek 4: shine restore, reduced breakage, and curl definition back."},
@@ -1297,7 +1298,12 @@ function setupLoginGate(){
   const providers = ["loginGoogle","loginMicrosoft","loginPhone","loginYahoo","loginOther"]
   providers.forEach(id=>{
     const btn = qs("#" + id)
-    if(btn){ btn.addEventListener("click", completeLogin) }
+    if(btn){
+      btn.addEventListener("click", ()=>{
+        openLinkModal(LOGIN_URL, "SupportRD Login")
+        completeLogin()
+      })
+    }
   })
 }
 
