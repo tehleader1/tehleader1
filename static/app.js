@@ -375,8 +375,8 @@ function setupOccasion(){
   const actionSel = qs("#occasionAction")
   const applySel = qs("#occasionApply")
   const enjoySel = qs("#occasionEnjoy")
-  const weekBoxes = qsa("#weekBoxes .week")
-  if(!actionSel || !applySel || !enjoySel || !weekBoxes.length) return
+  const weekWrap = qs("#weekBoxes")
+  if(!actionSel || !applySel || !enjoySel || !weekWrap) return
 
   const actions = [
     "Normal Action","Getting Up","Wash Day","Training","Travel","Work","School","After Gym","Beach Day","Pool Day",
@@ -401,14 +401,37 @@ function setupOccasion(){
   applySel.innerHTML = applies.map(a=>`<option>${a}</option>`).join("")
   enjoySel.innerHTML = enjoys.map(a=>`<option>${a}</option>`).join("")
 
-  function updateWeek(){
-    const text = `${actionSel.value} · ${applySel.value} · ${enjoySel.value}`
-    weekBoxes.forEach((box, i)=>{ box.textContent = `Day ${i+1} — ${text}` })
+  function renderWeek(){
+    weekWrap.innerHTML = ""
+    for(let i=0;i<7;i++){
+      const row = document.createElement("div")
+      row.className = "week"
+      row.innerHTML = `<div class="day-title">Day ${i+1}</div>
+        <div class="day-line">${actionSel.value} · ${applySel.value} · ${enjoySel.value}</div>
+        <div class="day-line">AI: ${buildDescription(i)}</div>`
+      weekWrap.appendChild(row)
+    }
   }
-  actionSel.addEventListener("change", updateWeek)
-  applySel.addEventListener("change", updateWeek)
-  enjoySel.addEventListener("change", updateWeek)
-  updateWeek()
+
+  function buildDescription(i){
+    return `Today you will ${actionSel.value.toLowerCase()}, ${applySel.value.toLowerCase()}, and enjoy ${enjoySel.value.toLowerCase()} for healthy hair.`
+  }
+
+  function updatePost(){
+    const input = qs("#postInput")
+    if(!input) return
+    input.value = buildDescription(0)
+  }
+
+  const applyBtn = qs("#applyOccasion")
+  const addBtn = qs("#addOccasionPost")
+  if(applyBtn){ applyBtn.addEventListener("click", renderWeek) }
+  if(addBtn){ addBtn.addEventListener("click", updatePost) }
+
+  actionSel.addEventListener("change", renderWeek)
+  applySel.addEventListener("change", renderWeek)
+  enjoySel.addEventListener("change", renderWeek)
+  renderWeek()
 }
 
 function setupScanUpload(){
@@ -667,12 +690,18 @@ function setupAria(){
       const text = e.results[0][0].transcript
       askAria(text)
     }
-    rec.onerror = ()=>toast("Voice error")
+    rec.onerror = (e)=>{
+      if(e && (e.error === "no-speech" || e.error === "aborted")) return
+      toast("Voice error")
+    }
     rec.start()
   }
 
   if(btn){ btn.addEventListener("click", startListening) }
-  if(sphere){ sphere.addEventListener("click", startListening) }
+  if(sphere){
+    sphere.classList.add("aria-pulse")
+    sphere.addEventListener("click", startListening)
+  }
   window.startAriaListening = startListening
 }
 
@@ -921,6 +950,9 @@ window.addEventListener("DOMContentLoaded", ()=>{
   }
 
   const safe = (fn)=>{ try{ fn() }catch(e){ console.error(e) } }
+  initHairScore()
+  renderApp("Live Hair Score")
+  openModal("appModal")
   safe(setupTabs)
   safe(setupThemeArrows)
   safe(setupModals)
