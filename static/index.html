@@ -20,9 +20,9 @@
       <h2>SupportRD Login</h2>
       <p>Login is required to use the app. Premium unlocks 2 ARIA levels (fewer puzzles). Pro unlocks all 4 levels (unlimited ARIA).</p>
       <div class="login-actions">
-        <button class="btn" id="loginPremium">$35 PREMIUM</button>
-        <button class="btn" id="loginPro">$50 PROFESSIONAL</button>
-        <button class="btn ghost" id="loginFree">Login Free (More Puzzles)</button>
+        <button class="btn" id="loginPremium" onclick="localStorage.setItem('loggedIn','true');document.getElementById('loginGate').style.display='none';">$35 PREMIUM</button>
+        <button class="btn" id="loginPro" onclick="localStorage.setItem('loggedIn','true');document.getElementById('loginGate').style.display='none';">$50 PROFESSIONAL</button>
+        <button class="btn ghost" id="loginFree" onclick="localStorage.setItem('loggedIn','true');document.getElementById('loginGate').style.display='none';">Login Free (More Puzzles)</button>
       </div>
     </div>
   </div>
