@@ -1378,6 +1378,13 @@ function setupAria(){
       const form = new FormData()
       form.append("audio", blob, "chunk.webm")
       const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
+      if(!r.ok){
+        let detail = ''
+        try{ const d = await r.json(); detail = (d.detail || d.error || '') }catch{}
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failed ' + r.status + (detail ? ' · ' + detail : '')
+        return
+      }
       if(r.ok){
         transcribeFailures = 0
         const d = await r.json()
@@ -1472,7 +1479,12 @@ function setupAria(){
           const form = new FormData()
           form.append("audio", blob, "speech.webm")
           const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
-          if(!r.ok){ setMicStatus('Mic: transcribe failed ' + r.status); throw new Error('transcribe failed') }
+          if(!r.ok){
+            let detail = ''
+            try{ const dErr = await r.json(); detail = (dErr.detail || dErr.error || '') }catch{}
+            setMicStatus('Mic: transcribe failed ' + r.status + (detail ? ' · ' + detail : ''))
+            throw new Error('transcribe failed')
+          }
           const d = await r.json()
           const transcript = (d.text || "").trim() || liveTranscript
           const transcriptEl = qs("#ariaTranscript")
