@@ -283,18 +283,10 @@ body{
 <script>
 (function(){
   var VIDEOS = [
-    // Coverr
     { src: 'https://cdn.coverr.co/videos/coverr-a-woman-getting-her-hair-done-3747/1080p.mp4', title: 'Professional blowout technique for silky smooth hair', tag: '#hairtransformation', link: '' },
     { src: 'https://cdn.coverr.co/videos/coverr-woman-having-her-hair-styled-1584/1080p.mp4', title: 'Moisture routine for dry damaged hair — watch the difference', tag: '#hairrepair', link: '' },
     { src: 'https://cdn.coverr.co/videos/coverr-woman-combing-her-hair-6129/1080p.mp4', title: 'Detangling natural hair without breakage — the right way', tag: '#naturalhair', link: '' },
-    { src: 'https://cdn.coverr.co/videos/coverr-woman-with-curly-hair-8120/1080p.mp4', title: 'Curl definition secrets — no frizz, all bounce', tag: '#curlyhair', link: '' },
-    // Pexels (direct download endpoints)
-    { src: 'https://www.pexels.com/download/video/6940177/', title: 'Combing routine for healthy texture', tag: '#haircare', link: 'https://www.pexels.com/video/woman-combing-her-hair-6940177/' },
-    { src: 'https://www.pexels.com/download/video/3742035/', title: 'Flat ironing for sleek finish', tag: '#hairstyling', link: 'https://www.pexels.com/video/a-hairdresser-flat-ironing-a-clients-hair-3742035/' },
-    { src: 'https://www.pexels.com/download/video/7428177/', title: 'Product placement + daily routine', tag: '#hairproducts', link: 'https://www.pexels.com/video/a-person-putting-down-a-hair-product-7428177/' },
-    { src: 'https://www.pexels.com/download/video/5450206/', title: 'Salon blow dry technique', tag: '#salon', link: 'https://www.pexels.com/video/person-drying-the-hair-of-a-man-5450206/' },
-    { src: 'https://www.pexels.com/download/video/5068244/', title: 'Hair styling prep and detail', tag: '#styling', link: 'https://www.pexels.com/video/a-person-fixing-her-hair-5068244/' },
-    { src: 'https://www.pexels.com/download/video/4665779/', title: 'Self care hair routine', tag: '#selfcare', link: 'https://www.pexels.com/video/video-of-woman-taking-care-of-her-hair-4665779/' }
+    { src: 'https://cdn.coverr.co/videos/coverr-woman-with-curly-hair-8120/1080p.mp4', title: 'Curl definition secrets — no frizz, all bounce', tag: '#curlyhair', link: '' }
   ];
 
   VIDEOS.sort(function(){ return Math.random() - 0.5; });
@@ -361,12 +353,12 @@ body{
     video.play().then(function(){
       loading.style.opacity = '0';
       loading.style.pointerEvents = 'none';
-      var dur = 10;
+      var dur = (video.duration && isFinite(video.duration)) ? Math.max(10, Math.round(video.duration)) : 12;
       startProgress(dur);
     }).catch(function(){
       loading.style.opacity = '0';
       loading.style.pointerEvents = 'none';
-      setTimeout(nextVideo, 400);
+      setTimeout(nextVideo, 3000);
     });
 
     if(v.link){
