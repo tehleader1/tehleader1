@@ -9,12 +9,25 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(1200px 600px at 20% 20%, rgba(116,224,184,0.25), transparent 60%),
+    radial-gradient(900px 500px at 80% 30%, rgba(255,214,153,0.22), transparent 60%),
+    linear-gradient(135deg, #0d1412 0%, #0b1a14 40%, #111c26 100%);
+  color:#fff;
+  font-family:'DM Sans', sans-serif;
+}
 .srd-feed-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0;
-  padding: 0;
+  padding: 12px;
   width: 100%;
 }
 
@@ -337,7 +350,7 @@
     video.play().then(function(){
       loading.style.opacity = '0';
       loading.style.pointerEvents = 'none';
-      var dur = Math.min(video.duration || 12, 12);
+    var dur = Math.min(video.duration || 10, 10);
       startProgress(dur);
     }).catch(function(){
       loading.style.opacity = '0';
