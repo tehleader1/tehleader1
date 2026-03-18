@@ -124,9 +124,15 @@ body:hover .theme-side{opacity:0.6;box-shadow:0 0 40px rgba(124,243,209,0.35);}
 .login-card{width:min(520px,90vw);padding:28px;display:flex;flex-direction:column;gap:12px;}
 .login-actions{display:flex;gap:10px;flex-wrap:wrap;}
 .login-fab{position:fixed;right:22px;bottom:22px;z-index:150;background:linear-gradient(120deg,var(--accent),var(--accent-2));border:none;color:#0b0f14;font-weight:700;padding:12px 16px;border-radius:999px;cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,0.4);}
-.listening-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,10,14,0.6);backdrop-filter:blur(8px);color:#fff;font-size:18px;letter-spacing:0.08em;text-transform:uppercase;z-index:120;}
+.listening-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,10,14,0.35);backdrop-filter:blur(4px);color:#fff;font-size:18px;letter-spacing:0.08em;text-transform:uppercase;z-index:120;pointer-events:none;}
 body.listening .listening-overlay{display:flex;}
-body.listening #app{filter:blur(3px);}
+body.listening .center-stage,
+body.listening #appsDock,
+body.listening .topbar,
+body.listening .ad-banner,
+body.listening .reel-panel{filter:blur(3px);}
+body.listening #tab-gps, 
+body.listening #tab-gps *{filter:none !important;}
 .profile-scan{margin-left:auto;display:flex;flex-direction:column;gap:10px;align-items:flex-end;}
 .profile-preview{width:120px;height:120px;border-radius:18px;position:relative;overflow:hidden;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:var(--muted);}
 .profile-preview::after{content:"";position:absolute;left:-20%;right:-20%;height:2px;top:10%;background:linear-gradient(90deg,transparent,rgba(124,243,209,0.9),transparent);animation:scanLine 2.6s linear infinite;}

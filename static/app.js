@@ -93,8 +93,10 @@ async function askAria(msg){
       body:JSON.stringify({message: msg})
     })
     const d = await r.json()
-    appendAria(`ARIA: ${d.reply || "AI unavailable"}`)
+    const reply = d.reply || "AI unavailable"
+    appendAria(`ARIA: ${reply}`)
     bumpHairScore(1)
+    speakReply(reply)
     state.ariaCount += 1
     const limit = state.subscription === "pro" ? 1e9 : (state.subscription === "premium" ? 8 : 2)
     if(state.ariaCount >= limit){
@@ -104,6 +106,81 @@ async function askAria(msg){
   }catch{
     appendAria("ARIA: AI unavailable")
   }
+}
+
+  let cachedAriaVoice = null
+  function speakReply(text){
+    try{
+      const utter = new SpeechSynthesisUtterance(text)
+      utter.rate = 1
+      utter.pitch = 1.1
+      utter.lang = "en-US"
+      const voices = window.speechSynthesis.getVoices() || []
+      const nameOrder = [
+        "Google US English",
+        "Microsoft Aria Online (Natural) - English (United States)",
+        "Microsoft Jenny Online (Natural) - English (United States)",
+        "Samantha",
+        "Zira",
+        "Ava",
+        "Allison",
+        "Victoria",
+        "Karen"
+      ]
+      if(!cachedAriaVoice){
+        cachedAriaVoice =
+          nameOrder.map(n => voices.find(v => v.name === n && v.lang === "en-US")).find(Boolean) ||
+          voices.find(v => v.lang === "en-US" && /female|woman|girl/i.test(v.name)) ||
+          voices.find(v => v.lang === "en-US")
+      }
+      if(cachedAriaVoice){ utter.voice = cachedAriaVoice }
+      utter.onend = ()=>playDoneChime()
+      window.speechSynthesis.cancel()
+      window.speechSynthesis.speak(utter)
+    }catch{}
+  }
+  if(window.speechSynthesis && typeof window.speechSynthesis.onvoiceschanged !== "undefined"){
+    window.speechSynthesis.onvoiceschanged = ()=>{ cachedAriaVoice = null }
+  }
+  
+  let listenTone = null
+  let listenTimer = null
+  function startListenTone(){
+    stopListenTone()
+    listenTimer = setInterval(()=>{
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = "sine"
+        osc.frequency.value = 520
+        gain.gain.value = 0.08
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start()
+        setTimeout(()=>{osc.stop(); ctx.close()}, 260)
+      }catch{}
+    }, 1400)
+  }
+
+function stopListenTone(){
+  if(listenTimer){ clearInterval(listenTimer); listenTimer = null }
+}
+
+  function playDoneChime(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = "triangle"
+    osc.frequency.value = 660
+    gain.gain.value = 0.06
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    setTimeout(()=>{osc.frequency.value = 880}, 120)
+    setTimeout(()=>{osc.stop(); ctx.close()}, 280)
+  }catch{}
 }
 
 function setupTabs(){
@@ -780,68 +857,53 @@ async function loadProducts(){
   }
 }
 
-function setupAria(){
-  const btn = qs("#voiceToggle")
-  const sphere = qs("#ariaSphere")
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  const greetings = [
-    "Hello, how may I help you today with your hair issues?",
-    "Hi there! How can I help you with your hair today?",
-    "Hey! Tell me what’s going on with your hair and I’ll help.",
-    "Welcome back. What hair concern can I solve right now?",
-    "Hi! I’m ARIA — how can I support your hair routine today?"
-  ]
-
-    function greet(){
-      const greetText = greetings[Math.floor(Math.random() * greetings.length)]
-      appendAria(`ARIA: ${greetText}`)
-      try{
-        const utter = new SpeechSynthesisUtterance(greetText)
-        utter.rate = 0.95
-        utter.pitch = 1.2
-        utter.lang = qs("#ariaLanguage")?.value || "en-US"
-      const voices = window.speechSynthesis.getVoices() || []
-      const preferred = voices.find(v => v.lang === "en-US" && /female|woman|girl/i.test(v.name)) ||
-                        voices.find(v => v.lang === "en-US" && /Samantha|Zira|Karen|Victoria|Allison|Ava/i.test(v.name)) ||
-                        voices.find(v => /Google US English/i.test(v.name))
-      if(preferred){ utter.voice = preferred }
-        window.speechSynthesis.cancel()
-        window.speechSynthesis.speak(utter)
-      }catch{}
+  function setupAria(){
+    const btn = qs("#voiceToggle")
+    const sphere = qs("#ariaSphere")
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    let ariaRec = null
+    let ariaActive = false
+  
+      function startListening(){
+        if(!SpeechRecognition){
+          toast("Voice not supported")
+          return
+        }
+        if(!ariaRec){
+          ariaRec = new SpeechRecognition()
+          ariaRec.lang = qs("#ariaLanguage")?.value || "en-US"
+          ariaRec.interimResults = true
+          ariaRec.maxAlternatives = 1
+          try{ ariaRec.continuous = true }catch{}
+          ariaRec.onstart = ()=>{
+            ariaActive = true
+            document.body.classList.add("listening")
+            startListenTone()
+          }
+          ariaRec.onresult = (e)=>{
+            const res = e.results[e.results.length - 1]
+            if(!res || !res.isFinal) return
+            const text = res[0]?.transcript || ""
+            document.body.classList.remove("listening")
+            stopListenTone()
+            if(text.trim()){ askAria(text) }
+          }
+          ariaRec.onerror = (e)=>{
+            if(e && (e.error === "no-speech" || e.error === "aborted")) return
+            toast("Voice error")
+          }
+          ariaRec.onend = ()=>{
+            ariaActive = false
+            document.body.classList.remove("listening")
+            stopListenTone()
+            if(document.visibilityState === "visible"){
+              try{ ariaRec.start() }catch{}
+            }
+          }
+        }
+        if(ariaActive){ return }
+        try{ ariaRec.start() }catch{}
     }
-
-  function startListening(){
-    greet()
-    if(!SpeechRecognition){
-      toast("Voice not supported")
-      return
-    }
-    const rec = new SpeechRecognition()
-    rec.lang = qs("#ariaLanguage")?.value || "en-US"
-    rec.interimResults = false
-    rec.maxAlternatives = 1
-    try{ rec.continuous = true }catch{}
-    rec.onstart = ()=>{
-      document.body.classList.add("listening")
-      toast("ARIA listening...")
-    }
-    rec.onresult = (e)=>{
-      const text = e.results[0][0].transcript
-      document.body.classList.remove("listening")
-      askAria(text)
-    }
-    rec.onerror = (e)=>{
-      if(e && (e.error === "no-speech" || e.error === "aborted")) return
-      toast("Voice error")
-    }
-    rec.onend = ()=>{
-      document.body.classList.remove("listening")
-      if(document.visibilityState === "visible"){
-        try{ rec.start() }catch{}
-      }
-    }
-    rec.start()
-  }
 
   if(btn){ btn.addEventListener("click", startListening) }
   if(sphere){
