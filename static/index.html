@@ -287,15 +287,29 @@
   </div>
 </div>
 
-<div id="appModal" class="modal">
-  <div class="modal-card glass">
-    <div class="modal-head">
-      <h2 id="appTitle">App</h2>
-      <button class="btn ghost" id="closeApp">Close</button>
+  <div id="appModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2 id="appTitle">App</h2>
+        <button class="btn ghost" id="closeApp">Close</button>
+      </div>
+      <div id="appBody">App details here.</div>
     </div>
-    <div id="appBody">App details here.</div>
   </div>
-</div>
+
+  <div id="linkModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2 id="linkTitle">Open Link</h2>
+        <button class="btn ghost" id="closeLink">Close</button>
+      </div>
+      <div id="linkNotice" style="display:none;color:var(--muted);margin-bottom:10px;">
+        This action opens your email app. Use the button below if the embedded view can’t load.
+      </div>
+      <button class="btn" id="linkExternal" style="display:none;margin-bottom:10px;">Open Externally</button>
+      <iframe id="linkFrame" class="custom-iframe" src="about:blank" title="SupportRD Link"></iframe>
+    </div>
+  </div>
 
 <div id="customOrderModal" class="modal">
   <div class="modal-card glass" style="max-height:90vh;overflow:auto;">

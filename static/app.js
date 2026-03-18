@@ -143,6 +143,7 @@ function setupModals(){
   bindClose("closeSeo", "seoModal")
   bindClose("closeBlog", "blogModal")
   bindClose("closeApp", "appModal")
+  bindClose("closeLink", "linkModal")
   bindClose("closeCustomOrder", "customOrderModal")
   bindClose("closeReel", "reelModal")
   bindClose("closeSettings", "settingsModal")
@@ -167,11 +168,11 @@ function setupModals(){
           openModal("appModal")
           return
         }
-        const link = btn.dataset.link
-        if(link){
-          window.open(link, "_blank")
-          return
-        }
+    const link = btn.dataset.link
+    if(link){
+      openLinkModal(link, "SupportRD Link")
+      return
+    }
         if(name === "Settings"){
           openModal("settingsModal")
           return
@@ -213,7 +214,7 @@ function setupModals(){
     })
 
   qsa(".gift-card .btn").forEach(btn=>{
-    btn.addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
+    btn.addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
   })
 }
 
@@ -230,6 +231,27 @@ function bindOpen(triggerId, modalId){
 function bindClose(triggerId, modalId){
   const el = qs("#" + triggerId)
   if(el){ el.addEventListener("click", ()=>{ const m = qs("#" + modalId); if(m) m.style.display = "none" }) }
+}
+
+function openLinkModal(url, title){
+  const modal = qs("#linkModal")
+  const frame = qs("#linkFrame")
+  const header = qs("#linkTitle")
+  const notice = qs("#linkNotice")
+  const external = qs("#linkExternal")
+  if(!modal || !frame || !header) return
+  header.textContent = title || "Open Link"
+  if(url && url.startsWith("mailto:")){
+    notice.style.display = "block"
+    external.style.display = "inline-flex"
+    external.onclick = ()=>{ window.location.href = url }
+    frame.src = "about:blank"
+  } else {
+    notice.style.display = "none"
+    external.style.display = "none"
+    frame.src = url || "about:blank"
+  }
+  modal.style.display = "flex"
 }
 
 function renderBlog(){
@@ -264,16 +286,16 @@ function setupPaymentChooser(){
     }
     if(val === "premium"){
       view.innerHTML = `<p>$35 PREMIUM subscription.</p><button class="btn" id="goPremium">Pay $35</button>`
-      qs("#goPremium").addEventListener("click", ()=>window.open(LINKS.premium, "_blank"))
+      qs("#goPremium").addEventListener("click", ()=>openLinkModal(LINKS.premium, "Premium Subscription"))
       return
     }
     if(val === "pro"){
       view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><button class="btn" id="goPro">Pay $50</button>`
-      qs("#goPro").addEventListener("click", ()=>window.open(LINKS.pro, "_blank"))
+      qs("#goPro").addEventListener("click", ()=>openLinkModal(LINKS.pro, "Professional Subscription"))
       return
     }
     view.innerHTML = `<p>Tip the team.</p><button class="btn" id="tipOrder">Open Tip</button>`
-    qs("#tipOrder").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
+    qs("#tipOrder").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
   }
 
   select.addEventListener("change", render)
@@ -312,7 +334,7 @@ function setupPostActions(){
 
   function openFeed(key){
     const link = state.socialLinks[feedMap[key]]
-    if(link){ window.open(link, "_blank"); return true }
+    if(link){ openLinkModal(link, "Social Feed"); return true }
     return false
   }
 
@@ -334,7 +356,7 @@ function setupPostActions(){
 
   if(send){ send.addEventListener("click", postToFeeds) }
   if(post){ post.addEventListener("click", postToFeeds) }
-  if(adCta){ adCta.addEventListener("click", ()=>window.open(LINKS.custom, "_blank")) }
+  if(adCta){ adCta.addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order")) }
   if(socialSelect){
     socialSelect.addEventListener("change", ()=>{
       if(socialSelect.value !== "all"){
@@ -364,7 +386,7 @@ function setupPostActions(){
     contactEvelyn.addEventListener("click", ()=>{
       const phone = (state.socialLinks.evelyn || "829-233-2670").replace(/\D/g,"")
       if(!phone){ toast("Add Evelyn WhatsApp in Settings"); return }
-      window.open(`https://wa.me/${phone}?text=Hi%20Evelyn%2C%20I%20need%20help%20with%20my%20order.`,"_blank")
+      openLinkModal(`https://wa.me/${phone}?text=Hi%20Evelyn%2C%20I%20need%20help%20with%20my%20order.`,"Contact Evelyn")
     })
   }
 
@@ -736,7 +758,7 @@ function renderApp(name){
         </div>
       </div>
     `
-    qs("#donateLinkBtn").addEventListener("click", ()=>window.open(LINKS.donate, "_blank"))
+    qs("#donateLinkBtn").addEventListener("click", ()=>openLinkModal(LINKS.donate, "Donate to the Poor"))
     return
   }
   if(name === "Contact Anthony"){
@@ -748,7 +770,7 @@ function renderApp(name){
     qs("#coderAnalyze").addEventListener("click", ()=>toast("ARIA analysis queued"))
     qs("#coderSend").addEventListener("click", ()=>{
       const text = encodeURIComponent(qs("#coderInput").value || "")
-      window.open(`mailto:AgentAnthony@supportdr.com?subject=Snapshot%20Coder%20Idea&body=${text}`,"_blank")
+      openLinkModal(`mailto:AgentAnthony@supportdr.com?subject=Snapshot%20Coder%20Idea&body=${text}`,"Send Snapshot")
     })
     return
   }
@@ -767,7 +789,7 @@ function renderApp(name){
     `
     qs("#sendSuggestion").addEventListener("click", ()=>{
       const text = encodeURIComponent(qs("#suggestionInput").value || "")
-      window.open(`mailto:AgentAnthony@supportdr.com?subject=Live%20Coder%20Suggestion&body=${text}`,"_blank")
+      openLinkModal(`mailto:AgentAnthony@supportdr.com?subject=Live%20Coder%20Suggestion&body=${text}`,"Send Suggestion")
     })
     return
   }
@@ -843,7 +865,7 @@ function renderApp(name){
   }
   if(name === "Shopify Products"){
     body.innerHTML = `Open the full catalog and custom order flow from SupportRD.<br><button class="btn" id="openCustomShop">Open Custom Order</button>`
-    qs("#openCustomShop").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
+    qs("#openCustomShop").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
     return
   }
   body.textContent = name
