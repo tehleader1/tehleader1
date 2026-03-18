@@ -63,13 +63,8 @@ function beep(freq = 880, duration = 120){
 }
 
 function initHairScore(){
-  const saved = Number(localStorage.getItem("hairScore") || "")
-  if(Number.isFinite(saved) && saved > 0){
-    state.hairScore = Math.min(100, Math.max(1, saved))
-    return
-  }
-  state.hairScore = 55 + Math.floor(Math.random() * 35)
-  localStorage.setItem("hairScore", String(state.hairScore))
+  state.hairScore = 100
+  localStorage.setItem("hairScore", "100")
 }
 
 function bumpHairScore(delta){
