@@ -250,3 +250,7 @@ body.listening .bg-layers{animation-play-state:paused;}
 .speech-popup .who{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
 .speech-avatar{width:36px;height:36px;border-radius:50%;background-size:cover;background-position:center;border:1px solid rgba(255,255,255,0.35);box-shadow:0 0 12px rgba(124,243,209,0.35);flex:0 0 auto;}
 .speech-body{display:flex;flex-direction:column;gap:2px;}
+
+body.listening.gps-active .center-blur{opacity:0;}
+
+body.aria-speaking .aria-large{box-shadow:0 0 48px rgba(0,226,255,0.8),0 0 90px rgba(124,124,255,0.5);}

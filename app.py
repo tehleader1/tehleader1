@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, Response
 import os
 import requests
 import time
@@ -173,6 +173,70 @@ def aria():
 
     except:
         return {"reply": "AI error"}
+
+
+@app.route("/api/aria/transcribe", methods=["POST"])
+def aria_transcribe():
+
+    if not OPENAI_KEY:
+        return {"error": "AI unavailable"}, 503
+
+    audio = request.files.get("audio")
+    if not audio:
+        return {"error": "No audio provided"}, 400
+
+    try:
+        files = {
+            "file": (audio.filename or "audio.webm", audio.stream, audio.mimetype or "audio/webm")
+        }
+        data = {
+            "model": os.environ.get("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe")
+        }
+        r = requests.post(
+            "https://api.openai.com/v1/audio/transcriptions",
+            headers={"Authorization": f"Bearer {OPENAI_KEY}"},
+            data=data,
+            files=files,
+            timeout=30
+        )
+        if r.status_code >= 400:
+            return {"error": "Transcription failed"}, 500
+        out = r.json()
+        return {"text": out.get("text", "")}
+    except:
+        return {"error": "Transcription error"}, 500
+
+@app.route("/api/aria/speech", methods=["POST"])
+def aria_speech():
+
+    if not OPENAI_KEY:
+        return {"error": "AI unavailable"}, 503
+
+    text = request.json.get("text", "") if request.is_json else ""
+    if not text:
+        return {"error": "No text"}, 400
+
+    try:
+        payload = {
+            "model": os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),
+            "voice": os.environ.get("OPENAI_TTS_VOICE", "coral"),
+            "input": text,
+            "response_format": "mp3"
+        }
+        r = requests.post(
+            "https://api.openai.com/v1/audio/speech",
+            headers={
+                "Authorization": f"Bearer {OPENAI_KEY}",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=30
+        )
+        if r.status_code >= 400:
+            return {"error": "Speech failed"}, 500
+        return Response(r.content, mimetype="audio/mpeg")
+    except:
+        return {"error": "Speech error"}, 500
 
 #################################################
 # MARKETING ENGINE

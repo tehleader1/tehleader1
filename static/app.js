@@ -164,6 +164,9 @@ function bumpHairScore(delta){
       const overlay = qs("#listeningOverlay")
       const textEl = qs("#ariaFlowText")
       const transcriptEl = qs("#ariaTranscript")
+      const gpsActive = qs("#tab-gps")?.classList.contains("active")
+      document.body.classList.toggle("gps-active", !!gpsActive)
+      document.body.classList.toggle("aria-speaking", state === "speaking")
       if(!overlay || !textEl) return
       if(state === "listening"){
         document.body.classList.add("listening")
@@ -179,9 +182,46 @@ function bumpHairScore(delta){
         if(transcriptEl){ transcriptEl.textContent = "Replying with hair guidance…" }
       }else{
         document.body.classList.remove("listening")
+        document.body.classList.remove("aria-speaking")
+        document.body.classList.remove("gps-active")
+      }
+    }else if(state === "processing"){
+        document.body.classList.add("listening")
+        textEl.textContent = "Processing…"
+        if(transcriptEl){ transcriptEl.textContent = "Analyzing your words…" }
+      }else if(state === "speaking"){
+        document.body.classList.add("listening")
+        textEl.textContent = "ARIA Speaking…"
+        if(transcriptEl){ transcriptEl.textContent = "Replying with hair guidance…" }
+      }else{
+        document.body.classList.remove("listening")
       }
     }
-  function speakReply(text){
+  
+  async function speakReply(text){
+    const transcriptEl = qs("#ariaTranscript")
+    try{
+      setAriaFlow("speaking")
+      const r = await fetch("/api/aria/speech", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({text})
+      })
+      if(!r.ok) throw new Error("tts failed")
+      const blob = await r.blob()
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audio.onended = ()=>{
+        playDoneChime()
+        setAriaFlow("idle")
+        URL.revokeObjectURL(url)
+      }
+      await audio.play()
+      return
+    }catch(e){
+      if(transcriptEl){ transcriptEl.textContent = "Using device voice…" }
+    }
+
     try{
       const utter = new SpeechSynthesisUtterance(text)
       utter.rate = 1
@@ -996,72 +1036,112 @@ function setupHairAnalysis(){
   })
 }
 
+  
   function setupAria(){
     const btn = qs("#voiceToggle")
     const sphere = qs("#ariaSphere")
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    let ariaRec = null
     let ariaActive = false
-  
-      function startListening(){
-        if(!SpeechRecognition){
-          toast("Voice not supported")
-          return
+    let mediaRecorder = null
+    let audioChunks = []
+    let recStream = null
+    let interimRec = null
+
+    function stopInterim(){
+      try{ if(interimRec){ interimRec.onresult = null; interimRec.stop() } }catch{}
+      interimRec = null
+    }
+
+    function startInterim(){
+      if(!SpeechRecognition) return
+      try{
+        interimRec = new SpeechRecognition()
+        interimRec.lang = qs("#ariaLanguage")?.value || "en-US"
+        interimRec.interimResults = true
+        interimRec.maxAlternatives = 1
+        interimRec.onresult = (e)=>{
+          const res = e.results[e.results.length - 1]
+          const transcript = res?.[0]?.transcript || ""
+          const transcriptEl = qs("#ariaTranscript")
+          if(transcriptEl){ transcriptEl.textContent = transcript || "Listening…" }
         }
+        interimRec.start()
+      }catch{}
+    }
+
+    async function stopOpenAIListening(){
+      try{
+        if(mediaRecorder && mediaRecorder.state !== "inactive"){
+          mediaRecorder.stop()
+        }
+      }catch{}
+    }
+
+    async function startOpenAIListening(){
+      if(ariaActive){
+        await stopOpenAIListening()
+        return
+      }
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        toast("Voice not supported")
+        return
+      }
+      try{
         startListenLoop()
         setAriaFlow("listening")
         const reelVid = qs(".reel-embed video")
         if(reelVid){ try{ reelVid.pause() }catch{} }
-        if(!ariaRec){
-          ariaRec = new SpeechRecognition()
-          ariaRec.lang = qs("#ariaLanguage")?.value || "en-US"
-          ariaRec.interimResults = true
-          ariaRec.maxAlternatives = 1
-          try{ ariaRec.continuous = true }catch{}
-          ariaRec.onstart = ()=>{
-            ariaActive = true
-          }
-          ariaRec.onspeechstart = ()=>{ setAriaFlow("listening") }
-          ariaRec.onsoundstart = ()=>{ setAriaFlow("listening") }
-          ariaRec.onspeechend = ()=>{ setAriaFlow("processing") }
-            ariaRec.onresult = (e)=>{
-              const res = e.results[e.results.length - 1]
-              if(!res) return
-              const transcript = res[0]?.transcript || ""
-              const transcriptEl = qs("#ariaTranscript")
-              if(transcriptEl){ transcriptEl.textContent = transcript || "Listening…" }
-              if(!res.isFinal) return
-              stopListenLoop()
-              if(transcript.trim()){ 
-                setAriaFlow("processing")
-                askAria(transcript) 
-              }
+
+        recStream = await navigator.mediaDevices.getUserMedia({audio:true})
+        audioChunks = []
+        mediaRecorder = new MediaRecorder(recStream)
+        mediaRecorder.ondataavailable = (e)=>{
+          if(e.data && e.data.size){ audioChunks.push(e.data) }
+        }
+        mediaRecorder.onstop = async ()=>{
+          ariaActive = false
+          stopInterim()
+          stopListenLoop()
+          if(reelVid){ try{ reelVid.play() }catch{} }
+          const blob = new Blob(audioChunks, {type: "audio/webm"})
+          if(recStream){ recStream.getTracks().forEach(t=>t.stop()) }
+          try{
+            setAriaFlow("processing")
+            const form = new FormData()
+            form.append("audio", blob, "speech.webm")
+            const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
+            if(!r.ok) throw new Error("transcribe failed")
+            const d = await r.json()
+            const transcript = (d.text || "").trim()
+            const transcriptEl = qs("#ariaTranscript")
+            if(transcriptEl){ transcriptEl.textContent = transcript || "No speech detected." }
+            if(transcript){
+              await askAria(transcript)
+            } else {
+              setAriaFlow("idle")
             }
-          ariaRec.onerror = (e)=>{
-            if(e && (e.error === "no-speech" || e.error === "aborted")) return
+          }catch{
             toast("Voice error")
-          }
-          ariaRec.onend = ()=>{
-            ariaActive = false
             setAriaFlow("idle")
-            stopListenLoop()
-            if(reelVid){ try{ reelVid.play() }catch{} }
-            if(document.visibilityState === "visible"){
-              try{ ariaRec.start() }catch{}
-            }
           }
         }
-        if(ariaActive){ return }
-        try{ ariaRec.start() }catch{}
+        mediaRecorder.start()
+        ariaActive = true
+        startInterim()
+      }catch{
+        toast("Voice error")
+        setAriaFlow("idle")
+        stopListenLoop()
+      }
     }
 
-  if(btn){ btn.addEventListener("click", startListening) }
-  if(sphere){
-    sphere.classList.add("aria-pulse")
-    sphere.addEventListener("click", startListening)
+    if(btn){ btn.addEventListener("click", startOpenAIListening) }
+    if(sphere){
+      sphere.classList.add("aria-pulse")
+      sphere.addEventListener("click", startOpenAIListening)
+    }
+    window.startAriaListening = startOpenAIListening
   }
-  window.startAriaListening = startListening
-}
 
 function renderApp(name){
   const body = qs("#appBody")
