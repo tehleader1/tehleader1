@@ -914,7 +914,10 @@ function setupAppsDock(){
   if(library){
     library.querySelectorAll(".app-card").forEach(card=>wireCard(card, "library"))
   }
-}\n\nwindow.addEventListener("DOMContentLoaded", ()=>{
+}
+
+
+window.addEventListener("DOMContentLoaded", ()=>{
   const savedHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
   state.ariaHistory = savedHistory
   const ariaEl = qs("#ariaHistory")
