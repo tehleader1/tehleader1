@@ -96,7 +96,7 @@ async function askAria(msg){
     appendAria(`ARIA: ${d.reply || "AI unavailable"}`)
     bumpHairScore(1)
     state.ariaCount += 1
-    const limit = state.subscription === "pro" ? 1e9 : (state.subscription === "premium" ? 8 : 4)
+    const limit = state.subscription === "pro" ? 1e9 : (state.subscription === "premium" ? 8 : 2)
     if(state.ariaCount >= limit){
       state.ariaBlocked = true
       openModal("puzzleModal")
@@ -705,6 +705,18 @@ function setupFamilyMode(){
       window.location.href = "https://supportrd.com"
     }
   })
+}
+
+function setupLoginGate(){
+  const gate = qs("#loginGate")
+  const loggedIn = localStorage.getItem("loggedIn") === "true"
+  if(!loggedIn && gate){ gate.style.display = "flex" }
+  const btnPremium = qs("#loginPremium")
+  const btnPro = qs("#loginPro")
+  const btnFree = qs("#loginFree")
+  if(btnPremium){ btnPremium.addEventListener("click", ()=>{ localStorage.setItem("loggedIn","true"); gate.style.display="none"; openLinkModal(LINKS.premium, "Premium Subscription") }) }
+  if(btnPro){ btnPro.addEventListener("click", ()=>{ localStorage.setItem("loggedIn","true"); gate.style.display="none"; openLinkModal(LINKS.pro, "Professional Subscription") }) }
+  if(btnFree){ btnFree.addEventListener("click", ()=>{ localStorage.setItem("loggedIn","true"); gate.style.display="none" }) }
 }
 
 function setupPuzzle(){

@@ -13,7 +13,18 @@
 </head>
 <body class="theme-aurora">
 <div class="bg-layers"></div>
-<div id="app">
+  <div id="app">
+  <div id="loginGate" class="login-gate">
+    <div class="login-card glass">
+      <h2>SupportRD Login</h2>
+      <p>Login is required to use the app. Premium unlocks 2 ARIA levels (fewer puzzles). Pro unlocks all 4 levels (unlimited ARIA).</p>
+      <div class="login-actions">
+        <button class="btn" id="loginPremium">$35 PREMIUM</button>
+        <button class="btn" id="loginPro">$50 PROFESSIONAL</button>
+        <button class="btn ghost" id="loginFree">Login Free (More Puzzles)</button>
+      </div>
+    </div>
+  </div>
   <header class="topbar glass">
     <div class="brand">
       <div class="logo">SupportRD</div>
@@ -295,6 +306,21 @@
         <button class="btn ghost" id="closeApp">Close</button>
       </div>
       <div id="appBody">App details here.</div>
+    </div>
+  </div>
+
+  <div id="puzzleModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2>ARIA Coding Puzzle</h2>
+        <button class="btn ghost" id="closePuzzle">Close</button>
+      </div>
+      <div style="color:var(--muted);margin-bottom:10px;">
+        Solve the quick puzzle to continue the conversation.
+      </div>
+      <div id="puzzleQuestion" style="font-weight:700;margin-bottom:8px;">Loading…</div>
+      <input id="puzzleAnswer" placeholder="Your answer">
+      <button class="btn" id="puzzleSubmit">Unlock ARIA</button>
     </div>
   </div>
 
