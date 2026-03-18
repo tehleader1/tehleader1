@@ -36,7 +36,11 @@ const BLOG_POSTS = [
     blogIndex: 0,
     ariaHistory: [],
     socialLinks: {},
-    hairScore: 0
+    hairScore: 0,
+    subscription: "free",
+    ariaCount: 0,
+    ariaBlocked: false,
+    puzzleAnswer: null
   }
 
 function toast(msg){
@@ -77,6 +81,10 @@ function bumpHairScore(delta){
 
 async function askAria(msg){
   if(!msg) return
+  if(state.ariaBlocked){
+    openModal("puzzleModal")
+    return
+  }
   appendAria(`You: ${msg}`)
   try{
     const r = await fetch("/api/aria",{
@@ -87,6 +95,12 @@ async function askAria(msg){
     const d = await r.json()
     appendAria(`ARIA: ${d.reply || "AI unavailable"}`)
     bumpHairScore(1)
+    state.ariaCount += 1
+    const limit = state.subscription === "pro" ? 1e9 : (state.subscription === "premium" ? 8 : 4)
+    if(state.ariaCount >= limit){
+      state.ariaBlocked = true
+      openModal("puzzleModal")
+    }
   }catch{
     appendAria("ARIA: AI unavailable")
   }
@@ -133,7 +147,17 @@ function setupThemeArrows(){
 }
 
 function setupModals(){
-  bindOpen("menuOccasion", "occasionModal")
+  const occBtn = qs("#menuOccasion")
+  if(occBtn){
+    occBtn.addEventListener("click", ()=>{
+      if(state.subscription === "free"){
+        openModal("subscriptionModal")
+        toast("Occasion Editor is Premium+")
+        return
+      }
+      openModal("occasionModal")
+    })
+  }
   bindOpen("menuGift", "giftModal")
   bindOpen("menuSubscription", "subscriptionModal")
   bindClose("closeOccasion", "occasionModal")
@@ -144,6 +168,7 @@ function setupModals(){
   bindClose("closeBlog", "blogModal")
   bindClose("closeApp", "appModal")
   bindClose("closeLink", "linkModal")
+  bindClose("closePuzzle", "puzzleModal")
   bindClose("closeCustomOrder", "customOrderModal")
   bindClose("closeReel", "reelModal")
   bindClose("closeSettings", "settingsModal")
@@ -160,9 +185,9 @@ function setupModals(){
   qs("#blogPrev").addEventListener("click", ()=>{state.blogIndex = (state.blogIndex - 1 + BLOG_POSTS.length) % BLOG_POSTS.length; renderBlog()})
   qs("#blogNext").addEventListener("click", ()=>{state.blogIndex = (state.blogIndex + 1) % BLOG_POSTS.length; renderBlog()})
 
-    qsa("#appsRow .app-card").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        const name = btn.dataset.app
+  qsa("#appsRow .app-card").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const name = btn.dataset.app
         if(name && name.includes("Donate")){
           renderApp(name)
           openModal("appModal")
@@ -208,6 +233,11 @@ function setupModals(){
           return
         }
         bumpHairScore(1)
+        if(name === "Snapshot Coder Idea" && state.subscription === "free"){
+          openModal("subscriptionModal")
+          toast("Snapshot Coder is Premium+")
+          return
+        }
         renderApp(name)
         openModal("appModal")
       })
@@ -280,17 +310,19 @@ function setupPaymentChooser(){
   function render(){
     const val = select.value
     if(val === "evelyn"){
-      view.innerHTML = `<p>Custom order with Evelyn.</p><button class="btn" id="openCustomOrder">Open Custom Order</button>`
+      view.innerHTML = `<p>Custom order with Evelyn.</p><div class="lock-pill">Premium: 2 ARIA levels + puzzles</div><div class="lock-pill">Pro: all 4 levels + unlimited</div><button class="btn" id="openCustomOrder">Open Custom Order</button>`
       qs("#openCustomOrder").addEventListener("click", ()=>openModal("customOrderModal"))
       return
     }
     if(val === "premium"){
-      view.innerHTML = `<p>$35 PREMIUM subscription.</p><button class="btn" id="goPremium">Pay $35</button>`
+      view.innerHTML = `<p>$35 PREMIUM subscription.</p><div class="lock-pill">Unlocks 2 ARIA levels + puzzles to continue</div><button class="btn" id="goPremium">Pay $35</button>`
+      state.subscription = "premium"
       qs("#goPremium").addEventListener("click", ()=>openLinkModal(LINKS.premium, "Premium Subscription"))
       return
     }
     if(val === "pro"){
-      view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><button class="btn" id="goPro">Pay $50</button>`
+      view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><div class="lock-pill">All 4 levels + unlimited ARIA</div><button class="btn" id="goPro">Pay $50</button>`
+      state.subscription = "pro"
       qs("#goPro").addEventListener("click", ()=>openLinkModal(LINKS.pro, "Professional Subscription"))
       return
     }
@@ -576,6 +608,8 @@ function setupCamera(){
 function setupSettings(){
   const saved = JSON.parse(localStorage.getItem("socialLinks") || "{}")
   state.socialLinks = saved
+  state.subscription = (saved.subscription || "free").toLowerCase().includes("pro") ? "pro" :
+    ((saved.subscription || "").toLowerCase().includes("premium") ? "premium" : "free")
   qs("#setName").value = saved.name || ""
   qs("#setEmail").value = saved.email || ""
   qs("#setPhone").value = saved.phone || ""
@@ -629,6 +663,8 @@ function setupSettings(){
         pushAria: qs("#pushAria").checked
       }
       localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+      const sub = state.socialLinks.subscription.toLowerCase()
+      state.subscription = sub.includes("pro") ? "pro" : (sub.includes("premium") ? "premium" : "free")
       toast("Settings saved")
       const indicator = qs("#socialIndicator")
       if(indicator){
@@ -669,6 +705,32 @@ function setupFamilyMode(){
       window.location.href = "https://supportrd.com"
     }
   })
+}
+
+function setupPuzzle(){
+  const q = qs("#puzzleQuestion")
+  const a = qs("#puzzleAnswer")
+  const btn = qs("#puzzleSubmit")
+  if(!q || !a || !btn) return
+  function newPuzzle(){
+    const x = 3 + Math.floor(Math.random() * 9)
+    const y = 4 + Math.floor(Math.random() * 9)
+    state.puzzleAnswer = x + y
+    q.textContent = `What is ${x} + ${y}?`
+    a.value = ""
+  }
+  btn.addEventListener("click", ()=>{
+    if(Number(a.value) === state.puzzleAnswer){
+      state.ariaBlocked = false
+      state.ariaCount = 0
+      qs("#puzzleModal").style.display = "none"
+      appendAria("ARIA: Thanks! You’re unlocked — continue your hair routine questions.")
+    } else {
+      toast("Try again")
+      newPuzzle()
+    }
+  })
+  newPuzzle()
 }
 
 async function loadProducts(){
@@ -726,6 +788,7 @@ function setupAria(){
     rec.lang = qs("#ariaLanguage")?.value || "en-US"
     rec.interimResults = false
     rec.maxAlternatives = 1
+    try{ rec.continuous = true }catch{}
     rec.onstart = ()=>toast("ARIA listening...")
     rec.onresult = (e)=>{
       const text = e.results[0][0].transcript
@@ -782,6 +845,11 @@ function renderApp(name){
     return
   }
   if(name === "Snapshot Coder Idea"){
+    if(state.subscription === "free"){
+      body.innerHTML = `<div class="lock-pill">Premium feature</div><div style="margin-top:8px;color:var(--muted);">Upgrade to unlock Snapshot Coder insights and GPT‑5.2 Codex tracking.</div><button class="btn" id="openSubFromSnap">Upgrade</button>`
+      qs("#openSubFromSnap").addEventListener("click", ()=>openModal("subscriptionModal"))
+      return
+    }
     body.innerHTML = `<div style="margin-bottom:10px;">Paste your recent work and let ARIA score progress, blockers, and next steps.</div><textarea id="coderInput" style="width:100%;min-height:140px;"></textarea><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn" id="coderAnalyze">Analyze with ARIA (GPT 5.2 Codex)</button><button class="btn ghost" id="coderSend">Send Snapshot to Anthony</button></div>`
     qs("#coderAnalyze").addEventListener("click", ()=>toast("ARIA analysis queued"))
     qs("#coderSend").addEventListener("click", ()=>{
@@ -865,7 +933,10 @@ function renderApp(name){
       })
     }
     const level = score >= 90 ? "pro" : score >= 75 ? "inner" : score >= 45 ? "breakdown" : "intro"
+    const sub = state.subscription
     qsa(".level-card").forEach(card=>{
+      const isLocked = (sub === "free" && card.dataset.level !== "intro") ||
+        (sub === "premium" && (card.dataset.level === "inner" || card.dataset.level === "pro"))
       if(card.dataset.level === level){
         card.style.background = "linear-gradient(135deg, rgba(0,226,255,0.25), rgba(124,124,255,0.25))"
         card.style.border = "1px solid rgba(0,226,255,0.6)"
@@ -874,9 +945,12 @@ function renderApp(name){
         card.style.background = "rgba(255,255,255,0.06)"
         card.style.border = "1px solid rgba(255,255,255,0.12)"
       }
+      card.classList.toggle("locked", isLocked)
+      card.textContent = card.textContent.replace(" 🔒","")
+      if(isLocked){ card.textContent += " 🔒" }
     })
     const pro = qs("#proDetails")
-    if(pro && level === "pro"){ pro.style.display = "block" }
+    if(pro && level === "pro" && sub === "pro"){ pro.style.display = "block" }
     return
   }
   if(name === "Shopify Products"){
@@ -1009,6 +1083,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupScanUpload)
   safe(setupGPS)
   safe(setupAria)
+  safe(setupPuzzle)
   safe(setupSEOLogs)
   safe(setupReel)
   safe(setupCamera)
@@ -1022,7 +1097,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   document.body.addEventListener("click", (e)=>{
     const el = e.target.closest("[data-link]")
     if(el && el.dataset.link){
-      window.open(el.dataset.link, "_blank")
+      openLinkModal(el.dataset.link, "SupportRD Link")
     }
   })
 })
