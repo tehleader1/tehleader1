@@ -3,6 +3,20 @@ const qsa = (sel) => Array.from(document.querySelectorAll(sel))
 
 const THEMES = ["aurora","ice","ember","carbon","nebula"]
 const DEFAULT_THEME = "aurora"
+const THEME_CONTENT = [
+  {title:"SupportRD Live", desc:"Hair care, routines, product matching, and live guidance — all focused on healthy hair, growth, and repair."},
+  {title:"SupportRD Live Studio", desc:"Moisture, bounce, and growth tracking with ARIA‑guided routines and real product wins."},
+  {title:"SupportRD Live Lab", desc:"Deep repair, scalp care, and shine — your weekly routine mapped in 7‑day views."},
+  {title:"SupportRD Live Motion", desc:"Social‑ready hair moments, instant scans, and custom orders with Evelyn."},
+  {title:"SupportRD Live Pro", desc:"Professional routines, growth analytics, and premium subscription guidance."}
+]
+const HERO_FILTERS = [
+  "saturate(1.1) contrast(1.05)",
+  "hue-rotate(15deg) saturate(1.2)",
+  "hue-rotate(-10deg) saturate(1.15)",
+  "grayscale(0.1) contrast(1.1)",
+  "hue-rotate(25deg) saturate(1.25)"
+]
 
 const LINKS = {
   premium: "https://supportrd.com/products/hair-advisor-premium",
@@ -108,6 +122,18 @@ function setupThemeArrows(){
   function applyTheme(){
     document.body.className = `theme-${THEMES[state.themeIndex]}`
     localStorage.setItem("theme", THEMES[state.themeIndex])
+    const content = THEME_CONTENT[state.themeIndex % THEME_CONTENT.length]
+    const hero = qs(".center-hero")
+    if(hero && content){
+      const h2 = hero.querySelector("h2")
+      const p = hero.querySelector("p")
+      if(h2) h2.textContent = content.title
+      if(p) p.textContent = content.desc
+    }
+    const icon = qs("#heroIcon")
+    if(icon){
+      icon.style.filter = HERO_FILTERS[state.themeIndex % HERO_FILTERS.length]
+    }
   }
 }
 
@@ -196,6 +222,416 @@ function setupModals(){
   })
 }
 
+function openModal(id){
+  const el = qs("#" + id)
+  if(el){ el.style.display = "flex" }
+}
+
+function bindOpen(triggerId, modalId){
+  const el = qs("#" + triggerId)
+  if(el){ el.addEventListener("click", ()=>openModal(modalId)) }
+}
+
+function bindClose(triggerId, modalId){
+  const el = qs("#" + triggerId)
+  if(el){ el.addEventListener("click", ()=>{ const m = qs("#" + modalId); if(m) m.style.display = "none" }) }
+}
+
+function renderBlog(){
+  const post = BLOG_POSTS[state.blogIndex]
+  const title = qs("#blogTitle")
+  const body = qs("#blogBody")
+  if(title) title.textContent = post.title
+  if(body) body.textContent = post.body
+}
+
+function appendAria(text){
+  state.ariaHistory.unshift(text)
+  if(state.ariaHistory.length > 6) state.ariaHistory.pop()
+  localStorage.setItem("ariaHistory", JSON.stringify(state.ariaHistory))
+  const ariaEl = qs("#ariaHistory")
+  if(ariaEl){
+    ariaEl.innerHTML = state.ariaHistory.map(x=>`<div>${x}</div>`).join("")
+  }
+}
+
+function setupPaymentChooser(){
+  const select = qs("#paymentSelect")
+  const view = qs("#paymentView")
+  if(!select || !view) return
+
+  function render(){
+    const val = select.value
+    if(val === "evelyn"){
+      view.innerHTML = `<p>Custom order with Evelyn.</p><button class="btn" id="openCustomOrder">Open Custom Order</button>`
+      qs("#openCustomOrder").addEventListener("click", ()=>openModal("customOrderModal"))
+      return
+    }
+    if(val === "premium"){
+      view.innerHTML = `<p>$35 PREMIUM subscription.</p><button class="btn" id="goPremium">Pay $35</button>`
+      qs("#goPremium").addEventListener("click", ()=>window.open(LINKS.premium, "_blank"))
+      return
+    }
+    if(val === "pro"){
+      view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><button class="btn" id="goPro">Pay $50</button>`
+      qs("#goPro").addEventListener("click", ()=>window.open(LINKS.pro, "_blank"))
+      return
+    }
+    view.innerHTML = `<p>Tip the team.</p><button class="btn" id="tipOrder">Open Tip</button>`
+    qs("#tipOrder").addEventListener("click", ()=>window.open(LINKS.custom, "_blank"))
+  }
+
+  select.addEventListener("change", render)
+  render()
+}
+
+function setupPostActions(){
+  const live = qs("#liveStatus")
+  const send = qs("#sendSocials")
+  const post = qs("#postSocials")
+  const paySelect = qs("#paySelect")
+  const contactEvelyn = qs("#contactEvelyn")
+  const indicator = qs("#socialIndicator")
+  const socialSelect = qs("#socialSelect")
+  const adCta = qs("#adCta")
+
+  const feedMap = {
+    instagram: "ig",
+    tiktok: "tiktok",
+    facebook: "fb",
+    youtube: "yt",
+    x: "x",
+    threads: "threads"
+  }
+
+  function enabledFeeds(){
+    const feeds = state.socialLinks.feeds || {ig:true,tiktok:true,fb:true}
+    return Object.keys(feedMap).filter(k => feeds[feedMap[k]])
+  }
+
+  function updateIndicator(){
+    if(!indicator) return
+    const list = enabledFeeds()
+    indicator.textContent = list.length ? `Feeds: ${list.map(x=>x[0].toUpperCase()+x.slice(1)).join(", ")}` : "Feeds: none selected"
+  }
+
+  function openFeed(key){
+    const link = state.socialLinks[feedMap[key]]
+    if(link){ window.open(link, "_blank"); return true }
+    return false
+  }
+
+  function postToFeeds(){
+    const choice = socialSelect ? socialSelect.value : "all"
+    const targets = choice === "all" ? enabledFeeds() : [choice]
+    let opened = 0
+    targets.forEach(t=>{ if(openFeed(t)) opened++ })
+    if(!opened){ toast("Add social links in Settings") }
+  }
+
+  if(live){
+    live.addEventListener("click", ()=>{
+      live.classList.toggle("active")
+      live.textContent = live.classList.contains("active") ? "Live Status · ON" : "Live Status"
+      bumpHairScore(1)
+    })
+  }
+
+  if(send){ send.addEventListener("click", postToFeeds) }
+  if(post){ post.addEventListener("click", postToFeeds) }
+  if(adCta){ adCta.addEventListener("click", ()=>window.open(LINKS.custom, "_blank")) }
+  if(socialSelect){
+    socialSelect.addEventListener("change", ()=>{
+      if(socialSelect.value !== "all"){
+        indicator.textContent = `Selected: ${socialSelect.value}`
+      } else {
+        updateIndicator()
+      }
+    })
+  }
+
+  if(paySelect){
+    paySelect.addEventListener("change", ()=>{
+      const mapping = {
+        "Payment with Evelyn": "evelyn",
+        "Tip to Developer": "tip5",
+        "Payment to Crystal": "tip10",
+        "Tip to Ramlin (Labor)": "tip20"
+      }
+      const target = mapping[paySelect.value] || "evelyn"
+      const select = qs("#paymentSelect")
+      if(select){ select.value = target; select.dispatchEvent(new Event("change")) }
+      openModal("subscriptionModal")
+    })
+  }
+
+  if(contactEvelyn){
+    contactEvelyn.addEventListener("click", ()=>{
+      const phone = (state.socialLinks.evelyn || "829-233-2670").replace(/\D/g,"")
+      if(!phone){ toast("Add Evelyn WhatsApp in Settings"); return }
+      window.open(`https://wa.me/${phone}?text=Hi%20Evelyn%2C%20I%20need%20help%20with%20my%20order.`,"_blank")
+    })
+  }
+
+  updateIndicator()
+}
+
+function setupOccasion(){
+  const actionSel = qs("#occasionAction")
+  const applySel = qs("#occasionApply")
+  const enjoySel = qs("#occasionEnjoy")
+  const weekBoxes = qsa("#weekBoxes .week")
+  if(!actionSel || !applySel || !enjoySel || !weekBoxes.length) return
+
+  const actions = [
+    "Normal Action","Getting Up","Wash Day","Training","Travel","Work","School","After Gym","Beach Day","Pool Day",
+    "Rainy Day","Sweat Reset","Curl Refresh","Detox Day","Protective Style","Braids Day","Twist Day","Silk Press",
+    "Blowout Prep","Color Day","Trim Day","Night Routine","Morning Routine","Self Care","Date Night","Photo Day",
+    "Big Fight","Party","Wedding","Brunch","Office Presentation","Interview","Vacation","Salon Visit","Product Test",
+    "Scalp Care","Moisture Boost","Protein Boost","Hydration Day","Heat Protect","Overnight Mask","Co‑Wash",
+    "Deep Clean","Anti‑Frizz","Volume Day","Edge Control","Sleek Bun","Natural Day","Maintenance Day","Post Swim",
+    "Pre Workout","Post Workout","Travel Pack","Festival","Family Event","New Product Day","Weekly Reset"
+  ]
+  const applies = [
+    "Apply Product","Shampoo","Laciador","Mask","Leave‑In","Serum","Scalp Oil","Heat Protectant","Foam","Gel","Cream",
+    "Butter","Conditioner","Deep Conditioner","Clarifying Wash","Co‑Wash","Edge Control","Mousse","Protein Treatment",
+    "Hydration Mist","Styling Spray"
+  ]
+  const enjoys = [
+    "Enjoy Product","Big Fight","Date Night","Photo Day","After Workout","All‑Day Shine","Smooth Finish","Soft Curls",
+    "Volume Boost","Frizz‑Free","Long‑Lasting Style","Protective Glow","Salon‑Ready","Party Ready","Interview Ready"
+  ]
+
+  actionSel.innerHTML = actions.map(a=>`<option>${a}</option>`).join("")
+  applySel.innerHTML = applies.map(a=>`<option>${a}</option>`).join("")
+  enjoySel.innerHTML = enjoys.map(a=>`<option>${a}</option>`).join("")
+
+  function updateWeek(){
+    const text = `${actionSel.value} · ${applySel.value} · ${enjoySel.value}`
+    weekBoxes.forEach((box, i)=>{ box.textContent = `Day ${i+1} — ${text}` })
+  }
+  actionSel.addEventListener("change", updateWeek)
+  applySel.addEventListener("change", updateWeek)
+  enjoySel.addEventListener("change", updateWeek)
+  updateWeek()
+}
+
+function setupScanUpload(){
+  const input = qs("#scanUpload")
+  const preview = qs("#scanPreview")
+  if(!input || !preview) return
+  input.addEventListener("change", ()=>{
+    const file = input.files[0]
+    if(!file) return
+    const url = URL.createObjectURL(file)
+    preview.innerHTML = `<img src="${url}" alt="Scan">`
+    preview.style.display = "block"
+    toast("3D scan photo attached")
+  })
+}
+
+function setupGPS(){
+  const map = qs("#gpsMap")
+  if(map){
+    map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-74.1%2C40.6%2C-73.7%2C40.9&layer=mapnik"
+  }
+  const btn = qs("#findSalons")
+  const list = qs("#salonResults")
+  if(btn && list){
+    btn.addEventListener("click", ()=>{
+      list.textContent = "Finding nearby salons..."
+      if(!navigator.geolocation){
+        list.textContent = "Geolocation not supported."
+        return
+      }
+      navigator.geolocation.getCurrentPosition(async (pos)=>{
+        try{
+          const r = await fetch("/api/salons",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({lat: pos.coords.latitude, lon: pos.coords.longitude})
+          })
+          const salons = await r.json()
+          if(!salons.length){ list.textContent = "No salons found."; return }
+          list.innerHTML = salons.map(s=>`<div>${s.name} - ${s.distance} mi</div>`).join("")
+        }catch{
+          list.textContent = "Salon lookup failed."
+        }
+      }, ()=>{ list.textContent = "Location denied."; })
+    })
+  }
+  const hf = qs("#gpsHandsFree")
+  if(hf){
+    hf.addEventListener("click", ()=>{
+      qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
+      qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
+      qs('[data-tab="handsfree"]').classList.add("active")
+      qs("#tab-handsfree").classList.add("active")
+      if(window.startAriaListening){ window.startAriaListening() }
+    })
+  }
+}
+
+function setupSEOLogs(){
+  const stream = qs("#logStream")
+  let timer = null
+  const open = qs("#openSeo")
+  const close = qs("#closeSeo")
+  if(!stream || !open || !close) return
+  open.addEventListener("click", ()=>{
+    if(timer) clearInterval(timer)
+    stream.innerHTML = ""
+    timer = setInterval(()=>{
+      const line = `[${new Date().toLocaleTimeString()}] render: build ok · cache hit · seo feed synced`
+      const div = document.createElement("div")
+      div.textContent = line
+      stream.appendChild(div)
+      stream.scrollTop = stream.scrollHeight
+    }, 800)
+  })
+  close.addEventListener("click", ()=>{ if(timer) clearInterval(timer) })
+}
+
+function setupReel(){
+  const btn = qs("#openReel")
+  if(btn){ btn.addEventListener("click", ()=>openModal("reelModal")) }
+}
+
+function setupCamera(){
+  const chip = qs("#cameraChip")
+  let stream = null
+  if(chip){ chip.addEventListener("click", ()=>openModal("cameraModal")) }
+  const start = qs("#startCamera")
+  const stop = qs("#stopCamera")
+  if(start){
+    start.addEventListener("click", async ()=>{
+      try{
+        stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+        qs("#cameraView").srcObject = stream
+      }catch{ toast("Camera blocked") }
+    })
+  }
+  if(stop){
+    stop.addEventListener("click", ()=>{
+      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null }
+    })
+  }
+}
+
+function setupSettings(){
+  const saved = JSON.parse(localStorage.getItem("socialLinks") || "{}")
+  state.socialLinks = saved
+  qs("#setName").value = saved.name || ""
+  qs("#setEmail").value = saved.email || ""
+  qs("#setPhone").value = saved.phone || ""
+  qs("#setUsername").value = saved.username || ""
+  qs("#setPassword").value = ""
+  qs("#setAddress").value = saved.address || ""
+  qs("#setSubscription").value = saved.subscription || ""
+  qs("#setCustomOrder").value = saved.customOrder || ""
+  qs("#setEvelyn").value = saved.evelyn || ""
+  qs("#setIG").value = saved.ig || ""
+  qs("#setTikTok").value = saved.tiktok || ""
+  qs("#setFB").value = saved.fb || ""
+  qs("#setYT").value = saved.yt || ""
+  qs("#setX").value = saved.x || ""
+  qs("#setThreads").value = saved.threads || ""
+  const feeds = saved.feeds || {ig:true,tiktok:true,fb:true}
+  qs("#feedIG").checked = !!feeds.ig
+  qs("#feedTikTok").checked = !!feeds.tiktok
+  qs("#feedFB").checked = !!feeds.fb
+  qs("#feedYT").checked = !!feeds.yt
+  qs("#feedX").checked = !!feeds.x
+  qs("#feedThreads").checked = !!feeds.threads
+  qs("#pushAria").checked = !!saved.pushAria
+
+  const save = qs("#saveSettings")
+  if(save){
+    save.addEventListener("click", ()=>{
+      state.socialLinks = {
+        name: qs("#setName").value.trim(),
+        email: qs("#setEmail").value.trim(),
+        phone: qs("#setPhone").value.trim(),
+        username: qs("#setUsername").value.trim(),
+        address: qs("#setAddress").value.trim(),
+        subscription: qs("#setSubscription").value.trim(),
+        customOrder: qs("#setCustomOrder").value.trim(),
+        evelyn: qs("#setEvelyn").value.trim(),
+        ig: qs("#setIG").value.trim(),
+        tiktok: qs("#setTikTok").value.trim(),
+        fb: qs("#setFB").value.trim(),
+        yt: qs("#setYT").value.trim(),
+        x: qs("#setX").value.trim(),
+        threads: qs("#setThreads").value.trim(),
+        feeds: {
+          ig: qs("#feedIG").checked,
+          tiktok: qs("#feedTikTok").checked,
+          fb: qs("#feedFB").checked,
+          yt: qs("#feedYT").checked,
+          x: qs("#feedX").checked,
+          threads: qs("#feedThreads").checked
+        },
+        pushAria: qs("#pushAria").checked
+      }
+      localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+      toast("Settings saved")
+      const indicator = qs("#socialIndicator")
+      if(indicator){
+        const list = Object.keys(state.socialLinks.feeds || {}).filter(k=>state.socialLinks.feeds[k])
+        indicator.textContent = list.length ? `Feeds: ${list.map(x=>x[0].toUpperCase()+x.slice(1)).join(", ")}` : "Feeds: none selected"
+      }
+    })
+  }
+}
+
+function setupPwa(){
+  let deferredPrompt = null
+  window.addEventListener("beforeinstallprompt", (e)=>{
+    e.preventDefault()
+    deferredPrompt = e
+    const btn = qs("#installBtn")
+    if(btn) btn.style.display = "inline-flex"
+  })
+  const btn = qs("#installBtn")
+  if(btn){
+    btn.addEventListener("click", async ()=>{
+      if(!deferredPrompt) return
+      deferredPrompt.prompt()
+      deferredPrompt = null
+      btn.style.display = "none"
+    })
+  }
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("/sw.js")
+  }
+}
+
+function setupFamilyMode(){
+  const toggle = qs("#familyToggle")
+  if(!toggle) return
+  toggle.addEventListener("change", ()=>{
+    if(toggle.checked){
+      window.location.href = "https://supportrd.com"
+    }
+  })
+}
+
+async function loadProducts(){
+  const mini = qs("#productsMini")
+  if(!mini) return
+  try{
+    const r = await fetch("/api/products")
+    const items = await r.json()
+    if(!items.length){
+      mini.textContent = "No products found."
+      return
+    }
+    mini.innerHTML = items.slice(0,3).map(p=>`<div>${p.title}</div>`).join("")
+  }catch{
+    mini.textContent = "Loading shopify products failed."
+  }
+}
+
 function setupAria(){
   const btn = qs("#voiceToggle")
   const sphere = qs("#ariaSphere")
@@ -242,6 +678,7 @@ function setupAria(){
 
   if(btn){ btn.addEventListener("click", startListening) }
   if(sphere){ sphere.addEventListener("click", startListening) }
+  window.startAriaListening = startListening
 }
 
 function renderApp(name){
@@ -275,8 +712,12 @@ function renderApp(name){
     return
   }
   if(name === "Snapshot Coder Idea"){
-    body.innerHTML = `<div style="margin-bottom:10px;">Paste your recent work and let ARIA score progress, blockers, and next steps.</div><textarea id="coderInput" style="width:100%;min-height:140px;"></textarea><button class="btn" id="coderAnalyze">Analyze with ARIA (GPT 5.2 Codex)</button>`
+    body.innerHTML = `<div style="margin-bottom:10px;">Paste your recent work and let ARIA score progress, blockers, and next steps.</div><textarea id="coderInput" style="width:100%;min-height:140px;"></textarea><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn" id="coderAnalyze">Analyze with ARIA (GPT 5.2 Codex)</button><button class="btn ghost" id="coderSend">Send Snapshot to Anthony</button></div>`
     qs("#coderAnalyze").addEventListener("click", ()=>toast("ARIA analysis queued"))
+    qs("#coderSend").addEventListener("click", ()=>{
+      const text = encodeURIComponent(qs("#coderInput").value || "")
+      window.open(`mailto:AgentAnthony@supportdr.com?subject=Snapshot%20Coder%20Idea&body=${text}`,"_blank")
+    })
     return
   }
   if(name === "Live Coder Suggestions"){
@@ -288,8 +729,14 @@ function renderApp(name){
         <li>Week 3: social posting automation + SEO blog cadence.</li>
         <li>Week 4: growth experiments + retention and push/PWA upgrades.</li>
       </ul>
-      <div style="color:var(--muted);">Drop your progress logs and ARIA will propose next sprint items.</div>
+      <div style="color:var(--muted);margin-bottom:10px;">Send a suggestion and we’ll credit 1 month premium for accepted ideas.</div>
+      <textarea id="suggestionInput" style="width:100%;min-height:120px;"></textarea>
+      <button class="btn" id="sendSuggestion">Send Suggestion</button>
     `
+    qs("#sendSuggestion").addEventListener("click", ()=>{
+      const text = encodeURIComponent(qs("#suggestionInput").value || "")
+      window.open(`mailto:AgentAnthony@supportdr.com?subject=Live%20Coder%20Suggestion&body=${text}`,"_blank")
+    })
     return
   }
   if(name === "Live Hair Score"){
@@ -467,7 +914,7 @@ function setupAppsDock(){
   if(library){
     library.querySelectorAll(".app-card").forEach(card=>wireCard(card, "library"))
   }
-}\nwindow.addEventListener("DOMContentLoaded", ()=>{
+}\n\nwindow.addEventListener("DOMContentLoaded", ()=>{
   const savedHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
   state.ariaHistory = savedHistory
   const ariaEl = qs("#ariaHistory")
@@ -480,14 +927,15 @@ function setupAppsDock(){
   safe(setupThemeArrows)
   safe(setupModals)
   safe(setupPaymentChooser)
+  safe(setupSettings)
   safe(setupPostActions)
+  safe(setupOccasion)
   safe(setupScanUpload)
   safe(setupGPS)
   safe(setupAria)
   safe(setupSEOLogs)
   safe(setupReel)
   safe(setupCamera)
-  safe(setupSettings)
   safe(setupPwa)
     safe(setupFamilyMode)
     safe(initHairScore)

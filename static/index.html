@@ -23,7 +23,7 @@
       <div class="big-menu">
         <button class="menu-btn" id="menuOccasion">Occasion Editor</button>
         <button class="menu-btn" id="menuGift">Gift Shop</button>
-        <button class="menu-btn" id="menuSubscription">Subscription</button>
+        <button class="menu-btn glow" id="menuSubscription">Subscription · $35 / $50</button>
       </div>
       <div class="toggle-wrap">
         <label class="toggle">
@@ -50,6 +50,7 @@
     </div>
     <div class="center-head">
       <div class="center-hero">
+        <img id="heroIcon" class="hero-icon" src="/static/images/woman-waking-up12.jpg" alt="SupportRD">
         <h2>SupportRD Live</h2>
         <p>Hair care, routines, product matching, and live guidance — all focused on healthy hair, growth, and repair.</p>
       </div>
@@ -96,6 +97,16 @@
 
         <div class="post-bottom">
           <button class="btn" id="postSocials">Post to All Socials</button>
+          <select class="payment-dropdown" id="socialSelect">
+            <option value="all">All Feeds</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="facebook">Facebook</option>
+            <option value="youtube">YouTube</option>
+            <option value="x">X (Twitter)</option>
+            <option value="threads">Threads</option>
+          </select>
+          <div class="social-indicator" id="socialIndicator">Feeds: Instagram, TikTok, Facebook</div>
           <select class="payment-dropdown" id="paySelect">
             <option>Payment with Evelyn</option>
             <option>Tip to Developer</option>
@@ -237,36 +248,20 @@
       <h2>Occasion Editor</h2>
       <button class="btn ghost" id="closeOccasion">Close</button>
     </div>
-    <div class="occasion-boxes">
-      <select class="occasion-select">
-        <option>Normal Action</option>
-        <option>Getting Up</option>
-        <option>Wash Day</option>
-        <option>Training</option>
-        <option>Travel</option>
-      </select>
-      <select class="occasion-select">
-        <option>Apply Product</option>
-        <option>Shampoo</option>
-        <option>Laciador</option>
-        <option>Mask</option>
-      </select>
-      <select class="occasion-select">
-        <option>Enjoy Product</option>
-        <option>Big Fight</option>
-        <option>Date Night</option>
-        <option>Photo Day</option>
-      </select>
-    </div>
-    <div class="week-boxes">
-      <div class="week">Day 1</div>
-      <div class="week">Day 2</div>
-      <div class="week">Day 3</div>
-      <div class="week">Day 4</div>
-      <div class="week">Day 5</div>
-      <div class="week">Day 6</div>
-      <div class="week">Day 7</div>
-    </div>
+      <div class="occasion-boxes">
+        <select class="occasion-select" id="occasionAction"></select>
+        <select class="occasion-select" id="occasionApply"></select>
+        <select class="occasion-select" id="occasionEnjoy"></select>
+      </div>
+      <div class="week-boxes" id="weekBoxes">
+        <div class="week">Day 1</div>
+        <div class="week">Day 2</div>
+        <div class="week">Day 3</div>
+        <div class="week">Day 4</div>
+        <div class="week">Day 5</div>
+        <div class="week">Day 6</div>
+        <div class="week">Day 7</div>
+      </div>
   </div>
 </div>
 
@@ -332,11 +327,27 @@
       <input id="setName" placeholder="Name">
       <input id="setEmail" placeholder="Email">
       <input id="setPhone" placeholder="Phone">
+      <input id="setUsername" placeholder="Username">
+      <input id="setPassword" type="password" placeholder="New Password">
+      <input id="setAddress" placeholder="Address">
+      <input id="setSubscription" placeholder="Current Subscription">
+      <input id="setCustomOrder" placeholder="Current Custom Order Link">
+      <input id="setEvelyn" placeholder="Evelyn WhatsApp Number">
       <input id="setIG" placeholder="Instagram link">
       <input id="setTikTok" placeholder="TikTok link">
       <input id="setFB" placeholder="Facebook link">
       <input id="setYT" placeholder="YouTube link">
       <input id="setX" placeholder="X / Twitter link">
+      <input id="setThreads" placeholder="Threads link">
+      <div class="settings-checks">
+        <label><input type="checkbox" id="feedIG"> Post to Instagram</label>
+        <label><input type="checkbox" id="feedTikTok"> Post to TikTok</label>
+        <label><input type="checkbox" id="feedFB"> Post to Facebook</label>
+        <label><input type="checkbox" id="feedYT"> Post to YouTube</label>
+        <label><input type="checkbox" id="feedX"> Post to X</label>
+        <label><input type="checkbox" id="feedThreads"> Post to Threads</label>
+        <label><input type="checkbox" id="pushAria"> Push notifications via ARIA text</label>
+      </div>
       <button class="btn" id="saveSettings">Save Settings</button>
     </div>
   </div>
