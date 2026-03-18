@@ -302,10 +302,10 @@ body{
 (function(){
   var CLIP_MS = 10000;
   var VIDEOS = [
-    { src: 'https://cdn.coverr.co/videos/coverr-a-woman-getting-her-hair-done-3747/1080p.mp4', title: 'Professional blowout technique for silky smooth hair', tag: '#hairtransformation', link: '' },
-    { src: 'https://cdn.coverr.co/videos/coverr-woman-having-her-hair-styled-1584/1080p.mp4', title: 'Moisture routine for dry damaged hair — watch the difference', tag: '#hairrepair', link: '' },
-    { src: 'https://cdn.coverr.co/videos/coverr-woman-combing-her-hair-6129/1080p.mp4', title: 'Detangling natural hair without breakage — the right way', tag: '#naturalhair', link: '' },
-    { src: 'https://cdn.coverr.co/videos/coverr-woman-with-curly-hair-8120/1080p.mp4', title: 'Curl definition secrets — no frizz, all bounce', tag: '#curlyhair', link: '' }
+    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', title: 'Hair TV Reel · Clip 1', tag: '#reel', link: '' },
+    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', title: 'Hair TV Reel · Clip 2', tag: '#reel', link: '' },
+    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', title: 'Hair TV Reel · Clip 3', tag: '#reel', link: '' },
+    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', title: 'Hair TV Reel · Clip 4', tag: '#reel', link: '' }
   ];
 
   VIDEOS.sort(function(){ return Math.random() - 0.5; });
@@ -376,6 +376,7 @@ body{
     }).catch(function(){
       loading.style.opacity = '0';
       loading.style.pointerEvents = 'none';
+      title.textContent = 'Reel playback blocked — tap to start';
       startProgress(CLIP_MS / 1000);
     });
 
