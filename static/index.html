@@ -186,6 +186,14 @@
               <button class="btn" id="startHairScan">Start Hair Scan</button>
             </div>
             <div class="analysis-steps">
+              <label class="analysis-level">ARIA Level
+                <select id="ariaLevelSelect">
+                  <option value="greeting">Greetings</option>
+                  <option value="thorough">Thorough Info</option>
+                  <option value="inner">Inner Circle</option>
+                  <option value="pro">Professional</option>
+                </select>
+              </label>
               <div class="step">1. Center your face and shoulders in view.</div>
               <div class="step">2. Slowly turn left, then right.</div>
               <div class="step">3. Follow ARIA’s voice while the scan runs.</div>
@@ -202,7 +210,6 @@
           <div class="listen-copy">
             <div id="ariaFlowText" class="listen-text">Listening…</div>
             <div id="ariaTranscript" class="listen-transcript">Say something about your hair…</div>
-            <div id="micStatus" class="mic-status">Mic: idle</div>
           </div>
         </div>
       </div>
@@ -222,12 +229,6 @@
       <div class="panel-head">
         <h3>Live Conversation</h3>
         <span class="engine-glow">ARIA Flow</span>
-      </div>
-      <div class="level-controls">
-        <button class="level-btn active" data-level="greeting">Greetings</button>
-        <button class="level-btn" data-level="thorough">Thorough Info</button>
-        <button class="level-btn" data-level="inner">Inner Circle</button>
-        <button class="level-btn" data-level="pro">Professional</button>
       </div>
       <div id="conversationLog" class="conversation-log">No conversation yet.</div>
     </section>
