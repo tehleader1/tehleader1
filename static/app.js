@@ -143,19 +143,47 @@ async function askAria(msg){
     window.speechSynthesis.onvoiceschanged = ()=>{ cachedAriaVoice = null }
   }
   
-  function playListenBeep(){
+  let listenCtx = null
+  let listenOsc = null
+  let listenGain = null
+  let listenLfo = null
+  let listenLfoGain = null
+  function startListenLoop(){
+    stopListenLoop()
     try{
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = "sine"
-      osc.frequency.value = 520
-      gain.gain.value = 0.08
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start()
-      setTimeout(()=>{osc.stop(); ctx.close()}, 220)
+      const Ctx = window.AudioContext || window.webkitAudioContext
+      listenCtx = new Ctx()
+      listenOsc = listenCtx.createOscillator()
+      listenGain = listenCtx.createGain()
+      listenLfo = listenCtx.createOscillator()
+      listenLfoGain = listenCtx.createGain()
+      listenOsc.type = "sine"
+      listenOsc.frequency.value = 430
+      listenGain.gain.value = 0.02
+      listenLfo.type = "sine"
+      listenLfo.frequency.value = 0.8
+      listenLfoGain.gain.value = 0.03
+      listenLfo.connect(listenLfoGain)
+      listenLfoGain.connect(listenGain.gain)
+      listenOsc.connect(listenGain)
+      listenGain.connect(listenCtx.destination)
+      listenOsc.start()
+      listenLfo.start()
     }catch{}
+  }
+  function stopListenLoop(){
+    try{
+      if(listenGain){
+        const t = listenCtx.currentTime
+        listenGain.gain.setTargetAtTime(0.0001, t, 0.05)
+      }
+    }catch{}
+    setTimeout(()=>{
+      try{ if(listenOsc) listenOsc.stop() }catch{}
+      try{ if(listenLfo) listenLfo.stop() }catch{}
+      try{ if(listenCtx) listenCtx.close() }catch{}
+      listenCtx = listenOsc = listenGain = listenLfo = listenLfoGain = null
+    }, 160)
   }
 
   function playDoneChime(){
@@ -860,7 +888,7 @@ async function loadProducts(){
           toast("Voice not supported")
           return
         }
-        playListenBeep()
+        startListenLoop()
         if(!ariaRec){
           ariaRec = new SpeechRecognition()
           ariaRec.lang = qs("#ariaLanguage")?.value || "en-US"
@@ -878,6 +906,7 @@ async function loadProducts(){
             if(!res || !res.isFinal) return
             const text = res[0]?.transcript || ""
             document.body.classList.remove("listening")
+            stopListenLoop()
             if(text.trim()){ askAria(text) }
           }
           ariaRec.onerror = (e)=>{
@@ -887,6 +916,7 @@ async function loadProducts(){
           ariaRec.onend = ()=>{
             ariaActive = false
             document.body.classList.remove("listening")
+            stopListenLoop()
             if(document.visibilityState === "visible"){
               try{ ariaRec.start() }catch{}
             }

@@ -141,6 +141,11 @@ body.listening .ad-banner,
 body.listening .reel-panel{filter:blur(3px);}
 body.listening #tab-gps, 
 body.listening #tab-gps *{filter:none !important;}
+body .center-stage,
+body #appsDock,
+body .topbar,
+body .ad-banner,
+body .reel-panel{transition:filter .18s ease;}
 .profile-scan{margin-left:auto;display:flex;flex-direction:column;gap:10px;align-items:flex-end;}
 .profile-preview{width:120px;height:120px;border-radius:18px;position:relative;overflow:hidden;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:var(--muted);}
 .profile-preview::after{content:"";position:absolute;left:-20%;right:-20%;height:2px;top:10%;background:linear-gradient(90deg,transparent,rgba(124,243,209,0.9),transparent);animation:scanLine 2.6s linear infinite;}
