@@ -181,6 +181,23 @@ body{
   gap: 14px;
   z-index: 10;
 }
+.srd-sound-hint{
+  position:absolute;
+  left:50%;
+  bottom:120px;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,0.55);
+  border:1px solid rgba(255,255,255,0.2);
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:9px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  opacity:0;
+  transition:opacity 0.3s ease;
+  pointer-events:none;
+}
+.srd-sound-hint.show{opacity:1;}
 
 .srd-feed-action {
   display: flex;
@@ -271,6 +288,7 @@ body{
       <div class="srd-feed-action" id="srdFeedNext"><div class="srd-feed-action-icon">▶</div><div class="srd-feed-action-label">Next</div></div>
       <div class="srd-feed-action" id="srdFeedMute"><div class="srd-feed-action-icon" id="srdMuteIcon">🔇</div><div class="srd-feed-action-label">Sound</div></div>
     </div>
+    <div class="srd-sound-hint" id="srdSoundHint">Tap video to enable sound</div>
     <div class="srd-feed-bottom">
       <div class="srd-feed-tag" id="srdFeedTag">#haircare</div>
       <div class="srd-feed-title" id="srdFeedTitle">Hair tips loading...</div>
@@ -282,6 +300,7 @@ body{
 
 <script>
 (function(){
+  var CLIP_MS = 10000;
   var VIDEOS = [
     { src: 'https://cdn.coverr.co/videos/coverr-a-woman-getting-her-hair-done-3747/1080p.mp4', title: 'Professional blowout technique for silky smooth hair', tag: '#hairtransformation', link: '' },
     { src: 'https://cdn.coverr.co/videos/coverr-woman-having-her-hair-styled-1584/1080p.mp4', title: 'Moisture routine for dry damaged hair — watch the difference', tag: '#hairrepair', link: '' },
@@ -305,6 +324,7 @@ body{
   var dots     = document.getElementById('srdFeedDots');
   var muteIcon = document.getElementById('srdMuteIcon');
   var clickEl  = document.getElementById('srdFeedClick');
+  var soundHint = document.getElementById('srdSoundHint');
 
   VIDEOS.forEach(function(_, i){
     var d = document.createElement('div');
@@ -331,7 +351,7 @@ body{
       bar.style.transition = 'width 0.3s linear';
       bar.style.width = pct + '%';
     }, 300);
-    hardTimer = setTimeout(nextVideo, duration * 1000);
+    hardTimer = setTimeout(function(){ nextVideo(true); }, duration * 1000);
   }
 
   function loadVideo(idx){
@@ -352,11 +372,11 @@ body{
     video.play().then(function(){
       loading.style.opacity = '0';
       loading.style.pointerEvents = 'none';
-      startProgress(10);
+      startProgress(CLIP_MS / 1000);
     }).catch(function(){
       loading.style.opacity = '0';
       loading.style.pointerEvents = 'none';
-      setTimeout(nextVideo, 3000);
+      startProgress(CLIP_MS / 1000);
     });
 
     if(v.link){
@@ -370,7 +390,7 @@ body{
 
   function nextVideo(force){
     var now = Date.now();
-    if(!force && now - lastSwitch < 9500){ return; }
+    if(!force && now - lastSwitch < (CLIP_MS - 500)){ return; }
     lastSwitch = now;
     current = (current + 1) % VIDEOS.length;
     loadVideo(current);
@@ -385,7 +405,30 @@ body{
     e.stopPropagation();
     isMuted = !isMuted;
     video.muted = isMuted;
+    if(!isMuted){
+      video.volume = 0.8;
+      video.play().catch(function(){
+        isMuted = true;
+        video.muted = true;
+        if(soundHint){ soundHint.classList.add('show'); }
+      });
+    }
     muteIcon.textContent = isMuted ? '🔇' : '🔊';
+  });
+
+  clickEl.addEventListener('click', function(){
+    if(isMuted){
+      isMuted = false;
+      video.muted = false;
+      video.volume = 0.8;
+      video.play().then(function(){
+        if(soundHint){ soundHint.classList.remove('show'); }
+        muteIcon.textContent = '🔊';
+      }).catch(function(){
+        isMuted = true;
+        video.muted = true;
+      });
+    }
   });
 
   video.addEventListener('ended', function(){});
