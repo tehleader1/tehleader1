@@ -42,7 +42,7 @@ const BLOG_POSTS = [
     ariaBlocked: false,
     puzzleAnswer: null,
     livePopupActive: false,
-    ariaLevel: 'thorough'
+    ariaLevel: 'greeting'
   }
 
 
@@ -129,6 +129,12 @@ function wireAllButtons(){
   })
 }
 
+function syncLevelButtons(){
+  const buttons = qsa('.level-btn')
+  if(!buttons.length) return
+  buttons.forEach(b=>b.classList.toggle('active', b.dataset.level === state.ariaLevel))
+}
+
 function setupLevelControls(){
   const buttons = qsa('.level-btn')
   if(!buttons.length) return
@@ -152,6 +158,7 @@ function setupLevelControls(){
   }
 
   markLocks()
+  syncLevelButtons()
 
   buttons.forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -1045,8 +1052,17 @@ function setupCamera(){
   }
 }
 
+function setDefaultLevelBySubscription(){
+  if(state.subscription === 'premium' || state.subscription === 'pro'){
+    if(state.ariaLevel === 'greeting'){ state.ariaLevel = 'thorough' }
+  } else {
+    state.ariaLevel = 'greeting'
+  }
+}
+
 function setupSettings(){
   const saved = JSON.parse(localStorage.getItem("socialLinks") || "{}")
+  setDefaultLevelBySubscription()
   state.socialLinks = saved
   state.subscription = (saved.subscription || "free").toLowerCase().includes("pro") ? "pro" :
     ((saved.subscription || "").toLowerCase().includes("premium") ? "premium" : "free")
@@ -1105,6 +1121,7 @@ function setupSettings(){
       localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
       const sub = state.socialLinks.subscription.toLowerCase()
       state.subscription = sub.includes("pro") ? "pro" : (sub.includes("premium") ? "premium" : "free")
+      setDefaultLevelBySubscription()
       toast("Settings saved")
       const indicator = qs("#socialIndicator")
       if(indicator){
