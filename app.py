@@ -172,19 +172,29 @@ def aria():
         return {"reply": "AI error"}
 
 
+
+@app.route("/api/aria/transcribe/ping")
+def aria_transcribe_ping():
+    return {"status": "ok"}
+
+@app.route("/api/aria/transcribe", methods=["POST"])
+
 @app.route("/api/aria/transcribe", methods=["POST"])
 def aria_transcribe():
 
     if not OPENAI_KEY:
-        return {"error": "AI unavailable"}, 503
+        return {"error": "OPENAI_API_KEY missing"}, 500
 
     audio = request.files.get("audio")
     if not audio:
         return {"error": "No audio provided"}, 400
 
     try:
+        audio_bytes = audio.read()
+        if not audio_bytes:
+            return {"error": "Empty audio"}, 400
         files = {
-            "file": (audio.filename or "audio.webm", audio.stream, audio.mimetype or "audio/webm")
+            "file": (audio.filename or "audio.webm", audio_bytes, audio.mimetype or "audio/webm")
         }
         data = {
             "model": os.environ.get("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe")
@@ -194,14 +204,14 @@ def aria_transcribe():
             headers={"Authorization": f"Bearer {OPENAI_KEY}"},
             data=data,
             files=files,
-            timeout=30
+            timeout=45
         )
         if r.status_code >= 400:
-            return {"error": "Transcription failed"}, 500
+            return {"error": "Transcription failed", "status": r.status_code, "detail": r.text[:300]}, 500
         out = r.json()
         return {"text": out.get("text", "")}
-    except:
-        return {"error": "Transcription error"}, 500
+    except Exception as e:
+        return {"error": "Transcription error", "detail": str(e)[:300]}, 500
 
 @app.route("/api/aria/speech", methods=["POST"])
 def aria_speech():

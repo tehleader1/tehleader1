@@ -221,7 +221,13 @@ function beep(freq = 880, duration = 120){
     gain.connect(ctx.destination)
     osc.start()
     setTimeout(()=>{osc.stop(); ctx.close()}, duration)
-  }catch{}
+  }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
 }
 
 function initHairScore(){
@@ -459,7 +465,13 @@ async function speakReply(text){
       }
       window.speechSynthesis.cancel()
       window.speechSynthesis.speak(utter)
-    }catch{}
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
   }
   if(window.speechSynthesis && typeof window.speechSynthesis.onvoiceschanged !== "undefined"){
     window.speechSynthesis.onvoiceschanged = ()=>{ cachedAriaVoice = null }
@@ -491,7 +503,13 @@ async function speakReply(text){
       listenGain.connect(listenCtx.destination)
       listenOsc.start()
       listenLfo.start()
-    }catch{}
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
   }
   function stopListenLoop(){
     try{
@@ -499,11 +517,35 @@ async function speakReply(text){
         const t = listenCtx.currentTime
         listenGain.gain.setTargetAtTime(0.0001, t, 0.05)
       }
-    }catch{}
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
     setTimeout(()=>{
-      try{ if(listenOsc) listenOsc.stop() }catch{}
-      try{ if(listenLfo) listenLfo.stop() }catch{}
-      try{ if(listenCtx) listenCtx.close() }catch{}
+      try{ if(listenOsc) listenOsc.stop() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+      try{ if(listenLfo) listenLfo.stop() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+      try{ if(listenCtx) listenCtx.close() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
       listenCtx = listenOsc = listenGain = listenLfo = listenLfoGain = null
     }, 160)
   }
@@ -521,7 +563,13 @@ async function speakReply(text){
     osc.start()
     setTimeout(()=>{osc.frequency.value = 880}, 120)
     setTimeout(()=>{osc.stop(); ctx.close()}, 280)
-  }catch{}
+  }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
 }
 
   function setupTabs(){
@@ -1274,6 +1322,7 @@ function setupAria(){
   let vadTimer = null
   let liveTranscript = ""
   let transcribeBusy = false
+  let transcribeFailures = 0
 
   function uiError(msg){
     const t = qs("#ariaTranscript")
@@ -1313,7 +1362,13 @@ function setupAria(){
           stopOpenAIListening()
         }
       }, 150)
-    }catch{}
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
   }
 
   async function transcribeChunk(blob){
@@ -1324,6 +1379,7 @@ function setupAria(){
       form.append("audio", blob, "chunk.webm")
       const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
       if(r.ok){
+        transcribeFailures = 0
         const d = await r.json()
         const t = (d.text || "").trim()
         if(t){
@@ -1333,7 +1389,13 @@ function setupAria(){
           showLiveSpeechPopup(liveTranscript)
         }
       }
-    }catch{}
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
     transcribeBusy = false
   }
 
@@ -1344,7 +1406,13 @@ function setupAria(){
       if(mediaRecorder && mediaRecorder.state !== "inactive"){
         mediaRecorder.stop()
       }
-    }catch{}
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
   }
 
   async function startOpenAIListening(){
@@ -1366,7 +1434,13 @@ function setupAria(){
       setMicStatus('Mic: listening')
       liveTranscript = ""
       const reelVid = qs(".reel-embed video")
-      if(reelVid){ try{ reelVid.pause() }catch{} }
+      if(reelVid){ try{ reelVid.pause() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    } }
 
       recStream = await navigator.mediaDevices.getUserMedia({audio:true})
       audioChunks = []
@@ -1383,7 +1457,13 @@ function setupAria(){
       mediaRecorder.onerror = ()=>{ setMicStatus('Mic: recorder error') }
       mediaRecorder.onstop = async ()=>{
         ariaActive = false
-        if(reelVid){ try{ reelVid.play() }catch{} }
+        if(reelVid){ try{ reelVid.play() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    } }
         if(!chunkCount){ setMicStatus('Mic: no audio captured'); setAriaFlow('idle'); stopListenLoop(); return }
         const blob = new Blob(audioChunks, {type: "audio/webm"})
         if(recStream){ recStream.getTracks().forEach(t=>t.stop()) }
@@ -1413,7 +1493,7 @@ function setupAria(){
           stopListenLoop()
         }
       }
-      try{ mediaRecorder.start(400) }catch{ mediaRecorder.start() }
+      try{ mediaRecorder.start(800) }catch{ mediaRecorder.start() }
       ariaActive = true
       startVAD(recStream)
       maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 12000)
@@ -1660,7 +1740,13 @@ function setupAppsDock(){
       e.preventDefault()
       card.classList.remove("drag-over")
       let payload = {}
-      try{ payload = JSON.parse(e.dataTransfer.getData("text/plain") || "{}") }catch{}
+      try{ payload = JSON.parse(e.dataTransfer.getData("text/plain") || "{}") }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
       if(!payload.app) return
       if(payload.source === "row" && dragEl && dragEl !== card && card.parentElement === row){
         row.insertBefore(dragEl, card)
