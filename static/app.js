@@ -143,6 +143,25 @@ function syncLevelButtons(){
   buttons.forEach(b=>b.classList.toggle('active', b.dataset.level === state.ariaLevel))
 }
 
+function setupInfoTray(){
+  const tray = qs("#infoTray")
+  if(!tray) return
+  tray.addEventListener("click", (e)=>{
+    const btn = e.target.closest("button")
+    if(!btn) return
+    const label = btn.dataset.info || btn.textContent || "Info"
+    const infoMap = {
+      "Privacy": "We respect your privacy. Personal data stays private and is never sold.",
+      "Politics": "SupportRD is non-partisan and focused on hair care education and wellness.",
+      "Donate": "Donations support hygiene kits and hair care outreach programs.",
+      "About Us": "SupportRD delivers live hair guidance, routines, and product matching.",
+      "Terms": "Use of this app is subject to standard terms and service policies.",
+      "Contact": "Email: AgentAnthony@supportdr.com · Phone: 704‑345‑2867"
+    }
+    openMiniWindow(label, infoMap[label] || "More information coming soon.")
+  })
+}
+
 
 
 
@@ -1846,6 +1865,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupMiniWindow)
   safe(setupLevelSelect)
   safe(wireAllButtons)
+  safe(setupInfoTray)
   safe(watchTranscriptErrors)
 
   // Fallback: open any data-link button
