@@ -537,10 +537,17 @@ function setupReel(){
   if(btn){ btn.addEventListener("click", ()=>openModal("reelModal")) }
   const panel = qs("#reelPanel")
   const toggle = qs("#toggleReel")
+  const tab = qs("#reelTab")
   if(panel && toggle){
     toggle.addEventListener("click", ()=>{
       panel.classList.toggle("hidden")
       toggle.textContent = panel.classList.contains("hidden") ? "Show" : "Hide"
+    })
+  }
+  if(panel && tab){
+    tab.addEventListener("click", ()=>{
+      panel.classList.remove("hidden")
+      if(toggle) toggle.textContent = "Hide"
     })
   }
 }
@@ -692,18 +699,22 @@ function setupAria(){
     "Hi! I’m ARIA — how can I support your hair routine today?"
   ]
 
-  function greet(){
-    const greetText = greetings[Math.floor(Math.random() * greetings.length)]
-    appendAria(`ARIA: ${greetText}`)
-    try{
-      const utter = new SpeechSynthesisUtterance(greetText)
-      utter.rate = 1
-      utter.pitch = 1
-      utter.lang = qs("#ariaLanguage")?.value || "en-US"
-      window.speechSynthesis.cancel()
-      window.speechSynthesis.speak(utter)
-    }catch{}
-  }
+    function greet(){
+      const greetText = greetings[Math.floor(Math.random() * greetings.length)]
+      appendAria(`ARIA: ${greetText}`)
+      try{
+        const utter = new SpeechSynthesisUtterance(greetText)
+        utter.rate = 0.95
+        utter.pitch = 1.2
+        utter.lang = qs("#ariaLanguage")?.value || "en-US"
+        const voices = window.speechSynthesis.getVoices() || []
+        const preferred = voices.find(v => /female|woman|girl/i.test(v.name)) ||
+                          voices.find(v => /Google US English|Samantha|Zira|Karen|Victoria|Amélie|Tessa/i.test(v.name))
+        if(preferred){ utter.voice = preferred }
+        window.speechSynthesis.cancel()
+        window.speechSynthesis.speak(utter)
+      }catch{}
+    }
 
   function startListening(){
     greet()
@@ -723,6 +734,11 @@ function setupAria(){
     rec.onerror = (e)=>{
       if(e && (e.error === "no-speech" || e.error === "aborted")) return
       toast("Voice error")
+    }
+    rec.onend = ()=>{
+      if(document.visibilityState === "visible"){
+        try{ rec.start() }catch{}
+      }
     }
     rec.start()
   }
