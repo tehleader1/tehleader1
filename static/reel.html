@@ -295,6 +295,7 @@ body{
   var isMuted = true;
   var progressTimer = null;
   var hardTimer = null;
+  var lastSwitch = 0;
   var video    = document.getElementById('srdFeedVideo');
   var loading  = document.getElementById('srdFeedLoading');
   var count    = document.getElementById('srdFeedCount');
@@ -334,6 +335,8 @@ body{
   }
 
   function loadVideo(idx){
+    clearInterval(progressTimer);
+    if(hardTimer){ clearTimeout(hardTimer); }
     var v = VIDEOS[idx];
     loading.style.opacity = '1';
     loading.style.pointerEvents = 'all';
@@ -365,15 +368,17 @@ body{
     }
   }
 
-  function nextVideo(){
+  function nextVideo(force){
+    var now = Date.now();
+    if(!force && now - lastSwitch < 9500){ return; }
+    lastSwitch = now;
     current = (current + 1) % VIDEOS.length;
     loadVideo(current);
   }
 
   document.getElementById('srdFeedNext').addEventListener('click', function(e){
     e.stopPropagation();
-    clearInterval(progressTimer);
-    nextVideo();
+    nextVideo(true);
   });
 
   document.getElementById('srdFeedMute').addEventListener('click', function(e){
@@ -383,9 +388,9 @@ body{
     muteIcon.textContent = isMuted ? '🔇' : '🔊';
   });
 
-  video.addEventListener('ended', nextVideo);
+  video.addEventListener('ended', function(){});
   video.addEventListener('error', function(){
-    setTimeout(nextVideo, 200);
+    setTimeout(function(){ nextVideo(true); }, 3000);
   });
   loadVideo(0);
 })();

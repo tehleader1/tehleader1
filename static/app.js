@@ -169,7 +169,10 @@ function setupInfoTray(){
       "Contact": "Email: AgentAnthony@supportdr.com · Phone: 704‑345‑2867"
     }
     const link = linkMap[label]
-    if(link){ openLinkModal(link, label) }
+    if(link){
+      openLinkModal(link, label)
+      try{ window.open(link, "_blank") }catch{}
+    }
     openMiniWindow(label, infoMap[label] || "More information coming soon.")
   })
 }
