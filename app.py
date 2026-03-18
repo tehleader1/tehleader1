@@ -219,7 +219,7 @@ def aria_speech():
     try:
         payload = {
             "model": os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),
-            "voice": os.environ.get("OPENAI_TTS_VOICE", "coral"),
+            "voice": os.environ.get("OPENAI_TTS_VOICE", "shimmer"),
             "input": text,
             "response_format": "mp3"
         }

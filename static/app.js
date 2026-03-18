@@ -1182,6 +1182,7 @@ function setupHairAnalysis(){
 
   
   
+
 function setupAria(){
   const btn = qs("#voiceToggle")
   const sphere = qs("#ariaSphere")
@@ -1193,6 +1194,13 @@ function setupAria(){
   let interimRec = null
   let silenceTimer = null
   let maxRecordTimer = null
+  let lastInterim = ""
+  let lastInterimTs = 0
+
+  function resetSilenceTimer(delay = 800){
+    if(silenceTimer){ clearTimeout(silenceTimer) }
+    silenceTimer = setTimeout(()=>{ stopOpenAIListening() }, delay)
+  }
 
   function stopInterim(){
     if(silenceTimer){ clearTimeout(silenceTimer); silenceTimer = null }
@@ -1210,15 +1218,24 @@ function setupAria(){
       interimRec.onresult = (e)=>{
         const res = e.results[e.results.length - 1]
         const transcript = res?.[0]?.transcript || ""
-        const transcriptEl = qs("#ariaTranscript")
-        if(transcriptEl){ transcriptEl.textContent = transcript || "Listening…" }
-        showLiveSpeechPopup(transcript)
+        const now = Date.now()
+        if(transcript){
+          lastInterim = transcript
+          if(now - lastInterimTs > 120){
+            lastInterimTs = now
+            const transcriptEl = qs("#ariaTranscript")
+            if(transcriptEl){ transcriptEl.textContent = transcript }
+            showLiveSpeechPopup(transcript)
+          }
+        }
+        // push stop slightly after final chunk
         if(res && res.isFinal){
-          finalizeLiveSpeechPopup()
-          stopOpenAIListening()
+          resetSilenceTimer(500)
+        } else {
+          resetSilenceTimer(900)
         }
       }
-      interimRec.onspeechend = ()=>{ stopOpenAIListening() }
+      interimRec.onerror = ()=>{ resetSilenceTimer(700) }
       interimRec.start()
     }catch{}
   }
@@ -1269,7 +1286,7 @@ function setupAria(){
           const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
           if(!r.ok) throw new Error("transcribe failed")
           const d = await r.json()
-          const transcript = (d.text || "").trim()
+          const transcript = (d.text || "").trim() || lastInterim.trim()
           const transcriptEl = qs("#ariaTranscript")
           if(transcriptEl){ transcriptEl.textContent = transcript || "No speech detected." }
           finalizeLiveSpeechPopup()
@@ -1286,10 +1303,9 @@ function setupAria(){
       mediaRecorder.start()
       ariaActive = true
       startInterim()
-      if(!SpeechRecognition){
-        silenceTimer = setTimeout(()=>{ stopOpenAIListening() }, 5500)
-      }
-      maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 8000)
+      // safety stop if no interim results
+      resetSilenceTimer(1200)
+      maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 10000)
     }catch{
       toast("Voice error")
       setAriaFlow("idle")
