@@ -41,7 +41,8 @@ const BLOG_POSTS = [
     ariaCount: 0,
     ariaBlocked: false,
     puzzleAnswer: null,
-    livePopupActive: false
+    livePopupActive: false,
+    ariaLevel: 'thorough'
   }
 
 
@@ -125,6 +126,19 @@ function wireAllButtons(){
 
     // Default fallback: show mini window so every button has behavior
     openMiniWindow(label, `Triggered: ${id || "button"}`)
+  })
+}
+
+function setupLevelControls(){
+  const buttons = qsa('.level-btn')
+  if(!buttons.length) return
+  buttons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      buttons.forEach(b=>b.classList.remove('active'))
+      btn.classList.add('active')
+      state.ariaLevel = btn.dataset.level
+      toast('ARIA level: ' + btn.textContent.trim())
+    })
   })
 }
 
@@ -287,10 +301,17 @@ function bumpHairScore(delta){
     }
     try{
       setAriaFlow("processing")
+      const levelMap = {
+        greeting: 'Keep it brief and welcoming. 3-5 sentences.',
+        thorough: 'Give a thorough, structured answer with steps and routines.',
+        inner: 'Give insider tips, product usage details, and sequencing.',
+        pro: 'Give professional guidance and ways to monetize or upsell services.'
+      }
+      const ariaLevelPrompt = levelMap[state.ariaLevel] || levelMap.thorough
       const r = await fetch("/api/aria",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({message: msg})
+        body:JSON.stringify({message: msg + '\n\nResponse level: ' + ariaLevelPrompt})
       })
       const d = await r.json()
       const reply = d.reply || "AI unavailable"
@@ -1225,7 +1246,7 @@ function setupAria(){
         } else if(heardSpeech){
           silenceMs += 150
         }
-        if(heardSpeech && silenceMs >= 700){
+        if(heardSpeech && silenceMs >= 500){
           stopOpenAIListening()
         }
       }, 150)
@@ -1309,7 +1330,7 @@ function setupAria(){
             setTimeout(async ()=>{
               stopListenLoop()
               await askAria(transcript)
-            }, 3000)
+            }, 2000)
           } else {
             setAriaFlow("idle")
             stopListenLoop()
@@ -1320,7 +1341,7 @@ function setupAria(){
           stopListenLoop()
         }
       }
-      mediaRecorder.start(1200)
+      mediaRecorder.start(800)
       ariaActive = true
       startVAD(recStream)
       maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 12000)
@@ -1452,9 +1473,11 @@ function renderApp(name){
     `
     const ring = qs("#scoreRing")
     const levels = qs("#scoreLevels")
+    const side = qs("#levelSide")
     if(ring){
       ring.addEventListener("click", ()=>{
         levels.style.display = levels.style.display === "none" ? "block" : "none"
+        if(side){ side.classList.toggle('show') }
       })
     }
     const level = score >= 90 ? "pro" : score >= 75 ? "inner" : score >= 45 ? "breakdown" : "intro"
@@ -1620,6 +1643,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
     safe(setupAppsDock)
   safe(loadProducts)
   safe(setupMiniWindow)
+  safe(setupLevelControls)
   safe(wireAllButtons)
 
   // Fallback: open any data-link button
