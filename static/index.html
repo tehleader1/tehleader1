@@ -13,8 +13,7 @@
 </head>
 <body class="theme-aurora plus500">
 <div class="bg-layers"></div>
-<div id="listeningOverlay" class="listening-overlay">ARIA is listening… speak now</div>
-    <div id="app">
+      <div id="app">
     <button class="login-fab" id="openLogin">Login</button>
   <div id="loginGate" class="login-gate">
     <div class="login-card glass">
@@ -55,7 +54,15 @@
       <span>Instant routines · real products · live guidance</span>
     </div>
     <button class="btn" id="adCta">Explore Products</button>
-  </section>
+    </section>
+
+    <section class="conversation-panel glass" id="conversationPanel">
+      <div class="panel-head">
+        <h3>Live Conversation</h3>
+        <span class="engine-glow">ARIA Flow</span>
+      </div>
+      <div id="conversationLog" class="conversation-log">No conversation yet.</div>
+    </section>
 
   <section class="reel-panel glass" id="reelPanel">
     <div class="panel-head">
@@ -66,30 +73,31 @@
     <iframe class="custom-iframe reel-embed" src="/static/reel.html" title="Hair Reel"></iframe>
   </section>
 
-  <section class="center-stage glass" id="centerStage">
+    <section class="center-stage glass" id="centerStage">
     <div class="center-icon">
       <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD">
     </div>
-    <div class="center-head">
-      <div class="center-hero">
-        <img id="heroIcon" class="hero-icon" src="/static/images/woman-waking-up12.jpg" alt="SupportRD">
-        <h2>SupportRD Live</h2>
+      <div class="center-head">
+        <div class="center-hero">
+          <img id="heroIcon" class="hero-icon" src="/static/images/woman-waking-up12.jpg" alt="SupportRD">
+          <h2>SupportRD Live</h2>
         <p>Hair care, routines, product matching, and live guidance — all focused on healthy hair, growth, and repair.</p>
       </div>
-      <div class="center-actions">
-        <button class="aria-sphere" id="ariaSphere" aria-label="Open ARIA"></button>
+        <div class="center-actions">
+          <div class="aria-badge">
+            <div class="aria-title">Professional Hair Advisor</div>
+            <div class="aria-sub">ARIA · Problems / Solutions</div>
+          </div>
+          <button class="aria-sphere" id="ariaSphere" aria-label="Open ARIA"></button>
+        </div>
       </div>
-      <div class="profile-scan">
-        <div class="profile-preview" id="profilePreview">Upload Profile</div>
-        <label class="btn ghost scan-upload">Upload Profile<input type="file" id="profileUpload" accept="image/*,video/*"></label>
-      </div>
-    </div>
 
-    <div class="center-tabs">
-      <button class="tab-btn active" data-tab="post">Post</button>
-      <button class="tab-btn" data-tab="gps">GPS</button>
-      <button class="tab-btn" data-tab="handsfree">Hands‑Free</button>
-    </div>
+      <div class="center-tabs">
+        <button class="tab-btn active" data-tab="post">Post</button>
+        <button class="tab-btn" data-tab="gps">GPS</button>
+        <button class="tab-btn" data-tab="handsfree">Hands‑Free</button>
+        <button class="tab-btn" data-tab="analysis">Hair Analysis</button>
+      </div>
 
     <div class="tab-panel active" id="tab-post">
       <div class="post-card">
@@ -107,12 +115,12 @@
           <div class="smoke">Add a new post</div>
         </div>
 
-        <div id="scanPreview" class="scan-preview"></div>
 
         <div class="scan-row">
           <button class="scan-pill" data-aria="Moisture check">Moisture Check</button>
           <button class="scan-pill" data-aria="Tangles">Tangles</button>
           <button class="scan-pill" data-aria="Dry">Dry</button>
+          <button class="scan-pill" data-aria="Frizzy">Frizzy</button>
           <button class="scan-pill" data-aria="Oily">Oily</button>
           <button class="scan-pill" data-aria="Damage">Damage</button>
           <button class="scan-pill" data-aria="No bounce">No Bounce</button>
@@ -138,7 +146,6 @@
             <option>With Evelyn Custom Order</option>
           </select>
           <button class="btn ghost" id="contactEvelyn">Contact Evelyn Directly</button>
-          <label class="btn ghost scan-upload">Add 3D Scan Photo<input type="file" id="scanUpload" accept="image/*"></label>
         </div>
       </div>
     </div>
@@ -158,23 +165,63 @@
     </div>
 
     <div class="tab-panel" id="tab-handsfree">
-      <div class="handsfree-wrap">
-        <div class="aria-large">ARIA</div>
-        <div class="aria-tools">
-            <button class="btn ghost aria-pulse" id="voiceToggle">ARIA • Tap to Talk</button>
-          <select id="ariaLanguage">
-            <option value="en-US">English</option>
-            <option value="es-ES">Español</option>
-            <option value="fr-FR">Français</option>
-          </select>
-        </div>
-        <div class="history">
-          <h3>Recorded History</h3>
-          <div id="ariaHistory" class="mini-list">No history yet.</div>
+        <div class="handsfree-wrap">
+          <div class="aria-large">ARIA Professional Hair Specialist</div>
+          <div class="aria-tools">
+              <button class="btn ghost aria-pulse" id="voiceToggle">ARIA • Tap to Talk</button>
+            <select id="ariaLanguage">
+              <option value="en-US">English (US)</option>
+              <option value="es-ES">Español</option>
+              <option value="fr-FR">Français</option>
+            </select>
+          </div>
+          <div class="history">
+            <h3>Recorded History</h3>
+            <div id="ariaHistory" class="mini-list">No history yet.</div>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+      <div class="tab-panel" id="tab-analysis">
+        <div class="analysis-wrap">
+          <div class="analysis-title">Hair Analysis</div>
+          <div class="analysis-sub">Move your head left to right and follow the on‑screen guide. ARIA will read your scan out loud and summarize the result.</div>
+          <div class="analysis-grid">
+            <div class="analysis-video">
+              <div class="profile-preview" id="profilePreview">Upload Profile</div>
+              <label class="btn ghost scan-upload">Upload Profile<input type="file" id="profileUpload" accept="image/*,video/*"></label>
+              <label class="btn ghost scan-upload">Upload Hair Scan<input type="file" id="scanUpload" accept="image/*,video/*"></label>
+              <div id="scanPreview" class="scan-preview"></div>
+              <button class="btn" id="startHairScan">Start Hair Scan</button>
+            </div>
+            <div class="analysis-steps">
+              <div class="step">1. Center your face and shoulders in view.</div>
+              <div class="step">2. Slowly turn left, then right.</div>
+              <div class="step">3. Follow ARIA’s voice while the scan runs.</div>
+              <div class="analysis-result" id="analysisResult">Awaiting scan…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="centerBlur" class="center-blur" aria-hidden="true"></div>
+      <div id="speechPopupAnchor" class="speech-anchor"></div>
+      <div id="listeningOverlay" class="listening-overlay">
+        <div class="listen-card">
+          <div class="mini-aria" aria-hidden="true"></div>
+          <div class="listen-copy">
+            <div id="ariaFlowText" class="listen-text">Listening…</div>
+            <div id="ariaTranscript" class="listen-transcript">Say something about your hair…</div>
+          </div>
+        </div>
+      </div>
+      <div id="hairScanOverlay" class="scan-overlay">
+        <div class="scan-card glass">
+          <div class="scan-title">Hair Analysis</div>
+          <div class="scan-sub">Move your head left to right and follow the on-screen guide. ARIA will read your scan out loud.</div>
+          <div id="hairScanStatus" class="scan-status">Initializing scan…</div>
+          <button class="btn ghost" id="closeHairScan">Close</button>
+        </div>
+      </div>
+    </section>
 
   <button class="theme-side left" id="themePrevSide" aria-label="Previous theme"></button>
   <button class="theme-side right" id="themeNextSide" aria-label="Next theme"></button>

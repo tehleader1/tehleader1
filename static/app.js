@@ -79,36 +79,108 @@ function bumpHairScore(delta){
   }
 }
 
-async function askAria(msg){
-  if(!msg) return
-  if(state.ariaBlocked){
-    openModal("puzzleModal")
-    return
+  function appendConversation(role, text){
+    const log = qs("#conversationLog")
+    if(!log) return
+    if(log.textContent === "No conversation yet.") log.textContent = ""
+    const div = document.createElement("div")
+    div.className = `conversation-item ${role}`
+    div.textContent = `${role === "user" ? "You" : "ARIA"}: ${text}`
+    log.appendChild(div)
+    log.scrollTop = log.scrollHeight
   }
-  appendAria(`You: ${msg}`)
-  try{
-    const r = await fetch("/api/aria",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({message: msg})
-    })
-    const d = await r.json()
-    const reply = d.reply || "AI unavailable"
-    appendAria(`ARIA: ${reply}`)
-    bumpHairScore(1)
-    speakReply(reply)
-    state.ariaCount += 1
+
+  function showSpeechPopup(who, text){
+    const existing = qs("#speechPopup")
+    if(existing) existing.remove()
+    const anchor = qs("#speechPopupAnchor") || qs("#centerStage") || document.body
+    const stage = qs("#centerStage")
+    const pop = document.createElement("div")
+    pop.id = "speechPopup"
+    pop.className = "speech-popup"
+    const userAvatar = state.userAvatar || "/static/images/woman-waking-up12.jpg"
+    const ariaAvatar = "/static/images/woman-waking-up12.jpg"
+    pop.innerHTML = `
+      <div class="speech-avatars">
+        <div class="speech-avatar me" style="background-image:url('${userAvatar}')"></div>
+        <div class="speech-avatar aria" style="background-image:url('${ariaAvatar}')"></div>
+      </div>
+      <div class="speech-body">
+        <div class="who">${who}</div>
+        <div class="speech-text">${text}</div>
+      </div>
+    `
+    anchor.appendChild(pop)
+    if(stage && anchor === qs("#speechPopupAnchor")){
+      const bounds = stage.getBoundingClientRect()
+      const x = bounds.width * (0.35 + Math.random() * 0.3)
+      const y = bounds.height * (0.2 + Math.random() * 0.4)
+      pop.style.left = `${x}px`
+      pop.style.top = `${y}px`
+    }
+    requestAnimationFrame(()=>pop.classList.add("show"))
+    setTimeout(()=>{ pop.classList.remove("show"); setTimeout(()=>pop.remove(), 240) }, 1900)
+  }
+
+  async function askAria(msg){
+    if(!msg) return
+    if(state.ariaBlocked){
+      openModal("puzzleModal")
+      return
+    }
+    appendAria(`You: ${msg}`)
+    appendConversation("user", msg)
+    showSpeechPopup("YOU", msg)
+    try{
+      setAriaFlow("processing")
+      const r = await fetch("/api/aria",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({message: msg})
+      })
+      const d = await r.json()
+      const reply = d.reply || "AI unavailable"
+      appendAria(`ARIA: ${reply}`)
+      appendConversation("aria", reply)
+      showSpeechPopup("ARIA", reply)
+      bumpHairScore(1)
+      speakReply(reply)
+      state.ariaCount += 1
     const limit = state.subscription === "pro" ? 1e9 : (state.subscription === "premium" ? 8 : 2)
     if(state.ariaCount >= limit){
       state.ariaBlocked = true
       openModal("puzzleModal")
     }
-  }catch{
-    appendAria("ARIA: AI unavailable")
+    }catch{
+      appendAria("ARIA: AI unavailable")
+      appendConversation("aria", "AI unavailable")
+      showSpeechPopup("ARIA", "AI unavailable")
+      setAriaFlow("idle")
+    }
   }
-}
 
   let cachedAriaVoice = null
+    function setAriaFlow(state){
+      const overlay = qs("#listeningOverlay")
+      const textEl = qs("#ariaFlowText")
+      const transcriptEl = qs("#ariaTranscript")
+      if(!overlay || !textEl) return
+      if(state === "listening"){
+        document.body.classList.add("listening")
+        textEl.textContent = "Listening…"
+        if(transcriptEl){ transcriptEl.textContent = "Say something about your hair…" }
+      }else if(state === "processing"){
+        document.body.classList.add("listening")
+        textEl.textContent = "Processing…"
+        if(transcriptEl){ transcriptEl.textContent = "Analyzing your words…" }
+      }else if(state === "speaking"){
+        document.body.classList.add("listening")
+        textEl.textContent = "ARIA Speaking…"
+        if(transcriptEl){ transcriptEl.textContent = "Replying with hair guidance…" }
+      }else{
+        document.body.classList.remove("listening")
+      }
+    }
   function speakReply(text){
     try{
       const utter = new SpeechSynthesisUtterance(text)
@@ -134,7 +206,11 @@ async function askAria(msg){
           voices.find(v => v.lang === "en-US")
       }
       if(cachedAriaVoice){ utter.voice = cachedAriaVoice }
-      utter.onend = ()=>playDoneChime()
+      utter.onstart = ()=>setAriaFlow("speaking")
+      utter.onend = ()=>{
+        playDoneChime()
+        setAriaFlow("idle")
+      }
       window.speechSynthesis.cancel()
       window.speechSynthesis.speak(utter)
     }catch{}
@@ -202,7 +278,7 @@ async function askAria(msg){
   }catch{}
 }
 
-function setupTabs(){
+  function setupTabs(){
   qsa(".tab-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
@@ -240,7 +316,26 @@ function setupThemeArrows(){
       icon.style.filter = HERO_FILTERS[state.themeIndex % HERO_FILTERS.length]
     }
   }
+
+  function setupScanPills(){
+    qsa(".scan-pill").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const issue = btn.dataset.aria || btn.textContent.trim()
+        const post = qs("#postInput")
+        if(post){
+          const line = `Hair scan update: ${issue}. Looking for a fix, routine, and product match.`
+          post.value = line
+          post.focus()
+        }
+        btn.classList.remove("bounce")
+        void btn.offsetWidth
+        btn.classList.add("bounce")
+      })
+    })
+  }
+  setupScanPills()
 }
+
 
 function setupModals(){
   const occBtn = qs("#menuOccasion")
@@ -596,15 +691,16 @@ function setupScanUpload(){
   })
 }
 
-function setupProfileUpload(){
-  const input = qs("#profileUpload")
-  const preview = qs("#profilePreview")
-  if(!input || !preview) return
-  input.addEventListener("change", ()=>{
-    const file = input.files[0]
-    if(!file) return
-    const url = URL.createObjectURL(file)
-    if(file.type.startsWith("video")){
+  function setupProfileUpload(){
+    const input = qs("#profileUpload")
+    const preview = qs("#profilePreview")
+    if(!input || !preview) return
+    input.addEventListener("change", ()=>{
+      const file = input.files[0]
+      if(!file) return
+      const url = URL.createObjectURL(file)
+      state.userAvatar = url
+      if(file.type.startsWith("video")){
       preview.innerHTML = `<video src="${url}" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"></video>`
     } else {
       preview.innerHTML = `<img src="${url}" alt="Profile" style="width:100%;height:100%;object-fit:cover;">`
@@ -876,6 +972,30 @@ async function loadProducts(){
   }
 }
 
+
+function setupHairAnalysis(){
+  const start = qs("#startHairScan")
+  const overlay = qs("#hairScanOverlay")
+  const status = qs("#hairScanStatus")
+  const result = qs("#analysisResult")
+  const close = qs("#closeHairScan")
+  if(close){ close.addEventListener("click", ()=>{ if(overlay) overlay.style.display = "none" }) }
+  if(!start || !overlay) return
+  start.addEventListener("click", ()=>{
+    overlay.style.display = "flex"
+    if(status) status.textContent = "Scanning... hold steady and move left to right."
+    if(result) result.textContent = "Scan running..."
+    setTimeout(()=>{
+      const summary = "Scan complete. I see dryness at the ends with light frizz and low bounce at the crown. I recommend a moisture mask, light protein, and a satin wrap.";
+      if(status) status.textContent = summary
+      if(result) result.textContent = summary
+      showSpeechPopup("ARIA", summary)
+      speakReply(summary)
+      setTimeout(()=>{ overlay.style.display = "none" }, 2400)
+    }, 1800)
+  })
+}
+
   function setupAria(){
     const btn = qs("#voiceToggle")
     const sphere = qs("#ariaSphere")
@@ -889,6 +1009,9 @@ async function loadProducts(){
           return
         }
         startListenLoop()
+        setAriaFlow("listening")
+        const reelVid = qs(".reel-embed video")
+        if(reelVid){ try{ reelVid.pause() }catch{} }
         if(!ariaRec){
           ariaRec = new SpeechRecognition()
           ariaRec.lang = qs("#ariaLanguage")?.value || "en-US"
@@ -898,25 +1021,31 @@ async function loadProducts(){
           ariaRec.onstart = ()=>{
             ariaActive = true
           }
-          ariaRec.onspeechstart = ()=>{ document.body.classList.add("listening") }
-          ariaRec.onsoundstart = ()=>{ document.body.classList.add("listening") }
-          ariaRec.onspeechend = ()=>{ document.body.classList.remove("listening") }
-          ariaRec.onresult = (e)=>{
-            const res = e.results[e.results.length - 1]
-            if(!res || !res.isFinal) return
-            const text = res[0]?.transcript || ""
-            document.body.classList.remove("listening")
-            stopListenLoop()
-            if(text.trim()){ askAria(text) }
-          }
+          ariaRec.onspeechstart = ()=>{ setAriaFlow("listening") }
+          ariaRec.onsoundstart = ()=>{ setAriaFlow("listening") }
+          ariaRec.onspeechend = ()=>{ setAriaFlow("processing") }
+            ariaRec.onresult = (e)=>{
+              const res = e.results[e.results.length - 1]
+              if(!res) return
+              const transcript = res[0]?.transcript || ""
+              const transcriptEl = qs("#ariaTranscript")
+              if(transcriptEl){ transcriptEl.textContent = transcript || "Listening…" }
+              if(!res.isFinal) return
+              stopListenLoop()
+              if(transcript.trim()){ 
+                setAriaFlow("processing")
+                askAria(transcript) 
+              }
+            }
           ariaRec.onerror = (e)=>{
             if(e && (e.error === "no-speech" || e.error === "aborted")) return
             toast("Voice error")
           }
           ariaRec.onend = ()=>{
             ariaActive = false
-            document.body.classList.remove("listening")
+            setAriaFlow("idle")
             stopListenLoop()
+            if(reelVid){ try{ reelVid.play() }catch{} }
             if(document.visibilityState === "visible"){
               try{ ariaRec.start() }catch{}
             }
@@ -1202,6 +1331,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupOccasion)
   safe(setupScanUpload)
   safe(setupProfileUpload)
+  safe(setupHairAnalysis)
   safe(setupGPS)
   safe(setupAria)
   safe(setupPuzzle)
