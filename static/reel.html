@@ -302,6 +302,7 @@ body{
   var current = 0;
   var isMuted = true;
   var progressTimer = null;
+  var hardTimer = null;
   var video    = document.getElementById('srdFeedVideo');
   var loading  = document.getElementById('srdFeedLoading');
   var count    = document.getElementById('srdFeedCount');
@@ -327,6 +328,7 @@ body{
 
   function startProgress(duration){
     clearInterval(progressTimer);
+    if(hardTimer){ clearTimeout(hardTimer); }
     bar.style.transition = 'none';
     bar.style.width = '0%';
     var start = Date.now();
@@ -340,6 +342,7 @@ body{
         nextVideo();
       }
     }, 300);
+    hardTimer = setTimeout(nextVideo, duration * 1000);
   }
 
   function loadVideo(idx){
@@ -358,7 +361,7 @@ body{
     video.play().then(function(){
       loading.style.opacity = '0';
       loading.style.pointerEvents = 'none';
-      var dur = Math.min(video.duration || 10, 10);
+      var dur = 10;
       startProgress(dur);
     }).catch(function(){
       loading.style.opacity = '0';

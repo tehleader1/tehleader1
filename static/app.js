@@ -26,9 +26,9 @@ const LINKS = {
 }
 
 const BLOG_POSTS = [
-  {title:"Repair story: Heat damage recovery", body:"A real repair journey: moisture stacking, trimming, and a 4-week recovery arc."},
-  {title:"Protein balance for bounce", body:"How to layer protein and hydration so curls keep their spring."},
-  {title:"All‑in‑one product success stories", body:"Fast routines using the all‑in‑one product for shine, softness, and reduced breakage."}
+  {title:"Repair story: Heat damage recovery", body:"Week 1: moisture stacking, trim, and protective styling.\n\nWeek 2: deep conditioning twice a week, gentle detangle, scalp oil.\n\nWeek 3: protein balance and low‑heat styling.\n\nWeek 4: shine restore, reduced breakage, and curl definition back."},
+  {title:"Protein balance for bounce", body:"Step 1: hydrate with a light leave‑in.\n\nStep 2: add protein treatment every 7–10 days.\n\nStep 3: seal with oil or butter.\n\nResult: curls hold shape with less frizz."},
+  {title:"All‑in‑one product success stories", body:"Fast routines using the all‑in‑one product for shine, softness, and reduced breakage.\n\nMorning: apply to damp hair.\n\nMid‑day: refresh with a light mist.\n\nNight: protect with satin wrap."}
 ]
 
   const state = {
@@ -289,7 +289,7 @@ function renderBlog(){
   const title = qs("#blogTitle")
   const body = qs("#blogBody")
   if(title) title.textContent = post.title
-  if(body) body.textContent = post.body
+  if(body) body.innerHTML = post.body.split("\n\n").map(p=>`<p>${p}</p>`).join("")
 }
 
 function appendAria(text){
@@ -339,6 +339,7 @@ function setupPostActions(){
   const send = qs("#sendSocials")
   const post = qs("#postSocials")
   const paySelect = qs("#paySelect")
+  const tipTeam = qs("#tipTeam")
   const contactEvelyn = qs("#contactEvelyn")
   const indicator = qs("#socialIndicator")
   const socialSelect = qs("#socialSelect")
@@ -401,17 +402,14 @@ function setupPostActions(){
 
   if(paySelect){
     paySelect.addEventListener("change", ()=>{
-      const mapping = {
-        "Payment with Evelyn": "evelyn",
-        "Tip to Developer": "tip5",
-        "Payment to Crystal": "tip10",
-        "Tip to Ramlin (Labor)": "tip20"
+      const value = paySelect.value
+      if(value.includes("Custom Order")){
+        openModal("customOrderModal")
       }
-      const target = mapping[paySelect.value] || "evelyn"
-      const select = qs("#paymentSelect")
-      if(select){ select.value = target; select.dispatchEvent(new Event("change")) }
-      openModal("subscriptionModal")
     })
+  }
+  if(tipTeam){
+    tipTeam.addEventListener("click", ()=>openLinkModal("https://supportrd.com/cart","Tip Developer & Team"))
   }
 
   if(contactEvelyn){
@@ -499,6 +497,22 @@ function setupScanUpload(){
     preview.innerHTML = `<img src="${url}" alt="Scan">`
     preview.style.display = "block"
     toast("3D scan photo attached")
+  })
+}
+
+function setupProfileUpload(){
+  const input = qs("#profileUpload")
+  const preview = qs("#profilePreview")
+  if(!input || !preview) return
+  input.addEventListener("change", ()=>{
+    const file = input.files[0]
+    if(!file) return
+    const url = URL.createObjectURL(file)
+    if(file.type.startsWith("video")){
+      preview.innerHTML = `<video src="${url}" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"></video>`
+    } else {
+      preview.innerHTML = `<img src="${url}" alt="Profile" style="width:100%;height:100%;object-fit:cover;">`
+    }
   })
 }
 
@@ -710,7 +724,12 @@ function setupFamilyMode(){
 function setupLoginGate(){
   const gate = qs("#loginGate")
   const loggedIn = localStorage.getItem("loggedIn") === "true"
-  if(!loggedIn && gate){ gate.style.display = "flex" }
+  const first = Number(localStorage.getItem("firstSeen") || Date.now())
+  if(!localStorage.getItem("firstSeen")) localStorage.setItem("firstSeen", String(first))
+  const minutes = (Date.now() - first) / (1000*60)
+  if(!loggedIn && gate && minutes >= 30){ gate.style.display = "flex" }
+  const openLogin = qs("#openLogin")
+  if(openLogin){ openLogin.addEventListener("click", ()=>{ gate.style.display = "flex" }) }
   const btnPremium = qs("#loginPremium")
   const btnPro = qs("#loginPro")
   const btnFree = qs("#loginFree")
@@ -781,10 +800,11 @@ function setupAria(){
         utter.rate = 0.95
         utter.pitch = 1.2
         utter.lang = qs("#ariaLanguage")?.value || "en-US"
-        const voices = window.speechSynthesis.getVoices() || []
-        const preferred = voices.find(v => /female|woman|girl/i.test(v.name)) ||
-                          voices.find(v => /Google US English|Samantha|Zira|Karen|Victoria|Amélie|Tessa/i.test(v.name))
-        if(preferred){ utter.voice = preferred }
+      const voices = window.speechSynthesis.getVoices() || []
+      const preferred = voices.find(v => v.lang === "en-US" && /female|woman|girl/i.test(v.name)) ||
+                        voices.find(v => v.lang === "en-US" && /Samantha|Zira|Karen|Victoria|Allison|Ava/i.test(v.name)) ||
+                        voices.find(v => /Google US English/i.test(v.name))
+      if(preferred){ utter.voice = preferred }
         window.speechSynthesis.cancel()
         window.speechSynthesis.speak(utter)
       }catch{}
@@ -801,9 +821,13 @@ function setupAria(){
     rec.interimResults = false
     rec.maxAlternatives = 1
     try{ rec.continuous = true }catch{}
-    rec.onstart = ()=>toast("ARIA listening...")
+    rec.onstart = ()=>{
+      document.body.classList.add("listening")
+      toast("ARIA listening...")
+    }
     rec.onresult = (e)=>{
       const text = e.results[0][0].transcript
+      document.body.classList.remove("listening")
       askAria(text)
     }
     rec.onerror = (e)=>{
@@ -811,6 +835,7 @@ function setupAria(){
       toast("Voice error")
     }
     rec.onend = ()=>{
+      document.body.classList.remove("listening")
       if(document.visibilityState === "visible"){
         try{ rec.start() }catch{}
       }
@@ -1093,6 +1118,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupPostActions)
   safe(setupOccasion)
   safe(setupScanUpload)
+  safe(setupProfileUpload)
   safe(setupGPS)
   safe(setupAria)
   safe(setupPuzzle)

@@ -13,7 +13,9 @@
 </head>
 <body class="theme-aurora">
 <div class="bg-layers"></div>
-  <div id="app">
+<div id="listeningOverlay" class="listening-overlay">ARIA is listening… speak now</div>
+    <div id="app">
+    <button class="login-fab" id="openLogin">Login</button>
   <div id="loginGate" class="login-gate">
     <div class="login-card glass">
       <h2>SupportRD Login</h2>
@@ -77,6 +79,10 @@
       <div class="center-actions">
         <button class="aria-sphere" id="ariaSphere" aria-label="Open ARIA"></button>
       </div>
+      <div class="profile-scan">
+        <div class="profile-preview" id="profilePreview">Upload Profile</div>
+        <label class="btn ghost scan-upload">Upload Profile<input type="file" id="profileUpload" accept="image/*,video/*"></label>
+      </div>
     </div>
 
     <div class="center-tabs">
@@ -126,11 +132,10 @@
             <option value="threads">Threads</option>
           </select>
           <div class="social-indicator" id="socialIndicator">Feeds: Instagram, TikTok, Facebook</div>
+          <button class="btn ghost" id="tipTeam">Tip Developer & Team</button>
           <select class="payment-dropdown" id="paySelect">
-            <option>Payment with Evelyn</option>
-            <option>Tip to Developer</option>
-            <option>Payment to Crystal</option>
-            <option>Tip to Ramlin (Labor)</option>
+            <option>Custom Order Payment</option>
+            <option>With Evelyn Custom Order</option>
           </select>
           <button class="btn ghost" id="contactEvelyn">Contact Evelyn Directly</button>
           <label class="btn ghost scan-upload">Add 3D Scan Photo<input type="file" id="scanUpload" accept="image/*"></label>
