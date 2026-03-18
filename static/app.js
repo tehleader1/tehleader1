@@ -1352,13 +1352,13 @@ function setupAria(){
           sum += v * v
         }
         const rms = Math.sqrt(sum / data.length)
-        if(rms > 0.02){
+        if(rms > 0.012){
           heardSpeech = true
           silenceMs = 0
         } else if(heardSpeech){
           silenceMs += 150
         }
-        if(heardSpeech && silenceMs >= 500){
+        if(heardSpeech && silenceMs >= 800){
           stopOpenAIListening()
         }
       }, 150)
@@ -1505,7 +1505,7 @@ function setupAria(){
           stopListenLoop()
         }
       }
-      try{ mediaRecorder.start(800) }catch{ mediaRecorder.start() }
+      try{ mediaRecorder.start(600) }catch{ mediaRecorder.start() }
       ariaActive = true
       startVAD(recStream)
       maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 12000)
