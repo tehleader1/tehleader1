@@ -196,6 +196,11 @@ function setupMiniWindow(){
   })
 }
 
+function setMicStatus(msg){
+  const el = qs('#micStatus')
+  if(el) el.textContent = msg
+}
+
 function toast(msg){
   const el = qs("#toast")
   el.textContent = msg
@@ -1019,13 +1024,17 @@ function setupReel(){
   const tab = qs("#reelTab")
   if(panel && toggle){
     toggle.addEventListener("click", ()=>{
-      panel.classList.toggle("hidden")
-      toggle.textContent = panel.classList.contains("hidden") ? "Show" : "Hide"
+      const hidden = panel.classList.toggle("hidden")
+      panel.style.display = hidden ? "none" : "flex"
+      toggle.textContent = hidden ? "Show" : "Hide"
+      if(!hidden){ panel.style.opacity = "1" }
     })
   }
   if(panel && tab){
     tab.addEventListener("click", ()=>{
       panel.classList.remove("hidden")
+      panel.style.display = "flex"
+      panel.style.opacity = "1"
       if(toggle) toggle.textContent = "Hide"
     })
   }
@@ -1259,6 +1268,7 @@ function setupAria(){
   let ariaActive = false
   let mediaRecorder = null
   let audioChunks = []
+      let chunkCount = 0
   let recStream = null
   let maxRecordTimer = null
   let vadTimer = null
@@ -1353,23 +1363,28 @@ function setupAria(){
     try{
       startListenLoop()
       setAriaFlow("listening")
+      setMicStatus('Mic: listening')
       liveTranscript = ""
       const reelVid = qs(".reel-embed video")
       if(reelVid){ try{ reelVid.pause() }catch{} }
 
       recStream = await navigator.mediaDevices.getUserMedia({audio:true})
       audioChunks = []
+      let chunkCount = 0
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm"
       mediaRecorder = new MediaRecorder(recStream, { mimeType: mime })
       mediaRecorder.ondataavailable = (e)=>{
         if(e.data && e.data.size){
           audioChunks.push(e.data)
+          chunkCount++
           transcribeChunk(e.data)
         }
       }
+      mediaRecorder.onerror = ()=>{ setMicStatus('Mic: recorder error') }
       mediaRecorder.onstop = async ()=>{
         ariaActive = false
         if(reelVid){ try{ reelVid.play() }catch{} }
+        if(!chunkCount){ setMicStatus('Mic: no audio captured'); setAriaFlow('idle'); stopListenLoop(); return }
         const blob = new Blob(audioChunks, {type: "audio/webm"})
         if(recStream){ recStream.getTracks().forEach(t=>t.stop()) }
         try{
@@ -1377,7 +1392,7 @@ function setupAria(){
           const form = new FormData()
           form.append("audio", blob, "speech.webm")
           const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
-          if(!r.ok) throw new Error("transcribe failed")
+          if(!r.ok){ setMicStatus('Mic: transcribe failed ' + r.status); throw new Error('transcribe failed') }
           const d = await r.json()
           const transcript = (d.text || "").trim() || liveTranscript
           const transcriptEl = qs("#ariaTranscript")
@@ -1387,7 +1402,7 @@ function setupAria(){
             setTimeout(async ()=>{
               stopListenLoop()
               await askAria(transcript)
-            }, 300)
+            }, 1300)
           } else {
             setAriaFlow("idle")
             stopListenLoop()
@@ -1403,7 +1418,7 @@ function setupAria(){
       startVAD(recStream)
       maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 12000)
     }catch{
-      uiError("Microphone permission blocked — allow mic access")
+      uiError("Mic permission blocked — allow mic access")
       setAriaFlow("idle")
       stopListenLoop()
     }
