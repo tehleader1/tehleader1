@@ -143,29 +143,20 @@ async function askAria(msg){
     window.speechSynthesis.onvoiceschanged = ()=>{ cachedAriaVoice = null }
   }
   
-  let listenTone = null
-  let listenTimer = null
-  function startListenTone(){
-    stopListenTone()
-    listenTimer = setInterval(()=>{
-      try{
-        const ctx = new (window.AudioContext || window.webkitAudioContext)()
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = "sine"
-        osc.frequency.value = 520
-        gain.gain.value = 0.08
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start()
-        setTimeout(()=>{osc.stop(); ctx.close()}, 260)
-      }catch{}
-    }, 1400)
+  function playListenBeep(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = "sine"
+      osc.frequency.value = 520
+      gain.gain.value = 0.08
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      setTimeout(()=>{osc.stop(); ctx.close()}, 220)
+    }catch{}
   }
-
-function stopListenTone(){
-  if(listenTimer){ clearInterval(listenTimer); listenTimer = null }
-}
 
   function playDoneChime(){
     try{
@@ -869,6 +860,7 @@ async function loadProducts(){
           toast("Voice not supported")
           return
         }
+        playListenBeep()
         if(!ariaRec){
           ariaRec = new SpeechRecognition()
           ariaRec.lang = qs("#ariaLanguage")?.value || "en-US"
@@ -877,15 +869,15 @@ async function loadProducts(){
           try{ ariaRec.continuous = true }catch{}
           ariaRec.onstart = ()=>{
             ariaActive = true
-            document.body.classList.add("listening")
-            startListenTone()
           }
+          ariaRec.onspeechstart = ()=>{ document.body.classList.add("listening") }
+          ariaRec.onsoundstart = ()=>{ document.body.classList.add("listening") }
+          ariaRec.onspeechend = ()=>{ document.body.classList.remove("listening") }
           ariaRec.onresult = (e)=>{
             const res = e.results[e.results.length - 1]
             if(!res || !res.isFinal) return
             const text = res[0]?.transcript || ""
             document.body.classList.remove("listening")
-            stopListenTone()
             if(text.trim()){ askAria(text) }
           }
           ariaRec.onerror = (e)=>{
@@ -895,7 +887,6 @@ async function loadProducts(){
           ariaRec.onend = ()=>{
             ariaActive = false
             document.body.classList.remove("listening")
-            stopListenTone()
             if(document.visibilityState === "visible"){
               try{ ariaRec.start() }catch{}
             }
