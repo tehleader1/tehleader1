@@ -60,6 +60,8 @@ function openMiniWindow(title, body){
 
 
 function wireAllButtons(){
+  try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init done'; }catch{}
+
   document.body.addEventListener("click", (e)=>{
     const btn = e.target.closest("button")
     if(!btn) return
@@ -200,6 +202,8 @@ function setupMiniWindow(){
       if(win) win.classList.remove("show")
     })
   }
+
+  try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init done'; }catch{}
 
   document.body.addEventListener("click", (e)=>{
     const btn = e.target.closest("button")
@@ -1822,6 +1826,8 @@ function setupAppsDock(){
 
 
 window.addEventListener("DOMContentLoaded", ()=>{
+  try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init start'; }catch{}
+  window.__appInit = true;
   const savedHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
   state.ariaHistory = savedHistory
   const ariaEl = qs("#ariaHistory")
@@ -1859,6 +1865,8 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(wireAllButtons)
 
   // Fallback: open any data-link button
+  try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init done'; }catch{}
+
   document.body.addEventListener("click", (e)=>{
     const el = e.target.closest("[data-link]")
     if(el && el.dataset.link){

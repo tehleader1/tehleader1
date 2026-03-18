@@ -59,9 +59,9 @@
   <section class="reel-panel glass" id="reelPanel">
     <div class="panel-head">
       <h3>Hair TV Reel</h3>
-      <button class="btn ghost" id="toggleReel">Hide</button>
+      <button class="btn ghost" id="toggleReel" onclick="(function(){var p=document.getElementById('reelPanel');if(!p)return; p.classList.toggle('hidden'); this.textContent=p.classList.contains('hidden')?'Show':'Hide';})()">Hide</button>
     </div>
-    <div class="reel-tab" id="reelTab">REEL</div>
+    <div class="reel-tab" id="reelTab" onclick="(function(){var p=document.getElementById('reelPanel');if(!p)return; p.classList.remove('hidden'); var t=document.getElementById('toggleReel'); if(t) t.textContent='Hide';})()">REEL</div>
     <iframe class="custom-iframe reel-embed" src="/static/reel.html" title="Hair Reel"></iframe>
   </section>
 
@@ -524,7 +524,15 @@ window.__debugClicks = true;
   });
 })();
 </script>
-<script src="/static/app.js?v=20260319"></script>
+<script src="/static/app.js?v=20260320"></script>
+<script>
+setTimeout(function(){
+  var el=document.getElementById('debugClick');
+  if(!el) return;
+  if(window.__appInit){ el.textContent = 'App init OK'; }
+  else { el.textContent = 'App init NOT reached'; }
+}, 1200);
+</script>
 </body>
 </html>
 
