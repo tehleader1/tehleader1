@@ -31,7 +31,7 @@ const BLOG_POSTS = [
   {title:"All‑in‑one product success stories", body:"Fast routines using the all‑in‑one product for shine, softness, and reduced breakage.\n\nMorning: apply to damp hair.\n\nMid‑day: refresh with a light mist.\n\nNight: protect with satin wrap."}
 ]
 
-  const state = {
+const state = {
     themeIndex: 0,
     blogIndex: 0,
     ariaHistory: [],
@@ -44,6 +44,7 @@ const BLOG_POSTS = [
     livePopupActive: false,
     ariaLevel: 'greeting'
   }
+let transcribeFailures = 0
 
 
 function openMiniWindow(title, body){
@@ -138,39 +139,6 @@ function syncLevelButtons(){
 }
 
 
-  function markLocks(){
-    buttons.forEach(btn=>{
-      const level = btn.dataset.level
-      const locked = !isPremium() && level !== 'greeting'
-      btn.classList.toggle('locked', locked)
-      if(locked && !btn.textContent.includes('🔒')){
-        btn.textContent = btn.textContent + ' 🔒'
-      }
-      if(!locked){
-        btn.textContent = btn.textContent.replace(' 🔒','')
-      }
-    })
-  }
-
-  markLocks()
-  syncLevelButtons()
-
-  buttons.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const level = btn.dataset.level
-      if(!isPremium() && level !== 'greeting'){
-        openModal('subscriptionModal')
-        toast('Upgrade to unlock ARIA levels')
-        return
-      }
-      buttons.forEach(b=>b.classList.remove('active'))
-      btn.classList.add('active')
-      state.ariaLevel = level
-      toast('ARIA level: ' + btn.textContent.replace(' 🔒','').trim())
-    })
-  })
-
-
 
 
 function setupLevelSelect(){
@@ -237,27 +205,6 @@ function beep(freq = 880, duration = 120){
     osc.start()
     setTimeout(()=>{osc.stop(); ctx.close()}, duration)
   }catch{}
-}
-
-function beep(freq = 880, duration = 120){
-  try{
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.type = "sine"
-    osc.frequency.value = freq
-    gain.gain.value = 0.08
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start()
-    setTimeout(()=>{osc.stop(); ctx.close()}, duration)
-  }catch{
-      transcribeFailures += 1
-      if(transcribeFailures >= 3){
-        const t = qs('#ariaTranscript')
-        if(t) t.textContent = 'Mic: transcribe failing (check server)'
-      }
-    }
 }
 
 function initHairScore(){
