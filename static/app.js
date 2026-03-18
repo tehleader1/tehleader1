@@ -31,7 +31,7 @@ const BLOG_POSTS = [
   {title:"All‑in‑one product success stories", body:"Fast routines using the all‑in‑one product for shine, softness, and reduced breakage.\n\nMorning: apply to damp hair.\n\nMid‑day: refresh with a light mist.\n\nNight: protect with satin wrap."}
 ]
 
-const state = {
+  const state = {
     themeIndex: 0,
     blogIndex: 0,
     ariaHistory: [],
@@ -45,6 +45,11 @@ const state = {
     ariaLevel: 'greeting'
   }
 let transcribeFailures = 0
+const SUPPRESS_ERROR_TEXT = true
+function suppressIfErrorText(text){
+  if(!text) return false
+  return text.startsWith("Mic:") || text.startsWith("Voice error") || text.startsWith("AI unavailable")
+}
 
 
 function openMiniWindow(title, body){
@@ -229,6 +234,19 @@ function bumpHairScore(delta){
     div.textContent = `${role === "user" ? "You" : "ARIA"}: ${text}`
     log.appendChild(div)
     log.scrollTop = log.scrollHeight
+  }
+
+  function watchTranscriptErrors(){
+    if(!SUPPRESS_ERROR_TEXT) return
+    const t = qs("#ariaTranscript")
+    if(!t) return
+    const clearIfError = ()=>{
+      const val = t.textContent || ""
+      if(suppressIfErrorText(val)){ t.textContent = "" }
+    }
+    const obs = new MutationObserver(clearIfError)
+    obs.observe(t, {childList:true, characterData:true, subtree:true})
+    clearIfError()
   }
 
   function showSpeechPopup(who, text){
@@ -886,7 +904,7 @@ function setupPostActions(){
 }
 
 
-function setupOccasion(){
+  function setupOccasion(){
   const actionSel = qs("#occasionAction")
   const applySel = qs("#occasionApply")
   const enjoySel = qs("#occasionEnjoy")
@@ -934,7 +952,13 @@ function setupOccasion(){
       row.innerHTML = `<div class="day-title">Day ${i+1}</div>
         <div class="day-line">${plan.action} · ${plan.apply} · ${plan.enjoy}</div>
         <div class="day-line">AI: ${buildDescription(i)}</div>`
-      row.addEventListener("click", ()=>{ selectedDay = i; renderWeek() })
+      row.addEventListener("click", ()=>{
+        selectedDay = i
+        actionSel.value = dayPlans[i].action
+        applySel.value = dayPlans[i].apply
+        enjoySel.value = dayPlans[i].enjoy
+        renderWeek()
+      })
       weekWrap.appendChild(row)
     }
   }
@@ -1217,18 +1241,31 @@ function setupLoginGate(){
     }
   }catch{}
   const gate = qs("#loginGate")
+  const loginBtn = qs("#loginBtn")
+  const logoutBtn = qs("#logoutBtn")
   const loggedIn = localStorage.getItem("loggedIn") === "true"
   const first = Number(localStorage.getItem("firstSeen") || Date.now())
   if(!localStorage.getItem("firstSeen")) localStorage.setItem("firstSeen", String(first))
-  if(!loggedIn && gate){ gate.style.display = "flex" }
-  const openLogin = qs("#openLogin")
-  if(openLogin){ openLogin.addEventListener("click", ()=>{ gate.style.display = "flex" }) }
-  const btnPremium = qs("#loginPremium")
-  const btnPro = qs("#loginPro")
-  const btnFree = qs("#loginFree")
-  if(btnPremium){ btnPremium.addEventListener("click", ()=>{ localStorage.setItem("loggedIn","true"); gate.style.display="none"; openLinkModal(LINKS.premium, "Premium Subscription") }) }
-  if(btnPro){ btnPro.addEventListener("click", ()=>{ localStorage.setItem("loggedIn","true"); gate.style.display="none"; openLinkModal(LINKS.pro, "Professional Subscription") }) }
-  if(btnFree){ btnFree.addEventListener("click", ()=>{ localStorage.setItem("loggedIn","true"); gate.style.display="none" }) }
+  function syncLoginUi(isLogged){
+    if(gate){ gate.style.display = isLogged ? "none" : "flex" }
+    document.body.classList.toggle("login-active", !isLogged)
+    if(loginBtn) loginBtn.style.display = isLogged ? "none" : "inline-flex"
+    if(logoutBtn) logoutBtn.style.display = isLogged ? "inline-flex" : "none"
+  }
+  syncLoginUi(loggedIn)
+  if(loginBtn){ loginBtn.addEventListener("click", ()=>syncLoginUi(false)) }
+  if(logoutBtn){ logoutBtn.addEventListener("click", ()=>{ localStorage.setItem("loggedIn","false"); syncLoginUi(false) }) }
+
+  function completeLogin(){
+    localStorage.setItem("loggedIn","true")
+    syncLoginUi(true)
+  }
+
+  const providers = ["loginGoogle","loginMicrosoft","loginPhone","loginYahoo","loginOther"]
+  providers.forEach(id=>{
+    const btn = qs("#" + id)
+    if(btn){ btn.addEventListener("click", completeLogin) }
+  })
 }
 
 function setupPuzzle(){
@@ -1318,9 +1355,7 @@ function setupAria(){
   let transcribeFailures = 0
 
   function uiError(msg){
-    const t = qs("#ariaTranscript")
-    if(t) t.textContent = msg
-    toast(msg)
+    if(!SUPPRESS_ERROR_TEXT) toast(msg)
   }
 
   function stopVAD(){
@@ -1806,10 +1841,12 @@ window.addEventListener("DOMContentLoaded", ()=>{
     safe(setupFamilyMode)
     safe(initHairScore)
     safe(setupAppsDock)
+  safe(setupLoginGate)
   safe(loadProducts)
   safe(setupMiniWindow)
   safe(setupLevelSelect)
   safe(wireAllButtons)
+  safe(watchTranscriptErrors)
 
   // Fallback: open any data-link button
   try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init done'; }catch{}

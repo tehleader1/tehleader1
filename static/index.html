@@ -8,21 +8,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=20260318">
+<link rel="stylesheet" href="/static/style.css?v=20260318d">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
 <body class="theme-aurora plus500">
 <div class="bg-layers"></div>
       <div id="app">
-    <button class="login-fab" id="openLogin">Login</button>
   <div id="loginGate" class="login-gate">
     <div class="login-card glass">
       <h2>SupportRD Login</h2>
-      <p>Login is required to use the app. Premium unlocks 2 ARIA levels (fewer puzzles). Pro unlocks all 4 levels (unlimited ARIA).</p>
+      <p>Select a provider to continue.</p>
       <div class="login-actions">
-        <button class="btn" id="loginPremium" onclick="localStorage.setItem('loggedIn','true');document.getElementById('loginGate').style.display='none';">$35 PREMIUM</button>
-        <button class="btn" id="loginPro" onclick="localStorage.setItem('loggedIn','true');document.getElementById('loginGate').style.display='none';">$50 PROFESSIONAL</button>
-        <button class="btn ghost" id="loginFree" onclick="localStorage.setItem('loggedIn','true');document.getElementById('loginGate').style.display='none';">Login Free (More Puzzles)</button>
+        <button class="btn" id="loginGoogle">Login with Google</button>
+        <button class="btn" id="loginMicrosoft">Login with Microsoft</button>
+        <button class="btn" id="loginPhone">Login with Phone Number</button>
+        <button class="btn" id="loginYahoo">Login with Yahoo</button>
+        <button class="btn ghost" id="loginOther">Login with Other</button>
       </div>
     </div>
   </div>
@@ -35,13 +36,13 @@
       <div class="big-menu">
         <button class="menu-btn" id="menuOccasion">Occasion Editor</button>
         <button class="menu-btn" id="menuGift">Gift Shop</button>
-        <button class="menu-btn glow" id="menuSubscription">Subscription · $35 / $50</button>
+        <button class="menu-btn glow" id="menuSubscription">Subscription</button>
       </div>
       <div class="toggle-wrap">
-        <label class="toggle">
-          <input type="checkbox" id="familyToggle">
-          <span>Family Friendly Mode</span>
-        </label>
+        <div class="login-actions-top">
+          <button class="btn ghost" id="loginBtn">Log In</button>
+          <button class="btn" id="logoutBtn">Log Out</button>
+        </div>
       </div>
       <button class="btn primary" id="installBtn" style="display:none">Install + Subscribe</button>
     </div>
@@ -84,11 +85,23 @@
         </div>
       </div>
 
-      <div class="center-tabs">
-        <button class="tab-btn active" data-tab="post">Post</button>
-        <button class="tab-btn" data-tab="gps">GPS</button>
-        <button class="tab-btn" data-tab="handsfree">Hands‑Free</button>
-        <button class="tab-btn" data-tab="analysis">Hair Analysis</button>
+      <div class="center-tabs-row">
+        <div class="center-tabs">
+          <button class="tab-btn active" data-tab="post">Post</button>
+          <button class="tab-btn" data-tab="gps">GPS</button>
+          <button class="tab-btn" data-tab="handsfree">Hands‑Free</button>
+          <button class="tab-btn" data-tab="analysis">Hair Analysis</button>
+        </div>
+        <div class="level-select">
+          <label class="analysis-level">ARIA Level
+            <select id="ariaLevelSelect">
+              <option value="greeting">Greetings</option>
+              <option value="thorough">Thorough Info</option>
+              <option value="inner">Inner Circle</option>
+              <option value="pro">Professional</option>
+            </select>
+          </label>
+        </div>
       </div>
 
     <div class="tab-panel active" id="tab-post">
@@ -186,14 +199,6 @@
               <button class="btn" id="startHairScan">Start Hair Scan</button>
             </div>
             <div class="analysis-steps">
-              <label class="analysis-level">ARIA Level
-                <select id="ariaLevelSelect">
-                  <option value="greeting">Greetings</option>
-                  <option value="thorough">Thorough Info</option>
-                  <option value="inner">Inner Circle</option>
-                  <option value="pro">Professional</option>
-                </select>
-              </label>
               <div class="step">1. Center your face and shoulders in view.</div>
               <div class="step">2. Slowly turn left, then right.</div>
               <div class="step">3. Follow ARIA’s voice while the scan runs.</div>
@@ -471,7 +476,6 @@
   </div>
 </div>
 <div id="toast" class="toast"></div>
-<div id="debugClick" class="debug-click">JS loading…</div>
 
 <div id="miniWindow" class="mini-window">
   <div class="mini-window-card glass">
@@ -499,40 +503,7 @@
 </div>
 
 <script src="/static/auth.js"></script>
-<script>
-window.__debugClicks = true;
-(function(){
-  function setDebug(text){
-    var el = document.getElementById('debugClick');
-    if(el) el.textContent = text;
-  }
-  window.addEventListener('error', function(e){
-    setDebug('JS error: ' + (e.message || 'unknown'));
-  });
-  document.addEventListener('DOMContentLoaded', function(){
-    setDebug('JS loaded');
-    document.addEventListener('click', function(ev){
-      var t = ev.target;
-      var btn = t && t.closest ? t.closest('button') : null;
-      var top = document.elementFromPoint(ev.clientX, ev.clientY);
-      var topId = top && top.id ? '#' + top.id : '';
-      var topCls = top && top.className ? '.' + String(top.className).split(' ')[0] : '';
-      var btnId = btn && btn.id ? '#' + btn.id : '';
-      var btnTxt = btn ? (btn.textContent || '').trim().slice(0,30) : 'none';
-      setDebug('Click: ' + (btn ? 'button' : (t && t.tagName ? t.tagName : 'node')) + ' ' + btnId + ' | top: ' + (top ? top.tagName : 'none') + topId + topCls + ' | btn: ' + btnTxt);
-    }, true);
-  });
-})();
-</script>
-<script src="/static/app.js?v=20260318b"></script>
-<script>
-setTimeout(function(){
-  var el=document.getElementById('debugClick');
-  if(!el) return;
-  if(window.__appInit){ el.textContent = 'App init OK'; }
-  else { el.textContent = 'App init NOT reached'; }
-}, 1200);
-</script>
+<script src="/static/app.js?v=20260318c"></script>
 </body>
 </html>
 
