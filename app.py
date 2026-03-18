@@ -17,6 +17,7 @@ app.register_blueprint(engine)
 #################################################
 
 OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 client = None
 if OPENAI_KEY:
@@ -122,6 +123,28 @@ def products():
 # ARIA AI
 #################################################
 
+HAIR_SYSTEM = (
+    "You are ARIA, a hair and scalp care expert for SupportRD. "
+    "You only discuss hair, scalp, hair products, routines, styling, and hair-related wellness. "
+    "If the user asks about anything outside hair or scalp care, refuse and redirect to hair help. "
+    "Keep answers practical, friendly, and focused on hair solutions."
+)
+
+HAIR_KEYWORDS = {
+    "hair","scalp","shampoo","conditioner","oil","oily","dry","damage","damaged",
+    "split","ends","dandruff","itch","itchy","shedding","loss","bald","balding",
+    "curl","curls","waves","wavy","straight","frizz","frizzy","color","bleach",
+    "treat","treatment","mask","serum","leave-in","moisture","hydration","porosity",
+    "breakage","growth","style","styling","heat","protectant","braid","loc","locks",
+    "edges","hairline","detangle","tangle","tangled","dryness","oiling","rinse"
+}
+
+def is_hair_topic(text):
+    if not text:
+        return False
+    t = text.lower()
+    return any(k in t for k in HAIR_KEYWORDS)
+
 @app.route("/api/aria", methods=["POST"])
 def aria():
 
@@ -129,15 +152,19 @@ def aria():
         return {"reply": "AI unavailable"}
 
     msg = request.json.get("message")
+    if not is_hair_topic(msg):
+        return {"reply": "I can only help with hair and scalp care. Tell me your hair concern and I’ll help."}
 
     try:
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
-                {"role": "system", "content": "You are ARIA, an AI hair expert."},
+                {"role": "system", "content": HAIR_SYSTEM},
                 {"role": "user", "content": msg}
-            ]
+            ],
+            temperature=0.4,
+            max_tokens=400
         )
 
         reply = response.choices[0].message.content
