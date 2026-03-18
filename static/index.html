@@ -471,6 +471,7 @@
   </div>
 </div>
 <div id="toast" class="toast"></div>
+<div id="debugClick" class="debug-click">JS loading…</div>
 
 <div id="miniWindow" class="mini-window">
   <div class="mini-window-card glass">
@@ -498,7 +499,32 @@
 </div>
 
 <script src="/static/auth.js"></script>
-<script src="/static/app.js?v=20260318"></script>
+<script>
+window.__debugClicks = true;
+(function(){
+  function setDebug(text){
+    var el = document.getElementById('debugClick');
+    if(el) el.textContent = text;
+  }
+  window.addEventListener('error', function(e){
+    setDebug('JS error: ' + (e.message || 'unknown'));
+  });
+  document.addEventListener('DOMContentLoaded', function(){
+    setDebug('JS loaded');
+    document.addEventListener('click', function(ev){
+      var t = ev.target;
+      var btn = t && t.closest ? t.closest('button') : null;
+      var top = document.elementFromPoint(ev.clientX, ev.clientY);
+      var topId = top && top.id ? '#' + top.id : '';
+      var topCls = top && top.className ? '.' + String(top.className).split(' ')[0] : '';
+      var btnId = btn && btn.id ? '#' + btn.id : '';
+      var btnTxt = btn ? (btn.textContent || '').trim().slice(0,30) : 'none';
+      setDebug('Click: ' + (btn ? 'button' : (t && t.tagName ? t.tagName : 'node')) + ' ' + btnId + ' | top: ' + (top ? top.tagName : 'none') + topId + topCls + ' | btn: ' + btnTxt);
+    }, true);
+  });
+})();
+</script>
+<script src="/static/app.js?v=20260319"></script>
 </body>
 </html>
 
