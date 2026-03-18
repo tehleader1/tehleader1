@@ -132,12 +132,39 @@ function wireAllButtons(){
 function setupLevelControls(){
   const buttons = qsa('.level-btn')
   if(!buttons.length) return
+
+  function isPremium(){
+    return state.subscription === 'premium' || state.subscription === 'pro'
+  }
+
+  function markLocks(){
+    buttons.forEach(btn=>{
+      const level = btn.dataset.level
+      const locked = !isPremium() && level !== 'greeting'
+      btn.classList.toggle('locked', locked)
+      if(locked && !btn.textContent.includes('🔒')){
+        btn.textContent = btn.textContent + ' 🔒'
+      }
+      if(!locked){
+        btn.textContent = btn.textContent.replace(' 🔒','')
+      }
+    })
+  }
+
+  markLocks()
+
   buttons.forEach(btn=>{
     btn.addEventListener('click', ()=>{
+      const level = btn.dataset.level
+      if(!isPremium() && level !== 'greeting'){
+        openModal('subscriptionModal')
+        toast('Upgrade to unlock ARIA levels')
+        return
+      }
       buttons.forEach(b=>b.classList.remove('active'))
       btn.classList.add('active')
-      state.ariaLevel = btn.dataset.level
-      toast('ARIA level: ' + btn.textContent.trim())
+      state.ariaLevel = level
+      toast('ARIA level: ' + btn.textContent.replace(' 🔒','').trim())
     })
   })
 }
@@ -307,7 +334,9 @@ function bumpHairScore(delta){
         inner: 'Give insider tips, product usage details, and sequencing.',
         pro: 'Give professional guidance and ways to monetize or upsell services.'
       }
-      const ariaLevelPrompt = levelMap[state.ariaLevel] || levelMap.thorough
+      const isPremium = state.subscription === 'premium' || state.subscription === 'pro'
+      const shortMode = 'Reply in 1-2 sentences maximum.'
+      const ariaLevelPrompt = isPremium ? (levelMap[state.ariaLevel] || levelMap.thorough) : shortMode
       const r = await fetch("/api/aria",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
