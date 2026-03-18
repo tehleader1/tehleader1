@@ -43,6 +43,39 @@ const BLOG_POSTS = [
     puzzleAnswer: null
   }
 
+
+function openMiniWindow(title, body){
+  const win = qs("#miniWindow")
+  const t = qs("#miniWindowTitle")
+  const b = qs("#miniWindowBody")
+  if(!win || !t || !b) return
+  t.textContent = title || "Action"
+  b.textContent = body || ""
+  win.classList.add("show")
+  clearTimeout(win._t)
+  win._t = setTimeout(()=>win.classList.remove("show"), 2400)
+}
+
+function setupMiniWindow(){
+  const close = qs("#closeMiniWindow")
+  if(close){
+    close.addEventListener("click", ()=>{
+      const win = qs("#miniWindow")
+      if(win) win.classList.remove("show")
+    })
+  }
+
+  document.body.addEventListener("click", (e)=>{
+    const btn = e.target.closest("button")
+    if(!btn) return
+    const id = btn.id || "button"
+    const label = (btn.textContent || "").trim() || "Action"
+    // avoid popping a mini window when closing the mini window itself
+    if(id === "closeMiniWindow") return
+    openMiniWindow(label, `Triggered: ${id}`)
+  })
+}
+
 function toast(msg){
   const el = qs("#toast")
   el.textContent = msg
@@ -1423,6 +1456,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
     safe(initHairScore)
     safe(setupAppsDock)
   safe(loadProducts)
+  safe(setupMiniWindow)
 
   // Fallback: open any data-link button
   document.body.addEventListener("click", (e)=>{
