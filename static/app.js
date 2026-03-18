@@ -156,6 +156,7 @@ function setupInfoTray(){
       "Donate": "Donations support hygiene kits and hair care outreach programs.",
       "About Us": "SupportRD delivers live hair guidance, routines, and product matching.",
       "Terms": "Use of this app is subject to standard terms and service policies.",
+      "FAQ": "FAQ: Use the ARIA sphere to talk, scan with Hair Analysis, and manage routines in Occasion Editor.",
       "Contact": "Email: AgentAnthony@supportdr.com · Phone: 704‑345‑2867"
     }
     openMiniWindow(label, infoMap[label] || "More information coming soon.")

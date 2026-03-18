@@ -353,8 +353,7 @@ body{
     video.play().then(function(){
       loading.style.opacity = '0';
       loading.style.pointerEvents = 'none';
-      var dur = (video.duration && isFinite(video.duration)) ? Math.max(10, Math.round(video.duration)) : 12;
-      startProgress(dur);
+      startProgress(10);
     }).catch(function(){
       loading.style.opacity = '0';
       loading.style.pointerEvents = 'none';
