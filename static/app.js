@@ -150,6 +150,15 @@ function setupInfoTray(){
     const btn = e.target.closest("button")
     if(!btn) return
     const label = btn.dataset.info || btn.textContent || "Info"
+    const linkMap = {
+      "Privacy": "https://supportrd.com/policies/privacy-policy",
+      "Politics": "https://supportrd.com/pages/politics",
+      "Donate": LINKS.donate,
+      "About Us": "https://supportrd.com/pages/about-us",
+      "Terms": "https://supportrd.com/policies/terms-of-service",
+      "FAQ": "https://supportrd.com/pages/faq",
+      "Contact": "https://supportrd.com/pages/contact"
+    }
     const infoMap = {
       "Privacy": "We respect your privacy. Personal data stays private and is never sold.",
       "Politics": "SupportRD is non-partisan and focused on hair care education and wellness.",
@@ -159,6 +168,8 @@ function setupInfoTray(){
       "FAQ": "FAQ — Quick Tips:\n1) Dry hair: add a weekly deep conditioner + leave-in moisture.\n2) Frizz: seal with light oil and reduce heat.\n3) No bounce: add protein every 7–10 days.\n4) Oily scalp: clarify 1x weekly and avoid heavy oils at roots.\n5) Damage: trim split ends + heat protect.\n6) Tangly hair: detangle on damp hair with slip + wide-tooth comb.\n7) Color loss: use color-safe shampoo + cool rinses.\n\nWebsite Tips:\n• ARIA Sphere: hold to talk for voice guidance.\n• Hair Analysis: upload scan to get better feedback.\n• Occasion Editor: tap a day to set that routine.\n• Info Tray: tap buttons for policies and help.",
       "Contact": "Email: AgentAnthony@supportdr.com · Phone: 704‑345‑2867"
     }
+    const link = linkMap[label]
+    if(link){ openLinkModal(link, label) }
     openMiniWindow(label, infoMap[label] || "More information coming soon.")
   })
 }
