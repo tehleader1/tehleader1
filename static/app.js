@@ -40,7 +40,8 @@ const BLOG_POSTS = [
     subscription: "free",
     ariaCount: 0,
     ariaBlocked: false,
-    puzzleAnswer: null
+    puzzleAnswer: null,
+    livePopupActive: false
   }
 
 
@@ -226,6 +227,51 @@ function bumpHairScore(delta){
     setTimeout(()=>{ pop.classList.remove("show"); setTimeout(()=>pop.remove(), 240) }, 1900)
   }
 
+
+  let liveSpeechPopup = null
+  function showLiveSpeechPopup(text){
+    const anchor = qs("#speechPopupAnchor") || qs("#centerStage") || document.body
+    const stage = qs("#centerStage")
+    if(!liveSpeechPopup){
+      const pop = document.createElement("div")
+      pop.id = "speechLive"
+      pop.className = "speech-popup live"
+      const userAvatar = state.userAvatar || "/static/images/woman-waking-up12.jpg"
+      const ariaAvatar = "/static/images/woman-waking-up12.jpg"
+      pop.innerHTML = `
+        <div class="speech-avatars">
+          <div class="speech-avatar me" style="background-image:url('${userAvatar}')"></div>
+          <div class="speech-avatar aria" style="background-image:url('${ariaAvatar}')"></div>
+        </div>
+        <div class="speech-body">
+          <div class="who">YOU</div>
+          <div class="speech-text"></div>
+        </div>
+      `
+      anchor.appendChild(pop)
+      if(stage && anchor === qs("#speechPopupAnchor")){
+        const bounds = stage.getBoundingClientRect()
+        const x = bounds.width * (0.35 + Math.random() * 0.3)
+        const y = bounds.height * (0.2 + Math.random() * 0.4)
+        pop.style.left = `${x}px`
+        pop.style.top = `${y}px`
+      }
+      liveSpeechPopup = pop
+      requestAnimationFrame(()=>pop.classList.add("show"))
+    }
+    const textEl = liveSpeechPopup.querySelector(".speech-text")
+    if(textEl){ textEl.textContent = text || "Listening…" }
+    state.livePopupActive = true
+  }
+
+  function finalizeLiveSpeechPopup(){
+    if(!liveSpeechPopup) return
+    const pop = liveSpeechPopup
+    setTimeout(()=>{ pop.classList.remove("show"); setTimeout(()=>pop.remove(), 240) }, 1200)
+    liveSpeechPopup = null
+  }
+
+
   async function askAria(msg){
     if(!msg) return
     if(state.ariaBlocked){
@@ -234,7 +280,11 @@ function bumpHairScore(delta){
     }
     appendAria(`You: ${msg}`)
     appendConversation("user", msg)
-    showSpeechPopup("YOU", msg)
+    if(state.livePopupActive){
+      state.livePopupActive = false
+    } else {
+      showSpeechPopup("YOU", msg)
+    }
     try{
       setAriaFlow("processing")
       const r = await fetch("/api/aria",{
@@ -1131,111 +1181,129 @@ function setupHairAnalysis(){
 }
 
   
-  function setupAria(){
-    const btn = qs("#voiceToggle")
-    const sphere = qs("#ariaSphere")
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    let ariaActive = false
-    let mediaRecorder = null
-    let audioChunks = []
-    let recStream = null
-    let interimRec = null
+  
+function setupAria(){
+  const btn = qs("#voiceToggle")
+  const sphere = qs("#ariaSphere")
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+  let ariaActive = false
+  let mediaRecorder = null
+  let audioChunks = []
+  let recStream = null
+  let interimRec = null
+  let silenceTimer = null
+  let maxRecordTimer = null
 
-    function stopInterim(){
-      try{ if(interimRec){ interimRec.onresult = null; interimRec.stop() } }catch{}
-      interimRec = null
+  function stopInterim(){
+    if(silenceTimer){ clearTimeout(silenceTimer); silenceTimer = null }
+    try{ if(interimRec){ interimRec.onresult = null; interimRec.stop() } }catch{}
+    interimRec = null
+  }
+
+  function startInterim(){
+    if(!SpeechRecognition) return
+    try{
+      interimRec = new SpeechRecognition()
+      interimRec.lang = qs("#ariaLanguage")?.value || "en-US"
+      interimRec.interimResults = true
+      interimRec.maxAlternatives = 1
+      interimRec.onresult = (e)=>{
+        const res = e.results[e.results.length - 1]
+        const transcript = res?.[0]?.transcript || ""
+        const transcriptEl = qs("#ariaTranscript")
+        if(transcriptEl){ transcriptEl.textContent = transcript || "Listening…" }
+        showLiveSpeechPopup(transcript)
+        if(res && res.isFinal){
+          finalizeLiveSpeechPopup()
+          stopOpenAIListening()
+        }
+      }
+      interimRec.onspeechend = ()=>{ stopOpenAIListening() }
+      interimRec.start()
+    }catch{}
+  }
+
+  async function stopOpenAIListening(){
+    if(silenceTimer){ clearTimeout(silenceTimer); silenceTimer = null }
+    if(maxRecordTimer){ clearTimeout(maxRecordTimer); maxRecordTimer = null }
+    try{
+      if(mediaRecorder && mediaRecorder.state !== "inactive"){
+        mediaRecorder.stop()
+      }
+    }catch{}
+  }
+
+  async function startOpenAIListening(){
+    if(ariaActive){
+      await stopOpenAIListening()
+      return
     }
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      toast("Voice not supported")
+      return
+    }
+    try{
+      startListenLoop()
+      setAriaFlow("listening")
+      const reelVid = qs(".reel-embed video")
+      if(reelVid){ try{ reelVid.pause() }catch{} }
 
-    function startInterim(){
-      if(!SpeechRecognition) return
-      try{
-        interimRec = new SpeechRecognition()
-        interimRec.lang = qs("#ariaLanguage")?.value || "en-US"
-        interimRec.interimResults = true
-        interimRec.maxAlternatives = 1
-        interimRec.onresult = (e)=>{
-          const res = e.results[e.results.length - 1]
-          const transcript = res?.[0]?.transcript || ""
+      recStream = await navigator.mediaDevices.getUserMedia({audio:true})
+      audioChunks = []
+      mediaRecorder = new MediaRecorder(recStream)
+      mediaRecorder.ondataavailable = (e)=>{
+        if(e.data && e.data.size){ audioChunks.push(e.data) }
+      }
+      mediaRecorder.onstop = async ()=>{
+        ariaActive = false
+        stopInterim()
+        stopListenLoop()
+        if(reelVid){ try{ reelVid.play() }catch{} }
+        if(maxRecordTimer){ clearTimeout(maxRecordTimer); maxRecordTimer = null }
+        const blob = new Blob(audioChunks, {type: "audio/webm"})
+        if(recStream){ recStream.getTracks().forEach(t=>t.stop()) }
+        try{
+          setAriaFlow("processing")
+          const form = new FormData()
+          form.append("audio", blob, "speech.webm")
+          const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
+          if(!r.ok) throw new Error("transcribe failed")
+          const d = await r.json()
+          const transcript = (d.text || "").trim()
           const transcriptEl = qs("#ariaTranscript")
-          if(transcriptEl){ transcriptEl.textContent = transcript || "Listening…" }
-        }
-        interimRec.start()
-      }catch{}
-    }
-
-    async function stopOpenAIListening(){
-      try{
-        if(mediaRecorder && mediaRecorder.state !== "inactive"){
-          mediaRecorder.stop()
-        }
-      }catch{}
-    }
-
-    async function startOpenAIListening(){
-      if(ariaActive){
-        await stopOpenAIListening()
-        return
-      }
-      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        toast("Voice not supported")
-        return
-      }
-      try{
-        startListenLoop()
-        setAriaFlow("listening")
-        const reelVid = qs(".reel-embed video")
-        if(reelVid){ try{ reelVid.pause() }catch{} }
-
-        recStream = await navigator.mediaDevices.getUserMedia({audio:true})
-        audioChunks = []
-        mediaRecorder = new MediaRecorder(recStream)
-        mediaRecorder.ondataavailable = (e)=>{
-          if(e.data && e.data.size){ audioChunks.push(e.data) }
-        }
-        mediaRecorder.onstop = async ()=>{
-          ariaActive = false
-          stopInterim()
-          stopListenLoop()
-          if(reelVid){ try{ reelVid.play() }catch{} }
-          const blob = new Blob(audioChunks, {type: "audio/webm"})
-          if(recStream){ recStream.getTracks().forEach(t=>t.stop()) }
-          try{
-            setAriaFlow("processing")
-            const form = new FormData()
-            form.append("audio", blob, "speech.webm")
-            const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
-            if(!r.ok) throw new Error("transcribe failed")
-            const d = await r.json()
-            const transcript = (d.text || "").trim()
-            const transcriptEl = qs("#ariaTranscript")
-            if(transcriptEl){ transcriptEl.textContent = transcript || "No speech detected." }
-            if(transcript){
-              await askAria(transcript)
-            } else {
-              setAriaFlow("idle")
-            }
-          }catch{
-            toast("Voice error")
+          if(transcriptEl){ transcriptEl.textContent = transcript || "No speech detected." }
+          finalizeLiveSpeechPopup()
+          if(transcript){
+            await askAria(transcript)
+          } else {
             setAriaFlow("idle")
           }
+        }catch{
+          toast("Voice error")
+          setAriaFlow("idle")
         }
-        mediaRecorder.start()
-        ariaActive = true
-        startInterim()
-      }catch{
-        toast("Voice error")
-        setAriaFlow("idle")
-        stopListenLoop()
       }
+      mediaRecorder.start()
+      ariaActive = true
+      startInterim()
+      if(!SpeechRecognition){
+        silenceTimer = setTimeout(()=>{ stopOpenAIListening() }, 5500)
+      }
+      maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 8000)
+    }catch{
+      toast("Voice error")
+      setAriaFlow("idle")
+      stopListenLoop()
     }
-
-    if(btn){ btn.addEventListener("click", startOpenAIListening) }
-    if(sphere){
-      sphere.classList.add("aria-pulse")
-      sphere.addEventListener("click", startOpenAIListening)
-    }
-    window.startAriaListening = startOpenAIListening
   }
+
+  if(btn){ btn.addEventListener("click", startOpenAIListening) }
+  if(sphere){
+    sphere.classList.add("aria-pulse")
+    sphere.addEventListener("click", startOpenAIListening)
+  }
+  window.startAriaListening = startOpenAIListening
+}
 
 function renderApp(name){
   const body = qs("#appBody")
