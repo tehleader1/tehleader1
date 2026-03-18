@@ -1252,6 +1252,7 @@ function setupHairAnalysis(){
 
 
 
+
 function setupAria(){
   const btn = qs("#voiceToggle")
   const sphere = qs("#ariaSphere")
@@ -1263,6 +1264,12 @@ function setupAria(){
   let vadTimer = null
   let liveTranscript = ""
   let transcribeBusy = false
+
+  function uiError(msg){
+    const t = qs("#ariaTranscript")
+    if(t) t.textContent = msg
+    toast(msg)
+  }
 
   function stopVAD(){
     if(vadTimer){ clearInterval(vadTimer); vadTimer = null }
@@ -1336,7 +1343,11 @@ function setupAria(){
       return
     }
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      toast("Voice not supported")
+      uiError("Microphone not supported in this browser")
+      return
+    }
+    if(!window.MediaRecorder){
+      uiError("Recording not supported in this browser")
       return
     }
     try{
@@ -1348,7 +1359,8 @@ function setupAria(){
 
       recStream = await navigator.mediaDevices.getUserMedia({audio:true})
       audioChunks = []
-      mediaRecorder = new MediaRecorder(recStream)
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm"
+      mediaRecorder = new MediaRecorder(recStream, { mimeType: mime })
       mediaRecorder.ondataavailable = (e)=>{
         if(e.data && e.data.size){
           audioChunks.push(e.data)
@@ -1372,7 +1384,6 @@ function setupAria(){
           if(transcriptEl){ transcriptEl.textContent = transcript || "No speech detected." }
           finalizeLiveSpeechPopup()
           if(transcript){
-            // 3-second pause before ARIA responds
             setTimeout(async ()=>{
               stopListenLoop()
               await askAria(transcript)
@@ -1382,17 +1393,17 @@ function setupAria(){
             stopListenLoop()
           }
         }catch{
-          toast("Voice error")
+          uiError("Voice error: could not transcribe")
           setAriaFlow("idle")
           stopListenLoop()
         }
       }
-      mediaRecorder.start(800)
+      try{ mediaRecorder.start(800) }catch{ mediaRecorder.start() }
       ariaActive = true
       startVAD(recStream)
       maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 12000)
     }catch{
-      toast("Voice error")
+      uiError("Microphone permission blocked")
       setAriaFlow("idle")
       stopListenLoop()
     }
