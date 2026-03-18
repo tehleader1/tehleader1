@@ -1387,7 +1387,7 @@ function setupAria(){
             setTimeout(async ()=>{
               stopListenLoop()
               await askAria(transcript)
-            }, 2000)
+            }, 300)
           } else {
             setAriaFlow("idle")
             stopListenLoop()
@@ -1398,12 +1398,12 @@ function setupAria(){
           stopListenLoop()
         }
       }
-      try{ mediaRecorder.start(800) }catch{ mediaRecorder.start() }
+      try{ mediaRecorder.start(400) }catch{ mediaRecorder.start() }
       ariaActive = true
       startVAD(recStream)
       maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 12000)
     }catch{
-      uiError("Microphone permission blocked")
+      uiError("Microphone permission blocked — allow mic access")
       setAriaFlow("idle")
       stopListenLoop()
     }
