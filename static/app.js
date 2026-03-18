@@ -1183,66 +1183,79 @@ function setupHairAnalysis(){
   
   
 
+
+
 function setupAria(){
   const btn = qs("#voiceToggle")
   const sphere = qs("#ariaSphere")
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
   let ariaActive = false
   let mediaRecorder = null
   let audioChunks = []
   let recStream = null
-  let interimRec = null
-  let silenceTimer = null
   let maxRecordTimer = null
-  let lastInterim = ""
-  let lastInterimTs = 0
+  let vadTimer = null
+  let liveTranscript = ""
+  let transcribeBusy = false
 
-  function resetSilenceTimer(delay = 800){
-    if(silenceTimer){ clearTimeout(silenceTimer) }
-    silenceTimer = setTimeout(()=>{ stopOpenAIListening() }, delay)
+  function stopVAD(){
+    if(vadTimer){ clearInterval(vadTimer); vadTimer = null }
   }
 
-  function stopInterim(){
-    if(silenceTimer){ clearTimeout(silenceTimer); silenceTimer = null }
-    try{ if(interimRec){ interimRec.onresult = null; interimRec.stop() } }catch{}
-    interimRec = null
-  }
-
-  function startInterim(){
-    if(!SpeechRecognition) return
+  function startVAD(stream){
     try{
-      interimRec = new SpeechRecognition()
-      interimRec.lang = qs("#ariaLanguage")?.value || "en-US"
-      interimRec.interimResults = true
-      interimRec.maxAlternatives = 1
-      interimRec.onresult = (e)=>{
-        const res = e.results[e.results.length - 1]
-        const transcript = res?.[0]?.transcript || ""
-        const now = Date.now()
-        if(transcript){
-          lastInterim = transcript
-          if(now - lastInterimTs > 120){
-            lastInterimTs = now
-            const transcriptEl = qs("#ariaTranscript")
-            if(transcriptEl){ transcriptEl.textContent = transcript }
-            showLiveSpeechPopup(transcript)
-          }
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const src = ctx.createMediaStreamSource(stream)
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 1024
+      src.connect(analyser)
+      const data = new Uint8Array(analyser.fftSize)
+      let silenceMs = 0
+      let heardSpeech = false
+      vadTimer = setInterval(()=>{
+        analyser.getByteTimeDomainData(data)
+        let sum = 0
+        for(let i=0;i<data.length;i++){
+          const v = (data[i] - 128) / 128
+          sum += v * v
         }
-        // push stop slightly after final chunk
-        if(res && res.isFinal){
-          resetSilenceTimer(500)
-        } else {
-          resetSilenceTimer(900)
+        const rms = Math.sqrt(sum / data.length)
+        if(rms > 0.02){
+          heardSpeech = true
+          silenceMs = 0
+        } else if(heardSpeech){
+          silenceMs += 150
         }
-      }
-      interimRec.onerror = ()=>{ resetSilenceTimer(700) }
-      interimRec.start()
+        if(heardSpeech && silenceMs >= 700){
+          stopOpenAIListening()
+        }
+      }, 150)
     }catch{}
   }
 
+  async function transcribeChunk(blob){
+    if(transcribeBusy) return
+    transcribeBusy = true
+    try{
+      const form = new FormData()
+      form.append("audio", blob, "chunk.webm")
+      const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
+      if(r.ok){
+        const d = await r.json()
+        const t = (d.text || "").trim()
+        if(t){
+          liveTranscript = (liveTranscript + " " + t).trim()
+          const transcriptEl = qs("#ariaTranscript")
+          if(transcriptEl){ transcriptEl.textContent = liveTranscript }
+          showLiveSpeechPopup(liveTranscript)
+        }
+      }
+    }catch{}
+    transcribeBusy = false
+  }
+
   async function stopOpenAIListening(){
-    if(silenceTimer){ clearTimeout(silenceTimer); silenceTimer = null }
     if(maxRecordTimer){ clearTimeout(maxRecordTimer); maxRecordTimer = null }
+    stopVAD()
     try{
       if(mediaRecorder && mediaRecorder.state !== "inactive"){
         mediaRecorder.stop()
@@ -1262,6 +1275,7 @@ function setupAria(){
     try{
       startListenLoop()
       setAriaFlow("listening")
+      liveTranscript = ""
       const reelVid = qs(".reel-embed video")
       if(reelVid){ try{ reelVid.pause() }catch{} }
 
@@ -1269,14 +1283,14 @@ function setupAria(){
       audioChunks = []
       mediaRecorder = new MediaRecorder(recStream)
       mediaRecorder.ondataavailable = (e)=>{
-        if(e.data && e.data.size){ audioChunks.push(e.data) }
+        if(e.data && e.data.size){
+          audioChunks.push(e.data)
+          transcribeChunk(e.data)
+        }
       }
       mediaRecorder.onstop = async ()=>{
         ariaActive = false
-        stopInterim()
-        stopListenLoop()
         if(reelVid){ try{ reelVid.play() }catch{} }
-        if(maxRecordTimer){ clearTimeout(maxRecordTimer); maxRecordTimer = null }
         const blob = new Blob(audioChunks, {type: "audio/webm"})
         if(recStream){ recStream.getTracks().forEach(t=>t.stop()) }
         try{
@@ -1286,26 +1300,30 @@ function setupAria(){
           const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
           if(!r.ok) throw new Error("transcribe failed")
           const d = await r.json()
-          const transcript = (d.text || "").trim() || lastInterim.trim()
+          const transcript = (d.text || "").trim() || liveTranscript
           const transcriptEl = qs("#ariaTranscript")
           if(transcriptEl){ transcriptEl.textContent = transcript || "No speech detected." }
           finalizeLiveSpeechPopup()
           if(transcript){
-            await askAria(transcript)
+            // 3-second pause before ARIA responds
+            setTimeout(async ()=>{
+              stopListenLoop()
+              await askAria(transcript)
+            }, 3000)
           } else {
             setAriaFlow("idle")
+            stopListenLoop()
           }
         }catch{
           toast("Voice error")
           setAriaFlow("idle")
+          stopListenLoop()
         }
       }
-      mediaRecorder.start()
+      mediaRecorder.start(1200)
       ariaActive = true
-      startInterim()
-      // safety stop if no interim results
-      resetSilenceTimer(1200)
-      maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 10000)
+      startVAD(recStream)
+      maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 12000)
     }catch{
       toast("Voice error")
       setAriaFlow("idle")
