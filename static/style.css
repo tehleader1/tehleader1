@@ -16,7 +16,7 @@ body.theme-nebula{--accent:#c77dff;--accent-2:#ffb657;--hero-bg:linear-gradient(
   *{box-sizing:border-box;}
   body{background:var(--page-bg);}
 body{margin:0;font-family:"Space Grotesk",system-ui,sans-serif;background:#07080b;color:var(--text);min-height:100vh;overflow-x:hidden;}
-body::before{content:"";position:fixed;inset:0;background:none;z-index:-2;}
+body::before{content:"";position:fixed;inset:0;background:url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;z-index:-2;}
 .bg-layers{position:fixed;inset:0;background:none;pointer-events:none;z-index:-1;}
 
 #app{padding:26px 22px 140px;}
