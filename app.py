@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory, Response
+from flask import Flask, jsonify, request, send_from_directory, Response, session, redirect
 import os
 import requests
 import time
@@ -9,6 +9,7 @@ from engine_routes import engine
 from content_engine import trending_products, reorder_suggestions
 
 app = Flask(__name__, static_folder="static")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
 
 app.register_blueprint(engine)
 
@@ -25,6 +26,12 @@ if OPENAI_KEY:
 
 SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "")
 SHOPIFY_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
+
+AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN", "")
+AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID", "")
+AUTH0_CLIENT_SECRET = os.environ.get("AUTH0_CLIENT_SECRET", "")
+AUTH0_CALLBACK_URL = os.environ.get("AUTH0_CALLBACK_URL", "https://ai-hair-advisor.onrender.com/callback")
+AUTH0_LOGOUT_URL = os.environ.get("AUTH0_LOGOUT_URL", "https://supportrd.com")
 
 #################################################
 # CACHE
@@ -45,6 +52,71 @@ def health():
 @app.route("/api/ping")
 def ping():
     return {"status": "ok"}
+
+@app.route("/api/me")
+def me():
+    user = session.get("user")
+    if not user:
+        return {"authenticated": False}
+    return {"authenticated": True, "user": user}
+
+@app.route("/login")
+def login():
+    if not AUTH0_DOMAIN or not AUTH0_CLIENT_ID or not AUTH0_CLIENT_SECRET:
+        return redirect("/")
+    state = os.urandom(16).hex()
+    session["oauth_state"] = state
+    provider = request.args.get("provider")
+    authorize_url = f"https://{AUTH0_DOMAIN}/authorize"
+    params = {
+        "response_type": "code",
+        "client_id": AUTH0_CLIENT_ID,
+        "redirect_uri": AUTH0_CALLBACK_URL,
+        "scope": "openid profile email",
+        "state": state
+    }
+    if provider:
+        params["connection"] = provider
+    query = "&".join([f"{k}={requests.utils.quote(str(v))}" for k, v in params.items()])
+    return redirect(f"{authorize_url}?{query}")
+
+@app.route("/callback")
+def callback():
+    code = request.args.get("code")
+    state = request.args.get("state")
+    if not code or not state or state != session.get("oauth_state"):
+        return redirect("/")
+    token_url = f"https://{AUTH0_DOMAIN}/oauth/token"
+    payload = {
+        "grant_type": "authorization_code",
+        "client_id": AUTH0_CLIENT_ID,
+        "client_secret": AUTH0_CLIENT_SECRET,
+        "code": code,
+        "redirect_uri": AUTH0_CALLBACK_URL
+    }
+    try:
+        token_res = requests.post(token_url, json=payload, timeout=10)
+        token_res.raise_for_status()
+        tokens = token_res.json()
+        userinfo_url = f"https://{AUTH0_DOMAIN}/userinfo"
+        userinfo_res = requests.get(
+            userinfo_url,
+            headers={"Authorization": f"Bearer {tokens.get('access_token','')}"}, timeout=10
+        )
+        userinfo_res.raise_for_status()
+        session["user"] = userinfo_res.json()
+    except:
+        return redirect("/")
+    return redirect("/")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    if not AUTH0_DOMAIN or not AUTH0_CLIENT_ID:
+        return redirect("/")
+    return redirect(
+        f"https://{AUTH0_DOMAIN}/v2/logout?client_id={AUTH0_CLIENT_ID}&returnTo={AUTH0_LOGOUT_URL}"
+    )
 
 #################################################
 # PRODUCTS

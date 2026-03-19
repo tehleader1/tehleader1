@@ -1287,8 +1287,14 @@ function setupLoginGate(){
     if(logoutBtn) logoutBtn.style.display = isLogged ? "inline-flex" : "none"
   }
   syncLoginUi(loggedIn)
-  if(loginBtn){ loginBtn.addEventListener("click", ()=>syncLoginUi(false)) }
-  if(logoutBtn){ logoutBtn.addEventListener("click", ()=>{ localStorage.setItem("loggedIn","false"); syncLoginUi(false) }) }
+  fetch("/api/me").then(r=>r.json()).then(d=>{
+    if(d && d.authenticated){
+      localStorage.setItem("loggedIn","true")
+      syncLoginUi(true)
+    }
+  }).catch(()=>{})
+  if(loginBtn){ loginBtn.addEventListener("click", ()=>{ window.location = "/login" }) }
+  if(logoutBtn){ logoutBtn.addEventListener("click", ()=>{ window.location = "/logout" }) }
 
   function completeLogin(){
     localStorage.setItem("loggedIn","true")
@@ -1300,8 +1306,15 @@ function setupLoginGate(){
     const btn = qs("#" + id)
     if(btn){
       btn.addEventListener("click", ()=>{
-        openLinkModal(LOGIN_URL, "SupportRD Login")
-        completeLogin()
+        const map = {
+          loginGoogle: "google-oauth2",
+          loginMicrosoft: "windowslive",
+          loginYahoo: "yahoo",
+          loginPhone: "sms",
+          loginOther: ""
+        }
+        const conn = map[id]
+        window.location = conn ? ("/login?provider=" + conn) : "/login"
       })
     }
   })
