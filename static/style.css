@@ -44,6 +44,21 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 }
 .big-menu .menu-btn{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);background:rgba(6,10,12,0.55);}
 .login-actions-top{display:flex;gap:8px;align-items:center;}
+.user-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(0,0,0,0.45);
+  border:1px solid rgba(255,255,255,0.2);
+  font-size:11px;
+  color:#fff;
+  max-width:220px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 
 body.family-mode{filter:saturate(0.92) brightness(1.03);}
 body.family-mode .ad-banner{background:linear-gradient(120deg,rgba(124,243,209,0.2),rgba(104,166,255,0.2));}

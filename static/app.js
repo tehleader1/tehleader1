@@ -1285,12 +1285,17 @@ function setupLoginGate(){
     document.body.classList.toggle("login-active", !isLogged)
     if(loginBtn) loginBtn.style.display = isLogged ? "none" : "inline-flex"
     if(logoutBtn) logoutBtn.style.display = isLogged ? "inline-flex" : "none"
+    const badge = qs("#userBadge")
+    if(badge){ badge.style.display = isLogged ? "inline-flex" : "none" }
   }
   syncLoginUi(loggedIn)
   fetch("/api/me").then(r=>r.json()).then(d=>{
     if(d && d.authenticated){
       localStorage.setItem("loggedIn","true")
       syncLoginUi(true)
+      const badge = qs("#userBadge")
+      const name = d.user && (d.user.name || d.user.nickname || d.user.email) ? (d.user.name || d.user.nickname || d.user.email) : "Logged In"
+      if(badge){ badge.textContent = name }
     }
   }).catch(()=>{})
   if(loginBtn){ loginBtn.addEventListener("click", ()=>{ window.location = "/login" }) }
