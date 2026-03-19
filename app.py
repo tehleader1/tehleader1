@@ -1,4 +1,6 @@
 from flask import Flask, jsonify, request, send_from_directory, Response, session, redirect
+import json
+import random
 import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
@@ -30,6 +32,12 @@ if OPENAI_KEY:
 
 SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "")
 SHOPIFY_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
+SHOPIFY_ADMIN_TOKEN = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
+SHOPIFY_BLOG_ID = os.environ.get("SHOPIFY_BLOG_ID", "")
+
+SEO_ENABLED = os.environ.get("SEO_ENABLED", "false").lower() == "true"
+SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "72"))
+LAST_SEO_POST = 0
 
 AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN", "")
 AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID", "")
@@ -43,6 +51,9 @@ SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 FROM_EMAIL = os.environ.get("FROM_EMAIL", "")
 DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL", "")
+ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or DEVELOPER_EMAIL).lower()
+SEO_RANDOM_ENABLED = os.environ.get("SEO_RANDOM_ENABLED", "false").lower() == "true"
+SEO_RANDOM_JOB_IDS = []
 
 #################################################
 # CACHE
@@ -63,6 +74,49 @@ def health():
 @app.route("/api/ping")
 def ping():
     return {"status": "ok"}
+
+def is_admin():
+    try:
+        user = session.get("user") or {}
+        email = (user.get("email") or "").lower()
+        return bool(email and ADMIN_EMAIL and email == ADMIN_EMAIL)
+    except:
+        return False
+
+@app.route("/api/seo/publish", methods=["POST"])
+def seo_publish():
+    if not is_admin():
+        return {"ok": False, "message": "unauthorized"}, 401
+    ok, msg = publish_shopify_blog()
+    return {"ok": ok, "message": msg}
+
+def schedule_random_seo_jobs():
+    global SEO_RANDOM_JOB_IDS
+    for jid in SEO_RANDOM_JOB_IDS:
+        try:
+            scheduler.remove_job(jid)
+        except:
+            pass
+    SEO_RANDOM_JOB_IDS = []
+    now = time.time()
+    for i in range(4):
+        offset = random.randint(10 * 60, 24 * 60 * 60 - 1)
+        run_at = time.localtime(now + offset)
+        run_date = time.strftime("%Y-%m-%d %H:%M:%S", run_at)
+        jid = f"seo-rand-{i}-{int(now)}"
+        scheduler.add_job(publish_shopify_blog, "date", run_date=run_date, id=jid, replace_existing=True)
+        SEO_RANDOM_JOB_IDS.append(jid)
+
+@app.route("/api/seo/auto", methods=["POST"])
+def seo_auto():
+    global SEO_RANDOM_ENABLED
+    if not is_admin():
+        return {"ok": False, "message": "unauthorized"}, 401
+    data = request.json or {}
+    SEO_RANDOM_ENABLED = bool(data.get("enabled"))
+    if SEO_RANDOM_ENABLED:
+        schedule_random_seo_jobs()
+    return {"ok": True, "enabled": SEO_RANDOM_ENABLED}
 
 @app.route("/api/custom-order", methods=["POST"])
 def custom_order():
@@ -128,12 +182,42 @@ def custom_order():
     except Exception as e:
         return {"ok": False, "error": "Email send failed", "detail": str(e)[:200]}, 500
 
+@app.route("/api/custom-order/test", methods=["POST"])
+def custom_order_test():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and (FROM_EMAIL or SMTP_USER) and DEVELOPER_EMAIL):
+        return {"ok": False, "error": "Email not configured"}, 500
+    html = """
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+      <h1 style="font-size:26px;font-weight:800;margin:0 0 8px;">CUSTOM ORDER ARRIVED ⭐⭐⭐⭐⭐</h1>
+      <div style="background:#0b1a0f;color:#fff;padding:12px 16px;border-radius:8px;font-weight:800;display:inline-block;">
+        CUSTOM ORDER ARRIVED ⭐⭐⭐⭐⭐
+      </div>
+      <p style="margin:16px 0 6px;"><strong>Test Email</strong> — this is a system check.</p>
+    </div>
+    """
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "CUSTOM ORDER ARRIVED ⭐⭐⭐⭐⭐"
+    msg["From"] = FROM_EMAIL or SMTP_USER
+    msg["To"] = DEVELOPER_EMAIL
+    msg.attach(MIMEText(html, "html"))
+    context = ssl.create_default_context()
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            server.starttls(context=context)
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(msg["From"], [DEVELOPER_EMAIL], msg.as_string())
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": "Email send failed", "detail": str(e)[:200]}, 500
+
 @app.route("/api/me")
 def me():
     user = session.get("user")
     if not user:
         return {"authenticated": False}
-    return {"authenticated": True, "user": user}
+    return {"authenticated": True, "user": user, "admin": is_admin()}
 
 @app.route("/login")
 def login():
@@ -261,6 +345,100 @@ def get_products():
 
     except:
         return []
+
+def get_shopify_blog_id():
+    if SHOPIFY_BLOG_ID:
+        return SHOPIFY_BLOG_ID
+    if not SHOPIFY_STORE or not SHOPIFY_ADMIN_TOKEN:
+        return None
+    try:
+        r = requests.get(
+            f"https://{SHOPIFY_STORE}/admin/api/2024-01/blogs.json",
+            headers={"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN},
+            timeout=8
+        )
+        data = r.json()
+        blogs = data.get("blogs", [])
+        if blogs:
+            return str(blogs[0].get("id"))
+    except:
+        return None
+    return None
+
+def generate_seo_post(products):
+    title = "Healthy Hair Routine: Moisture, Bounce, and Shine"
+    body = """
+    <h2>Start With a Scalp-First Wash Day</h2>
+    <p>Clean hair starts at the scalp. Use a gentle cleanser, then follow with a hydrating conditioner. Avoid heavy buildup to keep natural bounce.</p>
+    <h2>Midweek Moisture Reset</h2>
+    <p>Refresh with a light mist or leave-in. Seal ends with a small amount of oil to reduce frizz and tangles.</p>
+    <h2>Styling + Protection</h2>
+    <p>Limit heat. Use a heat protectant when needed. Sleep on satin to reduce friction and breakage.</p>
+    <h2>Product Pairing</h2>
+    <p>Match products to your goals: hydration for dryness, protein for bounce, and gentle detangling for fragile strands.</p>
+    <p><strong>Need a custom routine?</strong> Use the SupportRD Custom Order to get a product match and routine plan.</p>
+    """
+    excerpt = "A simple weekly routine to restore moisture, reduce frizz, and bring back bounce."
+
+    if not client:
+        return title, body, excerpt
+
+    try:
+        product_list = ", ".join([p.get("title", "") for p in products if p.get("title")])[:600]
+        prompt = (
+            "Write a Shopify blog post (HTML) about healthy hair care. "
+            "Include sections for wash day, midweek refresh, styling protection, and product pairing. "
+            "Use a warm, expert tone. 800-1200 words. "
+            "Return JSON with keys: title, body_html, excerpt. "
+            f"Products to mention if relevant: {product_list}."
+        )
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+            max_tokens=1200
+        )
+        content = response.choices[0].message.content or ""
+        if content.strip().startswith("{"):
+            data = json.loads(content)
+            return data.get("title", title), data.get("body_html", body), data.get("excerpt", excerpt)
+    except:
+        return title, body, excerpt
+
+    return title, body, excerpt
+
+def publish_shopify_blog():
+    if not SHOPIFY_STORE or not SHOPIFY_ADMIN_TOKEN:
+        return False, "Shopify admin not configured"
+    blog_id = get_shopify_blog_id()
+    if not blog_id:
+        return False, "No blog id found"
+    products = get_products()
+    title, body_html, excerpt = generate_seo_post(products)
+    payload = {
+        "article": {
+            "title": title,
+            "body_html": body_html,
+            "summary_html": excerpt,
+            "tags": "hair care, moisture, frizz, routine, SupportRD",
+            "published": True
+        }
+    }
+    try:
+        r = requests.post(
+            f"https://{SHOPIFY_STORE}/admin/api/2024-01/blogs/{blog_id}/articles.json",
+            headers={
+                "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN,
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=10
+        )
+        if r.status_code >= 400:
+            return False, f"Shopify error {r.status_code}"
+        return True, "Published"
+    except Exception as e:
+        return False, str(e)[:200]
 
 @app.route("/api/products")
 def products():
@@ -419,6 +597,17 @@ def engine_loop():
         get_products()
     except:
         pass
+
+    global LAST_SEO_POST
+    if SEO_ENABLED:
+        now = time.time()
+        min_gap = SEO_INTERVAL_HOURS * 3600
+        if now - LAST_SEO_POST > min_gap:
+            ok, _ = publish_shopify_blog()
+            if ok:
+                LAST_SEO_POST = now
+    if SEO_RANDOM_ENABLED and not SEO_RANDOM_JOB_IDS:
+        schedule_random_seo_jobs()
 
 
 scheduler = BackgroundScheduler()

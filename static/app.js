@@ -1092,6 +1092,9 @@ function setupSEOLogs(){
   let timer = null
   const open = qs("#openSeo")
   const close = qs("#closeSeo")
+  const publish = qs("#seoPublish")
+  const autoBtn = qs("#seoAuto")
+  const testBtn = qs("#testEmailBtn")
   if(!stream || !open || !close) return
   open.addEventListener("click", ()=>{
     if(timer) clearInterval(timer)
@@ -1105,6 +1108,44 @@ function setupSEOLogs(){
     }, 800)
   })
   close.addEventListener("click", ()=>{ if(timer) clearInterval(timer) })
+  if(publish){
+    publish.addEventListener("click", async ()=>{
+      const r = await fetch("/api/seo/publish", {method:"POST"})
+      const d = await r.json()
+      const div = document.createElement("div")
+      div.textContent = `[SEO] ${d.ok ? "Published" : "Failed"} · ${d.message || d.error || ""}`
+      stream.appendChild(div)
+      stream.scrollTop = stream.scrollHeight
+    })
+  }
+  if(autoBtn){
+    autoBtn.addEventListener("click", async ()=>{
+      const enabled = !autoBtn.classList.contains("active")
+      const r = await fetch("/api/seo/auto", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({enabled})
+      })
+      const d = await r.json()
+      if(d.ok){
+        autoBtn.classList.toggle("active", enabled)
+        const div = document.createElement("div")
+        div.textContent = `[SEO] Auto 4x/day ${enabled ? "enabled" : "disabled"}`
+        stream.appendChild(div)
+        stream.scrollTop = stream.scrollHeight
+      }
+    })
+  }
+  if(testBtn){
+    testBtn.addEventListener("click", async ()=>{
+      const r = await fetch("/api/custom-order/test", {method:"POST"})
+      const d = await r.json()
+      const div = document.createElement("div")
+      div.textContent = `[EMAIL] ${d.ok ? "Test sent" : "Test failed"}`
+      stream.appendChild(div)
+      stream.scrollTop = stream.scrollHeight
+    })
+  }
 }
 
 function setupReel(){
@@ -1296,6 +1337,10 @@ function setupLoginGate(){
       const badge = qs("#userBadge")
       const name = d.user && (d.user.name || d.user.nickname || d.user.email) ? (d.user.name || d.user.nickname || d.user.email) : "Logged In"
       if(badge){ badge.textContent = name }
+      const testBtn = qs("#testEmailBtn")
+      const seoAuto = qs("#seoAuto")
+      if(testBtn){ testBtn.style.display = d.admin ? "inline-flex" : "none" }
+      if(seoAuto){ seoAuto.style.display = d.admin ? "inline-flex" : "none" }
     }
   }).catch(()=>{})
   if(loginBtn){ loginBtn.addEventListener("click", ()=>{ window.location = "/login" }) }
