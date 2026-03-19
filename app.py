@@ -1,4 +1,8 @@
 from flask import Flask, jsonify, request, send_from_directory, Response, session, redirect
+import smtplib
+import ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import os
 import requests
 import time
@@ -33,6 +37,13 @@ AUTH0_CLIENT_SECRET = os.environ.get("AUTH0_CLIENT_SECRET", "")
 AUTH0_CALLBACK_URL = os.environ.get("AUTH0_CALLBACK_URL", "https://ai-hair-advisor.onrender.com/callback")
 AUTH0_LOGOUT_URL = os.environ.get("AUTH0_LOGOUT_URL", "https://supportrd.com")
 
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+FROM_EMAIL = os.environ.get("FROM_EMAIL", "")
+DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL", "")
+
 #################################################
 # CACHE
 #################################################
@@ -52,6 +63,70 @@ def health():
 @app.route("/api/ping")
 def ping():
     return {"status": "ok"}
+
+@app.route("/api/custom-order", methods=["POST"])
+def custom_order():
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and (FROM_EMAIL or SMTP_USER) and DEVELOPER_EMAIL):
+        return {"ok": False, "error": "Email not configured"}, 500
+
+    data = request.json or {}
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
+    phone = data.get("phone", "").strip()
+    address = data.get("address", "").strip()
+    delivery = data.get("delivery", "").strip()
+    source = data.get("source", "").strip()
+    notes = data.get("notes", "").strip()
+    items = data.get("items", []) or []
+    total = data.get("total", 0)
+
+    if not name or not email or not phone or not address:
+        return {"ok": False, "error": "Missing required fields"}, 400
+
+    items_html = ""
+    for item in items:
+        iname = str(item.get("name", ""))
+        qty = str(item.get("qty", ""))
+        subtotal = str(item.get("subtotal", ""))
+        items_html += f"<tr><td>{iname}</td><td>{qty}</td><td>${subtotal}</td></tr>"
+
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+      <h1 style="font-size:26px;font-weight:800;margin:0 0 8px;">CUSTOM ORDER ARRIVED ⭐⭐⭐⭐⭐</h1>
+      <div style="background:#0b1a0f;color:#fff;padding:12px 16px;border-radius:8px;font-weight:800;display:inline-block;">
+        CUSTOM ORDER ARRIVED ⭐⭐⭐⭐⭐
+      </div>
+      <p style="margin:16px 0 6px;"><strong>Client:</strong> {name}</p>
+      <p style="margin:6px 0;"><strong>Email:</strong> {email}</p>
+      <p style="margin:6px 0;"><strong>Phone:</strong> {phone}</p>
+      <p style="margin:6px 0;"><strong>Address:</strong> {address}</p>
+      <p style="margin:6px 0;"><strong>Delivery:</strong> {delivery or "standard"}</p>
+      <p style="margin:6px 0;"><strong>Source:</strong> {source or "N/A"}</p>
+      <p style="margin:6px 0;"><strong>Notes:</strong> {notes or "N/A"}</p>
+      <h3 style="margin:18px 0 6px;">Items</h3>
+      <table style="border-collapse:collapse;width:100%;max-width:520px;">
+        <thead><tr><th align="left">Product</th><th align="left">Qty</th><th align="left">Subtotal</th></tr></thead>
+        <tbody>{items_html}</tbody>
+      </table>
+      <p style="margin-top:12px;"><strong>Total:</strong> ${total}</p>
+    </div>
+    """
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "CUSTOM ORDER ARRIVED ⭐⭐⭐⭐⭐"
+    msg["From"] = FROM_EMAIL or SMTP_USER
+    msg["To"] = DEVELOPER_EMAIL
+    msg.attach(MIMEText(html, "html"))
+
+    context = ssl.create_default_context()
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            server.starttls(context=context)
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(msg["From"], [DEVELOPER_EMAIL], msg.as_string())
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": "Email send failed", "detail": str(e)[:200]}, 500
 
 @app.route("/api/me")
 def me():
