@@ -1306,23 +1306,7 @@ function setupLoginGate(){
     syncLoginUi(true)
   }
 
-  const providers = ["loginGoogle","loginMicrosoft","loginPhone","loginYahoo","loginOther"]
-  providers.forEach(id=>{
-    const btn = qs("#" + id)
-    if(btn){
-      btn.addEventListener("click", ()=>{
-        const map = {
-          loginGoogle: "google-oauth2",
-          loginMicrosoft: "windowslive",
-          loginYahoo: "yahoo",
-          loginPhone: "sms",
-          loginOther: ""
-        }
-        const conn = map[id]
-        window.location = conn ? ("/login?provider=" + conn) : "/login"
-      })
-    }
-  })
+  // Provider buttons are plain links to avoid popup blockers.
 }
 
 function setupPuzzle(){

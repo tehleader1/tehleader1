@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=20260318h">
+<link rel="stylesheet" href="/static/style.css?v=20260318i">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
 <body class="theme-aurora plus500">
@@ -19,11 +19,11 @@
       <h2>SupportRD Login</h2>
       <p>Select a provider to continue.</p>
       <div class="login-actions">
-        <button class="btn" id="loginGoogle">Login with Google</button>
-        <button class="btn" id="loginMicrosoft">Login with Microsoft</button>
-        <button class="btn" id="loginPhone">Login with Phone Number</button>
-        <button class="btn" id="loginYahoo">Login with Yahoo</button>
-        <button class="btn ghost" id="loginOther">Login with Other</button>
+        <a class="btn" id="loginGoogle" href="/login?provider=google-oauth2">Login with Google</a>
+        <a class="btn" id="loginMicrosoft" href="/login?provider=windowslive">Login with Microsoft</a>
+        <a class="btn" id="loginPhone" href="/login?provider=sms">Login with Phone Number</a>
+        <a class="btn" id="loginYahoo" href="/login?provider=yahoo">Login with Yahoo</a>
+        <a class="btn ghost" id="loginOther" href="/login">Login with Other</a>
       </div>
     </div>
   </div>
