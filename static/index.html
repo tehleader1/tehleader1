@@ -9,46 +9,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320e.css">
+<link rel="stylesheet" href="/static/style.v20260320h.css">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
-<body class="theme-aurora plus500">
+<body class="theme-aurora plus500 system-theme">
 <div class="bg-layers"></div>
       <div id="app">
-  <div id="trialOverlay" class="trial-overlay" aria-hidden="true">
-    <div class="trial-overlay-card glass">
-      <div class="trial-overlay-top">
-        <div class="trial-eyebrow">First 30 Minutes Free Trial</div>
-        <button class="btn ghost" id="trialClose">Close</button>
-      </div>
-      <a class="trial-overlay-link" href="https://supportrd.com/login?mode=signup">
-        <span class="trial-code">SRD2026</span>
-        <span class="trial-arrow">=====&gt;</span>
-        <span class="trial-posted">POSTED</span>
-        <span class="trial-brand">SupportRD</span>
-      </a>
-      <a class="trial-new-code" href="https://supportrd.com/login?mode=signup&new=1">
-        New Member Code: <span>NEW4ALL</span>
-      </a>
-      <div class="trial-sub">Tap the code to create your account and enter SupportRD.</div>
-      <div class="trial-hint">Login lives at SupportRD — this is your entry key.</div>
-    </div>
-  </div>
   <div id="loginGate" class="login-gate">
     <div class="login-card glass">
       <div class="modal-head" style="padding:0;margin-bottom:6px;">
         <h2>SupportRD Login</h2>
         <button class="btn ghost" id="closeLoginGate">Close</button>
-      </div>
-      <div id="trialCodeBanner" class="trial-code-banner">
-        <div class="trial-eyebrow">First 30 Minutes Free Trial</div>
-        <div class="trial-ad">
-          <span class="trial-code">/login?mode=signup</span>
-          <span class="trial-arrow">&lt;</span>
-          <span class="trial-posted">POSTED</span>
-          <span class="trial-brand">SupportRD</span>
-        </div>
-        <div class="trial-sub">Tap “Create Account” to activate your trial.</div>
       </div>
       <p>Select a provider to continue.</p>
       <div class="login-actions">
@@ -64,7 +35,10 @@
   <header class="topbar glass">
     <div class="brand">
       <div class="logo">SupportRD</div>
-      <div class="tagline">One page. Live engine depth. All systems visible.</div>
+      <div class="tagline">One page. Live engine depth. SupportRD is trying every day to serve people better worldwide — always more to come.</div>
+    </div>
+    <div class="top-middle">
+      <button class="btn ghost" id="liteModeBtn">Accessible Version</button>
     </div>
     <div class="status">
       <div class="big-menu">
@@ -88,10 +62,11 @@
   <section class="ad-banner">
     <div class="ad-badge">NEW</div>
     <div class="ad-copy">
-      <strong>SupportRD Live Advisor</strong>
-      <span>Instant routines · real products · live guidance</span>
+      <strong>SupportRD Live Advisor + Membership Power</strong>
+      <span>Don’t forget: Premium ($35) and Pro ($50) unlock deeper ARIA care plans and pro growth features. This system keeps evolving.</span>
     </div>
     <button class="btn" id="adCta">Explore Products</button>
+    <button class="btn ghost" id="adMembershipCta">See Premium/Pro</button>
     </section>
 
   <section class="reel-panel glass" id="reelPanel">
@@ -133,7 +108,7 @@
           <button class="tab-btn" data-tab="handsfree">Hands‑Free</button>
           <button class="tab-btn" data-tab="analysis">Hair Analysis</button>
           <button class="tab-btn" data-tab="ai">AI Millionaire</button>
-          <button class="tab-btn" data-tab="seo">SEO</button>
+          <button class="tab-btn" data-tab="credit">Credit</button>
         </div>
         <div class="level-select">
           <label class="analysis-level">ARIA Level
@@ -314,12 +289,34 @@
           </div>
         </div>
       </div>
-      <div class="tab-panel" id="tab-seo">
-        <div class="seo-panel glass">
-          <div class="seo-title">SEO Engine</div>
-          <div class="seo-sub">Activate the 4x/day random schedule and watch the log stream.</div>
-          <button class="btn" id="seoAutoStandalone">Activate SEO 4x/Day (Random)</button>
-          <div class="log-stream" id="logStreamStandalone"></div>
+      <div class="tab-panel" id="tab-seo"></div>
+      <div class="tab-panel" id="tab-credit">
+        <div class="system-card glass">
+          <div class="system-head">
+            <div>
+              <div class="system-title">SupportRD Credit Console</div>
+              <div class="system-sub">Friendly 2-click pre-check with a 30% payment capacity limit, built for international customers and fair treatment.</div>
+            </div>
+            <span class="system-badge">Live System</span>
+          </div>
+          <div class="credit-grid">
+            <input id="creditEmail" placeholder="Email">
+            <input id="creditCountry" placeholder="Country Code (US, DO, etc)">
+            <input id="creditIncome" type="number" min="0" step="0.01" placeholder="Monthly Income">
+            <input id="creditDebt" type="number" min="0" step="0.01" placeholder="Monthly Debt Payments">
+            <input id="creditAmount" type="number" min="0" step="0.01" placeholder="Requested Credit Amount">
+            <input id="creditTerm" type="number" min="1" max="24" placeholder="Term Months (1-24)">
+          </div>
+          <label class="system-check"><input id="creditRiskFlag" type="checkbox"> Previous payment issues on file</label>
+          <div class="system-actions">
+            <button class="btn" id="creditEvaluate">Check Eligibility</button>
+            <button class="btn ghost" id="creditLoadStatus">Load My Last Result</button>
+          </div>
+          <div class="system-log" id="creditDecisionLog">No decision yet.</div>
+          <div class="system-actions">
+            <button class="btn primary" id="creditPayMembership">Pay Membership</button>
+            <button class="btn ghost" id="creditPayProducts">Pay Products</button>
+          </div>
         </div>
       </div>
       <div id="centerBlur" class="center-blur" aria-hidden="true"></div>
@@ -645,7 +642,7 @@
 </div>
 
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320f.js"></script>
+<script src="/static/app.v20260320h.js"></script>
 </body>
 </html>
 

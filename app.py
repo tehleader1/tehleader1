@@ -54,12 +54,18 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 FROM_EMAIL = os.environ.get("FROM_EMAIL", "")
 DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL", "")
 ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or DEVELOPER_EMAIL).lower()
+WELLNESS_SUBJECT = os.environ.get("WELLNESS_SUBJECT", "SupportRD Personal Check-In")
 SEO_RANDOM_ENABLED = os.environ.get("SEO_RANDOM_ENABLED", "false").lower() == "true"
 SEO_RANDOM_JOB_IDS = []
 SEO_TRIGGER_TOKEN = os.environ.get("SEO_TRIGGER_TOKEN", "")
 CLAIM_CODES = [c.strip().upper() for c in os.environ.get("CLAIM_CODES", "SRD2026,NEW4ALL").split(",") if c.strip()]
 CLAIM_NAMES = [n.strip() for n in os.environ.get("CLAIM_NAMES", "Reptar,MrGiggles").split(",") if n.strip()]
 CLAIM_DB_PATH = os.environ.get("CLAIM_DB_PATH", "users.db")
+CREDIT_DB_PATH = os.environ.get("CREDIT_DB_PATH", CLAIM_DB_PATH)
+CREDIT_MAX_PAYMENT_RATIO = float(os.environ.get("CREDIT_MAX_PAYMENT_RATIO", "0.30"))
+CREDIT_MIN_TERM_MONTHS = int(os.environ.get("CREDIT_MIN_TERM_MONTHS", "1"))
+CREDIT_MAX_TERM_MONTHS = int(os.environ.get("CREDIT_MAX_TERM_MONTHS", "24"))
+CREDIT_BLOCKED_COUNTRIES = set([c.strip().upper() for c in os.environ.get("CREDIT_BLOCKED_COUNTRIES", "").split(",") if c.strip()])
 
 #################################################
 # CACHE
@@ -115,6 +121,189 @@ def set_claim(name, email):
         return True
     except:
         return False
+
+def init_credit_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS credit_decisions ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "email TEXT,"
+            "country TEXT,"
+            "requested_amount REAL,"
+            "term_months INTEGER,"
+            "monthly_income REAL,"
+            "monthly_debt REAL,"
+            "estimated_payment REAL,"
+            "allowed_payment REAL,"
+            "approved_amount REAL,"
+            "status TEXT,"
+            "reason TEXT,"
+            "decision_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def init_wellness_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS wellness_messages ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "email TEXT,"
+            "name TEXT,"
+            "message_type TEXT,"
+            "status TEXT,"
+            "error_detail TEXT,"
+            "sent_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def send_smtp_html(to_email, subject, html):
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and (FROM_EMAIL or SMTP_USER)):
+        return False, "email_not_configured"
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = FROM_EMAIL or SMTP_USER
+    msg["To"] = to_email
+    msg.attach(MIMEText(html, "html"))
+    context = ssl.create_default_context()
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            server.starttls(context=context)
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(msg["From"], [to_email], msg.as_string())
+        return True, ""
+    except Exception as e:
+        return False, str(e)[:200]
+
+def get_wellness_recipients(limit=500):
+    recipients = {}
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT email FROM credit_decisions WHERE email IS NOT NULL AND email <> '' ORDER BY id DESC LIMIT ?", (limit,))
+        for row in cur.fetchall():
+            em = (row[0] or "").strip().lower()
+            if em and "@" in em:
+                recipients[em] = {"email": em, "name": em.split("@")[0]}
+        cur.execute("SELECT DISTINCT email FROM name_claims WHERE email IS NOT NULL AND email <> '' ORDER BY claimed_at DESC LIMIT ?", (limit,))
+        for row in cur.fetchall():
+            em = (row[0] or "").strip().lower()
+            if em and "@" in em and em not in recipients:
+                recipients[em] = {"email": em, "name": em.split("@")[0]}
+        conn.close()
+    except:
+        pass
+    for extra in [DEVELOPER_EMAIL, ADMIN_EMAIL]:
+        em = (extra or "").strip().lower()
+        if em and "@" in em and em not in recipients:
+            recipients[em] = {"email": em, "name": em.split("@")[0]}
+    return list(recipients.values())
+
+def save_wellness_log(email, name, message_type, status, error_detail=""):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO wellness_messages (email, name, message_type, status, error_detail, sent_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (email, name, message_type, status, error_detail, datetime.utcnow().isoformat() + "Z"),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def save_credit_decision(row):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO credit_decisions ("
+            "email, country, requested_amount, term_months, monthly_income, monthly_debt, "
+            "estimated_payment, allowed_payment, approved_amount, status, reason, decision_at"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                row.get("email", ""),
+                row.get("country", ""),
+                float(row.get("requested_amount", 0) or 0),
+                int(row.get("term_months", 0) or 0),
+                float(row.get("monthly_income", 0) or 0),
+                float(row.get("monthly_debt", 0) or 0),
+                float(row.get("estimated_payment", 0) or 0),
+                float(row.get("allowed_payment", 0) or 0),
+                float(row.get("approved_amount", 0) or 0),
+                row.get("status", "denied"),
+                row.get("reason", ""),
+                datetime.utcnow().isoformat() + "Z",
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def latest_credit_decision(email):
+    if not email:
+        return None
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT status, approved_amount, reason, decision_at, estimated_payment, allowed_payment "
+            "FROM credit_decisions WHERE email = ? ORDER BY id DESC LIMIT 1",
+            (email.lower(),),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return None
+        return {
+            "status": row[0],
+            "approved_amount": row[1],
+            "reason": row[2],
+            "decision_at": row[3],
+            "estimated_payment": row[4],
+            "allowed_payment": row[5],
+        }
+    except:
+        return None
+
+def currency_for_country(country_code):
+    cc = (country_code or "").upper()
+    mapping = {
+        "US": "USD",
+        "DO": "DOP",
+        "MX": "MXN",
+        "CA": "CAD",
+        "GB": "GBP",
+        "EU": "EUR",
+        "ES": "EUR",
+        "DE": "EUR",
+        "FR": "EUR",
+        "IT": "EUR",
+        "BR": "BRL",
+        "CO": "COP",
+        "AR": "ARS",
+        "KE": "KES",
+        "ZA": "ZAR",
+        "NG": "NGN",
+        "IN": "INR",
+        "JP": "JPY",
+        "KR": "KRW",
+        "AE": "AED",
+        "SA": "SAR",
+    }
+    return mapping.get(cc, "USD")
 
 #################################################
 # HEALTH CHECKS
@@ -290,6 +479,34 @@ def custom_order_test():
     except Exception as e:
         return {"ok": False, "error": "Email send failed", "detail": str(e)[:200]}, 500
 
+@app.route("/api/wellness/send-all", methods=["POST"])
+def wellness_send_all():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    recipients = get_wellness_recipients()
+    if not recipients:
+        return {"ok": False, "error": "no_recipients"}, 404
+    sent = 0
+    failed = 0
+    for rec in recipients:
+        first = (rec.get("name") or "friend").replace(".", " ").replace("_", " ").title()
+        html = f"""
+        <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+          <h2 style="margin:0 0 8px;">Hi {first}, we at SupportRD are trying for you.</h2>
+          <p style="margin:10px 0;">If you're not feeling your best, we're sending a personal check-in to say we care.</p>
+          <p style="margin:10px 0;">Reply to this message and our team will support you with simple hair care steps and encouragement.</p>
+          <p style="margin:14px 0 0;"><strong>SupportRD Team</strong></p>
+        </div>
+        """
+        ok, detail = send_smtp_html(rec["email"], WELLNESS_SUBJECT, html)
+        if ok:
+            sent += 1
+            save_wellness_log(rec["email"], first, "wellness_blast", "sent", "")
+        else:
+            failed += 1
+            save_wellness_log(rec["email"], first, "wellness_blast", "failed", detail)
+    return {"ok": True, "sent": sent, "failed": failed, "total": len(recipients)}
+
 @app.route("/api/me")
 def me():
     user = session.get("user")
@@ -324,6 +541,85 @@ def claim_status():
         return {"ok": False, "error": "missing"}, 400
     row = get_claim(name)
     return {"ok": True, "claimed": bool(row), "name": name}
+
+@app.route("/api/credit/evaluate", methods=["POST"])
+def credit_evaluate():
+    data = request.json or {}
+    user = session.get("user") or {}
+    email = (data.get("email") or user.get("email") or "").strip().lower()
+    country = (data.get("country") or "").strip().upper()
+    has_payment_issues = bool(data.get("has_payment_issues"))
+
+    try:
+        requested_amount = float(data.get("requested_amount", 0) or 0)
+        term_months = int(data.get("term_months", 0) or 0)
+        monthly_income = float(data.get("monthly_income", 0) or 0)
+        monthly_debt = float(data.get("monthly_debt", 0) or 0)
+    except:
+        return {"ok": False, "error": "invalid_numbers"}, 400
+
+    if not email:
+        return {"ok": False, "error": "email_required"}, 400
+    if requested_amount <= 0 or monthly_income <= 0:
+        return {"ok": False, "error": "invalid_financial_input"}, 400
+    if term_months < CREDIT_MIN_TERM_MONTHS or term_months > CREDIT_MAX_TERM_MONTHS:
+        return {"ok": False, "error": "invalid_term"}, 400
+
+    allowed_payment = max(0.0, round(monthly_income * CREDIT_MAX_PAYMENT_RATIO - monthly_debt, 2))
+    estimated_payment = round(requested_amount / term_months, 2)
+    approved_amount = max(0.0, round(min(requested_amount, allowed_payment * term_months), 2))
+    currency = currency_for_country(country)
+
+    status = "approved"
+    reason = "approved"
+
+    if country and country in CREDIT_BLOCKED_COUNTRIES:
+        status = "denied"
+        reason = "country_not_supported"
+    elif has_payment_issues:
+        status = "denied"
+        reason = "risk_flag"
+    elif allowed_payment <= 0:
+        status = "denied"
+        reason = "debt_ratio_limit"
+    elif estimated_payment > allowed_payment:
+        status = "denied"
+        reason = "payment_above_30_percent_limit"
+    elif approved_amount < requested_amount:
+        status = "conditional"
+        reason = "reduced_limit"
+
+    decision = {
+        "email": email,
+        "country": country,
+        "requested_amount": requested_amount,
+        "term_months": term_months,
+        "monthly_income": monthly_income,
+        "monthly_debt": monthly_debt,
+        "estimated_payment": estimated_payment,
+        "allowed_payment": allowed_payment,
+        "approved_amount": approved_amount if status != "denied" else 0,
+        "status": status,
+        "reason": reason,
+        "currency": currency,
+        "country_supported": bool(country not in CREDIT_BLOCKED_COUNTRIES) if country else True,
+    }
+    save_credit_decision(decision)
+    decision["ok"] = True
+    decision["legal_note"] = "Automated pre-screen only. Final credit decisions require manual compliance review."
+    return decision
+
+@app.route("/api/credit/status")
+def credit_status():
+    user = session.get("user") or {}
+    email = (request.args.get("email") or user.get("email") or "").strip().lower()
+    if not email:
+        return {"ok": False, "error": "email_required"}, 400
+    row = latest_credit_decision(email)
+    if not row:
+        return {"ok": True, "status": "none"}
+    row["ok"] = True
+    return row
 
 @app.route("/login")
 def login():
@@ -558,7 +854,7 @@ def products():
 #################################################
 
 HAIR_SYSTEM = (
-    "You are ARIA, a hair and scalp care expert for SupportRD. You only discuss hair, scalp, hair products, routines, styling, and hair-related wellness. If the user asks about anything outside hair or scalp care, refuse and redirect to hair help. Always give thorough, structured answers and include a routine (wash day + midweek + styling + protection). When users list multiple issues (dryness, lack of bounce, frizz, oiliness, damage, tangles, color loss), address each one explicitly. When asked for prices or when the user lists products, always repeat the price for each named item and give a total if quantity is 1 each. Prices: Shampoo Aloe Vera $20, Formula Exclusiva $55, Laciador Crece $40, Mascarilla Capilar $25, Gotero Rapido $55, Gotitas Brillantes $30. If user names differ (Gotika, Gotero, Mascrilla, Laciador), map them to Gotitas Brillantes, Gotero Rapido, Mascarilla Capilar, Laciador Crece. Offer a simple total estimate when quantities are 1 each. "
+    "You are ARIA, a hair and scalp care expert for SupportRD. You only discuss hair, scalp, hair products, routines, styling, and hair-related wellness. If the user asks about anything outside hair or scalp care, refuse and redirect to hair help. Always give thorough, structured answers and include a routine (wash day + midweek + styling + protection). When users list multiple issues (dryness, lack of bounce, frizz, oiliness, damage, tangles, color loss), address each one explicitly. When asked for prices or when the user lists products, always repeat the price for each named item and give a total if quantity is 1 each. Prices: Shampoo Aloe Vera $20, Formula Exclusiva $55, Laciador Crece $40, Mascarilla Capilar $25, Gotero Rapido $55, Gotitas Brillantes $30. If user names differ (Gotika, Gotero, Mascrilla, Laciador), map them to Gotitas Brillantes, Gotero Rapido, Mascarilla Capilar, Laciador Crece. Offer a simple total estimate when quantities are 1 each. End every answer with one short 'Don't forget' reminder line about the member plan relevant to the user."
 )
 
 HAIR_KEYWORDS = {
@@ -582,23 +878,37 @@ def aria():
     if not client:
         return {"reply": "AI unavailable"}
 
-    msg = request.json.get("message")
+    body = request.json if request.is_json else {}
+    msg = body.get("message")
+    membership_tier = (body.get("membership_tier") or "free").strip().lower()
     if not is_hair_topic(msg):
         return {"reply": "I can only help with hair and scalp care. Tell me your hair concern and I’ll help."}
 
     try:
 
+        tier_note = "free plan user"
+        if membership_tier == "premium":
+            tier_note = "premium member"
+        elif membership_tier == "pro":
+            tier_note = "pro member"
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
-                {"role": "system", "content": HAIR_SYSTEM},
+                {"role": "system", "content": HAIR_SYSTEM + f" Membership context: {tier_note}."},
                 {"role": "user", "content": msg}
             ],
             temperature=0.4,
             max_tokens=400
         )
 
-        reply = response.choices[0].message.content
+        reply = response.choices[0].message.content or ""
+        reminder = "Don't forget: upgrade to Premium ($35) or Pro ($50) for deeper ARIA guidance."
+        if membership_tier == "premium":
+            reminder = "Don't forget: Premium is active. Use your deeper ARIA guidance and routines."
+        elif membership_tier == "pro":
+            reminder = "Don't forget: Pro is active. You have full ARIA power and advanced coaching."
+        if "don't forget" not in reply.lower():
+            reply = f"{reply}\n\n{reminder}"
 
         return {"reply": reply}
 
@@ -750,6 +1060,8 @@ scheduler.add_job(
 
 scheduler.start()
 init_claim_db()
+init_credit_db()
+init_wellness_db()
 
 #################################################
 # STATIC FILES
