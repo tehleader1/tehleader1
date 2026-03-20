@@ -50,6 +50,9 @@ body.plus500 .menu-btn,
 body.plus500 .tab-btn{font-weight:700;letter-spacing:0.06em;text-transform:uppercase;}
 body.plus500 .ad-banner{background:linear-gradient(120deg,rgba(255,255,255,0.18),rgba(255,255,255,0.04));border:1px solid rgba(255,255,255,0.28);}
 body.plus500 .post-input textarea{background:rgba(6,8,12,0.55);}
+body.natural-pro .ad-banner{border-width:2px;}
+body.natural-pro .menu-btn.glow{box-shadow:0 0 22px rgba(124,243,209,0.65);}
+body.natural-pro .btn.primary{font-weight:800;}
 .admin-only{display:none !important;}
 .trial-code-banner{
   margin-bottom:14px;
@@ -519,6 +522,9 @@ body.family-mode .aria-sphere{box-shadow:0 0 12px rgba(124,243,209,0.35);}
 .comms-panel{padding:16px;border-radius:16px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);display:grid;gap:12px;}
 .comms-title{font-weight:700;font-size:18px;}
 .comms-sub{color:var(--muted);font-size:12px;}
+.comms-flow{padding:12px;border-radius:12px;border:1px solid rgba(104,166,255,0.45);background:linear-gradient(120deg,rgba(104,166,255,0.16),rgba(124,243,209,0.1));display:grid;gap:8px;}
+.comms-flow-title{font-weight:700;letter-spacing:0.08em;text-transform:uppercase;font-size:11px;}
+.comms-flow-sub{font-size:12px;color:rgba(255,255,255,0.85);line-height:1.5;}
 .comms-block{padding:12px;border-radius:12px;border:1px solid rgba(124,243,209,0.35);background:rgba(0,0,0,0.35);}
 .comms-block p{margin:8px 0 0;line-height:1.5;}
 .comms-list{display:grid;gap:8px;}
@@ -692,6 +698,32 @@ body.listening .bg-layers{animation-play-state:paused;}
 }
 @media (max-width:560px){
   .trust-strip{grid-template-columns:1fr;}
+}
+
+@media (max-width:900px){
+  body.natural-pro #appsDock,
+  body.natural-pro .info-tray,
+  body.natural-pro .reel-panel,
+  body.natural-pro .tab-btn[data-tab="ai"],
+  body.natural-pro #tab-ai,
+  body.natural-pro .scan-row,
+  body.natural-pro #tipTeam,
+  body.natural-pro #themePrevSide,
+  body.natural-pro #themeNextSide{
+    display:none !important;
+  }
+  body.natural-pro .center-stage{padding:14px;}
+  body.natural-pro .post-bottom{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+  body.natural-pro #postSocials,
+  body.natural-pro #adMembershipCta,
+  body.natural-pro #contactEvelyn,
+  body.natural-pro #creditPayMembership{
+    width:100%;
+  }
 }
 
 .tab-btn[data-tab="seo"],
