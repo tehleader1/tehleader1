@@ -41,9 +41,9 @@ const AI_LINKS = {
 const LOGIN_URL = "https://supportrd.com/account/login"
 
 const BLOG_POSTS = [
-  {title:"Repair story: Heat damage recovery", body:"Week 1: moisture stacking, trim, and protective styling.\n\nWeek 2: deep conditioning twice a week, gentle detangle, scalp oil.\n\nWeek 3: protein balance and low‑heat styling.\n\nWeek 4: shine restore, reduced breakage, and curl definition back."},
-  {title:"Protein balance for bounce", body:"Step 1: hydrate with a light leave‑in.\n\nStep 2: add protein treatment every 7–10 days.\n\nStep 3: seal with oil or butter.\n\nResult: curls hold shape with less frizz."},
-  {title:"All‑in‑one product success stories", body:"Fast routines using the all‑in‑one product for shine, softness, and reduced breakage.\n\nMorning: apply to damp hair.\n\nMid‑day: refresh with a light mist.\n\nNight: protect with satin wrap."}
+  {title:"Natural: Recuperacion de Pelo con Calor", body:"Semana 1: hidratacion profunda, recorte y proteccion.\n\nSemana 2: acondicionamiento 2 veces y desenredo suave.\n\nSemana 3: balance de proteina + poco calor.\n\nSemana 4: mas brillo, menos quiebre y mejor forma del pelo."},
+  {title:"Natural: Balance de Proteina y Brillo", body:"Paso 1: hidrata con leave-in ligero.\n\nPaso 2: tratamiento de proteina cada 7-10 dias.\n\nPaso 3: sella con aceite.\n\nResultado: menos frizz, mas cuerpo y mejor movimiento."},
+  {title:"Natural: Rutina Real para Shampoo Familiar", body:"Rutina simple con productos reales para crecimiento sano.\n\nManana: aplica en pelo humedo.\n\nMedio dia: refresh suave.\n\nNoche: proteccion y descanso del pelo."}
 ]
 
 const state = {
@@ -885,7 +885,10 @@ function renderBlog(){
   const title = qs("#blogTitle")
   const body = qs("#blogBody")
   if(title) title.textContent = post.title
-  if(body) body.innerHTML = post.body.split("\n\n").map(p=>`<p>${p}</p>`).join("")
+  if(body){
+    const policy = `<div style="padding:10px;border-radius:10px;border:1px solid rgba(124,243,209,0.35);background:rgba(124,243,209,0.08);font-size:12px;margin-bottom:10px;"><strong>Politica del Blog:</strong> Solo noticias y contenido nitido de pelo.</div>`
+    body.innerHTML = policy + post.body.split("\n\n").map(p=>`<p>${p}</p>`).join("")
+  }
 }
 
 function appendAria(text){
@@ -1475,7 +1478,7 @@ function setupCommunications(){
     const w = loadWallet()
     balanceView.textContent = `Balance: $${w.balance.toFixed(2)} · Reserva: $${w.reserve.toFixed(2)}`
     if(newsGuardBtn){
-      newsGuardBtn.textContent = `Prevencion Noticias: ${w.newsGuard ? "On" : "Off"}`
+      newsGuardBtn.textContent = `Filtro Noticias Pelo: ${w.newsGuard ? "On" : "Off"}`
       newsGuardBtn.classList.toggle("active", w.newsGuard)
     }
   }
@@ -1510,7 +1513,7 @@ function setupCommunications(){
       w.newsGuard = !w.newsGuard
       saveWallet(w)
       drawWallet()
-      toast(w.newsGuard ? "Prevencion de noticias activada" : "Prevencion de noticias desactivada")
+      toast(w.newsGuard ? "Filtro de noticias de pelo activado" : "Filtro de noticias de pelo desactivado")
     })
   }
 
