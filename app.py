@@ -601,8 +601,6 @@ def aria_transcribe_ping():
     return {"status": "ok"}
 
 @app.route("/api/aria/transcribe", methods=["POST"])
-
-@app.route("/api/aria/transcribe", methods=["POST"])
 def aria_transcribe():
 
     if not OPENAI_KEY:
@@ -619,20 +617,32 @@ def aria_transcribe():
         files = {
             "file": (audio.filename or "audio.webm", audio_bytes, audio.mimetype or "audio/webm")
         }
-        data = {
-            "model": os.environ.get("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe")
-        }
-        r = requests.post(
-            "https://api.openai.com/v1/audio/transcriptions",
-            headers={"Authorization": f"Bearer {OPENAI_KEY}"},
-            data=data,
-            files=files,
-            timeout=45
-        )
-        if r.status_code >= 400:
-            return {"error": "Transcription failed", "status": r.status_code, "detail": r.text[:300]}, 500
-        out = r.json()
-        return {"text": out.get("text", "")}
+        primary_model = os.environ.get("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe")
+        fallback_models = [primary_model, "whisper-1"]
+        tried = set()
+        last_status = None
+        last_detail = ""
+        for model in fallback_models:
+            if model in tried:
+                continue
+            tried.add(model)
+            data = {"model": model}
+            r = requests.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {OPENAI_KEY}"},
+                data=data,
+                files=files,
+                timeout=45
+            )
+            if r.status_code < 400:
+                out = r.json()
+                return {"text": out.get("text", ""), "model": model}
+            last_status = r.status_code
+            last_detail = r.text[:300]
+            # Only retry on model-related failures or not found
+            if r.status_code not in (400, 404):
+                break
+        return {"error": "Transcription failed", "status": last_status, "detail": last_detail}, 500
     except Exception as e:
         return {"error": "Transcription error", "detail": str(e)[:300]}, 500
 
