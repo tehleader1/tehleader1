@@ -1,5 +1,3 @@
 self.addEventListener("install",e=>{
-self.skipWaiting()
+  self.skipWaiting()
 })
-
-self.addEventListener("fetch",e=>{})

@@ -62,6 +62,10 @@
     color:#0b0f14;
     border-color:transparent;
   }
+  .chip.secondary{
+    border-style:dashed;
+    opacity:0.9;
+  }
   .reel-frame{
     width:100%;
     height:62vh;
@@ -81,10 +85,6 @@
     font-size:11px;
     color:rgba(255,255,255,0.65);
   }
-  .reel-actions .chip.secondary{
-    border-style:dashed;
-    opacity:0.9;
-  }
   @media (max-width:700px){
     .reel-frame{height:52vh;}
     .reel-head{flex-direction:column;align-items:flex-start;}
@@ -96,7 +96,7 @@
     <div class="reel-head">
       <div>
         <div class="reel-title">SupportRD TV Reel</div>
-        <div class="reel-sub">Internet Archive stream · rotates hair + millionaire content.</div>
+        <div class="reel-sub">Internet Archive stream · curated hair + millionaire/business clips.</div>
         <div class="reel-status" id="reelStatus">Loading archive feed…</div>
       </div>
       <div class="reel-actions">
@@ -107,88 +107,105 @@
         <button class="chip secondary" id="nextClip">Next Clip</button>
       </div>
     </div>
-    <iframe
-      id="reelFrame"
-      class="reel-frame"
-      src=""
-      title="SupportRD TV Reel"
-      allowfullscreen
-      webkitallowfullscreen="true"
-      mozallowfullscreen="true"
-    ></iframe>
+    <video id="reelVideo" class="reel-frame" controls autoplay muted playsinline></video>
     <div class="reel-foot">Internet Archive reel • tap a topic to switch • auto-rotates every 28 seconds</div>
   </div>
 
 <script>
   (function(){
-    var IA_ENDPOINT = "https://archive.org/advancedsearch.php";
-    var frame = document.getElementById("reelFrame");
+    var META_BASE = "https://archive.org/metadata/";
+    var DL_BASE = "https://archive.org/download/";
+    var video = document.getElementById("reelVideo");
     var statusEl = document.getElementById("reelStatus");
     var nextBtn = document.getElementById("nextClip");
     var topicButtons = Array.prototype.slice.call(document.querySelectorAll("[data-topic]"));
-    var cache = { hair: [], haircare: [], millionaire: [], business: [] };
     var currentTopic = "hair";
     var autoTimer = null;
+    var cache = {};
 
-    var TOPIC_QUERIES = {
-      hair: '(title:(hair OR hairstyle OR "hair growth") OR subject:(hair OR hairstyle)) AND mediatype:movies',
-      haircare: '(title:("hair care" OR "haircare" OR "scalp care") OR subject:("hair care" OR "scalp")) AND mediatype:movies',
-      millionaire: '(title:(millionaire OR "wealth" OR "riches") OR subject:(millionaire OR wealth)) AND mediatype:movies',
-      business: '(title:(entrepreneur OR business OR startup) OR subject:(business OR entrepreneurship)) AND mediatype:movies'
+    var TOPIC_IDS = {
+      hair: [
+        "BodyCare1948",
+        "HowtoBeW1949",
+        "0589_Health_Your_Cleanliness_E01763_05_14_56_00",
+        "4087_Cleanliness_And_Health"
+      ],
+      haircare: [
+        "BodyCare1948",
+        "HowtoBeW1949",
+        "4087_Cleanliness_And_Health"
+      ],
+      millionaire: [
+        "OfficeCo1952",
+        "HabitPat1954",
+        "Developing1951",
+        "Everyday1948"
+      ],
+      business: [
+        "OfficeCo1952",
+        "HabitPat1954",
+        "Developing1951",
+        "Everyday1948"
+      ]
     };
 
     function setStatus(msg){
       if(statusEl){ statusEl.textContent = msg; }
     }
 
-    function buildUrl(query){
-      var params = new URLSearchParams();
-      params.set("q", query);
-      params.append("fl[]", "identifier");
-      params.append("fl[]", "title");
-      params.set("rows", "20");
-      params.set("page", "1");
-      params.set("output", "json");
-      params.append("sort[]", "downloads desc");
-      return IA_ENDPOINT + "?" + params.toString();
-    }
-
-    function fetchTopic(topic){
-      var query = TOPIC_QUERIES[topic] || TOPIC_QUERIES.hair;
-      var url = buildUrl(query);
-      return fetch(url)
-        .then(function(r){ return r.json(); })
-        .then(function(data){
-          var docs = (data && data.response && data.response.docs) || [];
-          var items = docs.map(function(d){ return d.identifier; }).filter(Boolean);
-          cache[topic] = items;
-          return items;
-        })
-        .catch(function(){
-          cache[topic] = [];
-          return [];
-        });
-    }
-
-    function pickItem(topic){
-      var list = cache[topic] || [];
-      if(!list.length) return null;
+    function pickRandom(list){
+      if(!list || !list.length) return null;
       return list[Math.floor(Math.random() * list.length)];
     }
 
-    function loadItem(id){
-      if(!id){
+    function findVideoFile(files){
+      if(!files) return null;
+      for(var i=0;i<files.length;i++){
+        var f = files[i];
+        if(!f || !f.name) continue;
+        var name = String(f.name).toLowerCase();
+        var format = String(f.format || "").toLowerCase();
+        if(name.endsWith(".mp4") || format.indexOf("mpeg4") !== -1){
+          return f.name;
+        }
+      }
+      return null;
+    }
+
+    function loadFromIdentifier(identifier){
+      if(!identifier){
         setStatus("No archive clips found. Try another topic.");
-        frame.src = "";
+        video.removeAttribute("src");
         return;
       }
-      frame.src = "https://archive.org/embed/" + encodeURIComponent(id);
-      setStatus("Now playing: " + id);
+      if(cache[identifier]){
+        video.src = cache[identifier];
+        setStatus("Now playing: " + identifier);
+        return;
+      }
+      setStatus("Fetching archive metadata…");
+      fetch(META_BASE + encodeURIComponent(identifier))
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          var fileName = findVideoFile(data && data.files);
+          if(!fileName){
+            setStatus("No playable video found for " + identifier);
+            return;
+          }
+          var url = DL_BASE + encodeURIComponent(identifier) + "/" + encodeURIComponent(fileName);
+          cache[identifier] = url;
+          video.src = url;
+          setStatus("Now playing: " + identifier);
+        })
+        .catch(function(){
+          setStatus("Archive fetch failed for " + identifier);
+        });
     }
 
     function rotate(){
-      var item = pickItem(currentTopic);
-      loadItem(item);
+      var ids = TOPIC_IDS[currentTopic] || TOPIC_IDS.hair;
+      var id = pickRandom(ids);
+      loadFromIdentifier(id);
     }
 
     function ensureTopic(topic){
@@ -196,14 +213,7 @@
       topicButtons.forEach(function(btn){
         btn.classList.toggle("active", btn.getAttribute("data-topic") === topic);
       });
-      if(cache[topic] && cache[topic].length){
-        rotate();
-        return Promise.resolve();
-      }
-      setStatus("Fetching archive clips…");
-      return fetchTopic(topic).then(function(){
-        rotate();
-      });
+      rotate();
     }
 
     function startAuto(){
@@ -225,7 +235,8 @@
       });
     }
 
-    ensureTopic(currentTopic).then(startAuto);
+    ensureTopic(currentTopic);
+    startAuto();
   })();
 </script>
 </body>
