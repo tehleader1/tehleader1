@@ -446,6 +446,11 @@ body.family-mode .aria-sphere{box-shadow:0 0 12px rgba(124,243,209,0.35);}
 .ad-copy strong{font-size:16px;} 
 .ad-copy span{font-size:12px;color:#0b0c10;} 
 
+.emit-strip{padding:12px 14px;border-radius:14px;margin:0 0 14px;display:grid;gap:4px;}
+.emit-title{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);}
+.emit-sub{font-size:12px;color:#e9f5ff;}
+.emit-findme{font-size:12px;color:rgba(124,243,209,0.95);font-weight:700;}
+
 .trust-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 18px;}
 .trust-card{padding:14px;border-radius:16px;}
 .trust-kicker{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}

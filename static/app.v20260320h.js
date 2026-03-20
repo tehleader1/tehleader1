@@ -57,7 +57,58 @@ const state = {
     ariaBlocked: false,
     puzzleAnswer: null,
     livePopupActive: false,
-    ariaLevel: 'greeting'
+    ariaLevel: 'greeting',
+    resolverContext: null
+}
+
+function detectDeviceTier(){
+  try{
+    const dm = Number(navigator.deviceMemory || 0)
+    const cpu = Number(navigator.hardwareConcurrency || 0)
+    if((dm && dm <= 3) || (cpu && cpu <= 4)) return "low-cost"
+    if((dm && dm <= 6) || (cpu && cpu <= 8)) return "mid-range"
+    return "high-performance"
+  }catch{
+    return "unknown"
+  }
+}
+
+function initResolverContext(){
+  const saved = JSON.parse(localStorage.getItem("resolverContext") || "null")
+  const base = saved || {}
+  const ctx = {
+    country: base.country || "US",
+    city: base.city || "unknown",
+    coords: base.coords || null,
+    device_tier: detectDeviceTier(),
+    user_agent: (navigator.userAgent || "").slice(0, 120),
+    language: (navigator.language || "en-US"),
+    low_cost_mode: true
+  }
+  state.resolverContext = ctx
+  localStorage.setItem("resolverContext", JSON.stringify(ctx))
+  const dash = qs("#dashboardEmitStatus")
+  if(dash){ dash.textContent = `Device: ${ctx.device_tier} · Location: pending · Low-cost mode: ON` }
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition((pos)=>{
+      const updated = {
+        ...ctx,
+        coords: {
+          lat: Number(pos.coords.latitude.toFixed(4)),
+          lon: Number(pos.coords.longitude.toFixed(4))
+        }
+      }
+      state.resolverContext = updated
+      localStorage.setItem("resolverContext", JSON.stringify(updated))
+      const v = qs("#resolverEmitView")
+      if(v) v.textContent = `Resolver emit: ${updated.device_tier} · ${updated.coords.lat}, ${updated.coords.lon} · low-cost mode ON`
+      if(dash){ dash.textContent = `Device: ${updated.device_tier} · Location: ${updated.coords.lat}, ${updated.coords.lon} · Low-cost mode: ON` }
+    }, ()=>{
+      const v = qs("#resolverEmitView")
+      if(v) v.textContent = `Resolver emit: ${ctx.device_tier} · location pending · low-cost mode ON`
+      if(dash){ dash.textContent = `Device: ${ctx.device_tier} · Location: not granted · Low-cost mode: ON` }
+    }, {timeout: 3000})
+  }
 }
 function setupAccessibilityMode(){
   const liteBtn = qs("#liteModeBtn")
@@ -470,7 +521,8 @@ function bumpHairScore(delta){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           message: msg + '\n\nResponse level: ' + ariaLevelPrompt,
-          membership_tier: state.subscription || "free"
+          membership_tier: state.subscription || "free",
+          resolver_context: state.resolverContext || {}
         })
       })
       const d = await r.json()
