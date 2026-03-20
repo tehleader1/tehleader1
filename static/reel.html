@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Millionaire TV Reel</title>
+<title>SupportRD TV Reel</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   body{
@@ -57,6 +57,11 @@
     font-weight:600;
     cursor:pointer;
   }
+  .chip.active{
+    background:linear-gradient(120deg, rgba(47,230,200,0.75), rgba(58,125,255,0.75));
+    color:#0b0f14;
+    border-color:transparent;
+  }
   .reel-frame{
     width:100%;
     height:62vh;
@@ -72,6 +77,14 @@
     color:rgba(255,255,255,0.6);
     text-align:center;
   }
+  .reel-status{
+    font-size:11px;
+    color:rgba(255,255,255,0.65);
+  }
+  .reel-actions .chip.secondary{
+    border-style:dashed;
+    opacity:0.9;
+  }
   @media (max-width:700px){
     .reel-frame{height:52vh;}
     .reel-head{flex-direction:column;align-items:flex-start;}
@@ -82,36 +95,137 @@
   <div class="reel-wrap">
     <div class="reel-head">
       <div>
-        <div class="reel-title">AI Millionaire TV</div>
-        <div class="reel-sub">Live YouTube reel · rotate topics to keep the feed fresh.</div>
+        <div class="reel-title">SupportRD TV Reel</div>
+        <div class="reel-sub">Internet Archive stream · rotates hair + millionaire content.</div>
+        <div class="reel-status" id="reelStatus">Loading archive feed…</div>
       </div>
       <div class="reel-actions">
-        <button class="chip" data-topic="AI making millionaires">AI Millionaires</button>
-        <button class="chip" data-topic="best AI tools 2026">Best AI 2026</button>
-        <button class="chip" data-topic="AI automation agency">AI Agency</button>
-        <button class="chip" data-topic="Dan Martell AI business">Dan Martell</button>
-        <button class="chip" data-topic="AI SaaS case study">AI SaaS</button>
+        <button class="chip active" data-topic="hair">Hair Growth</button>
+        <button class="chip" data-topic="haircare">Hair Care</button>
+        <button class="chip" data-topic="millionaire">Millionaire Mindset</button>
+        <button class="chip" data-topic="business">Business Wins</button>
+        <button class="chip secondary" id="nextClip">Next Clip</button>
       </div>
     </div>
     <iframe
       id="reelFrame"
       class="reel-frame"
-      src="https://www.youtube.com/embed?listType=search&list=AI%20making%20millionaires"
-      title="AI Millionaire Reel"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowfullscreen></iframe>
-    <div class="reel-foot">Live reel • tap a topic to switch • stay consistent daily</div>
+      src=""
+      title="SupportRD TV Reel"
+      allowfullscreen
+      webkitallowfullscreen="true"
+      mozallowfullscreen="true"
+    ></iframe>
+    <div class="reel-foot">Internet Archive reel • tap a topic to switch • auto-rotates every 28 seconds</div>
   </div>
 
 <script>
   (function(){
-    var frame = document.getElementById('reelFrame');
-    document.querySelectorAll('[data-topic]').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var topic = encodeURIComponent(btn.getAttribute('data-topic') || '');
-        frame.src = 'https://www.youtube.com/embed?listType=search&list=' + topic;
+    var IA_ENDPOINT = "https://archive.org/advancedsearch.php";
+    var frame = document.getElementById("reelFrame");
+    var statusEl = document.getElementById("reelStatus");
+    var nextBtn = document.getElementById("nextClip");
+    var topicButtons = Array.prototype.slice.call(document.querySelectorAll("[data-topic]"));
+    var cache = { hair: [], haircare: [], millionaire: [], business: [] };
+    var currentTopic = "hair";
+    var autoTimer = null;
+
+    var TOPIC_QUERIES = {
+      hair: '(title:(hair OR hairstyle OR "hair growth") OR subject:(hair OR hairstyle)) AND mediatype:movies',
+      haircare: '(title:("hair care" OR "haircare" OR "scalp care") OR subject:("hair care" OR "scalp")) AND mediatype:movies',
+      millionaire: '(title:(millionaire OR "wealth" OR "riches") OR subject:(millionaire OR wealth)) AND mediatype:movies',
+      business: '(title:(entrepreneur OR business OR startup) OR subject:(business OR entrepreneurship)) AND mediatype:movies'
+    };
+
+    function setStatus(msg){
+      if(statusEl){ statusEl.textContent = msg; }
+    }
+
+    function buildUrl(query){
+      var params = new URLSearchParams();
+      params.set("q", query);
+      params.append("fl[]", "identifier");
+      params.append("fl[]", "title");
+      params.set("rows", "20");
+      params.set("page", "1");
+      params.set("output", "json");
+      params.append("sort[]", "downloads desc");
+      return IA_ENDPOINT + "?" + params.toString();
+    }
+
+    function fetchTopic(topic){
+      var query = TOPIC_QUERIES[topic] || TOPIC_QUERIES.hair;
+      var url = buildUrl(query);
+      return fetch(url)
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          var docs = (data && data.response && data.response.docs) || [];
+          var items = docs.map(function(d){ return d.identifier; }).filter(Boolean);
+          cache[topic] = items;
+          return items;
+        })
+        .catch(function(){
+          cache[topic] = [];
+          return [];
+        });
+    }
+
+    function pickItem(topic){
+      var list = cache[topic] || [];
+      if(!list.length) return null;
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function loadItem(id){
+      if(!id){
+        setStatus("No archive clips found. Try another topic.");
+        frame.src = "";
+        return;
+      }
+      frame.src = "https://archive.org/embed/" + encodeURIComponent(id);
+      setStatus("Now playing: " + id);
+    }
+
+    function rotate(){
+      var item = pickItem(currentTopic);
+      loadItem(item);
+    }
+
+    function ensureTopic(topic){
+      currentTopic = topic;
+      topicButtons.forEach(function(btn){
+        btn.classList.toggle("active", btn.getAttribute("data-topic") === topic);
+      });
+      if(cache[topic] && cache[topic].length){
+        rotate();
+        return Promise.resolve();
+      }
+      setStatus("Fetching archive clips…");
+      return fetchTopic(topic).then(function(){
+        rotate();
+      });
+    }
+
+    function startAuto(){
+      clearInterval(autoTimer);
+      autoTimer = setInterval(rotate, 28000);
+    }
+
+    topicButtons.forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var topic = btn.getAttribute("data-topic");
+        ensureTopic(topic);
+        startAuto();
       });
     });
+
+    if(nextBtn){
+      nextBtn.addEventListener("click", function(){
+        rotate();
+      });
+    }
+
+    ensureTopic(currentTopic).then(startAuto);
   })();
 </script>
 </body>
