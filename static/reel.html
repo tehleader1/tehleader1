@@ -108,7 +108,7 @@
       </div>
     </div>
     <video id="reelVideo" class="reel-frame" controls autoplay muted playsinline></video>
-    <div class="reel-foot">Internet Archive reel • tap a topic to switch • auto-rotates every 28 seconds</div>
+    <div class="reel-foot">Internet Archive reel • tap a topic to switch • auto-rotates every 10 seconds</div>
   </div>
 
 <script>
@@ -218,7 +218,7 @@
 
     function startAuto(){
       clearInterval(autoTimer);
-      autoTimer = setInterval(rotate, 28000);
+      autoTimer = setInterval(rotate, 10000);
     }
 
     topicButtons.forEach(function(btn){
