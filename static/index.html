@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320a.css">
+<link rel="stylesheet" href="/static/style.v20260320b.css">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
 <body class="theme-aurora plus500">
@@ -69,6 +69,7 @@
     <div class="status">
       <div class="big-menu">
         <button class="menu-btn" id="menuOccasion">Occasion Editor</button>
+        <button class="menu-btn" id="menuGift">Gift Shop</button>
         <button class="menu-btn glow" id="menuSubscription">Subscription</button>
       </div>
       <div class="toggle-wrap">
@@ -91,6 +92,15 @@
     </div>
     <button class="btn" id="adCta">Explore Products</button>
     </section>
+
+  <section class="reel-panel glass" id="reelPanel">
+    <div class="panel-head">
+      <h3>SupportRD TV Reel</h3>
+      <button class="btn ghost" id="toggleReel">Hide</button>
+    </div>
+    <div class="reel-tab" id="reelTab">REEL</div>
+    <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260320b" title="SupportRD TV Reel"></iframe>
+  </section>
 
   <div class="brochure-float" id="brochureFloat">
     <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
@@ -401,6 +411,47 @@
   </div>
 </div>
 
+<div id="giftModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Gift Shop</h2>
+      <button class="btn ghost" id="closeGift">Close</button>
+    </div>
+    <p>Gifts you can find everywhere — including competition stores.</p>
+    <div class="gift-grid">
+      <div class="gift-card">
+        <div class="gift-name">CR Natural Full Line</div>
+        <div class="gift-price">$125</div>
+        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+      </div>
+      <div class="gift-card">
+        <div class="gift-name">Dove · Gift Bundle</div>
+        <div class="gift-price">Custom Order</div>
+        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+      </div>
+      <div class="gift-card">
+        <div class="gift-name">L’Oréal · Gift Set</div>
+        <div class="gift-price">Custom Order</div>
+        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="vrScanModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>VR Code Scan</h2>
+      <button class="btn ghost" id="closeVrScan">Close</button>
+    </div>
+    <div class="vr-scan-box">
+      <div class="vr-scan-ring"></div>
+      <div class="vr-scan-status" id="vrScanStatus">Ready to scan brochure.</div>
+      <button class="btn" id="startVrScan">Start VR Scan</button>
+    </div>
+  </div>
+</div>
+
 <div id="occasionModal" class="modal">
   <div class="modal-card glass">
     <div class="modal-head">
@@ -461,8 +512,18 @@
       <div id="puzzleQuestion" style="font-weight:700;margin-bottom:8px;">Loading…</div>
       <input id="puzzleAnswer" placeholder="Your answer">
       <button class="btn" id="puzzleSubmit">Unlock ARIA</button>
-    </div>
   </div>
+</div>
+
+<div id="reelModal" class="modal">
+  <div class="modal-card glass" style="max-height:90vh;overflow:auto;">
+    <div class="modal-head">
+      <h2>SupportRD TV Reel</h2>
+      <button class="btn ghost" id="closeReel">Close</button>
+    </div>
+    <iframe class="custom-iframe" src="/static/reel.html?v=20260320b" title="SupportRD TV Reel"></iframe>
+  </div>
+</div>
 
   <div id="linkModal" class="modal">
     <div class="modal-card glass">
@@ -577,7 +638,7 @@
 </div>
 
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320a.js"></script>
+<script src="/static/app.v20260320b.js"></script>
 </body>
 </html>
 
