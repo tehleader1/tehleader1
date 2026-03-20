@@ -266,6 +266,54 @@ def set_subscription_for_email(email, plan, source="manual", order_id=""):
     except:
         return False
 
+def init_app_settings_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS app_settings ("
+            "k TEXT PRIMARY KEY,"
+            "v TEXT,"
+            "updated_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def get_setting(key, default=""):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT v FROM app_settings WHERE k = ? LIMIT 1", (key,))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return default
+        return row[0]
+    except:
+        return default
+
+def set_setting(key, value):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO app_settings (k, v, updated_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(k) DO UPDATE SET v=excluded.v, updated_at=excluded.updated_at",
+            (key, str(value), datetime.utcnow().isoformat() + "Z")
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
+
+def money_guard_enabled():
+    val = (get_setting("money_guard_enabled", "1") or "1").strip().lower()
+    return val in ("1", "true", "on", "yes")
+
 def send_smtp_html(to_email, subject, html):
     if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and (FROM_EMAIL or SMTP_USER)):
         return False, "email_not_configured"
@@ -954,7 +1002,24 @@ def community_launch_alert():
 def finance_shopify_status():
     if not is_admin():
         return {"ok": False, "error": "unauthorized"}, 401
-    return get_shopify_finance_snapshot()
+    snap = get_shopify_finance_snapshot()
+    snap["money_guard_enabled"] = money_guard_enabled()
+    return snap
+
+@app.route("/api/finance/guard-state")
+def finance_guard_state():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    return {"ok": True, "enabled": money_guard_enabled()}
+
+@app.route("/api/finance/guard-state", methods=["POST"])
+def finance_guard_state_set():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    data = request.json or {}
+    enabled = bool(data.get("enabled"))
+    ok = set_setting("money_guard_enabled", "1" if enabled else "0")
+    return {"ok": bool(ok), "enabled": enabled}
 
 @app.route("/api/finance/notify", methods=["POST"])
 def finance_notify():
@@ -991,6 +1056,45 @@ def finance_notify():
         else:
             failed += 1
     return {"ok": sent > 0, "sent": sent, "failed": failed, "recipients": len(recipients), "snapshot": snap}
+
+def auto_money_guard_check():
+    if not money_guard_enabled():
+        return
+    snap = get_shopify_finance_snapshot()
+    if not snap.get("ok"):
+        return
+    risk = (snap.get("risk_level") or "ok").lower()
+    if risk not in ("watch", "critical"):
+        return
+    now_ts = int(time.time())
+    last_ts = int(float(get_setting("money_guard_last_alert_ts", "0") or "0"))
+    cooldown = 6 * 3600
+    if now_ts - last_ts < cooldown:
+        return
+    recipients = []
+    for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL]:
+        v = (em or "").strip().lower()
+        if v and "@" in v and v not in recipients:
+            recipients.append(v)
+    if not recipients:
+        return
+    subject = "SupportRD Auto Money Guard Alert"
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+      <h2 style="margin:0 0 8px;">Automatic money safeguard alert</h2>
+      <p><strong>Today:</strong> {snap.get("today_total")} {snap.get("currency","USD")}</p>
+      <p><strong>7-day avg:</strong> {snap.get("avg_prev_7d")} {snap.get("currency","USD")}</p>
+      <p><strong>Drop:</strong> {snap.get("drop_pct")}%</p>
+      <p><strong>Risk level:</strong> {snap.get("risk_level")}</p>
+      <p>This is auto-monitoring while safeguard is ON.</p>
+    </div>
+    """
+    sent_any = False
+    for em in recipients:
+        ok, _detail = send_smtp_html(em, subject, html)
+        sent_any = sent_any or ok
+    if sent_any:
+        set_setting("money_guard_last_alert_ts", str(now_ts))
 
 @app.route("/api/community/post-intake", methods=["POST"])
 def community_post_intake():
@@ -1638,6 +1742,10 @@ def engine_loop():
         prune_random_seo_jobs()
         if not SEO_RANDOM_JOB_IDS:
             schedule_random_seo_jobs()
+    try:
+        auto_money_guard_check()
+    except:
+        pass
     # Community auto-rotation: self-run daily, founder only notified when needed.
     try:
         run_daily_community_rotation(force=False)
@@ -1659,6 +1767,8 @@ init_credit_db()
 init_wellness_db()
 init_community_db()
 init_subscription_db()
+init_app_settings_db()
+set_setting("money_guard_enabled", "1")
 
 #################################################
 # STATIC FILES

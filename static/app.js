@@ -1531,6 +1531,10 @@ function setupCommunications(){
   const newsGuardBtn = qs("#newsGuardBtn")
   const openPreventionOk = qs("#openPreventionOk")
   const balanceView = qs("#commsBalanceView")
+  const shopifyGuardView = qs("#shopifyGuardView")
+  const shopifyGuardCheck = qs("#shopifyGuardCheck")
+  const shopifyGuardNotify = qs("#shopifyGuardNotify")
+  const adsGuardBtn = qs("#adsGuardBtn")
 
   const walletKey = "supportrdWallet"
   function loadWallet(){
@@ -1555,6 +1559,70 @@ function setupCommunications(){
   }
 
   drawWallet()
+
+  async function refreshShopifyGuard(){
+    if(!shopifyGuardView) return
+    try{
+      const r = await fetch("/api/finance/shopify-status")
+      const d = await r.json()
+      if(!r.ok || !d.ok){
+        shopifyGuardView.textContent = `Shopify Guard: ${d.error || "unavailable"}`
+        return
+      }
+      shopifyGuardView.textContent = `Shopify Guard: ${d.risk_level.toUpperCase()} · Today ${d.today_total} ${d.currency} · 7d avg ${d.avg_prev_7d} · Drop ${d.drop_pct}%`
+      if(adsGuardBtn){
+        adsGuardBtn.textContent = `Ads Safeguard: ${d.money_guard_enabled ? "On" : "Off"}`
+        adsGuardBtn.classList.toggle("active", !!d.money_guard_enabled)
+      }
+    }catch{
+      shopifyGuardView.textContent = "Shopify Guard: network_error"
+    }
+  }
+
+  refreshShopifyGuard()
+
+  if(shopifyGuardCheck){
+    shopifyGuardCheck.addEventListener("click", refreshShopifyGuard)
+  }
+  if(shopifyGuardNotify){
+    shopifyGuardNotify.addEventListener("click", async ()=>{
+      try{
+        const r = await fetch("/api/finance/notify", {method:"POST"})
+        const d = await r.json()
+        if(d.ok){
+          openMiniWindow("Money Guard", `Alert sent to ${d.sent}/${d.recipients} contacts.`)
+        } else {
+          openMiniWindow("Money Guard", `Alert failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("Money Guard", "Alert failed: network_error")
+      }
+    })
+  }
+  if(adsGuardBtn){
+    adsGuardBtn.addEventListener("click", async ()=>{
+      const currentlyOn = (adsGuardBtn.textContent || "").toLowerCase().includes("on")
+      const next = !currentlyOn
+      try{
+        const r = await fetch("/api/finance/guard-state", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({enabled: next})
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          adsGuardBtn.textContent = `Ads Safeguard: ${d.enabled ? "On" : "Off"}`
+          adsGuardBtn.classList.toggle("active", !!d.enabled)
+          toast(d.enabled ? "Safeguards ON" : "Safeguards OFF")
+          refreshShopifyGuard()
+        } else {
+          toast("Could not change safeguard")
+        }
+      }catch{
+        toast("Could not change safeguard")
+      }
+    })
+  }
 
   if(checkBalanceBtn){
     checkBalanceBtn.addEventListener("click", ()=>{
