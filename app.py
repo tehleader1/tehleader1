@@ -8,6 +8,8 @@ from email.mime.text import MIMEText
 import os
 import requests
 import time
+import sqlite3
+from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from openai import OpenAI
 
@@ -54,6 +56,9 @@ DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL", "")
 ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or DEVELOPER_EMAIL).lower()
 SEO_RANDOM_ENABLED = os.environ.get("SEO_RANDOM_ENABLED", "false").lower() == "true"
 SEO_RANDOM_JOB_IDS = []
+CLAIM_CODES = [c.strip().upper() for c in os.environ.get("CLAIM_CODES", "SRD2026,NEW4ALL").split(",") if c.strip()]
+CLAIM_NAMES = [n.strip() for n in os.environ.get("CLAIM_NAMES", "Reptar,MrGiggles").split(",") if n.strip()]
+CLAIM_DB_PATH = os.environ.get("CLAIM_DB_PATH", "users.db")
 
 #################################################
 # CACHE
@@ -62,6 +67,53 @@ SEO_RANDOM_JOB_IDS = []
 PRODUCT_CACHE = []
 PRODUCT_CACHE_TIME = 0
 CACHE_TTL = 300
+
+#################################################
+# FOUNDER CLAIMS
+#################################################
+
+def init_claim_db():
+    try:
+        conn = sqlite3.connect(CLAIM_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS name_claims ("
+            "name TEXT PRIMARY KEY,"
+            "claimed_at TEXT,"
+            "email TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def get_claim(name):
+    if not name:
+        return None
+    try:
+        conn = sqlite3.connect(CLAIM_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT name, claimed_at, email FROM name_claims WHERE name = ?", (name,))
+        row = cur.fetchone()
+        conn.close()
+        return row
+    except:
+        return None
+
+def set_claim(name, email):
+    try:
+        conn = sqlite3.connect(CLAIM_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT OR REPLACE INTO name_claims (name, claimed_at, email) VALUES (?, ?, ?)",
+            (name, datetime.utcnow().isoformat() + "Z", email or "")
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
 
 #################################################
 # HEALTH CHECKS
@@ -107,6 +159,14 @@ def schedule_random_seo_jobs():
         scheduler.add_job(publish_shopify_blog, "date", run_date=run_date, id=jid, replace_existing=True)
         SEO_RANDOM_JOB_IDS.append(jid)
 
+def prune_random_seo_jobs():
+    global SEO_RANDOM_JOB_IDS
+    keep = []
+    for jid in SEO_RANDOM_JOB_IDS:
+        if scheduler.get_job(jid):
+            keep.append(jid)
+    SEO_RANDOM_JOB_IDS = keep
+
 @app.route("/api/seo/auto", methods=["POST"])
 def seo_auto():
     global SEO_RANDOM_ENABLED
@@ -116,6 +176,13 @@ def seo_auto():
     SEO_RANDOM_ENABLED = bool(data.get("enabled"))
     if SEO_RANDOM_ENABLED:
         schedule_random_seo_jobs()
+    else:
+        for jid in SEO_RANDOM_JOB_IDS:
+            try:
+                scheduler.remove_job(jid)
+            except:
+                pass
+        SEO_RANDOM_JOB_IDS.clear()
     return {"ok": True, "enabled": SEO_RANDOM_ENABLED}
 
 @app.route("/api/custom-order", methods=["POST"])
@@ -219,6 +286,34 @@ def me():
         return {"authenticated": False}
     return {"authenticated": True, "user": user, "admin": is_admin()}
 
+@app.route("/api/claim-name", methods=["POST"])
+def claim_name():
+    user = session.get("user") or {}
+    email = (user.get("email") or "").lower()
+    if not email:
+        return {"ok": False, "error": "unauthorized"}, 401
+    data = request.json or {}
+    name = (data.get("name") or "").strip()
+    code = (data.get("code") or "").strip().upper()
+    if not name or not code:
+        return {"ok": False, "error": "missing"}, 400
+    if code not in CLAIM_CODES:
+        return {"ok": False, "error": "invalid_code"}, 400
+    if name not in CLAIM_NAMES:
+        return {"ok": False, "error": "not_eligible"}, 400
+    if get_claim(name):
+        return {"ok": False, "error": "already_claimed"}, 409
+    ok = set_claim(name, email)
+    return {"ok": ok}
+
+@app.route("/api/claim-status")
+def claim_status():
+    name = (request.args.get("name") or "").strip()
+    if not name:
+        return {"ok": False, "error": "missing"}, 400
+    row = get_claim(name)
+    return {"ok": True, "claimed": bool(row), "name": name}
+
 @app.route("/login")
 def login():
     if not AUTH0_DOMAIN or not AUTH0_CLIENT_ID or not AUTH0_CLIENT_SECRET:
@@ -226,6 +321,7 @@ def login():
     state = os.urandom(16).hex()
     session["oauth_state"] = state
     provider = request.args.get("provider")
+    mode = request.args.get("mode", "").lower()
     authorize_url = f"https://{AUTH0_DOMAIN}/authorize"
     params = {
         "response_type": "code",
@@ -236,6 +332,8 @@ def login():
     }
     if provider:
         params["connection"] = provider
+    if mode == "signup":
+        params["screen_hint"] = "signup"
     query = "&".join([f"{k}={requests.utils.quote(str(v))}" for k, v in params.items()])
     return redirect(f"{authorize_url}?{query}")
 
@@ -606,8 +704,10 @@ def engine_loop():
             ok, _ = publish_shopify_blog()
             if ok:
                 LAST_SEO_POST = now
-    if SEO_RANDOM_ENABLED and not SEO_RANDOM_JOB_IDS:
-        schedule_random_seo_jobs()
+    if SEO_RANDOM_ENABLED:
+        prune_random_seo_jobs()
+        if not SEO_RANDOM_JOB_IDS:
+            schedule_random_seo_jobs()
 
 
 scheduler = BackgroundScheduler()
@@ -619,6 +719,7 @@ scheduler.add_job(
 )
 
 scheduler.start()
+init_claim_db()
 
 #################################################
 # STATIC FILES
@@ -635,6 +736,10 @@ def manifest():
 @app.route("/sw.js")
 def sw():
     return send_from_directory("static", "sw.js")
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory("static/images", "woman-waking-up12.jpg")
 
 #################################################
 

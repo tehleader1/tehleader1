@@ -3,442 +3,116 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hair Reel</title>
+<title>AI Millionaire TV Reel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      radial-gradient(1200px 600px at 20% 20%, rgba(116,224,184,0.25), transparent 60%),
+      radial-gradient(900px 500px at 80% 30%, rgba(255,214,153,0.22), transparent 60%),
+      linear-gradient(135deg, #0d1412 0%, #0b1a14 40%, #111c26 100%);
+    color:#fff;
+    font-family:'DM Sans', sans-serif;
+  }
+  .reel-wrap{
+    width:min(980px, 92vw);
+    display:grid;
+    gap:14px;
+  }
+  .reel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,0.12);
+    background:rgba(0,0,0,0.35);
+  }
+  .reel-title{
+    font-size:18px;
+    font-weight:700;
+  }
+  .reel-sub{
+    font-size:12px;
+    color:rgba(255,255,255,0.7);
+  }
+  .reel-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .chip{
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.08);
+    color:#fff;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .reel-frame{
+    width:100%;
+    height:62vh;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,0.16);
+    background:#000;
+  }
+  .reel-foot{
+    font-family:'Space Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.6);
+    text-align:center;
+  }
+  @media (max-width:700px){
+    .reel-frame{height:52vh;}
+    .reel-head{flex-direction:column;align-items:flex-start;}
+  }
+</style>
 </head>
 <body>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-
-<style>
-body{
-  margin:0;
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:
-    radial-gradient(1200px 600px at 20% 20%, rgba(116,224,184,0.25), transparent 60%),
-    radial-gradient(900px 500px at 80% 30%, rgba(255,214,153,0.22), transparent 60%),
-    linear-gradient(135deg, #0d1412 0%, #0b1a14 40%, #111c26 100%);
-  color:#fff;
-  font-family:'DM Sans', sans-serif;
-}
-.srd-feed-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 12px;
-  width: 100%;
-}
-
-.srd-feed-player {
-  position: relative;
-  width: 220px;
-  min-width: 220px;
-  height: 390px;
-  border-radius: 18px;
-  overflow: hidden;
-  background: #0a0a0a;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.06);
-  flex-shrink: 0;
-}
-
-.srd-feed-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  border-radius: 18px;
-}
-
-.srd-feed-top {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  right: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.srd-live-badge {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-family: 'Space Mono', monospace;
-  font-size: 9px;
-  color: #fff;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.srd-live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ff3b5c;
-  animation: srdPulse 1.2s ease-in-out infinite;
-}
-
-@keyframes srdPulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,59,92,0.5); }
-  50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(255,59,92,0); }
-}
-
-.srd-feed-count {
-  font-family: 'Space Mono', monospace;
-  font-size: 9px;
-  color: rgba(255,255,255,0.6);
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(8px);
-  border-radius: 20px;
-  padding: 4px 10px;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-.srd-feed-bottom {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 32px 14px 14px;
-  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
-  z-index: 10;
-}
-
-.srd-feed-tag {
-  font-family: 'Space Mono', monospace;
-  font-size: 9px;
-  color: #ff3b5c;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
-
-.srd-feed-title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-  line-height: 1.4;
-  margin-bottom: 10px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.srd-progress-wrap {
-  width: 100%;
-  height: 2px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 10px;
-}
-
-.srd-progress-bar {
-  height: 100%;
-  background: #ff3b5c;
-  border-radius: 2px;
-  width: 0%;
-  transition: width 0.3s linear;
-}
-
-.srd-feed-dots {
-  display: flex;
-  gap: 4px;
-  justify-content: center;
-}
-
-.srd-feed-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.3);
-  transition: all 0.3s;
-}
-
-.srd-feed-dot.active {
-  background: #ff3b5c;
-  width: 16px;
-  border-radius: 2px;
-}
-
-.srd-feed-actions {
-  position: absolute;
-  right: 10px;
-  bottom: 80px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  z-index: 10;
-}
-.srd-sound-hint{
-  position:absolute;
-  left:50%;
-  bottom:120px;
-  transform:translateX(-50%);
-  background:rgba(0,0,0,0.55);
-  border:1px solid rgba(255,255,255,0.2);
-  padding:6px 10px;
-  border-radius:999px;
-  font-size:9px;
-  letter-spacing:0.18em;
-  text-transform:uppercase;
-  opacity:0;
-  transition:opacity 0.3s ease;
-  pointer-events:none;
-}
-.srd-sound-hint.show{opacity:1;}
-
-.srd-feed-action {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  cursor: pointer;
-}
-
-.srd-feed-action-icon {
-  width: 32px;
-  height: 32px;
-  background: rgba(255,255,255,0.12);
-  backdrop-filter: blur(8px);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-.srd-feed-action-label {
-  font-family: 'Space Mono', monospace;
-  font-size: 8px;
-  color: rgba(255,255,255,0.6);
-}
-
-.srd-feed-click {
-  position: absolute;
-  inset: 0;
-  z-index: 9;
-  cursor: pointer;
-}
-
-.srd-feed-loading {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
-  background-size: 200% 200%;
-  animation: srdShimmer 1.5s infinite;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 18px;
-  z-index: 20;
-  transition: opacity 0.4s;
-}
-
-@keyframes srdShimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.srd-feed-loading svg {
-  opacity: 0.3;
-  animation: srdSpin 1s linear infinite;
-}
-
-@keyframes srdSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@media (max-width: 600px) {
-  .srd-feed-player {
-    width: 180px;
-    min-width: 180px;
-    height: 320px;
-  }
-}
-</style>
-
-<div class="srd-feed-wrap">
-  <div class="srd-feed-player" id="srdFeedPlayer">
-    <div class="srd-feed-loading" id="srdFeedLoading">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-      </svg>
+  <div class="reel-wrap">
+    <div class="reel-head">
+      <div>
+        <div class="reel-title">AI Millionaire TV</div>
+        <div class="reel-sub">Live YouTube reel · rotate topics to keep the feed fresh.</div>
+      </div>
+      <div class="reel-actions">
+        <button class="chip" data-topic="AI making millionaires">AI Millionaires</button>
+        <button class="chip" data-topic="best AI tools 2026">Best AI 2026</button>
+        <button class="chip" data-topic="AI automation agency">AI Agency</button>
+        <button class="chip" data-topic="Dan Martell AI business">Dan Martell</button>
+        <button class="chip" data-topic="AI SaaS case study">AI SaaS</button>
+      </div>
     </div>
-    <video id="srdFeedVideo" class="srd-feed-video" muted playsinline autoplay preload="auto"></video>
-    <div class="srd-feed-click" id="srdFeedClick"></div>
-    <div class="srd-feed-top">
-      <div class="srd-live-badge"><div class="srd-live-dot"></div>Hair Feed</div>
-      <div class="srd-feed-count" id="srdFeedCount">1 / 1</div>
-    </div>
-    <div class="srd-feed-actions">
-      <div class="srd-feed-action" id="srdFeedNext"><div class="srd-feed-action-icon">▶</div><div class="srd-feed-action-label">Next</div></div>
-      <div class="srd-feed-action" id="srdFeedMute"><div class="srd-feed-action-icon" id="srdMuteIcon">🔇</div><div class="srd-feed-action-label">Sound</div></div>
-    </div>
-    <div class="srd-sound-hint" id="srdSoundHint">Tap video to enable sound</div>
-    <div class="srd-feed-bottom">
-      <div class="srd-feed-tag" id="srdFeedTag">#haircare</div>
-      <div class="srd-feed-title" id="srdFeedTitle">Hair tips loading...</div>
-      <div class="srd-progress-wrap"><div class="srd-progress-bar" id="srdProgressBar"></div></div>
-      <div class="srd-feed-dots" id="srdFeedDots"></div>
-    </div>
+    <iframe
+      id="reelFrame"
+      class="reel-frame"
+      src="https://www.youtube.com/embed?listType=search&list=AI%20making%20millionaires"
+      title="AI Millionaire Reel"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen></iframe>
+    <div class="reel-foot">Live reel • tap a topic to switch • stay consistent daily</div>
   </div>
-</div>
 
 <script>
-(function(){
-  var CLIP_MS = 10000;
-  var VIDEOS = [
-    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', title: 'Hair TV Reel · Clip 1', tag: '#reel', link: '' },
-    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', title: 'Hair TV Reel · Clip 2', tag: '#reel', link: '' },
-    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', title: 'Hair TV Reel · Clip 3', tag: '#reel', link: '' },
-    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', title: 'Hair TV Reel · Clip 4', tag: '#reel', link: '' }
-  ];
-
-  VIDEOS.sort(function(){ return Math.random() - 0.5; });
-
-  var current = 0;
-  var isMuted = true;
-  var progressTimer = null;
-  var hardTimer = null;
-  var lastSwitch = 0;
-  var video    = document.getElementById('srdFeedVideo');
-  var loading  = document.getElementById('srdFeedLoading');
-  var count    = document.getElementById('srdFeedCount');
-  var tag      = document.getElementById('srdFeedTag');
-  var title    = document.getElementById('srdFeedTitle');
-  var bar      = document.getElementById('srdProgressBar');
-  var dots     = document.getElementById('srdFeedDots');
-  var muteIcon = document.getElementById('srdMuteIcon');
-  var clickEl  = document.getElementById('srdFeedClick');
-  var soundHint = document.getElementById('srdSoundHint');
-
-  VIDEOS.forEach(function(_, i){
-    var d = document.createElement('div');
-    d.className = 'srd-feed-dot' + (i === 0 ? ' active' : '');
-    d.setAttribute('data-i', i);
-    dots.appendChild(d);
-  });
-
-  function updateDots(){
-    dots.querySelectorAll('.srd-feed-dot').forEach(function(d, i){
-      d.className = 'srd-feed-dot' + (i === current ? ' active' : '');
-    });
-  }
-
-  function startProgress(duration){
-    clearInterval(progressTimer);
-    if(hardTimer){ clearTimeout(hardTimer); }
-    bar.style.transition = 'none';
-    bar.style.width = '0%';
-    var start = Date.now();
-    var dur = duration * 1000;
-    progressTimer = setInterval(function(){
-      var pct = Math.min(100, ((Date.now() - start) / dur) * 100);
-      bar.style.transition = 'width 0.3s linear';
-      bar.style.width = pct + '%';
-    }, 300);
-    hardTimer = setTimeout(function(){ nextVideo(true); }, duration * 1000);
-  }
-
-  function loadVideo(idx){
-    clearInterval(progressTimer);
-    if(hardTimer){ clearTimeout(hardTimer); }
-    var v = VIDEOS[idx];
-    loading.style.opacity = '1';
-    loading.style.pointerEvents = 'all';
-
-    video.src = v.src;
-    video.muted = isMuted;
-    tag.textContent = v.tag;
-    title.textContent = v.title;
-    count.textContent = (idx + 1) + ' / ' + VIDEOS.length;
-    updateDots();
-
-    video.load();
-    video.play().then(function(){
-      loading.style.opacity = '0';
-      loading.style.pointerEvents = 'none';
-      startProgress(CLIP_MS / 1000);
-    }).catch(function(){
-      loading.style.opacity = '0';
-      loading.style.pointerEvents = 'none';
-      title.textContent = 'Reel playback blocked — tap to start';
-      startProgress(CLIP_MS / 1000);
-    });
-
-    if(v.link){
-      clickEl.onclick = function(){ window.open(v.link, '_blank'); };
-      clickEl.style.cursor = 'pointer';
-    } else {
-      clickEl.onclick = null;
-      clickEl.style.cursor = 'default';
-    }
-  }
-
-  function nextVideo(force){
-    var now = Date.now();
-    if(!force && now - lastSwitch < (CLIP_MS - 500)){ return; }
-    lastSwitch = now;
-    current = (current + 1) % VIDEOS.length;
-    loadVideo(current);
-  }
-
-  document.getElementById('srdFeedNext').addEventListener('click', function(e){
-    e.stopPropagation();
-    nextVideo(true);
-  });
-
-  document.getElementById('srdFeedMute').addEventListener('click', function(e){
-    e.stopPropagation();
-    isMuted = !isMuted;
-    video.muted = isMuted;
-    if(!isMuted){
-      video.volume = 0.8;
-      video.play().catch(function(){
-        isMuted = true;
-        video.muted = true;
-        if(soundHint){ soundHint.classList.add('show'); }
+  (function(){
+    var frame = document.getElementById('reelFrame');
+    document.querySelectorAll('[data-topic]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var topic = encodeURIComponent(btn.getAttribute('data-topic') || '');
+        frame.src = 'https://www.youtube.com/embed?listType=search&list=' + topic;
       });
-    }
-    muteIcon.textContent = isMuted ? '🔇' : '🔊';
-  });
-
-  clickEl.addEventListener('click', function(){
-    if(isMuted){
-      isMuted = false;
-      video.muted = false;
-      video.volume = 0.8;
-      video.play().then(function(){
-        if(soundHint){ soundHint.classList.remove('show'); }
-        muteIcon.textContent = '🔊';
-      }).catch(function(){
-        isMuted = true;
-        video.muted = true;
-      });
-    }
-  });
-
-  video.addEventListener('ended', function(){});
-  video.addEventListener('error', function(){
-    setTimeout(function(){ nextVideo(true); }, 3000);
-  });
-  loadVideo(0);
-})();
+    });
+  })();
 </script>
 </body>
 </html>
-

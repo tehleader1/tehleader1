@@ -8,15 +8,48 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=20260318k">
+<link rel="icon" href="/static/images/woman-waking-up12.jpg">
+<link rel="stylesheet" href="/static/style.v20260319d.css">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
 <body class="theme-aurora plus500">
 <div class="bg-layers"></div>
       <div id="app">
+  <div id="trialOverlay" class="trial-overlay" aria-hidden="true">
+    <div class="trial-overlay-card glass">
+      <div class="trial-overlay-top">
+        <div class="trial-eyebrow">First 30 Minutes Free Trial</div>
+        <button class="btn ghost" id="trialClose">Close</button>
+      </div>
+      <a class="trial-overlay-link" href="https://supportrd.com/login?mode=signup">
+        <span class="trial-code">SRD2026</span>
+        <span class="trial-arrow">=====&gt;</span>
+        <span class="trial-posted">POSTED</span>
+        <span class="trial-brand">SupportRD</span>
+      </a>
+      <a class="trial-new-code" href="https://supportrd.com/login?mode=signup&new=1">
+        New Member Code: <span>NEW4ALL</span>
+      </a>
+      <div class="trial-sub">Tap the code to create your account and enter SupportRD.</div>
+      <div class="trial-hint">Login lives at SupportRD — this is your entry key.</div>
+    </div>
+  </div>
   <div id="loginGate" class="login-gate">
     <div class="login-card glass">
-      <h2>SupportRD Login</h2>
+      <div class="modal-head" style="padding:0;margin-bottom:6px;">
+        <h2>SupportRD Login</h2>
+        <button class="btn ghost" id="closeLoginGate">Close</button>
+      </div>
+      <div id="trialCodeBanner" class="trial-code-banner">
+        <div class="trial-eyebrow">First 30 Minutes Free Trial</div>
+        <div class="trial-ad">
+          <span class="trial-code">/login?mode=signup</span>
+          <span class="trial-arrow">&lt;</span>
+          <span class="trial-posted">POSTED</span>
+          <span class="trial-brand">SupportRD</span>
+        </div>
+        <div class="trial-sub">Tap “Create Account” to activate your trial.</div>
+      </div>
       <p>Select a provider to continue.</p>
       <div class="login-actions">
         <a class="btn" id="loginGoogle" href="/login?provider=google-oauth2">Login with Google</a>
@@ -24,6 +57,7 @@
         <a class="btn" id="loginPhone" href="/login?provider=sms">Login with Phone Number</a>
         <a class="btn" id="loginYahoo" href="/login?provider=yahoo">Login with Yahoo</a>
         <a class="btn ghost" id="loginOther" href="/login">Login with Other</a>
+        <a class="btn ghost" id="signupBtn" href="/login?mode=signup">Create Account</a>
       </div>
     </div>
   </div>
@@ -42,6 +76,7 @@
         <div class="login-actions-top">
           <div id="userBadge" class="user-badge" style="display:none"></div>
           <button class="btn ghost" id="loginBtn">Log In</button>
+          <button class="btn ghost" id="signupTop">Create Account</button>
           <button class="btn" id="logoutBtn">Log Out</button>
         </div>
       </div>
@@ -60,12 +95,16 @@
 
   <section class="reel-panel glass" id="reelPanel">
     <div class="panel-head">
-      <h3>Hair TV Reel</h3>
+      <h3>AI Millionaire TV Reel</h3>
       <button class="btn ghost" id="toggleReel" onclick="(function(){var p=document.getElementById('reelPanel');if(!p)return; p.classList.toggle('hidden'); this.textContent=p.classList.contains('hidden')?'Show':'Hide';})()">Hide</button>
     </div>
     <div class="reel-tab" id="reelTab" onclick="(function(){var p=document.getElementById('reelPanel');if(!p)return; p.classList.remove('hidden'); var t=document.getElementById('toggleReel'); if(t) t.textContent='Hide';})()">REEL</div>
-    <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260318h" title="Hair Reel"></iframe>
+    <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260319a" title="AI Millionaire Reel"></iframe>
   </section>
+
+  <div class="brochure-float" id="brochureFloat">
+    <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
+  </div>
 
     <section class="center-stage glass" id="centerStage">
     <div class="center-icon">
@@ -92,6 +131,7 @@
           <button class="tab-btn" data-tab="gps">GPS</button>
           <button class="tab-btn" data-tab="handsfree">Hands‑Free</button>
           <button class="tab-btn" data-tab="analysis">Hair Analysis</button>
+          <button class="tab-btn" data-tab="ai">AI Millionaire</button>
         </div>
         <div class="level-select">
           <label class="analysis-level">ARIA Level
@@ -113,6 +153,9 @@
             <button class="chip" id="liveStatus">Live Status</button>
             <button class="chip" id="sendSocials">Send to All Socials</button>
             <button class="chip" id="cameraChip">Explore Camera</button>
+            <button class="chip" id="vrScanBtn">VR Code Scan</button>
+            <button class="chip admin-only" id="seoQuick">Activate SEO 4x/Day</button>
+            <button class="chip admin-only" id="testEmailQuick">Send Test Email</button>
           </div>
         </div>
 
@@ -208,6 +251,60 @@
           </div>
         </div>
       </div>
+      <div class="tab-panel" id="tab-ai">
+        <div class="ai-wrap">
+          <div class="ai-hero">
+            <div class="ai-title">AI Millionaire Source Hub</div>
+            <div class="ai-sub">Live reels, creator spotlights, and fast-start playbooks to help you become a public source for AI wealth creation.</div>
+            <div class="ai-actions">
+              <button class="btn" id="aiOpenReel">Open AI Millionaire TV</button>
+              <button class="btn ghost" id="aiStartBrief">Generate 5 AI Money Paths</button>
+            </div>
+          </div>
+          <div class="ai-grid">
+            <div class="ai-card">
+              <div class="ai-card-title">Creator Spotlights</div>
+              <div class="ai-card-sub">Launch points for audience-ready AI business lessons.</div>
+              <div class="ai-links">
+                <button class="chip ai-link" data-ai-link="dan_martell">Dan Martell</button>
+                <button class="chip ai-link" data-ai-link="ai_millionaire">AI Making Millionaires</button>
+                <button class="chip ai-link" data-ai-link="ai_saas">AI SaaS Case Studies</button>
+              </div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-title">Best AI Stack (2026)</div>
+              <div class="ai-card-sub">Curate your “top tools” list for customers.</div>
+              <div class="ai-links">
+                <button class="chip ai-link" data-ai-link="best_ai_2026">Best AI Tools 2026</button>
+                <button class="chip ai-link" data-ai-link="agent_workflows">AI Agent Workflows</button>
+                <button class="chip ai-link" data-ai-link="automation_agency">Automation Agency Playbooks</button>
+              </div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-title">AI 2026 Tech Radar</div>
+              <div class="ai-card-sub">Trends, launches, and breakthroughs to narrate.</div>
+              <div class="ai-links">
+                <button class="chip ai-link" data-ai-link="ai_2026">AI 2026 Technology Advances</button>
+                <button class="chip ai-link" data-ai-link="ai_research">AI Research Highlights</button>
+                <button class="chip ai-link" data-ai-link="future_jobs">AI Jobs & Income</button>
+              </div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-title">Millionaire Playbooks</div>
+              <div class="ai-card-sub">Turn ideas into content, funnels, and offers.</div>
+              <div class="ai-links">
+                <button class="chip ai-link" data-ai-link="ai_agency">AI Agency Blueprint</button>
+                <button class="chip ai-link" data-ai-link="ai_saas_builder">AI SaaS Builder</button>
+                <button class="chip ai-link" data-ai-link="ai_consulting">AI Consulting Offers</button>
+              </div>
+            </div>
+          </div>
+          <div class="ai-strip">
+            <div class="ai-strip-title">Your “Source of AI Millionaires” Script</div>
+            <div class="ai-strip-body">Post daily: 1) a real AI revenue story, 2) a tool stack breakdown, 3) a 60‑second tutorial, 4) a CTA to your premium plan.</div>
+          </div>
+        </div>
+      </div>
       <div id="centerBlur" class="center-blur" aria-hidden="true"></div>
       <div id="speechPopupAnchor" class="speech-anchor"></div>
       <div id="listeningOverlay" class="listening-overlay">
@@ -266,6 +363,7 @@
         <div class="apps-library-label">Available Apps (Drag onto a tab to replace)</div>
         <div class="apps-row library" id="appsLibrary">
           <button class="app-card app-library" draggable="true" data-app="Gift Shop">Gift Shop</button>
+          <button class="app-card app-library" draggable="true" data-app="AI Millionaire Hub">AI Millionaire Hub</button>
           <button class="app-card app-library" draggable="true" data-app="TV Reel">TV Reel</button>
           <button class="app-card app-library" draggable="true" data-app="Shopify Products">Shopify Products</button>
           <button class="app-card app-library" draggable="true" data-app="SEO Engine Viewer">SEO Engine Viewer</button>
@@ -284,8 +382,8 @@
       <h2>SEO Engine Viewer</h2>
       <div class="modal-actions">
         <button class="btn" id="seoPublish">Publish SEO Post</button>
-        <button class="btn" id="seoAuto" style="display:none">Auto SEO 4x/Day</button>
-        <button class="btn" id="testEmailBtn" style="display:none">Send Test Email</button>
+        <button class="btn admin-only" id="seoAuto">Activate SEO 4x/Day (Random)</button>
+        <button class="btn admin-only" id="testEmailBtn">Send Test Email</button>
         <button class="btn ghost" id="closeSeo">Close</button>
       </div>
     </div>
@@ -425,10 +523,10 @@
 <div id="reelModal" class="modal">
   <div class="modal-card glass" style="max-height:90vh;overflow:auto;">
     <div class="modal-head">
-      <h2>Hair TV Reel</h2>
+      <h2>AI Millionaire TV Reel</h2>
       <button class="btn ghost" id="closeReel">Close</button>
     </div>
-    <iframe class="custom-iframe" src="/static/reel.html?v=20260318h" title="Hair Reel"></iframe>
+    <iframe class="custom-iframe" src="/static/reel.html?v=20260319a" title="AI Millionaire Reel"></iframe>
   </div>
 </div>
 
@@ -481,6 +579,16 @@
     </div>
   </div>
 </div>
+
+<div id="brochureModal" class="modal">
+  <div class="modal-card glass brochure-card">
+    <div class="modal-head">
+      <h2>SupportRD Full Brochure</h2>
+      <button class="btn ghost" id="closeBrochure">Close</button>
+    </div>
+    <iframe class="brochure-embed" src="/static/brochure.html" title="SupportRD Brochure"></iframe>
+  </div>
+</div>
 <div id="toast" class="toast"></div>
 
 <div class="info-tray glass" id="infoTray">
@@ -522,7 +630,7 @@
 </div>
 
 <script src="/static/auth.js"></script>
-<script src="/static/app.js?v=20260319a"></script>
+<script src="/static/app.v20260319d.js"></script>
 </body>
 </html>
 
