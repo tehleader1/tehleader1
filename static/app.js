@@ -1663,7 +1663,12 @@ function setupCommunications(){
 
   if(reviewBtn){
     reviewBtn.addEventListener("click", async ()=>{
-      openMiniWindow("Flow Internacional", "Perfecto, puede revisarlo.")
+      openMiniWindow("International Interest", "Great — let’s get you started.")
+      try{
+        const gate = qs("#loginGate")
+        if(gate){ gate.style.display = "flex" }
+        document.body.classList.add("login-active")
+      }catch{}
       try{
         await fetch("/api/community/signal", {
           method: "POST",
@@ -1671,9 +1676,9 @@ function setupCommunications(){
           body: JSON.stringify({
             region: "international",
             language: "es",
-            event_type: "request",
+            event_type: "interest",
             severity: 2,
-            notes: "International page review requested: puede revisarlo"
+            notes: "International user clicked I Want To Check This Out"
           })
         })
       }catch{}
