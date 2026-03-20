@@ -806,14 +806,14 @@ def community_post_intake():
             if v and "@" in v and v not in recipients:
                 recipients.append(v)
         if recipients:
-            subject = "SupportRD Developer Assist Needed"
+            subject = "SupportRD Family Support Assist Needed"
             html = f"""
             <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
-              <h2 style="margin:0 0 8px;">Developer assistance requested</h2>
+              <h2 style="margin:0 0 8px;">Family support assistance requested</h2>
               <p><strong>Source:</strong> {source}</p>
               <p><strong>Region:</strong> {region} · <strong>Language:</strong> {language}</p>
               <p><strong>Message:</strong> {message}</p>
-              <p style="margin-top:12px;">Community mode is running. This reached you because it likely needs direct developer help.</p>
+              <p style="margin-top:12px;">Community mode is running. This reached you because it likely needs direct family support help.</p>
             </div>
             """
             sent_count = 0

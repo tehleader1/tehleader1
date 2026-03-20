@@ -993,7 +993,7 @@ function setupPostActions(){
           })
         }).then(r=>r.json()).then(d=>{
           if(d && d.ok && d.needs_developer){
-            openMiniWindow("Developer Assist", "Escalated to developer contact.")
+            openMiniWindow("Family Support Assist", "Escalated to family support contact.")
           }
         }).catch(()=>{})
       }
@@ -1031,7 +1031,7 @@ function setupPostActions(){
     })
   }
   if(tipTeam){
-    tipTeam.addEventListener("click", ()=>openLinkModal("https://supportrd.com/cart","Tip Developer & Team"))
+    tipTeam.addEventListener("click", ()=>openLinkModal("https://supportrd.com/cart","Tip SupportRD Family Team"))
   }
 
   if(contactEvelyn){
@@ -2285,7 +2285,7 @@ function setupAppsDock(){
     "Live Coder Suggestions",
     "Donate to the Poor · Auto Dissolve Bar",
     "Settings",
-    "Contact Anthony · Developer",
+    "Contact Anthony · Family Support",
     "Shopify Products",
     "SEO Engine Viewer",
     "Occasion Editor",
@@ -2306,7 +2306,7 @@ function setupAppsDock(){
 
   function applyAppToCard(card, name, linkOverride){
     card.textContent = name
-    card.dataset.app = name.replace(" · Developer","Contact Anthony")
+    card.dataset.app = name.replace(" · Family Support","Contact Anthony")
     if(linkOverride !== undefined){
       card.dataset.link = linkOverride
     } else if(name.includes("Donate")){
