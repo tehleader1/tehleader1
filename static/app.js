@@ -2379,17 +2379,23 @@ function setupAppsDock(){
       e.preventDefault()
       card.classList.remove("drag-over")
       let payload = {}
-      try{ payload = JSON.parse(e.dataTransfer.getData("text/plain") || "{}") }catch{
-      transcribeFailures += 1
-      if(transcribeFailures >= 3){
-        const t = qs('#ariaTranscript')
-        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      try{
+        payload = JSON.parse(e.dataTransfer.getData("text/plain") || "{}")
+      }catch{
+        payload = {}
       }
-    }
       if(!payload.app) return
       if(payload.source === "row" && dragEl && dragEl !== card && card.parentElement === row){
-        row.insertBefore(dragEl, card)
-        toast("Apps reordered")
+        const draggedNext = dragEl.nextSibling
+        const targetNext = card.nextSibling
+        const dragBeforeTarget = draggedNext === card
+        if(dragBeforeTarget){
+          row.insertBefore(card, dragEl)
+        } else {
+          row.insertBefore(dragEl, targetNext)
+          row.insertBefore(card, draggedNext)
+        }
+        toast("Apps swapped")
         return
       }
       if(payload.source === "library"){
