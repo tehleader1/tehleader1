@@ -390,6 +390,7 @@ body::before{content:"";position:fixed;inset:0;background:url('/static/images/wo
 .logo{font-size:26px;font-weight:700;letter-spacing:0.4px;font-family:"Outfit",system-ui,sans-serif;} 
 .founder-narrative{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent);margin-top:2px;}
 .tagline{color:var(--muted);font-size:14px;margin-top:4px;} 
+.brand{max-width:760px;}
 .big-menu{display:flex;gap:10px;flex-wrap:wrap;} 
 .menu-btn{background:rgba(255,255,255,0.08);color:var(--text);border:1px solid rgba(255,255,255,0.18);padding:10px 14px;border-radius:12px;font-weight:600;} 
 .status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;} 
@@ -441,6 +442,12 @@ body.family-mode .aria-sphere{box-shadow:0 0 12px rgba(124,243,209,0.35);}
 .ad-copy{display:flex;flex-direction:column;gap:4px;} 
 .ad-copy strong{font-size:16px;} 
 .ad-copy span{font-size:12px;color:#0b0c10;} 
+
+.trust-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 18px;}
+.trust-card{padding:14px;border-radius:16px;}
+.trust-kicker{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
+.trust-main{font-size:18px;font-weight:700;margin-top:6px;}
+.trust-sub{font-size:12px;line-height:1.5;color:rgba(255,255,255,0.8);margin-top:6px;}
 
 .center-stage{padding:22px;border-radius:24px;margin:0 auto 26px;max-width:760px;width:min(92vw,760px);aspect-ratio:1 / 1;min-height:560px;display:flex;flex-direction:column;gap:12px;position:relative;}
 .center-icon{position:absolute;top:14px;left:14px;width:42px;height:42px;border-radius:14px;border:1px solid rgba(255,255,255,0.25);overflow:hidden;box-shadow:0 10px 20px rgba(0,0,0,0.35);}
@@ -674,6 +681,7 @@ body.listening .bg-layers{animation-play-state:paused;}
 @media (max-width:900px){
   .top-middle{width:100%;justify-content:center;order:2;}
   .status{width:100%;order:3;justify-content:flex-start;}
+  .trust-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
   .center-head{flex-direction:column;align-items:stretch;}
   .center-actions{justify-content:space-between;flex-wrap:wrap;}
   .center-stage{width:min(95vw,760px);padding:16px;aspect-ratio:auto;}
@@ -681,6 +689,9 @@ body.listening .bg-layers{animation-play-state:paused;}
   .tab-btn{text-align:center;}
   .post-bottom,.gps-actions,.aria-tools{display:grid;grid-template-columns:1fr;gap:8px;}
   .ad-banner{flex-direction:column;align-items:flex-start;}
+}
+@media (max-width:560px){
+  .trust-strip{grid-template-columns:1fr;}
 }
 
 .tab-btn[data-tab="seo"],
