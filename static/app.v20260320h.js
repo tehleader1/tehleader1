@@ -1478,7 +1478,7 @@ function setupCommunications(){
     const w = loadWallet()
     balanceView.textContent = `Balance: $${w.balance.toFixed(2)} · Reserva: $${w.reserve.toFixed(2)}`
     if(newsGuardBtn){
-      newsGuardBtn.textContent = `Filtro Noticias Pelo: ${w.newsGuard ? "On" : "Off"}`
+      newsGuardBtn.textContent = `Prevencion Somos Nosotros: ${w.newsGuard ? "On" : "Off"}`
       newsGuardBtn.classList.toggle("active", w.newsGuard)
     }
   }
@@ -1513,7 +1513,7 @@ function setupCommunications(){
       w.newsGuard = !w.newsGuard
       saveWallet(w)
       drawWallet()
-      toast(w.newsGuard ? "Filtro de noticias de pelo activado" : "Filtro de noticias de pelo desactivado")
+      toast(w.newsGuard ? "Prevencion activa: 100% nosotros intentando" : "Prevencion en pausa")
     })
   }
 

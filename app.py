@@ -60,6 +60,7 @@ COMMUNITY_ALERT_SECONDARY_EMAIL = os.environ.get("COMMUNITY_ALERT_SECONDARY_EMAI
 COMMUNITY_ALERT_PHONE = os.environ.get("COMMUNITY_ALERT_PHONE", "980-375-9197")
 COMMUNITY_ALERT_THRESHOLD = float(os.environ.get("COMMUNITY_ALERT_THRESHOLD", "75"))
 COMMUNITY_TARGET_RATIO = float(os.environ.get("COMMUNITY_TARGET_RATIO", "0.70"))
+MONEY_GUARD_DROP_PCT = float(os.environ.get("MONEY_GUARD_DROP_PCT", "35"))
 SEO_RANDOM_ENABLED = os.environ.get("SEO_RANDOM_ENABLED", "false").lower() == "true"
 SEO_RANDOM_JOB_IDS = []
 SEO_TRIGGER_TOKEN = os.environ.get("SEO_TRIGGER_TOKEN", "")
@@ -222,6 +223,69 @@ def send_smtp_html(to_email, subject, html):
         return True, ""
     except Exception as e:
         return False, str(e)[:200]
+
+def get_shopify_finance_snapshot():
+    if not SHOPIFY_STORE or not SHOPIFY_ADMIN_TOKEN:
+        return {"ok": False, "error": "shopify_admin_not_configured"}
+    try:
+        now = datetime.utcnow()
+        created_min = (now - timedelta(days=8)).isoformat() + "Z"
+        r = requests.get(
+            f"https://{SHOPIFY_STORE}/admin/api/2024-01/orders.json",
+            headers={"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN},
+            params={
+                "status": "any",
+                "financial_status": "paid",
+                "created_at_min": created_min,
+                "limit": 250,
+                "fields": "id,created_at,total_price,currency,financial_status,cancelled_at"
+            },
+            timeout=20,
+        )
+        if r.status_code >= 400:
+            return {"ok": False, "error": f"shopify_error_{r.status_code}"}
+        data = r.json() or {}
+        orders = data.get("orders", []) or []
+        today_key = now.strftime("%Y-%m-%d")
+        today_total = 0.0
+        prev_days = {}
+        currency = "USD"
+        for o in orders:
+            if o.get("cancelled_at"):
+                continue
+            try:
+                total = float(o.get("total_price", 0) or 0)
+            except:
+                total = 0.0
+            created = (o.get("created_at") or "")[:10]
+            if o.get("currency"):
+                currency = o.get("currency")
+            if created == today_key:
+                today_total += total
+            elif created:
+                prev_days[created] = prev_days.get(created, 0.0) + total
+        prev_values = list(prev_days.values())
+        avg_prev = (sum(prev_values) / len(prev_values)) if prev_values else 0.0
+        drop_pct = 0.0
+        if avg_prev > 0:
+            drop_pct = max(0.0, round((1 - (today_total / avg_prev)) * 100, 2))
+        risk_level = "ok"
+        if avg_prev > 0 and drop_pct >= MONEY_GUARD_DROP_PCT:
+            risk_level = "watch"
+        if avg_prev > 0 and drop_pct >= (MONEY_GUARD_DROP_PCT + 15):
+            risk_level = "critical"
+        return {
+            "ok": True,
+            "today_total": round(today_total, 2),
+            "avg_prev_7d": round(avg_prev, 2),
+            "drop_pct": drop_pct,
+            "risk_level": risk_level,
+            "currency": currency,
+            "orders_count": len(orders),
+            "threshold_pct": MONEY_GUARD_DROP_PCT,
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
 
 def get_wellness_recipients(limit=500):
     recipients = {}
@@ -825,6 +889,48 @@ def community_launch_alert():
         else:
             failed += 1
     return {"ok": sent > 0, "sent": sent, "failed": failed, "recipients": len(recipients)}
+
+@app.route("/api/finance/shopify-status")
+def finance_shopify_status():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    return get_shopify_finance_snapshot()
+
+@app.route("/api/finance/notify", methods=["POST"])
+def finance_notify():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    snap = get_shopify_finance_snapshot()
+    if not snap.get("ok"):
+        return snap, 500
+    recipients = []
+    for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL]:
+        v = (em or "").strip().lower()
+        if v and "@" in v and v not in recipients:
+            recipients.append(v)
+    if not recipients:
+        return {"ok": False, "error": "no_recipients"}, 500
+    subject = "SupportRD Money Guard Alert"
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+      <h2 style="margin:0 0 8px;">Money guard status</h2>
+      <p><strong>Today:</strong> {snap.get("today_total")} {snap.get("currency","USD")}</p>
+      <p><strong>7-day avg:</strong> {snap.get("avg_prev_7d")} {snap.get("currency","USD")}</p>
+      <p><strong>Drop:</strong> {snap.get("drop_pct")}%</p>
+      <p><strong>Risk level:</strong> {snap.get("risk_level")}</p>
+      <p><strong>Threshold:</strong> {snap.get("threshold_pct")}%</p>
+      <p style="margin-top:10px;">SupportRD ads + money guard legal-style monitoring update.</p>
+    </div>
+    """
+    sent = 0
+    failed = 0
+    for em in recipients:
+        ok, _detail = send_smtp_html(em, subject, html)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+    return {"ok": sent > 0, "sent": sent, "failed": failed, "recipients": len(recipients), "snapshot": snap}
 
 @app.route("/api/community/post-intake", methods=["POST"])
 def community_post_intake():
