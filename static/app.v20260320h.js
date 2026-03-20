@@ -934,6 +934,7 @@ function setupPostActions(){
   const live = qs("#liveStatus")
   const send = qs("#sendSocials")
   const post = qs("#postSocials")
+  const postInput = qs("#postInput")
   const paySelect = qs("#paySelect")
   const tipTeam = qs("#tipTeam")
   const contactEvelyn = qs("#contactEvelyn")
@@ -978,6 +979,25 @@ function setupPostActions(){
       const source = targets.length === 1 ? targets[0] : "social feeds"
       setTimeout(()=>triggerClassActLaugh(source), 800)
     }
+    try{
+      const text = (postInput && postInput.value ? postInput.value.trim() : "")
+      if(text){
+        fetch("/api/community/post-intake", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({
+            message: text,
+            source: choice === "all" ? "all_feeds_post" : `feed_${choice}`,
+            region: "global",
+            language: "en"
+          })
+        }).then(r=>r.json()).then(d=>{
+          if(d && d.ok && d.needs_developer){
+            openMiniWindow("Developer Assist", "Escalated to developer contact.")
+          }
+        }).catch(()=>{})
+      }
+    }catch{}
   }
 
   if(live){

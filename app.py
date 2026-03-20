@@ -415,6 +415,17 @@ def run_daily_community_rotation(force=False):
     save_rotation(plan, alert_sent)
     return {"ok": True, "skipped": False, "plan": plan, "alert_sent": alert_sent, "alert_detail": detail}
 
+def needs_developer_assistance(message):
+    text = (message or "").lower()
+    if not text:
+        return False
+    flags = [
+        "bug", "error", "not working", "doesn't work", "doesnt work", "broken",
+        "crash", "500", "payment fail", "can't login", "cant login", "locked out",
+        "refund", "chargeback", "fraud", "security", "urgent", "help now"
+    ]
+    return any(f in text for f in flags)
+
 def save_wellness_log(email, name, message_type, status, error_detail=""):
     try:
         conn = sqlite3.connect(CREDIT_DB_PATH)
@@ -760,6 +771,59 @@ def community_rotation_today():
         }
     except:
         return {"ok": False, "error": "query_failed"}, 500
+
+@app.route("/api/community/post-intake", methods=["POST"])
+def community_post_intake():
+    data = request.json or {}
+    message = (data.get("message") or "").strip()
+    region = (data.get("region") or "global").strip()
+    language = (data.get("language") or "en").strip()
+    source = (data.get("source") or "post").strip()
+    if not message:
+        return {"ok": False, "error": "message_required"}, 400
+    needs_dev = needs_developer_assistance(message)
+    event_type = "developer_needed" if needs_dev else "general_upgrade"
+    severity = 4 if needs_dev else 1
+    log_community_signal(region, language, event_type, severity, f"{source}: {message[:300]}")
+
+    notified = False
+    notify_detail = "not_needed"
+    if needs_dev:
+        recipients = []
+        for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL]:
+            v = (em or "").strip().lower()
+            if v and "@" in v and v not in recipients:
+                recipients.append(v)
+        if recipients:
+            subject = "SupportRD Developer Assist Needed"
+            html = f"""
+            <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+              <h2 style="margin:0 0 8px;">Developer assistance requested</h2>
+              <p><strong>Source:</strong> {source}</p>
+              <p><strong>Region:</strong> {region} · <strong>Language:</strong> {language}</p>
+              <p><strong>Message:</strong> {message}</p>
+              <p style="margin-top:12px;">Community mode is running. This reached you because it likely needs direct developer help.</p>
+            </div>
+            """
+            sent_count = 0
+            for em in recipients:
+                ok, detail = send_smtp_html(em, subject, html)
+                if ok:
+                    sent_count += 1
+                else:
+                    notify_detail = detail or "email_failed"
+            notified = sent_count > 0
+            if notified:
+                notify_detail = "sent"
+        else:
+            notify_detail = "no_recipients"
+
+    return {
+        "ok": True,
+        "needs_developer": needs_dev,
+        "notified": notified,
+        "detail": notify_detail
+    }
 
 @app.route("/api/me")
 def me():
