@@ -10,6 +10,9 @@ import requests
 import time
 import sqlite3
 from datetime import datetime, timedelta
+import hmac
+import hashlib
+import base64
 from apscheduler.schedulers.background import BackgroundScheduler
 from openai import OpenAI
 
@@ -36,6 +39,7 @@ SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "")
 SHOPIFY_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
 SHOPIFY_ADMIN_TOKEN = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
 SHOPIFY_BLOG_ID = os.environ.get("SHOPIFY_BLOG_ID", "")
+SHOPIFY_WEBHOOK_SECRET = os.environ.get("SHOPIFY_WEBHOOK_SECRET", "")
 
 SEO_ENABLED = os.environ.get("SEO_ENABLED", "false").lower() == "true"
 SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "72"))
@@ -205,6 +209,62 @@ def init_community_db():
         conn.close()
     except:
         pass
+
+def init_subscription_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS user_subscriptions ("
+            "email TEXT PRIMARY KEY,"
+            "plan TEXT,"
+            "source TEXT,"
+            "order_id TEXT,"
+            "updated_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def get_subscription_for_email(email):
+    if not email:
+        return "free"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT plan FROM user_subscriptions WHERE email = ? LIMIT 1", (email.lower(),))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return "free"
+        plan = (row[0] or "free").lower().strip()
+        if plan not in ("free", "premium", "pro"):
+            return "free"
+        return plan
+    except:
+        return "free"
+
+def set_subscription_for_email(email, plan, source="manual", order_id=""):
+    if not email:
+        return False
+    normalized = (plan or "free").lower().strip()
+    if normalized not in ("free", "premium", "pro"):
+        normalized = "free"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO user_subscriptions (email, plan, source, order_id, updated_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(email) DO UPDATE SET plan=excluded.plan, source=excluded.source, order_id=excluded.order_id, updated_at=excluded.updated_at",
+            (email.lower(), normalized, source[:40], (order_id or "")[:80], datetime.utcnow().isoformat() + "Z"),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
 
 def send_smtp_html(to_email, subject, html):
     if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and (FROM_EMAIL or SMTP_USER)):
@@ -990,7 +1050,59 @@ def me():
     user = session.get("user")
     if not user:
         return {"authenticated": False}
-    return {"authenticated": True, "user": user, "admin": is_admin()}
+    email = (user.get("email") or "").strip().lower()
+    return {
+        "authenticated": True,
+        "user": user,
+        "admin": is_admin(),
+        "subscription": get_subscription_for_email(email)
+    }
+
+@app.route("/api/subscription/status")
+def subscription_status():
+    user = session.get("user") or {}
+    email = (request.args.get("email") or user.get("email") or "").strip().lower()
+    if not email:
+        return {"ok": False, "error": "email_required"}, 400
+    return {"ok": True, "subscription": get_subscription_for_email(email)}
+
+@app.route("/webhooks/shopify/orders-paid", methods=["POST"])
+def shopify_orders_paid_webhook():
+    if not SHOPIFY_WEBHOOK_SECRET:
+        return {"ok": False, "error": "webhook_secret_not_configured"}, 503
+    h = request.headers.get("X-Shopify-Hmac-Sha256", "")
+    body = request.get_data() or b""
+    digest = hmac.new(
+        SHOPIFY_WEBHOOK_SECRET.encode("utf-8"),
+        body,
+        hashlib.sha256
+    ).digest()
+    expected = base64.b64encode(digest).decode("utf-8")
+    if not h or not hmac.compare_digest(expected, h):
+        return {"ok": False, "error": "invalid_signature"}, 401
+    try:
+        payload = request.json or {}
+        email = (payload.get("email") or ((payload.get("customer") or {}).get("email")) or "").strip().lower()
+        if not email:
+            return {"ok": True, "ignored": "missing_email"}
+        order_id = str(payload.get("id") or "")
+        items = payload.get("line_items", []) or []
+        plan = None
+        for item in items:
+            title = (item.get("title") or "").lower()
+            sku = (item.get("sku") or "").lower()
+            check = f"{title} {sku}"
+            if "professional hair advisor" in check or "$50" in check or "pro" in check:
+                plan = "pro"
+                break
+            if "hair advisor premium" in check or "$35" in check or "premium" in check:
+                plan = "premium"
+        if not plan:
+            return {"ok": True, "ignored": "not_subscription_order"}
+        ok = set_subscription_for_email(email, plan, source="shopify_webhook_paid", order_id=order_id)
+        return {"ok": bool(ok), "email": email, "plan": plan}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}, 500
 
 @app.route("/api/claim-name", methods=["POST"])
 def claim_name():
@@ -1546,6 +1658,7 @@ init_claim_db()
 init_credit_db()
 init_wellness_db()
 init_community_db()
+init_subscription_db()
 
 #################################################
 # STATIC FILES

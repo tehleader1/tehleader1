@@ -906,6 +906,24 @@ function setupPaymentChooser(){
   const view = qs("#paymentView")
   if(!select || !view) return
 
+  async function checkUpgrade(){
+    const email = (state.socialLinks && state.socialLinks.email) ? state.socialLinks.email : ""
+    try{
+      const url = email ? `/api/subscription/status?email=${encodeURIComponent(email)}` : "/api/subscription/status"
+      const r = await fetch(url)
+      const d = await r.json()
+      if(d && d.ok){
+        state.subscription = d.subscription || "free"
+        setDefaultLevelBySubscription()
+        toast(`Plan: ${(state.subscription || "free").toUpperCase()}`)
+      } else {
+        toast("Could not verify plan yet")
+      }
+    }catch{
+      toast("Could not verify plan yet")
+    }
+  }
+
   function render(){
     const val = select.value
     if(val === "evelyn"){
@@ -914,15 +932,15 @@ function setupPaymentChooser(){
       return
     }
     if(val === "premium"){
-      view.innerHTML = `<p>$35 PREMIUM subscription.</p><div class="lock-pill">Unlocks 2 ARIA levels + puzzles to continue</div><button class="btn" id="goPremium">Pay $35</button>`
-      state.subscription = "premium"
+      view.innerHTML = `<p>$35 PREMIUM subscription.</p><div class="lock-pill">Unlocks 2 ARIA levels + puzzles to continue</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div><button class="btn" id="goPremium">Pay $35</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goPremium").addEventListener("click", ()=>openLinkModal(LINKS.premium, "Premium Subscription"))
+      qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     if(val === "pro"){
-      view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><div class="lock-pill">All 4 levels + unlimited ARIA</div><button class="btn" id="goPro">Pay $50</button>`
-      state.subscription = "pro"
+      view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><div class="lock-pill">All 4 levels + unlimited ARIA</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div><button class="btn" id="goPro">Pay $50</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goPro").addEventListener("click", ()=>openLinkModal(LINKS.pro, "Professional Subscription"))
+      qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     view.innerHTML = `<p>Tip the team.</p><button class="btn" id="tipOrder">Open Tip</button>`
@@ -1703,8 +1721,7 @@ function isProOverride(){
 function setupSettings(){
   const saved = JSON.parse(localStorage.getItem("socialLinks") || "{}")
   state.socialLinks = saved
-  state.subscription = (saved.subscription || "free").toLowerCase().includes("pro") ? "pro" :
-    ((saved.subscription || "").toLowerCase().includes("premium") ? "premium" : "free")
+  state.subscription = "free"
   if(isProOverride()) { state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0; localStorage.setItem('loggedIn','true') }
   setDefaultLevelBySubscription()
   qs("#setName").value = saved.name || ""
@@ -1760,8 +1777,6 @@ function setupSettings(){
         pushAria: qs("#pushAria").checked
       }
       localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
-      const sub = state.socialLinks.subscription.toLowerCase()
-      state.subscription = sub.includes("pro") ? "pro" : (sub.includes("premium") ? "premium" : "free")
       if(isProOverride()){ state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0 }
       setDefaultLevelBySubscription()
       toast("Settings saved")
@@ -1870,6 +1885,10 @@ function setupLoginGate(){
       const badge = qs("#userBadge")
       const name = d.user && (d.user.name || d.user.nickname || d.user.email) ? (d.user.name || d.user.nickname || d.user.email) : "Logged In"
       if(badge){ badge.textContent = name }
+      if(d.subscription){
+        state.subscription = d.subscription
+        setDefaultLevelBySubscription()
+      }
       setAdminVisibility(!!d.admin)
     }
   }).catch(()=>{})
