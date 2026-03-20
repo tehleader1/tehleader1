@@ -9,7 +9,7 @@ import os
 import requests
 import time
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from openai import OpenAI
 
@@ -55,6 +55,11 @@ FROM_EMAIL = os.environ.get("FROM_EMAIL", "")
 DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL", "")
 ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or DEVELOPER_EMAIL).lower()
 WELLNESS_SUBJECT = os.environ.get("WELLNESS_SUBJECT", "SupportRD Personal Check-In")
+COMMUNITY_ALERT_PRIMARY_EMAIL = os.environ.get("COMMUNITY_ALERT_PRIMARY_EMAIL", "")
+COMMUNITY_ALERT_SECONDARY_EMAIL = os.environ.get("COMMUNITY_ALERT_SECONDARY_EMAIL", "")
+COMMUNITY_ALERT_PHONE = os.environ.get("COMMUNITY_ALERT_PHONE", "")
+COMMUNITY_ALERT_THRESHOLD = float(os.environ.get("COMMUNITY_ALERT_THRESHOLD", "75"))
+COMMUNITY_TARGET_RATIO = float(os.environ.get("COMMUNITY_TARGET_RATIO", "0.70"))
 SEO_RANDOM_ENABLED = os.environ.get("SEO_RANDOM_ENABLED", "false").lower() == "true"
 SEO_RANDOM_JOB_IDS = []
 SEO_TRIGGER_TOKEN = os.environ.get("SEO_TRIGGER_TOKEN", "")
@@ -168,6 +173,38 @@ def init_wellness_db():
     except:
         pass
 
+def init_community_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS community_signals ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "region TEXT,"
+            "language TEXT,"
+            "event_type TEXT,"
+            "severity REAL,"
+            "notes TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS community_rotations ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "mode TEXT,"
+            "region TEXT,"
+            "language TEXT,"
+            "score REAL,"
+            "reason TEXT,"
+            "alert_sent INTEGER DEFAULT 0,"
+            "created_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
 def send_smtp_html(to_email, subject, html):
     if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and (FROM_EMAIL or SMTP_USER)):
         return False, "email_not_configured"
@@ -209,6 +246,174 @@ def get_wellness_recipients(limit=500):
         if em and "@" in em and em not in recipients:
             recipients[em] = {"email": em, "name": em.split("@")[0]}
     return list(recipients.values())
+
+def log_community_signal(region, language, event_type, severity, notes):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO community_signals (region, language, event_type, severity, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                (region or "global").strip(),
+                (language or "en").strip(),
+                (event_type or "general_upgrade").strip(),
+                float(severity or 1),
+                (notes or "").strip()[:500],
+                datetime.utcnow().isoformat() + "Z",
+            ),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
+
+def compute_region_need_scores():
+    now = datetime.utcnow()
+    since = (now - timedelta(days=7)).isoformat() + "Z"
+    scores = {}
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT region, language, event_type, severity FROM community_signals WHERE created_at >= ? ORDER BY id DESC LIMIT 3000",
+            (since,),
+        )
+        rows = cur.fetchall()
+        conn.close()
+        negative_types = {"refund", "cancel", "support_issue", "delivery_problem", "payment_fail", "unhappy"}
+        for region, language, event_type, severity in rows:
+            key = (region or "global").strip() or "global"
+            lang = (language or "en").strip() or "en"
+            event = (event_type or "general_upgrade").strip().lower()
+            sev = float(severity or 1)
+            weight = 1.0
+            if event in negative_types:
+                weight = 3.0
+            elif event == "low_engagement":
+                weight = 2.0
+            elif event == "request":
+                weight = 1.6
+            score = max(1.0, min(5.0, sev)) * weight * 10.0
+            prev = scores.get(key, {"score": 0.0, "language": lang, "events": 0})
+            prev["score"] += score
+            prev["events"] += 1
+            if prev.get("language") in ("", "en") and lang not in ("", "en"):
+                prev["language"] = lang
+            scores[key] = prev
+    except:
+        pass
+    if not scores:
+        scores["global"] = {"score": 40.0, "language": "en", "events": 0}
+    return scores
+
+def choose_community_rotation():
+    scores = compute_region_need_scores()
+    ranked = sorted(scores.items(), key=lambda x: x[1]["score"], reverse=True)
+    top_region, top_data = ranked[0]
+    use_targeted = random.random() < COMMUNITY_TARGET_RATIO and top_region != "global"
+    if use_targeted:
+        pool = ranked[: min(5, len(ranked))]
+        total = sum(max(1.0, p[1]["score"]) for p in pool)
+        pick = random.uniform(0.0, total)
+        upto = 0.0
+        chosen = pool[0]
+        for item in pool:
+            upto += max(1.0, item[1]["score"])
+            if upto >= pick:
+                chosen = item
+                break
+        region, data = chosen
+        mode = "priority_targeted"
+        reason = "targeted_by_need_and_randomized"
+    else:
+        region = "global"
+        data = {"score": max(40.0, top_data.get("score", 40.0) * 0.5), "language": "en", "events": 0}
+        mode = "general_upgrade"
+        reason = "global_upgrade_for_everybody"
+    return {
+        "mode": mode,
+        "region": region,
+        "language": data.get("language", "en"),
+        "score": round(float(data.get("score", 0.0)), 2),
+        "reason": reason,
+        "top_region": top_region,
+        "top_score": round(float(top_data.get("score", 0.0)), 2),
+    }
+
+def save_rotation(plan, alert_sent):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO community_rotations (mode, region, language, score, reason, alert_sent, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                plan.get("mode", "general_upgrade"),
+                plan.get("region", "global"),
+                plan.get("language", "en"),
+                float(plan.get("score", 0.0)),
+                plan.get("reason", ""),
+                1 if alert_sent else 0,
+                datetime.utcnow().isoformat() + "Z",
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def send_founder_alert_if_needed(plan):
+    try:
+        need_alert = float(plan.get("top_score", 0)) >= COMMUNITY_ALERT_THRESHOLD
+    except:
+        need_alert = False
+    if not need_alert:
+        return False, "threshold_not_met"
+    recipients = []
+    for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL]:
+        e = (em or "").strip()
+        if e and "@" in e:
+            recipients.append(e)
+    if not recipients:
+        return False, "no_alert_recipients"
+    subject = "SupportRD Community Alert: Founder Needed"
+    phone = COMMUNITY_ALERT_PHONE or "not_set"
+    body = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+      <h2 style="margin:0 0 8px;">Founder check-in requested</h2>
+      <p>Community rotation mode: <strong>{plan.get("mode","general_upgrade")}</strong></p>
+      <p>Today target: <strong>{plan.get("region","global")}</strong> ({plan.get("language","en")})</p>
+      <p>Need score (top region): <strong>{plan.get("top_score",0)}</strong> (threshold: {COMMUNITY_ALERT_THRESHOLD})</p>
+      <p>Reason: {plan.get("reason","")}</p>
+      <p>Preferred founder phone on file: {phone}</p>
+      <p style="margin-top:14px;">SupportRD auto-ops sent this because founder support is needed.</p>
+    </div>
+    """
+    sent_any = False
+    last_error = ""
+    for em in recipients:
+        ok, detail = send_smtp_html(em, subject, body)
+        sent_any = sent_any or ok
+        if not ok:
+            last_error = detail
+    return sent_any, ("" if sent_any else (last_error or "alert_send_failed"))
+
+def run_daily_community_rotation(force=False):
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM community_rotations WHERE created_at LIKE ? ORDER BY id DESC LIMIT 1", (today + "%",))
+        row = cur.fetchone()
+        conn.close()
+        if row and not force:
+            return {"ok": True, "skipped": True, "reason": "already_ran_today"}
+    except:
+        pass
+    plan = choose_community_rotation()
+    alert_sent, detail = send_founder_alert_if_needed(plan)
+    save_rotation(plan, alert_sent)
+    return {"ok": True, "skipped": False, "plan": plan, "alert_sent": alert_sent, "alert_detail": detail}
 
 def save_wellness_log(email, name, message_type, status, error_detail=""):
     try:
@@ -506,6 +711,55 @@ def wellness_send_all():
             failed += 1
             save_wellness_log(rec["email"], first, "wellness_blast", "failed", detail)
     return {"ok": True, "sent": sent, "failed": failed, "total": len(recipients)}
+
+@app.route("/api/community/signal", methods=["POST"])
+def community_signal():
+    data = request.json or {}
+    ok = log_community_signal(
+        data.get("region", "global"),
+        data.get("language", "en"),
+        data.get("event_type", "general_upgrade"),
+        data.get("severity", 1),
+        data.get("notes", ""),
+    )
+    return {"ok": bool(ok)}
+
+@app.route("/api/community/rotation/run", methods=["POST"])
+def community_rotation_run():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    force = bool((request.json or {}).get("force"))
+    return run_daily_community_rotation(force=force)
+
+@app.route("/api/community/rotation/today")
+def community_rotation_today():
+    try:
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT mode, region, language, score, reason, alert_sent, created_at FROM community_rotations WHERE created_at LIKE ? ORDER BY id DESC LIMIT 1",
+            (today + "%",),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return {"ok": True, "has_plan": False}
+        return {
+            "ok": True,
+            "has_plan": True,
+            "plan": {
+                "mode": row[0],
+                "region": row[1],
+                "language": row[2],
+                "score": row[3],
+                "reason": row[4],
+                "alert_sent": bool(row[5]),
+                "created_at": row[6],
+            },
+        }
+    except:
+        return {"ok": False, "error": "query_failed"}, 500
 
 @app.route("/api/me")
 def me():
@@ -1048,6 +1302,11 @@ def engine_loop():
         prune_random_seo_jobs()
         if not SEO_RANDOM_JOB_IDS:
             schedule_random_seo_jobs()
+    # Community auto-rotation: self-run daily, founder only notified when needed.
+    try:
+        run_daily_community_rotation(force=False)
+    except:
+        pass
 
 
 scheduler = BackgroundScheduler()
@@ -1062,6 +1321,7 @@ scheduler.start()
 init_claim_db()
 init_credit_db()
 init_wellness_db()
+init_community_db()
 
 #################################################
 # STATIC FILES
