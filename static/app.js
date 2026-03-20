@@ -1525,7 +1525,6 @@ function setupCredit(){
 
 function setupCommunications(){
   const btn = qs("#sendLaunchAlert")
-  const reviewBtn = qs("#internationalReviewBtn")
   const checkBalanceBtn = qs("#checkBalanceBtn")
   const reserveMoveBtn = qs("#reserveMoveBtn")
   const newsGuardBtn = qs("#newsGuardBtn")
@@ -1661,29 +1660,6 @@ function setupCommunications(){
     })
   }
 
-  if(reviewBtn){
-    reviewBtn.addEventListener("click", async ()=>{
-      openMiniWindow("Flow Internacional", "Perfecto, puede revisarlo.")
-      try{
-        const gate = qs("#loginGate")
-        if(gate){ gate.style.display = "flex" }
-        document.body.classList.add("login-active")
-      }catch{}
-      try{
-        await fetch("/api/community/signal", {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({
-            region: "international",
-            language: "es",
-            event_type: "request",
-            severity: 2,
-            notes: "International page review requested: puede revisarlo"
-          })
-        })
-      }catch{}
-    })
-  }
   if(!btn) return
   btn.addEventListener("click", async ()=>{
     const launch_day = (qs("#launchDay")?.value || "").trim()
