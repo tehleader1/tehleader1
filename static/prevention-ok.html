@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SupportRD OK Page</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#071018;color:#eef5ff;font-family:Arial,sans-serif;}
+    .card{width:min(520px,92vw);padding:24px;border-radius:16px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);}
+    h1{margin:0 0 10px;font-size:26px;}
+    p{margin:0 0 14px;line-height:1.5;color:#c9d8ef;}
+    .row{display:flex;gap:10px;flex-wrap:wrap;}
+    button{border:none;border-radius:12px;padding:11px 14px;font-weight:700;cursor:pointer;}
+    .on{background:#7cf3d1;color:#08211d;}
+    .off{background:#203244;color:#e6f2ff;}
+    .back{background:#4e7bff;color:#fff;}
+    .status{margin-top:12px;padding:10px;border-radius:10px;background:rgba(124,243,209,0.15);font-size:14px;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>OK Page</h1>
+    <p>Turn <strong>Team Focus Guard</strong> on right away and go back to SupportRD.</p>
+    <div class="row">
+      <button class="on" id="guardOn">Turn On Now</button>
+      <button class="off" id="guardOff">Turn Off</button>
+      <button class="back" id="backHome">Back to SupportRD</button>
+    </div>
+    <div class="status" id="status">Status: checking...</div>
+  </div>
+  <script>
+    function readWallet(){
+      const w = JSON.parse(localStorage.getItem("supportrdWallet") || "{}");
+      return { balance:Number(w.balance||0), reserve:Number(w.reserve||0), newsGuard:!!w.newsGuard };
+    }
+    function writeWallet(w){
+      localStorage.setItem("supportrdWallet", JSON.stringify(w));
+    }
+    function render(){
+      const w = readWallet();
+      document.getElementById("status").textContent = "Status: Team Focus Guard is " + (w.newsGuard ? "ON" : "OFF");
+    }
+    document.getElementById("guardOn").addEventListener("click", ()=>{
+      const w = readWallet(); w.newsGuard = true; writeWallet(w); render();
+    });
+    document.getElementById("guardOff").addEventListener("click", ()=>{
+      const w = readWallet(); w.newsGuard = false; writeWallet(w); render();
+    });
+    document.getElementById("backHome").addEventListener("click", ()=>{ window.location.href = "/"; });
+    render();
+  </script>
+</body>
+</html>

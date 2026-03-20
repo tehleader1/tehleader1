@@ -1459,6 +1459,7 @@ function setupCommunications(){
   const checkBalanceBtn = qs("#checkBalanceBtn")
   const reserveMoveBtn = qs("#reserveMoveBtn")
   const newsGuardBtn = qs("#newsGuardBtn")
+  const openPreventionOk = qs("#openPreventionOk")
   const balanceView = qs("#commsBalanceView")
 
   const walletKey = "supportrdWallet"
@@ -1478,7 +1479,7 @@ function setupCommunications(){
     const w = loadWallet()
     balanceView.textContent = `Balance: $${w.balance.toFixed(2)} · Reserva: $${w.reserve.toFixed(2)}`
     if(newsGuardBtn){
-      newsGuardBtn.textContent = `Prevencion Somos Nosotros: ${w.newsGuard ? "On" : "Off"}`
+      newsGuardBtn.textContent = `Team Focus Guard: ${w.newsGuard ? "On" : "Off"}`
       newsGuardBtn.classList.toggle("active", w.newsGuard)
     }
   }
@@ -1514,6 +1515,11 @@ function setupCommunications(){
       saveWallet(w)
       drawWallet()
       toast(w.newsGuard ? "Prevencion activa: 100% nosotros intentando" : "Prevencion en pausa")
+    })
+  }
+  if(openPreventionOk){
+    openPreventionOk.addEventListener("click", ()=>{
+      window.location.href = "/ok"
     })
   }
 

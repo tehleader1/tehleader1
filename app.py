@@ -1555,6 +1555,10 @@ init_community_db()
 def home():
     return send_from_directory("static", "index.html")
 
+@app.route("/ok")
+def prevention_ok():
+    return send_from_directory("static", "prevention-ok.html")
+
 @app.route("/manifest.json")
 def manifest():
     return send_from_directory("static", "manifest.json")
