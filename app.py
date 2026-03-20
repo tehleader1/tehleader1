@@ -615,11 +615,23 @@ def aria_transcribe():
         audio_bytes = audio.read()
         if not audio_bytes:
             return {"error": "Empty audio"}, 400
+        language = (request.form.get("language") or request.form.get("lang") or "").strip()
+        if language:
+            language = language.replace("_", "-").split("-")[0].lower()
         files = {
             "file": (audio.filename or "audio.webm", audio_bytes, audio.mimetype or "audio/webm")
         }
         model = "whisper-1"
         data = {"model": model}
+        if language:
+            data["language"] = language
+        app.logger.info(
+            "ARIA transcribe request: filename=%s mimetype=%s bytes=%s lang=%s",
+            audio.filename or "audio.webm",
+            audio.mimetype or "audio/webm",
+            len(audio_bytes or b""),
+            language or "auto",
+        )
         r = requests.post(
             "https://api.openai.com/v1/audio/transcriptions",
             headers={"Authorization": f"Bearer {OPENAI_KEY}"},
@@ -633,7 +645,8 @@ def aria_transcribe():
                 r.status_code,
                 r.text[:300],
             )
-            return {"error": "Transcription failed", "status": r.status_code, "detail": r.text[:300]}, 500
+            status = r.status_code if r.status_code < 600 else 500
+            return {"error": "Transcription failed", "status": r.status_code, "detail": r.text[:300]}, status
         out = r.json()
         text = out.get("text", "")
         app.logger.info("ARIA transcribe ok: model=%s chars=%s", model, len(text or ""))
