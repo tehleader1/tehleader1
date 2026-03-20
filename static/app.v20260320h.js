@@ -1450,6 +1450,36 @@ function setupCredit(){
   }
 }
 
+function setupCommunications(){
+  const btn = qs("#sendLaunchAlert")
+  if(!btn) return
+  btn.addEventListener("click", async ()=>{
+    const launch_day = (qs("#launchDay")?.value || "").trim()
+    const launch_location = (qs("#launchLocation")?.value || "").trim()
+    const mission = (qs("#launchMission")?.value || "SupportRD Radio Satellite Mission").trim()
+    const notes = (qs("#launchNotes")?.value || "").trim()
+    if(!launch_day || !launch_location){
+      toast("Add launch day and location")
+      return
+    }
+    try{
+      const r = await fetch("/api/community/launch-alert", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({launch_day, launch_location, mission, notes})
+      })
+      const d = await r.json()
+      if(d.ok){
+        openMiniWindow("Launch Alert", `Sent to ${d.sent}/${d.recipients} contacts.`)
+      }else{
+        openMiniWindow("Launch Alert", `Failed: ${d.error || "unknown"}`)
+      }
+    }catch{
+      openMiniWindow("Launch Alert", "Failed: network_error")
+    }
+  })
+}
+
 function setupReel(){
   const btn = qs("#openReel")
   if(btn){ btn.addEventListener("click", ()=>openModal("reelModal")) }
@@ -2406,6 +2436,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupPuzzle)
   safe(setupSEOLogs)
   safe(setupCredit)
+  safe(setupCommunications)
   safe(setupReel)
   safe(setupAIMillionaireTab)
   safe(setupAdminQuickActions)

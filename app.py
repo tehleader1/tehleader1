@@ -783,6 +783,49 @@ def community_alert_contacts():
         "phone": COMMUNITY_ALERT_PHONE,
     }
 
+@app.route("/api/community/launch-alert", methods=["POST"])
+def community_launch_alert():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    data = request.json or {}
+    launch_day = (data.get("launch_day") or "").strip()
+    launch_location = (data.get("launch_location") or "").strip()
+    mission = (data.get("mission") or "SupportRD satellite mission").strip()
+    notes = (data.get("notes") or "").strip()
+    if not launch_day or not launch_location:
+        return {"ok": False, "error": "launch_day_and_location_required"}, 400
+
+    recipients = []
+    for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL]:
+        v = (em or "").strip().lower()
+        if v and "@" in v and v not in recipients:
+            recipients.append(v)
+    if not recipients:
+        return {"ok": False, "error": "no_recipients"}, 500
+
+    subject = "SupportRD Launch Watch Alert"
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+      <h2 style="margin:0 0 8px;">Launch watch alert</h2>
+      <p><strong>Mission:</strong> {mission}</p>
+      <p><strong>Day:</strong> {launch_day}</p>
+      <p><strong>Location:</strong> {launch_location}</p>
+      <p><strong>Phone on file:</strong> {COMMUNITY_ALERT_PHONE or "not_set"}</p>
+      <p><strong>Compliance note:</strong> Tracking under ITU Radio Regulations Appendix 30B workflow.</p>
+      <p><strong>Notes:</strong> {notes or "N/A"}</p>
+      <p style="margin-top:12px;">SupportRD auto-alert sent this so you can fly in and watch launch day.</p>
+    </div>
+    """
+    sent = 0
+    failed = 0
+    for em in recipients:
+        ok, _detail = send_smtp_html(em, subject, html)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+    return {"ok": sent > 0, "sent": sent, "failed": failed, "recipients": len(recipients)}
+
 @app.route("/api/community/post-intake", methods=["POST"])
 def community_post_intake():
     data = request.json or {}
