@@ -1,0 +1,2249 @@
+const qs = (sel) => document.querySelector(sel)
+const qsa = (sel) => Array.from(document.querySelectorAll(sel))
+
+const THEMES = ["aurora","ice","ember","carbon","nebula"]
+const DEFAULT_THEME = "aurora"
+const THEME_CONTENT = [
+  {title:"SupportRD Live", desc:"Hair care, routines, product matching, and live guidance — all focused on healthy hair, growth, and repair."},
+  {title:"SupportRD Live Studio", desc:"Moisture, bounce, and growth tracking with ARIA‑guided routines and real product wins."},
+  {title:"SupportRD Live Lab", desc:"Deep repair, scalp care, and shine — your weekly routine mapped in 7‑day views."},
+  {title:"SupportRD Live Motion", desc:"Social‑ready hair moments, instant scans, and custom orders with Evelyn."},
+  {title:"SupportRD Live Pro", desc:"Professional routines, growth analytics, and premium subscription guidance."}
+]
+const HERO_FILTERS = [
+  "saturate(1.1) contrast(1.05)",
+  "hue-rotate(15deg) saturate(1.2)",
+  "hue-rotate(-10deg) saturate(1.15)",
+  "grayscale(0.1) contrast(1.1)",
+  "hue-rotate(25deg) saturate(1.25)"
+]
+
+const LINKS = {
+  premium: "https://supportrd.com/products/hair-advisor-premium",
+  pro: "https://supportrd.com/products/professional-hair-advisor",
+  donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
+  custom: "https://supportrd.com/pages/custom-order"
+}
+const AI_LINKS = {
+  dan_martell: "https://archive.org/search?query=Dan%20Martell%20AI%20business%20mediatype%3Amovies",
+  ai_millionaire: "https://archive.org/search?query=AI%20millionaire%20mediatype%3Amovies",
+  ai_saas: "https://archive.org/search?query=AI%20SaaS%20mediatype%3Amovies",
+  best_ai_2026: "https://archive.org/search?query=best%20AI%20tools%202026%20mediatype%3Amovies",
+  agent_workflows: "https://archive.org/search?query=AI%20agent%20workflows%20mediatype%3Amovies",
+  automation_agency: "https://archive.org/search?query=AI%20automation%20agency%20mediatype%3Amovies",
+  ai_2026: "https://archive.org/search?query=AI%202026%20technology%20advances%20mediatype%3Amovies",
+  ai_research: "https://archive.org/search?query=AI%20research%20breakthroughs%202026%20mediatype%3Amovies",
+  future_jobs: "https://archive.org/search?query=AI%20jobs%20income%20opportunities%20mediatype%3Amovies",
+  ai_agency: "https://archive.org/search?query=AI%20agency%20blueprint%20mediatype%3Amovies",
+  ai_saas_builder: "https://archive.org/search?query=AI%20SaaS%20builder%20mediatype%3Amovies",
+  ai_consulting: "https://archive.org/search?query=AI%20consulting%20offers%20mediatype%3Amovies"
+}
+const LOGIN_URL = "https://supportrd.com/account/login"
+
+const BLOG_POSTS = [
+  {title:"Repair story: Heat damage recovery", body:"Week 1: moisture stacking, trim, and protective styling.\n\nWeek 2: deep conditioning twice a week, gentle detangle, scalp oil.\n\nWeek 3: protein balance and low‑heat styling.\n\nWeek 4: shine restore, reduced breakage, and curl definition back."},
+  {title:"Protein balance for bounce", body:"Step 1: hydrate with a light leave‑in.\n\nStep 2: add protein treatment every 7–10 days.\n\nStep 3: seal with oil or butter.\n\nResult: curls hold shape with less frizz."},
+  {title:"All‑in‑one product success stories", body:"Fast routines using the all‑in‑one product for shine, softness, and reduced breakage.\n\nMorning: apply to damp hair.\n\nMid‑day: refresh with a light mist.\n\nNight: protect with satin wrap."}
+]
+
+const state = {
+    themeIndex: 0,
+    blogIndex: 0,
+    ariaHistory: [],
+    socialLinks: {},
+    hairScore: 0,
+    subscription: "free",
+    ariaCount: 0,
+    ariaBlocked: false,
+    puzzleAnswer: null,
+    livePopupActive: false,
+    ariaLevel: 'greeting'
+}
+let transcribeFailures = 0
+let handsFreeMode = false
+const SUPPRESS_ERROR_TEXT = false
+function suppressIfErrorText(text){
+  if(!text) return false
+  return text.startsWith("Mic:") || text.startsWith("Voice error") || text.startsWith("AI unavailable")
+}
+
+
+function openMiniWindow(title, body){
+  const win = qs("#miniWindow")
+  const t = qs("#miniWindowTitle")
+  const b = qs("#miniWindowBody")
+  if(!win || !t || !b) return
+  t.textContent = title || "Action"
+  b.textContent = body || ""
+  win.classList.add("show")
+  clearTimeout(win._t)
+  win._t = setTimeout(()=>win.classList.remove("show"), 2400)
+}
+
+function triggerClassActLaugh(source){
+  const label = source ? `from ${source}` : "incoming"
+  openMiniWindow("Class Act Laugh", `Received ${label}.`)
+  const burst = document.createElement("div")
+  burst.className = "laugh-burst"
+  burst.innerHTML = `CLASS ACT LAUGH <span>Ha‑ha‑ha!</span>`
+  document.body.appendChild(burst)
+  setTimeout(()=>{ try{ burst.remove() }catch{} }, 1600)
+}
+
+
+function wireAllButtons(){
+  try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init done'; }catch{}
+
+  document.body.addEventListener("click", (e)=>{
+    const btn = e.target.closest("button")
+    if(!btn) return
+
+    const id = btn.id || ""
+    const label = (btn.textContent || "").trim() || "Action"
+
+    // If button has data-link, honor it
+    if(btn.dataset && btn.dataset.link){
+      openLinkModal(btn.dataset.link, label)
+      openMiniWindow(label, "Opening link...")
+      return
+    }
+
+    // Route common IDs to real actions
+    const modalMap = {
+      menuOccasion: "occasionModal",
+      menuGift: "giftModal",
+      menuSubscription: "subscriptionModal",
+      openLogin: "loginGate",
+      openSeo: "seoModal",
+      openReel: "reelModal",
+      openSettings: "settingsModal",
+      openCustomOrder: "customOrderModal"
+    }
+    if(modalMap[id]){
+      const el = qs("#" + modalMap[id])
+      if(el){ el.style.display = "flex" }
+      openMiniWindow(label, "Opened panel.")
+      return
+    }
+
+    if(id === "findSalons"){
+      openMiniWindow(label, "Searching for salons...")
+      return
+    }
+
+    if(id === "startCamera"){
+      openMiniWindow(label, "Starting camera...")
+      return
+    }
+    if(id === "stopCamera"){
+      openMiniWindow(label, "Stopping camera...")
+      return
+    }
+
+    if(id === "postSocials" || id === "sendSocials"){
+      openMiniWindow(label, "Posting to feeds...")
+      return
+    }
+
+    if(id === "voiceToggle" || id === "ariaSphere"){
+      openMiniWindow(label, "Listening...")
+      return
+    }
+
+    // Default fallback: show mini window so every button has behavior
+    openMiniWindow(label, `Triggered: ${id || "button"}`)
+  })
+}
+
+function syncLevelButtons(){
+  const buttons = qsa('.level-btn')
+  if(!buttons.length) return
+  buttons.forEach(b=>b.classList.toggle('active', b.dataset.level === state.ariaLevel))
+}
+
+function setAdminVisibility(isAdmin){
+  qsa(".admin-only").forEach((el)=>{
+    if(isAdmin){
+      const display = el.dataset.adminDisplay || ((el.tagName || "").toLowerCase() === "button" ? "inline-flex" : (el.classList.contains("chip") ? "inline-flex" : "block"))
+      el.style.display = display
+    }else{
+      el.style.display = "none"
+    }
+  })
+}
+
+async function setSeoAuto(enabled, stream){
+  try{
+    const r = await fetch("/api/seo/auto", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({enabled})
+    })
+    const d = await r.json()
+    if(d.ok){
+      const div = document.createElement("div")
+      div.textContent = `[SEO] Auto 4x/day ${enabled ? "enabled" : "disabled"}`
+      if(stream){
+        stream.appendChild(div)
+        stream.scrollTop = stream.scrollHeight
+      }
+      return true
+    }
+  }catch{}
+  return false
+}
+
+function setupInfoTray(){
+  const tray = qs("#infoTray")
+  if(!tray) return
+  tray.addEventListener("click", (e)=>{
+    const btn = e.target.closest("button")
+    if(!btn) return
+    const label = btn.dataset.info || btn.textContent || "Info"
+    const linkMap = {
+      "Privacy": "https://supportrd.com/policies/privacy-policy",
+      "Politics": "https://supportrd.com/pages/politics",
+      "Donate": LINKS.donate,
+      "About Us": "https://supportrd.com/pages/about-us",
+      "Terms": "https://supportrd.com/policies/terms-of-service",
+      "FAQ": "https://supportrd.com/pages/faq",
+      "Contact": "https://supportrd.com/pages/contact"
+    }
+    const infoMap = {
+      "Privacy": "We respect your privacy. Personal data stays private and is never sold.",
+      "Politics": "SupportRD is non-partisan and focused on hair care education and wellness.",
+      "Donate": "Donations support hygiene kits and hair care outreach programs.",
+      "About Us": "SupportRD delivers live hair guidance, routines, and product matching.",
+      "Terms": "Use of this app is subject to standard terms and service policies.",
+      "FAQ": "FAQ — Quick Tips:\n1) Dry hair: add a weekly deep conditioner + leave-in moisture.\n2) Frizz: seal with light oil and reduce heat.\n3) No bounce: add protein every 7–10 days.\n4) Oily scalp: clarify 1x weekly and avoid heavy oils at roots.\n5) Damage: trim split ends + heat protect.\n6) Tangly hair: detangle on damp hair with slip + wide-tooth comb.\n7) Color loss: use color-safe shampoo + cool rinses.\n\nWebsite Tips:\n• ARIA Sphere: hold to talk for voice guidance.\n• Hair Analysis: upload scan to get better feedback.\n• Occasion Editor: tap a day to set that routine.\n• Info Tray: tap buttons for policies and help.",
+      "Contact": "Email: AgentAnthony@supportdr.com · Phone: 704‑345‑2867"
+    }
+    const link = linkMap[label]
+    if(link){
+      openLinkModal(link, label)
+    }
+    openMiniWindow(label, infoMap[label] || "More information coming soon.")
+  })
+}
+
+
+
+
+function setupLevelSelect(){
+  const sel = qs('#ariaLevelSelect')
+  if(!sel) return
+  function isPremium(){ return state.subscription === 'premium' || state.subscription === 'pro' || isProOverride() }
+  function sync(){
+    const val = isPremium() ? state.ariaLevel : 'greeting'
+    sel.value = val
+  }
+  sel.addEventListener('change', ()=>{
+    if(!isPremium() && sel.value !== 'greeting'){
+      openModal('subscriptionModal')
+      sel.value = 'greeting'
+      state.ariaLevel = 'greeting'
+      toast('Upgrade to unlock ARIA levels')
+      return
+    }
+    state.ariaLevel = sel.value
+  })
+  sync()
+}
+
+function setupMiniWindow(){
+  const close = qs("#closeMiniWindow")
+  if(close){
+    close.addEventListener("click", ()=>{
+      const win = qs("#miniWindow")
+      if(win) win.classList.remove("show")
+    })
+  }
+
+  try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init done'; }catch{}
+
+  document.body.addEventListener("click", (e)=>{
+    const btn = e.target.closest("button")
+    if(!btn) return
+    const id = btn.id || "button"
+    const label = (btn.textContent || "").trim() || "Action"
+    if(id === "closeMiniWindow") return
+    openMiniWindow(label, `Triggered: ${id}`)
+  })
+}
+
+function toast(msg){
+  const el = qs("#toast")
+  if(!el) return
+  el.textContent = msg
+  el.style.display = "block"
+  clearTimeout(el._t)
+  el._t = setTimeout(()=>{el.style.display="none"}, 2200)
+}
+
+function beep(freq = 880, duration = 120){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = "sine"
+    osc.frequency.value = freq
+    gain.gain.value = 0.08
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    setTimeout(()=>{osc.stop(); ctx.close()}, duration)
+  }catch{}
+}
+
+function initHairScore(){
+  state.hairScore = 100
+  localStorage.setItem("hairScore", "100")
+}
+
+function bumpHairScore(delta){
+  const next = Math.min(100, Math.max(0, state.hairScore + delta))
+  if(next !== state.hairScore){
+    state.hairScore = next
+    localStorage.setItem("hairScore", String(state.hairScore))
+  }
+}
+
+  function appendConversation(role, text){
+    const log = qs("#conversationLog")
+    if(!log) return
+    if(log.textContent === "No conversation yet.") log.textContent = ""
+    const div = document.createElement("div")
+    div.className = `conversation-item ${role}`
+    div.textContent = `${role === "user" ? "You" : "ARIA"}: ${text}`
+    log.appendChild(div)
+    log.scrollTop = log.scrollHeight
+  }
+
+  function watchTranscriptErrors(){
+    if(!SUPPRESS_ERROR_TEXT) return
+    const t = qs("#ariaTranscript")
+    if(!t) return
+    const clearIfError = ()=>{
+      const val = t.textContent || ""
+      if(suppressIfErrorText(val)){ t.textContent = "" }
+    }
+    const obs = new MutationObserver(clearIfError)
+    obs.observe(t, {childList:true, characterData:true, subtree:true})
+    clearIfError()
+  }
+
+  function showSpeechPopup(who, text){
+    const existing = qs("#speechPopup")
+    if(existing) existing.remove()
+    const anchor = qs("#speechPopupAnchor") || qs("#centerStage") || document.body
+    const stage = qs("#centerStage")
+    const pop = document.createElement("div")
+    pop.id = "speechPopup"
+    pop.className = "speech-popup"
+    const userAvatar = state.userAvatar || "/static/images/woman-waking-up12.jpg"
+    const ariaAvatar = "/static/images/woman-waking-up12.jpg"
+    pop.innerHTML = `
+      <div class="speech-avatars">
+        <div class="speech-avatar me" style="background-image:url('${userAvatar}')"></div>
+        <div class="speech-avatar aria" style="background-image:url('${ariaAvatar}')"></div>
+      </div>
+      <div class="speech-body">
+        <div class="who">${who}</div>
+        <div class="speech-text">${text}</div>
+      </div>
+    `
+    anchor.appendChild(pop)
+    if(stage && anchor === qs("#speechPopupAnchor")){
+      const bounds = stage.getBoundingClientRect()
+      const x = bounds.width * (0.08 + Math.random() * 0.84)
+      const y = bounds.height * (0.08 + Math.random() * 0.6)
+      pop.style.left = `${x}px`
+      pop.style.top = `${y}px`
+      requestAnimationFrame(()=>{
+        const r = pop.getBoundingClientRect()
+        const maxX = bounds.width - r.width - 12
+        const maxY = bounds.height - r.height - 12
+        pop.style.left = `${Math.max(12, Math.min(x, maxX))}px`
+        pop.style.top = `${Math.max(12, Math.min(y, maxY))}px`
+      })
+    }
+    requestAnimationFrame(()=>pop.classList.add("show"))
+    setTimeout(()=>{ pop.classList.remove("show"); setTimeout(()=>pop.remove(), 240) }, 1900)
+  }
+
+
+  let liveSpeechPopup = null
+  function showLiveSpeechPopup(text){
+    const anchor = qs("#speechPopupAnchor") || qs("#centerStage") || document.body
+    const stage = qs("#centerStage")
+    if(!liveSpeechPopup){
+      const pop = document.createElement("div")
+      pop.id = "speechLive"
+      pop.className = "speech-popup live"
+      const userAvatar = state.userAvatar || "/static/images/woman-waking-up12.jpg"
+      const ariaAvatar = "/static/images/woman-waking-up12.jpg"
+      pop.innerHTML = `
+        <div class="speech-avatars">
+          <div class="speech-avatar me" style="background-image:url('${userAvatar}')"></div>
+          <div class="speech-avatar aria" style="background-image:url('${ariaAvatar}')"></div>
+        </div>
+        <div class="speech-body">
+          <div class="who">YOU</div>
+          <div class="speech-text"></div>
+        </div>
+      `
+      anchor.appendChild(pop)
+      if(stage && anchor === qs("#speechPopupAnchor")){
+        const bounds = stage.getBoundingClientRect()
+        const x = bounds.width * (0.08 + Math.random() * 0.84)
+        const y = bounds.height * (0.08 + Math.random() * 0.6)
+        pop.style.left = `${x}px`
+        pop.style.top = `${y}px`
+        requestAnimationFrame(()=>{
+          const r = pop.getBoundingClientRect()
+          const maxX = bounds.width - r.width - 12
+          const maxY = bounds.height - r.height - 12
+          pop.style.left = `${Math.max(12, Math.min(x, maxX))}px`
+          pop.style.top = `${Math.max(12, Math.min(y, maxY))}px`
+        })
+      }
+      liveSpeechPopup = pop
+      requestAnimationFrame(()=>pop.classList.add("show"))
+    }
+    const textEl = liveSpeechPopup.querySelector(".speech-text")
+    if(textEl){ textEl.textContent = text || "Listening…" }
+    state.livePopupActive = true
+  }
+
+  function finalizeLiveSpeechPopup(){
+    if(!liveSpeechPopup) return
+    const pop = liveSpeechPopup
+    setTimeout(()=>{ pop.classList.remove("show"); setTimeout(()=>pop.remove(), 240) }, 1200)
+    liveSpeechPopup = null
+  }
+
+
+  async function askAria(msg){
+    if(!msg) return
+    if(state.ariaBlocked && !isProOverride()){
+      openModal("puzzleModal")
+      return
+    }
+    appendAria(`You: ${msg}`)
+    appendConversation("user", msg)
+    if(state.livePopupActive){
+      state.livePopupActive = false
+    } else {
+      showSpeechPopup("YOU", msg)
+    }
+    try{
+      setAriaFlow("processing")
+      const levelMap = {
+        greeting: 'Keep it brief and welcoming. 3-5 sentences.',
+        thorough: 'Give a thorough, structured answer with steps and routines.',
+        inner: 'Give insider tips, product usage details, and sequencing.',
+        pro: 'Give professional guidance and ways to monetize or upsell services.'
+      }
+      const isPremium = state.subscription === 'premium' || state.subscription === 'pro'
+      const shortMode = 'Reply in 1-2 sentences maximum.'
+      const ariaLevelPrompt = isPremium ? (levelMap[state.ariaLevel] || levelMap.thorough) : shortMode
+      const r = await fetch("/api/aria",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({message: msg + '\n\nResponse level: ' + ariaLevelPrompt})
+      })
+      const d = await r.json()
+      const reply = d.reply || "AI unavailable"
+      appendAria(`ARIA: ${reply}`)
+      appendConversation("aria", reply)
+      showSpeechPopup("ARIA", reply)
+      bumpHairScore(1)
+      speakReply(reply)
+      state.ariaCount += 1
+    const limit = (state.subscription === "pro" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
+    if(state.ariaCount >= limit){
+      state.ariaBlocked = true
+      openModal("puzzleModal")
+    }
+    }catch{
+      appendAria("ARIA: AI unavailable")
+      appendConversation("aria", "AI unavailable")
+      showSpeechPopup("ARIA", "AI unavailable")
+      setAriaFlow("idle")
+    }
+  }
+
+  let cachedAriaVoice = null
+    
+function setAriaFlow(state){
+  const overlay = qs("#listeningOverlay")
+  const textEl = qs("#ariaFlowText")
+  const transcriptEl = qs("#ariaTranscript")
+  const gpsActive = qs("#tab-gps")?.classList.contains("active")
+  document.body.classList.toggle("gps-active", !!gpsActive)
+  document.body.classList.toggle("aria-speaking", state === "speaking")
+  if(!overlay || !textEl) return
+  if(state === "listening"){
+    document.body.classList.add("listening")
+    textEl.textContent = "Listening…"
+    if(transcriptEl){ transcriptEl.textContent = "Say something about your hair…" }
+  }else if(state === "processing"){
+    document.body.classList.add("listening")
+    textEl.textContent = "Processing…"
+    if(transcriptEl){ transcriptEl.textContent = "Analyzing your words…" }
+  }else if(state === "speaking"){
+    document.body.classList.add("listening")
+    textEl.textContent = "ARIA Speaking…"
+    if(transcriptEl){ transcriptEl.textContent = "Replying with hair guidance…" }
+  }else{
+    document.body.classList.remove("listening")
+    document.body.classList.remove("aria-speaking")
+    document.body.classList.remove("gps-active")
+  }
+}
+
+function getAriaLang(){
+  const sel = qs("#ariaLanguage")
+  return (sel && sel.value) ? sel.value : "en-US"
+}
+
+async function speakReply(text){
+    const transcriptEl = qs("#ariaTranscript")
+    try{
+      setAriaFlow("speaking")
+      const r = await fetch("/api/aria/speech", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({text})
+      })
+      if(!r.ok) throw new Error("tts failed")
+      const blob = await r.blob()
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audio.onended = ()=>{
+        playDoneChime()
+        setAriaFlow("idle")
+        URL.revokeObjectURL(url)
+      }
+      await audio.play()
+      return
+    }catch(e){
+      if(transcriptEl){ transcriptEl.textContent = "Using device voice…" }
+    }
+
+    try{
+      const utter = new SpeechSynthesisUtterance(text)
+      utter.rate = 1
+      utter.pitch = 1.1
+      const lang = getAriaLang()
+      utter.lang = lang
+      const voices = window.speechSynthesis.getVoices() || []
+      const nameOrder = [
+        "Google US English",
+        "Microsoft Aria Online (Natural) - English (United States)",
+        "Microsoft Jenny Online (Natural) - English (United States)",
+        "Samantha",
+        "Zira",
+        "Ava",
+        "Allison",
+        "Victoria",
+        "Karen"
+      ]
+      if(!cachedAriaVoice){
+        cachedAriaVoice =
+          nameOrder.map(n => voices.find(v => v.name === n && v.lang === lang)).find(Boolean) ||
+          voices.find(v => v.lang === lang && /female|woman|girl/i.test(v.name)) ||
+          voices.find(v => v.lang === lang) ||
+          voices.find(v => v.lang === "en-US")
+      }
+      if(cachedAriaVoice){ utter.voice = cachedAriaVoice }
+      utter.onstart = ()=>setAriaFlow("speaking")
+      utter.onend = ()=>{
+        playDoneChime()
+        setAriaFlow("idle")
+      }
+      window.speechSynthesis.cancel()
+      window.speechSynthesis.speak(utter)
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+  }
+  if(window.speechSynthesis && typeof window.speechSynthesis.onvoiceschanged !== "undefined"){
+    window.speechSynthesis.onvoiceschanged = ()=>{ cachedAriaVoice = null }
+  }
+  
+  let listenCtx = null
+  let listenOsc = null
+  let listenGain = null
+  let listenLfo = null
+  let listenLfoGain = null
+  function startListenLoop(){
+    stopListenLoop()
+    try{
+      const Ctx = window.AudioContext || window.webkitAudioContext
+      listenCtx = new Ctx()
+      listenOsc = listenCtx.createOscillator()
+      listenGain = listenCtx.createGain()
+      listenLfo = listenCtx.createOscillator()
+      listenLfoGain = listenCtx.createGain()
+      listenOsc.type = "sine"
+      listenOsc.frequency.value = 430
+      listenGain.gain.value = 0.02
+      listenLfo.type = "sine"
+      listenLfo.frequency.value = 0.8
+      listenLfoGain.gain.value = 0.03
+      listenLfo.connect(listenLfoGain)
+      listenLfoGain.connect(listenGain.gain)
+      listenOsc.connect(listenGain)
+      listenGain.connect(listenCtx.destination)
+      listenOsc.start()
+      listenLfo.start()
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+  }
+  function stopListenLoop(){
+    try{
+      if(listenGain){
+        const t = listenCtx.currentTime
+        listenGain.gain.setTargetAtTime(0.0001, t, 0.05)
+      }
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+    setTimeout(()=>{
+      try{ if(listenOsc) listenOsc.stop() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+      try{ if(listenLfo) listenLfo.stop() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+      try{ if(listenCtx) listenCtx.close() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+      listenCtx = listenOsc = listenGain = listenLfo = listenLfoGain = null
+    }, 160)
+  }
+
+  function playDoneChime(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = "triangle"
+    osc.frequency.value = 660
+    gain.gain.value = 0.06
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    setTimeout(()=>{osc.frequency.value = 880}, 120)
+    setTimeout(()=>{osc.stop(); ctx.close()}, 280)
+  }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+}
+
+  function setupTabs(){
+  qsa(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
+      btn.classList.add("active")
+      const id = btn.dataset.tab
+      qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
+      qs(`#tab-${id}`).classList.add("active")
+    })
+  })
+}
+
+function setupThemeArrows(){
+  const prev = qs("#themePrevSide")
+  const next = qs("#themeNextSide")
+  const saved = localStorage.getItem("theme") || DEFAULT_THEME
+  state.themeIndex = Math.max(0, THEMES.indexOf(saved))
+  applyTheme()
+
+  prev.addEventListener("click", ()=>{state.themeIndex = (state.themeIndex - 1 + THEMES.length) % THEMES.length; applyTheme()})
+  next.addEventListener("click", ()=>{state.themeIndex = (state.themeIndex + 1) % THEMES.length; applyTheme()})
+
+  function applyTheme(){
+    document.body.className = `theme-${THEMES[state.themeIndex]}`
+    localStorage.setItem("theme", THEMES[state.themeIndex])
+    const content = THEME_CONTENT[state.themeIndex % THEME_CONTENT.length]
+    const hero = qs(".center-hero")
+    if(hero && content){
+      const h2 = hero.querySelector("h2")
+      const p = hero.querySelector("p")
+      if(h2) h2.textContent = content.title
+      if(p) p.textContent = content.desc
+    }
+    const icon = qs("#heroIcon")
+    if(icon){
+      icon.style.filter = HERO_FILTERS[state.themeIndex % HERO_FILTERS.length]
+    }
+  }
+
+  function setupScanPills(){
+    qsa(".scan-pill").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const issue = btn.dataset.aria || btn.textContent.trim()
+        const post = qs("#postInput")
+        if(post){
+          const line = `Hair scan update: ${issue}. Looking for a fix, routine, and product match.`
+          post.value = line
+          post.focus()
+        }
+        btn.classList.remove("bounce")
+        void btn.offsetWidth
+        btn.classList.add("bounce")
+      })
+    })
+  }
+  setupScanPills()
+}
+
+
+function setupModals(){
+  const occBtn = qs("#menuOccasion")
+  if(occBtn){
+    occBtn.addEventListener("click", ()=>{
+      if(state.subscription === "free" && !isProOverride()){
+        openModal("subscriptionModal")
+        toast("Occasion Editor is Premium+")
+        return
+      }
+      openModal("occasionModal")
+    })
+  }
+  bindOpen("menuGift", "giftModal")
+  bindOpen("menuSubscription", "subscriptionModal")
+  bindClose("closeOccasion", "occasionModal")
+  bindClose("closeGift", "giftModal")
+  bindClose("closeSubscription", "subscriptionModal")
+  bindOpen("openSeo", "seoModal")
+  bindClose("closeSeo", "seoModal")
+  bindClose("closeBlog", "blogModal")
+  bindClose("closeApp", "appModal")
+  bindClose("closeLink", "linkModal")
+  bindClose("closePuzzle", "puzzleModal")
+  bindClose("closeCustomOrder", "customOrderModal")
+  bindClose("closeReel", "reelModal")
+  bindClose("closeSettings", "settingsModal")
+  bindClose("closeBrochure", "brochureModal")
+
+  qsa(".blog-post").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      state.blogIndex = Number(btn.dataset.post)
+      renderBlog()
+      openModal("blogModal")
+    })
+  })
+
+  qs("#blogPrev").addEventListener("click", ()=>{state.blogIndex = (state.blogIndex - 1 + BLOG_POSTS.length) % BLOG_POSTS.length; renderBlog()})
+  qs("#blogNext").addEventListener("click", ()=>{state.blogIndex = (state.blogIndex + 1) % BLOG_POSTS.length; renderBlog()})
+
+  qsa("#appsRow .app-card").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const name = btn.dataset.app
+        if(name && name.includes("Donate")){
+          renderApp(name)
+          openModal("appModal")
+          return
+        }
+    const link = btn.dataset.link
+    if(link){
+      openLinkModal(link, "SupportRD Link")
+      return
+    }
+        if(name === "Settings"){
+          openModal("settingsModal")
+          return
+        }
+        if(name === "Blog"){
+          state.blogIndex = 0
+          renderBlog()
+          openModal("blogModal")
+          return
+        }
+        if(name === "SEO Engine Viewer"){
+          openModal("seoModal")
+          return
+        }
+        if(name === "Occasion Editor"){
+          if(state.subscription === "free" && !isProOverride()){
+            openModal("subscriptionModal")
+            toast("Occasion Editor is Premium+")
+            return
+          }
+          openModal("occasionModal")
+          return
+        }
+        if(name === "Subscription Banner"){
+          openModal("subscriptionModal")
+          return
+        }
+        bumpHairScore(1)
+        if(name === "Snapshot Coder Idea" && state.subscription === "free"){
+          openModal("subscriptionModal")
+          toast("Snapshot Coder is Premium+")
+          return
+        }
+        renderApp(name)
+        openModal("appModal")
+      })
+    })
+
+}
+
+function openModal(id){
+  const el = qs("#" + id)
+  if(el){ el.style.display = "flex" }
+}
+
+function bindOpen(triggerId, modalId){
+  const el = qs("#" + triggerId)
+  if(el){ el.addEventListener("click", ()=>openModal(modalId)) }
+}
+
+function bindClose(triggerId, modalId){
+  const el = qs("#" + triggerId)
+  if(el){ el.addEventListener("click", ()=>{ const m = qs("#" + modalId); if(m) m.style.display = "none" }) }
+}
+
+function openLinkModal(url, title){
+  const modal = qs("#linkModal")
+  const frame = qs("#linkFrame")
+  const header = qs("#linkTitle")
+  const notice = qs("#linkNotice")
+  const external = qs("#linkExternal")
+  if(!modal || !frame || !header) return
+  header.textContent = title || "Open Link"
+  if(url && url.startsWith("mailto:")){
+    notice.style.display = "block"
+    external.style.display = "inline-flex"
+    external.onclick = ()=>{ window.location.href = url }
+    frame.src = "about:blank"
+  } else {
+    notice.style.display = "none"
+    external.style.display = "none"
+    frame.src = url || "about:blank"
+  }
+  modal.style.display = "flex"
+}
+
+function renderBlog(){
+  const post = BLOG_POSTS[state.blogIndex]
+  const title = qs("#blogTitle")
+  const body = qs("#blogBody")
+  if(title) title.textContent = post.title
+  if(body) body.innerHTML = post.body.split("\n\n").map(p=>`<p>${p}</p>`).join("")
+}
+
+function appendAria(text){
+  state.ariaHistory.unshift(text)
+  if(state.ariaHistory.length > 6) state.ariaHistory.pop()
+  localStorage.setItem("ariaHistory", JSON.stringify(state.ariaHistory))
+  const ariaEl = qs("#ariaHistory")
+  if(ariaEl){
+    ariaEl.innerHTML = state.ariaHistory.map(x=>`<div>${x}</div>`).join("")
+  }
+}
+
+function setupPaymentChooser(){
+  const select = qs("#paymentSelect")
+  const view = qs("#paymentView")
+  if(!select || !view) return
+
+  function render(){
+    const val = select.value
+    if(val === "evelyn"){
+      view.innerHTML = `<p>Custom order with Evelyn.</p><div class="lock-pill">Premium: 2 ARIA levels + puzzles</div><div class="lock-pill">Pro: all 4 levels + unlimited</div><button class="btn" id="openCustomOrder">Open Custom Order</button>`
+      qs("#openCustomOrder").addEventListener("click", ()=>openModal("customOrderModal"))
+      return
+    }
+    if(val === "premium"){
+      view.innerHTML = `<p>$35 PREMIUM subscription.</p><div class="lock-pill">Unlocks 2 ARIA levels + puzzles to continue</div><button class="btn" id="goPremium">Pay $35</button>`
+      state.subscription = "premium"
+      qs("#goPremium").addEventListener("click", ()=>openLinkModal(LINKS.premium, "Premium Subscription"))
+      return
+    }
+    if(val === "pro"){
+      view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><div class="lock-pill">All 4 levels + unlimited ARIA</div><button class="btn" id="goPro">Pay $50</button>`
+      state.subscription = "pro"
+      qs("#goPro").addEventListener("click", ()=>openLinkModal(LINKS.pro, "Professional Subscription"))
+      return
+    }
+    view.innerHTML = `<p>Tip the team.</p><button class="btn" id="tipOrder">Open Tip</button>`
+    qs("#tipOrder").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
+  }
+
+  select.addEventListener("change", render)
+  render()
+}
+
+function setupPostActions(){
+  const live = qs("#liveStatus")
+  const send = qs("#sendSocials")
+  const post = qs("#postSocials")
+  const paySelect = qs("#paySelect")
+  const tipTeam = qs("#tipTeam")
+  const contactEvelyn = qs("#contactEvelyn")
+  const indicator = qs("#socialIndicator")
+  const socialSelect = qs("#socialSelect")
+  const adCta = qs("#adCta")
+
+  const feedMap = {
+    instagram: "ig",
+    tiktok: "tiktok",
+    facebook: "fb",
+    youtube: "yt",
+    x: "x",
+    threads: "threads"
+  }
+
+  function enabledFeeds(){
+    const feeds = state.socialLinks.feeds || {ig:true,tiktok:true,fb:true}
+    return Object.keys(feedMap).filter(k => feeds[feedMap[k]])
+  }
+
+  function updateIndicator(){
+    if(!indicator) return
+    const list = enabledFeeds()
+    indicator.textContent = list.length ? `Feeds: ${list.map(x=>x[0].toUpperCase()+x.slice(1)).join(", ")}` : "Feeds: none selected"
+  }
+
+  function openFeed(key){
+    const link = state.socialLinks[feedMap[key]]
+    if(link){ openLinkModal(link, "Social Feed"); return true }
+    return false
+  }
+
+  function postToFeeds(){
+    const choice = socialSelect ? socialSelect.value : "all"
+    const targets = choice === "all" ? enabledFeeds() : [choice]
+    let opened = 0
+    targets.forEach(t=>{ if(openFeed(t)) opened++ })
+    if(!opened){ toast("Add social links in Settings") }
+    if(opened){
+      const source = targets.length === 1 ? targets[0] : "social feeds"
+      setTimeout(()=>triggerClassActLaugh(source), 800)
+    }
+  }
+
+  if(live){
+    live.addEventListener("click", ()=>{
+      live.classList.toggle("active")
+      live.textContent = live.classList.contains("active") ? "Live Status · ON" : "Live Status"
+      bumpHairScore(1)
+    })
+  }
+
+  if(send){ send.addEventListener("click", postToFeeds) }
+  if(post){ post.addEventListener("click", postToFeeds) }
+  if(adCta){ adCta.addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order")) }
+  if(socialSelect){
+    socialSelect.addEventListener("change", ()=>{
+      if(socialSelect.value !== "all"){
+        indicator.textContent = `Selected: ${socialSelect.value}`
+      } else {
+        updateIndicator()
+      }
+    })
+  }
+
+  if(paySelect){
+    paySelect.addEventListener("change", ()=>{
+      const value = paySelect.value
+      if(value.includes("Custom Order")){
+        openModal("customOrderModal")
+      }
+    })
+  }
+  if(tipTeam){
+    tipTeam.addEventListener("click", ()=>openLinkModal("https://supportrd.com/cart","Tip Developer & Team"))
+  }
+
+  if(contactEvelyn){
+    contactEvelyn.addEventListener("click", ()=>{
+      const phone = (state.socialLinks.evelyn || "829-233-2670").replace(/\D/g,"")
+      if(!phone){ toast("Add Evelyn WhatsApp in Settings"); return }
+      openLinkModal(`https://wa.me/${phone}?text=Hi%20Evelyn%2C%20I%20need%20help%20with%20my%20order.`,"Contact Evelyn")
+    })
+  }
+
+  updateIndicator()
+}
+
+
+  function setupOccasion(){
+  const actionSel = qs("#occasionAction")
+  const applySel = qs("#occasionApply")
+  const enjoySel = qs("#occasionEnjoy")
+  const weekWrap = qs("#weekBoxes")
+  if(!actionSel || !applySel || !enjoySel || !weekWrap) return
+
+  const actions = [
+    "Normal Action","Getting Up","Wash Day","Training","Travel","Work","School","After Gym","Beach Day","Pool Day",
+    "Rainy Day","Sweat Reset","Curl Refresh","Detox Day","Protective Style","Braids Day","Twist Day","Silk Press",
+    "Blowout Prep","Color Day","Trim Day","Night Routine","Morning Routine","Self Care","Date Night","Photo Day",
+    "Big Fight","Party","Wedding","Brunch","Office Presentation","Interview","Vacation","Salon Visit","Product Test",
+    "Scalp Care","Moisture Boost","Protein Boost","Hydration Day","Heat Protect","Overnight Mask","Co‑Wash",
+    "Deep Clean","Anti‑Frizz","Volume Day","Edge Control","Sleek Bun","Natural Day","Maintenance Day","Post Swim",
+    "Pre Workout","Post Workout","Travel Pack","Festival","Family Event","New Product Day","Weekly Reset"
+  ]
+  const applies = [
+    "Apply Product","Shampoo","Laciador","Mask","Leave In","Serum","Scalp Oil","Heat Protectant","Foam","Gel","Cream",
+    "Butter","Conditioner","Deep Conditioner","Clarifying Wash","Co Wash","Edge Control","Mousse","Protein Treatment",
+    "Hydration Mist","Styling Spray"
+  ]
+  const enjoys = [
+    "Enjoy Product","Big Fight","Date Night","Photo Day","After Workout","All Day Shine","Smooth Finish","Soft Curls",
+    "Volume Boost","Frizz‑Free","Long‑Lasting Style","Protective Glow","Salon‑Ready","Party Ready","Interview Ready"
+  ]
+
+  actionSel.innerHTML = actions.map(a=>`<option>${a}</option>`).join("")
+  applySel.innerHTML = applies.map(a=>`<option>${a}</option>`).join("")
+  enjoySel.innerHTML = enjoys.map(a=>`<option>${a}</option>`).join("")
+
+  const dayPlans = Array.from({length:7}, () => ({action: actionSel.value, apply: applySel.value, enjoy: enjoySel.value}))
+  let selectedDay = 0
+
+  function buildDescription(i){
+    const plan = dayPlans[i]
+    return `Today you will ${plan.action.toLowerCase()}, ${plan.apply.toLowerCase()}, and enjoy ${plan.enjoy.toLowerCase()} for healthy hair.`
+  }
+
+  function renderWeek(){
+    weekWrap.innerHTML = ""
+    for(let i=0;i<7;i++){
+      const row = document.createElement("div")
+      row.className = "week"
+      if(i === selectedDay) row.classList.add("active")
+      const plan = dayPlans[i]
+      row.innerHTML = `<div class="day-title">Day ${i+1}</div>
+        <div class="day-line">${plan.action} · ${plan.apply} · ${plan.enjoy}</div>
+        <div class="day-line">AI: ${buildDescription(i)}</div>`
+      row.addEventListener("click", ()=>{
+        selectedDay = i
+        actionSel.value = dayPlans[i].action
+        applySel.value = dayPlans[i].apply
+        enjoySel.value = dayPlans[i].enjoy
+        renderWeek()
+      })
+      weekWrap.appendChild(row)
+    }
+  }
+
+  function updatePost(){
+    const input = qs("#postInput")
+    if(!input) return
+    input.value = buildDescription(selectedDay)
+  }
+
+  const applyBtn = qs("#applyOccasion")
+  const addBtn = qs("#addOccasionPost")
+  if(applyBtn){ applyBtn.addEventListener("click", ()=>{ dayPlans[selectedDay] = {action: actionSel.value, apply: applySel.value, enjoy: enjoySel.value}; renderWeek() }) }
+  if(addBtn){ addBtn.addEventListener("click", updatePost) }
+
+  actionSel.addEventListener("change", ()=>{ dayPlans[selectedDay].action = actionSel.value; renderWeek() })
+  applySel.addEventListener("change", ()=>{ dayPlans[selectedDay].apply = applySel.value; renderWeek() })
+  enjoySel.addEventListener("change", ()=>{ dayPlans[selectedDay].enjoy = enjoySel.value; renderWeek() })
+  renderWeek()
+}
+
+function setupScanUpload(){
+  const input = qs("#scanUpload")
+  const preview = qs("#scanPreview")
+  if(!input || !preview) return
+  input.addEventListener("change", ()=>{
+    const file = input.files[0]
+    if(!file) return
+    const url = URL.createObjectURL(file)
+    preview.innerHTML = `<img src="${url}" alt="Scan">`
+    preview.style.display = "block"
+    toast("3D scan photo attached")
+  })
+}
+
+  function setupProfileUpload(){
+    const input = qs("#profileUpload")
+    const preview = qs("#profilePreview")
+    if(!input || !preview) return
+    input.addEventListener("change", ()=>{
+      const file = input.files[0]
+      if(!file) return
+      const url = URL.createObjectURL(file)
+      state.userAvatar = url
+      if(file.type.startsWith("video")){
+      preview.innerHTML = `<video src="${url}" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"></video>`
+    } else {
+      preview.innerHTML = `<img src="${url}" alt="Profile" style="width:100%;height:100%;object-fit:cover;">`
+    }
+  })
+}
+
+function setupGPS(){
+  const map = qs("#gpsMap")
+  const destInput = qs("#gpsDestination")
+  const routeBtn = qs("#gpsRoute")
+  if(map){
+    map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-74.1%2C40.6%2C-73.7%2C40.9&layer=mapnik"
+  }
+  async function routeToDestination(){
+    if(!map || !destInput) return
+    const dest = (destInput.value || "").trim()
+    if(!dest){
+      toast("Enter a destination")
+      return
+    }
+    const coordMatch = dest.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/)
+    const getOrigin = ()=>new Promise((resolve)=>{
+      if(!navigator.geolocation){ resolve(null); return }
+      navigator.geolocation.getCurrentPosition(
+        pos=>resolve({lat:pos.coords.latitude, lng:pos.coords.longitude}),
+        ()=>resolve(null),
+        {enableHighAccuracy:true, timeout:6000}
+      )
+    })
+    const origin = await getOrigin()
+    if(coordMatch){
+      const dLat = coordMatch[1]
+      const dLng = coordMatch[3]
+      if(origin){
+        map.src = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.lat},${origin.lng};${dLat},${dLng}`
+      } else {
+        map.src = `https://www.openstreetmap.org/?mlat=${dLat}&mlon=${dLng}#map=13/${dLat}/${dLng}`
+      }
+      return
+    }
+    try{
+      const q = encodeURIComponent(dest)
+      const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
+      const data = await geo.json()
+      if(!data.length){
+        toast("Destination not found")
+        return
+      }
+      const dLat = data[0].lat
+      const dLng = data[0].lon
+      if(origin){
+        map.src = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.lat},${origin.lng};${dLat},${dLng}`
+      } else {
+        map.src = `https://www.openstreetmap.org/?mlat=${dLat}&mlon=${dLng}#map=13/${dLat}/${dLng}`
+      }
+    }catch{
+      toast("Route failed")
+    }
+  }
+  if(routeBtn){ routeBtn.addEventListener("click", routeToDestination) }
+  const btn = qs("#findSalons")
+  const list = qs("#salonResults")
+  if(btn && list){
+    btn.addEventListener("click", ()=>{
+      list.textContent = "Finding nearby salons..."
+      if(!navigator.geolocation){
+        list.textContent = "Geolocation not supported."
+        return
+      }
+      navigator.geolocation.getCurrentPosition(async (pos)=>{
+        try{
+          const r = await fetch("/api/salons",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({lat: pos.coords.latitude, lon: pos.coords.longitude})
+          })
+          const salons = await r.json()
+          if(!salons.length){ list.textContent = "No salons found."; return }
+          list.innerHTML = salons.map(s=>`<div>${s.name} - ${s.distance} mi</div>`).join("")
+        }catch{
+          list.textContent = "Salon lookup failed."
+        }
+      }, ()=>{ list.textContent = "Location denied."; })
+    })
+  }
+  const hf = qs("#gpsHandsFree")
+  if(hf){
+    hf.addEventListener("click", ()=>{
+      qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
+      qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
+      qs('[data-tab="handsfree"]').classList.add("active")
+      qs("#tab-handsfree").classList.add("active")
+      if(window.startAriaListening){ window.startAriaListening() }
+    })
+  }
+}
+
+function setupSEOLogs(){
+  const streams = [qs("#logStream"), qs("#logStreamStandalone")].filter(Boolean)
+  let timer = null
+  const close = qs("#closeSeo")
+  const publish = qs("#seoPublish")
+  const autoBtn = qs("#seoAuto")
+  const autoStandalone = qs("#seoAutoStandalone")
+  const testBtn = qs("#testEmailBtn")
+  if(!streams.length) return
+  if(timer) clearInterval(timer)
+  timer = setInterval(()=>{
+    const line = `[${new Date().toLocaleTimeString()}] render: build ok · cache hit · seo feed synced`
+    streams.forEach(stream=>{
+      const div = document.createElement("div")
+      div.textContent = line
+      stream.appendChild(div)
+      stream.scrollTop = stream.scrollHeight
+    })
+  }, 4800)
+  if(close){ close.addEventListener("click", ()=>{ if(timer) clearInterval(timer) }) }
+  if(publish){
+    publish.addEventListener("click", async ()=>{
+      const r = await fetch("/api/seo/publish", {method:"POST"})
+      const d = await r.json()
+      streams.forEach(stream=>{
+        const div = document.createElement("div")
+        div.textContent = `[SEO] ${d.ok ? "Published" : "Failed"} · ${d.message || d.error || ""}`
+        stream.appendChild(div)
+        stream.scrollTop = stream.scrollHeight
+      })
+    })
+  }
+  if(autoBtn){
+    autoBtn.addEventListener("click", async ()=>{
+      const enabled = !autoBtn.classList.contains("active")
+      const ok = await setSeoAuto(enabled, streams[0])
+      if(ok){
+        autoBtn.classList.toggle("active", enabled)
+        autoBtn.textContent = enabled ? "SEO 4x/Day Active" : "Activate SEO 4x/Day (Random)"
+      }
+    })
+  }
+  if(autoStandalone){
+    autoStandalone.addEventListener("click", async ()=>{
+      const enabled = !autoStandalone.classList.contains("active")
+      const ok = await setSeoAuto(enabled, streams[0])
+      if(ok){
+        autoStandalone.classList.toggle("active", enabled)
+        autoStandalone.textContent = enabled ? "SEO 4x/Day Active" : "Activate SEO 4x/Day (Random)"
+      }
+    })
+  }
+  if(testBtn){
+    testBtn.addEventListener("click", async ()=>{
+      const r = await fetch("/api/custom-order/test", {method:"POST"})
+      const d = await r.json()
+      streams.forEach(stream=>{
+        const div = document.createElement("div")
+        div.textContent = `[EMAIL] ${d.ok ? "Test sent" : "Test failed"}`
+        stream.appendChild(div)
+        stream.scrollTop = stream.scrollHeight
+      })
+    })
+  }
+}
+
+function setupReel(){
+  const btn = qs("#openReel")
+  if(btn){ btn.addEventListener("click", ()=>openModal("reelModal")) }
+  const panel = qs("#reelPanel")
+  const toggle = qs("#toggleReel")
+  const tab = qs("#reelTab")
+  if(panel && toggle){
+    toggle.addEventListener("click", ()=>{
+      panel.classList.toggle("hidden")
+      toggle.textContent = panel.classList.contains("hidden") ? "Show" : "Hide"
+    })
+  }
+  if(panel && tab){
+    tab.addEventListener("click", ()=>{
+      panel.classList.remove("hidden")
+      if(toggle) toggle.textContent = "Hide"
+    })
+  }
+}
+
+function setupAIMillionaireTab(){
+  const briefBtn = qs("#aiStartBrief")
+  if(briefBtn){
+    briefBtn.addEventListener("click", ()=>{
+      openMiniWindow("AI Money Paths", "Agency, SaaS, automation, content, and consulting.")
+    })
+  }
+  qsa(".ai-link").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.dataset.aiLink
+      const link = AI_LINKS[key]
+      if(link){ openLinkModal(link, "AI Millionaire Source") }
+    })
+  })
+}
+
+function setupVRScan(){
+  const openBtn = qs("#vrScanBtn")
+  const modal = qs("#vrScanModal")
+  const close = qs("#closeVrScan")
+  const start = qs("#startVrScan")
+  const status = qs("#vrScanStatus")
+
+  function reset(){
+    if(status) status.textContent = "Ready to scan brochure."
+    if(start) start.disabled = false
+  }
+
+  if(openBtn){
+    openBtn.addEventListener("click", ()=>{
+      reset()
+      const brochure = qs("#brochureModal")
+      if(brochure) brochure.style.display = "none"
+      openModal("vrScanModal")
+    })
+  }
+  if(close){
+    close.addEventListener("click", ()=>{
+      if(modal) modal.style.display = "none"
+    })
+  }
+  if(start){
+    start.addEventListener("click", ()=>{
+      if(status) status.textContent = "Scanning VR code…"
+      start.disabled = true
+      setTimeout(()=>{
+        if(modal) modal.style.display = "none"
+        if(status) status.textContent = "Scan complete. Opening brochure…"
+        openModal("brochureModal")
+        start.disabled = false
+      }, 2200)
+    })
+  }
+}
+
+function setupAdminQuickActions(){
+  const seoQuick = qs("#seoQuick")
+  const testQuick = qs("#testEmailQuick")
+  if(seoQuick){
+    seoQuick.addEventListener("click", async ()=>{
+      const ok = await setSeoAuto(true)
+      if(ok){
+        const autoBtn = qs("#seoAuto")
+        if(autoBtn){
+          autoBtn.classList.add("active")
+          autoBtn.textContent = "SEO 4x/Day Active"
+        }
+        openMiniWindow("SEO Engine", "Random 4x/day schedule activated.")
+      }else{
+        openMiniWindow("SEO Engine", "Activation failed. Check admin config.")
+      }
+    })
+  }
+  if(testQuick){
+    testQuick.addEventListener("click", async ()=>{
+      try{
+        const r = await fetch("/api/custom-order/test", {method:"POST"})
+        const d = await r.json()
+        openMiniWindow("Test Email", d.ok ? "Sent to developer inbox." : "Failed to send.")
+      }catch{
+        openMiniWindow("Test Email", "Failed to send.")
+      }
+    })
+  }
+}
+
+function setupCamera(){}
+
+function updateOccasionVisibility(){
+  const show = state.subscription !== "free" || isProOverride()
+  const menu = qs("#menuOccasion")
+  if(menu) menu.style.display = show ? "inline-flex" : "none"
+  qsa('[data-app="Occasion Editor"]').forEach(el=>{
+    el.style.display = show ? "" : "none"
+  })
+}
+
+function setDefaultLevelBySubscription(){
+  if(state.subscription === 'premium' || state.subscription === 'pro'){
+    if(state.ariaLevel === 'greeting'){ state.ariaLevel = 'thorough' }
+  } else {
+    state.ariaLevel = 'greeting'
+  }
+  updateOccasionVisibility()
+}
+
+function isProOverride(){
+  const email = (state.socialLinks && state.socialLinks.email || '').toLowerCase()
+  return email === 'agentanthony@supportrd.com'
+}
+
+function setupSettings(){
+  const saved = JSON.parse(localStorage.getItem("socialLinks") || "{}")
+  state.socialLinks = saved
+  state.subscription = (saved.subscription || "free").toLowerCase().includes("pro") ? "pro" :
+    ((saved.subscription || "").toLowerCase().includes("premium") ? "premium" : "free")
+  if(isProOverride()) { state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0; localStorage.setItem('loggedIn','true') }
+  setDefaultLevelBySubscription()
+  qs("#setName").value = saved.name || ""
+  qs("#setEmail").value = saved.email || ""
+  qs("#setPhone").value = saved.phone || ""
+  qs("#setUsername").value = saved.username || ""
+  qs("#setPassword").value = ""
+  qs("#setAddress").value = saved.address || ""
+  qs("#setSubscription").value = isProOverride() ? "Pro (Admin)" : (saved.subscription || "")
+  qs("#setCustomOrder").value = saved.customOrder || ""
+  qs("#setEvelyn").value = saved.evelyn || ""
+  qs("#setIG").value = saved.ig || ""
+  qs("#setTikTok").value = saved.tiktok || ""
+  qs("#setFB").value = saved.fb || ""
+  qs("#setYT").value = saved.yt || ""
+  qs("#setX").value = saved.x || ""
+  qs("#setThreads").value = saved.threads || ""
+  const feeds = saved.feeds || {ig:true,tiktok:true,fb:true}
+  qs("#feedIG").checked = !!feeds.ig
+  qs("#feedTikTok").checked = !!feeds.tiktok
+  qs("#feedFB").checked = !!feeds.fb
+  qs("#feedYT").checked = !!feeds.yt
+  qs("#feedX").checked = !!feeds.x
+  qs("#feedThreads").checked = !!feeds.threads
+  qs("#pushAria").checked = !!saved.pushAria
+
+  const save = qs("#saveSettings")
+  if(save){
+    save.addEventListener("click", ()=>{
+      state.socialLinks = {
+        name: qs("#setName").value.trim(),
+        email: qs("#setEmail").value.trim(),
+        phone: qs("#setPhone").value.trim(),
+        username: qs("#setUsername").value.trim(),
+        address: qs("#setAddress").value.trim(),
+        subscription: qs("#setSubscription").value.trim(),
+        customOrder: qs("#setCustomOrder").value.trim(),
+        evelyn: qs("#setEvelyn").value.trim(),
+        ig: qs("#setIG").value.trim(),
+        tiktok: qs("#setTikTok").value.trim(),
+        fb: qs("#setFB").value.trim(),
+        yt: qs("#setYT").value.trim(),
+        x: qs("#setX").value.trim(),
+        threads: qs("#setThreads").value.trim(),
+        feeds: {
+          ig: qs("#feedIG").checked,
+          tiktok: qs("#feedTikTok").checked,
+          fb: qs("#feedFB").checked,
+          yt: qs("#feedYT").checked,
+          x: qs("#feedX").checked,
+          threads: qs("#feedThreads").checked
+        },
+        pushAria: qs("#pushAria").checked
+      }
+      localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+      const sub = state.socialLinks.subscription.toLowerCase()
+      state.subscription = sub.includes("pro") ? "pro" : (sub.includes("premium") ? "premium" : "free")
+      if(isProOverride()){ state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0 }
+      setDefaultLevelBySubscription()
+      toast("Settings saved")
+      const indicator = qs("#socialIndicator")
+      if(indicator){
+        const list = Object.keys(state.socialLinks.feeds || {}).filter(k=>state.socialLinks.feeds[k])
+        indicator.textContent = list.length ? `Feeds: ${list.map(x=>x[0].toUpperCase()+x.slice(1)).join(", ")}` : "Feeds: none selected"
+      }
+    })
+  }
+}
+
+function setupPwa(){
+  let deferredPrompt = null
+  window.addEventListener("beforeinstallprompt", (e)=>{
+    e.preventDefault()
+    deferredPrompt = e
+    const btn = qs("#installBtn")
+    if(btn) btn.style.display = "inline-flex"
+  })
+  const btn = qs("#installBtn")
+  if(btn){
+    btn.addEventListener("click", async ()=>{
+      if(!deferredPrompt) return
+      deferredPrompt.prompt()
+      deferredPrompt = null
+      btn.style.display = "none"
+    })
+  }
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("/sw.js")
+  }
+}
+
+function setupFamilyMode(){
+  const toggle = qs("#familyToggle")
+  if(!toggle) return
+  toggle.addEventListener("change", ()=>{
+    if(toggle.checked){
+      window.location.href = "https://supportrd.com"
+    }
+  })
+}
+
+function setupLoginGate(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('socialLinks') || '{}')
+    if(saved.email && saved.email.toLowerCase() === 'agentanthony@supportrd.com'){
+      localStorage.setItem('loggedIn','true')
+    }
+  }catch{}
+  const gate = qs("#loginGate")
+  const loginBtn = qs("#loginBtn")
+  const logoutBtn = qs("#logoutBtn")
+  const signupTop = qs("#signupTop")
+  const closeGate = qs("#closeLoginGate")
+  const loggedIn = localStorage.getItem("loggedIn") === "true"
+  const first = Number(localStorage.getItem("firstSeen") || Date.now())
+  if(!localStorage.getItem("firstSeen")) localStorage.setItem("firstSeen", String(first))
+  const trialBanner = qs("#trialCodeBanner")
+  const trialOverlay = qs("#trialOverlay")
+  const trialClose = qs("#trialClose")
+  let overlayShowing = false
+  function syncTrialOverlay(){
+    if(!trialOverlay) return
+    const now = Date.now()
+    const minutes = (now - first) / 60000
+    const dismissed = localStorage.getItem("trialDismissed") === "true"
+    const shouldShow = minutes <= 30 && !dismissed && !loggedIn
+    if(shouldShow !== overlayShowing){
+      trialOverlay.classList.toggle("show", shouldShow)
+      overlayShowing = shouldShow
+    }
+    trialOverlay.setAttribute("aria-hidden", shouldShow ? "false" : "true")
+    if(trialBanner){ trialBanner.style.display = shouldShow ? "none" : "block" }
+  }
+  function syncTrialBanner(){
+    if(!trialBanner) return
+    const now = Date.now()
+    const minutes = (now - first) / 60000
+    trialBanner.style.display = minutes <= 30 ? "block" : "none"
+  }
+  if(trialClose){
+    trialClose.addEventListener("click", ()=>{
+      localStorage.setItem("trialDismissed", "true")
+      syncTrialOverlay()
+    })
+  }
+  function syncLoginUi(isLogged){
+    if(gate){ gate.style.display = "none" }
+    document.body.classList.toggle("login-active", false)
+    if(loginBtn) loginBtn.style.display = isLogged ? "none" : "inline-flex"
+    if(signupTop) signupTop.style.display = isLogged ? "none" : "inline-flex"
+    if(logoutBtn) logoutBtn.style.display = isLogged ? "inline-flex" : "none"
+    const badge = qs("#userBadge")
+    if(badge){ badge.style.display = isLogged ? "inline-flex" : "none" }
+  }
+  syncTrialOverlay()
+  syncTrialBanner()
+  syncLoginUi(loggedIn)
+  setAdminVisibility(false)
+  fetch("/api/me").then(r=>r.json()).then(d=>{
+    if(d && d.authenticated){
+      localStorage.setItem("loggedIn","true")
+      syncLoginUi(true)
+      const badge = qs("#userBadge")
+      const name = d.user && (d.user.name || d.user.nickname || d.user.email) ? (d.user.name || d.user.nickname || d.user.email) : "Logged In"
+      if(badge){ badge.textContent = name }
+      setAdminVisibility(!!d.admin)
+    }
+  }).catch(()=>{})
+  function openLoginGate(){
+    if(gate){ gate.style.display = "flex" }
+    document.body.classList.add("login-active")
+  }
+  function closeLoginGate(){
+    if(gate){ gate.style.display = "none" }
+    document.body.classList.remove("login-active")
+  }
+  if(loginBtn){ loginBtn.addEventListener("click", openLoginGate) }
+  if(signupTop){ signupTop.addEventListener("click", ()=>{ window.location = "/login?mode=signup" }) }
+  if(closeGate){ closeGate.addEventListener("click", closeLoginGate) }
+  if(logoutBtn){ logoutBtn.addEventListener("click", ()=>{ window.location = "/logout" }) }
+
+  function completeLogin(){
+    localStorage.setItem("loggedIn","true")
+    syncLoginUi(true)
+  }
+
+  // Provider buttons are plain links to avoid popup blockers.
+}
+
+function setupBrochure(){
+  const btn = qs("#vrScanBtn")
+  const floatBtn = qs("#openBrochureFloat")
+  if(btn){ btn.addEventListener("click", ()=>openModal("brochureModal")) }
+  if(floatBtn){ floatBtn.addEventListener("click", ()=>openModal("brochureModal")) }
+}
+
+function setupPuzzle(){
+  const q = qs("#puzzleQuestion")
+  const a = qs("#puzzleAnswer")
+  const btn = qs("#puzzleSubmit")
+  if(!q || !a || !btn) return
+  function newPuzzle(){
+    const x = 3 + Math.floor(Math.random() * 9)
+    const y = 4 + Math.floor(Math.random() * 9)
+    state.puzzleAnswer = x + y
+    q.textContent = `What is ${x} + ${y}?`
+    a.value = ""
+  }
+  btn.addEventListener("click", ()=>{
+    if(Number(a.value) === state.puzzleAnswer){
+      state.ariaBlocked = false
+      state.ariaCount = 0
+      qs("#puzzleModal").style.display = "none"
+      appendAria("ARIA: Thanks! You’re unlocked — continue your hair routine questions.")
+    } else {
+      toast("Try again")
+      newPuzzle()
+    }
+  })
+  newPuzzle()
+}
+
+async function loadProducts(){
+  try{
+    const r = await fetch("/api/products")
+    const items = await r.json()
+    return Array.isArray(items) ? items : []
+  }catch{
+    return []
+  }
+}
+
+
+function setupHairAnalysis(){
+  const start = qs("#startHairScan")
+  const overlay = qs("#hairScanOverlay")
+  const status = qs("#hairScanStatus")
+  const result = qs("#analysisResult")
+  const close = qs("#closeHairScan")
+  if(close){ close.addEventListener("click", ()=>{ if(overlay) overlay.style.display = "none" }) }
+  if(!start || !overlay) return
+  start.addEventListener("click", ()=>{
+    overlay.style.display = "flex"
+    if(status) status.textContent = "Scanning... hold steady and move left to right."
+    if(result) result.textContent = "Scan running..."
+    setTimeout(()=>{
+      const summary = "Scan complete. I see dryness at the ends with light frizz and low bounce at the crown. I recommend a moisture mask, light protein, and a satin wrap.";
+      if(status) status.textContent = summary
+      if(result) result.textContent = summary
+      showSpeechPopup("ARIA", summary)
+      speakReply(summary)
+      setTimeout(()=>{ overlay.style.display = "none" }, 2400)
+    }, 1800)
+  })
+}
+
+  
+  
+
+
+
+
+function setupAria(){
+  const btn = qs("#voiceToggle")
+  const sphere = qs("#ariaSphere")
+  const handsBtn = qs("#handsfreeToggle")
+  let ariaActive = false
+  let mediaRecorder = null
+  let audioChunks = []
+      let chunkCount = 0
+  let recStream = null
+  let maxRecordTimer = null
+  let vadTimer = null
+  let liveTranscript = ""
+  let transcribeBusy = false
+  let transcribeFailures = 0
+
+  function syncHandsFree(){
+    if(!handsBtn) return
+    handsBtn.textContent = handsFreeMode ? "Hands-Free: ON" : "Hands-Free: OFF"
+    handsBtn.classList.toggle("active", handsFreeMode)
+  }
+  if(handsBtn){
+    syncHandsFree()
+    handsBtn.addEventListener("click", ()=>{
+      handsFreeMode = !handsFreeMode
+      syncHandsFree()
+      if(handsFreeMode && !ariaActive){
+        startOpenAIListening()
+      }
+    })
+  }
+
+function uiError(msg){
+  if(!msg) return
+  if(msg.startsWith("Mic:") || msg.startsWith("Voice error")) return
+  if(!SUPPRESS_ERROR_TEXT) toast(msg)
+}
+
+  function stopVAD(){
+    if(vadTimer){ clearInterval(vadTimer); vadTimer = null }
+  }
+
+  function startVAD(stream){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const src = ctx.createMediaStreamSource(stream)
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 1024
+      src.connect(analyser)
+      const data = new Uint8Array(analyser.fftSize)
+      let silenceMs = 0
+      let heardSpeech = false
+      vadTimer = setInterval(()=>{
+        analyser.getByteTimeDomainData(data)
+        let sum = 0
+        for(let i=0;i<data.length;i++){
+          const v = (data[i] - 128) / 128
+          sum += v * v
+        }
+        const rms = Math.sqrt(sum / data.length)
+        if(rms > 0.012){
+          heardSpeech = true
+          silenceMs = 0
+        } else if(heardSpeech){
+          silenceMs += 150
+        }
+        if(heardSpeech && silenceMs >= 2000){
+          stopOpenAIListening()
+        }
+      }, 150)
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+  }
+
+  async function transcribeChunk(blob){
+    if(transcribeBusy) return
+    transcribeBusy = true
+    try{
+      const form = new FormData()
+      form.append("audio", blob, "chunk.webm")
+      if(typeof getAriaLang === "function"){ form.append("language", getAriaLang()) }
+      const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
+      if(!r.ok){
+        let detail = ''
+        try{ const d = await r.json(); detail = (d.detail || d.error || '') }catch{}
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failed ' + r.status + (detail ? ' · ' + detail : '')
+        return
+      }
+      if(r.ok){
+        transcribeFailures = 0
+        const d = await r.json()
+        const t = (d.text || "").trim()
+        if(t){
+          liveTranscript = (liveTranscript + " " + t).trim()
+          const transcriptEl = qs("#ariaTranscript")
+          if(transcriptEl){ transcriptEl.textContent = liveTranscript }
+          showLiveSpeechPopup(liveTranscript)
+        }
+      }
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+    transcribeBusy = false
+  }
+
+  async function stopOpenAIListening(){
+    if(maxRecordTimer){ clearTimeout(maxRecordTimer); maxRecordTimer = null }
+    stopVAD()
+    try{
+      if(mediaRecorder && mediaRecorder.state !== "inactive"){
+        mediaRecorder.stop()
+      }
+    }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+  }
+
+  async function startOpenAIListening(){
+    if(ariaActive){
+      await stopOpenAIListening()
+      return
+    }
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      
+      return
+    }
+    if(!window.MediaRecorder){
+      
+      return
+    }
+    try{
+      startListenLoop()
+      setAriaFlow("listening")
+      
+      liveTranscript = ""
+      const reelVid = qs(".reel-embed video")
+      if(reelVid){ try{ reelVid.pause() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    } }
+
+      recStream = await navigator.mediaDevices.getUserMedia({audio:true})
+      audioChunks = []
+      let chunkCount = 0
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm"
+      mediaRecorder = new MediaRecorder(recStream, { mimeType: mime })
+      mediaRecorder.ondataavailable = (e)=>{
+        if(e.data && e.data.size){
+          audioChunks.push(e.data)
+          chunkCount++
+          transcribeChunk(e.data)
+        }
+      }
+      mediaRecorder.onerror = ()=>{  }
+      mediaRecorder.onstop = async ()=>{
+        ariaActive = false
+        if(reelVid){ try{ reelVid.play() }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    } }
+        if(!chunkCount){  setAriaFlow('idle'); stopListenLoop(); return }
+        const blob = new Blob(audioChunks, {type: "audio/webm"})
+        if(recStream){ recStream.getTracks().forEach(t=>t.stop()) }
+        try{
+          setAriaFlow("processing")
+          const form = new FormData()
+          form.append("audio", blob, "speech.webm")
+          form.append("language", getAriaLang())
+          const r = await fetch("/api/aria/transcribe", { method:"POST", body: form })
+          if(!r.ok){
+            let detail = ''
+            try{ const dErr = await r.json(); detail = (dErr.detail || dErr.error || '') }catch{}
+            throw new Error(detail || 'transcribe failed')
+          }
+          const d = await r.json()
+          const transcript = (d.text || "").trim() || liveTranscript
+          const transcriptEl = qs("#ariaTranscript")
+          if(transcriptEl){ transcriptEl.textContent = transcript || "No speech detected." }
+          finalizeLiveSpeechPopup()
+          if(transcript){
+            stopListenLoop()
+            setTimeout(async ()=>{
+              await askAria(transcript)
+              if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening() }, 900) }
+            }, 2000)
+          } else {
+            setAriaFlow("idle")
+            stopListenLoop()
+            if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening() }, 900) }
+          }
+        }catch(err){
+          uiError("Voice error: " + (err && err.message ? err.message : "could not transcribe"))
+          setAriaFlow("idle")
+          stopListenLoop()
+        }
+      }
+      try{ mediaRecorder.start(600) }catch{ mediaRecorder.start() }
+      ariaActive = true
+      startVAD(recStream)
+      maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 12000)
+    }catch{
+      
+      setAriaFlow("idle")
+      stopListenLoop()
+    }
+  }
+
+  if(btn){ btn.addEventListener("click", startOpenAIListening) }
+  if(sphere){
+    sphere.classList.add("aria-pulse")
+    sphere.addEventListener("click", startOpenAIListening)
+  }
+  window.startAriaListening = startOpenAIListening
+}
+
+function renderApp(name){
+  const body = qs("#appBody")
+  if(!body) return
+  if(name && name.includes("Donate")){
+    body.innerHTML = `
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+        <div style="width:140px;height:120px;border-radius:18px;background:linear-gradient(135deg,#f7e7c9,#e4b97e);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.25);">
+          <svg width="110" height="80" viewBox="0 0 110 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="18" width="94" height="44" rx="14" fill="#f2d8a6" stroke="#d3aa6c" stroke-width="3"/>
+            <rect x="16" y="26" width="78" height="28" rx="12" fill="#f7e6c9"/>
+            <circle cx="40" cy="40" r="6" fill="#d0b184"/>
+            <circle cx="66" cy="40" r="6" fill="#d0b184"/>
+          </svg>
+        </div>
+        <div style="flex:1;min-width:220px;">
+          <div style="font-weight:700;margin-bottom:6px;">Donate to the Poor · Auto Dissolve Bar</div>
+          <div style="color:var(--muted);margin-bottom:10px;">
+            Movement: every bar supports local care packages and hygiene support. Your purchase helps fund soap, shampoo, and essentials.
+          </div>
+          <button class="btn" id="donateLinkBtn">Open Donation</button>
+        </div>
+      </div>
+    `
+    qs("#donateLinkBtn").addEventListener("click", ()=>openLinkModal(LINKS.donate, "Donate to the Poor"))
+    return
+  }
+  if(name === "Contact Anthony"){
+    body.innerHTML = `Email: AgentAnthony@supportdr.com<br>Phone: 7043452867`
+    return
+  }
+  if(name === "Snapshot Coder Idea"){
+    if(state.subscription === "free"){
+      body.innerHTML = `<div class="lock-pill">Premium feature</div><div style="margin-top:8px;color:var(--muted);">Upgrade to unlock Snapshot Coder insights and GPT‑5.2 Codex tracking.</div><button class="btn" id="openSubFromSnap">Upgrade</button>`
+      qs("#openSubFromSnap").addEventListener("click", ()=>openModal("subscriptionModal"))
+      return
+    }
+    body.innerHTML = `<div style="margin-bottom:10px;">Paste your recent work and let ARIA score progress, blockers, and next steps.</div><textarea id="coderInput" style="width:100%;min-height:140px;"></textarea><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn" id="coderAnalyze">Analyze with ARIA (GPT 5.2 Codex)</button><button class="btn ghost" id="coderSend">Send Snapshot to Anthony</button></div>`
+    qs("#coderAnalyze").addEventListener("click", ()=>toast("ARIA analysis queued"))
+    qs("#coderSend").addEventListener("click", ()=>{
+      const text = encodeURIComponent(qs("#coderInput").value || "")
+      openLinkModal(`mailto:AgentAnthony@supportdr.com?subject=Snapshot%20Coder%20Idea&body=${text}`,"Send Snapshot")
+    })
+    return
+  }
+  if(name === "Live Coder Suggestions"){
+    body.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px;">30‑Day Subscription Build Plan</div>
+      <ul style="margin:0 0 10px 16px;color:var(--muted);">
+        <li>Week 1: onboarding flow, account linking, analytics baseline.</li>
+        <li>Week 2: routine generator improvements + scan history.</li>
+        <li>Week 3: social posting automation + SEO blog cadence.</li>
+        <li>Week 4: growth experiments + retention and push/PWA upgrades.</li>
+      </ul>
+      <div style="color:var(--muted);margin-bottom:10px;">Send a suggestion and we’ll credit 1 month premium for accepted ideas.</div>
+      <textarea id="suggestionInput" style="width:100%;min-height:120px;"></textarea>
+      <button class="btn" id="sendSuggestion">Send Suggestion</button>
+    `
+    qs("#sendSuggestion").addEventListener("click", ()=>{
+      const text = encodeURIComponent(qs("#suggestionInput").value || "")
+      openLinkModal(`mailto:AgentAnthony@supportdr.com?subject=Live%20Coder%20Suggestion&body=${text}`,"Send Suggestion")
+    })
+    return
+  }
+  if(name === "Live Hair Score"){
+    const score = Math.round(state.hairScore || 0)
+    const circumference = 2 * Math.PI * 70
+    const dash = Math.round(circumference * (score / 100))
+    body.innerHTML = `
+      <div class="score-card">
+        <div class="score-ring" id="scoreRing">
+          <svg viewBox="0 0 160 160">
+            <defs>
+              <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#00e2ff"/>
+                <stop offset="0.5" stop-color="#7c7cff"/>
+                <stop offset="1" stop-color="#ffb657"/>
+              </linearGradient>
+            </defs>
+            <circle cx="80" cy="80" r="70" stroke="rgba(255,255,255,0.15)" stroke-width="12" fill="none"/>
+            <circle cx="80" cy="80" r="70" stroke="url(#scoreGrad)" stroke-width="12" fill="none" stroke-linecap="round"
+              stroke-dasharray="${dash} ${Math.round(circumference - dash)}"/>
+          </svg>
+          <div class="score-value"><div>${score}%</div><span>Live Hair Score</span></div>
+        </div>
+        <div class="score-legend">
+          <div class="tag">SupportRD Live · Plus500‑style momentum</div>
+          <div style="color:var(--muted);margin-bottom:10px;">Tap the score to reveal your ARIA level and unlocks.</div>
+          <div class="score-bars">
+            <div>Consistency</div>
+            <div class="score-bar"><span style="width:${Math.min(100, score + 10)}%"></span></div>
+            <div>Care Routine</div>
+            <div class="score-bar"><span style="width:${Math.max(20, score - 8)}%"></span></div>
+            <div>Progress</div>
+            <div class="score-bar"><span style="width:${Math.min(100, score + 4)}%"></span></div>
+          </div>
+        </div>
+      </div>
+      <div id="scoreLevels" style="display:none;margin-top:14px;">
+        <div style="font-weight:700;margin-bottom:8px;">ARIA Levels</div>
+        <div class="levels-grid" style="display:grid;gap:8px;">
+          <div class="level-card" data-level="intro">Introduction</div>
+          <div class="level-card" data-level="breakdown">Breaking Down Topics</div>
+          <div class="level-card" data-level="inner">Inner Circle</div>
+          <div class="level-card" data-level="pro">Professional · Making Money</div>
+        </div>
+        <div id="proDetails" style="margin-top:10px;color:var(--muted);display:none;">
+          Professional access unlocked. Direct contact: AgentAnthony@supportdr.com · 7043452867.
+          Sally Ruberry has reached professional level due to her outstanding hair managing skills and wants to discuss business.
+        </div>
+      </div>
+    `
+    const ring = qs("#scoreRing")
+    const levels = qs("#scoreLevels")
+    const side = qs("#levelSide")
+    if(ring){
+      ring.addEventListener("click", ()=>{
+        levels.style.display = levels.style.display === "none" ? "block" : "none"
+        if(side){ side.classList.toggle('show') }
+      })
+    }
+    const level = score >= 90 ? "pro" : score >= 75 ? "inner" : score >= 45 ? "breakdown" : "intro"
+    const sub = state.subscription
+    qsa(".level-card").forEach(card=>{
+      const isLocked = (sub === "free" && card.dataset.level !== "intro") ||
+        (sub === "premium" && (card.dataset.level === "inner" || card.dataset.level === "pro"))
+      if(card.dataset.level === level){
+        card.style.background = "linear-gradient(135deg, rgba(0,226,255,0.25), rgba(124,124,255,0.25))"
+        card.style.border = "1px solid rgba(0,226,255,0.6)"
+        card.style.color = "#fff"
+      } else {
+        card.style.background = "rgba(255,255,255,0.06)"
+        card.style.border = "1px solid rgba(255,255,255,0.12)"
+      }
+      card.classList.toggle("locked", isLocked)
+      card.textContent = card.textContent.replace(" 🔒","")
+      if(isLocked){ card.textContent += " 🔒" }
+    })
+    const pro = qs("#proDetails")
+    if(pro && level === "pro" && sub === "pro"){ pro.style.display = "block" }
+    return
+  }
+  if(name === "Shopify Products"){
+    body.innerHTML = `<div style="font-weight:700;margin-bottom:8px;">SupportRD Products</div>
+      <div style="color:var(--muted);margin-bottom:10px;">Browse the lineup and jump to custom orders.</div>
+      <div id="shopifyLineup" class="gift-grid"></div>
+      <button class="btn" id="openCustomShop">Open Custom Order</button>`
+    qs("#openCustomShop").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
+    loadProducts().then(items=>{
+      const fallback = [
+        {title:"Shampoo Aloe Vera", price:"20"},
+        {title:"Formula Exclusiva", price:"55"},
+        {title:"Laciador Crece", price:"40"},
+        {title:"Mascarilla Capilar", price:"25"},
+        {title:"Gotero Rapido", price:"55"},
+        {title:"Gotitas Brillantes", price:"30"}
+      ]
+      const list = items.length ? items : fallback
+      const wrap = qs("#shopifyLineup")
+      if(!wrap) return
+      wrap.innerHTML = list.map(p=>`<div class="gift-card"><div style="font-weight:700;">${p.title}</div><div class="gift-price">$${p.price}</div></div>`).join("")
+    })
+    return
+  }
+  if(name === "Subscription Banner"){
+    body.innerHTML = `<div style="font-weight:700;margin-bottom:8px;">Subscription Banner</div>
+      <div style="color:var(--muted);margin-bottom:10px;">Current plan: <strong>${state.subscription.toUpperCase()}</strong></div>
+      <div class="gift-grid">
+        <div class="gift-card"><div style="font-weight:700;">Premium</div><div class="gift-price">$35 / month</div></div>
+        <div class="gift-card"><div style="font-weight:700;">Professional</div><div class="gift-price">$50 / month</div></div>
+      </div>
+      <button class="btn" id="openSubscriptionBanner">Open Subscription</button>`
+    qs("#openSubscriptionBanner").addEventListener("click", ()=>openModal("subscriptionModal"))
+    return
+  }
+  if(name === "AI Millionaire Hub"){
+    body.innerHTML = `
+      <div style="font-weight:700;margin-bottom:8px;">AI Millionaire Source Hub</div>
+      <div style="color:var(--muted);margin-bottom:10px;">Use these links to curate daily AI wealth content.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="btn ghost" id="aiHubStack">Best AI Stack 2026</button>
+        <button class="btn ghost" id="aiHubStories">AI Millionaire Stories</button>
+      </div>
+      <div class="mini-list">Daily cadence: story · tool stack · tutorial · CTA to premium.</div>
+    `
+    qs("#aiHubStack").addEventListener("click", ()=>openLinkModal(AI_LINKS.best_ai_2026, "Best AI Tools 2026"))
+    qs("#aiHubStories").addEventListener("click", ()=>openLinkModal(AI_LINKS.ai_millionaire, "AI Millionaire Stories"))
+    return
+  }
+  body.textContent = name
+}
+
+function setupAppsDock(){
+  const row = qs("#appsRow")
+  const library = qs("#appsLibrary")
+  const select = qs("#appSwapSelect")
+  if(!row || !select) return
+
+  const allApps = [
+    "Blog",
+    "Snapshot Coder Idea",
+    "Live Coder Suggestions",
+    "Donate to the Poor · Auto Dissolve Bar",
+    "Settings",
+    "Contact Anthony · Developer",
+    "Shopify Products",
+    "SEO Engine Viewer",
+    "Occasion Editor",
+    "Subscription Banner",
+    "Live Hair Score"
+  ]
+
+  select.innerHTML = '<option value="">Replace Selected App…</option>' + allApps.map(a=>`<option value="${a}">${a}</option>`).join("")
+
+  let activeCard = null
+  row.querySelectorAll(".app-card").forEach(card=>{
+    card.addEventListener("click", ()=>{
+      row.querySelectorAll(".app-card").forEach(c=>c.classList.remove("active"))
+      card.classList.add("active")
+      activeCard = card
+    })
+  })
+
+  function applyAppToCard(card, name, linkOverride){
+    card.textContent = name
+    card.dataset.app = name.replace(" · Developer","Contact Anthony")
+    if(linkOverride !== undefined){
+      card.dataset.link = linkOverride
+    } else if(name.includes("Donate")){
+      card.dataset.link = LINKS.donate
+    } else {
+      card.dataset.link = ""
+    }
+  }
+
+  select.addEventListener("change", ()=>{
+    if(!activeCard || !select.value) return
+    applyAppToCard(activeCard, select.value)
+    select.value = ""
+    toast("App replaced")
+  })
+
+  let dragEl = null
+  function wireCard(card, source){
+    card.setAttribute("draggable","true")
+    card.addEventListener("dragstart", e=>{
+      dragEl = source === "row" ? card : null
+      e.dataTransfer.effectAllowed = "move"
+      e.dataTransfer.setData("text/plain", JSON.stringify({
+        app: card.dataset.app,
+        link: card.dataset.link || "",
+        source
+      }))
+      card.classList.add("dragging")
+    })
+    card.addEventListener("dragend", ()=>{
+      card.classList.remove("dragging")
+      dragEl = null
+    })
+    card.addEventListener("dragover", e=>{
+      e.preventDefault()
+      card.classList.add("drag-over")
+    })
+    card.addEventListener("dragleave", ()=>card.classList.remove("drag-over"))
+    card.addEventListener("drop", e=>{
+      e.preventDefault()
+      card.classList.remove("drag-over")
+      let payload = {}
+      try{ payload = JSON.parse(e.dataTransfer.getData("text/plain") || "{}") }catch{
+      transcribeFailures += 1
+      if(transcribeFailures >= 3){
+        const t = qs('#ariaTranscript')
+        if(t) t.textContent = 'Mic: transcribe failing (check server)'
+      }
+    }
+      if(!payload.app) return
+      if(payload.source === "row" && dragEl && dragEl !== card && card.parentElement === row){
+        row.insertBefore(dragEl, card)
+        toast("Apps reordered")
+        return
+      }
+      if(payload.source === "library"){
+        applyAppToCard(card, payload.app, payload.link || "")
+        toast("App replaced")
+      }
+    })
+  }
+
+  row.querySelectorAll(".app-card").forEach(card=>wireCard(card, "row"))
+  if(library){
+    library.querySelectorAll(".app-card").forEach(card=>wireCard(card, "library"))
+  }
+}
+
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init start'; }catch{}
+  window.__appInit = true;
+  const savedHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
+  state.ariaHistory = savedHistory
+  const ariaEl = qs("#ariaHistory")
+  if(ariaEl){
+    ariaEl.innerHTML = state.ariaHistory.length ? state.ariaHistory.map(x=>`<div>${x}</div>`).join("") : "No history yet."
+  }
+
+  const safe = (fn)=>{ try{ fn() }catch(e){ console.error(e) } }
+  initHairScore()
+  renderApp("Live Hair Score")
+  openModal("appModal")
+  safe(setupTabs)
+  safe(setupThemeArrows)
+  safe(setupModals)
+  safe(setupPaymentChooser)
+  safe(setupSettings)
+  safe(setupPostActions)
+  safe(setupOccasion)
+  safe(setupScanUpload)
+  safe(setupProfileUpload)
+  safe(setupHairAnalysis)
+  safe(setupGPS)
+  safe(setupAria)
+  safe(setupPuzzle)
+  safe(setupSEOLogs)
+  safe(setupReel)
+  safe(setupAIMillionaireTab)
+  safe(setupAdminQuickActions)
+  safe(setupVRScan)
+  safe(setupBrochure)
+  safe(setupPwa)
+    safe(setupFamilyMode)
+    safe(initHairScore)
+    safe(setupAppsDock)
+  safe(setupLoginGate)
+  safe(loadProducts)
+  safe(setupMiniWindow)
+  safe(setupLevelSelect)
+  safe(wireAllButtons)
+  safe(setupInfoTray)
+  safe(watchTranscriptErrors)
+
+  // Fallback: open any data-link button
+  try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init done'; }catch{}
+
+  document.body.addEventListener("click", (e)=>{
+    const el = e.target.closest("[data-link]")
+    if(el && el.dataset.link){
+      openLinkModal(el.dataset.link, "SupportRD Link")
+    }
+  })
+})

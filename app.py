@@ -56,6 +56,7 @@ DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL", "")
 ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or DEVELOPER_EMAIL).lower()
 SEO_RANDOM_ENABLED = os.environ.get("SEO_RANDOM_ENABLED", "false").lower() == "true"
 SEO_RANDOM_JOB_IDS = []
+SEO_TRIGGER_TOKEN = os.environ.get("SEO_TRIGGER_TOKEN", "")
 CLAIM_CODES = [c.strip().upper() for c in os.environ.get("CLAIM_CODES", "SRD2026,NEW4ALL").split(",") if c.strip()]
 CLAIM_NAMES = [n.strip() for n in os.environ.get("CLAIM_NAMES", "Reptar,MrGiggles").split(",") if n.strip()]
 CLAIM_DB_PATH = os.environ.get("CLAIM_DB_PATH", "users.db")
@@ -184,6 +185,16 @@ def seo_auto():
                 pass
         SEO_RANDOM_JOB_IDS.clear()
     return {"ok": True, "enabled": SEO_RANDOM_ENABLED}
+
+@app.route("/seo/start", methods=["GET"])
+def seo_start():
+    global SEO_RANDOM_ENABLED
+    token = request.args.get("token", "")
+    if not SEO_TRIGGER_TOKEN or token != SEO_TRIGGER_TOKEN:
+        return "unauthorized", 401
+    SEO_RANDOM_ENABLED = True
+    schedule_random_seo_jobs()
+    return "ok"
 
 @app.route("/api/custom-order", methods=["POST"])
 def custom_order():
