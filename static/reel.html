@@ -115,6 +115,7 @@
   (function(){
     var META_BASE = "https://archive.org/metadata/";
     var DL_BASE = "https://archive.org/download/";
+    var SEARCH_BASE = "https://archive.org/advancedsearch.php?q=";
     var video = document.getElementById("reelVideo");
     var statusEl = document.getElementById("reelStatus");
     var nextBtn = document.getElementById("nextClip");
@@ -123,31 +124,31 @@
     var autoTimer = null;
     var cache = {};
 
-    var TOPIC_IDS = {
-      hair: [
-        "BodyCare1948",
-        "HowtoBeW1949",
-        "0589_Health_Your_Cleanliness_E01763_05_14_56_00",
-        "4087_Cleanliness_And_Health"
-      ],
-      haircare: [
-        "BodyCare1948",
-        "HowtoBeW1949",
-        "4087_Cleanliness_And_Health"
-      ],
-      millionaire: [
-        "OfficeCo1952",
-        "HabitPat1954",
-        "Developing1951",
-        "Everyday1948"
-      ],
-      business: [
-        "OfficeCo1952",
-        "HabitPat1954",
-        "Developing1951",
-        "Everyday1948"
-      ]
+    var TOPIC_QUERIES = {
+      hair: "tiktok hair mediatype:movies",
+      haircare: "tiktok hair care mediatype:movies",
+      millionaire: "tiktok millionaire mediatype:movies",
+      business: "tiktok business success mediatype:movies"
     };
+    var topicCache = {};
+
+    function fetchTopicIds(topic){
+      if(topicCache[topic]) return Promise.resolve(topicCache[topic]);
+      var query = TOPIC_QUERIES[topic] || TOPIC_QUERIES.hair;
+      var url = SEARCH_BASE + encodeURIComponent(query) + "&fl[]=identifier&rows=20&page=1&output=json";
+      return fetch(url)
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          var docs = (data && data.response && data.response.docs) ? data.response.docs : [];
+          var ids = docs.map(function(d){ return d.identifier; }).filter(Boolean);
+          topicCache[topic] = ids;
+          return ids;
+        })
+        .catch(function(){
+          topicCache[topic] = [];
+          return [];
+        });
+    }
 
     function setStatus(msg){
       if(statusEl){ statusEl.textContent = msg; }
@@ -203,9 +204,14 @@
     }
 
     function rotate(){
-      var ids = TOPIC_IDS[currentTopic] || TOPIC_IDS.hair;
-      var id = pickRandom(ids);
-      loadFromIdentifier(id);
+      fetchTopicIds(currentTopic).then(function(ids){
+        if(!ids.length){
+          setStatus("No TikTok clips found right now. Try another topic.");
+          return;
+        }
+        var id = pickRandom(ids);
+        loadFromIdentifier(id);
+      });
     }
 
     function ensureTopic(topic){
