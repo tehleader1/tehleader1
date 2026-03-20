@@ -1453,6 +1453,67 @@ function setupCredit(){
 function setupCommunications(){
   const btn = qs("#sendLaunchAlert")
   const reviewBtn = qs("#internationalReviewBtn")
+  const checkBalanceBtn = qs("#checkBalanceBtn")
+  const reserveMoveBtn = qs("#reserveMoveBtn")
+  const newsGuardBtn = qs("#newsGuardBtn")
+  const balanceView = qs("#commsBalanceView")
+
+  const walletKey = "supportrdWallet"
+  function loadWallet(){
+    const w = JSON.parse(localStorage.getItem(walletKey) || "{}")
+    return {
+      balance: Number(w.balance || 0),
+      reserve: Number(w.reserve || 0),
+      newsGuard: !!w.newsGuard
+    }
+  }
+  function saveWallet(w){
+    localStorage.setItem(walletKey, JSON.stringify(w))
+  }
+  function drawWallet(){
+    if(!balanceView) return
+    const w = loadWallet()
+    balanceView.textContent = `Balance: $${w.balance.toFixed(2)} · Reserva: $${w.reserve.toFixed(2)}`
+    if(newsGuardBtn){
+      newsGuardBtn.textContent = `Prevencion Noticias: ${w.newsGuard ? "On" : "Off"}`
+      newsGuardBtn.classList.toggle("active", w.newsGuard)
+    }
+  }
+
+  drawWallet()
+
+  if(checkBalanceBtn){
+    checkBalanceBtn.addEventListener("click", ()=>{
+      const w = loadWallet()
+      drawWallet()
+      openMiniWindow("Balance", `Disponible $${w.balance.toFixed(2)} · Reserva $${w.reserve.toFixed(2)}`)
+    })
+  }
+  if(reserveMoveBtn){
+    reserveMoveBtn.addEventListener("click", ()=>{
+      const w = loadWallet()
+      const move = Math.max(0, Math.round((w.balance * 0.1) * 100) / 100)
+      if(move <= 0){
+        openMiniWindow("Reserva", "No hay balance para mover.")
+        return
+      }
+      w.balance = Math.max(0, w.balance - move)
+      w.reserve = w.reserve + move
+      saveWallet(w)
+      drawWallet()
+      openMiniWindow("Reserva", `Movido $${move.toFixed(2)} a reserva.`)
+    })
+  }
+  if(newsGuardBtn){
+    newsGuardBtn.addEventListener("click", ()=>{
+      const w = loadWallet()
+      w.newsGuard = !w.newsGuard
+      saveWallet(w)
+      drawWallet()
+      toast(w.newsGuard ? "Prevencion de noticias activada" : "Prevencion de noticias desactivada")
+    })
+  }
+
   if(reviewBtn){
     reviewBtn.addEventListener("click", async ()=>{
       openMiniWindow("Flow Internacional", "Perfecto, puede revisarlo.")
