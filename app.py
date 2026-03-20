@@ -55,9 +55,9 @@ FROM_EMAIL = os.environ.get("FROM_EMAIL", "")
 DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL", "")
 ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or DEVELOPER_EMAIL).lower()
 WELLNESS_SUBJECT = os.environ.get("WELLNESS_SUBJECT", "SupportRD Personal Check-In")
-COMMUNITY_ALERT_PRIMARY_EMAIL = os.environ.get("COMMUNITY_ALERT_PRIMARY_EMAIL", "")
-COMMUNITY_ALERT_SECONDARY_EMAIL = os.environ.get("COMMUNITY_ALERT_SECONDARY_EMAIL", "")
-COMMUNITY_ALERT_PHONE = os.environ.get("COMMUNITY_ALERT_PHONE", "")
+COMMUNITY_ALERT_PRIMARY_EMAIL = os.environ.get("COMMUNITY_ALERT_PRIMARY_EMAIL", "agentanthony@supportrd.com")
+COMMUNITY_ALERT_SECONDARY_EMAIL = os.environ.get("COMMUNITY_ALERT_SECONDARY_EMAIL", "xxfigueroa1993@yahoo.com")
+COMMUNITY_ALERT_PHONE = os.environ.get("COMMUNITY_ALERT_PHONE", "980-375-9197")
 COMMUNITY_ALERT_THRESHOLD = float(os.environ.get("COMMUNITY_ALERT_THRESHOLD", "75"))
 COMMUNITY_TARGET_RATIO = float(os.environ.get("COMMUNITY_TARGET_RATIO", "0.70"))
 SEO_RANDOM_ENABLED = os.environ.get("SEO_RANDOM_ENABLED", "false").lower() == "true"
@@ -771,6 +771,17 @@ def community_rotation_today():
         }
     except:
         return {"ok": False, "error": "query_failed"}, 500
+
+@app.route("/api/community/alert-contacts")
+def community_alert_contacts():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    return {
+        "ok": True,
+        "primary_email": COMMUNITY_ALERT_PRIMARY_EMAIL,
+        "secondary_email": COMMUNITY_ALERT_SECONDARY_EMAIL,
+        "phone": COMMUNITY_ALERT_PHONE,
+    }
 
 @app.route("/api/community/post-intake", methods=["POST"])
 def community_post_intake():
