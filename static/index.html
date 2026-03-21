@@ -165,7 +165,7 @@
           <button class="tab-btn" data-tab="ai">AI Millionaire</button>
           <button class="tab-btn" data-tab="communications">Communications</button>
           <button class="tab-btn" data-tab="credit">Credit</button>
-          <button class="tab-btn" data-tab="adult">21+ Mode</button>
+          <button class="tab-btn" data-tab="adult">Fantasy Mode</button>
         </div>
         <div class="level-select">
           <label class="analysis-level">ARIA Level
@@ -522,12 +522,12 @@
         <div class="system-card glass">
           <div class="system-head">
             <div>
-              <div class="system-title">SupportRD 21+ Sensual Product Mode</div>
-              <div class="system-sub">For adults 21+ only. Sensual branding tone is allowed. Drugs and gang-related content are blocked.</div>
+              <div class="system-title">SupportRD Fantasy Mode</div>
+              <div class="system-sub">4 plans: Bingo Fantasy ($100), Family Fantasy ($200), 21+ Basic Fantasy ($300), 21+ Advanced Fantasy ($600). Drugs and gang-related content are blocked.</div>
             </div>
             <span class="system-badge">21+</span>
           </div>
-          <label class="system-check"><input id="adult21Confirm" type="checkbox"> I confirm I am 21+ and want mature/sensual product style.</label>
+          <label class="system-check"><input id="adult21Confirm" type="checkbox"> I confirm I am 21+ for mature fantasy mode (required for $300/$600).</label>
           <div class="system-actions">
             <button class="btn" id="adult21Enable">Activate 21+ Mode</button>
             <button class="btn ghost" id="adult21Disable">Disable 21+ Mode</button>
@@ -540,6 +540,7 @@
             <div class="system-actions">
               <button class="btn" id="openSocialCircuitFeed">Open Social Circuit Feed</button>
               <button class="btn ghost" id="launchSensualAriaPost">Launch 21+ Sensual ARIA Post</button>
+              <button class="btn ghost" id="startBingoFantasy">Start Bingo Fantasy (5-to-9)</button>
             </div>
             <div class="system-log" id="socialCircuitStatus">Source mode idle.</div>
           </div>
@@ -713,9 +714,12 @@
       <select id="paymentSelect">
         <option value="evelyn">With Evelyn Custom Order</option>
         <option value="premium">$35 PREMIUM</option>
+        <option value="bingo100">$100 BINGO FANTASY</option>
+        <option value="family200">$200 FAMILY FANTASY</option>
         <option value="yoda">$20 YODA PASS</option>
         <option value="pro">$50 PROFESSIONAL</option>
-        <option value="android80">$80 PERSONAL HAIR ANDROID</option>
+        <option value="fantasy300">$300 BASIC FANTASY (21+)</option>
+        <option value="fantasy600">$600 ADVANCED FANTASY (21+)</option>
         <option value="tip5">$5 Tip</option>
         <option value="tip10">$10 Tip</option>
         <option value="tip20">$20 Tip</option>
@@ -835,7 +839,7 @@
       </select>
       <label class="system-check"><input type="checkbox" id="setWifeVoiceMode"> Wife Voice Style Mode (consent required)</label>
       <label class="system-check"><input type="checkbox" id="setWifeVoiceConsent"> Voice consent confirmed</label>
-      <label class="system-check"><input type="checkbox" id="setMuslimGreeting"> Muslim greeting mode (available on $80 / Pro)</label>
+      <label class="system-check"><input type="checkbox" id="setMuslimGreeting"> Muslim greeting mode (available on $300/$600/Pro)</label>
       <input id="setCustomGreeting" placeholder="Custom greeting line (optional)">
       <textarea id="setVoiceReference" placeholder="Voice reference sentence (imagination style)"></textarea>
       <label class="system-check"><input type="checkbox" id="setSameFeelVoice"> Same Feel Voice (safe consistency mode)</label>

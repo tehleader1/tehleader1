@@ -825,7 +825,7 @@ def get_subscription_for_email(email):
         if not row:
             return "free"
         plan = (row[0] or "free").lower().strip()
-        if plan not in ("free", "premium", "pro", "yoda", "android80"):
+        if plan not in ("free", "premium", "pro", "yoda", "bingo100", "family200", "fantasy300", "fantasy600"):
             return "free"
         return plan
     except:
@@ -835,7 +835,7 @@ def set_subscription_for_email(email, plan, source="manual", order_id=""):
     if not email:
         return False
     normalized = (plan or "free").lower().strip()
-    if normalized not in ("free", "premium", "pro", "yoda", "android80"):
+    if normalized not in ("free", "premium", "pro", "yoda", "bingo100", "family200", "fantasy300", "fantasy600"):
         normalized = "free"
     try:
         conn = sqlite3.connect(CREDIT_DB_PATH)
@@ -1833,9 +1833,12 @@ def payment_options():
         "cash_note": "Cash is accepted at official SupportRD points with receipt logging.",
         "membership_tiers": [
             {"id": "premium", "price": 35, "label": "Puzzle Tier"},
+            {"id": "bingo100", "price": 100, "label": "Bingo Fantasy"},
+            {"id": "family200", "price": 200, "label": "Family Fantasy"},
             {"id": "yoda", "price": 20, "label": "Yoda Pass"},
             {"id": "pro", "price": 50, "label": "Unlimited ARIA"},
-            {"id": "android80", "price": 80, "label": "Personal Hair Android"},
+            {"id": "fantasy300", "price": 300, "label": "Basic Fantasy 21+"},
+            {"id": "fantasy600", "price": 600, "label": "Advanced Fantasy 21+"},
         ],
     }
 
@@ -2260,8 +2263,17 @@ def shopify_orders_paid_webhook():
             title = (item.get("title") or "").lower()
             sku = (item.get("sku") or "").lower()
             check = f"{title} {sku}"
-            if "personal hair android" in check or "$80" in check or "android80" in check:
-                plan = "android80"
+            if "bingo fantasy" in check or "$100" in check or "bingo100" in check:
+                plan = "bingo100"
+                break
+            if "advanced fantasy" in check or "$600" in check or "fantasy600" in check:
+                plan = "fantasy600"
+                break
+            if "basic fantasy" in check or "$300" in check or "fantasy300" in check or "21+ sexual aria" in check:
+                plan = "fantasy300"
+                break
+            if "family fantasy" in check or "$200" in check or "family200" in check:
+                plan = "family200"
                 break
             if "professional hair advisor" in check or "$50" in check or "pro" in check:
                 plan = "pro"
@@ -2717,8 +2729,14 @@ def aria():
             tier_note = "yoda pass member"
         elif membership_tier == "pro":
             tier_note = "pro member"
-        elif membership_tier == "android80":
-            tier_note = "$80 personal hair android member"
+        elif membership_tier == "bingo100":
+            tier_note = "$100 bingo fantasy member"
+        elif membership_tier == "family200":
+            tier_note = "$200 family fantasy member"
+        elif membership_tier == "fantasy300":
+            tier_note = "$300 basic fantasy 21+ member"
+        elif membership_tier == "fantasy600":
+            tier_note = "$600 advanced fantasy 21+ member"
         adult_note = ""
         if adult_mode:
             adult_note = (
@@ -2747,9 +2765,15 @@ def aria():
             reminder = "Don't forget: Yoda Pass is active. You have style-first unlimited ARIA build guidance."
         elif membership_tier == "pro":
             reminder = "Don't forget: Pro is active. You have full ARIA power and advanced coaching."
-        elif membership_tier == "android80":
-            reminder = "Don't forget: $80 Personal Hair Android is active. Your custom greeting and voice style are unlocked."
-        if muslim_greeting and membership_tier in ("android80", "pro"):
+        elif membership_tier == "bingo100":
+            reminder = "Don't forget: Bingo Fantasy ($100) is active. Keep it imaginative, positive, and hair-focused."
+        elif membership_tier == "family200":
+            reminder = "Don't forget: Family Fantasy ($200) is active. Keep content clean, warm, and confidence-focused."
+        elif membership_tier == "fantasy300":
+            reminder = "Don't forget: $300 Basic Fantasy is active. Your custom greeting and voice style are unlocked."
+        elif membership_tier == "fantasy600":
+            reminder = "Don't forget: $600 Advanced Fantasy is active. Your full voice style stack is unlocked."
+        if muslim_greeting and membership_tier in ("fantasy300", "fantasy600", "pro"):
             lead = custom_greeting or "As-salamu alaykum. How are you and what's new?"
             reply = f"{lead}\n\n{reply}"
         if adult_mode:

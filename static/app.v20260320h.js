@@ -65,7 +65,8 @@ const LINKS = {
   premium: "https://supportrd.com/products/hair-advisor-premium",
   yoda: "https://supportrd.com/products/yoda-pass",
   pro: "https://supportrd.com/products/professional-hair-advisor",
-  android80: "https://supportrd.com/products/personal-hair-android-80",
+  fantasy300: "https://supportrd.com/products/basic-fantasy-21-plus-300",
+  fantasy600: "https://supportrd.com/products/advanced-fantasy-21-plus-600",
   donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
   custom: "https://supportrd.com/pages/custom-order"
 }
@@ -362,7 +363,7 @@ function setupInfoTray(){
 function setupLevelSelect(){
   const sel = qs('#ariaLevelSelect')
   if(!sel) return
-  function isPremium(){ return state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'android80' || isProOverride() }
+  function isPremium(){ return state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600' || isProOverride() }
   function sync(){
     const val = isPremium() ? state.ariaLevel : 'greeting'
     sel.value = val
@@ -574,7 +575,7 @@ function bumpHairScore(delta){
         inner: 'Give insider tips, product usage details, and sequencing.',
         pro: 'Give professional guidance and ways to monetize or upsell services.'
       }
-  const isPremium = state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'android80'
+  const isPremium = state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600'
       const shortMode = 'Reply in 1-2 sentences maximum.'
       const ariaLevelPrompt = isPremium ? (levelMap[state.ariaLevel] || levelMap.thorough) : shortMode
       const r = await fetch("/api/aria",{
@@ -599,7 +600,7 @@ function bumpHairScore(delta){
       bumpHairScore(1)
       speakReply(reply)
       state.ariaCount += 1
-  const limit = (state.subscription === "pro" || state.subscription === "yoda" || state.subscription === "android80" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
+  const limit = (state.subscription === "pro" || state.subscription === "yoda" || state.subscription === "fantasy300" || state.subscription === "fantasy600" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
     if(state.ariaCount >= limit){
       state.ariaBlocked = true
       openModal("puzzleModal")
@@ -1097,9 +1098,15 @@ function setupPaymentChooser(){
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
-    if(val === "android80"){
-      view.innerHTML = `<p>$80 PERSONAL HAIR ANDROID.</p><div class="lock-pill">Custom greeting + advanced personal voice style.</div><div class="lock-pill">Optional Muslim greeting mode in Settings.</div><button class="btn" id="goAndroid80">Pay $80</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
-      qs("#goAndroid80").addEventListener("click", ()=>openLinkModal(LINKS.android80, "Personal Hair Android"))
+    if(val === "fantasy300"){
+      view.innerHTML = `<p>$300 BASIC FANTASY (21+).</p><div class="lock-pill">Safe playful 21+ hair persona style.</div><div class="lock-pill">Unlocks 21+ mode base access.</div><button class="btn" id="goFantasy300">Pay $300</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      qs("#goFantasy300").addEventListener("click", ()=>openLinkModal(LINKS.fantasy300, "Basic Fantasy 21+"))
+      qs("#checkPlanNow").addEventListener("click", checkUpgrade)
+      return
+    }
+    if(val === "fantasy600"){
+      view.innerHTML = `<p>$600 ADVANCED FANTASY (21+).</p><div class="lock-pill">Advanced voice consistency stack + premium playful mode.</div><div class="lock-pill">Technology is premium. No exceptions.</div><button class="btn" id="goFantasy600">Pay $600</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      qs("#goFantasy600").addEventListener("click", ()=>openLinkModal(LINKS.fantasy600, "Advanced Fantasy 21+"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
@@ -1902,6 +1909,10 @@ function setupAdult21Mode(){
       openMiniWindow("21+ Mode", "Please confirm 21+ first.")
       return
     }
+    if(!(state.subscription === "fantasy300" || state.subscription === "fantasy600" || isProOverride())){
+      openMiniWindow("21+ Mode", "21+ mode requires Basic Fantasy ($300) or Advanced Fantasy ($600). No exceptions.")
+      return
+    }
     state.adult21 = true
     localStorage.setItem("adult21Mode", "true")
     render()
@@ -2445,7 +2456,7 @@ function updateOccasionVisibility(){
 }
 
 function setDefaultLevelBySubscription(){
-  if(state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'android80'){
+  if(state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600'){
     if(state.ariaLevel === 'greeting'){ state.ariaLevel = 'thorough' }
   } else {
     state.ariaLevel = 'greeting'

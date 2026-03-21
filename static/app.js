@@ -63,9 +63,11 @@ const HERO_FILTERS = [
 
 const LINKS = {
   premium: "https://supportrd.com/products/hair-advisor-premium",
+  bingo100: "https://supportrd.com/products/bingo-fantasy-100",
   yoda: "https://supportrd.com/products/yoda-pass",
   pro: "https://supportrd.com/products/professional-hair-advisor",
-  android80: "https://supportrd.com/products/personal-hair-android-80",
+  fantasy300: "https://supportrd.com/products/basic-fantasy-21-plus-300",
+  fantasy600: "https://supportrd.com/products/advanced-fantasy-21-plus-600",
   donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
   custom: "https://supportrd.com/pages/custom-order"
 }
@@ -362,7 +364,7 @@ function setupInfoTray(){
 function setupLevelSelect(){
   const sel = qs('#ariaLevelSelect')
   if(!sel) return
-  function isPremium(){ return state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'android80' || isProOverride() }
+function isPremium(){ return state.subscription === 'premium' || state.subscription === 'bingo100' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600' || isProOverride() }
   function sync(){
     const val = isPremium() ? state.ariaLevel : 'greeting'
     sel.value = val
@@ -574,7 +576,7 @@ function bumpHairScore(delta){
         inner: 'Give insider tips, product usage details, and sequencing.',
         pro: 'Give professional guidance and ways to monetize or upsell services.'
       }
-  const isPremium = state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'android80'
+  const isPremium = state.subscription === 'premium' || state.subscription === 'bingo100' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600'
       const shortMode = 'Reply in 1-2 sentences maximum.'
       const ariaLevelPrompt = isPremium ? (levelMap[state.ariaLevel] || levelMap.thorough) : shortMode
       const r = await fetch("/api/aria",{
@@ -599,7 +601,7 @@ function bumpHairScore(delta){
       bumpHairScore(1)
       speakReply(reply)
       state.ariaCount += 1
-  const limit = (state.subscription === "pro" || state.subscription === "yoda" || state.subscription === "android80" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
+  const limit = (state.subscription === "pro" || state.subscription === "yoda" || state.subscription === "fantasy300" || state.subscription === "fantasy600" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
     if(state.ariaCount >= limit){
       state.ariaBlocked = true
       openModal("puzzleModal")
@@ -1091,15 +1093,27 @@ function setupPaymentChooser(){
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
+    if(val === "bingo100"){
+      view.innerHTML = `<p>$100 BINGO FANTASY.</p><div class="lock-pill">Creative fantasy lane for everyday builders and creators.</div><div class="lock-pill">Great for 5-to-9 focus without 21+ mode.</div><button class="btn" id="goBingo100">Pay $100</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      qs("#goBingo100").addEventListener("click", ()=>openLinkModal(LINKS.bingo100, "Bingo Fantasy"))
+      qs("#checkPlanNow").addEventListener("click", checkUpgrade)
+      return
+    }
     if(val === "yoda"){
       view.innerHTML = `<p>$20 YODA PASS.</p><div class="lock-pill">A focused build version of unlimited ARIA for style-first creators.</div><div class="lock-pill">Talk-to-us deal lane stays in $50 Unlimited ARIA.</div><button class="btn" id="goYoda">Pay $20</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goYoda").addEventListener("click", ()=>openLinkModal(LINKS.yoda, "Yoda Pass"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
-    if(val === "android80"){
-      view.innerHTML = `<p>$80 PERSONAL HAIR ANDROID.</p><div class="lock-pill">Custom greeting + advanced personal voice style.</div><div class="lock-pill">Optional Muslim greeting mode in Settings.</div><button class="btn" id="goAndroid80">Pay $80</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
-      qs("#goAndroid80").addEventListener("click", ()=>openLinkModal(LINKS.android80, "Personal Hair Android"))
+    if(val === "fantasy300"){
+      view.innerHTML = `<p>$300 BASIC FANTASY (21+).</p><div class="lock-pill">Safe playful 21+ hair persona style.</div><div class="lock-pill">Unlocks 21+ mode base access.</div><button class="btn" id="goFantasy300">Pay $300</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      qs("#goFantasy300").addEventListener("click", ()=>openLinkModal(LINKS.fantasy300, "Basic Fantasy 21+"))
+      qs("#checkPlanNow").addEventListener("click", checkUpgrade)
+      return
+    }
+    if(val === "fantasy600"){
+      view.innerHTML = `<p>$600 ADVANCED FANTASY (21+).</p><div class="lock-pill">Advanced voice consistency stack + premium playful mode.</div><div class="lock-pill">Technology is premium. No exceptions.</div><button class="btn" id="goFantasy600">Pay $600</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      qs("#goFantasy600").addEventListener("click", ()=>openLinkModal(LINKS.fantasy600, "Advanced Fantasy 21+"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
@@ -1888,6 +1902,7 @@ function setupAdult21Mode(){
   const status = qs("#adult21Status")
   const feedBtn = qs("#openSocialCircuitFeed")
   const launchBtn = qs("#launchSensualAriaPost")
+  const bingoBtn = qs("#startBingoFantasy")
   const circuitStatus = qs("#socialCircuitStatus")
   if(!confirm || !onBtn || !offBtn || !status) return
   state.adult21 = localStorage.getItem("adult21Mode") === "true"
@@ -1900,6 +1915,10 @@ function setupAdult21Mode(){
   onBtn.addEventListener("click", ()=>{
     if(!confirm.checked){
       openMiniWindow("21+ Mode", "Please confirm 21+ first.")
+      return
+    }
+    if(!(state.subscription === "fantasy300" || state.subscription === "fantasy600" || isProOverride())){
+      openMiniWindow("21+ Mode", "21+ mode requires Basic Fantasy ($300) or Advanced Fantasy ($600). No exceptions.")
       return
     }
     state.adult21 = true
@@ -1940,6 +1959,13 @@ function setupAdult21Mode(){
       if(post) post.value = msg
       if(circuitStatus) circuitStatus.textContent = "21+ Sensual ARIA post staged to Social Source."
       openMiniWindow("Sensual ARIA", "Post staged. Keep it adult, clean, and hair-focused.")
+    })
+  }
+  if(bingoBtn){
+    bingoBtn.addEventListener("click", ()=>{
+      openLinkModal(LINKS.bingo100, "Bingo Fantasy")
+      if(circuitStatus) circuitStatus.textContent = "Bingo Fantasy lane opened."
+      openMiniWindow("Bingo Fantasy", "Launching $100 Bingo Fantasy lane.")
     })
   }
   render()
@@ -2445,7 +2471,7 @@ function updateOccasionVisibility(){
 }
 
 function setDefaultLevelBySubscription(){
-  if(state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'android80'){
+  if(state.subscription === 'premium' || state.subscription === 'bingo100' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600'){
     if(state.ariaLevel === 'greeting'){ state.ariaLevel = 'thorough' }
   } else {
     state.ariaLevel = 'greeting'
