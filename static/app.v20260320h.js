@@ -909,6 +909,24 @@ function setupModals(){
   bindClose("closeSettings", "settingsModal")
   bindClose("closeBrochure", "brochureModal")
   bindClose("closeOccasion6Q", "occasion6qModal")
+  bindClose("closeRequestCall", "requestCallModal")
+
+  // Real-work quick close: tap random outside spots to dismiss current modal.
+  document.addEventListener("click", (e)=>{
+    const openModals = qsa(".modal").filter(m => getComputedStyle(m).display !== "none")
+    if(!openModals.length) return
+    const top = openModals[openModals.length - 1]
+    const card = top.querySelector(".modal-card")
+    if(card && card.contains(e.target)) return
+    if(e.target.closest(".menu-btn, .btn, .chip, .tab-btn, .app-card")) return
+    top.style.display = "none"
+  })
+  document.addEventListener("keydown", (e)=>{
+    if(e.key !== "Escape") return
+    const openModals = qsa(".modal").filter(m => getComputedStyle(m).display !== "none")
+    if(!openModals.length) return
+    openModals[openModals.length - 1].style.display = "none"
+  })
 
   qsa(".blog-post").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -979,6 +997,11 @@ function openModal(id){
   if(el){ el.style.display = "flex" }
 }
 
+function closeModal(id){
+  const el = qs("#" + id)
+  if(el){ el.style.display = "none" }
+}
+
 function bindOpen(triggerId, modalId){
   const el = qs("#" + triggerId)
   if(el){ el.addEventListener("click", ()=>openModal(modalId)) }
@@ -986,7 +1009,7 @@ function bindOpen(triggerId, modalId){
 
 function bindClose(triggerId, modalId){
   const el = qs("#" + triggerId)
-  if(el){ el.addEventListener("click", ()=>{ const m = qs("#" + modalId); if(m) m.style.display = "none" }) }
+  if(el){ el.addEventListener("click", ()=>closeModal(modalId)) }
 }
 
 function openLinkModal(url, title){
@@ -1979,6 +2002,8 @@ function setupCommunications(){
   const shopifyGuardCheck = qs("#shopifyGuardCheck")
   const shopifyGuardNotify = qs("#shopifyGuardNotify")
   const adsGuardBtn = qs("#adsGuardBtn")
+  const emitResolverNow = qs("#emitResolverNow")
+  const resolverEmitView = qs("#resolverEmitView")
   const startJackpotBuild = qs("#startJackpotBuild")
   const createCompetitionBtn = qs("#createCompetitionBtn")
 
@@ -2104,6 +2129,26 @@ function setupCommunications(){
   if(openPreventionOk){
     openPreventionOk.addEventListener("click", ()=>{
       window.location.href = "/ok"
+    })
+  }
+  if(emitResolverNow){
+    emitResolverNow.addEventListener("click", ()=>{
+      if(!navigator.geolocation){
+        if(resolverEmitView) resolverEmitView.textContent = "Resolver emit: geolocation not supported on this device."
+        return
+      }
+      navigator.geolocation.getCurrentPosition((pos)=>{
+        const lat = Number(pos.coords.latitude.toFixed(6))
+        const lon = Number(pos.coords.longitude.toFixed(6))
+        const mapsUrl = `https://www.google.com/maps?q=${lat},${lon}`
+        const geoUrl = `geo:${lat},${lon}`
+        if(resolverEmitView){
+          resolverEmitView.innerHTML = `Resolver emit live: <a href="${mapsUrl}" target="_blank" rel="noopener">${lat}, ${lon}</a> · <a href="${geoUrl}">Open in phone GPS</a>`
+        }
+        openMiniWindow("Resolver GPS", "Live location link emitted.")
+      }, ()=>{
+        if(resolverEmitView) resolverEmitView.textContent = "Resolver emit: location permission denied."
+      }, {enableHighAccuracy:true, timeout:7000})
     })
   }
 
