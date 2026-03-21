@@ -92,6 +92,8 @@ FREEZE_MINUTES = int(os.environ.get("FREEZE_MINUTES", "1440"))
 CASH_MAX_AMOUNT = float(os.environ.get("CASH_MAX_AMOUNT", "25000"))
 TRADE_LOCK_DAYS = int(os.environ.get("TRADE_LOCK_DAYS", "7"))
 TRADE_REVERIFY_MAX_FAILS = int(os.environ.get("TRADE_REVERIFY_MAX_FAILS", "2"))
+TRADE_MAX_USD = float(os.environ.get("TRADE_MAX_USD", "50000"))
+TRADE_SERVICE_TAX_RATE = float(os.environ.get("TRADE_SERVICE_TAX_RATE", "0.05"))
 ACCEPTED_PAYMENT_NETWORKS = ["Visa", "Mastercard", "American Express", "Discover", "Debit / ATM Cards", "Cash"]
 MAJOR_BANKS = [
     "U.S. Bank",
@@ -294,6 +296,7 @@ def init_credit_db():
             "from_email TEXT,"
             "to_email TEXT,"
             "aria_plan TEXT,"
+            "transfer_amount REAL DEFAULT 0,"
             "id_last4_hash TEXT,"
             "visa_last4_hash TEXT,"
             "status TEXT,"
@@ -309,6 +312,10 @@ def init_credit_db():
             pass
         try:
             cur.execute("ALTER TABLE account_transfer_requests ADD COLUMN reverify_needed INTEGER DEFAULT 2")
+        except:
+            pass
+        try:
+            cur.execute("ALTER TABLE account_transfer_requests ADD COLUMN transfer_amount REAL DEFAULT 0")
         except:
             pass
         cur.execute(
@@ -906,6 +913,10 @@ def set_setting(key, value):
         return True
     except:
         return False
+
+def trade_release_open():
+    val = (get_setting("sell_aria_release_open", "0") or "0").strip().lower()
+    return val in ("1", "true", "on", "yes")
 
 def money_guard_enabled():
     val = (get_setting("money_guard_enabled", "1") or "1").strip().lower()
@@ -1849,13 +1860,13 @@ def payment_options():
         "cash_supported": True,
         "cash_note": "Cash is accepted at official SupportRD points with receipt logging.",
         "membership_tiers": [
-            {"id": "premium", "price": 35, "label": "Puzzle Tier"},
-            {"id": "bingo100", "price": 100, "label": "Bingo Fantasy"},
-            {"id": "family200", "price": 200, "label": "Family Fantasy"},
-            {"id": "yoda", "price": 20, "label": "Yoda Pass"},
-            {"id": "pro", "price": 50, "label": "Unlimited ARIA"},
-            {"id": "fantasy300", "price": 300, "label": "Basic Fantasy 21+"},
-            {"id": "fantasy600", "price": 600, "label": "Advanced Fantasy 21+"},
+            {"id": "premium", "price": 35, "label": "Puzzle Tier", "billing": "monthly"},
+            {"id": "bingo100", "price": 100, "label": "Bingo Fantasy", "billing": "monthly"},
+            {"id": "family200", "price": 200, "label": "Family Fantasy", "billing": "monthly"},
+            {"id": "yoda", "price": 20, "label": "Yoda Pass", "billing": "monthly"},
+            {"id": "pro", "price": 50, "label": "Unlimited ARIA", "billing": "monthly"},
+            {"id": "fantasy300", "price": 300, "label": "Basic Fantasy 21+", "billing": "monthly"},
+            {"id": "fantasy600", "price": 600, "label": "Advanced Fantasy 21+", "billing": "monthly"},
         ],
     }
 
@@ -2004,12 +2015,24 @@ def account_transfer_request():
     to_email = (data.get("to_email") or "").strip().lower()
     id_last4 = "".join([c for c in str(data.get("id_last4") or "") if c.isdigit()])
     visa_last4 = "".join([c for c in str(data.get("visa_last4") or "") if c.isdigit()])
+    transfer_amount = float(data.get("transfer_amount") or 0)
     if not is_admin() and from_email != session_email:
         return {"ok": False, "error": "identity_mismatch"}, 403
     if not from_email or not to_email or "@" not in from_email or "@" not in to_email:
         return {"ok": False, "error": "invalid_email"}, 400
     if len(id_last4) != 4 or len(visa_last4) != 4:
         return {"ok": False, "error": "last4_required"}, 400
+    if transfer_amount <= 0:
+        return {"ok": False, "error": "transfer_amount_required"}, 400
+    if transfer_amount > TRADE_MAX_USD:
+        return {"ok": False, "error": "trade_cap_exceeded", "cap_usd": TRADE_MAX_USD}, 400
+    if not trade_release_open():
+        return {
+            "ok": False,
+            "error": "founder_presence_required",
+            "message": "Sell Your ARIA trading is on hold until founder is present and release is opened.",
+            "cap_usd": TRADE_MAX_USD
+        }, 423
     lock_until = trade_lock_until(from_email)
     now_ts = int(time.time())
     if lock_until > now_ts:
@@ -2022,19 +2045,22 @@ def account_transfer_request():
     plan = get_subscription_for_email(from_email)
     if plan != "pro":
         return {"ok": False, "error": "unlimited_required"}, 403
+    tax_amount = round(float(transfer_amount) * TRADE_SERVICE_TAX_RATE, 2)
+    seller_net = round(float(transfer_amount) - tax_amount, 2)
     request_id = f"TR-{uuid.uuid4().hex[:10].upper()}"
     try:
         now = datetime.utcnow().isoformat() + "Z"
         conn = sqlite3.connect(CREDIT_DB_PATH)
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO account_transfer_requests (request_id, from_email, to_email, aria_plan, id_last4_hash, visa_last4_hash, status, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO account_transfer_requests (request_id, from_email, to_email, aria_plan, transfer_amount, id_last4_hash, visa_last4_hash, status, reverify_passed, reverify_needed, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 request_id,
                 from_email,
                 to_email,
                 plan,
+                transfer_amount,
                 hash_sensitive("id_last4", id_last4),
                 hash_sensitive("visa_last4", visa_last4),
                 "reverify_required",
@@ -2048,12 +2074,17 @@ def account_transfer_request():
         conn.close()
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}, 500
-    send_admin_alert("account_transfer_request", "urgent", request_id, "SupportRD transfer lane", f"{from_email} -> {to_email} ({plan})")
+    send_admin_alert("account_transfer_request", "urgent", request_id, "SupportRD transfer lane", f"{from_email} -> {to_email} ({plan}) gross ${transfer_amount:,.2f}, tax ${tax_amount:,.2f}, net ${seller_net:,.2f}")
+    append_credit_audit(request_id, from_email, "account_transfer_requested", {"to_email": to_email, "plan": plan, "transfer_amount": transfer_amount, "tax_amount": tax_amount, "seller_net": seller_net})
     return {
         "ok": True,
         "request_id": request_id,
         "status": "reverify_required",
         "reverify_needed": 2,
+        "transfer_amount": transfer_amount,
+        "tax_rate": TRADE_SERVICE_TAX_RATE,
+        "tax_amount": tax_amount,
+        "seller_net": seller_net,
         "note": "Raw ID data is never stored; only secure hashes are kept."
     }
 
@@ -2128,20 +2159,28 @@ def account_transfer_approve():
         conn = sqlite3.connect(CREDIT_DB_PATH)
         cur = conn.cursor()
         cur.execute(
-            "SELECT from_email, to_email, aria_plan, status, reverify_passed, reverify_needed FROM account_transfer_requests WHERE request_id = ? LIMIT 1",
+            "SELECT from_email, to_email, aria_plan, transfer_amount, status, reverify_passed, reverify_needed FROM account_transfer_requests WHERE request_id = ? LIMIT 1",
             (request_id,),
         )
         row = cur.fetchone()
         if not row:
             conn.close()
             return {"ok": False, "error": "request_not_found"}, 404
-        from_email, to_email, aria_plan, status, reverify_passed, reverify_needed = row
+        from_email, to_email, aria_plan, transfer_amount, status, reverify_passed, reverify_needed = row
+        if float(transfer_amount or 0) > TRADE_MAX_USD:
+            conn.close()
+            return {"ok": False, "error": "trade_cap_exceeded", "cap_usd": TRADE_MAX_USD}, 409
+        if not trade_release_open():
+            conn.close()
+            return {"ok": False, "error": "founder_presence_required", "message": "Founder presence is required before release is opened."}, 423
         if status != "pending_review":
             conn.close()
             return {"ok": False, "error": "request_not_pending"}, 409
         if int(reverify_passed or 0) < int(reverify_needed or 2):
             conn.close()
             return {"ok": False, "error": "reverify_incomplete"}, 409
+        tax_amount = round(float(transfer_amount or 0) * TRADE_SERVICE_TAX_RATE, 2)
+        seller_net = round(float(transfer_amount or 0) - tax_amount, 2)
         set_subscription_for_email(to_email, aria_plan or "pro", source="transfer_approved", order_id=request_id)
         set_subscription_for_email(from_email, "free", source="transfer_approved", order_id=request_id)
         now = datetime.utcnow().isoformat() + "Z"
@@ -2151,10 +2190,36 @@ def account_transfer_approve():
         )
         conn.commit()
         conn.close()
-        append_credit_audit(request_id, from_email, "account_transfer_approved", {"to_email": to_email, "plan": aria_plan})
-        return {"ok": True, "status": "approved", "to_email": to_email, "plan": aria_plan}
+        append_credit_audit(request_id, from_email, "account_transfer_approved", {"to_email": to_email, "plan": aria_plan, "transfer_amount": float(transfer_amount or 0), "tax_amount": tax_amount, "seller_net": seller_net})
+        return {"ok": True, "status": "approved", "to_email": to_email, "plan": aria_plan, "transfer_amount": float(transfer_amount or 0), "tax_rate": TRADE_SERVICE_TAX_RATE, "tax_amount": tax_amount, "seller_net": seller_net}
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}, 500
+
+@app.route("/api/account-transfer/status")
+def account_transfer_status():
+    return {
+        "ok": True,
+        "sell_aria_release_open": trade_release_open(),
+        "founder_presence_required": True,
+        "trade_cap_usd": TRADE_MAX_USD,
+        "trade_service_tax_rate": TRADE_SERVICE_TAX_RATE
+    }
+
+@app.route("/api/account-transfer/release-toggle", methods=["POST"])
+def account_transfer_release_toggle():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    data = request.json or {}
+    active = bool(data.get("active"))
+    founder_present = bool(data.get("founder_present"))
+    if active and not founder_present:
+        return {"ok": False, "error": "founder_presence_required"}, 400
+    ok = set_setting("sell_aria_release_open", "1" if active else "0")
+    if not ok:
+        return {"ok": False, "error": "setting_write_failed"}, 500
+    if active:
+        send_admin_alert("sell_aria_release_opened", "urgent", "", "SupportRD transfer lane", "Founder present. Sell Your ARIA release opened.")
+    return {"ok": True, "sell_aria_release_open": active, "trade_cap_usd": TRADE_MAX_USD, "trade_service_tax_rate": TRADE_SERVICE_TAX_RATE}
 
 @app.route("/api/competitions/create", methods=["POST"])
 def competitions_create():

@@ -64,6 +64,7 @@ const HERO_FILTERS = [
 const LINKS = {
   premium: "https://supportrd.com/products/hair-advisor-premium",
   bingo100: "https://supportrd.com/products/bingo-fantasy-100",
+  family200: "https://supportrd.com/products/family-fantasy-200",
   yoda: "https://supportrd.com/products/yoda-pass",
   pro: "https://supportrd.com/products/professional-hair-advisor",
   fantasy300: "https://supportrd.com/products/basic-fantasy-21-plus-300",
@@ -1095,8 +1096,14 @@ function setupPaymentChooser(){
       return
     }
     if(val === "bingo100"){
-      view.innerHTML = `<p>$100 BINGO FANTASY.</p><div class="lock-pill">“You worked hard — relax, I got your hair.” chill support lane.</div><div class="lock-pill">Funny flow + confidence style for 5-to-9 builders (non-21+ mode).</div><button class="btn" id="goBingo100">Pay $100</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `<p>$100/MONTH BINGO FANTASY.</p><div class="lock-pill">“You worked hard — relax, I got your hair.” chill support lane.</div><div class="lock-pill">Funny flow + confidence style for 5-to-9 builders (non-21+ mode).</div><button class="btn" id="goBingo100">Pay $100/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goBingo100").addEventListener("click", ()=>openLinkModal(LINKS.bingo100, "Bingo Fantasy"))
+      qs("#checkPlanNow").addEventListener("click", checkUpgrade)
+      return
+    }
+    if(val === "family200"){
+      view.innerHTML = `<p>$200/MONTH FAMILY FANTASY.</p><div class="lock-pill">Choose your Family Fantasy scene pack and let ARIA prep your next movie moment.</div><div class="lock-pill">Family-safe, high-energy, hair-first coaching style.</div><button class="btn" id="goFamily200">Pay $200/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      qs("#goFamily200").addEventListener("click", ()=>openLinkModal(LINKS.family200 || LINKS.custom, "Family Fantasy"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
@@ -1107,13 +1114,13 @@ function setupPaymentChooser(){
       return
     }
     if(val === "fantasy300"){
-      view.innerHTML = `<p>$300 BASIC FANTASY (21+).</p><div class="lock-pill">Flirty-light vibe: “I like your style” and dinner-ready hair energy.</div><div class="lock-pill">Playful 21+ tone, non-explicit, hair-first.</div><button class="btn" id="goFantasy300">Pay $300</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `<p>$300/MONTH BASIC FANTASY (21+).</p><div class="lock-pill">Flirty-light vibe: “I like your style” and dinner-ready hair energy.</div><div class="lock-pill">Playful 21+ tone, non-explicit, hair-first.</div><button class="btn" id="goFantasy300">Pay $300/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goFantasy300").addEventListener("click", ()=>openLinkModal(LINKS.fantasy300, "Basic Fantasy 21+"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     if(val === "fantasy600"){
-      view.innerHTML = `<p>$600 ADVANCED FANTASY (21+).</p><div class="lock-pill">Meaningful romance storytelling with premium emotional tone.</div><div class="lock-pill">Cinematic, affectionate, non-explicit, hair-first guidance.</div><button class="btn" id="goFantasy600">Pay $600</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `<p>$600/MONTH ADVANCED FANTASY (21+).</p><div class="lock-pill">Meaningful romance storytelling with premium emotional tone.</div><div class="lock-pill">Cinematic, affectionate, non-explicit, hair-first guidance.</div><button class="btn" id="goFantasy600">Pay $600/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goFantasy600").addEventListener("click", ()=>openLinkModal(LINKS.fantasy600, "Advanced Fantasy 21+"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
@@ -1674,10 +1681,29 @@ function setupCredit(){
   const requestTransferBtn = qs("#requestTransferBtn")
   const reverifyTransferBtn = qs("#reverifyTransferBtn")
   const approveTransferBtn = qs("#approveTransferBtn")
+  const toggleTransferReleaseBtn = qs("#toggleTransferReleaseBtn")
   const transferStatusNote = qs("#transferStatusNote")
+  const transferReleaseState = qs("#transferReleaseState")
   const log = qs("#creditDecisionLog")
 
   if(!log) return
+
+  async function refreshTransferReleaseState(){
+    if(!transferReleaseState) return
+    try{
+      const r = await fetch("/api/account-transfer/status")
+      const d = await r.json()
+      if(d && d.ok){
+        const pct = Math.round(Number(d.trade_service_tax_rate || 0.05) * 100)
+        transferReleaseState.textContent = `Sell ARIA release: ${d.sell_aria_release_open ? "OPEN" : "HOLD"} · Cap: $${Number(d.trade_cap_usd || 50000).toLocaleString()} · Service tax: ${pct}% · Founder required: YES`
+      } else {
+        transferReleaseState.textContent = "Sell ARIA release status unavailable."
+      }
+    }catch{
+      transferReleaseState.textContent = "Sell ARIA release status unavailable."
+    }
+  }
+  refreshTransferReleaseState()
 
   const saved = JSON.parse(localStorage.getItem("supportrdSettings") || "{}")
   if(email && !email.value) email.value = saved.email || ""
@@ -1792,6 +1818,7 @@ function setupCredit(){
       }
       const payload = {
         to_email: (qs("#transferToEmail")?.value || "").trim(),
+        transfer_amount: Number(qs("#transferAmount")?.value || 0),
         id_last4: (qs("#transferIdLast4")?.value || "").trim(),
         visa_last4: (qs("#transferVisaLast4")?.value || "").trim(),
         from_email: (state.socialLinks && state.socialLinks.email) ? state.socialLinks.email : ""
@@ -1805,13 +1832,41 @@ function setupCredit(){
         const d = await r.json()
         if(d && d.ok){
           localStorage.setItem("lastTransferRequestId", d.request_id || "")
-          if(transferStatusNote){ transferStatusNote.textContent = `Transfer ${d.request_id} created. Re-verify 2 times to unlock admin review.` }
+          if(transferStatusNote){ transferStatusNote.textContent = `Transfer ${d.request_id} created. Gross $${Number(d.transfer_amount || 0).toLocaleString()} · Tax $${Number(d.tax_amount || 0).toLocaleString()} · Net $${Number(d.seller_net || 0).toLocaleString()}. Re-verify 2 times to unlock admin review.` }
           openMiniWindow("Transfer Requested", `Request ${d.request_id} created. Re-verify now.`)
         } else {
-          openMiniWindow("Transfer", `Request failed: ${d.error || "unknown"}`)
+          if(d && d.error === "founder_presence_required"){
+            openMiniWindow("Transfer Hold", "Founder presence is required before Sell Your ARIA release opens.")
+          } else if(d && d.error === "trade_cap_exceeded"){
+            openMiniWindow("Transfer Cap", "Transfer exceeds $50,000 cap.")
+          } else {
+            openMiniWindow("Transfer", `Request failed: ${d.error || "unknown"}`)
+          }
         }
       }catch{
         openMiniWindow("Transfer", "Request failed: network_error")
+      }
+    })
+  }
+  if(toggleTransferReleaseBtn){
+    toggleTransferReleaseBtn.addEventListener("click", async ()=>{
+      const currentlyOpen = (transferReleaseState && transferReleaseState.textContent || "").includes("OPEN")
+      const active = !currentlyOpen
+      try{
+        const r = await fetch("/api/account-transfer/release-toggle", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({active, founder_present: true})
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          openMiniWindow("Sell ARIA Release", active ? "Release opened with founder present." : "Release placed on hold.")
+          refreshTransferReleaseState()
+        } else {
+          openMiniWindow("Sell ARIA Release", `Update failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("Sell ARIA Release", "Update failed: network_error")
       }
     })
   }
@@ -1859,7 +1914,7 @@ function setupCredit(){
         })
         const d = await r.json()
         if(d && d.ok){
-          openMiniWindow("Transfer", `Approved for ${d.to_email}.`)
+          openMiniWindow("Transfer", `Approved for ${d.to_email}. Net after 5% tax: $${Number(d.seller_net || 0).toLocaleString()}.`)
         } else {
           openMiniWindow("Transfer", `Approve failed: ${d.error || "unknown"}`)
         }
@@ -1954,15 +2009,11 @@ function setupAdult21Mode(){
   }
   if(launchBtn){
     launchBtn.addEventListener("click", ()=>{
-      if(!state.adult21){
-        openMiniWindow("21+ Mode", "Activate 21+ mode first.")
-        return
-      }
       const post = qs("#postInput")
-      const msg = "21+ Sensual ARIA: adult-only confidence routine with style pulse, hydration pulse, and repair pulse. Clean, respectful, hair-focused."
+      const msg = "SupportRD Social Source: style pulse, hydration pulse, repair pulse, and attraction pulse are live. Clean, respectful, hair-focused guidance for everyone."
       if(post) post.value = msg
-      if(circuitStatus) circuitStatus.textContent = "21+ Sensual ARIA post staged to Social Source."
-      openMiniWindow("Sensual ARIA", "Post staged. Keep it adult, clean, and hair-focused.")
+      if(circuitStatus) circuitStatus.textContent = "SupportRD circuit post staged to Social Source."
+      openMiniWindow("SupportRD Circuits", "Post staged for everybody. Keep it clean and hair-focused.")
     })
   }
   const familyThemeLabels = {
@@ -2126,6 +2177,7 @@ function setupCommunications(){
   const startJackpotBuild = qs("#startJackpotBuild")
   const createCompetitionBtn = qs("#createCompetitionBtn")
   const createMovementChallengeBtn = qs("#createMovementChallengeBtn")
+  const createCompetitionBtn1v1 = qs("#createCompetitionBtn1v1")
 
   const walletKey = "supportrdWallet"
   function loadWallet(){
@@ -2352,12 +2404,39 @@ function setupCommunications(){
       }
     })
   }
+  if(createCompetitionBtn1v1){
+    createCompetitionBtn1v1.addEventListener("click", async ()=>{
+      const raw = (qs("#movementUrls")?.value || "").trim()
+      const out = qs("#movementChallengeResult")
+      const participant_urls = raw.split(",").map(x=>x.trim()).filter(Boolean)
+      if(participant_urls.length < 2){
+        if(out) out.textContent = "Add 2 URLs for 1v1."
+        return
+      }
+      try{
+        const r = await fetch("/api/competitions/movement-challenge", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({participant_urls: participant_urls.slice(0, 2), mode: "1v1"})
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          if(out) out.textContent = `1v1 ready (${d.participants} participants): ${d.challenge_url}`
+          openMiniWindow("Movement 1v1", "1v1 challenge created.")
+        } else {
+          if(out) out.textContent = `Create failed: ${d.error || "unknown"}`
+        }
+      }catch{
+        if(out) out.textContent = "Create failed: network_error"
+      }
+    })
+  }
   if(createMovementChallengeBtn){
     createMovementChallengeBtn.addEventListener("click", async ()=>{
       const raw = (qs("#movementUrls")?.value || "").trim()
       const out = qs("#movementChallengeResult")
       if(!raw){
-        if(out) out.textContent = "Add at least 6 participant URLs."
+        if(out) out.textContent = "Add 10 participant URLs for 5v5."
         return
       }
       const participant_urls = raw.split(",").map(x=>x.trim()).filter(Boolean)
@@ -2365,12 +2444,12 @@ function setupCommunications(){
         const r = await fetch("/api/competitions/movement-challenge", {
           method:"POST",
           headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({participant_urls})
+          body: JSON.stringify({participant_urls: participant_urls.slice(0, 10), mode: "5v5"})
         })
         const d = await r.json()
         if(d && d.ok){
-          if(out) out.textContent = `Movement challenge ready (${d.participants} participants): ${d.challenge_url}`
-          openMiniWindow("Movement vs Movement", "Challenge created with 5 key scoring areas.")
+          if(out) out.textContent = `5v5 ready (${d.participants} participants): ${d.challenge_url}`
+          openMiniWindow("Movement 5v5", "5v5 challenge created with 5 key scoring areas.")
         } else {
           if(out) out.textContent = `Create failed: ${d.error || "unknown"}`
         }

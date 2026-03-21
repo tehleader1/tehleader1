@@ -413,18 +413,21 @@
           <div class="system-sub" id="dealLockNote">Locked: upgrade to Unlimited ARIA ($50) to unlock deal channel.</div>
           <div class="transfer-box">
             <div class="system-title" style="font-size:14px;">Sell Your ARIA System (Unlimited Only)</div>
-            <div class="system-sub">Each account is unique to ARIA. Transfer strips personal profile data and moves plan entitlement only.</div>
+            <div class="system-sub">Each account is unique to ARIA. Transfer strips personal profile data and moves plan entitlement only. Trading cap: $50,000. In-house service tax: 5%. Founder must be present before release opens.</div>
             <div class="credit-grid">
               <input id="transferToEmail" placeholder="New owner email">
+              <input id="transferAmount" type="number" min="1" max="50000" step="0.01" placeholder="Transfer amount (USD, max 50000)">
               <input id="transferIdLast4" maxlength="4" placeholder="ID Last 4">
               <input id="transferVisaLast4" maxlength="4" placeholder="International Visa Last 4">
             </div>
             <div class="system-actions">
               <button class="btn ghost" id="requestTransferBtn">Request Transfer Review</button>
               <button class="btn ghost" id="reverifyTransferBtn">Re-Verify (2x)</button>
+              <button class="btn ghost admin-only" id="toggleTransferReleaseBtn">Toggle Sell ARIA Release</button>
               <button class="btn admin-only" id="approveTransferBtn">Approve Transfer (Admin)</button>
             </div>
             <div class="system-sub" id="transferStatusNote">Clean trade rules: hand-to-hand clarity, anti-bot checks, two re-verifications. Failing re-verification twice locks trading for one week.</div>
+            <div class="system-sub" id="transferReleaseState">Checking release status...</div>
           </div>
         </div>
       </div>
@@ -503,9 +506,12 @@
           </div>
           <div class="request-grid" style="margin-top:8px;">
             <div class="comms-flow-title">Movement vs Movement Challenge</div>
-            <input id="movementUrls" placeholder="Participant URLs (comma separated, 6+ people)">
-            <button class="btn" id="createMovementChallengeBtn">Create Movement PvP (6+)</button>
-            <div class="system-sub" id="movementChallengeResult">PvP judged on 5 keys: Health, Longevity, Care, Love, Issues.</div>
+            <input id="movementUrls" placeholder="Participant URLs (comma separated)">
+            <div class="system-actions">
+              <button class="btn" id="createCompetitionBtn1v1">Create 1v1</button>
+              <button class="btn ghost" id="createMovementChallengeBtn">Create 5v5</button>
+            </div>
+            <div class="system-sub" id="movementChallengeResult">PvP judged on 5 keys: Health, Longevity, Care, Love, Issues. Modes: 1v1 and 5v5.</div>
           </div>
         </div>
           <div class="comms-launch">
@@ -523,7 +529,7 @@
           <div class="system-head">
             <div>
               <div class="system-title">SupportRD Fantasy Mode</div>
-              <div class="system-sub">4 plans: Bingo Fantasy ($100), Family Fantasy ($200), 21+ Basic Fantasy ($300), 21+ Advanced Fantasy ($600). Drugs and gang-related content are blocked.</div>
+              <div class="system-sub">4 monthly plans: Bingo Fantasy ($100/mo), Family Fantasy ($200/mo), 21+ Basic Fantasy ($300/mo), 21+ Advanced Fantasy ($600/mo). Drugs and gang-related content are blocked.</div>
             </div>
             <span class="system-badge">21+</span>
           </div>
@@ -550,10 +556,10 @@
           </div>
           <div class="transfer-box">
             <div class="system-title" style="font-size:14px;">SupportRD Social Source + Electronic Hair Circuits</div>
-            <div class="system-sub">Establish SupportRD as a source channel with live electronic hair circuits: style pulse, hydration pulse, repair pulse, attraction pulse.</div>
+            <div class="system-sub">For everybody: establish SupportRD as a source channel with live electronic hair circuits: style pulse, hydration pulse, repair pulse, attraction pulse.</div>
             <div class="system-actions">
               <button class="btn" id="openSocialCircuitFeed">Open Social Circuit Feed</button>
-              <button class="btn ghost" id="launchSensualAriaPost">Launch 21+ Sensual ARIA Post</button>
+              <button class="btn ghost" id="launchSensualAriaPost">Launch SupportRD Circuit Post</button>
               <button class="btn ghost" id="startBingoFantasy">Start Bingo Fantasy (5-to-9)</button>
             </div>
             <div class="system-log" id="socialCircuitStatus">Source mode idle.</div>
@@ -728,12 +734,12 @@
       <select id="paymentSelect">
         <option value="evelyn">With Evelyn Custom Order</option>
         <option value="premium">$35 PREMIUM</option>
-        <option value="bingo100">$100 BINGO FANTASY</option>
-        <option value="family200">$200 FAMILY FANTASY</option>
+        <option value="bingo100">$100/MO BINGO FANTASY</option>
+        <option value="family200">$200/MO FAMILY FANTASY</option>
         <option value="yoda">$20 YODA PASS</option>
         <option value="pro">$50 PROFESSIONAL</option>
-        <option value="fantasy300">$300 BASIC FANTASY (21+)</option>
-        <option value="fantasy600">$600 ADVANCED FANTASY (21+)</option>
+        <option value="fantasy300">$300/MO BASIC FANTASY (21+)</option>
+        <option value="fantasy600">$600/MO ADVANCED FANTASY (21+)</option>
         <option value="tip5">$5 Tip</option>
         <option value="tip10">$10 Tip</option>
         <option value="tip20">$20 Tip</option>
