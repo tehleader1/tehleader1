@@ -2477,6 +2477,8 @@ def aria():
     adult_mode = bool(body.get("adult_mode"))
     muslim_greeting = bool(body.get("muslim_greeting"))
     custom_greeting = (body.get("custom_greeting") or "").strip()
+    same_feel_voice = bool(body.get("same_feel_voice"))
+    thought_style = (body.get("thought_style") or "").strip()
     if not msg:
         return {"reply": "Tell me your hair concern and I’ll help."}
     if contains_prohibited_terms(msg):
@@ -2498,10 +2500,13 @@ def aria():
         adult_note = ""
         if adult_mode:
             adult_note = "User enabled 21+ mode. Keep it sensual and mature but non-explicit, legal, and hair-focused. No drugs, gangs, violence, or minors."
+        style_note = ""
+        if same_feel_voice:
+            style_note = f"Keep tone consistent across replies with this style: {thought_style[:120] or 'calm, descriptive, warm'}."
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
-                {"role": "system", "content": HAIR_SYSTEM + f" Membership context: {tier_note}. {adult_note}"},
+                {"role": "system", "content": HAIR_SYSTEM + f" Membership context: {tier_note}. {adult_note} {style_note}"},
                 {"role": "user", "content": msg}
             ],
             temperature=0.4,
@@ -2606,7 +2611,10 @@ def aria_speech():
         wife_mode = bool(body.get("wife_mode")) if isinstance(body, dict) else False
         wife_consent = bool(body.get("wife_consent")) if isinstance(body, dict) else False
         voice_reference = (body.get("voice_reference") or "").strip() if isinstance(body, dict) else ""
+        voice_reference_pack = (body.get("voice_reference_pack") or "").strip() if isinstance(body, dict) else ""
         muslim_greeting = bool(body.get("muslim_greeting")) if isinstance(body, dict) else False
+        same_feel_voice = bool(body.get("same_feel_voice")) if isinstance(body, dict) else False
+        thought_style = (body.get("thought_style") or "").strip() if isinstance(body, dict) else ""
         voice = requested_voice if requested_voice in TTS_ALLOWED_VOICES else os.environ.get("OPENAI_TTS_VOICE", "shimmer")
         payload = {
             "model": os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),
@@ -2621,6 +2629,12 @@ def aria_speech():
             instructions.append("Keep tone respectful and clean. Avoid profanity.")
         if voice_reference:
             instructions.append(f"Voice style reference: {voice_reference[:220]}")
+        if voice_reference_pack:
+            cleaned = " | ".join([ln.strip() for ln in voice_reference_pack.splitlines() if ln.strip()][:5])
+            if cleaned:
+                instructions.append(f"Consistency reference pack: {cleaned[:420]}")
+        if same_feel_voice:
+            instructions.append(f"Use same-feel consistency mode. Keep cadence and tone stable. Thought style: {thought_style[:120] or 'calm, descriptive, warm'}.")
         if instructions:
             payload["instructions"] = " ".join(instructions)
         r = requests.post(

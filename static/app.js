@@ -586,6 +586,8 @@ function bumpHairScore(delta){
           adult_mode: !!state.adult21,
           muslim_greeting: !!(state.socialLinks && state.socialLinks.muslimGreeting),
           custom_greeting: (state.socialLinks && state.socialLinks.customGreeting) ? state.socialLinks.customGreeting : "",
+          same_feel_voice: !!(state.socialLinks && state.socialLinks.sameFeelVoice),
+          thought_style: (state.socialLinks && state.socialLinks.thoughtStyle) ? state.socialLinks.thoughtStyle : "",
           resolver_context: state.resolverContext || {}
         })
       })
@@ -658,7 +660,10 @@ async function speakReply(text){
           wife_mode: !!prefs.wifeVoiceMode,
           wife_consent: !!prefs.wifeVoiceConsent,
           voice_reference: prefs.voiceReference || "",
-          muslim_greeting: !!prefs.muslimGreeting
+          muslim_greeting: !!prefs.muslimGreeting,
+          same_feel_voice: !!prefs.sameFeelVoice,
+          thought_style: prefs.thoughtStyle || "",
+          voice_reference_pack: prefs.voiceReferencePack || ""
         })
       })
       if(!r.ok) throw new Error("tts failed")
@@ -2343,6 +2348,9 @@ function setupSettings(){
   qs("#setMuslimGreeting").checked = !!saved.muslimGreeting
   qs("#setCustomGreeting").value = saved.customGreeting || ""
   qs("#setVoiceReference").value = saved.voiceReference || "I went to the park and birds were chirping. Keep this voice warm, calm, and clear when ARIA speaks."
+  qs("#setSameFeelVoice").checked = !!saved.sameFeelVoice
+  qs("#setVoiceReferencePack").value = saved.voiceReferencePack || ""
+  qs("#setThoughtStyle").value = saved.thoughtStyle || "calm, descriptive, warm"
   const feeds = saved.feeds || {ig:true,tiktok:true,fb:true}
   qs("#feedIG").checked = !!feeds.ig
   qs("#feedTikTok").checked = !!feeds.tiktok
@@ -2376,6 +2384,9 @@ function setupSettings(){
         muslimGreeting: qs("#setMuslimGreeting").checked,
         customGreeting: qs("#setCustomGreeting").value.trim(),
         voiceReference: qs("#setVoiceReference").value.trim(),
+        sameFeelVoice: qs("#setSameFeelVoice").checked,
+        voiceReferencePack: qs("#setVoiceReferencePack").value.trim(),
+        thoughtStyle: qs("#setThoughtStyle").value.trim(),
         feeds: {
           ig: qs("#feedIG").checked,
           tiktok: qs("#feedTikTok").checked,
