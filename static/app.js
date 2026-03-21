@@ -1512,7 +1512,8 @@ function setupCredit(){
         monthly_debt: Number(debt && debt.value || 0),
         requested_amount: Number(amount && amount.value || 0),
         term_months: Number(term && term.value || 0),
-        has_payment_issues: !!(risk && risk.checked)
+        has_payment_issues: !!(risk && risk.checked),
+        kyc_ack: true
       }
       try{
         const r = await fetch("/api/credit/evaluate", {

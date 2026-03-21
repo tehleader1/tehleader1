@@ -1440,9 +1440,28 @@ def claim_status():
 def credit_evaluate():
     data = request.json or {}
     user = session.get("user") or {}
-    email = (data.get("email") or user.get("email") or "").strip().lower()
+    ip = client_ip()
+    user_email = (user.get("email") or "").strip().lower()
+    input_email = (data.get("email") or "").strip().lower()
+    email = (input_email or user_email or "").strip().lower()
     country = (data.get("country") or "").strip().upper()
     has_payment_issues = bool(data.get("has_payment_issues"))
+    kyc_ack = bool(data.get("kyc_ack"))
+
+    if not user_email and not is_admin():
+        return {"ok": False, "error": "login_required"}, 401
+    if not is_admin():
+        if not user_email:
+            return {"ok": False, "error": "login_required"}, 401
+        if input_email and input_email != user_email:
+            ban_ip(ip, "identity_mismatch_attempt", f"input={input_email} session={user_email}")
+            return {"ok": False, "error": "banned", "reason": "identity_mismatch_attempt"}, 403
+        email = user_email
+    if not kyc_ack and not is_admin():
+        return {"ok": False, "error": "kyc_ack_required"}, 400
+    if rate_hit(ip, "credit_eval_strict", 300, 10):
+        ban_ip(ip, "credit_velocity_abuse", "/api/credit/evaluate")
+        return {"ok": False, "error": "banned", "reason": "credit_velocity_abuse"}, 403
 
     try:
         requested_amount = float(data.get("requested_amount", 0) or 0)
@@ -1456,6 +1475,9 @@ def credit_evaluate():
         return {"ok": False, "error": "email_required"}, 400
     if requested_amount <= 0 or monthly_income <= 0:
         return {"ok": False, "error": "invalid_financial_input"}, 400
+    if requested_amount > 100000 or monthly_income > 1000000 or monthly_debt > 1000000:
+        log_security_event(ip, "/api/credit/evaluate", "credit_outlier_input", f"amount={requested_amount}")
+        return {"ok": False, "error": "outlier_input_blocked"}, 400
     if term_months < CREDIT_MIN_TERM_MONTHS or term_months > CREDIT_MAX_TERM_MONTHS:
         return {"ok": False, "error": "invalid_term"}, 400
 
@@ -1499,6 +1521,7 @@ def credit_evaluate():
         "country_supported": bool(country not in CREDIT_BLOCKED_COUNTRIES) if country else True,
     }
     save_credit_decision(decision)
+    log_security_event(ip, "/api/credit/evaluate", "credit_eval", f"{email} {status} {reason}")
     decision["ok"] = True
     decision["legal_note"] = "Automated pre-screen only. Final credit decisions require manual compliance review."
     return decision
@@ -1506,7 +1529,14 @@ def credit_evaluate():
 @app.route("/api/credit/status")
 def credit_status():
     user = session.get("user") or {}
-    email = (request.args.get("email") or user.get("email") or "").strip().lower()
+    q_email = (request.args.get("email") or "").strip().lower()
+    user_email = (user.get("email") or "").strip().lower()
+    if not user_email and not is_admin():
+        return {"ok": False, "error": "login_required"}, 401
+    if is_admin():
+        email = (q_email or user_email or "").strip().lower()
+    else:
+        email = user_email
     if not email:
         return {"ok": False, "error": "email_required"}, 400
     row = latest_credit_decision(email)
