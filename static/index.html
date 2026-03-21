@@ -216,6 +216,7 @@
 
         <div class="post-bottom">
           <button class="btn" id="postSocials">Post to All Socials</button>
+          <button class="btn ghost" id="askAriaProductsAgain">What products again?</button>
           <select class="payment-dropdown" id="socialSelect">
             <option value="all">All Feeds</option>
             <option value="instagram">Instagram</option>
@@ -295,6 +296,22 @@
               <div class="step">1. Center your face and shoulders in view.</div>
               <div class="step">2. Slowly turn left, then right.</div>
               <div class="step">3. Follow ARIA’s voice while the scan runs.</div>
+              <div class="marinate-timer">
+                <div class="system-title" style="font-size:13px;">Product Marination Timer</div>
+                <div class="system-sub">Set how long product stays in your hair, then ARIA reminds you when time is up.</div>
+                <div class="system-actions">
+                  <select id="marinateMinutes">
+                    <option value="5">5 minutes</option>
+                    <option value="10">10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="20">20 minutes</option>
+                    <option value="30">30 minutes</option>
+                  </select>
+                  <button class="btn" id="startMarinateTimer">Start Timer</button>
+                  <button class="btn ghost" id="stopMarinateTimer">Stop</button>
+                </div>
+                <div class="system-sub" id="marinateTimerStatus">Timer not running.</div>
+              </div>
               <div class="analysis-result" id="analysisResult">Awaiting scan…</div>
             </div>
           </div>
@@ -469,9 +486,19 @@
               <span class="chip">Straight Down</span>
               <span class="chip">Chillen at Home Hair</span>
             </div>
-            <div class="comms-flow-sub">Soon: 1-hour attention challenge. Winner takes jackpot. Both attractions money.</div>
-            <button class="btn" id="startJackpotBuild">Start 1-Hour Build Challenge</button>
+          <div class="comms-flow-sub">Soon: 1-hour attention challenge. Winner takes jackpot. Both attractions money.</div>
+          <button class="btn" id="startJackpotBuild">Start 1-Hour Build Challenge</button>
+          <div class="request-grid" style="margin-top:8px;">
+            <input id="compOpponentUrl" placeholder="Other person URL (membership page)">
+            <select id="compTier">
+              <option value="premium">$35 Puzzle Tier</option>
+              <option value="pro">$50 Unlimited ARIA</option>
+              <option value="yoda">$20 Yoda Pass</option>
+            </select>
+            <button class="btn ghost" id="createCompetitionBtn">Create Competition Option</button>
+            <div class="system-sub" id="competitionResult">Set up competition with another URL and tier option.</div>
           </div>
+        </div>
           <div class="comms-launch">
             <div class="comms-item"><strong>Launch Watch Alert:</strong> send admin alert with day + location so you can fly in for orbit day.</div>
             <input id="launchDay" placeholder="Launch Day (YYYY-MM-DD or text)">
@@ -625,6 +652,9 @@
       <h2>Occasion Editor</h2>
       <button class="btn ghost" id="closeOccasion">Close</button>
     </div>
+      <div class="system-actions" style="margin-bottom:8px;">
+        <button class="btn ghost" id="openOccasion6Q">Open 6-Questionnaire</button>
+      </div>
       <div class="occasion-boxes">
         <select class="occasion-select" id="occasionAction"></select>
         <select class="occasion-select" id="occasionApply"></select>
@@ -647,6 +677,7 @@
       <select id="paymentSelect">
         <option value="evelyn">With Evelyn Custom Order</option>
         <option value="premium">$35 PREMIUM</option>
+        <option value="yoda">$20 YODA PASS</option>
         <option value="pro">$50 PROFESSIONAL</option>
         <option value="tip5">$5 Tip</option>
         <option value="tip10">$10 Tip</option>
@@ -679,6 +710,24 @@
       <div id="puzzleQuestion" style="font-weight:700;margin-bottom:8px;">Loading…</div>
       <input id="puzzleAnswer" placeholder="Your answer">
       <button class="btn" id="puzzleSubmit">Unlock ARIA</button>
+  </div>
+</div>
+
+<div id="occasion6qModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Occasion 6-Questionnaire</h2>
+      <button class="btn ghost" id="closeOccasion6Q">Close</button>
+    </div>
+    <div class="request-grid">
+      <input id="qLookGoal" placeholder="1) What look are you going for?">
+      <input id="qHairType" placeholder="2) Hair type today (curly, wavy, straight...)">
+      <input id="qScalp" placeholder="3) Scalp condition (dry, oily, normal)">
+      <input id="qHeat" placeholder="4) Heat tools today? (yes/no)">
+      <input id="qTime" placeholder="5) Minutes available right now">
+      <input id="qEvent" placeholder="6) Occasion/event">
+      <button class="btn" id="applyOccasion6Q">Use These in Occasion Editor</button>
+    </div>
   </div>
 </div>
 

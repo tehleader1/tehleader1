@@ -63,6 +63,7 @@ const HERO_FILTERS = [
 
 const LINKS = {
   premium: "https://supportrd.com/products/hair-advisor-premium",
+  yoda: "https://supportrd.com/products/yoda-pass",
   pro: "https://supportrd.com/products/professional-hair-advisor",
   donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
   custom: "https://supportrd.com/pages/custom-order"
@@ -352,7 +353,7 @@ function setupInfoTray(){
 function setupLevelSelect(){
   const sel = qs('#ariaLevelSelect')
   if(!sel) return
-  function isPremium(){ return state.subscription === 'premium' || state.subscription === 'pro' || isProOverride() }
+  function isPremium(){ return state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || isProOverride() }
   function sync(){
     const val = isPremium() ? state.ariaLevel : 'greeting'
     sel.value = val
@@ -564,7 +565,7 @@ function bumpHairScore(delta){
         inner: 'Give insider tips, product usage details, and sequencing.',
         pro: 'Give professional guidance and ways to monetize or upsell services.'
       }
-      const isPremium = state.subscription === 'premium' || state.subscription === 'pro'
+  const isPremium = state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda'
       const shortMode = 'Reply in 1-2 sentences maximum.'
       const ariaLevelPrompt = isPremium ? (levelMap[state.ariaLevel] || levelMap.thorough) : shortMode
       const r = await fetch("/api/aria",{
@@ -584,7 +585,7 @@ function bumpHairScore(delta){
       bumpHairScore(1)
       speakReply(reply)
       state.ariaCount += 1
-    const limit = (state.subscription === "pro" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
+  const limit = (state.subscription === "pro" || state.subscription === "yoda" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
     if(state.ariaCount >= limit){
       state.ariaBlocked = true
       openModal("puzzleModal")
@@ -882,6 +883,7 @@ function setupModals(){
   bindClose("closeReel", "reelModal")
   bindClose("closeSettings", "settingsModal")
   bindClose("closeBrochure", "brochureModal")
+  bindClose("closeOccasion6Q", "occasion6qModal")
 
   qsa(".blog-post").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -1041,6 +1043,12 @@ function setupPaymentChooser(){
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
+    if(val === "yoda"){
+      view.innerHTML = `<p>$20 YODA PASS.</p><div class="lock-pill">A focused build version of unlimited ARIA for style-first creators.</div><div class="lock-pill">Talk-to-us deal lane stays in $50 Unlimited ARIA.</div><button class="btn" id="goYoda">Pay $20</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      qs("#goYoda").addEventListener("click", ()=>openLinkModal(LINKS.yoda, "Yoda Pass"))
+      qs("#checkPlanNow").addEventListener("click", checkUpgrade)
+      return
+    }
     if(val === "pro"){
       view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><div class="lock-pill">All 4 levels + unlimited ARIA</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div><button class="btn" id="goPro">Pay $50</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goPro").addEventListener("click", ()=>openLinkModal(LINKS.pro, "Professional Subscription"))
@@ -1068,6 +1076,7 @@ function setupPostActions(){
   const adCta = qs("#adCta")
   const adMembershipCta = qs("#adMembershipCta")
   const tipFrontierBody = qs("#tipFrontierBody")
+  const askProductsAgain = qs("#askAriaProductsAgain")
 
   const feedMap = {
     instagram: "ig",
@@ -1192,13 +1201,25 @@ function setupPostActions(){
       openLinkModal(`https://wa.me/${phone}?text=Hi%20Evelyn%2C%20I%20need%20help%20with%20my%20order.`,"Contact Evelyn")
     })
   }
+  if(askProductsAgain){
+    askProductsAgain.addEventListener("click", ()=>{
+      const prompt = "What products was I supposed to use again for my hair today? Please give me a simple routine and timing."
+      const input = qs("#postInput")
+      if(input) input.value = prompt
+      if(typeof window.askAriaDirect === "function"){
+        window.askAriaDirect(prompt)
+      }else{
+        openMiniWindow("ARIA", "Open ARIA and ask for product reminders.")
+      }
+    })
+  }
 
   updateIndicator()
   updateTipFrontier()
 }
 
 
-  function setupOccasion(){
+function setupOccasion(){
   const actionSel = qs("#occasionAction")
   const applySel = qs("#occasionApply")
   const enjoySel = qs("#occasionEnjoy")
@@ -1265,13 +1286,79 @@ function setupPostActions(){
 
   const applyBtn = qs("#applyOccasion")
   const addBtn = qs("#addOccasionPost")
+  const open6Q = qs("#openOccasion6Q")
+  const apply6Q = qs("#applyOccasion6Q")
   if(applyBtn){ applyBtn.addEventListener("click", ()=>{ dayPlans[selectedDay] = {action: actionSel.value, apply: applySel.value, enjoy: enjoySel.value}; renderWeek() }) }
   if(addBtn){ addBtn.addEventListener("click", updatePost) }
+  if(open6Q){
+    open6Q.addEventListener("click", ()=>openModal("occasion6qModal"))
+  }
+  if(apply6Q){
+    apply6Q.addEventListener("click", ()=>{
+      const look = (qs("#qLookGoal")?.value || "").trim()
+      const type = (qs("#qHairType")?.value || "").trim()
+      const scalp = (qs("#qScalp")?.value || "").trim()
+      const heat = (qs("#qHeat")?.value || "").trim()
+      const mins = (qs("#qTime")?.value || "").trim()
+      const event = (qs("#qEvent")?.value || "").trim()
+      const summary = `Occasion questionnaire: Look=${look || "natural"}, Type=${type || "mixed"}, Scalp=${scalp || "normal"}, Heat=${heat || "no"}, Time=${mins || "15"} mins, Event=${event || "daily routine"}.`
+      const input = qs("#postInput")
+      if(input){ input.value = summary + " What products and order should I use?" }
+      closeModal("occasion6qModal")
+      openMiniWindow("6-Questionnaire", "Saved to your plan. ARIA can now refine product sequence.")
+      if(typeof window.askAriaDirect === "function"){
+        window.askAriaDirect(summary + " Give the exact products and marination timing.")
+      }
+    })
+  }
 
   actionSel.addEventListener("change", ()=>{ dayPlans[selectedDay].action = actionSel.value; renderWeek() })
   applySel.addEventListener("change", ()=>{ dayPlans[selectedDay].apply = applySel.value; renderWeek() })
   enjoySel.addEventListener("change", ()=>{ dayPlans[selectedDay].enjoy = enjoySel.value; renderWeek() })
   renderWeek()
+}
+
+function setupMarinationTimer(){
+  const startBtn = qs("#startMarinateTimer")
+  const stopBtn = qs("#stopMarinateTimer")
+  const minutesSel = qs("#marinateMinutes")
+  const status = qs("#marinateTimerStatus")
+  if(!startBtn || !stopBtn || !minutesSel || !status) return
+  let timer = null
+  let endTs = 0
+  function draw(){
+    if(!endTs){
+      status.textContent = "Timer not running."
+      return
+    }
+    const left = Math.max(0, endTs - Date.now())
+    if(left <= 0){
+      status.textContent = "Marination done. Rinse now."
+      clearInterval(timer); timer = null; endTs = 0
+      openMiniWindow("ARIA Timer", "Marination complete. Time to rinse.")
+      if(typeof window.askAriaDirect === "function"){
+        window.askAriaDirect("My marination timer just ended. What is my next product step?")
+      }
+      return
+    }
+    const mm = Math.floor(left / 60000)
+    const ss = Math.floor((left % 60000) / 1000)
+    status.textContent = `Time left: ${mm}:${String(ss).padStart(2,"0")}`
+  }
+  startBtn.addEventListener("click", ()=>{
+    const mins = Number(minutesSel.value || 10)
+    endTs = Date.now() + mins * 60000
+    if(timer) clearInterval(timer)
+    timer = setInterval(draw, 1000)
+    draw()
+    openMiniWindow("ARIA Timer", `Marination timer started for ${mins} minutes.`)
+  })
+  stopBtn.addEventListener("click", ()=>{
+    if(timer) clearInterval(timer)
+    timer = null
+    endTs = 0
+    draw()
+  })
 }
 
 function setupScanUpload(){
@@ -1826,6 +1913,7 @@ function setupCommunications(){
   const shopifyGuardNotify = qs("#shopifyGuardNotify")
   const adsGuardBtn = qs("#adsGuardBtn")
   const startJackpotBuild = qs("#startJackpotBuild")
+  const createCompetitionBtn = qs("#createCompetitionBtn")
 
   const walletKey = "supportrdWallet"
   function loadWallet(){
@@ -2005,6 +2093,33 @@ function setupCommunications(){
       openMiniWindow("Build Challenge", `${pick} started. 1-hour attention race is live.`)
     })
   }
+  if(createCompetitionBtn){
+    createCompetitionBtn.addEventListener("click", async ()=>{
+      const opponent_url = (qs("#compOpponentUrl")?.value || "").trim()
+      const membership_tier = (qs("#compTier")?.value || "premium").trim()
+      const out = qs("#competitionResult")
+      if(!opponent_url){
+        if(out) out.textContent = "Add the other person URL first."
+        return
+      }
+      try{
+        const r = await fetch("/api/competitions/create", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({opponent_url, membership_tier})
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          if(out) out.textContent = `Competition ready: ${d.challenge_url}`
+          openMiniWindow("Competition", "Competition option created and tracked.")
+        } else {
+          if(out) out.textContent = `Create failed: ${d.error || "unknown"}`
+        }
+      }catch{
+        if(out) out.textContent = "Create failed: network_error"
+      }
+    })
+  }
 }
 
 function setupReel(){
@@ -2125,7 +2240,7 @@ function updateOccasionVisibility(){
 }
 
 function setDefaultLevelBySubscription(){
-  if(state.subscription === 'premium' || state.subscription === 'pro'){
+  if(state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda'){
     if(state.ariaLevel === 'greeting'){ state.ariaLevel = 'thorough' }
   } else {
     state.ariaLevel = 'greeting'
@@ -2423,6 +2538,12 @@ function setupAria(){
   let liveTranscript = ""
   let transcribeBusy = false
   let transcribeFailures = 0
+  function ariaMasterGreeting(){
+    const line = "How can I serve you master."
+    const transcriptEl = qs("#ariaTranscript")
+    if(transcriptEl){ transcriptEl.textContent = line }
+    showSpeechPopup("ARIA", line)
+  }
 
   function syncHandsFree(){
     if(!handsBtn) return
@@ -2635,12 +2756,13 @@ function uiError(msg){
     }
   }
 
-  if(btn){ btn.addEventListener("click", startOpenAIListening) }
+  if(btn){ btn.addEventListener("click", ()=>{ ariaMasterGreeting(); startOpenAIListening() }) }
   if(sphere){
     sphere.classList.add("aria-pulse")
-    sphere.addEventListener("click", startOpenAIListening)
+    sphere.addEventListener("click", ()=>{ ariaMasterGreeting(); startOpenAIListening() })
   }
   window.startAriaListening = startOpenAIListening
+  window.askAriaDirect = askAria
 }
 
 function renderApp(name){
@@ -2968,6 +3090,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupSettings)
   safe(setupPostActions)
   safe(setupOccasion)
+  safe(setupMarinationTimer)
   safe(setupScanUpload)
   safe(setupProfileUpload)
   safe(setupHairAnalysis)

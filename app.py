@@ -278,6 +278,17 @@ def init_credit_db():
             "updated_at TEXT"
             ")"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS competitions ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "competition_id TEXT UNIQUE,"
+            "owner_email TEXT,"
+            "opponent_url TEXT,"
+            "membership_tier TEXT,"
+            "status TEXT,"
+            "created_at TEXT"
+            ")"
+        )
         conn.commit()
         conn.close()
     except:
@@ -732,7 +743,7 @@ def get_subscription_for_email(email):
         if not row:
             return "free"
         plan = (row[0] or "free").lower().strip()
-        if plan not in ("free", "premium", "pro"):
+        if plan not in ("free", "premium", "pro", "yoda"):
             return "free"
         return plan
     except:
@@ -742,7 +753,7 @@ def set_subscription_for_email(email, plan, source="manual", order_id=""):
     if not email:
         return False
     normalized = (plan or "free").lower().strip()
-    if normalized not in ("free", "premium", "pro"):
+    if normalized not in ("free", "premium", "pro", "yoda"):
         normalized = "free"
     try:
         conn = sqlite3.connect(CREDIT_DB_PATH)
@@ -1726,6 +1737,11 @@ def payment_options():
         "major_banks": MAJOR_BANKS,
         "cash_supported": True,
         "cash_note": "Cash is accepted at official SupportRD points with receipt logging.",
+        "membership_tiers": [
+            {"id": "premium", "price": 35, "label": "Puzzle Tier"},
+            {"id": "yoda", "price": 20, "label": "Yoda Pass"},
+            {"id": "pro", "price": 50, "label": "Unlimited ARIA"},
+        ],
     }
 
 @app.route("/api/leads/request-call", methods=["POST"])
@@ -1930,6 +1946,42 @@ def account_transfer_approve():
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}, 500
 
+@app.route("/api/competitions/create", methods=["POST"])
+def competitions_create():
+    user = session.get("user") or {}
+    owner_email = (user.get("email") or "").strip().lower()
+    if not owner_email and not is_admin():
+        return {"ok": False, "error": "login_required"}, 401
+    data = request.json or {}
+    opponent_url = (data.get("opponent_url") or "").strip()
+    membership_tier = (data.get("membership_tier") or "premium").strip().lower()
+    if membership_tier not in ("premium", "pro", "yoda"):
+        return {"ok": False, "error": "invalid_membership_tier"}, 400
+    if not opponent_url or not (opponent_url.startswith("http://") or opponent_url.startswith("https://")):
+        return {"ok": False, "error": "valid_opponent_url_required"}, 400
+    competition_id = f"CMP-{uuid.uuid4().hex[:10].upper()}"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO competitions (competition_id, owner_email, opponent_url, membership_tier, status, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                competition_id,
+                owner_email or "admin",
+                opponent_url[:350],
+                membership_tier,
+                "active",
+                datetime.utcnow().isoformat() + "Z",
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
+    challenge_url = f"{request.host_url.rstrip('/')}/?competition={competition_id}&tier={membership_tier}"
+    append_credit_audit(competition_id, owner_email or "admin", "competition_created", {"tier": membership_tier, "opponent_url": opponent_url[:200]})
+    return {"ok": True, "competition_id": competition_id, "challenge_url": challenge_url, "status": "active"}
+
 @app.route("/api/me")
 def me():
     user = session.get("user")
@@ -1979,6 +2031,9 @@ def shopify_orders_paid_webhook():
             check = f"{title} {sku}"
             if "professional hair advisor" in check or "$50" in check or "pro" in check:
                 plan = "pro"
+                break
+            if "yoda pass" in check or "$20" in check or "yoda" in check:
+                plan = "yoda"
                 break
             if "hair advisor premium" in check or "$35" in check or "premium" in check:
                 plan = "premium"
@@ -2415,6 +2470,8 @@ def aria():
         tier_note = "free plan user"
         if membership_tier == "premium":
             tier_note = "premium member"
+        elif membership_tier == "yoda":
+            tier_note = "yoda pass member"
         elif membership_tier == "pro":
             tier_note = "pro member"
         response = client.chat.completions.create(
@@ -2431,6 +2488,8 @@ def aria():
         reminder = "Don't forget: upgrade to Premium ($35) or Pro ($50) for deeper ARIA guidance."
         if membership_tier == "premium":
             reminder = "Don't forget: Premium is active. Use your deeper ARIA guidance and routines."
+        elif membership_tier == "yoda":
+            reminder = "Don't forget: Yoda Pass is active. You have style-first unlimited ARIA build guidance."
         elif membership_tier == "pro":
             reminder = "Don't forget: Pro is active. You have full ARIA power and advanced coaching."
         if "don't forget" not in reply.lower():
