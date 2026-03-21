@@ -1710,9 +1710,30 @@ function setupCredit(){
     if(!tradeBotOrbit || tradeBotOrbit.dataset.ready === "1") return
     tradeBotOrbit.dataset.ready = "1"
     const roles = [
-      {id:"risk", label:"Risk Bot: trade setup is clean. Cap 50k, founder release, and 5% service tax are enforced."},
-      {id:"ops", label:"Ops Bot: rules are live. Two re-verifies, anti-bot controls, and timed lockouts are active."},
-      {id:"comms", label:"Comms Bot: competition policy is active. No pornography. Win metrics are laughs, excitement, and votes."},
+      {
+        id:"risk",
+        lines:[
+          "Risk Bot: trade setup is clean. Cap 50k, founder release, and 5% service tax are enforced.",
+          "Your hair can become an active style weapon, be careful.",
+          "Whip-lock that flow, but keep the trade rules tighter."
+        ]
+      },
+      {
+        id:"ops",
+        lines:[
+          "Ops Bot: rules are live. Two re-verifies, anti-bot controls, and timed lockouts are active.",
+          "Whip lock that thang, girl - now verify twice and keep it clean.",
+          "Fast moves are fine, but no quick-close tricks in this lane."
+        ]
+      },
+      {
+        id:"comms",
+        lines:[
+          "Comms Bot: competition policy is active. No pornography. Win metrics are laughs, excitement, and votes.",
+          "Encima de ti tu pelo esta - misterioso, la crema completa el look.",
+          "Bring laughs, excitement, and votes. That's how champions are represented."
+        ]
+      },
     ]
     const bots = roles.map((role, idx)=>{
       const el = document.createElement("button")
@@ -1728,7 +1749,9 @@ function setupCredit(){
       el.addEventListener("click", ()=>{
         bot.caughtUntil = Date.now() + 900
         el.classList.add("caught")
-        openMiniWindow("Bot Caught", role.label)
+        const lines = role.lines || []
+        const pick = lines[Math.floor(Math.random() * lines.length)] || "Trade bot active."
+        openMiniWindow("Bot Caught", pick)
         setTimeout(()=>el.classList.remove("caught"), 950)
       })
       return bot
