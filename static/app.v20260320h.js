@@ -1886,6 +1886,9 @@ function setupAdult21Mode(){
   const onBtn = qs("#adult21Enable")
   const offBtn = qs("#adult21Disable")
   const status = qs("#adult21Status")
+  const feedBtn = qs("#openSocialCircuitFeed")
+  const launchBtn = qs("#launchSensualAriaPost")
+  const circuitStatus = qs("#socialCircuitStatus")
   if(!confirm || !onBtn || !offBtn || !status) return
   state.adult21 = localStorage.getItem("adult21Mode") === "true"
   function render(){
@@ -1909,6 +1912,36 @@ function setupAdult21Mode(){
     localStorage.setItem("adult21Mode", "false")
     render()
   })
+  if(feedBtn){
+    feedBtn.addEventListener("click", async ()=>{
+      try{
+        const r = await fetch("/api/social-circuits")
+        const d = await r.json()
+        if(d && d.ok){
+          const lines = (d.circuits || []).map(c=>`${c.name}: ${c.state}`).join(" · ")
+          if(circuitStatus) circuitStatus.textContent = `Live circuits: ${lines}`
+          openMiniWindow("Social Circuits", "SupportRD source feed is active.")
+        } else {
+          if(circuitStatus) circuitStatus.textContent = `Source mode error: ${d.error || "unknown"}`
+        }
+      }catch{
+        if(circuitStatus) circuitStatus.textContent = "Source mode error: network_error"
+      }
+    })
+  }
+  if(launchBtn){
+    launchBtn.addEventListener("click", ()=>{
+      if(!state.adult21){
+        openMiniWindow("21+ Mode", "Activate 21+ mode first.")
+        return
+      }
+      const post = qs("#postInput")
+      const msg = "21+ Sensual ARIA: adult-only confidence routine with style pulse, hydration pulse, and repair pulse. Clean, respectful, hair-focused."
+      if(post) post.value = msg
+      if(circuitStatus) circuitStatus.textContent = "21+ Sensual ARIA post staged to Social Source."
+      openMiniWindow("Sensual ARIA", "Post staged. Keep it adult, clean, and hair-focused.")
+    })
+  }
   render()
 }
 

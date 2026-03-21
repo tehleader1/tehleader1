@@ -1826,6 +1826,22 @@ def payment_options():
         ],
     }
 
+@app.route("/api/social-circuits")
+def social_circuits():
+    mode = "active" if (get_setting("social_circuit_mode", "1") or "1") in ("1", "true", "on") else "standby"
+    return {
+        "ok": True,
+        "mode": mode,
+        "source": "SupportRD",
+        "circuits": [
+            {"name": "style_pulse", "state": "active"},
+            {"name": "hydration_pulse", "state": "active"},
+            {"name": "repair_pulse", "state": "active"},
+            {"name": "attraction_pulse_21plus", "state": "guarded"},
+        ],
+        "policy": "21+ sensual mode allowed for adults. Drugs, gangs, violence, illegal activity, and minors are blocked."
+    }
+
 @app.route("/api/leads/request-call", methods=["POST"])
 def leads_request_call():
     data = request.json or {}
