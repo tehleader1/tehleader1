@@ -109,6 +109,13 @@ MAJOR_BANKS = [
 ]
 TTS_ALLOWED_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"}
 PROHIBITED_TERMS = ["drug", "drugs", "cocaine", "meth", "weed", "marijuana", "heroin", "fentanyl", "gang", "gangs", "cartel", "ms-13", "crip", "bloods"]
+SAFE_21PLUS_FUN_LINES = [
+    "Hair date energy: I bring the shine plan, you bring the smile.",
+    "Mamacita, ese amor por tu pelo se nota hoy.",
+    "Stressful day? Let me coach your hair into chill mode.",
+    "You and your hair are the main character today.",
+    "Funny truth: your split ends just resigned from the company.",
+]
 
 RATE_TRACKER = {}
 DUP_TRACKER = {}
@@ -1179,6 +1186,12 @@ def needs_developer_assistance(message):
 def contains_prohibited_terms(text):
     t = (text or "").lower()
     return any(x in t for x in PROHIBITED_TERMS)
+
+def pick_safe_21plus_line():
+    try:
+        return random.choice(SAFE_21PLUS_FUN_LINES)
+    except:
+        return "Hair date energy: I bring the shine plan, you bring the smile."
 
 def save_wellness_log(email, name, message_type, status, error_detail=""):
     try:
@@ -2708,7 +2721,11 @@ def aria():
             tier_note = "$80 personal hair android member"
         adult_note = ""
         if adult_mode:
-            adult_note = "User enabled 21+ mode. Keep it sensual and mature but non-explicit, legal, and hair-focused. No drugs, gangs, violence, or minors."
+            adult_note = (
+                "User enabled 21+ mode. Keep it playful, funny, and mature but non-explicit, legal, and hair-focused. "
+                "Do not use predatory language, coercion, explicit sexual content, or exclusivity/relationship dependency framing. "
+                "No drugs, gangs, violence, illegal activity, or minors."
+            )
         style_note = ""
         if same_feel_voice:
             style_note = f"Keep tone consistent across replies with this style: {thought_style[:120] or 'calm, descriptive, warm'}."
@@ -2735,6 +2752,9 @@ def aria():
         if muslim_greeting and membership_tier in ("android80", "pro"):
             lead = custom_greeting or "As-salamu alaykum. How are you and what's new?"
             reply = f"{lead}\n\n{reply}"
+        if adult_mode:
+            line = pick_safe_21plus_line()
+            reply = f"{line}\n\n{reply}"
         if "don't forget" not in reply.lower():
             reply = f"{reply}\n\n{reminder}"
 
