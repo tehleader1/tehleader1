@@ -2747,10 +2747,23 @@ def aria():
         style_note = ""
         if same_feel_voice:
             style_note = f"Keep tone consistent across replies with this style: {thought_style[:120] or 'calm, descriptive, warm'}."
+        theme_note = ""
+        if membership_tier == "family200":
+            theme_note = (
+                "Family Fantasy theme pack is active. Offer playful, movie-scene prep coaching with hair-first lines. "
+                "Available themes: boat conductor, theme park conductor, museum information greeter, race-day driver energy, jungle bloom, and laid-back board-game strategy. "
+                "Keep it clean, uplifting, and family-friendly."
+            )
+        elif membership_tier == "bingo100":
+            theme_note = (
+                "Bingo Fantasy is active. Use a chill, supportive, king/queen confidence tone with light humor. "
+                "Example vibe: hard-working user relaxing while ARIA handles hair guidance. "
+                "You may suggest profile flow stats as confidence markers, but stay hair-focused and non-deceptive."
+            )
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
-                {"role": "system", "content": HAIR_SYSTEM + f" Membership context: {tier_note}. {adult_note} {style_note}"},
+                {"role": "system", "content": HAIR_SYSTEM + f" Membership context: {tier_note}. {adult_note} {style_note} {theme_note}"},
                 {"role": "user", "content": msg}
             ],
             temperature=0.4,
@@ -2766,7 +2779,7 @@ def aria():
         elif membership_tier == "pro":
             reminder = "Don't forget: Pro is active. You have full ARIA power and advanced coaching."
         elif membership_tier == "bingo100":
-            reminder = "Don't forget: Bingo Fantasy ($100) is active. Keep it imaginative, positive, and hair-focused."
+            reminder = "Don't forget: Bingo Fantasy ($100) is active. Chill vibe, funny flow, and hair-first confidence are unlocked."
         elif membership_tier == "family200":
             reminder = "Don't forget: Family Fantasy ($200) is active. Keep content clean, warm, and confidence-focused."
         elif membership_tier == "fantasy300":

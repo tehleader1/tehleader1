@@ -1094,7 +1094,7 @@ function setupPaymentChooser(){
       return
     }
     if(val === "bingo100"){
-      view.innerHTML = `<p>$100 BINGO FANTASY.</p><div class="lock-pill">Creative fantasy lane for everyday builders and creators.</div><div class="lock-pill">Great for 5-to-9 focus without 21+ mode.</div><button class="btn" id="goBingo100">Pay $100</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `<p>$100 BINGO FANTASY.</p><div class="lock-pill">“You worked hard — relax, I got your hair.” chill support lane.</div><div class="lock-pill">Funny flow + confidence style for 5-to-9 builders (non-21+ mode).</div><button class="btn" id="goBingo100">Pay $100</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goBingo100").addEventListener("click", ()=>openLinkModal(LINKS.bingo100, "Bingo Fantasy"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
@@ -1964,8 +1964,8 @@ function setupAdult21Mode(){
   if(bingoBtn){
     bingoBtn.addEventListener("click", ()=>{
       openLinkModal(LINKS.bingo100, "Bingo Fantasy")
-      if(circuitStatus) circuitStatus.textContent = "Bingo Fantasy lane opened."
-      openMiniWindow("Bingo Fantasy", "Launching $100 Bingo Fantasy lane.")
+      if(circuitStatus) circuitStatus.textContent = "Bingo Fantasy lane opened. Chill vibe + funny flow mode."
+      openMiniWindow("Bingo Fantasy", "You worked long and hard. Relax — ARIA is ready to assist your hair flow.")
     })
   }
   render()
