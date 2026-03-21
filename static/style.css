@@ -388,23 +388,23 @@ body::before{content:"";position:fixed;inset:0;background:url('/static/images/wo
 #app{padding:26px 22px 140px;}
 .glass{background:var(--glass);border:1px solid var(--stroke);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,0.08);} 
 
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-radius:20px;margin-bottom:18px;gap:16px;flex-wrap:wrap;} 
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:14px;margin-bottom:10px;gap:10px;flex-wrap:wrap;} 
 .top-middle{display:flex;justify-content:center;align-items:center;flex:1 1 180px;}
 .logo{font-size:26px;font-weight:700;letter-spacing:0.4px;font-family:"Outfit",system-ui,sans-serif;} 
 .founder-narrative{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent);margin-top:2px;}
 .tagline{color:var(--muted);font-size:14px;margin-top:4px;} 
 .brand{max-width:760px;}
-.big-menu{display:flex;gap:10px;flex-wrap:wrap;} 
-.menu-btn{background:rgba(255,255,255,0.08);color:var(--text);border:1px solid rgba(255,255,255,0.18);padding:10px 14px;border-radius:12px;font-weight:600;} 
+.big-menu{display:flex;gap:6px;flex-wrap:wrap;} 
+.menu-btn{background:rgba(255,255,255,0.08);color:var(--text);border:1px solid rgba(255,255,255,0.18);padding:7px 10px;border-radius:10px;font-weight:600;font-size:12px;} 
 .status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;} 
 .toggle-wrap{display:flex;align-items:center;}
 .big-menu{
   display:flex;
-  gap:10px;
+  gap:6px;
   align-items:center;
   flex-wrap:wrap;
-  padding:10px 14px;
-  border-radius:18px;
+  padding:6px 8px;
+  border-radius:12px;
   border:1px solid rgba(255,255,255,0.2);
   background:
     linear-gradient(120deg, rgba(0,0,0,0.35), rgba(0,0,0,0.1)),
@@ -715,9 +715,7 @@ body.listening .bg-layers{animation-play-state:paused;}
   body.natural-pro .tab-btn[data-tab="ai"],
   body.natural-pro #tab-ai,
   body.natural-pro .scan-row,
-  body.natural-pro #tipTeam,
-  body.natural-pro #themePrevSide,
-  body.natural-pro #themeNextSide{
+  body.natural-pro #tipTeam{
     display:none !important;
   }
   body.natural-pro .center-stage{padding:14px;}
@@ -867,11 +865,11 @@ body.aria-speaking .aria-large{box-shadow:0 0 48px rgba(0,226,255,0.8),0 0 90px 
 
 .campaign-strip{
   display:grid;
-  grid-template-columns:1.4fr 1fr;
+  grid-template-columns:1fr;
   gap:12px;
   margin:10px 0 14px;
-  padding:14px;
-  border-radius:18px;
+  padding:10px;
+  border-radius:12px;
   border:1px solid rgba(255,255,255,0.2);
   background:linear-gradient(120deg, rgba(44,183,146,0.17), rgba(60,118,219,0.12));
 }

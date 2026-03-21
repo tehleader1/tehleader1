@@ -842,6 +842,7 @@ async function speakReply(text){
 function setupThemeArrows(){
   const prev = qs("#themePrevSide")
   const next = qs("#themeNextSide")
+  if(!prev || !next) return
   const saved = localStorage.getItem("theme") || DEFAULT_THEME
   state.themeIndex = Math.max(0, THEMES.indexOf(saved))
   applyTheme()
@@ -850,7 +851,12 @@ function setupThemeArrows(){
   next.addEventListener("click", ()=>{state.themeIndex = (state.themeIndex + 1) % THEMES.length; applyTheme()})
 
   function applyTheme(){
-    document.body.className = `theme-${THEMES[state.themeIndex]} plus500 system-theme`
+    const keep = []
+    if(document.body.classList.contains("resort-brochure")) keep.push("resort-brochure")
+    if(document.body.classList.contains("natural-pro")) keep.push("natural-pro")
+    if(document.body.classList.contains("plus500")) keep.push("plus500")
+    if(document.body.classList.contains("system-theme")) keep.push("system-theme")
+    document.body.className = `theme-${THEMES[state.themeIndex]} ${keep.join(" ")}`.trim()
     localStorage.setItem("theme", THEMES[state.themeIndex])
     const content = THEME_CONTENT[state.themeIndex % THEME_CONTENT.length]
     const hero = qs(".center-hero")
@@ -906,8 +912,10 @@ function setupModals(){
   const creditTop = qs("#menuCreditTop")
   if(creditTop){
     creditTop.addEventListener("click", ()=>{
-      const tab = document.querySelector('.tab-btn[data-tab="credit"]')
-      if(tab){ tab.click() }
+      qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
+      qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
+      const panel = qs("#tab-credit")
+      if(panel){ panel.classList.add("active") }
     })
   }
   bindClose("closeOccasion", "occasionModal")
@@ -3461,6 +3469,59 @@ function renderApp(name){
     if(pro && level === "pro" && sub === "pro"){ pro.style.display = "block" }
     return
   }
+  if(name === "Competition Arena"){
+    body.innerHTML = `
+      <div style="font-weight:700;margin-bottom:8px;">Competition Arena (Bottom Panel)</div>
+      <div style="color:var(--muted);margin-bottom:10px;">Start 30-minute or 1-hour live attention challenge. Winner is measured by laughs, excitement, and votes.</div>
+      <div class="request-grid" style="margin-bottom:10px;">
+        <select id="arenaDuration">
+          <option value="30">30 Minutes</option>
+          <option value="60">1 Hour</option>
+        </select>
+        <input id="arenaBetAmount" type="number" min="1" max="50000" step="0.01" placeholder="Bet amount (USD)">
+        <select id="arenaPaymentSource">
+          <option value="debit_card">Debit Card</option>
+          <option value="bank_account">Bank Account</option>
+        </select>
+        <label class="system-check"><input id="arenaPaymentLinked" type="checkbox"> My debit card/bank is linked for immediate in-house transfer.</label>
+        <button class="btn" id="arenaStartLive">Go Live Competition</button>
+      </div>
+      <div class="system-sub" id="arenaStatus">Ready.</div>
+    `
+    const start = qs("#arenaStartLive")
+    if(start){
+      start.addEventListener("click", async ()=>{
+        const duration_minutes = Number(qs("#arenaDuration")?.value || 0)
+        const bet_amount = Number(qs("#arenaBetAmount")?.value || 0)
+        const payment_source = (qs("#arenaPaymentSource")?.value || "").trim()
+        const payment_linked = !!qs("#arenaPaymentLinked")?.checked
+        const email = ((state.socialLinks && state.socialLinks.email) || "").trim().toLowerCase()
+        const out = qs("#arenaStatus")
+        try{
+          const r = await fetch("/api/competitions/start-live", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({duration_minutes, bet_amount, payment_source, payment_linked, email})
+          })
+          const d = await r.json()
+          if(d && d.ok){
+            const post = qs("#postInput")
+            if(post){
+              post.value = `LIVE COMPETITION ${d.session_id} · ${d.duration_minutes} min · Bet $${d.bet_amount} · Metrics: laughs/excitement/votes.`
+            }
+            if(out) out.textContent = `Live ${d.session_id} started. ${d.recording_hint} Transfer: ${d.transfer_state}.`
+            openMiniWindow("Competition Live", "Live started. Post panel is ready to record session activity.")
+          } else {
+            if(out) out.textContent = `Start failed: ${d.error || "unknown"}`
+            openMiniWindow("Competition", `Start failed: ${d.error || "unknown"}`)
+          }
+        }catch{
+          if(out) out.textContent = "Start failed: network_error"
+        }
+      })
+    }
+    return
+  }
   if(name === "Shopify Products"){
     body.innerHTML = `<div style="font-weight:700;margin-bottom:8px;">SupportRD Products</div>
       <div style="color:var(--muted);margin-bottom:10px;">Browse the lineup, open My Orders, and checkout fast with Shopify cart.</div>
@@ -3545,6 +3606,7 @@ function setupAppsDock(){
 
   const allApps = [
     "Blog",
+    "Competition Arena",
     "Snapshot Coder Idea",
     "Live Coder Suggestions",
     "Donate to the Poor · Auto Dissolve Bar",

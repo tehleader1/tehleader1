@@ -360,6 +360,18 @@ def init_credit_db():
             ")"
         )
         cur.execute(
+            "CREATE TABLE IF NOT EXISTS competition_sessions ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "session_id TEXT UNIQUE,"
+            "owner_email TEXT,"
+            "duration_minutes INTEGER,"
+            "bet_amount REAL,"
+            "payment_source TEXT,"
+            "status TEXT,"
+            "started_at TEXT"
+            ")"
+        )
+        cur.execute(
             "CREATE TABLE IF NOT EXISTS trade_controls ("
             "email TEXT PRIMARY KEY,"
             "failed_reverify INTEGER DEFAULT 0,"
@@ -2705,6 +2717,63 @@ def competitions_create():
     challenge_url = f"{request.host_url.rstrip('/')}/?competition={competition_id}&tier={membership_tier}"
     append_credit_audit(competition_id, owner_email or "admin", "competition_created", {"tier": membership_tier, "opponent_url": opponent_url[:200]})
     return {"ok": True, "competition_id": competition_id, "challenge_url": challenge_url, "status": "active", "score_metrics": ["laughs", "excitement", "votes"]}
+
+@app.route("/api/competitions/start-live", methods=["POST"])
+def competitions_start_live():
+    user = session.get("user") or {}
+    owner_email = (user.get("email") or "").strip().lower()
+    data = request.json or {}
+    if not owner_email:
+        owner_email = (data.get("email") or "").strip().lower()
+    if not owner_email and not is_admin():
+        return {"ok": False, "error": "login_required"}, 401
+    duration = int(data.get("duration_minutes") or 0)
+    if duration not in (30, 60):
+        return {"ok": False, "error": "duration_invalid"}, 400
+    try:
+        bet_amount = float(data.get("bet_amount") or 0)
+    except:
+        bet_amount = 0
+    if bet_amount <= 0:
+        return {"ok": False, "error": "bet_amount_required"}, 400
+    if bet_amount > TRADE_MAX_USD:
+        return {"ok": False, "error": "bet_cap_exceeded", "cap_usd": TRADE_MAX_USD}, 400
+    payment_source = (data.get("payment_source") or "").strip().lower()
+    if payment_source not in ("debit_card", "bank_account"):
+        return {"ok": False, "error": "payment_source_invalid"}, 400
+    payment_linked = bool(data.get("payment_linked"))
+    if not payment_linked:
+        return {"ok": False, "error": "payment_link_required"}, 400
+    session_id = f"LIVE-{uuid.uuid4().hex[:10].upper()}"
+    started_at = datetime.utcnow().isoformat() + "Z"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO competition_sessions (session_id, owner_email, duration_minutes, bet_amount, payment_source, status, started_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (session_id, owner_email or "admin", duration, bet_amount, payment_source, "live", started_at)
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
+    append_credit_audit(session_id, owner_email or "admin", "competition_live_started", {
+        "duration_minutes": duration,
+        "bet_amount": bet_amount,
+        "payment_source": payment_source,
+        "score_metrics": ["laughs", "excitement", "votes"]
+    })
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "status": "live",
+        "duration_minutes": duration,
+        "bet_amount": bet_amount,
+        "payment_source": payment_source,
+        "transfer_state": "queued_inhouse_transfer",
+        "recording_hint": "Use the Post middle panel while live.",
+        "score_metrics": ["laughs", "excitement", "votes"]
+    }
 
 @app.route("/api/competitions/movement-challenge", methods=["POST"])
 def competitions_movement_challenge():
