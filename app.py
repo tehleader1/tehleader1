@@ -105,6 +105,7 @@ MAJOR_BANKS = [
     "USAA",
     "Ally Bank",
 ]
+TTS_ALLOWED_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"}
 
 RATE_TRACKER = {}
 DUP_TRACKER = {}
@@ -2567,17 +2568,24 @@ def aria_speech():
     if not OPENAI_KEY:
         return {"error": "AI unavailable"}, 503
 
-    text = request.json.get("text", "") if request.is_json else ""
+    body = request.json if request.is_json else {}
+    text = body.get("text", "") if isinstance(body, dict) else ""
     if not text:
         return {"error": "No text"}, 400
 
     try:
+        requested_voice = (body.get("voice_preference") or "").strip().lower() if isinstance(body, dict) else ""
+        wife_mode = bool(body.get("wife_mode")) if isinstance(body, dict) else False
+        wife_consent = bool(body.get("wife_consent")) if isinstance(body, dict) else False
+        voice = requested_voice if requested_voice in TTS_ALLOWED_VOICES else os.environ.get("OPENAI_TTS_VOICE", "shimmer")
         payload = {
             "model": os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),
-            "voice": os.environ.get("OPENAI_TTS_VOICE", "shimmer"),
+            "voice": voice,
             "input": text,
             "response_format": "mp3"
         }
+        if wife_mode and wife_consent:
+            payload["instructions"] = "Use a respectful, calm, encouraging, family-safe tone."
         r = requests.post(
             "https://api.openai.com/v1/audio/speech",
             headers={

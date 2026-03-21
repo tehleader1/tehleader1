@@ -636,10 +636,16 @@ async function speakReply(text){
     const transcriptEl = qs("#ariaTranscript")
     try{
       setAriaFlow("speaking")
+      const prefs = state.socialLinks || {}
       const r = await fetch("/api/aria/speech", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({text})
+        body: JSON.stringify({
+          text,
+          voice_preference: prefs.voiceProfile || "shimmer",
+          wife_mode: !!prefs.wifeVoiceMode,
+          wife_consent: !!prefs.wifeVoiceConsent
+        })
       })
       if(!r.ok) throw new Error("tts failed")
       const blob = await r.blob()
@@ -2275,6 +2281,9 @@ function setupSettings(){
   qs("#setYT").value = saved.yt || ""
   qs("#setX").value = saved.x || ""
   qs("#setThreads").value = saved.threads || ""
+  qs("#setVoiceProfile").value = saved.voiceProfile || "shimmer"
+  qs("#setWifeVoiceMode").checked = !!saved.wifeVoiceMode
+  qs("#setWifeVoiceConsent").checked = !!saved.wifeVoiceConsent
   const feeds = saved.feeds || {ig:true,tiktok:true,fb:true}
   qs("#feedIG").checked = !!feeds.ig
   qs("#feedTikTok").checked = !!feeds.tiktok
@@ -2302,6 +2311,9 @@ function setupSettings(){
         yt: qs("#setYT").value.trim(),
         x: qs("#setX").value.trim(),
         threads: qs("#setThreads").value.trim(),
+        voiceProfile: qs("#setVoiceProfile").value.trim(),
+        wifeVoiceMode: qs("#setWifeVoiceMode").checked,
+        wifeVoiceConsent: qs("#setWifeVoiceConsent").checked,
         feeds: {
           ig: qs("#feedIG").checked,
           tiktok: qs("#feedTikTok").checked,
@@ -2539,7 +2551,8 @@ function setupAria(){
   let transcribeBusy = false
   let transcribeFailures = 0
   function ariaMasterGreeting(){
-    const line = "How can I serve you master."
+    const proUnlocked = state.subscription === "pro" || isProOverride()
+    const line = proUnlocked ? "How can I serve you master." : "How can I support your hair goals today?"
     const transcriptEl = qs("#ariaTranscript")
     if(transcriptEl){ transcriptEl.textContent = line }
     showSpeechPopup("ARIA", line)
