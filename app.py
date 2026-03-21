@@ -90,6 +90,8 @@ CREDIT_MANUAL_REVIEW_THRESHOLD = float(os.environ.get("CREDIT_MANUAL_REVIEW_THRE
 CREDIT_MAX_OPEN_OBLIGATIONS = int(os.environ.get("CREDIT_MAX_OPEN_OBLIGATIONS", "1"))
 FREEZE_MINUTES = int(os.environ.get("FREEZE_MINUTES", "1440"))
 CASH_MAX_AMOUNT = float(os.environ.get("CASH_MAX_AMOUNT", "25000"))
+TRADE_LOCK_DAYS = int(os.environ.get("TRADE_LOCK_DAYS", "7"))
+TRADE_REVERIFY_MAX_FAILS = int(os.environ.get("TRADE_REVERIFY_MAX_FAILS", "2"))
 ACCEPTED_PAYMENT_NETWORKS = ["Visa", "Mastercard", "American Express", "Discover", "Debit / ATM Cards", "Cash"]
 MAJOR_BANKS = [
     "U.S. Bank",
@@ -276,10 +278,20 @@ def init_credit_db():
             "id_last4_hash TEXT,"
             "visa_last4_hash TEXT,"
             "status TEXT,"
+            "reverify_passed INTEGER DEFAULT 0,"
+            "reverify_needed INTEGER DEFAULT 2,"
             "created_at TEXT,"
             "updated_at TEXT"
             ")"
         )
+        try:
+            cur.execute("ALTER TABLE account_transfer_requests ADD COLUMN reverify_passed INTEGER DEFAULT 0")
+        except:
+            pass
+        try:
+            cur.execute("ALTER TABLE account_transfer_requests ADD COLUMN reverify_needed INTEGER DEFAULT 2")
+        except:
+            pass
         cur.execute(
             "CREATE TABLE IF NOT EXISTS competitions ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -289,6 +301,14 @@ def init_credit_db():
             "membership_tier TEXT,"
             "status TEXT,"
             "created_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS trade_controls ("
+            "email TEXT PRIMARY KEY,"
+            "failed_reverify INTEGER DEFAULT 0,"
+            "lock_until_ts INTEGER DEFAULT 0,"
+            "updated_at TEXT"
             ")"
         )
         conn.commit()
@@ -553,6 +573,48 @@ def send_admin_alert(event_type, priority, request_id, location, summary):
 def hash_sensitive(label, value):
     raw = f"{label}|{(value or '').strip()}|{app.secret_key}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+def trade_lock_until(email):
+    if not email:
+        return 0
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT lock_until_ts FROM trade_controls WHERE email = ? LIMIT 1", (email.lower(),))
+        row = cur.fetchone()
+        conn.close()
+        return int(row[0] or 0) if row else 0
+    except:
+        return 0
+
+def record_reverify_result(email, passed):
+    if not email:
+        return
+    now_ts = int(time.time())
+    now_iso = datetime.utcnow().isoformat() + "Z"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT failed_reverify, lock_until_ts FROM trade_controls WHERE email = ? LIMIT 1", (email.lower(),))
+        row = cur.fetchone()
+        fails = int(row[0] or 0) if row else 0
+        lock_until = int(row[1] or 0) if row else 0
+        if passed:
+            fails = 0
+        else:
+            fails += 1
+            if fails >= TRADE_REVERIFY_MAX_FAILS:
+                lock_until = now_ts + (TRADE_LOCK_DAYS * 24 * 3600)
+                fails = 0
+        cur.execute(
+            "INSERT INTO trade_controls (email, failed_reverify, lock_until_ts, updated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(email) DO UPDATE SET failed_reverify=excluded.failed_reverify, lock_until_ts=excluded.lock_until_ts, updated_at=excluded.updated_at",
+            (email.lower(), fails, lock_until, now_iso),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
 
 def init_wellness_db():
     try:
@@ -1888,6 +1950,15 @@ def account_transfer_request():
         return {"ok": False, "error": "invalid_email"}, 400
     if len(id_last4) != 4 or len(visa_last4) != 4:
         return {"ok": False, "error": "last4_required"}, 400
+    lock_until = trade_lock_until(from_email)
+    now_ts = int(time.time())
+    if lock_until > now_ts:
+        return {
+            "ok": False,
+            "error": "trade_locked",
+            "unlock_at": datetime.utcfromtimestamp(lock_until).isoformat() + "Z",
+            "message": "Trading is locked for one week after repeated failed re-verification."
+        }, 423
     plan = get_subscription_for_email(from_email)
     if plan != "pro":
         return {"ok": False, "error": "unlimited_required"}, 403
@@ -1906,7 +1977,9 @@ def account_transfer_request():
                 plan,
                 hash_sensitive("id_last4", id_last4),
                 hash_sensitive("visa_last4", visa_last4),
-                "pending_review",
+                "reverify_required",
+                0,
+                2,
                 now,
                 now,
             ),
@@ -1916,7 +1989,72 @@ def account_transfer_request():
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}, 500
     send_admin_alert("account_transfer_request", "urgent", request_id, "SupportRD transfer lane", f"{from_email} -> {to_email} ({plan})")
-    return {"ok": True, "request_id": request_id, "status": "pending_review", "note": "Raw ID data is never stored; only secure hashes are kept."}
+    return {
+        "ok": True,
+        "request_id": request_id,
+        "status": "reverify_required",
+        "reverify_needed": 2,
+        "note": "Raw ID data is never stored; only secure hashes are kept."
+    }
+
+@app.route("/api/account-transfer/reverify", methods=["POST"])
+def account_transfer_reverify():
+    user = session.get("user") or {}
+    session_email = (user.get("email") or "").strip().lower()
+    if not session_email and not is_admin():
+        return {"ok": False, "error": "login_required"}, 401
+    data = request.json or {}
+    request_id = (data.get("request_id") or "").strip()
+    id_last4 = "".join([c for c in str(data.get("id_last4") or "") if c.isdigit()])
+    visa_last4 = "".join([c for c in str(data.get("visa_last4") or "") if c.isdigit()])
+    if not request_id or len(id_last4) != 4 or len(visa_last4) != 4:
+        return {"ok": False, "error": "invalid_reverify_payload"}, 400
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT from_email, id_last4_hash, visa_last4_hash, status, reverify_passed, reverify_needed "
+            "FROM account_transfer_requests WHERE request_id = ? LIMIT 1",
+            (request_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return {"ok": False, "error": "request_not_found"}, 404
+        from_email, id_hash, visa_hash, status, passed, needed = row
+        if not is_admin() and from_email != session_email:
+            conn.close()
+            return {"ok": False, "error": "identity_mismatch"}, 403
+        if status not in ("reverify_required", "pending_review"):
+            conn.close()
+            return {"ok": False, "error": "request_not_reverifiable"}, 409
+        ok_id = hash_sensitive("id_last4", id_last4) == (id_hash or "")
+        ok_visa = hash_sensitive("visa_last4", visa_last4) == (visa_hash or "")
+        if not (ok_id and ok_visa):
+            record_reverify_result(from_email, passed=False)
+            cur.execute(
+                "UPDATE account_transfer_requests SET status = ?, updated_at = ? WHERE request_id = ?",
+                ("reverify_required", datetime.utcnow().isoformat() + "Z", request_id),
+            )
+            conn.commit()
+            conn.close()
+            lock_until = trade_lock_until(from_email)
+            if lock_until > int(time.time()):
+                return {"ok": False, "error": "trade_locked", "unlock_at": datetime.utcfromtimestamp(lock_until).isoformat() + "Z"}, 423
+            return {"ok": False, "error": "reverify_failed", "message": "Re-verification failed. Two failed attempts lock trading for one week."}, 400
+        passed = int(passed or 0) + 1
+        needed = int(needed or 2)
+        next_status = "pending_review" if passed >= needed else "reverify_required"
+        cur.execute(
+            "UPDATE account_transfer_requests SET reverify_passed = ?, status = ?, updated_at = ? WHERE request_id = ?",
+            (passed, next_status, datetime.utcnow().isoformat() + "Z", request_id),
+        )
+        conn.commit()
+        conn.close()
+        record_reverify_result(from_email, passed=True)
+        return {"ok": True, "request_id": request_id, "status": next_status, "reverify_passed": passed, "reverify_needed": needed}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
 
 @app.route("/api/account-transfer/approve", methods=["POST"])
 def account_transfer_approve():
@@ -1930,17 +2068,20 @@ def account_transfer_approve():
         conn = sqlite3.connect(CREDIT_DB_PATH)
         cur = conn.cursor()
         cur.execute(
-            "SELECT from_email, to_email, aria_plan, status FROM account_transfer_requests WHERE request_id = ? LIMIT 1",
+            "SELECT from_email, to_email, aria_plan, status, reverify_passed, reverify_needed FROM account_transfer_requests WHERE request_id = ? LIMIT 1",
             (request_id,),
         )
         row = cur.fetchone()
         if not row:
             conn.close()
             return {"ok": False, "error": "request_not_found"}, 404
-        from_email, to_email, aria_plan, status = row
+        from_email, to_email, aria_plan, status, reverify_passed, reverify_needed = row
         if status != "pending_review":
             conn.close()
             return {"ok": False, "error": "request_not_pending"}, 409
+        if int(reverify_passed or 0) < int(reverify_needed or 2):
+            conn.close()
+            return {"ok": False, "error": "reverify_incomplete"}, 409
         set_subscription_for_email(to_email, aria_plan or "pro", source="transfer_approved", order_id=request_id)
         set_subscription_for_email(from_email, "free", source="transfer_approved", order_id=request_id)
         now = datetime.utcnow().isoformat() + "Z"

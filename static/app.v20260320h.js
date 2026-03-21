@@ -1657,7 +1657,9 @@ function setupCredit(){
   const dealBtn = qs("#talkDealBtn")
   const dealLockNote = qs("#dealLockNote")
   const requestTransferBtn = qs("#requestTransferBtn")
+  const reverifyTransferBtn = qs("#reverifyTransferBtn")
   const approveTransferBtn = qs("#approveTransferBtn")
+  const transferStatusNote = qs("#transferStatusNote")
   const log = qs("#creditDecisionLog")
 
   if(!log) return
@@ -1788,12 +1790,42 @@ function setupCredit(){
         const d = await r.json()
         if(d && d.ok){
           localStorage.setItem("lastTransferRequestId", d.request_id || "")
-          openMiniWindow("Transfer Requested", `Request ${d.request_id} pending review.`)
+          if(transferStatusNote){ transferStatusNote.textContent = `Transfer ${d.request_id} created. Re-verify 2 times to unlock admin review.` }
+          openMiniWindow("Transfer Requested", `Request ${d.request_id} created. Re-verify now.`)
         } else {
           openMiniWindow("Transfer", `Request failed: ${d.error || "unknown"}`)
         }
       }catch{
         openMiniWindow("Transfer", "Request failed: network_error")
+      }
+    })
+  }
+  if(reverifyTransferBtn){
+    reverifyTransferBtn.addEventListener("click", async ()=>{
+      const request_id = localStorage.getItem("lastTransferRequestId") || ""
+      const id_last4 = (qs("#transferIdLast4")?.value || "").trim()
+      const visa_last4 = (qs("#transferVisaLast4")?.value || "").trim()
+      if(!request_id){
+        openMiniWindow("Re-Verify", "Create transfer request first.")
+        return
+      }
+      try{
+        const r = await fetch("/api/account-transfer/reverify", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({request_id, id_last4, visa_last4})
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          const msg = `Re-verify ${d.reverify_passed}/${d.reverify_needed}. Status: ${d.status}`
+          if(transferStatusNote){ transferStatusNote.textContent = msg }
+          openMiniWindow("Re-Verify", msg)
+        } else {
+          if(transferStatusNote){ transferStatusNote.textContent = `Re-verify failed: ${d.error || "unknown"}` }
+          openMiniWindow("Re-Verify", `Failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("Re-Verify", "Failed: network_error")
       }
     })
   }
