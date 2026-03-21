@@ -111,6 +111,7 @@ MAJOR_BANKS = [
 ]
 TTS_ALLOWED_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"}
 PROHIBITED_TERMS = ["drug", "drugs", "cocaine", "meth", "weed", "marijuana", "heroin", "fentanyl", "gang", "gangs", "cartel", "ms-13", "crip", "bloods"]
+COMPETITION_BLOCKED_TOKENS = ["porn", "pornography", "xxx", "sex", "nsfw", "adultvideo"]
 SAFE_21PLUS_FUN_LINES = [
     "Hair date energy: I bring the shine plan, you bring the smile.",
     "Mamacita, ese amor por tu pelo se nota hoy.",
@@ -1210,6 +1211,10 @@ def contains_prohibited_terms(text):
     t = (text or "").lower()
     return any(x in t for x in PROHIBITED_TERMS)
 
+def competition_content_allowed(value):
+    v = (value or "").lower()
+    return not any(x in v for x in COMPETITION_BLOCKED_TOKENS)
+
 def pick_safe_21plus_line(membership_tier=""):
     try:
         tier = (membership_tier or "").strip().lower()
@@ -2234,6 +2239,8 @@ def competitions_create():
         return {"ok": False, "error": "invalid_membership_tier"}, 400
     if not opponent_url or not (opponent_url.startswith("http://") or opponent_url.startswith("https://")):
         return {"ok": False, "error": "valid_opponent_url_required"}, 400
+    if not competition_content_allowed(opponent_url):
+        return {"ok": False, "error": "pornography_blocked", "message": "No pornography is allowed in competition links."}, 400
     competition_id = f"CMP-{uuid.uuid4().hex[:10].upper()}"
     try:
         conn = sqlite3.connect(CREDIT_DB_PATH)
@@ -2255,7 +2262,7 @@ def competitions_create():
         return {"ok": False, "error": str(e)[:120]}, 500
     challenge_url = f"{request.host_url.rstrip('/')}/?competition={competition_id}&tier={membership_tier}"
     append_credit_audit(competition_id, owner_email or "admin", "competition_created", {"tier": membership_tier, "opponent_url": opponent_url[:200]})
-    return {"ok": True, "competition_id": competition_id, "challenge_url": challenge_url, "status": "active"}
+    return {"ok": True, "competition_id": competition_id, "challenge_url": challenge_url, "status": "active", "score_metrics": ["laughs", "excitement", "votes"]}
 
 @app.route("/api/competitions/movement-challenge", methods=["POST"])
 def competitions_movement_challenge():
@@ -2271,6 +2278,8 @@ def competitions_movement_challenge():
     urls = [u for u in urls if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://"))]
     unique_urls = []
     for u in urls:
+        if not competition_content_allowed(u):
+            return {"ok": False, "error": "pornography_blocked", "message": "No pornography is allowed in challenge URLs."}, 400
         if u not in unique_urls:
             unique_urls.append(u[:350])
     min_needed = 6
@@ -2310,7 +2319,7 @@ def competitions_movement_challenge():
         return {"ok": False, "error": str(e)[:120]}, 500
     challenge_url = f"{request.host_url.rstrip('/')}/?movement_challenge={challenge_id}"
     append_credit_audit(challenge_id, owner_email or "admin", "movement_challenge_created", {"participants": len(unique_urls), "areas": areas, "mode": mode or "open"})
-    return {"ok": True, "challenge_id": challenge_id, "challenge_url": challenge_url, "participants": len(unique_urls), "areas": areas, "mode": mode or "open"}
+    return {"ok": True, "challenge_id": challenge_id, "challenge_url": challenge_url, "participants": len(unique_urls), "areas": areas, "mode": mode or "open", "score_metrics": ["laughs", "excitement", "votes"]}
 
 @app.route("/api/me")
 def me():

@@ -1710,9 +1710,9 @@ function setupCredit(){
     if(!tradeBotOrbit || tradeBotOrbit.dataset.ready === "1") return
     tradeBotOrbit.dataset.ready = "1"
     const roles = [
-      {id:"risk", label:"Risk Bot locked in on clean trading."},
-      {id:"ops", label:"Ops Bot is tracking flow and timing."},
-      {id:"comms", label:"Comms Bot is handling attention updates."},
+      {id:"risk", label:"Risk Bot: trade setup is clean. Cap 50k, founder release, and 5% service tax are enforced."},
+      {id:"ops", label:"Ops Bot: rules are live. Two re-verifies, anti-bot controls, and timed lockouts are active."},
+      {id:"comms", label:"Comms Bot: competition policy is active. No pornography. Win metrics are laughs, excitement, and votes."},
     ]
     const bots = roles.map((role, idx)=>{
       const el = document.createElement("button")
@@ -2446,6 +2446,9 @@ function setupCommunications(){
           if(out) out.textContent = `Competition ready: ${d.challenge_url}`
           openMiniWindow("Competition", "Competition option created and tracked.")
         } else {
+          if(d && d.error === "pornography_blocked"){
+            openMiniWindow("Competition Rules", "No pornography is allowed in competition links.")
+          }
           if(out) out.textContent = `Create failed: ${d.error || "unknown"}`
         }
       }catch{
@@ -2470,9 +2473,13 @@ function setupCommunications(){
         })
         const d = await r.json()
         if(d && d.ok){
-          if(out) out.textContent = `1v1 ready (${d.participants} participants): ${d.challenge_url}`
-          openMiniWindow("Movement 1v1", "1v1 challenge created.")
+          const metrics = (d.score_metrics || ["laughs","excitement","votes"]).join(", ")
+          if(out) out.textContent = `1v1 ready (${d.participants} participants): ${d.challenge_url} · Metrics: ${metrics}`
+          openMiniWindow("Movement 1v1", "1v1 challenge created. Scored by laughs, excitement, and votes.")
         } else {
+          if(d && d.error === "pornography_blocked"){
+            openMiniWindow("Competition Rules", "No pornography is allowed in challenge URLs.")
+          }
           if(out) out.textContent = `Create failed: ${d.error || "unknown"}`
         }
       }catch{
@@ -2497,9 +2504,13 @@ function setupCommunications(){
         })
         const d = await r.json()
         if(d && d.ok){
-          if(out) out.textContent = `5v5 ready (${d.participants} participants): ${d.challenge_url}`
-          openMiniWindow("Movement 5v5", "5v5 challenge created with 5 key scoring areas.")
+          const metrics = (d.score_metrics || ["laughs","excitement","votes"]).join(", ")
+          if(out) out.textContent = `5v5 ready (${d.participants} participants): ${d.challenge_url} · Metrics: ${metrics}`
+          openMiniWindow("Movement 5v5", "5v5 challenge created. Scored by laughs, excitement, and votes.")
         } else {
+          if(d && d.error === "pornography_blocked"){
+            openMiniWindow("Competition Rules", "No pornography is allowed in challenge URLs.")
+          }
           if(out) out.textContent = `Create failed: ${d.error || "unknown"}`
         }
       }catch{
