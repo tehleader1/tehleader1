@@ -304,6 +304,17 @@ def init_credit_db():
             ")"
         )
         cur.execute(
+            "CREATE TABLE IF NOT EXISTS movement_challenges ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "challenge_id TEXT UNIQUE,"
+            "owner_email TEXT,"
+            "participant_urls TEXT,"
+            "areas TEXT,"
+            "status TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        cur.execute(
             "CREATE TABLE IF NOT EXISTS trade_controls ("
             "email TEXT PRIMARY KEY,"
             "failed_reverify INTEGER DEFAULT 0,"
@@ -2131,6 +2142,47 @@ def competitions_create():
     challenge_url = f"{request.host_url.rstrip('/')}/?competition={competition_id}&tier={membership_tier}"
     append_credit_audit(competition_id, owner_email or "admin", "competition_created", {"tier": membership_tier, "opponent_url": opponent_url[:200]})
     return {"ok": True, "competition_id": competition_id, "challenge_url": challenge_url, "status": "active"}
+
+@app.route("/api/competitions/movement-challenge", methods=["POST"])
+def competitions_movement_challenge():
+    user = session.get("user") or {}
+    owner_email = (user.get("email") or "").strip().lower()
+    if not owner_email and not is_admin():
+        return {"ok": False, "error": "login_required"}, 401
+    data = request.json or {}
+    urls = data.get("participant_urls") or []
+    if isinstance(urls, str):
+        urls = [x.strip() for x in urls.split(",") if x.strip()]
+    urls = [u for u in urls if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://"))]
+    unique_urls = []
+    for u in urls:
+        if u not in unique_urls:
+            unique_urls.append(u[:350])
+    if len(unique_urls) < 6:
+        return {"ok": False, "error": "minimum_6_participants_required"}, 400
+    areas = ["Health", "Longevity", "Care", "Love", "Issues"]
+    challenge_id = f"MVM-{uuid.uuid4().hex[:10].upper()}"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO movement_challenges (challenge_id, owner_email, participant_urls, areas, status, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                challenge_id,
+                owner_email or "admin",
+                json.dumps(unique_urls),
+                json.dumps(areas),
+                "active",
+                datetime.utcnow().isoformat() + "Z",
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
+    challenge_url = f"{request.host_url.rstrip('/')}/?movement_challenge={challenge_id}"
+    append_credit_audit(challenge_id, owner_email or "admin", "movement_challenge_created", {"participants": len(unique_urls), "areas": areas})
+    return {"ok": True, "challenge_id": challenge_id, "challenge_url": challenge_url, "participants": len(unique_urls), "areas": areas}
 
 @app.route("/api/me")
 def me():

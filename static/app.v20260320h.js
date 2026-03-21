@@ -2038,6 +2038,7 @@ function setupCommunications(){
   const resolverEmitView = qs("#resolverEmitView")
   const startJackpotBuild = qs("#startJackpotBuild")
   const createCompetitionBtn = qs("#createCompetitionBtn")
+  const createMovementChallengeBtn = qs("#createMovementChallengeBtn")
 
   const walletKey = "supportrdWallet"
   function loadWallet(){
@@ -2256,6 +2257,33 @@ function setupCommunications(){
         if(d && d.ok){
           if(out) out.textContent = `Competition ready: ${d.challenge_url}`
           openMiniWindow("Competition", "Competition option created and tracked.")
+        } else {
+          if(out) out.textContent = `Create failed: ${d.error || "unknown"}`
+        }
+      }catch{
+        if(out) out.textContent = "Create failed: network_error"
+      }
+    })
+  }
+  if(createMovementChallengeBtn){
+    createMovementChallengeBtn.addEventListener("click", async ()=>{
+      const raw = (qs("#movementUrls")?.value || "").trim()
+      const out = qs("#movementChallengeResult")
+      if(!raw){
+        if(out) out.textContent = "Add at least 6 participant URLs."
+        return
+      }
+      const participant_urls = raw.split(",").map(x=>x.trim()).filter(Boolean)
+      try{
+        const r = await fetch("/api/competitions/movement-challenge", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({participant_urls})
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          if(out) out.textContent = `Movement challenge ready (${d.participants} participants): ${d.challenge_url}`
+          openMiniWindow("Movement vs Movement", "Challenge created with 5 key scoring areas.")
         } else {
           if(out) out.textContent = `Create failed: ${d.error || "unknown"}`
         }
