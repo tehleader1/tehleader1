@@ -1825,6 +1825,7 @@ function setupCommunications(){
   const shopifyGuardCheck = qs("#shopifyGuardCheck")
   const shopifyGuardNotify = qs("#shopifyGuardNotify")
   const adsGuardBtn = qs("#adsGuardBtn")
+  const startJackpotBuild = qs("#startJackpotBuild")
 
   const walletKey = "supportrdWallet"
   function loadWallet(){
@@ -1983,6 +1984,27 @@ function setupCommunications(){
       openMiniWindow("Launch Alert", "Failed: network_error")
     }
   })
+
+  if(startJackpotBuild){
+    startJackpotBuild.addEventListener("click", ()=>{
+      const titles = [
+        "Curly Hair Men Upgrade",
+        "Short Nice Hairline Fade",
+        "Wavy and Direct",
+        "Long Hair Pony Tail",
+        "Straight Down",
+        "Just Chillen at Home Hair"
+      ]
+      const pick = titles[Math.floor(Math.random() * titles.length)]
+      const post = qs("#postInput")
+      if(post){
+        post.value = `${pick} · SupportRD attention challenge build starts now. Winner takes the jackpot in 1 hour.`
+      }
+      const endTs = Date.now() + 60 * 60 * 1000
+      localStorage.setItem("jackpotBuildEndTs", String(endTs))
+      openMiniWindow("Build Challenge", `${pick} started. 1-hour attention race is live.`)
+    })
+  }
 }
 
 function setupReel(){

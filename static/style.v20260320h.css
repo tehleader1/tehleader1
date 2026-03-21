@@ -899,6 +899,8 @@ body.aria-speaking .aria-large{box-shadow:0 0 48px rgba(0,226,255,0.8),0 0 90px 
 .wait-copy{margin-top:6px;color:var(--muted);}
 .wait-id{margin-top:8px;font-size:11px;color:#b9cbe8;letter-spacing:.05em;}
 .transfer-box{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.16);display:grid;gap:8px;}
+.comms-challenge{margin-top:10px;padding:10px;border-radius:14px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.04);display:grid;gap:8px;}
+.comms-tags{display:flex;flex-wrap:wrap;gap:6px;}
 @media (max-width:900px){
   .campaign-strip{grid-template-columns:1fr;}
   .credit-tier-strip{grid-template-columns:1fr;}
