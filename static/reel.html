@@ -96,59 +96,54 @@
     <div class="reel-head">
       <div>
         <div class="reel-title">SupportRD TV Reel</div>
-        <div class="reel-sub">Internet Archive stream · curated hair + millionaire/business clips.</div>
-        <div class="reel-status" id="reelStatus">Loading archive feed…</div>
+        <div class="reel-sub">TikTok service stream · hair videos only.</div>
+        <div class="reel-status" id="reelStatus">Loading TikTok hair feed…</div>
       </div>
       <div class="reel-actions">
         <button class="chip active" data-topic="hair">Hair Growth</button>
         <button class="chip" data-topic="haircare">Hair Care</button>
-        <button class="chip" data-topic="millionaire">Millionaire Mindset</button>
-        <button class="chip" data-topic="business">Business Wins</button>
+        <button class="chip" data-topic="curly">Curly Hair</button>
+        <button class="chip" data-topic="scalp">Scalp Care</button>
         <button class="chip secondary" id="nextClip">Next Clip</button>
+        <button class="chip secondary" id="openTiktok">Open in TikTok</button>
       </div>
     </div>
-    <video id="reelVideo" class="reel-frame" controls autoplay muted playsinline></video>
-    <div class="reel-foot">Internet Archive reel • tap a topic to switch • auto-rotates every 10 seconds</div>
+    <iframe id="reelFrame" class="reel-frame" title="TikTok Hair Reel" loading="lazy" allow="autoplay; encrypted-media"></iframe>
+    <div class="reel-foot">TikTok hair reel • tap a topic to switch • auto-rotates every 10 seconds</div>
   </div>
 
 <script>
   (function(){
-    var META_BASE = "https://archive.org/metadata/";
-    var DL_BASE = "https://archive.org/download/";
-    var SEARCH_BASE = "https://archive.org/advancedsearch.php?q=";
-    var video = document.getElementById("reelVideo");
+    var frame = document.getElementById("reelFrame");
     var statusEl = document.getElementById("reelStatus");
     var nextBtn = document.getElementById("nextClip");
+    var openBtn = document.getElementById("openTiktok");
     var topicButtons = Array.prototype.slice.call(document.querySelectorAll("[data-topic]"));
     var currentTopic = "hair";
     var autoTimer = null;
-    var cache = {};
-
-    var TOPIC_QUERIES = {
-      hair: "tiktok hair mediatype:movies",
-      haircare: "tiktok hair care mediatype:movies",
-      millionaire: "tiktok millionaire mediatype:movies",
-      business: "tiktok business success mediatype:movies"
+    var currentLink = "";
+    var TOPIC_LINKS = {
+      hair: [
+        "https://www.tiktok.com/tag/hair",
+        "https://www.tiktok.com/tag/hairtok",
+        "https://www.tiktok.com/search?q=hair%20routine"
+      ],
+      haircare: [
+        "https://www.tiktok.com/tag/haircare",
+        "https://www.tiktok.com/search?q=hair%20care",
+        "https://www.tiktok.com/search?q=healthy%20hair"
+      ],
+      curly: [
+        "https://www.tiktok.com/tag/curlyhair",
+        "https://www.tiktok.com/search?q=curly%20hair%20routine",
+        "https://www.tiktok.com/search?q=curl%20definition"
+      ],
+      scalp: [
+        "https://www.tiktok.com/search?q=scalp%20care",
+        "https://www.tiktok.com/search?q=hair%20growth%20tips",
+        "https://www.tiktok.com/search?q=scalp%20massage"
+      ]
     };
-    var topicCache = {};
-
-    function fetchTopicIds(topic){
-      if(topicCache[topic]) return Promise.resolve(topicCache[topic]);
-      var query = TOPIC_QUERIES[topic] || TOPIC_QUERIES.hair;
-      var url = SEARCH_BASE + encodeURIComponent(query) + "&fl[]=identifier&rows=20&page=1&output=json";
-      return fetch(url)
-        .then(function(r){ return r.json(); })
-        .then(function(data){
-          var docs = (data && data.response && data.response.docs) ? data.response.docs : [];
-          var ids = docs.map(function(d){ return d.identifier; }).filter(Boolean);
-          topicCache[topic] = ids;
-          return ids;
-        })
-        .catch(function(){
-          topicCache[topic] = [];
-          return [];
-        });
-    }
 
     function setStatus(msg){
       if(statusEl){ statusEl.textContent = msg; }
@@ -159,59 +154,16 @@
       return list[Math.floor(Math.random() * list.length)];
     }
 
-    function findVideoFile(files){
-      if(!files) return null;
-      for(var i=0;i<files.length;i++){
-        var f = files[i];
-        if(!f || !f.name) continue;
-        var name = String(f.name).toLowerCase();
-        var format = String(f.format || "").toLowerCase();
-        if(name.endsWith(".mp4") || format.indexOf("mpeg4") !== -1){
-          return f.name;
-        }
-      }
-      return null;
-    }
-
-    function loadFromIdentifier(identifier){
-      if(!identifier){
-        setStatus("No archive clips found. Try another topic.");
-        video.removeAttribute("src");
-        return;
-      }
-      if(cache[identifier]){
-        video.src = cache[identifier];
-        setStatus("Now playing: " + identifier);
-        return;
-      }
-      setStatus("Fetching archive metadata…");
-      fetch(META_BASE + encodeURIComponent(identifier))
-        .then(function(r){ return r.json(); })
-        .then(function(data){
-          var fileName = findVideoFile(data && data.files);
-          if(!fileName){
-            setStatus("No playable video found for " + identifier);
-            return;
-          }
-          var url = DL_BASE + encodeURIComponent(identifier) + "/" + encodeURIComponent(fileName);
-          cache[identifier] = url;
-          video.src = url;
-          setStatus("Now playing: " + identifier);
-        })
-        .catch(function(){
-          setStatus("Archive fetch failed for " + identifier);
-        });
-    }
-
     function rotate(){
-      fetchTopicIds(currentTopic).then(function(ids){
-        if(!ids.length){
-          setStatus("No TikTok clips found right now. Try another topic.");
-          return;
-        }
-        var id = pickRandom(ids);
-        loadFromIdentifier(id);
-      });
+      var links = TOPIC_LINKS[currentTopic] || TOPIC_LINKS.hair;
+      var link = pickRandom(links);
+      if(!link){
+        setStatus("No TikTok links found for this topic.");
+        return;
+      }
+      currentLink = link;
+      frame.src = link;
+      setStatus("Now showing TikTok " + currentTopic + " feed.");
     }
 
     function ensureTopic(topic){
@@ -238,6 +190,13 @@
     if(nextBtn){
       nextBtn.addEventListener("click", function(){
         rotate();
+      });
+    }
+    if(openBtn){
+      openBtn.addEventListener("click", function(){
+        if(currentLink){
+          window.open(currentLink, "_blank", "noopener");
+        }
       });
     }
 

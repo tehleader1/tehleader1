@@ -1028,10 +1028,10 @@ body.resort-brochure .glass{
   box-shadow:var(--shadow);
 }
 body.resort-brochure .topbar{
-  background:linear-gradient(90deg, rgba(250,243,230,0.95), rgba(234,222,199,0.9));
-  border-color:rgba(157,129,92,0.35);
+  background:linear-gradient(90deg, rgba(24,30,40,0.92), rgba(18,24,34,0.9));
+  border-color:rgba(172,188,210,0.28);
 }
-body.resort-brochure .logo{letter-spacing:.15em;color:#4a3f30;}
+body.resort-brochure .logo{letter-spacing:.15em;color:#e9f0ff;}
 body.resort-brochure .btn{
   background:linear-gradient(120deg, rgba(176,138,87,.16), rgba(90,122,122,.15));
   border-color:rgba(121,96,63,.35);
