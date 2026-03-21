@@ -1019,9 +1019,8 @@ body.resort-brochure{
   --accent-2:#5a7a7a;
   --shadow:0 20px 38px rgba(76,58,34,0.17);
   background:
-    radial-gradient(1200px 500px at 10% 0%, rgba(222,196,156,0.34), transparent 65%),
-    radial-gradient(900px 500px at 95% 8%, rgba(117,167,157,0.22), transparent 62%),
-    linear-gradient(180deg, #f7f3ea 0%, #efe7da 100%);
+    linear-gradient(rgba(247,243,234,0.74), rgba(239,231,218,0.78)),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat fixed;
   font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
 }
 body.resort-brochure .glass{
@@ -1044,7 +1043,6 @@ body.resort-brochure .btn.primary{
   color:#fff8ef;
 }
 body.resort-brochure .hero-image{filter:saturate(1.08) contrast(1.03);}
-body.resort-brochure .topbar,
 body.resort-brochure .center-stage,
 body.resort-brochure .panel,
 body.resort-brochure .conversation-panel{
@@ -1052,6 +1050,12 @@ body.resort-brochure .conversation-panel{
   width:min(90vw,640px);
   margin-left:auto;
   margin-right:auto;
+}
+body.resort-brochure .topbar{
+  max-width:none;
+  width:100%;
+  margin-left:0;
+  margin-right:0;
 }
 body.resort-brochure .center-stage{
   padding:14px 16px;
