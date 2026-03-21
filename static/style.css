@@ -396,7 +396,7 @@ body::before{content:"";position:fixed;inset:0;background:url('/static/images/wo
 .brand{max-width:760px;}
 .big-menu{display:flex;gap:6px;flex-wrap:wrap;} 
 .menu-btn{background:rgba(255,255,255,0.08);color:var(--text);border:1px solid rgba(255,255,255,0.18);padding:7px 10px;border-radius:10px;font-weight:600;font-size:12px;} 
-.status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;} 
+.status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;} 
 .toggle-wrap{display:flex;align-items:center;}
 .big-menu{
   display:flex;
@@ -413,6 +413,17 @@ body::before{content:"";position:fixed;inset:0;background:url('/static/images/wo
 }
 .big-menu .menu-btn{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);background:rgba(6,10,12,0.55);}
 .login-actions-top{display:flex;gap:8px;align-items:center;}
+#logoutBtn{
+  background:linear-gradient(120deg, #ffffff, #eaf2ff);
+  color:#0f1724;
+  border:1px solid rgba(120,146,190,0.65);
+  box-shadow:0 6px 18px rgba(0,0,0,0.22);
+}
+body.resort-brochure #logoutBtn{
+  background:linear-gradient(120deg, #ffffff, #eef4ff);
+  color:#111a29;
+  border-color:rgba(120,146,190,0.72);
+}
 .user-badge{
   display:inline-flex;
   align-items:center;

@@ -96,8 +96,8 @@
     <div class="reel-head">
       <div>
         <div class="reel-title">SupportRD TV Reel</div>
-        <div class="reel-sub">TikTok service stream · hair videos only.</div>
-        <div class="reel-status" id="reelStatus">Loading TikTok hair feed…</div>
+        <div class="reel-sub">TikTok-style hair clip stream · 10 second rotations.</div>
+        <div class="reel-status" id="reelStatus">Loading hair clips…</div>
       </div>
       <div class="reel-actions">
         <button class="chip active" data-topic="hair">Hair Growth</button>
@@ -105,11 +105,11 @@
         <button class="chip" data-topic="curly">Curly Hair</button>
         <button class="chip" data-topic="scalp">Scalp Care</button>
         <button class="chip secondary" id="nextClip">Next Clip</button>
-        <button class="chip secondary" id="openTiktok">Open in TikTok</button>
+        <button class="chip secondary" id="openTiktok">Open TikTok Topic</button>
       </div>
     </div>
-    <iframe id="reelFrame" class="reel-frame" title="TikTok Hair Reel" loading="lazy" allow="autoplay; encrypted-media"></iframe>
-    <div class="reel-foot">TikTok hair reel • tap a topic to switch • auto-rotates every 10 seconds</div>
+    <video id="reelFrame" class="reel-frame" title="SupportRD Hair Reel" autoplay muted playsinline controls></video>
+    <div class="reel-foot">hair clip reel • tap a topic to switch • auto-rotates every 10 seconds</div>
   </div>
 
 <script>
@@ -122,52 +122,77 @@
     var currentTopic = "hair";
     var autoTimer = null;
     var currentLink = "";
+    var cursor = 0;
     var TOPIC_LINKS = {
       hair: [
-        "https://www.tiktok.com/tag/hair",
-        "https://www.tiktok.com/tag/hairtok",
-        "https://www.tiktok.com/search?q=hair%20routine"
+        "https://cdn.coverr.co/videos/coverr-young-woman-touching-her-curly-hair-1578/1080p.mp4",
+        "https://cdn.coverr.co/videos/coverr-woman-flipping-her-long-hair-1577/1080p.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
       ],
       haircare: [
-        "https://www.tiktok.com/tag/haircare",
-        "https://www.tiktok.com/search?q=hair%20care",
-        "https://www.tiktok.com/search?q=healthy%20hair"
+        "https://cdn.coverr.co/videos/coverr-woman-applying-hair-oil-1576/1080p.mp4",
+        "https://cdn.coverr.co/videos/coverr-healthy-hair-routine-shot-1581/1080p.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
       ],
       curly: [
-        "https://www.tiktok.com/tag/curlyhair",
-        "https://www.tiktok.com/search?q=curly%20hair%20routine",
-        "https://www.tiktok.com/search?q=curl%20definition"
+        "https://cdn.coverr.co/videos/coverr-woman-with-curly-hair-posing-1575/1080p.mp4",
+        "https://cdn.coverr.co/videos/coverr-curls-shaking-in-slow-motion-1580/1080p.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
       ],
       scalp: [
-        "https://www.tiktok.com/search?q=scalp%20care",
-        "https://www.tiktok.com/search?q=hair%20growth%20tips",
-        "https://www.tiktok.com/search?q=scalp%20massage"
+        "https://cdn.coverr.co/videos/coverr-scalp-care-close-up-1574/1080p.mp4",
+        "https://cdn.coverr.co/videos/coverr-hair-scalp-massage-1582/1080p.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
       ]
+    };
+    var TOPIC_TIKTOK = {
+      hair: "https://www.tiktok.com/tag/hair",
+      haircare: "https://www.tiktok.com/tag/haircare",
+      curly: "https://www.tiktok.com/tag/curlyhair",
+      scalp: "https://www.tiktok.com/search?q=scalp%20care"
     };
 
     function setStatus(msg){
       if(statusEl){ statusEl.textContent = msg; }
     }
 
-    function pickRandom(list){
+    function pickNext(list){
       if(!list || !list.length) return null;
-      return list[Math.floor(Math.random() * list.length)];
+      cursor = (cursor + 1) % list.length;
+      return list[cursor];
+    }
+
+    function hardSeekToTenSeconds(){
+      try{
+        if(!frame.duration || !isFinite(frame.duration)) return;
+        if(frame.duration <= 10) return;
+        var maxStart = Math.max(0, Math.floor(frame.duration - 10));
+        frame.currentTime = Math.floor(Math.random() * maxStart);
+      }catch(_){}
     }
 
     function rotate(){
       var links = TOPIC_LINKS[currentTopic] || TOPIC_LINKS.hair;
-      var link = pickRandom(links);
+      var link = pickNext(links);
       if(!link){
-        setStatus("No TikTok links found for this topic.");
+        setStatus("No reel clips found for this topic.");
         return;
       }
       currentLink = link;
       frame.src = link;
-      setStatus("Now showing TikTok " + currentTopic + " feed.");
+      frame.load();
+      var playPromise = frame.play();
+      if(playPromise && playPromise.catch){
+        playPromise.catch(function(){
+          setStatus("Tap play to start the reel.");
+        });
+      }
+      setStatus("Now playing " + currentTopic + " clip.");
     }
 
     function ensureTopic(topic){
       currentTopic = topic;
+      cursor = -1;
       topicButtons.forEach(function(btn){
         btn.classList.toggle("active", btn.getAttribute("data-topic") === topic);
       });
@@ -194,11 +219,14 @@
     }
     if(openBtn){
       openBtn.addEventListener("click", function(){
-        if(currentLink){
-          window.open(currentLink, "_blank", "noopener");
-        }
+        window.open(TOPIC_TIKTOK[currentTopic] || TOPIC_TIKTOK.hair, "_blank", "noopener");
       });
     }
+    frame.addEventListener("loadedmetadata", hardSeekToTenSeconds);
+    frame.addEventListener("error", function(){
+      setStatus("Clip failed, loading next source...");
+      setTimeout(rotate, 300);
+    });
 
     ensureTopic(currentTopic);
     startAuto();
