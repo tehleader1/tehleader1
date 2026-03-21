@@ -1024,6 +1024,7 @@ body.resort-brochure{
     radial-gradient(1200px 500px at 10% 0%, rgba(222,196,156,0.34), transparent 65%),
     radial-gradient(900px 500px at 95% 8%, rgba(117,167,157,0.22), transparent 62%),
     linear-gradient(180deg, #f7f3ea 0%, #efe7da 100%);
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
 }
 body.resort-brochure .glass{
   background:linear-gradient(145deg, rgba(255,252,246,0.82), rgba(241,231,214,0.62));
@@ -1045,4 +1046,68 @@ body.resort-brochure .btn.primary{
   color:#fff8ef;
 }
 body.resort-brochure .hero-image{filter:saturate(1.08) contrast(1.03);}
+body.resort-brochure .topbar,
+body.resort-brochure .center-stage,
+body.resort-brochure .panel,
+body.resort-brochure .conversation-panel{
+  max-width:640px;
+  width:min(90vw,640px);
+  margin-left:auto;
+  margin-right:auto;
+}
+body.resort-brochure .center-stage{
+  padding:14px 16px;
+  border-radius:16px;
+  min-height:430px;
+  aspect-ratio:unset;
+}
+body.resort-brochure .panel,
+body.resort-brochure .conversation-panel{
+  padding:14px 16px;
+  border-radius:16px;
+}
+body.resort-brochure .reel-panel{
+  width:280px;
+  border-radius:14px;
+}
+body.resort-brochure .post-card{padding:12px;border-radius:14px;}
+body.resort-brochure .post-input textarea{min-height:92px;border-radius:12px;}
+body.resort-brochure .app-card{
+  min-width:155px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:linear-gradient(140deg, rgba(255,250,242,0.72), rgba(236,225,205,0.46));
+  color:#4c3f30;
+}
+body.resort-brochure .center-hero h2,
+body.resort-brochure .panel-head h2,
+body.resort-brochure .system-title{
+  letter-spacing:.04em;
+  font-weight:700;
+}
+body.resort-brochure .center-hero p,
+body.resort-brochure .system-sub,
+body.resort-brochure .comms-flow-sub{
+  font-size:12px;
+  line-height:1.45;
+}
+body.resort-brochure .btn{
+  padding:8px 10px;
+  border-radius:10px;
+}
+body.resort-brochure .engine-feed{
+  min-height:108px;
+  border-radius:10px;
+  font-size:11px;
+  background:rgba(253,247,238,0.78);
+  color:#3e3328;
+}
+body.resort-brochure .engine-live-video iframe{
+  min-height:170px;
+  border-radius:10px;
+}
+body.resort-brochure .trial-code-banner,
+body.resort-brochure .campaign-strip{
+  border-radius:12px;
+}
 

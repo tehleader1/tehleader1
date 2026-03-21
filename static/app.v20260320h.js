@@ -3757,6 +3757,7 @@ function setupEngineGlassViewer(){
 window.addEventListener("DOMContentLoaded", ()=>{
   try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init start'; }catch{}
   window.__appInit = true;
+  document.body.classList.add("resort-brochure")
   const savedHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
   state.ariaHistory = savedHistory
   const ariaEl = qs("#ariaHistory")
