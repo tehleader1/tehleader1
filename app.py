@@ -116,6 +116,18 @@ SAFE_21PLUS_FUN_LINES = [
     "You and your hair are the main character today.",
     "Funny truth: your split ends just resigned from the company.",
 ]
+BASIC_21PLUS_LINES = [
+    "Really what I’m saying is I like your vibe, my king - now let’s lock your hair flow.",
+    "When are we doing dinner-ready hair, my king? I brought the shine plan.",
+    "You look like a soft launch and a main event at the same time. Hair first, then fun.",
+    "You had a long day - relax, I’m on hair duty and I brought the glow.",
+]
+ADVANCED_21PLUS_LINES = [
+    "I’m in love with the way your confidence grows when your hair routine hits right.",
+    "Let’s make your next hair result feel like a love story worth sharing.",
+    "Your look has heart, presence, and purpose - let’s shape it like a signature moment.",
+    "I’m here for you: calm plan, real care, and a finish that feels unforgettable.",
+]
 
 RATE_TRACKER = {}
 DUP_TRACKER = {}
@@ -1187,8 +1199,13 @@ def contains_prohibited_terms(text):
     t = (text or "").lower()
     return any(x in t for x in PROHIBITED_TERMS)
 
-def pick_safe_21plus_line():
+def pick_safe_21plus_line(membership_tier=""):
     try:
+        tier = (membership_tier or "").strip().lower()
+        if tier == "fantasy300":
+            return random.choice(BASIC_21PLUS_LINES)
+        if tier == "fantasy600":
+            return random.choice(ADVANCED_21PLUS_LINES)
         return random.choice(SAFE_21PLUS_FUN_LINES)
     except:
         return "Hair date energy: I bring the shine plan, you bring the smile."
@@ -2709,6 +2726,7 @@ def aria():
     msg = body.get("message")
     membership_tier = (body.get("membership_tier") or "free").strip().lower()
     adult_mode = bool(body.get("adult_mode"))
+    family_theme = (body.get("family_theme") or "").strip().lower()
     muslim_greeting = bool(body.get("muslim_greeting"))
     custom_greeting = (body.get("custom_greeting") or "").strip()
     same_feel_voice = bool(body.get("same_feel_voice"))
@@ -2749,9 +2767,19 @@ def aria():
             style_note = f"Keep tone consistent across replies with this style: {thought_style[:120] or 'calm, descriptive, warm'}."
         theme_note = ""
         if membership_tier == "family200":
+            family_themes = {
+                "boat_conductor": "boat conductor",
+                "theme_park_conductor": "theme park conductor",
+                "museum_greeter": "museum information greeter",
+                "nascar_driver": "race-day driver",
+                "jungle_book": "jungle bloom",
+                "molopy_board": "laid-back board-game strategy",
+            }
+            chosen_family_theme = family_themes.get(family_theme, "boat conductor")
             theme_note = (
                 "Family Fantasy theme pack is active. Offer playful, movie-scene prep coaching with hair-first lines. "
                 "Available themes: boat conductor, theme park conductor, museum information greeter, race-day driver energy, jungle bloom, and laid-back board-game strategy. "
+                f"Prioritize this selected theme in this reply: {chosen_family_theme}. "
                 "Keep it clean, uplifting, and family-friendly."
             )
         elif membership_tier == "bingo100":
@@ -2759,6 +2787,16 @@ def aria():
                 "Bingo Fantasy is active. Use a chill, supportive, king/queen confidence tone with light humor. "
                 "Example vibe: hard-working user relaxing while ARIA handles hair guidance. "
                 "You may suggest profile flow stats as confidence markers, but stay hair-focused and non-deceptive."
+            )
+        elif membership_tier == "fantasy300":
+            theme_note = (
+                "Basic 21+ Fantasy is active. Keep it flirty-light, playful, and date-energy while staying non-explicit. "
+                "Use lines like: 'I like your vibe' and 'dinner-ready hair' while staying hair-focused."
+            )
+        elif membership_tier == "fantasy600":
+            theme_note = (
+                "Advanced 21+ Fantasy is active. Use meaningful romantic storytelling and emotional support, still non-explicit. "
+                "Keep it warm, cinematic, and confidence-building around hair routines."
             )
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
@@ -2790,7 +2828,7 @@ def aria():
             lead = custom_greeting or "As-salamu alaykum. How are you and what's new?"
             reply = f"{lead}\n\n{reply}"
         if adult_mode:
-            line = pick_safe_21plus_line()
+            line = pick_safe_21plus_line(membership_tier)
             reply = f"{line}\n\n{reply}"
         if "don't forget" not in reply.lower():
             reply = f"{reply}\n\n{reminder}"

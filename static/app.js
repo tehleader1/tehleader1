@@ -586,6 +586,7 @@ function bumpHairScore(delta){
           message: msg + '\n\nResponse level: ' + ariaLevelPrompt,
           membership_tier: state.subscription || "free",
           adult_mode: !!state.adult21,
+          family_theme: (state.socialLinks && state.socialLinks.familyFantasyTheme) ? state.socialLinks.familyFantasyTheme : "",
           muslim_greeting: !!(state.socialLinks && state.socialLinks.muslimGreeting),
           custom_greeting: (state.socialLinks && state.socialLinks.customGreeting) ? state.socialLinks.customGreeting : "",
           same_feel_voice: !!(state.socialLinks && state.socialLinks.sameFeelVoice),
@@ -1106,13 +1107,13 @@ function setupPaymentChooser(){
       return
     }
     if(val === "fantasy300"){
-      view.innerHTML = `<p>$300 BASIC FANTASY (21+).</p><div class="lock-pill">Safe playful 21+ hair persona style.</div><div class="lock-pill">Unlocks 21+ mode base access.</div><button class="btn" id="goFantasy300">Pay $300</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `<p>$300 BASIC FANTASY (21+).</p><div class="lock-pill">Flirty-light vibe: “I like your style” and dinner-ready hair energy.</div><div class="lock-pill">Playful 21+ tone, non-explicit, hair-first.</div><button class="btn" id="goFantasy300">Pay $300</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goFantasy300").addEventListener("click", ()=>openLinkModal(LINKS.fantasy300, "Basic Fantasy 21+"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     if(val === "fantasy600"){
-      view.innerHTML = `<p>$600 ADVANCED FANTASY (21+).</p><div class="lock-pill">Advanced voice consistency stack + premium playful mode.</div><div class="lock-pill">Technology is premium. No exceptions.</div><button class="btn" id="goFantasy600">Pay $600</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `<p>$600 ADVANCED FANTASY (21+).</p><div class="lock-pill">Meaningful romance storytelling with premium emotional tone.</div><div class="lock-pill">Cinematic, affectionate, non-explicit, hair-first guidance.</div><button class="btn" id="goFantasy600">Pay $600</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goFantasy600").addEventListener("click", ()=>openLinkModal(LINKS.fantasy600, "Advanced Fantasy 21+"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
@@ -1903,6 +1904,9 @@ function setupAdult21Mode(){
   const feedBtn = qs("#openSocialCircuitFeed")
   const launchBtn = qs("#launchSensualAriaPost")
   const bingoBtn = qs("#startBingoFantasy")
+  const familyTheme = qs("#familyFantasyTheme")
+  const familyThemeStatus = qs("#familyFantasyThemeStatus")
+  const saveFamilyTheme = qs("#saveFamilyFantasyTheme")
   const circuitStatus = qs("#socialCircuitStatus")
   if(!confirm || !onBtn || !offBtn || !status) return
   state.adult21 = localStorage.getItem("adult21Mode") === "true"
@@ -1961,6 +1965,30 @@ function setupAdult21Mode(){
       openMiniWindow("Sensual ARIA", "Post staged. Keep it adult, clean, and hair-focused.")
     })
   }
+  const familyThemeLabels = {
+    boat_conductor: "Boat Conductor",
+    theme_park_conductor: "Theme Park Conductor",
+    museum_greeter: "Museum Greeter / Information Guide",
+    nascar_driver: "Nascar Driver",
+    jungle_book: "Jungle Book",
+    molopy_board: "Molopy Board (laid back strategy)"
+  }
+  function renderFamilyTheme(){
+    const selected = (state.socialLinks && state.socialLinks.familyFantasyTheme) || "boat_conductor"
+    if(familyTheme){ familyTheme.value = selected }
+    if(familyThemeStatus){ familyThemeStatus.textContent = `Current family theme: ${familyThemeLabels[selected] || familyThemeLabels.boat_conductor}` }
+  }
+  if(saveFamilyTheme){
+    saveFamilyTheme.addEventListener("click", ()=>{
+      const selected = familyTheme ? familyTheme.value : "boat_conductor"
+      state.socialLinks = state.socialLinks || {}
+      state.socialLinks.familyFantasyTheme = selected
+      localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+      renderFamilyTheme()
+      openMiniWindow("Family Fantasy", "Theme saved for your $200 Family Fantasy pack.")
+    })
+  }
+  renderFamilyTheme()
   if(bingoBtn){
     bingoBtn.addEventListener("click", ()=>{
       openLinkModal(LINKS.bingo100, "Bingo Fantasy")
@@ -2551,6 +2579,7 @@ function setupSettings(){
         sameFeelVoice: qs("#setSameFeelVoice").checked,
         voiceReferencePack: qs("#setVoiceReferencePack").value.trim(),
         thoughtStyle: qs("#setThoughtStyle").value.trim(),
+        familyFantasyTheme: (state.socialLinks && state.socialLinks.familyFantasyTheme) ? state.socialLinks.familyFantasyTheme : "boat_conductor",
         feeds: {
           ig: qs("#feedIG").checked,
           tiktok: qs("#feedTikTok").checked,
