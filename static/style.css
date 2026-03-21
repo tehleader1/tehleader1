@@ -1009,23 +1009,22 @@ body.celebration-mode .buy-optional{
 }
 
 body.resort-brochure{
-  --bg:#f2eee6;
-  --glass:rgba(255,251,244,0.76);
-  --glass-strong:rgba(255,255,255,0.78);
-  --stroke:rgba(157,129,92,0.26);
-  --text:#2f2a22;
-  --muted:#675b49;
-  --accent:#b08a57;
-  --accent-2:#5a7a7a;
-  --shadow:0 20px 38px rgba(76,58,34,0.17);
+  --bg:#090b10;
+  --glass:rgba(24,28,35,0.78);
+  --glass-strong:rgba(46,54,66,0.72);
+  --stroke:rgba(172,188,210,0.22);
+  --text:#eef3ff;
+  --muted:#a7b2c8;
+  --accent:#7bc3d3;
+  --accent-2:#7ea0cf;
+  --shadow:0 20px 38px rgba(0,0,0,0.45);
   background:
-    linear-gradient(rgba(247,243,234,0.74), rgba(239,231,218,0.78)),
     url('/static/images/woman-waking-up12.jpg') center/cover no-repeat fixed;
   font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
 }
 body.resort-brochure .glass{
-  background:linear-gradient(145deg, rgba(255,252,246,0.82), rgba(241,231,214,0.62));
-  border:1px solid rgba(160,133,91,0.26);
+  background:linear-gradient(145deg, rgba(28,34,44,0.84), rgba(20,24,32,0.76));
+  border:1px solid rgba(172,188,210,0.22);
   box-shadow:var(--shadow);
 }
 body.resort-brochure .topbar{
@@ -1057,6 +1056,12 @@ body.resort-brochure .topbar{
   margin-left:0;
   margin-right:0;
 }
+body.resort-brochure #appsDock{
+  max-width:none;
+  width:100%;
+  margin-left:0;
+  margin-right:0;
+}
 body.resort-brochure .center-stage{
   padding:14px 16px;
   border-radius:16px;
@@ -1078,8 +1083,8 @@ body.resort-brochure .app-card{
   min-width:155px;
   padding:10px 12px;
   border-radius:12px;
-  background:linear-gradient(140deg, rgba(255,250,242,0.72), rgba(236,225,205,0.46));
-  color:#4c3f30;
+  background:linear-gradient(140deg, rgba(37,44,56,0.78), rgba(27,32,42,0.62));
+  color:#dfe8ff;
 }
 body.resort-brochure .center-hero h2,
 body.resort-brochure .panel-head h2,
@@ -1101,8 +1106,8 @@ body.resort-brochure .engine-feed{
   min-height:108px;
   border-radius:10px;
   font-size:11px;
-  background:rgba(253,247,238,0.78);
-  color:#3e3328;
+  background:rgba(22,28,38,0.82);
+  color:#dbe7ff;
 }
 body.resort-brochure .engine-live-video iframe{
   min-height:170px;
