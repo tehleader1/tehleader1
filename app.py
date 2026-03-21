@@ -106,6 +106,7 @@ MAJOR_BANKS = [
     "Ally Bank",
 ]
 TTS_ALLOWED_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"}
+PROHIBITED_TERMS = ["drug", "drugs", "cocaine", "meth", "weed", "marijuana", "heroin", "fentanyl", "gang", "gangs", "cartel", "ms-13", "crip", "bloods"]
 
 RATE_TRACKER = {}
 DUP_TRACKER = {}
@@ -744,7 +745,7 @@ def get_subscription_for_email(email):
         if not row:
             return "free"
         plan = (row[0] or "free").lower().strip()
-        if plan not in ("free", "premium", "pro", "yoda"):
+        if plan not in ("free", "premium", "pro", "yoda", "android80"):
             return "free"
         return plan
     except:
@@ -754,7 +755,7 @@ def set_subscription_for_email(email, plan, source="manual", order_id=""):
     if not email:
         return False
     normalized = (plan or "free").lower().strip()
-    if normalized not in ("free", "premium", "pro", "yoda"):
+    if normalized not in ("free", "premium", "pro", "yoda", "android80"):
         normalized = "free"
     try:
         conn = sqlite3.connect(CREDIT_DB_PATH)
@@ -1101,6 +1102,10 @@ def needs_developer_assistance(message):
         "refund", "chargeback", "fraud", "security", "urgent", "help now"
     ]
     return any(f in text for f in flags)
+
+def contains_prohibited_terms(text):
+    t = (text or "").lower()
+    return any(x in t for x in PROHIBITED_TERMS)
 
 def save_wellness_log(email, name, message_type, status, error_detail=""):
     try:
@@ -1686,6 +1691,8 @@ def community_post_intake():
     source = (data.get("source") or "post").strip()
     if not message:
         return {"ok": False, "error": "message_required"}, 400
+    if contains_prohibited_terms(message):
+        return {"ok": False, "error": "prohibited_content"}, 400
     needs_dev = needs_developer_assistance(message)
     event_type = "developer_needed" if needs_dev else "general_upgrade"
     severity = 4 if needs_dev else 1
@@ -1742,6 +1749,7 @@ def payment_options():
             {"id": "premium", "price": 35, "label": "Puzzle Tier"},
             {"id": "yoda", "price": 20, "label": "Yoda Pass"},
             {"id": "pro", "price": 50, "label": "Unlimited ARIA"},
+            {"id": "android80", "price": 80, "label": "Personal Hair Android"},
         ],
     }
 
@@ -2030,6 +2038,9 @@ def shopify_orders_paid_webhook():
             title = (item.get("title") or "").lower()
             sku = (item.get("sku") or "").lower()
             check = f"{title} {sku}"
+            if "personal hair android" in check or "$80" in check or "android80" in check:
+                plan = "android80"
+                break
             if "professional hair advisor" in check or "$50" in check or "pro" in check:
                 plan = "pro"
                 break
@@ -2463,6 +2474,13 @@ def aria():
     body = request.json if request.is_json else {}
     msg = body.get("message")
     membership_tier = (body.get("membership_tier") or "free").strip().lower()
+    adult_mode = bool(body.get("adult_mode"))
+    muslim_greeting = bool(body.get("muslim_greeting"))
+    custom_greeting = (body.get("custom_greeting") or "").strip()
+    if not msg:
+        return {"reply": "Tell me your hair concern and I’ll help."}
+    if contains_prohibited_terms(msg):
+        return {"reply": "I can’t help with drugs or gang-related content. I can help with healthy hair routines and products."}
     if not is_hair_topic(msg):
         return {"reply": "I can only help with hair and scalp care. Tell me your hair concern and I’ll help."}
 
@@ -2475,10 +2493,15 @@ def aria():
             tier_note = "yoda pass member"
         elif membership_tier == "pro":
             tier_note = "pro member"
+        elif membership_tier == "android80":
+            tier_note = "$80 personal hair android member"
+        adult_note = ""
+        if adult_mode:
+            adult_note = "User enabled 21+ mode. Keep it sensual and mature but non-explicit, legal, and hair-focused. No drugs, gangs, violence, or minors."
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
-                {"role": "system", "content": HAIR_SYSTEM + f" Membership context: {tier_note}."},
+                {"role": "system", "content": HAIR_SYSTEM + f" Membership context: {tier_note}. {adult_note}"},
                 {"role": "user", "content": msg}
             ],
             temperature=0.4,
@@ -2493,6 +2516,11 @@ def aria():
             reminder = "Don't forget: Yoda Pass is active. You have style-first unlimited ARIA build guidance."
         elif membership_tier == "pro":
             reminder = "Don't forget: Pro is active. You have full ARIA power and advanced coaching."
+        elif membership_tier == "android80":
+            reminder = "Don't forget: $80 Personal Hair Android is active. Your custom greeting and voice style are unlocked."
+        if muslim_greeting and membership_tier in ("android80", "pro"):
+            lead = custom_greeting or "As-salamu alaykum. How are you and what's new?"
+            reply = f"{lead}\n\n{reply}"
         if "don't forget" not in reply.lower():
             reply = f"{reply}\n\n{reminder}"
 
@@ -2577,6 +2605,8 @@ def aria_speech():
         requested_voice = (body.get("voice_preference") or "").strip().lower() if isinstance(body, dict) else ""
         wife_mode = bool(body.get("wife_mode")) if isinstance(body, dict) else False
         wife_consent = bool(body.get("wife_consent")) if isinstance(body, dict) else False
+        voice_reference = (body.get("voice_reference") or "").strip() if isinstance(body, dict) else ""
+        muslim_greeting = bool(body.get("muslim_greeting")) if isinstance(body, dict) else False
         voice = requested_voice if requested_voice in TTS_ALLOWED_VOICES else os.environ.get("OPENAI_TTS_VOICE", "shimmer")
         payload = {
             "model": os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),
@@ -2584,8 +2614,15 @@ def aria_speech():
             "input": text,
             "response_format": "mp3"
         }
+        instructions = []
         if wife_mode and wife_consent:
-            payload["instructions"] = "Use a respectful, calm, encouraging, family-safe tone."
+            instructions.append("Use a respectful, calm, encouraging, family-safe tone.")
+        if muslim_greeting:
+            instructions.append("Keep tone respectful and clean. Avoid profanity.")
+        if voice_reference:
+            instructions.append(f"Voice style reference: {voice_reference[:220]}")
+        if instructions:
+            payload["instructions"] = " ".join(instructions)
         r = requests.post(
             "https://api.openai.com/v1/audio/speech",
             headers={

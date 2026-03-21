@@ -65,6 +65,7 @@ const LINKS = {
   premium: "https://supportrd.com/products/hair-advisor-premium",
   yoda: "https://supportrd.com/products/yoda-pass",
   pro: "https://supportrd.com/products/professional-hair-advisor",
+  android80: "https://supportrd.com/products/personal-hair-android-80",
   donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
   custom: "https://supportrd.com/pages/custom-order"
 }
@@ -110,8 +111,11 @@ const state = {
     puzzleAnswer: null,
     livePopupActive: false,
     ariaLevel: 'greeting',
-    resolverContext: null
+    resolverContext: null,
+    adult21: false
 }
+
+const PROHIBITED_TERMS = ["drug","drugs","cocaine","meth","weed","marijuana","heroin","fentanyl","gang","gangs","cartel","crip","bloods","ms-13"]
 
 function detectDeviceTier(){
   try{
@@ -208,6 +212,11 @@ function triggerClassActLaugh(source){
   burst.innerHTML = `CLASS ACT LAUGH <span>Ha‑ha‑ha!</span>`
   document.body.appendChild(burst)
   setTimeout(()=>{ try{ burst.remove() }catch{} }, 1600)
+}
+
+function hasProhibitedContent(text){
+  const t = (text || "").toLowerCase()
+  return PROHIBITED_TERMS.some(k => t.includes(k))
 }
 
 
@@ -353,7 +362,7 @@ function setupInfoTray(){
 function setupLevelSelect(){
   const sel = qs('#ariaLevelSelect')
   if(!sel) return
-  function isPremium(){ return state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || isProOverride() }
+  function isPremium(){ return state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'android80' || isProOverride() }
   function sync(){
     const val = isPremium() ? state.ariaLevel : 'greeting'
     sel.value = val
@@ -565,7 +574,7 @@ function bumpHairScore(delta){
         inner: 'Give insider tips, product usage details, and sequencing.',
         pro: 'Give professional guidance and ways to monetize or upsell services.'
       }
-  const isPremium = state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda'
+  const isPremium = state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'android80'
       const shortMode = 'Reply in 1-2 sentences maximum.'
       const ariaLevelPrompt = isPremium ? (levelMap[state.ariaLevel] || levelMap.thorough) : shortMode
       const r = await fetch("/api/aria",{
@@ -574,6 +583,9 @@ function bumpHairScore(delta){
         body:JSON.stringify({
           message: msg + '\n\nResponse level: ' + ariaLevelPrompt,
           membership_tier: state.subscription || "free",
+          adult_mode: !!state.adult21,
+          muslim_greeting: !!(state.socialLinks && state.socialLinks.muslimGreeting),
+          custom_greeting: (state.socialLinks && state.socialLinks.customGreeting) ? state.socialLinks.customGreeting : "",
           resolver_context: state.resolverContext || {}
         })
       })
@@ -585,7 +597,7 @@ function bumpHairScore(delta){
       bumpHairScore(1)
       speakReply(reply)
       state.ariaCount += 1
-  const limit = (state.subscription === "pro" || state.subscription === "yoda" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
+  const limit = (state.subscription === "pro" || state.subscription === "yoda" || state.subscription === "android80" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
     if(state.ariaCount >= limit){
       state.ariaBlocked = true
       openModal("puzzleModal")
@@ -644,7 +656,9 @@ async function speakReply(text){
           text,
           voice_preference: prefs.voiceProfile || "shimmer",
           wife_mode: !!prefs.wifeVoiceMode,
-          wife_consent: !!prefs.wifeVoiceConsent
+          wife_consent: !!prefs.wifeVoiceConsent,
+          voice_reference: prefs.voiceReference || "",
+          muslim_greeting: !!prefs.muslimGreeting
         })
       })
       if(!r.ok) throw new Error("tts failed")
@@ -1055,6 +1069,12 @@ function setupPaymentChooser(){
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
+    if(val === "android80"){
+      view.innerHTML = `<p>$80 PERSONAL HAIR ANDROID.</p><div class="lock-pill">Custom greeting + advanced personal voice style.</div><div class="lock-pill">Optional Muslim greeting mode in Settings.</div><button class="btn" id="goAndroid80">Pay $80</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      qs("#goAndroid80").addEventListener("click", ()=>openLinkModal(LINKS.android80, "Personal Hair Android"))
+      qs("#checkPlanNow").addEventListener("click", checkUpgrade)
+      return
+    }
     if(val === "pro"){
       view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><div class="lock-pill">All 4 levels + unlimited ARIA</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div><button class="btn" id="goPro">Pay $50</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
       qs("#goPro").addEventListener("click", ()=>openLinkModal(LINKS.pro, "Professional Subscription"))
@@ -1113,6 +1133,11 @@ function setupPostActions(){
   function postToFeeds(){
     const choice = socialSelect ? socialSelect.value : "all"
     const targets = choice === "all" ? enabledFeeds() : [choice]
+    const text = (postInput && postInput.value ? postInput.value.trim() : "")
+    if(hasProhibitedContent(text)){
+      openMiniWindow("Blocked Content", "Drugs and gang-related content is not allowed.")
+      return
+    }
     let opened = 0
     targets.forEach(t=>{ if(openFeed(t)) opened++ })
     if(!opened){ toast("Add social links in Settings") }
@@ -1796,6 +1821,37 @@ function setupCampaign(){
   }
 }
 
+function setupAdult21Mode(){
+  const confirm = qs("#adult21Confirm")
+  const onBtn = qs("#adult21Enable")
+  const offBtn = qs("#adult21Disable")
+  const status = qs("#adult21Status")
+  if(!confirm || !onBtn || !offBtn || !status) return
+  state.adult21 = localStorage.getItem("adult21Mode") === "true"
+  function render(){
+    status.textContent = state.adult21
+      ? "21+ mode is active. ARIA will use mature sensual product tone for adults."
+      : "21+ mode is currently off."
+    document.body.classList.toggle("adult21-mode", state.adult21)
+  }
+  onBtn.addEventListener("click", ()=>{
+    if(!confirm.checked){
+      openMiniWindow("21+ Mode", "Please confirm 21+ first.")
+      return
+    }
+    state.adult21 = true
+    localStorage.setItem("adult21Mode", "true")
+    render()
+    openMiniWindow("21+ Mode", "Activated. No drugs or gang content allowed.")
+  })
+  offBtn.addEventListener("click", ()=>{
+    state.adult21 = false
+    localStorage.setItem("adult21Mode", "false")
+    render()
+  })
+  render()
+}
+
 function setupInHouseAd(){
   const title = qs("#inhouseAdTitle")
   const body = qs("#inhouseAdBody")
@@ -2246,7 +2302,7 @@ function updateOccasionVisibility(){
 }
 
 function setDefaultLevelBySubscription(){
-  if(state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda'){
+  if(state.subscription === 'premium' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'android80'){
     if(state.ariaLevel === 'greeting'){ state.ariaLevel = 'thorough' }
   } else {
     state.ariaLevel = 'greeting'
@@ -2284,6 +2340,9 @@ function setupSettings(){
   qs("#setVoiceProfile").value = saved.voiceProfile || "shimmer"
   qs("#setWifeVoiceMode").checked = !!saved.wifeVoiceMode
   qs("#setWifeVoiceConsent").checked = !!saved.wifeVoiceConsent
+  qs("#setMuslimGreeting").checked = !!saved.muslimGreeting
+  qs("#setCustomGreeting").value = saved.customGreeting || ""
+  qs("#setVoiceReference").value = saved.voiceReference || "I went to the park and birds were chirping. Keep this voice warm, calm, and clear when ARIA speaks."
   const feeds = saved.feeds || {ig:true,tiktok:true,fb:true}
   qs("#feedIG").checked = !!feeds.ig
   qs("#feedTikTok").checked = !!feeds.tiktok
@@ -2314,6 +2373,9 @@ function setupSettings(){
         voiceProfile: qs("#setVoiceProfile").value.trim(),
         wifeVoiceMode: qs("#setWifeVoiceMode").checked,
         wifeVoiceConsent: qs("#setWifeVoiceConsent").checked,
+        muslimGreeting: qs("#setMuslimGreeting").checked,
+        customGreeting: qs("#setCustomGreeting").value.trim(),
+        voiceReference: qs("#setVoiceReference").value.trim(),
         feeds: {
           ig: qs("#feedIG").checked,
           tiktok: qs("#feedTikTok").checked,
@@ -3094,6 +3156,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   openModal("appModal")
   safe(setupTabs)
   safe(setupAccessibilityMode)
+  safe(setupAdult21Mode)
   safe(setupCampaign)
   safe(setupInHouseAd)
   safe(setupRequestCall)
