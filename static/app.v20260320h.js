@@ -1,6 +1,49 @@
 const qs = (sel) => document.querySelector(sel)
 const qsa = (sel) => Array.from(document.querySelectorAll(sel))
 
+function showBannedOverlay(reason){
+  let el = qs("#bannedOverlay")
+  if(!el){
+    el = document.createElement("div")
+    el.id = "bannedOverlay"
+    el.style.cssText = "position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.92);color:#fff;"
+    el.innerHTML = `<div style="text-align:center;border:2px solid #ff4141;padding:24px;border-radius:16px;background:rgba(255,65,65,0.12);max-width:640px;">
+      <div style="font-size:56px;font-weight:900;letter-spacing:.16em;color:#ff5454;">BANNED</div>
+      <div style="margin-top:8px;color:#ffd6d6;">IP blocked. ${reason ? `Reason: ${reason}` : ""}</div>
+    </div>`
+    document.body.appendChild(el)
+  } else {
+    el.style.display = "flex"
+  }
+}
+
+;(function patchFetchForBan(){
+  if(!window.fetch || window.__banFetchPatched) return
+  const orig = window.fetch.bind(window)
+  window.fetch = async (...args)=>{
+    const res = await orig(...args)
+    if(res && res.status === 403){
+      try{
+        const clone = res.clone()
+        const ct = (clone.headers.get("content-type") || "").toLowerCase()
+        if(ct.includes("application/json")){
+          const d = await clone.json()
+          if(d && (d.error === "banned" || d.message === "BANNED")){
+            showBannedOverlay(d.reason || "")
+          }
+        } else {
+          const t = await clone.text()
+          if((t || "").toUpperCase().includes("BANNED")){
+            showBannedOverlay("")
+          }
+        }
+      }catch{}
+    }
+    return res
+  }
+  window.__banFetchPatched = true
+})()
+
 const THEMES = ["aurora","ice","ember","carbon","nebula"]
 const DEFAULT_THEME = "aurora"
 const THEME_CONTENT = [

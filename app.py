@@ -3,6 +3,7 @@ import json
 import random
 import smtplib
 import ssl
+import threading
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
@@ -76,6 +77,21 @@ CREDIT_MAX_PAYMENT_RATIO = float(os.environ.get("CREDIT_MAX_PAYMENT_RATIO", "0.3
 CREDIT_MIN_TERM_MONTHS = int(os.environ.get("CREDIT_MIN_TERM_MONTHS", "1"))
 CREDIT_MAX_TERM_MONTHS = int(os.environ.get("CREDIT_MAX_TERM_MONTHS", "24"))
 CREDIT_BLOCKED_COUNTRIES = set([c.strip().upper() for c in os.environ.get("CREDIT_BLOCKED_COUNTRIES", "").split(",") if c.strip()])
+SECURITY_DB_PATH = os.environ.get("SECURITY_DB_PATH", CREDIT_DB_PATH)
+SEC_BAN_MINUTES = int(os.environ.get("SEC_BAN_MINUTES", "1440"))
+SEC_RATE_WINDOW_SEC = int(os.environ.get("SEC_RATE_WINDOW_SEC", "60"))
+SEC_RATE_MAX_PER_WINDOW = int(os.environ.get("SEC_RATE_MAX_PER_WINDOW", "180"))
+SEC_CREDIT_WINDOW_SEC = int(os.environ.get("SEC_CREDIT_WINDOW_SEC", "300"))
+SEC_CREDIT_MAX_PER_WINDOW = int(os.environ.get("SEC_CREDIT_MAX_PER_WINDOW", "30"))
+
+RATE_TRACKER = {}
+DUP_TRACKER = {}
+SEC_LOCK = threading.Lock()
+SUSPICIOUS_PATH_TOKENS = [
+    "/.git", "/.env", "/wp-admin", "/phpmyadmin", "/server-status",
+    "/terminal", "/console", "/shell", "/cmd", "/powershell", "/ssh",
+    "/id_rsa", "/passwd", "/config", "/backup", "/dump"
+]
 
 #################################################
 # CACHE
@@ -227,6 +243,115 @@ def init_subscription_db():
         conn.close()
     except:
         pass
+
+def init_security_db():
+    try:
+        conn = sqlite3.connect(SECURITY_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS banned_ips ("
+            "ip TEXT PRIMARY KEY,"
+            "reason TEXT,"
+            "until_ts INTEGER,"
+            "created_at TEXT,"
+            "notes TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS security_events ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "ip TEXT,"
+            "path TEXT,"
+            "event_type TEXT,"
+            "detail TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def client_ip():
+    xff = (request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+    ip = xff or (request.remote_addr or "unknown")
+    return ip[:64]
+
+def log_security_event(ip, path, event_type, detail=""):
+    try:
+        conn = sqlite3.connect(SECURITY_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO security_events (ip, path, event_type, detail, created_at) VALUES (?, ?, ?, ?, ?)",
+            (ip, (path or "")[:200], (event_type or "")[:80], (detail or "")[:500], datetime.utcnow().isoformat() + "Z")
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def ban_ip(ip, reason, notes=""):
+    try:
+        until_ts = int(time.time()) + (SEC_BAN_MINUTES * 60)
+        conn = sqlite3.connect(SECURITY_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO banned_ips (ip, reason, until_ts, created_at, notes) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(ip) DO UPDATE SET reason=excluded.reason, until_ts=excluded.until_ts, notes=excluded.notes",
+            (ip, (reason or "policy_violation")[:120], until_ts, datetime.utcnow().isoformat() + "Z", (notes or "")[:500])
+        )
+        conn.commit()
+        conn.close()
+        log_security_event(ip, request.path if request else "", "ban", f"{reason} | {notes}")
+        return True
+    except:
+        return False
+
+def banned_reason(ip):
+    try:
+        conn = sqlite3.connect(SECURITY_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT reason, until_ts FROM banned_ips WHERE ip = ? LIMIT 1", (ip,))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return None
+        reason = row[0] or "policy_violation"
+        until_ts = int(row[1] or 0)
+        if until_ts <= int(time.time()):
+            return None
+        return reason
+    except:
+        return None
+
+def rate_hit(ip, bucket, window_sec, max_hits):
+    now = int(time.time())
+    key = f"{ip}:{bucket}"
+    with SEC_LOCK:
+        arr = RATE_TRACKER.get(key, [])
+        arr = [t for t in arr if now - t <= window_sec]
+        arr.append(now)
+        RATE_TRACKER[key] = arr
+        return len(arr) > max_hits
+
+def duplicate_abuse(ip, path, body_text):
+    now = int(time.time())
+    sig = f"{ip}:{path}:{hash(body_text or '')}"
+    with SEC_LOCK:
+        arr = DUP_TRACKER.get(sig, [])
+        arr = [t for t in arr if now - t <= 20]
+        arr.append(now)
+        DUP_TRACKER[sig] = arr
+        return len(arr) > 6
+
+def banned_screen(reason):
+    return f"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>BANNED</title><style>
+body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0b0d;color:#fff;font-family:Arial,sans-serif;}}
+.card{{width:min(620px,92vw);padding:28px;border-radius:18px;border:2px solid #ff3b3b;background:rgba(255,59,59,0.14);text-align:center;}}
+.big{{font-size:54px;font-weight:900;letter-spacing:.16em;color:#ff4d4d;}}
+.sub{{margin-top:10px;color:#ffd2d2;}}
+</style></head><body><div class='card'><div class='big'>BANNED</div><div class='sub'>Your IP is blocked. Reason: {reason}</div></div></body></html>"""
 
 def get_subscription_for_email(email):
     if not email:
@@ -713,6 +838,44 @@ def is_admin():
     except:
         return False
 
+@app.before_request
+def security_guard():
+    path = (request.path or "").lower()
+    if path.startswith("/health"):
+        return None
+    ip = client_ip()
+
+    reason = banned_reason(ip)
+    if reason:
+        if path.startswith("/api/"):
+            return {"ok": False, "error": "banned", "message": "BANNED", "reason": reason}, 403
+        return Response(banned_screen(reason), status=403, mimetype="text/html")
+
+    for token in SUSPICIOUS_PATH_TOKENS:
+        if token in path:
+            ban_ip(ip, "suspicious_path_probe", path)
+            return Response(banned_screen("suspicious_path_probe"), status=403, mimetype="text/html")
+
+    if rate_hit(ip, "global", SEC_RATE_WINDOW_SEC, SEC_RATE_MAX_PER_WINDOW):
+        ban_ip(ip, "speed_hack_detected", f"{path}")
+        if path.startswith("/api/"):
+            return {"ok": False, "error": "banned", "message": "BANNED", "reason": "speed_hack_detected"}, 403
+        return Response(banned_screen("speed_hack_detected"), status=403, mimetype="text/html")
+
+    if path.startswith("/api/credit"):
+        if rate_hit(ip, "credit", SEC_CREDIT_WINDOW_SEC, SEC_CREDIT_MAX_PER_WINDOW):
+            ban_ip(ip, "credit_system_abuse", path)
+            return {"ok": False, "error": "banned", "message": "BANNED", "reason": "credit_system_abuse"}, 403
+        body = ""
+        try:
+            body = request.get_data(cache=True, as_text=True) or ""
+        except:
+            body = ""
+        if duplicate_abuse(ip, path, body):
+            ban_ip(ip, "dupe_hack_detected", path)
+            return {"ok": False, "error": "banned", "message": "BANNED", "reason": "dupe_hack_detected"}, 403
+    return None
+
 @app.route("/api/seo/publish", methods=["POST"])
 def seo_publish():
     if not is_admin():
@@ -954,6 +1117,43 @@ def community_alert_contacts():
         "secondary_email": COMMUNITY_ALERT_SECONDARY_EMAIL,
         "phone": COMMUNITY_ALERT_PHONE,
     }
+
+@app.route("/api/security/banned")
+def security_banned_list():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    try:
+        conn = sqlite3.connect(SECURITY_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT ip, reason, until_ts, created_at FROM banned_ips ORDER BY until_ts DESC LIMIT 200")
+        rows = cur.fetchall()
+        conn.close()
+        now = int(time.time())
+        items = []
+        for r in rows:
+            if int(r[2] or 0) <= now:
+                continue
+            items.append({"ip": r[0], "reason": r[1], "until_ts": int(r[2] or 0), "created_at": r[3]})
+        return {"ok": True, "items": items}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:160]}, 500
+
+@app.route("/api/security/unban", methods=["POST"])
+def security_unban():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    ip = (request.json or {}).get("ip", "")
+    if not ip:
+        return {"ok": False, "error": "ip_required"}, 400
+    try:
+        conn = sqlite3.connect(SECURITY_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("DELETE FROM banned_ips WHERE ip = ?", (ip.strip(),))
+        conn.commit()
+        conn.close()
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:160]}, 500
 
 @app.route("/api/community/launch-alert", methods=["POST"])
 def community_launch_alert():
@@ -1768,6 +1968,7 @@ init_wellness_db()
 init_community_db()
 init_subscription_db()
 init_app_settings_db()
+init_security_db()
 set_setting("money_guard_enabled", "1")
 
 #################################################
