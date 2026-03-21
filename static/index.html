@@ -45,6 +45,8 @@
       <div class="big-menu">
         <button class="menu-btn" id="menuOccasion">Occasion Editor</button>
         <button class="menu-btn" id="menuGift">Gift Shop</button>
+        <button class="menu-btn" id="menuCustomOrderTop">Custom Order</button>
+        <button class="menu-btn" id="menuSellAria">Sell ARIA</button>
         <button class="menu-btn" id="menuSettings">Settings</button>
         <button class="menu-btn glow" id="menuSubscription">Subscription</button>
       </div>
@@ -456,33 +458,7 @@
             <button class="btn ghost" id="talkDealBtn" disabled>Talk to us for a deal (Unlimited ARIA)</button>
           </div>
           <div class="system-sub" id="dealLockNote">Locked: upgrade to Unlimited ARIA ($50) to unlock deal channel.</div>
-          <div class="transfer-box">
-            <div class="system-title" style="font-size:14px;">Sell Your ARIA System (Unlimited Only)</div>
-            <div class="system-sub">Each account is unique to ARIA. Transfer strips personal profile data and moves plan entitlement only. Trading cap: $50,000. In-house service tax: 5%. Founder must be present before release opens.</div>
-            <div class="credit-grid">
-              <input id="transferToEmail" placeholder="New owner email">
-              <input id="transferAmount" type="number" min="1" max="50000" step="0.01" placeholder="Transfer amount (USD, max 50000)">
-              <input id="transferIdLast4" maxlength="4" placeholder="ID Last 4">
-              <input id="transferVisaLast4" maxlength="4" placeholder="International Visa Last 4">
-            </div>
-            <div class="system-actions">
-              <button class="btn ghost" id="requestTransferBtn">Request Transfer Review</button>
-              <button class="btn ghost" id="reverifyTransferBtn">Re-Verify (2x)</button>
-              <button class="btn ghost admin-only" id="toggleTransferReleaseBtn">Toggle Sell ARIA Release</button>
-              <button class="btn admin-only" id="approveTransferBtn">Approve Transfer (Admin)</button>
-            </div>
-            <div class="system-sub" id="transferStatusNote">Clean trade rules: hand-to-hand clarity, anti-bot checks, two re-verifications. Failing re-verification twice locks trading for one week.</div>
-            <div class="system-sub" id="transferReleaseState">Checking release status...</div>
-            <div id="tradeBotOrbit" class="trade-bot-orbit" aria-label="SupportRD trade bots"></div>
-            <div class="transfer-box">
-              <div class="system-title" style="font-size:14px;">Trade Bot Live Functions</div>
-              <div class="system-actions">
-                <button class="btn ghost" id="refreshTradeBotsBtn">Refresh Bot Status</button>
-                <button class="btn ghost admin-only" id="runTradeBotsBtn">Run Bots Now (Admin)</button>
-              </div>
-              <div id="tradeBotsStatus" class="system-sub">Loading bot functions...</div>
-            </div>
-          </div>
+          <div class="system-sub">Sell Your ARIA moved to top menu for faster access.</div>
         </div>
       </div>
       <div class="tab-panel" id="tab-communications">
@@ -825,6 +801,42 @@
       <div id="puzzleQuestion" style="font-weight:700;margin-bottom:8px;">Loading…</div>
       <input id="puzzleAnswer" placeholder="Your answer">
       <button class="btn" id="puzzleSubmit">Unlock ARIA</button>
+  </div>
+</div>
+
+<div id="sellAriaModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Sell Your ARIA System</h2>
+      <button class="btn ghost" id="closeSellAria">Close</button>
+    </div>
+    <div class="transfer-box">
+      <div class="system-title" style="font-size:14px;">Unlimited Only</div>
+      <div class="system-sub">Each account is unique to ARIA. Transfer strips personal profile data and moves plan entitlement only. Trading cap: $50,000. In-house service tax: 5%. Founder must be present before release opens.</div>
+      <div class="credit-grid">
+        <input id="transferToEmail" placeholder="New owner email">
+        <input id="transferAmount" type="number" min="1" max="50000" step="0.01" placeholder="Transfer amount (USD, max 50000)">
+        <input id="transferIdLast4" maxlength="4" placeholder="ID Last 4">
+        <input id="transferVisaLast4" maxlength="4" placeholder="International Visa Last 4">
+      </div>
+      <div class="system-actions">
+        <button class="btn ghost" id="requestTransferBtn">Request Transfer Review</button>
+        <button class="btn ghost" id="reverifyTransferBtn">Re-Verify (2x)</button>
+        <button class="btn ghost admin-only" id="toggleTransferReleaseBtn">Toggle Sell ARIA Release</button>
+        <button class="btn admin-only" id="approveTransferBtn">Approve Transfer (Admin)</button>
+      </div>
+      <div class="system-sub" id="transferStatusNote">Clean trade rules: hand-to-hand clarity, anti-bot checks, two re-verifications. Failing re-verification twice locks trading for one week.</div>
+      <div class="system-sub" id="transferReleaseState">Checking release status...</div>
+      <div id="tradeBotOrbit" class="trade-bot-orbit" aria-label="SupportRD trade bots"></div>
+      <div class="transfer-box">
+        <div class="system-title" style="font-size:14px;">Trade Bot Live Functions</div>
+        <div class="system-actions">
+          <button class="btn ghost" id="refreshTradeBotsBtn">Refresh Bot Status</button>
+          <button class="btn ghost admin-only" id="runTradeBotsBtn">Run Bots Now (Admin)</button>
+        </div>
+        <div id="tradeBotsStatus" class="system-sub">Loading bot functions...</div>
+      </div>
+    </div>
   </div>
 </div>
 
