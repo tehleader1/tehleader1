@@ -60,6 +60,31 @@
     </div>
   </header>
 
+  <section class="campaign-strip glass">
+    <div class="campaign-left">
+      <div class="campaign-tag">#SupportRD is moving</div>
+      <h3>Cash Friendly. Card Ready. Sponsor Friendly.</h3>
+      <p>We welcome cash at official SupportRD points with clean receipt logging. Card acceptance and major bank support are active for everyday checkout confidence.</p>
+      <div class="campaign-actions">
+        <button class="btn primary" id="openRequestCall">Request Call</button>
+        <button class="btn ghost" id="campaignBlogCta">Read Launch Post</button>
+      </div>
+    </div>
+    <div class="campaign-right">
+      <div class="campaign-block">
+        <div class="campaign-title">Cash Welcome + Card Accepted</div>
+        <div class="campaign-lines">Visa · Mastercard · American Express · Discover · Debit · Cash</div>
+        <div class="campaign-lines">U.S. Bank · Bank of America · Wells Fargo · Woodforest · Chase · Citi · Capital One · PNC · Truist · TD · USAA</div>
+      </div>
+      <div class="campaign-block">
+        <div class="campaign-title">Expansion Roadmap</div>
+        <div class="campaign-lines">1) Charlotte, North Carolina</div>
+        <div class="campaign-lines">2) Virginia</div>
+        <div class="campaign-lines">3) Florida</div>
+      </div>
+    </div>
+  </section>
+
   <section class="emit-strip glass">
     <div class="emit-title">AI Hair Resolver Context</div>
     <div class="emit-sub" id="dashboardEmitStatus">Location + device emit loading...</div>
@@ -95,8 +120,8 @@
       <strong>SupportRD Live Advisor + Membership Power</strong>
       <span>Don’t forget: Premium ($35) and Pro ($50) unlock deeper ARIA care plans and pro growth features. This system keeps evolving.</span>
     </div>
-    <button class="btn" id="adCta">Explore Products</button>
-    <button class="btn ghost" id="adMembershipCta">See Premium/Pro</button>
+    <button class="btn buy-optional" id="adCta">Explore Products</button>
+    <button class="btn ghost buy-optional" id="adMembershipCta">See Premium/Pro</button>
     </section>
 
   <section class="reel-panel glass" id="reelPanel">
@@ -170,6 +195,11 @@
           <textarea id="postInput" placeholder="Add a new post"></textarea>
           <div class="smoke">Add a new post</div>
         </div>
+        <div class="inhouse-ad glass" id="inhouseAdSlot">
+          <div class="inhouse-eyebrow">In‑House Spotlight</div>
+          <div class="inhouse-title" id="inhouseAdTitle">Fresh support idea loading...</div>
+          <div class="inhouse-body" id="inhouseAdBody">Colorful ad-friendly space that rotates every time.</div>
+        </div>
 
 
         <div class="scan-row">
@@ -197,6 +227,10 @@
           </select>
           <div class="social-indicator" id="socialIndicator">Feeds: Instagram, TikTok, Facebook</div>
           <button class="btn ghost" id="tipTeam">Tip SupportRD Family Team</button>
+          <div class="tip-frontier" id="tipFrontier">
+            <div class="tip-frontier-title">Tip Frontier</div>
+            <div class="tip-frontier-body" id="tipFrontierBody">$0 tipped · Frontier pending</div>
+          </div>
           <select class="payment-dropdown" id="paySelect">
             <option>Custom Order Payment</option>
             <option>With Evelyn Custom Order</option>
@@ -329,6 +363,16 @@
             </div>
             <span class="system-badge">Live System</span>
           </div>
+          <div class="credit-tier-strip">
+            <div class="tier-card">
+              <strong>$35 ARIA Puzzle Tier</strong>
+              <span>Smart puzzle support, guided routines, and growth prompts.</span>
+            </div>
+            <div class="tier-card">
+              <strong>$50 Unlimited ARIA Tier</strong>
+              <span>Main perk: unlock <em>Talk to us for a deal</em> with professional handling.</span>
+            </div>
+          </div>
           <div class="credit-grid">
             <input id="creditEmail" placeholder="Email">
             <input id="creditCountry" placeholder="Country Code (US, DO, etc)">
@@ -344,8 +388,23 @@
           </div>
           <div class="system-log" id="creditDecisionLog">No decision yet.</div>
           <div class="system-actions">
-            <button class="btn primary" id="creditPayMembership">Pay Membership</button>
-            <button class="btn ghost" id="creditPayProducts">Pay Products</button>
+            <button class="btn primary buy-optional" id="creditPayMembership">Pay Membership</button>
+            <button class="btn ghost buy-optional" id="creditPayProducts">Pay Products</button>
+            <button class="btn ghost" id="talkDealBtn" disabled>Talk to us for a deal (Unlimited ARIA)</button>
+          </div>
+          <div class="system-sub" id="dealLockNote">Locked: upgrade to Unlimited ARIA ($50) to unlock deal channel.</div>
+          <div class="transfer-box">
+            <div class="system-title" style="font-size:14px;">Sell Your ARIA System (Unlimited Only)</div>
+            <div class="system-sub">Each account is unique to ARIA. Transfer strips personal profile data and moves plan entitlement only.</div>
+            <div class="credit-grid">
+              <input id="transferToEmail" placeholder="New owner email">
+              <input id="transferIdLast4" maxlength="4" placeholder="ID Last 4">
+              <input id="transferVisaLast4" maxlength="4" placeholder="International Visa Last 4">
+            </div>
+            <div class="system-actions">
+              <button class="btn ghost" id="requestTransferBtn">Request Transfer Review</button>
+              <button class="btn admin-only" id="approveTransferBtn">Approve Transfer (Admin)</button>
+            </div>
           </div>
         </div>
       </div>
@@ -677,6 +736,46 @@
         <label><input type="checkbox" id="pushAria"> Push notifications via ARIA text</label>
       </div>
       <button class="btn" id="saveSettings">Save Settings</button>
+      <div class="cash-ops admin-only">
+        <h4>Cash Point Ops (Admin)</h4>
+        <input id="cashRequestId" placeholder="Request ID (SRD-...)">
+        <select id="cashFlowType">
+          <option value="store">Store/Event</option>
+          <option value="bank">Bank Meetup</option>
+          <option value="envelope">Envelope Handoff</option>
+        </select>
+        <input id="cashLocation" placeholder="Meeting location">
+        <input id="cashAmount" type="number" step="0.01" min="0" placeholder="Amount">
+        <input id="cashProof" placeholder="Proof ref (optional)">
+        <button class="btn" id="cashCheckinBtn">Log Cash Point Check-In</button>
+        <input id="cashConfirmedBy" placeholder="Confirmed by (staff name)">
+        <textarea id="cashMemo" placeholder="Memo"></textarea>
+        <button class="btn ghost" id="cashConfirmBtn">Confirm Funds Received</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="requestCallModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Request Call · #SupportRD is moving</h2>
+      <button class="btn ghost" id="closeRequestCall">Close</button>
+    </div>
+    <div class="request-grid" id="requestCallFormWrap">
+      <input id="reqName" placeholder="Name">
+      <input id="reqPhone" placeholder="Phone">
+      <input id="reqEmail" placeholder="Email">
+      <input id="reqAddress" placeholder="Address">
+      <textarea id="reqNotes" placeholder="Notes (optional)"></textarea>
+      <label class="system-check"><input id="reqConsent" type="checkbox"> I consent to SupportRD follow-up for payment and delivery support.</label>
+      <button class="btn primary" id="submitRequestCall">Submit Request</button>
+    </div>
+    <div class="request-wait" id="requestWaitWrap" style="display:none;">
+      <div class="wait-badge">Pending</div>
+      <div class="wait-title">You are checked in.</div>
+      <div class="wait-copy" id="requestWaitMessage">Request received. Under review.</div>
+      <div class="wait-id" id="requestWaitId"></div>
     </div>
   </div>
 </div>

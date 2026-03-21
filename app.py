@@ -4,6 +4,7 @@ import random
 import smtplib
 import ssl
 import threading
+import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
@@ -63,6 +64,7 @@ WELLNESS_SUBJECT = os.environ.get("WELLNESS_SUBJECT", "SupportRD Personal Check-
 COMMUNITY_ALERT_PRIMARY_EMAIL = os.environ.get("COMMUNITY_ALERT_PRIMARY_EMAIL", "agentanthony@supportrd.com")
 COMMUNITY_ALERT_SECONDARY_EMAIL = os.environ.get("COMMUNITY_ALERT_SECONDARY_EMAIL", "xxfigueroa1993@yahoo.com")
 COMMUNITY_ALERT_PHONE = os.environ.get("COMMUNITY_ALERT_PHONE", "980-375-9197")
+COMMUNITY_ALERT_SMS_EMAIL = os.environ.get("COMMUNITY_ALERT_SMS_EMAIL", "")
 COMMUNITY_ALERT_THRESHOLD = float(os.environ.get("COMMUNITY_ALERT_THRESHOLD", "75"))
 COMMUNITY_TARGET_RATIO = float(os.environ.get("COMMUNITY_TARGET_RATIO", "0.70"))
 MONEY_GUARD_DROP_PCT = float(os.environ.get("MONEY_GUARD_DROP_PCT", "35"))
@@ -83,6 +85,26 @@ SEC_RATE_WINDOW_SEC = int(os.environ.get("SEC_RATE_WINDOW_SEC", "60"))
 SEC_RATE_MAX_PER_WINDOW = int(os.environ.get("SEC_RATE_MAX_PER_WINDOW", "180"))
 SEC_CREDIT_WINDOW_SEC = int(os.environ.get("SEC_CREDIT_WINDOW_SEC", "300"))
 SEC_CREDIT_MAX_PER_WINDOW = int(os.environ.get("SEC_CREDIT_MAX_PER_WINDOW", "30"))
+SEC_CREDIT_USER_COOLDOWN_SEC = int(os.environ.get("SEC_CREDIT_USER_COOLDOWN_SEC", "180"))
+CREDIT_MANUAL_REVIEW_THRESHOLD = float(os.environ.get("CREDIT_MANUAL_REVIEW_THRESHOLD", "5000"))
+CREDIT_MAX_OPEN_OBLIGATIONS = int(os.environ.get("CREDIT_MAX_OPEN_OBLIGATIONS", "1"))
+FREEZE_MINUTES = int(os.environ.get("FREEZE_MINUTES", "1440"))
+CASH_MAX_AMOUNT = float(os.environ.get("CASH_MAX_AMOUNT", "25000"))
+ACCEPTED_PAYMENT_NETWORKS = ["Visa", "Mastercard", "American Express", "Discover", "Debit / ATM Cards", "Cash"]
+MAJOR_BANKS = [
+    "U.S. Bank",
+    "Bank of America",
+    "Wells Fargo",
+    "Woodforest National Bank",
+    "JPMorgan Chase",
+    "Citi",
+    "Capital One",
+    "PNC",
+    "Truist",
+    "TD Bank",
+    "USAA",
+    "Ally Bank",
+]
 
 RATE_TRACKER = {}
 DUP_TRACKER = {}
@@ -166,13 +188,358 @@ def init_credit_db():
             "approved_amount REAL,"
             "status TEXT,"
             "reason TEXT,"
+            "application_uuid TEXT,"
+            "obligation_status TEXT DEFAULT 'none',"
             "decision_at TEXT"
+            ")"
+        )
+        try:
+            cur.execute("ALTER TABLE credit_decisions ADD COLUMN application_uuid TEXT")
+        except:
+            pass
+        try:
+            cur.execute("ALTER TABLE credit_decisions ADD COLUMN obligation_status TEXT DEFAULT 'none'")
+        except:
+            pass
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS credit_requests ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "idempotency_key TEXT UNIQUE,"
+            "email TEXT,"
+            "ip TEXT,"
+            "created_at TEXT,"
+            "response_json TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS account_freezes ("
+            "email TEXT PRIMARY KEY,"
+            "reason TEXT,"
+            "until_ts INTEGER,"
+            "created_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS credit_audit ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "application_uuid TEXT,"
+            "email TEXT,"
+            "event_type TEXT,"
+            "event_json TEXT,"
+            "prev_hash TEXT,"
+            "event_hash TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS lead_requests ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "request_id TEXT UNIQUE,"
+            "name TEXT,"
+            "phone TEXT,"
+            "email TEXT,"
+            "address TEXT,"
+            "notes TEXT,"
+            "consent INTEGER DEFAULT 0,"
+            "status TEXT DEFAULT 'pending',"
+            "wait_message TEXT,"
+            "created_at TEXT,"
+            "updated_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS cash_point_events ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "request_id TEXT,"
+            "email TEXT,"
+            "flow_type TEXT,"
+            "event_type TEXT,"
+            "location TEXT,"
+            "amount REAL,"
+            "proof_ref TEXT,"
+            "confirmed_by TEXT,"
+            "memo TEXT,"
+            "prev_hash TEXT,"
+            "event_hash TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS account_transfer_requests ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "request_id TEXT UNIQUE,"
+            "from_email TEXT,"
+            "to_email TEXT,"
+            "aria_plan TEXT,"
+            "id_last4_hash TEXT,"
+            "visa_last4_hash TEXT,"
+            "status TEXT,"
+            "created_at TEXT,"
+            "updated_at TEXT"
             ")"
         )
         conn.commit()
         conn.close()
     except:
         pass
+
+def audit_prev_hash(cur):
+    try:
+        cur.execute("SELECT event_hash FROM credit_audit ORDER BY id DESC LIMIT 1")
+        row = cur.fetchone()
+        return (row[0] if row else "") or ""
+    except:
+        return ""
+
+def append_credit_audit(application_uuid, email, event_type, event_data):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        prev = audit_prev_hash(cur)
+        payload = json.dumps(event_data or {}, sort_keys=True, separators=(",", ":"))
+        raw = f"{prev}|{application_uuid}|{email}|{event_type}|{payload}"
+        event_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+        cur.execute(
+            "INSERT INTO credit_audit (application_uuid, email, event_type, event_json, prev_hash, event_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (application_uuid, email, event_type, payload, prev, event_hash, datetime.utcnow().isoformat() + "Z")
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def frozen_reason(email):
+    if not email:
+        return None
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT reason, until_ts FROM account_freezes WHERE email = ? LIMIT 1", (email.lower(),))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return None
+        until_ts = int(row[1] or 0)
+        if until_ts <= int(time.time()):
+            return None
+        return row[0] or "frozen"
+    except:
+        return None
+
+def freeze_account(email, reason):
+    if not email:
+        return
+    try:
+        until_ts = int(time.time()) + FREEZE_MINUTES * 60
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO account_freezes (email, reason, until_ts, created_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(email) DO UPDATE SET reason=excluded.reason, until_ts=excluded.until_ts, created_at=excluded.created_at",
+            (email.lower(), reason[:160], until_ts, datetime.utcnow().isoformat() + "Z")
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def open_obligations_count(email):
+    if not email:
+        return 0
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT COUNT(*) FROM credit_decisions WHERE email = ? AND obligation_status = 'open'",
+            (email.lower(),)
+        )
+        row = cur.fetchone()
+        conn.close()
+        return int(row[0] or 0) if row else 0
+    except:
+        return 0
+
+def remember_idempotency(idem_key, email, ip, response_obj):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO credit_requests (idempotency_key, email, ip, created_at, response_json) VALUES (?, ?, ?, ?, ?)",
+            (idem_key, email, ip, datetime.utcnow().isoformat() + "Z", json.dumps(response_obj))
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
+
+def idempotency_response(idem_key):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT response_json FROM credit_requests WHERE idempotency_key = ? LIMIT 1", (idem_key,))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return None
+        return json.loads(row[0] or "{}")
+    except:
+        return None
+
+def new_request_id():
+    return f"SRD-{uuid.uuid4().hex[:12].upper()}"
+
+def upsert_lead_request(row):
+    try:
+        now = datetime.utcnow().isoformat() + "Z"
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO lead_requests (request_id, name, phone, email, address, notes, consent, status, wait_message, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(request_id) DO UPDATE SET "
+            "name=excluded.name, phone=excluded.phone, email=excluded.email, address=excluded.address, notes=excluded.notes, "
+            "consent=excluded.consent, status=excluded.status, wait_message=excluded.wait_message, updated_at=excluded.updated_at",
+            (
+                row.get("request_id"),
+                (row.get("name") or "")[:120],
+                (row.get("phone") or "")[:80],
+                (row.get("email") or "").lower()[:120],
+                (row.get("address") or "")[:240],
+                (row.get("notes") or "")[:500],
+                1 if row.get("consent") else 0,
+                (row.get("status") or "pending")[:40],
+                (row.get("wait_message") or "")[:240],
+                now,
+                now,
+            ),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
+
+def get_lead_request(request_id):
+    if not request_id:
+        return None
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT request_id, name, phone, email, address, notes, consent, status, wait_message, created_at, updated_at "
+            "FROM lead_requests WHERE request_id = ? LIMIT 1",
+            (request_id,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return None
+        return {
+            "request_id": row[0],
+            "name": row[1],
+            "phone": row[2],
+            "email": row[3],
+            "address": row[4],
+            "notes": row[5],
+            "consent": bool(row[6]),
+            "status": row[7],
+            "wait_message": row[8],
+            "created_at": row[9],
+            "updated_at": row[10],
+        }
+    except:
+        return None
+
+def chain_prev_hash(cur):
+    try:
+        cur.execute("SELECT event_hash FROM cash_point_events ORDER BY id DESC LIMIT 1")
+        row = cur.fetchone()
+        return (row[0] if row else "") or ""
+    except:
+        return ""
+
+def append_cash_point_event(request_id, email, flow_type, event_type, location="", amount=0.0, proof_ref="", confirmed_by="", memo=""):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        prev = chain_prev_hash(cur)
+        payload = json.dumps(
+            {
+                "request_id": request_id,
+                "email": email or "",
+                "flow_type": flow_type or "",
+                "event_type": event_type or "",
+                "location": location or "",
+                "amount": float(amount or 0),
+                "proof_ref": proof_ref or "",
+                "confirmed_by": confirmed_by or "",
+                "memo": memo or "",
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        event_hash = hashlib.sha256(f"{prev}|{payload}".encode("utf-8")).hexdigest()
+        cur.execute(
+            "INSERT INTO cash_point_events (request_id, email, flow_type, event_type, location, amount, proof_ref, confirmed_by, memo, prev_hash, event_hash, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                (request_id or "")[:40],
+                (email or "").lower()[:120],
+                (flow_type or "")[:20],
+                (event_type or "")[:30],
+                (location or "")[:240],
+                float(amount or 0),
+                (proof_ref or "")[:200],
+                (confirmed_by or "")[:120],
+                (memo or "")[:500],
+                prev,
+                event_hash,
+                datetime.utcnow().isoformat() + "Z",
+            ),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
+
+def send_admin_alert(event_type, priority, request_id, location, summary):
+    recipients = []
+    for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL]:
+        v = (em or "").strip().lower()
+        if v and "@" in v and v not in recipients:
+            recipients.append(v)
+    if not recipients:
+        return {"ok": False, "error": "no_recipients"}
+    subject = f"SupportRD Alert · {(event_type or 'general').strip()[:40]}"
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+      <h2 style="margin:0 0 8px;">SupportRD Admin Alert</h2>
+      <p><strong>Priority:</strong> {(priority or "normal")[:20]}</p>
+      <p><strong>Request ID:</strong> {(request_id or "n/a")[:40]}</p>
+      <p><strong>Location:</strong> {(location or "n/a")[:240]}</p>
+      <p><strong>Summary:</strong> {(summary or "n/a")[:600]}</p>
+      <p style="margin-top:10px;">#SupportRD is moving</p>
+    </div>
+    """
+    sent = 0
+    failed = 0
+    for em in recipients:
+        ok, _detail = send_smtp_html(em, subject, html)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+    sms_fallback = False
+    if sent == 0 and COMMUNITY_ALERT_SMS_EMAIL:
+        ok, _detail = send_smtp_html(COMMUNITY_ALERT_SMS_EMAIL, subject, html)
+        sms_fallback = bool(ok)
+    return {"ok": sent > 0 or sms_fallback, "sent": sent, "failed": failed, "recipients": len(recipients), "sms_fallback": sms_fallback}
+
+def hash_sensitive(label, value):
+    raw = f"{label}|{(value or '').strip()}|{app.secret_key}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 def init_wellness_db():
     try:
@@ -743,8 +1110,8 @@ def save_credit_decision(row):
         cur.execute(
             "INSERT INTO credit_decisions ("
             "email, country, requested_amount, term_months, monthly_income, monthly_debt, "
-            "estimated_payment, allowed_payment, approved_amount, status, reason, decision_at"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "estimated_payment, allowed_payment, approved_amount, status, reason, application_uuid, obligation_status, decision_at"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 row.get("email", ""),
                 row.get("country", ""),
@@ -757,6 +1124,8 @@ def save_credit_decision(row):
                 float(row.get("approved_amount", 0) or 0),
                 row.get("status", "denied"),
                 row.get("reason", ""),
+                (row.get("application_uuid") or ""),
+                (row.get("obligation_status") or "none"),
                 datetime.utcnow().isoformat() + "Z",
             ),
         )
@@ -1349,6 +1718,218 @@ def community_post_intake():
         "detail": notify_detail
     }
 
+@app.route("/api/payments/options")
+def payment_options():
+    return {
+        "ok": True,
+        "networks": ACCEPTED_PAYMENT_NETWORKS,
+        "major_banks": MAJOR_BANKS,
+        "cash_supported": True,
+        "cash_note": "Cash is accepted at official SupportRD points with receipt logging.",
+    }
+
+@app.route("/api/leads/request-call", methods=["POST"])
+def leads_request_call():
+    data = request.json or {}
+    name = (data.get("name") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    address = (data.get("address") or "").strip()
+    notes = (data.get("notes") or "").strip()
+    consent = bool(data.get("consent"))
+    if not name or not phone or not email or not address:
+        return {"ok": False, "error": "missing_required_fields"}, 400
+    if "@" not in email:
+        return {"ok": False, "error": "invalid_email"}, 400
+    if not consent:
+        return {"ok": False, "error": "consent_required"}, 400
+    request_id = new_request_id()
+    wait_message = "Request received. Your SupportRD check-in is pending review and follow-up."
+    row = {
+        "request_id": request_id,
+        "name": name,
+        "phone": phone,
+        "email": email,
+        "address": address,
+        "notes": notes,
+        "consent": True,
+        "status": "pending",
+        "wait_message": wait_message,
+    }
+    if not upsert_lead_request(row):
+        return {"ok": False, "error": "save_failed"}, 500
+    log_security_event(client_ip(), "/api/leads/request-call", "lead_request_created", f"{email} {request_id}")
+    return {"ok": True, "request_id": request_id, "status": "pending", "wait_screen_message": wait_message}
+
+@app.route("/api/cash-points/checkin", methods=["POST"])
+def cash_points_checkin():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    data = request.json or {}
+    request_id = (data.get("request_id") or "").strip()
+    flow_type = (data.get("flow_type") or "").strip().lower()
+    location = (data.get("location") or "").strip()
+    proof_ref = (data.get("proof_ref") or "").strip()
+    try:
+        amount = float(data.get("amount", 0) or 0)
+    except:
+        amount = -1
+    if flow_type not in ("store", "bank", "envelope"):
+        return {"ok": False, "error": "invalid_flow_type"}, 400
+    if not request_id:
+        return {"ok": False, "error": "request_id_required"}, 400
+    if not location:
+        return {"ok": False, "error": "location_required"}, 400
+    if amount < 0 or amount > CASH_MAX_AMOUNT:
+        return {"ok": False, "error": "invalid_amount"}, 400
+    lead = get_lead_request(request_id)
+    if not lead:
+        return {"ok": False, "error": "request_not_found"}, 404
+    if not append_cash_point_event(request_id, lead.get("email"), flow_type, "checkin", location=location, amount=amount, proof_ref=proof_ref):
+        return {"ok": False, "error": "event_log_failed"}, 500
+    lead["status"] = "checked_in"
+    upsert_lead_request(lead)
+    append_credit_audit(request_id, lead.get("email"), "cash_point_checkin", {"flow_type": flow_type, "location": location, "amount": amount})
+    return {"ok": True, "status": "checked_in", "logged_at": datetime.utcnow().isoformat() + "Z"}
+
+@app.route("/api/cash-points/confirm-received", methods=["POST"])
+def cash_points_confirm_received():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    data = request.json or {}
+    request_id = (data.get("request_id") or "").strip()
+    confirmed_by = (data.get("confirmed_by") or "").strip()
+    memo = (data.get("memo") or "").strip()
+    try:
+        received_amount = float(data.get("received_amount", 0) or 0)
+    except:
+        received_amount = -1
+    if not request_id or not confirmed_by:
+        return {"ok": False, "error": "missing_required_fields"}, 400
+    if received_amount < 0 or received_amount > CASH_MAX_AMOUNT:
+        return {"ok": False, "error": "invalid_amount"}, 400
+    lead = get_lead_request(request_id)
+    if not lead:
+        return {"ok": False, "error": "request_not_found"}, 404
+    if not append_cash_point_event(
+        request_id,
+        lead.get("email"),
+        "store",
+        "received",
+        location=lead.get("address", ""),
+        amount=received_amount,
+        confirmed_by=confirmed_by,
+        memo=memo,
+    ):
+        return {"ok": False, "error": "event_log_failed"}, 500
+    lead["status"] = "received"
+    upsert_lead_request(lead)
+    append_credit_audit(request_id, lead.get("email"), "cash_point_received", {"confirmed_by": confirmed_by, "amount": received_amount})
+    return {"ok": True, "status": "received"}
+
+@app.route("/api/admin/alerts/dispatch", methods=["POST"])
+def admin_alerts_dispatch():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    data = request.json or {}
+    event_type = (data.get("event_type") or "general").strip()
+    priority = (data.get("priority") or "normal").strip().lower()
+    request_id = (data.get("request_id") or "").strip()
+    location = (data.get("location") or "").strip()
+    summary = (data.get("summary") or "").strip()
+    if not summary:
+        return {"ok": False, "error": "summary_required"}, 400
+    result = send_admin_alert(event_type, priority, request_id, location, summary)
+    if request_id:
+        lead = get_lead_request(request_id)
+        if lead:
+            append_credit_audit(request_id, lead.get("email"), "admin_alert_dispatch", {"event_type": event_type, "priority": priority, "location": location})
+    return result
+
+@app.route("/api/account-transfer/request", methods=["POST"])
+def account_transfer_request():
+    user = session.get("user") or {}
+    session_email = (user.get("email") or "").strip().lower()
+    if not session_email and not is_admin():
+        return {"ok": False, "error": "login_required"}, 401
+    data = request.json or {}
+    from_email = (data.get("from_email") or session_email or "").strip().lower()
+    to_email = (data.get("to_email") or "").strip().lower()
+    id_last4 = "".join([c for c in str(data.get("id_last4") or "") if c.isdigit()])
+    visa_last4 = "".join([c for c in str(data.get("visa_last4") or "") if c.isdigit()])
+    if not is_admin() and from_email != session_email:
+        return {"ok": False, "error": "identity_mismatch"}, 403
+    if not from_email or not to_email or "@" not in from_email or "@" not in to_email:
+        return {"ok": False, "error": "invalid_email"}, 400
+    if len(id_last4) != 4 or len(visa_last4) != 4:
+        return {"ok": False, "error": "last4_required"}, 400
+    plan = get_subscription_for_email(from_email)
+    if plan != "pro":
+        return {"ok": False, "error": "unlimited_required"}, 403
+    request_id = f"TR-{uuid.uuid4().hex[:10].upper()}"
+    try:
+        now = datetime.utcnow().isoformat() + "Z"
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO account_transfer_requests (request_id, from_email, to_email, aria_plan, id_last4_hash, visa_last4_hash, status, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                request_id,
+                from_email,
+                to_email,
+                plan,
+                hash_sensitive("id_last4", id_last4),
+                hash_sensitive("visa_last4", visa_last4),
+                "pending_review",
+                now,
+                now,
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
+    send_admin_alert("account_transfer_request", "urgent", request_id, "SupportRD transfer lane", f"{from_email} -> {to_email} ({plan})")
+    return {"ok": True, "request_id": request_id, "status": "pending_review", "note": "Raw ID data is never stored; only secure hashes are kept."}
+
+@app.route("/api/account-transfer/approve", methods=["POST"])
+def account_transfer_approve():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    data = request.json or {}
+    request_id = (data.get("request_id") or "").strip()
+    if not request_id:
+        return {"ok": False, "error": "request_id_required"}, 400
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT from_email, to_email, aria_plan, status FROM account_transfer_requests WHERE request_id = ? LIMIT 1",
+            (request_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return {"ok": False, "error": "request_not_found"}, 404
+        from_email, to_email, aria_plan, status = row
+        if status != "pending_review":
+            conn.close()
+            return {"ok": False, "error": "request_not_pending"}, 409
+        set_subscription_for_email(to_email, aria_plan or "pro", source="transfer_approved", order_id=request_id)
+        set_subscription_for_email(from_email, "free", source="transfer_approved", order_id=request_id)
+        now = datetime.utcnow().isoformat() + "Z"
+        cur.execute(
+            "UPDATE account_transfer_requests SET status = ?, updated_at = ? WHERE request_id = ?",
+            ("approved", now, request_id),
+        )
+        conn.commit()
+        conn.close()
+        append_credit_audit(request_id, from_email, "account_transfer_approved", {"to_email": to_email, "plan": aria_plan})
+        return {"ok": True, "status": "approved", "to_email": to_email, "plan": aria_plan}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
+
 @app.route("/api/me")
 def me():
     user = session.get("user")
@@ -1457,11 +2038,21 @@ def credit_evaluate():
             ban_ip(ip, "identity_mismatch_attempt", f"input={input_email} session={user_email}")
             return {"ok": False, "error": "banned", "reason": "identity_mismatch_attempt"}, 403
         email = user_email
+    frozen = frozen_reason(email)
+    if frozen and not is_admin():
+        return {"ok": False, "error": "account_frozen", "reason": frozen}, 403
     if not kyc_ack and not is_admin():
         return {"ok": False, "error": "kyc_ack_required"}, 400
     if rate_hit(ip, "credit_eval_strict", 300, 10):
         ban_ip(ip, "credit_velocity_abuse", "/api/credit/evaluate")
         return {"ok": False, "error": "banned", "reason": "credit_velocity_abuse"}, 403
+
+    idem_key = (request.headers.get("X-Idempotency-Key") or "").strip()
+    if idem_key:
+        cached = idempotency_response(idem_key)
+        if cached:
+            cached["idempotent"] = True
+            return cached
 
     try:
         requested_amount = float(data.get("requested_amount", 0) or 0)
@@ -1480,11 +2071,14 @@ def credit_evaluate():
         return {"ok": False, "error": "outlier_input_blocked"}, 400
     if term_months < CREDIT_MIN_TERM_MONTHS or term_months > CREDIT_MAX_TERM_MONTHS:
         return {"ok": False, "error": "invalid_term"}, 400
+    if open_obligations_count(email) >= CREDIT_MAX_OPEN_OBLIGATIONS:
+        return {"ok": False, "error": "open_obligations_limit"}, 409
 
     allowed_payment = max(0.0, round(monthly_income * CREDIT_MAX_PAYMENT_RATIO - monthly_debt, 2))
     estimated_payment = round(requested_amount / term_months, 2)
     approved_amount = max(0.0, round(min(requested_amount, allowed_payment * term_months), 2))
     currency = currency_for_country(country)
+    application_uuid = str(uuid.uuid4())
 
     status = "approved"
     reason = "approved"
@@ -1501,6 +2095,9 @@ def credit_evaluate():
     elif estimated_payment > allowed_payment:
         status = "denied"
         reason = "payment_above_30_percent_limit"
+    elif requested_amount >= CREDIT_MANUAL_REVIEW_THRESHOLD:
+        status = "conditional"
+        reason = "manual_review_required"
     elif approved_amount < requested_amount:
         status = "conditional"
         reason = "reduced_limit"
@@ -1517,13 +2114,18 @@ def credit_evaluate():
         "approved_amount": approved_amount if status != "denied" else 0,
         "status": status,
         "reason": reason,
+        "application_uuid": application_uuid,
+        "obligation_status": "open" if status in ("approved", "conditional") else "none",
         "currency": currency,
         "country_supported": bool(country not in CREDIT_BLOCKED_COUNTRIES) if country else True,
     }
     save_credit_decision(decision)
+    append_credit_audit(application_uuid, email, "credit_decision", {"status": status, "reason": reason, "requested_amount": requested_amount, "approved_amount": decision["approved_amount"]})
     log_security_event(ip, "/api/credit/evaluate", "credit_eval", f"{email} {status} {reason}")
     decision["ok"] = True
     decision["legal_note"] = "Automated pre-screen only. Final credit decisions require manual compliance review."
+    if idem_key:
+        remember_idempotency(idem_key, email, ip, decision)
     return decision
 
 @app.route("/api/credit/status")

@@ -84,9 +84,17 @@ const AI_LINKS = {
 const LOGIN_URL = "https://supportrd.com/account/login"
 
 const BLOG_POSTS = [
+  {title:"SupportRD Is Moving: Cash Friendly Growth", body:"SupportRD is moving with a balanced, friendly system built on clean operations and community respect.\n\nWe now support Request Call intake with pending confirmation, cash-point workflows (store, bank meetup, envelope), and transparent receipt logging.\n\nPrimary rollout starts in Charlotte, North Carolina, then Virginia, then Florida. #SupportRD is moving."},
   {title:"Natural: Recuperacion de Pelo con Calor", body:"Semana 1: hidratacion profunda, recorte y proteccion.\n\nSemana 2: acondicionamiento 2 veces y desenredo suave.\n\nSemana 3: balance de proteina + poco calor.\n\nSemana 4: mas brillo, menos quiebre y mejor forma del pelo."},
   {title:"Natural: Balance de Proteina y Brillo", body:"Paso 1: hidrata con leave-in ligero.\n\nPaso 2: tratamiento de proteina cada 7-10 dias.\n\nPaso 3: sella con aceite.\n\nResultado: menos frizz, mas cuerpo y mejor movimiento."},
   {title:"Natural: Rutina Real para Shampoo Familiar", body:"Rutina simple con productos reales para crecimiento sano.\n\nManana: aplica en pelo humedo.\n\nMedio dia: refresh suave.\n\nNoche: proteccion y descanso del pelo."}
+]
+const INHOUSE_ADS = [
+  {title:"Fresh Drop: Caribe Gloss Routine", body:"A premium brochure-style glow pass for dry hair days. In-house and colorful on purpose."},
+  {title:"Sponsor Lane: Community Cash Point", body:"Friendly check-ins, receipt-first flow, and a smooth wait-screen so everyone knows what is next."},
+  {title:"Movement Alert: #SupportRD is moving", body:"Charlotte first, then Virginia, then Florida. New energy every run."},
+  {title:"ARIA Unlimited Perk", body:"$50 Unlimited ARIA unlocks Talk to us for a deal with professional handling."},
+  {title:"Puzzle Tier Momentum", body:"$35 Puzzle tier keeps your routine active while you build toward Unlimited ARIA."},
 ]
 
 const state = {
@@ -1010,6 +1018,7 @@ function setupPaymentChooser(){
       if(d && d.ok){
         state.subscription = d.subscription || "free"
         setDefaultLevelBySubscription()
+        refreshDealUnlock()
         toast(`Plan: ${(state.subscription || "free").toUpperCase()}`)
       } else {
         toast("Could not verify plan yet")
@@ -1058,6 +1067,7 @@ function setupPostActions(){
   const socialSelect = qs("#socialSelect")
   const adCta = qs("#adCta")
   const adMembershipCta = qs("#adMembershipCta")
+  const tipFrontierBody = qs("#tipFrontierBody")
 
   const feedMap = {
     instagram: "ig",
@@ -1116,6 +1126,24 @@ function setupPostActions(){
     }catch{}
   }
 
+  function updateTipFrontier(){
+    if(!tipFrontierBody) return
+    const tipped = Number(localStorage.getItem("srdTipTotal") || "0")
+    const frontierReached = tipped >= 10000
+    tipFrontierBody.textContent = frontierReached
+      ? `$${tipped.toFixed(2)} tipped · Celebration frontier active`
+      : `$${tipped.toFixed(2)} tipped · Frontier pending ($10,000+)`
+    if(frontierReached){
+      document.body.classList.add("celebration-mode")
+      const hideBuy = Math.random() < 0.35
+      document.body.classList.toggle("hide-buy-random", hideBuy)
+      qsa(".buy-optional").forEach(el=>el.style.display = hideBuy ? "none" : "")
+    } else {
+      document.body.classList.remove("celebration-mode")
+      qsa(".buy-optional").forEach(el=>el.style.display = "")
+    }
+  }
+
   if(live){
     live.addEventListener("click", ()=>{
       live.classList.toggle("active")
@@ -1147,7 +1175,14 @@ function setupPostActions(){
     })
   }
   if(tipTeam){
-    tipTeam.addEventListener("click", ()=>openLinkModal("https://supportrd.com/cart","Tip SupportRD Family Team"))
+    tipTeam.addEventListener("click", ()=>{
+      const tipped = Number(localStorage.getItem("srdTipTotal") || "0")
+      const bump = 25
+      localStorage.setItem("srdTipTotal", String(tipped + bump))
+      updateTipFrontier()
+      openMiniWindow("Tips", `Thanks for tipping SupportRD. Profile value signal +${bump}. Account transfer/sale is disabled for safety.`)
+      openLinkModal("https://supportrd.com/cart","Tip SupportRD Family Team")
+    })
   }
 
   if(contactEvelyn){
@@ -1159,6 +1194,7 @@ function setupPostActions(){
   }
 
   updateIndicator()
+  updateTipFrontier()
 }
 
 
@@ -1472,6 +1508,10 @@ function setupCredit(){
   const load = qs("#creditLoadStatus")
   const payMembership = qs("#creditPayMembership")
   const payProducts = qs("#creditPayProducts")
+  const dealBtn = qs("#talkDealBtn")
+  const dealLockNote = qs("#dealLockNote")
+  const requestTransferBtn = qs("#requestTransferBtn")
+  const approveTransferBtn = qs("#approveTransferBtn")
   const log = qs("#creditDecisionLog")
 
   if(!log) return
@@ -1564,6 +1604,213 @@ function setupCredit(){
   }
   if(payProducts){
     payProducts.addEventListener("click", ()=>openLinkModal(LINKS.custom, "Products Payment"))
+  }
+  if(dealBtn){
+    const unlock = state.subscription === "pro" || isProOverride()
+    dealBtn.disabled = !unlock
+    dealBtn.addEventListener("click", ()=>{
+      if(dealBtn.disabled){
+        openMiniWindow("Unlimited ARIA", "Upgrade to $50 Unlimited ARIA to unlock deal support.")
+        return
+      }
+      openMiniWindow("Talk to us for a deal", "Unlimited ARIA unlocked. Professional contact route is open.")
+    })
+  }
+  if(dealLockNote){
+    dealLockNote.textContent = (state.subscription === "pro" || isProOverride())
+      ? "Unlocked: Unlimited ARIA tier active."
+      : "Locked: upgrade to Unlimited ARIA ($50) to unlock deal channel."
+  }
+  if(requestTransferBtn){
+    requestTransferBtn.addEventListener("click", async ()=>{
+      if(!(state.subscription === "pro" || isProOverride())){
+        openMiniWindow("Transfer Locked", "Unlimited ARIA ($50) is required.")
+        return
+      }
+      const payload = {
+        to_email: (qs("#transferToEmail")?.value || "").trim(),
+        id_last4: (qs("#transferIdLast4")?.value || "").trim(),
+        visa_last4: (qs("#transferVisaLast4")?.value || "").trim(),
+        from_email: (state.socialLinks && state.socialLinks.email) ? state.socialLinks.email : ""
+      }
+      try{
+        const r = await fetch("/api/account-transfer/request", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(payload)
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          localStorage.setItem("lastTransferRequestId", d.request_id || "")
+          openMiniWindow("Transfer Requested", `Request ${d.request_id} pending review.`)
+        } else {
+          openMiniWindow("Transfer", `Request failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("Transfer", "Request failed: network_error")
+      }
+    })
+  }
+  if(approveTransferBtn){
+    approveTransferBtn.addEventListener("click", async ()=>{
+      const request_id = localStorage.getItem("lastTransferRequestId") || ""
+      if(!request_id){
+        openMiniWindow("Transfer", "No pending transfer request id found.")
+        return
+      }
+      try{
+        const r = await fetch("/api/account-transfer/approve", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({request_id})
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          openMiniWindow("Transfer", `Approved for ${d.to_email}.`)
+        } else {
+          openMiniWindow("Transfer", `Approve failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("Transfer", "Approve failed: network_error")
+      }
+    })
+  }
+}
+
+function refreshDealUnlock(){
+  const dealBtn = qs("#talkDealBtn")
+  const dealLockNote = qs("#dealLockNote")
+  if(!dealBtn || !dealLockNote) return
+  const unlock = state.subscription === "pro" || isProOverride()
+  dealBtn.disabled = !unlock
+  dealLockNote.textContent = unlock
+    ? "Unlocked: Unlimited ARIA tier active."
+    : "Locked: upgrade to Unlimited ARIA ($50) to unlock deal channel."
+}
+
+function setupCampaign(){
+  const openRequest = qs("#openRequestCall")
+  const closeRequest = qs("#closeRequestCall")
+  const blogCta = qs("#campaignBlogCta")
+  if(openRequest){ openRequest.addEventListener("click", ()=>openModal("requestCallModal")) }
+  if(closeRequest){ closeRequest.addEventListener("click", ()=>closeModal("requestCallModal")) }
+  if(blogCta){
+    blogCta.addEventListener("click", ()=>{
+      state.blogIndex = 0
+      renderBlog()
+      openModal("blogModal")
+    })
+  }
+}
+
+function setupInHouseAd(){
+  const title = qs("#inhouseAdTitle")
+  const body = qs("#inhouseAdBody")
+  if(!title || !body) return
+  function draw(){
+    const pick = INHOUSE_ADS[Math.floor(Math.random() * INHOUSE_ADS.length)]
+    title.textContent = pick.title
+    body.textContent = pick.body
+  }
+  draw()
+  setInterval(draw, 12000)
+}
+
+function setupRequestCall(){
+  const submit = qs("#submitRequestCall")
+  const form = qs("#requestCallFormWrap")
+  const wait = qs("#requestWaitWrap")
+  const waitMsg = qs("#requestWaitMessage")
+  const waitId = qs("#requestWaitId")
+  if(!submit || !form || !wait || !waitMsg || !waitId) return
+  submit.addEventListener("click", async ()=>{
+    const payload = {
+      name: (qs("#reqName")?.value || "").trim(),
+      phone: (qs("#reqPhone")?.value || "").trim(),
+      email: (qs("#reqEmail")?.value || "").trim(),
+      address: (qs("#reqAddress")?.value || "").trim(),
+      notes: (qs("#reqNotes")?.value || "").trim(),
+      consent: !!qs("#reqConsent")?.checked
+    }
+    if(!payload.name || !payload.phone || !payload.email || !payload.address || !payload.consent){
+      toast("Add name, phone, email, address, and consent.")
+      return
+    }
+    try{
+      const r = await fetch("/api/leads/request-call", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      })
+      const d = await r.json()
+      if(!r.ok || !d.ok){
+        toast(`Request failed: ${d.error || "unknown_error"}`)
+        return
+      }
+      localStorage.setItem("lastRequestId", d.request_id || "")
+      form.style.display = "none"
+      wait.style.display = "block"
+      waitMsg.textContent = d.wait_screen_message || "Request received and pending."
+      waitId.textContent = `Request ID: ${d.request_id || ""}`
+    }catch{
+      toast("Request failed: network_error")
+    }
+  })
+}
+
+function setupCashOps(){
+  const checkBtn = qs("#cashCheckinBtn")
+  const confirmBtn = qs("#cashConfirmBtn")
+  if(checkBtn){
+    checkBtn.addEventListener("click", async ()=>{
+      const payload = {
+        request_id: (qs("#cashRequestId")?.value || "").trim(),
+        flow_type: (qs("#cashFlowType")?.value || "").trim(),
+        location: (qs("#cashLocation")?.value || "").trim(),
+        amount: Number(qs("#cashAmount")?.value || 0),
+        proof_ref: (qs("#cashProof")?.value || "").trim()
+      }
+      try{
+        const r = await fetch("/api/cash-points/checkin", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(payload)
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          openMiniWindow("Cash Point", `Check-in logged at ${d.logged_at || "now"}`)
+        } else {
+          openMiniWindow("Cash Point", `Check-in failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("Cash Point", "Check-in failed: network_error")
+      }
+    })
+  }
+  if(confirmBtn){
+    confirmBtn.addEventListener("click", async ()=>{
+      const payload = {
+        request_id: (qs("#cashRequestId")?.value || "").trim(),
+        confirmed_by: (qs("#cashConfirmedBy")?.value || "").trim(),
+        received_amount: Number(qs("#cashAmount")?.value || 0),
+        memo: (qs("#cashMemo")?.value || "").trim()
+      }
+      try{
+        const r = await fetch("/api/cash-points/confirm-received", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(payload)
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          openMiniWindow("Cash Point", "Funds received confirmed.")
+        } else {
+          openMiniWindow("Cash Point", `Confirm failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("Cash Point", "Confirm failed: network_error")
+      }
+    })
   }
 }
 
@@ -1715,10 +1962,16 @@ function setupCommunications(){
       return
     }
     try{
-      const r = await fetch("/api/community/launch-alert", {
+      const r = await fetch("/api/admin/alerts/dispatch", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({launch_day, launch_location, mission, notes})
+        body: JSON.stringify({
+          event_type: "launch_watch",
+          priority: "urgent",
+          request_id: localStorage.getItem("lastRequestId") || "",
+          location: launch_location,
+          summary: `${mission} on ${launch_day}. ${notes}`.trim()
+        })
       })
       const d = await r.json()
       if(d.ok){
@@ -1843,7 +2096,7 @@ function setupCamera(){}
 function updateOccasionVisibility(){
   const show = state.subscription !== "free" || isProOverride()
   const menu = qs("#menuOccasion")
-  if(menu) menu.style.display = "inline-flex"
+  if(menu) menu.style.display = show ? "inline-flex" : "none"
   qsa('[data-app="Occasion Editor"]').forEach(el=>{
     el.style.display = show ? "" : "none"
   })
@@ -1869,6 +2122,7 @@ function setupSettings(){
   state.subscription = "free"
   if(isProOverride()) { state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0; localStorage.setItem('loggedIn','true') }
   setDefaultLevelBySubscription()
+  refreshDealUnlock()
   qs("#setName").value = saved.name || ""
   qs("#setEmail").value = saved.email || ""
   qs("#setPhone").value = saved.phone || ""
@@ -1924,6 +2178,7 @@ function setupSettings(){
       localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
       if(isProOverride()){ state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0 }
       setDefaultLevelBySubscription()
+      refreshDealUnlock()
       toast("Settings saved")
       const indicator = qs("#socialIndicator")
       if(indicator){
@@ -2033,6 +2288,7 @@ function setupLoginGate(){
       if(d.subscription){
         state.subscription = d.subscription
         setDefaultLevelBySubscription()
+        refreshDealUnlock()
       }
       setAdminVisibility(!!d.admin)
     }
@@ -2681,6 +2937,9 @@ window.addEventListener("DOMContentLoaded", ()=>{
   openModal("appModal")
   safe(setupTabs)
   safe(setupAccessibilityMode)
+  safe(setupCampaign)
+  safe(setupInHouseAd)
+  safe(setupRequestCall)
   safe(setupThemeArrows)
   safe(setupModals)
   safe(setupPaymentChooser)
@@ -2695,6 +2954,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupPuzzle)
   safe(setupSEOLogs)
   safe(setupCredit)
+  safe(setupCashOps)
   safe(setupCommunications)
   safe(setupReel)
   safe(setupAIMillionaireTab)
