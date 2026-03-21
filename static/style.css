@@ -985,3 +985,64 @@ body.celebration-mode .buy-optional{
   100%{transform:scale(.88);opacity:.7;}
 }
 
+.engine-glass-card{display:grid;gap:10px;}
+.engine-switch{display:flex;gap:8px;flex-wrap:wrap;}
+.engine-switch .btn.active{background:linear-gradient(120deg,rgba(124,243,209,.28),rgba(104,166,255,.25));border-color:rgba(124,243,209,.55);}
+.engine-pane{display:none;gap:8px;}
+.engine-pane.active{display:grid;}
+.engine-feed{
+  margin:0;
+  min-height:130px;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.15);
+  background:rgba(5,8,14,.58);
+  color:#ebf4ff;
+  font-size:12px;
+  line-height:1.45;
+  white-space:pre-wrap;
+}
+.engine-live-video iframe{
+  width:100%;
+  min-height:200px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:12px;
+  background:#0b111a;
+}
+
+body.resort-brochure{
+  --bg:#f2eee6;
+  --glass:rgba(255,251,244,0.76);
+  --glass-strong:rgba(255,255,255,0.78);
+  --stroke:rgba(157,129,92,0.26);
+  --text:#2f2a22;
+  --muted:#675b49;
+  --accent:#b08a57;
+  --accent-2:#5a7a7a;
+  --shadow:0 20px 38px rgba(76,58,34,0.17);
+  background:
+    radial-gradient(1200px 500px at 10% 0%, rgba(222,196,156,0.34), transparent 65%),
+    radial-gradient(900px 500px at 95% 8%, rgba(117,167,157,0.22), transparent 62%),
+    linear-gradient(180deg, #f7f3ea 0%, #efe7da 100%);
+}
+body.resort-brochure .glass{
+  background:linear-gradient(145deg, rgba(255,252,246,0.82), rgba(241,231,214,0.62));
+  border:1px solid rgba(160,133,91,0.26);
+  box-shadow:var(--shadow);
+}
+body.resort-brochure .topbar{
+  background:linear-gradient(90deg, rgba(250,243,230,0.95), rgba(234,222,199,0.9));
+  border-color:rgba(157,129,92,0.35);
+}
+body.resort-brochure .logo{letter-spacing:.15em;color:#4a3f30;}
+body.resort-brochure .btn{
+  background:linear-gradient(120deg, rgba(176,138,87,.16), rgba(90,122,122,.15));
+  border-color:rgba(121,96,63,.35);
+  color:#3c3227;
+}
+body.resort-brochure .btn.primary{
+  background:linear-gradient(120deg, #b08a57, #6e8b8b);
+  color:#fff8ef;
+}
+body.resort-brochure .hero-image{filter:saturate(1.08) contrast(1.03);}
+

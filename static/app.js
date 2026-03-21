@@ -3635,6 +3635,124 @@ function setupAppsDock(){
   }
 }
 
+function setupEngineGlassViewer(){
+  const wrap = qs("#tab-seo")
+  if(!wrap) return
+  const switches = qsa("[data-engine-view]")
+  const panes = {
+    action: qs("#engineViewAction"),
+    render: qs("#engineViewRender"),
+    ecosystem: qs("#engineViewEcosystem")
+  }
+  const actionFeed = qs("#engineActionFeed")
+  const renderFeed = qs("#engineRenderFeed")
+  const ecoFeed = qs("#engineEcoFeed")
+  const ecoVideoWrap = qs("#engineEcoVideoWrap")
+  const snapInput = qs("#engineSnapInput")
+  const snapBtn = qs("#engineSnapBtn")
+  const myFreqBtn = qs("#engineMyFreqBtn")
+  const myFreqFeed = qs("#engineMyFreqFeed")
+  const btnAction = qs("#engineRefreshAction")
+  const btnRender = qs("#engineRefreshRender")
+  const btnResort = qs("#engineApplyResortLook")
+
+  function setView(view){
+    switches.forEach(b=>b.classList.toggle("active", b.dataset.engineView === view))
+    Object.keys(panes).forEach(k=>{
+      if(panes[k]) panes[k].classList.toggle("active", k === view)
+    })
+  }
+  switches.forEach(b=>b.addEventListener("click", ()=>setView(b.dataset.engineView || "action")))
+
+  function linesToText(lines){
+    if(!Array.isArray(lines) || !lines.length) return "No live rows yet."
+    return lines.map(x=>`- ${x}`).join("\n")
+  }
+  async function refreshFeed(){
+    try{
+      const r = await fetch("/api/engine-glass/stream")
+      const d = await r.json()
+      if(!(d && d.ok)) throw new Error("feed_error")
+      if(actionFeed) actionFeed.textContent = linesToText(d.action_bot_lines)
+      if(renderFeed) renderFeed.textContent = linesToText(d.render_logging_lines)
+      if(ecoFeed) ecoFeed.textContent = linesToText(d.ecosystem_lines)
+      if(ecoVideoWrap) ecoVideoWrap.style.display = d.ecosystem_live_video ? "block" : "none"
+      if(d.resort_mode){ document.body.classList.add("resort-brochure") }
+    }catch{
+      if(actionFeed) actionFeed.textContent = "Action Bot feed unavailable."
+      if(renderFeed) renderFeed.textContent = "Render Logging feed unavailable."
+      if(ecoFeed) ecoFeed.textContent = "Ecosystem feed unavailable."
+    }
+  }
+  if(btnAction) btnAction.addEventListener("click", refreshFeed)
+  if(btnRender) btnRender.addEventListener("click", refreshFeed)
+  if(btnResort){
+    btnResort.addEventListener("click", ()=>{
+      document.body.classList.add("resort-brochure")
+      openMiniWindow("Resort Look", "Ecosystem resort brochure look applied.")
+    })
+  }
+  if(snapBtn){
+    snapBtn.addEventListener("click", async ()=>{
+      const content = (snapInput && snapInput.value || "").trim()
+      if(!content){
+        openMiniWindow("Snapshot", "Type words first, then snap.")
+        return
+      }
+      try{
+        const sourceEmail = ((state.socialLinks && state.socialLinks.email) || "ui").trim().toLowerCase()
+        const r = await fetch("/api/engine-glass/snapshot", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({content, source: sourceEmail || "ui"})
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          openMiniWindow("Snapshot", "Saved to ecosystem feed.")
+          if(snapInput) snapInput.value = ""
+          refreshFeed()
+        } else {
+          openMiniWindow("Snapshot", `Failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("Snapshot", "Failed: network_error")
+      }
+    })
+  }
+  if(myFreqBtn){
+    myFreqBtn.addEventListener("click", async ()=>{
+      const email = ((state.socialLinks && state.socialLinks.email) || "").trim().toLowerCase()
+      if(!(state.subscription === "pro" || email === "agentanthony@supportrd.com")){
+        openMiniWindow("Pro Required", "Watch My Frequency is a Pro option.")
+        return
+      }
+      if(!email){
+        openMiniWindow("Frequency", "Add your email in Settings first.")
+        return
+      }
+      try{
+        const r = await fetch(`/api/engine-glass/my-frequency?email=${encodeURIComponent(email)}`)
+        const d = await r.json()
+        if(d && d.ok){
+          if(myFreqFeed){
+            myFreqFeed.style.display = "block"
+            const lines = d.lines || []
+            myFreqFeed.textContent = lines.length ? lines.map(x=>`- ${x}`).join("\n") : "No personal frequency snapshots yet."
+          }
+          openMiniWindow("My Frequency", "Pro frequency stream loaded.")
+        } else {
+          openMiniWindow("My Frequency", `Failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("My Frequency", "Failed: network_error")
+      }
+    })
+  }
+  setView("action")
+  refreshFeed()
+  setInterval(refreshFeed, 12000)
+}
+
 
 window.addEventListener("DOMContentLoaded", ()=>{
   try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init start'; }catch{}
@@ -3670,6 +3788,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupAria)
   safe(setupPuzzle)
   safe(setupSEOLogs)
+  safe(setupEngineGlassViewer)
   safe(setupCredit)
   safe(setupCashOps)
   safe(setupCommunications)

@@ -371,7 +371,52 @@
           </div>
         </div>
       </div>
-      <div class="tab-panel" id="tab-seo"></div>
+      <div class="tab-panel" id="tab-seo">
+        <div class="system-card glass engine-glass-card">
+          <div class="system-head">
+            <div>
+              <div class="system-title">Engine Glass Viewer</div>
+              <div class="system-sub">Switch views across Action Bot, Render Logging, and Ecosystem resort mode.</div>
+            </div>
+            <span class="system-badge">Live</span>
+          </div>
+          <div class="engine-switch">
+            <button class="btn ghost active" data-engine-view="action">Action Bot</button>
+            <button class="btn ghost" data-engine-view="render">Render Logging</button>
+            <button class="btn ghost" data-engine-view="ecosystem">Ecosystem</button>
+          </div>
+          <div class="engine-pane active" id="engineViewAction">
+            <div class="system-actions">
+              <button class="btn ghost" id="engineRefreshAction">Refresh Action Bot</button>
+            </div>
+            <pre class="engine-feed" id="engineActionFeed">Loading action bot stream...</pre>
+          </div>
+          <div class="engine-pane" id="engineViewRender">
+            <div class="system-actions">
+              <button class="btn ghost" id="engineRefreshRender">Refresh Render Logging</button>
+            </div>
+            <pre class="engine-feed" id="engineRenderFeed">Loading render stream...</pre>
+          </div>
+          <div class="engine-pane" id="engineViewEcosystem">
+            <div class="system-actions">
+              <button class="btn ghost" id="engineApplyResortLook">Apply Resort Brochure Look</button>
+            </div>
+            <div class="request-grid">
+              <input id="engineSnapInput" placeholder="Type your next words snapshot for ecosystem feed">
+              <button class="btn ghost" id="engineSnapBtn">Snap To Ecosystem Feed</button>
+            </div>
+            <div class="system-actions">
+              <button class="btn ghost" id="engineMyFreqBtn">Watch My Frequency (Pro)</button>
+            </div>
+            <pre class="engine-feed" id="engineMyFreqFeed" style="display:none;">Pro frequency stream loading...</pre>
+            <pre class="engine-feed" id="engineEcoFeed">Ecosystem luxury profile loading...</pre>
+            <div class="engine-live-video" id="engineEcoVideoWrap" style="display:none;">
+              <div class="system-sub">Live Ecosystem Video</div>
+              <iframe id="engineEcoVideo" src="/static/reel.html?v=20260318h" title="Ecosystem Live Video" loading="lazy"></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="tab-panel" id="tab-credit">
         <div class="system-card glass">
           <div class="system-head">

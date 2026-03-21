@@ -387,6 +387,14 @@ def init_credit_db():
             "created_at TEXT"
             ")"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS engine_snapshots ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "source TEXT,"
+            "content TEXT,"
+            "created_at TEXT"
+            ")"
+        )
         conn.commit()
         conn.close()
     except:
@@ -745,6 +753,57 @@ def get_trade_bot_state():
             }
     except:
         return {}
+    return out
+
+def get_recent_credit_audit(limit=20):
+    rows_out = []
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT application_uuid, email, event_type, event_json, created_at FROM credit_audit ORDER BY id DESC LIMIT ?", (int(limit),))
+        rows = cur.fetchall() or []
+        conn.close()
+        for r in rows:
+            rows_out.append({
+                "application_uuid": r[0],
+                "email": r[1],
+                "event_type": r[2],
+                "event_json": r[3],
+                "created_at": r[4]
+            })
+    except:
+        return []
+    return rows_out
+
+def append_engine_snapshot(content, source="ui"):
+    try:
+        txt = (content or "").strip()
+        if not txt:
+            return False
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO engine_snapshots (source, content, created_at) VALUES (?, ?, ?)",
+            ((source or "ui")[:120], txt[:600], datetime.utcnow().isoformat() + "Z")
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
+
+def get_engine_snapshots(limit=6):
+    out = []
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT source, content, created_at FROM engine_snapshots ORDER BY id DESC LIMIT ?", (int(limit),))
+        rows = cur.fetchall() or []
+        conn.close()
+        for s, c, t in rows:
+            out.append({"source": s, "content": c, "created_at": t})
+    except:
+        return []
     return out
 
 def run_risk_bot():
@@ -2529,6 +2588,85 @@ def trade_bots_heartbeat_log_get():
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}, 500
     return {"ok": True, "rows": rows_out}
+
+@app.route("/api/engine-glass/stream")
+def engine_glass_stream():
+    bot_state = get_trade_bot_state()
+    recent = get_recent_credit_audit(limit=12)
+    snaps = get_engine_snapshots(limit=6)
+    action_lines = []
+    for bid in ("risk", "ops", "comms"):
+        row = bot_state.get(bid, {})
+        action_lines.append(
+            f"{bid.upper()} · {row.get('last_status', 'idle')} · {row.get('last_run_at', 'never')} · {row.get('last_summary', 'No run yet.')}"
+        )
+    render_lines = []
+    for item in recent[:8]:
+        render_lines.append(
+            f"{item.get('created_at','')} | {item.get('event_type','event')} | {item.get('application_uuid','n/a')}"
+        )
+    if not render_lines:
+        render_lines = ["No recent render-adjacent audit rows yet."]
+    samples = [
+        "Santiago team posting: scalp hydration before heat styling.",
+        "Charlotte team posting: 7-day repair routine update.",
+        "Santo Domingo team posting: before/after shine check.",
+        "Miami team posting: quick style pulse and confidence boost.",
+        "Community typing: 'What products should I use again?'",
+    ]
+    ecosystem_lines = random.sample(samples, k=min(3, len(samples)))
+    for snap in snaps:
+        ecosystem_lines.append(f"Snapshot[{(snap.get('source') or 'ui').upper()}] {snap.get('content')}")
+    ecosystem_lines.append("#SupportRD is moving · resort-grade brochure experience active.")
+    show_live_video = random.random() < 0.55
+    return {
+        "ok": True,
+        "action_bot_lines": action_lines,
+        "render_logging_lines": render_lines,
+        "ecosystem_lines": ecosystem_lines,
+        "ecosystem_live_video": show_live_video,
+        "resort_mode": True
+    }
+
+@app.route("/api/engine-glass/snapshot", methods=["POST"])
+def engine_glass_snapshot():
+    data = request.json or {}
+    content = (data.get("content") or "").strip()
+    source = (data.get("source") or "ui").strip().lower()[:120]
+    if not content:
+        return {"ok": False, "error": "content_required"}, 400
+    ok = append_engine_snapshot(content, source=source or "ui")
+    if not ok:
+        return {"ok": False, "error": "snapshot_write_failed"}, 500
+    return {"ok": True, "content": content[:120], "source": source or "ui"}
+
+@app.route("/api/engine-glass/my-frequency")
+def engine_glass_my_frequency():
+    email = (request.args.get("email") or "").strip().lower()
+    if not email:
+        return {"ok": False, "error": "email_required"}, 400
+    user = session.get("user") or {}
+    session_email = (user.get("email") or "").strip().lower()
+    if session_email and session_email != email and not is_admin():
+        return {"ok": False, "error": "identity_mismatch"}, 403
+    is_pro = get_subscription_for_email(email) == "pro" or email == "agentanthony@supportrd.com"
+    if not is_pro:
+        return {"ok": False, "error": "pro_required"}, 403
+    rows_out = []
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT content, created_at FROM engine_snapshots WHERE LOWER(source) = ? ORDER BY id DESC LIMIT 18",
+            (email,)
+        )
+        rows = cur.fetchall() or []
+        conn.close()
+        for c, t in rows:
+            rows_out.append(f"{t} | {c}")
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
+    return {"ok": True, "email": email, "lines": rows_out}
 
 @app.route("/api/competitions/create", methods=["POST"])
 def competitions_create():
