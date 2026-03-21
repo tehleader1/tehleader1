@@ -376,6 +376,17 @@ def init_credit_db():
             "last_metrics_json TEXT"
             ")"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS trade_bot_heartbeat_log ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "bot_id TEXT,"
+            "beat_mode TEXT,"
+            "source TEXT,"
+            "status TEXT,"
+            "metrics_json TEXT,"
+            "created_at TEXT"
+            ")"
+        )
         conn.commit()
         conn.close()
     except:
@@ -840,6 +851,26 @@ def run_comms_bot():
 
 def run_trade_bots():
     return [run_risk_bot(), run_ops_bot(), run_comms_bot()]
+
+def append_trade_bot_heartbeat(bot_id, beat_mode, source, status, metrics):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO trade_bot_heartbeat_log (bot_id, beat_mode, source, status, metrics_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                (bot_id or "")[:20],
+                (beat_mode or "slow")[:20],
+                (source or "unknown")[:30],
+                (status or "idle")[:20],
+                json.dumps(metrics or {}, separators=(",", ":"))[:1200],
+                datetime.utcnow().isoformat() + "Z"
+            )
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
 
 def init_wellness_db():
     try:
@@ -2435,6 +2466,69 @@ def trade_bots_run():
         return {"ok": False, "error": "unauthorized"}, 401
     results = run_trade_bots()
     return {"ok": True, "results": results}
+
+@app.route("/api/trade-bots/heartbeat-log", methods=["POST"])
+def trade_bots_heartbeat_log():
+    data = request.json or {}
+    entries = data.get("entries") or []
+    if not isinstance(entries, list):
+        return {"ok": False, "error": "invalid_entries"}, 400
+    written = 0
+    for item in entries[:20]:
+        if not isinstance(item, dict):
+            continue
+        bot_id = (item.get("bot_id") or "").strip().lower()
+        if bot_id not in ("risk", "ops", "comms"):
+            continue
+        beat_mode = (item.get("beat_mode") or "slow").strip().lower()
+        if beat_mode not in ("fast", "normal", "slow", "inout"):
+            beat_mode = "slow"
+        source = (item.get("source") or "ui").strip().lower()[:30]
+        status = (item.get("status") or "idle").strip().lower()[:20]
+        metrics = item.get("metrics") or {}
+        append_trade_bot_heartbeat(bot_id, beat_mode, source, status, metrics)
+        written += 1
+    return {"ok": True, "written": written}
+
+@app.route("/api/trade-bots/heartbeat-log")
+def trade_bots_heartbeat_log_get():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    bot_id = (request.args.get("bot_id") or "").strip().lower()
+    limit = int(request.args.get("limit") or 50)
+    limit = max(1, min(limit, 200))
+    rows_out = []
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        if bot_id in ("risk", "ops", "comms"):
+            cur.execute(
+                "SELECT bot_id, beat_mode, source, status, metrics_json, created_at FROM trade_bot_heartbeat_log WHERE bot_id = ? ORDER BY id DESC LIMIT ?",
+                (bot_id, limit)
+            )
+        else:
+            cur.execute(
+                "SELECT bot_id, beat_mode, source, status, metrics_json, created_at FROM trade_bot_heartbeat_log ORDER BY id DESC LIMIT ?",
+                (limit,)
+            )
+        rows = cur.fetchall() or []
+        conn.close()
+        for r in rows:
+            try:
+                metrics = json.loads(r[4] or "{}")
+            except:
+                metrics = {}
+            rows_out.append({
+                "bot_id": r[0],
+                "beat_mode": r[1],
+                "source": r[2],
+                "status": r[3],
+                "metrics": metrics,
+                "created_at": r[5]
+            })
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
+    return {"ok": True, "rows": rows_out}
 
 @app.route("/api/competitions/create", methods=["POST"])
 def competitions_create():

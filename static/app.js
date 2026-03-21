@@ -1691,6 +1691,8 @@ function setupCredit(){
   const refreshTradeBotsBtn = qs("#refreshTradeBotsBtn")
   const runTradeBotsBtn = qs("#runTradeBotsBtn")
   const log = qs("#creditDecisionLog")
+  let tradeBotRefs = {}
+  let lastHeartbeatSentAt = 0
 
   if(!log) return
 
@@ -1713,6 +1715,31 @@ function setupCredit(){
 
   async function refreshTradeBotsStatus(){
     if(!tradeBotsStatus) return
+    function modeForBot(b){
+      const now = Date.now()
+      const ts = b.last_run_at ? new Date(b.last_run_at).getTime() : 0
+      const ageSec = ts ? Math.max(0, (now - ts) / 1000) : 9999
+      if((b.last_status || "").toLowerCase() === "error" || ageSec > 180) return "inout"
+      const m = b.metrics || {}
+      let load = 0
+      if((b.bot_id || "") === "risk"){
+        load = Number(m.open_requests || 0) + Number(m.flagged_cap || 0) * 3
+      }else if((b.bot_id || "") === "ops"){
+        const c = m.counts || {}
+        load = Number(c.pending_review || 0) + Number(c.reverify_required || 0) + Number(m.expired_reverify || 0) * 2 + Number(m.expired_pending || 0) * 2
+      }else{
+        load = Number(m.reviewed_items || 0) + Number(m.policy_holds || 0) * 3
+      }
+      if(load >= 8) return "fast"
+      if(load >= 2) return "normal"
+      return "slow"
+    }
+    function modeLabel(mode){
+      if(mode === "fast") return "busy"
+      if(mode === "normal") return "pending"
+      if(mode === "inout") return "in-out"
+      return "slow"
+    }
     try{
       const r = await fetch("/api/trade-bots/status")
       const d = await r.json()
@@ -1723,12 +1750,35 @@ function setupCredit(){
       tradeBotsStatus.innerHTML = d.bots.map((b)=>{
         const fn = (b.functions || []).map(x=>`<li>${x}</li>`).join("")
         const when = b.last_run_at ? new Date(b.last_run_at).toLocaleString() : "Never"
+        const mode = modeForBot(b)
+        const ref = tradeBotRefs[String(b.bot_id || "").toLowerCase()]
+        if(ref && ref.el){
+          ref.el.classList.remove("hb-fast","hb-normal","hb-slow","hb-inout")
+          ref.el.classList.add(`hb-${mode}`)
+          ref.el.title = `${String(b.bot_id || "").toUpperCase()} bot · heartbeat ${modeLabel(mode)}`
+        }
         return `<div style="margin:6px 0;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);">
-          <div><strong>${String(b.bot_id || "").toUpperCase()} BOT</strong> · ${b.last_status || "idle"} · ${when}</div>
+          <div><strong>${String(b.bot_id || "").toUpperCase()} BOT</strong> · ${b.last_status || "idle"} · ${when} · heartbeat: ${modeLabel(mode)}</div>
           <div style="margin-top:4px;">${b.last_summary || ""}</div>
           <ul style="margin:6px 0 0 16px;">${fn}</ul>
         </div>`
       }).join("")
+      const now = Date.now()
+      if(now - lastHeartbeatSentAt > 60000){
+        const entries = d.bots.map((b)=>({
+          bot_id: String(b.bot_id || "").toLowerCase(),
+          beat_mode: modeForBot(b),
+          source: "ui",
+          status: String(b.last_status || "idle").toLowerCase(),
+          metrics: b.metrics || {}
+        }))
+        fetch("/api/trade-bots/heartbeat-log", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({entries})
+        }).catch(()=>{})
+        lastHeartbeatSentAt = now
+      }
     }catch{
       tradeBotsStatus.textContent = "Bot status unavailable."
     }
@@ -1799,6 +1849,7 @@ function setupCredit(){
       const vx = (Math.random() * 0.55 + 0.35) * (Math.random() > 0.5 ? 1 : -1)
       const vy = (Math.random() * 0.55 + 0.35) * (Math.random() > 0.5 ? 1 : -1)
       const bot = {el, role, x:16 + idx*36, y:16 + (idx%2)*16, vx, vy, caughtUntil:0}
+      tradeBotRefs[role.id] = bot
       el.addEventListener("click", ()=>{
         bot.caughtUntil = Date.now() + 900
         el.classList.add("caught")
