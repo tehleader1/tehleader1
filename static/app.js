@@ -903,6 +903,13 @@ function setupModals(){
   bindOpen("menuSellAria", "sellAriaModal")
   bindOpen("menuSettings", "settingsModal")
   bindOpen("menuSubscription", "subscriptionModal")
+  const creditTop = qs("#menuCreditTop")
+  if(creditTop){
+    creditTop.addEventListener("click", ()=>{
+      const tab = document.querySelector('.tab-btn[data-tab="credit"]')
+      if(tab){ tab.click() }
+    })
+  }
   bindClose("closeOccasion", "occasionModal")
   bindClose("closeGift", "giftModal")
   bindClose("closeSubscription", "subscriptionModal")
