@@ -2265,6 +2265,7 @@ def competitions_movement_challenge():
         return {"ok": False, "error": "login_required"}, 401
     data = request.json or {}
     urls = data.get("participant_urls") or []
+    mode = (data.get("mode") or "").strip().lower()
     if isinstance(urls, str):
         urls = [x.strip() for x in urls.split(",") if x.strip()]
     urls = [u for u in urls if isinstance(u, str) and (u.startswith("http://") or u.startswith("https://"))]
@@ -2272,7 +2273,20 @@ def competitions_movement_challenge():
     for u in urls:
         if u not in unique_urls:
             unique_urls.append(u[:350])
-    if len(unique_urls) < 6:
+    min_needed = 6
+    max_allowed = 100
+    if mode == "1v1":
+        min_needed = 2
+        max_allowed = 2
+    elif mode == "5v5":
+        min_needed = 10
+        max_allowed = 10
+    unique_urls = unique_urls[:max_allowed]
+    if len(unique_urls) < min_needed:
+        if mode == "1v1":
+            return {"ok": False, "error": "minimum_2_participants_required"}, 400
+        if mode == "5v5":
+            return {"ok": False, "error": "minimum_10_participants_required"}, 400
         return {"ok": False, "error": "minimum_6_participants_required"}, 400
     areas = ["Health", "Longevity", "Care", "Love", "Issues"]
     challenge_id = f"MVM-{uuid.uuid4().hex[:10].upper()}"
@@ -2295,8 +2309,8 @@ def competitions_movement_challenge():
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}, 500
     challenge_url = f"{request.host_url.rstrip('/')}/?movement_challenge={challenge_id}"
-    append_credit_audit(challenge_id, owner_email or "admin", "movement_challenge_created", {"participants": len(unique_urls), "areas": areas})
-    return {"ok": True, "challenge_id": challenge_id, "challenge_url": challenge_url, "participants": len(unique_urls), "areas": areas}
+    append_credit_audit(challenge_id, owner_email or "admin", "movement_challenge_created", {"participants": len(unique_urls), "areas": areas, "mode": mode or "open"})
+    return {"ok": True, "challenge_id": challenge_id, "challenge_url": challenge_url, "participants": len(unique_urls), "areas": areas, "mode": mode or "open"}
 
 @app.route("/api/me")
 def me():
