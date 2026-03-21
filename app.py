@@ -94,6 +94,7 @@ TRADE_LOCK_DAYS = int(os.environ.get("TRADE_LOCK_DAYS", "7"))
 TRADE_REVERIFY_MAX_FAILS = int(os.environ.get("TRADE_REVERIFY_MAX_FAILS", "2"))
 TRADE_MAX_USD = float(os.environ.get("TRADE_MAX_USD", "50000"))
 TRADE_SERVICE_TAX_RATE = float(os.environ.get("TRADE_SERVICE_TAX_RATE", "0.05"))
+TRADE_BOT_INTERVAL_MIN = int(os.environ.get("TRADE_BOT_INTERVAL_MIN", "1"))
 ACCEPTED_PAYMENT_NETWORKS = ["Visa", "Mastercard", "American Express", "Discover", "Debit / ATM Cards", "Cash"]
 MAJOR_BANKS = [
     "U.S. Bank",
@@ -112,6 +113,23 @@ MAJOR_BANKS = [
 TTS_ALLOWED_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"}
 PROHIBITED_TERMS = ["drug", "drugs", "cocaine", "meth", "weed", "marijuana", "heroin", "fentanyl", "gang", "gangs", "cartel", "ms-13", "crip", "bloods"]
 COMPETITION_BLOCKED_TOKENS = ["porn", "pornography", "xxx", "sex", "nsfw", "adultvideo"]
+TRADE_BOT_FUNCTIONS = {
+    "risk": [
+        "Enforce $50,000 transfer cap",
+        "Enforce 5% in-house service tax math",
+        "Flag out-of-policy transfer states"
+    ],
+    "ops": [
+        "Auto-expire stale transfer requests",
+        "Track queue counts by status",
+        "Keep re-verification flow healthy"
+    ],
+    "comms": [
+        "Block pornography in competition links",
+        "Keep scoring metrics fixed to laughs/excitement/votes",
+        "Report policy-hold events"
+    ]
+}
 SAFE_21PLUS_FUN_LINES = [
     "Hair date energy: I bring the shine plan, you bring the smile.",
     "Mamacita, ese amor por tu pelo se nota hoy.",
@@ -347,6 +365,15 @@ def init_credit_db():
             "failed_reverify INTEGER DEFAULT 0,"
             "lock_until_ts INTEGER DEFAULT 0,"
             "updated_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS trade_bot_state ("
+            "bot_id TEXT PRIMARY KEY,"
+            "last_run_at TEXT,"
+            "last_status TEXT,"
+            "last_summary TEXT,"
+            "last_metrics_json TEXT"
             ")"
         )
         conn.commit()
@@ -653,6 +680,166 @@ def record_reverify_result(email, passed):
         conn.close()
     except:
         pass
+
+def parse_iso_utc(ts):
+    try:
+        if not ts:
+            return None
+        txt = str(ts).strip()
+        if txt.endswith("Z"):
+            txt = txt[:-1] + "+00:00"
+        return datetime.fromisoformat(txt)
+    except:
+        return None
+
+def set_trade_bot_state(bot_id, status, summary, metrics):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO trade_bot_state (bot_id, last_run_at, last_status, last_summary, last_metrics_json) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(bot_id) DO UPDATE SET last_run_at=excluded.last_run_at, last_status=excluded.last_status, last_summary=excluded.last_summary, last_metrics_json=excluded.last_metrics_json",
+            (
+                bot_id,
+                datetime.utcnow().isoformat() + "Z",
+                (status or "ok")[:20],
+                (summary or "")[:240],
+                json.dumps(metrics or {}, separators=(",", ":"))[:2000]
+            )
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def get_trade_bot_state():
+    out = {}
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT bot_id, last_run_at, last_status, last_summary, last_metrics_json FROM trade_bot_state")
+        rows = cur.fetchall() or []
+        conn.close()
+        for r in rows:
+            metrics = {}
+            try:
+                metrics = json.loads(r[4] or "{}")
+            except:
+                metrics = {}
+            out[r[0]] = {
+                "last_run_at": r[1],
+                "last_status": r[2],
+                "last_summary": r[3],
+                "metrics": metrics
+            }
+    except:
+        return {}
+    return out
+
+def run_risk_bot():
+    flagged = 0
+    queue_open = 0
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT request_id, transfer_amount, status FROM account_transfer_requests WHERE status IN ('reverify_required','pending_review')")
+        rows = cur.fetchall() or []
+        queue_open = len(rows)
+        for req_id, amt, status in rows:
+            if float(amt or 0) > TRADE_MAX_USD:
+                cur.execute("UPDATE account_transfer_requests SET status = ?, updated_at = ? WHERE request_id = ?", ("blocked_cap", datetime.utcnow().isoformat() + "Z", req_id))
+                append_credit_audit(req_id, "system", "risk_bot_blocked_cap", {"transfer_amount": float(amt or 0), "cap": TRADE_MAX_USD, "prev_status": status})
+                flagged += 1
+        conn.commit()
+        conn.close()
+        summary = f"Risk bot scanned {queue_open} open transfer requests; flagged {flagged}."
+        metrics = {"open_requests": queue_open, "flagged_cap": flagged, "trade_cap_usd": TRADE_MAX_USD, "service_tax_rate": TRADE_SERVICE_TAX_RATE}
+        set_trade_bot_state("risk", "ok", summary, metrics)
+        return {"bot_id": "risk", "status": "ok", "summary": summary, "metrics": metrics}
+    except Exception as e:
+        summary = f"Risk bot error: {str(e)[:120]}"
+        set_trade_bot_state("risk", "error", summary, {"error": str(e)[:120]})
+        return {"bot_id": "risk", "status": "error", "summary": summary, "metrics": {"error": str(e)[:120]}}
+
+def run_ops_bot():
+    expired_reverify = 0
+    expired_pending = 0
+    counts = {"reverify_required": 0, "pending_review": 0, "approved": 0, "blocked_cap": 0}
+    try:
+        now = datetime.utcnow()
+        reverify_cutoff = now - timedelta(hours=48)
+        pending_cutoff = now - timedelta(hours=72)
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT request_id, status, updated_at FROM account_transfer_requests WHERE status IN ('reverify_required','pending_review')")
+        rows = cur.fetchall() or []
+        for req_id, status, updated_at in rows:
+            dt = parse_iso_utc(updated_at) or now
+            if status == "reverify_required" and dt < reverify_cutoff:
+                cur.execute("UPDATE account_transfer_requests SET status = ?, updated_at = ? WHERE request_id = ?", ("expired", datetime.utcnow().isoformat() + "Z", req_id))
+                append_credit_audit(req_id, "system", "ops_bot_expired_reverify", {"hours_old": 48})
+                expired_reverify += 1
+            elif status == "pending_review" and dt < pending_cutoff:
+                cur.execute("UPDATE account_transfer_requests SET status = ?, updated_at = ? WHERE request_id = ?", ("expired", datetime.utcnow().isoformat() + "Z", req_id))
+                append_credit_audit(req_id, "system", "ops_bot_expired_pending", {"hours_old": 72})
+                expired_pending += 1
+        cur.execute("SELECT status, COUNT(*) FROM account_transfer_requests GROUP BY status")
+        stats = cur.fetchall() or []
+        for k, v in stats:
+            counts[k] = int(v or 0)
+        conn.commit()
+        conn.close()
+        summary = f"Ops bot active. expired reverify={expired_reverify}, expired pending={expired_pending}."
+        metrics = {"expired_reverify": expired_reverify, "expired_pending": expired_pending, "counts": counts}
+        set_trade_bot_state("ops", "ok", summary, metrics)
+        return {"bot_id": "ops", "status": "ok", "summary": summary, "metrics": metrics}
+    except Exception as e:
+        summary = f"Ops bot error: {str(e)[:120]}"
+        set_trade_bot_state("ops", "error", summary, {"error": str(e)[:120]})
+        return {"bot_id": "ops", "status": "error", "summary": summary, "metrics": {"error": str(e)[:120]}}
+
+def run_comms_bot():
+    policy_holds = 0
+    reviewed = 0
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT competition_id, opponent_url, status FROM competitions WHERE status IN ('active','pending')")
+        for cid, url, status in (cur.fetchall() or []):
+            reviewed += 1
+            if not competition_content_allowed(url or ""):
+                cur.execute("UPDATE competitions SET status = ? WHERE competition_id = ?", ("policy_hold", cid))
+                append_credit_audit(cid, "system", "comms_bot_policy_hold_competition", {"reason": "pornography_blocked"})
+                policy_holds += 1
+        cur.execute("SELECT challenge_id, participant_urls, status FROM movement_challenges WHERE status IN ('active','pending')")
+        for mid, urls_json, status in (cur.fetchall() or []):
+            reviewed += 1
+            bad = False
+            try:
+                urls = json.loads(urls_json or "[]")
+            except:
+                urls = []
+            for u in urls:
+                if not competition_content_allowed(str(u)):
+                    bad = True
+                    break
+            if bad:
+                cur.execute("UPDATE movement_challenges SET status = ? WHERE challenge_id = ?", ("policy_hold", mid))
+                append_credit_audit(mid, "system", "comms_bot_policy_hold_movement", {"reason": "pornography_blocked"})
+                policy_holds += 1
+        conn.commit()
+        conn.close()
+        summary = f"Comms bot reviewed {reviewed} competitions/challenges; policy holds={policy_holds}."
+        metrics = {"reviewed_items": reviewed, "policy_holds": policy_holds, "score_metrics": ["laughs", "excitement", "votes"]}
+        set_trade_bot_state("comms", "ok", summary, metrics)
+        return {"bot_id": "comms", "status": "ok", "summary": summary, "metrics": metrics}
+    except Exception as e:
+        summary = f"Comms bot error: {str(e)[:120]}"
+        set_trade_bot_state("comms", "error", summary, {"error": str(e)[:120]})
+        return {"bot_id": "comms", "status": "error", "summary": summary, "metrics": {"error": str(e)[:120]}}
+
+def run_trade_bots():
+    return [run_risk_bot(), run_ops_bot(), run_comms_bot()]
 
 def init_wellness_db():
     try:
@@ -2226,6 +2413,29 @@ def account_transfer_release_toggle():
         send_admin_alert("sell_aria_release_opened", "urgent", "", "SupportRD transfer lane", "Founder present. Sell Your ARIA release opened.")
     return {"ok": True, "sell_aria_release_open": active, "trade_cap_usd": TRADE_MAX_USD, "trade_service_tax_rate": TRADE_SERVICE_TAX_RATE}
 
+@app.route("/api/trade-bots/status")
+def trade_bots_status():
+    state = get_trade_bot_state()
+    bots = []
+    for bid in ("risk", "ops", "comms"):
+        row = state.get(bid, {})
+        bots.append({
+            "bot_id": bid,
+            "functions": TRADE_BOT_FUNCTIONS.get(bid, []),
+            "last_run_at": row.get("last_run_at", ""),
+            "last_status": row.get("last_status", "idle"),
+            "last_summary": row.get("last_summary", "No run yet."),
+            "metrics": row.get("metrics", {})
+        })
+    return {"ok": True, "bots": bots}
+
+@app.route("/api/trade-bots/run", methods=["POST"])
+def trade_bots_run():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    results = run_trade_bots()
+    return {"ok": True, "results": results}
+
 @app.route("/api/competitions/create", methods=["POST"])
 def competitions_create():
     user = session.get("user") or {}
@@ -3103,6 +3313,12 @@ scheduler.add_job(
     minutes=30
 )
 
+scheduler.add_job(
+    run_trade_bots,
+    "interval",
+    minutes=max(1, TRADE_BOT_INTERVAL_MIN)
+)
+
 scheduler.start()
 init_claim_db()
 init_credit_db()
@@ -3112,6 +3328,10 @@ init_subscription_db()
 init_app_settings_db()
 init_security_db()
 set_setting("money_guard_enabled", "1")
+try:
+    run_trade_bots()
+except:
+    pass
 
 #################################################
 # STATIC FILES

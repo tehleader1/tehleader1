@@ -62,6 +62,8 @@ const HERO_FILTERS = [
 ]
 
 const LINKS = {
+  myOrders: "https://supportrd.com/account/orders",
+  cart: "https://supportrd.com/cart",
   premium: "https://supportrd.com/products/hair-advisor-premium",
   bingo100: "https://supportrd.com/products/bingo-fantasy-100",
   family200: "https://supportrd.com/products/family-fantasy-200",
@@ -1244,7 +1246,7 @@ function setupPostActions(){
 
   if(send){ send.addEventListener("click", postToFeeds) }
   if(post){ post.addEventListener("click", postToFeeds) }
-  if(adCta){ adCta.addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order")) }
+  if(adCta){ adCta.addEventListener("click", ()=>openLinkModal(LINKS.cart, "Shopify Cart")) }
   if(adMembershipCta){ adMembershipCta.addEventListener("click", ()=>openModal("subscriptionModal")) }
   if(socialSelect){
     socialSelect.addEventListener("change", ()=>{
@@ -1685,6 +1687,9 @@ function setupCredit(){
   const transferStatusNote = qs("#transferStatusNote")
   const transferReleaseState = qs("#transferReleaseState")
   const tradeBotOrbit = qs("#tradeBotOrbit")
+  const tradeBotsStatus = qs("#tradeBotsStatus")
+  const refreshTradeBotsBtn = qs("#refreshTradeBotsBtn")
+  const runTradeBotsBtn = qs("#runTradeBotsBtn")
   const log = qs("#creditDecisionLog")
 
   if(!log) return
@@ -1705,6 +1710,54 @@ function setupCredit(){
     }
   }
   refreshTransferReleaseState()
+
+  async function refreshTradeBotsStatus(){
+    if(!tradeBotsStatus) return
+    try{
+      const r = await fetch("/api/trade-bots/status")
+      const d = await r.json()
+      if(!(d && d.ok && Array.isArray(d.bots))){
+        tradeBotsStatus.textContent = "Bot status unavailable."
+        return
+      }
+      tradeBotsStatus.innerHTML = d.bots.map((b)=>{
+        const fn = (b.functions || []).map(x=>`<li>${x}</li>`).join("")
+        const when = b.last_run_at ? new Date(b.last_run_at).toLocaleString() : "Never"
+        return `<div style="margin:6px 0;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);">
+          <div><strong>${String(b.bot_id || "").toUpperCase()} BOT</strong> · ${b.last_status || "idle"} · ${when}</div>
+          <div style="margin-top:4px;">${b.last_summary || ""}</div>
+          <ul style="margin:6px 0 0 16px;">${fn}</ul>
+        </div>`
+      }).join("")
+    }catch{
+      tradeBotsStatus.textContent = "Bot status unavailable."
+    }
+  }
+  refreshTradeBotsStatus()
+  setInterval(refreshTradeBotsStatus, 15000)
+  if(refreshTradeBotsBtn){
+    refreshTradeBotsBtn.addEventListener("click", refreshTradeBotsStatus)
+  }
+  if(runTradeBotsBtn){
+    runTradeBotsBtn.addEventListener("click", async ()=>{
+      try{
+        const r = await fetch("/api/trade-bots/run", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({})
+        })
+        const d = await r.json()
+        if(d && d.ok){
+          openMiniWindow("Trade Bots", "3 bots executed now.")
+          refreshTradeBotsStatus()
+        } else {
+          openMiniWindow("Trade Bots", `Run failed: ${d.error || "unknown"}`)
+        }
+      }catch{
+        openMiniWindow("Trade Bots", "Run failed: network_error")
+      }
+    })
+  }
 
   function setupTradeBots(){
     if(!tradeBotOrbit || tradeBotOrbit.dataset.ready === "1") return
@@ -3349,9 +3402,25 @@ function renderApp(name){
   }
   if(name === "Shopify Products"){
     body.innerHTML = `<div style="font-weight:700;margin-bottom:8px;">SupportRD Products</div>
-      <div style="color:var(--muted);margin-bottom:10px;">Browse the lineup and jump to custom orders.</div>
+      <div style="color:var(--muted);margin-bottom:10px;">Browse the lineup, open My Orders, and checkout fast with Shopify cart.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="btn" id="openMyOrders">Open My Orders</button>
+        <button class="btn ghost" id="openShopifyCart">Open Shopify Cart</button>
+      </div>
+      <div class="gift-grid" style="margin-bottom:10px;">
+        <div class="gift-card"><div style="font-weight:700;">Bingo Fantasy</div><div class="gift-price">$100 / month</div><button class="btn ghost" id="buyBingo100">Checkout</button></div>
+        <div class="gift-card"><div style="font-weight:700;">Family Fantasy</div><div class="gift-price">$200 / month</div><button class="btn ghost" id="buyFamily200">Checkout</button></div>
+        <div class="gift-card"><div style="font-weight:700;">Basic Fantasy 21+</div><div class="gift-price">$300 / month</div><button class="btn ghost" id="buyFantasy300">Checkout</button></div>
+        <div class="gift-card"><div style="font-weight:700;">Advanced Fantasy 21+</div><div class="gift-price">$600 / month</div><button class="btn ghost" id="buyFantasy600">Checkout</button></div>
+      </div>
       <div id="shopifyLineup" class="gift-grid"></div>
       <button class="btn" id="openCustomShop">Open Custom Order</button>`
+    qs("#openMyOrders").addEventListener("click", ()=>openLinkModal(LINKS.myOrders, "My Orders"))
+    qs("#openShopifyCart").addEventListener("click", ()=>openLinkModal(LINKS.cart, "Shopify Cart"))
+    qs("#buyBingo100").addEventListener("click", ()=>openLinkModal(LINKS.bingo100, "Bingo Fantasy"))
+    qs("#buyFamily200").addEventListener("click", ()=>openLinkModal(LINKS.family200, "Family Fantasy"))
+    qs("#buyFantasy300").addEventListener("click", ()=>openLinkModal(LINKS.fantasy300, "Basic Fantasy 21+"))
+    qs("#buyFantasy600").addEventListener("click", ()=>openLinkModal(LINKS.fantasy600, "Advanced Fantasy 21+"))
     qs("#openCustomShop").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
     loadProducts().then(items=>{
       const fallback = [
@@ -3375,9 +3444,19 @@ function renderApp(name){
       <div class="gift-grid">
         <div class="gift-card"><div style="font-weight:700;">Premium</div><div class="gift-price">$35 / month</div></div>
         <div class="gift-card"><div style="font-weight:700;">Professional</div><div class="gift-price">$50 / month</div></div>
+        <div class="gift-card"><div style="font-weight:700;">Bingo Fantasy</div><div class="gift-price">$100 / month</div></div>
+        <div class="gift-card"><div style="font-weight:700;">Family Fantasy</div><div class="gift-price">$200 / month</div></div>
+        <div class="gift-card"><div style="font-weight:700;">Basic Fantasy 21+</div><div class="gift-price">$300 / month</div></div>
+        <div class="gift-card"><div style="font-weight:700;">Advanced Fantasy 21+</div><div class="gift-price">$600 / month</div></div>
       </div>
-      <button class="btn" id="openSubscriptionBanner">Open Subscription</button>`
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn" id="openSubscriptionBanner">Open Subscription</button>
+        <button class="btn ghost" id="openOrdersBanner">My Orders</button>
+        <button class="btn ghost" id="openCartBanner">Shopify Cart</button>
+      </div>`
     qs("#openSubscriptionBanner").addEventListener("click", ()=>openModal("subscriptionModal"))
+    qs("#openOrdersBanner").addEventListener("click", ()=>openLinkModal(LINKS.myOrders, "My Orders"))
+    qs("#openCartBanner").addEventListener("click", ()=>openLinkModal(LINKS.cart, "Shopify Cart"))
     return
   }
   if(name === "AI Millionaire Hub"){
