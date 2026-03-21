@@ -934,3 +934,29 @@ body.celebration-mode .buy-optional{
   100%{filter:hue-rotate(18deg);}
 }
 
+.trade-bot-orbit{
+  position:relative;
+  min-height:56px;
+  border-radius:14px;
+  border:1px dashed rgba(124,243,209,0.35);
+  background:radial-gradient(circle at 20% 30%, rgba(124,243,209,0.14), rgba(8,14,22,0.32));
+  overflow:hidden;
+}
+.trade-bot{
+  position:absolute;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,0.85);
+  background:radial-gradient(circle at 38% 38%, rgba(255,255,255,0.9), rgba(124,243,209,0.95) 52%, rgba(8,18,32,0.95) 100%);
+  box-shadow:0 0 12px rgba(124,243,209,0.6);
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+}
+.trade-bot:hover{transform:scale(1.15);}
+.trade-bot.caught{
+  transform:scale(1.4);
+  opacity:0.3;
+  box-shadow:0 0 20px rgba(255,220,120,0.9);
+}
+

@@ -1684,6 +1684,7 @@ function setupCredit(){
   const toggleTransferReleaseBtn = qs("#toggleTransferReleaseBtn")
   const transferStatusNote = qs("#transferStatusNote")
   const transferReleaseState = qs("#transferReleaseState")
+  const tradeBotOrbit = qs("#tradeBotOrbit")
   const log = qs("#creditDecisionLog")
 
   if(!log) return
@@ -1704,6 +1705,54 @@ function setupCredit(){
     }
   }
   refreshTransferReleaseState()
+
+  function setupTradeBots(){
+    if(!tradeBotOrbit || tradeBotOrbit.dataset.ready === "1") return
+    tradeBotOrbit.dataset.ready = "1"
+    const roles = [
+      {id:"risk", label:"Risk Bot locked in on clean trading."},
+      {id:"ops", label:"Ops Bot is tracking flow and timing."},
+      {id:"comms", label:"Comms Bot is handling attention updates."},
+    ]
+    const bots = roles.map((role, idx)=>{
+      const el = document.createElement("button")
+      el.type = "button"
+      el.className = "trade-bot"
+      el.setAttribute("aria-label", role.id)
+      el.style.left = `${16 + idx*36}px`
+      el.style.top = `${16 + (idx%2)*16}px`
+      tradeBotOrbit.appendChild(el)
+      const vx = (Math.random() * 0.55 + 0.35) * (Math.random() > 0.5 ? 1 : -1)
+      const vy = (Math.random() * 0.55 + 0.35) * (Math.random() > 0.5 ? 1 : -1)
+      const bot = {el, role, x:16 + idx*36, y:16 + (idx%2)*16, vx, vy, caughtUntil:0}
+      el.addEventListener("click", ()=>{
+        bot.caughtUntil = Date.now() + 900
+        el.classList.add("caught")
+        openMiniWindow("Bot Caught", role.label)
+        setTimeout(()=>el.classList.remove("caught"), 950)
+      })
+      return bot
+    })
+    let raf = 0
+    const tick = ()=>{
+      const now = Date.now()
+      const w = tradeBotOrbit.clientWidth || 260
+      const h = tradeBotOrbit.clientHeight || 56
+      bots.forEach((b)=>{
+        if(now < b.caughtUntil) return
+        b.x += b.vx
+        b.y += b.vy
+        if(b.x <= 2 || b.x >= w - 16){ b.vx *= -1 }
+        if(b.y <= 2 || b.y >= h - 16){ b.vy *= -1 }
+        b.el.style.left = `${Math.max(2, Math.min(w - 16, b.x))}px`
+        b.el.style.top = `${Math.max(2, Math.min(h - 16, b.y))}px`
+      })
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    tradeBotOrbit._raf = raf
+  }
+  setupTradeBots()
 
   const saved = JSON.parse(localStorage.getItem("supportrdSettings") || "{}")
   if(email && !email.value) email.value = saved.email || ""
