@@ -1022,6 +1022,10 @@ function setupModals(){
           openModal("subscriptionModal")
           return
         }
+        if(name === "Brochure"){
+          openModal("brochureModal")
+          return
+        }
         if(name === "TV Reel"){
           openModal("reelModal")
           return
@@ -3546,6 +3550,14 @@ function renderApp(name){
     if(open){ open.addEventListener("click", ()=>openModal("reelModal")) }
     return
   }
+  if(name === "Brochure"){
+    body.innerHTML = `<div style="font-weight:700;margin-bottom:8px;">SupportRD Brochure</div>
+      <div style="color:var(--muted);margin-bottom:10px;">Open the full brochure with all product pages.</div>
+      <button class="btn" id="openBrochureFromApp">Open Brochure</button>`
+    const open = qs("#openBrochureFromApp")
+    if(open){ open.addEventListener("click", ()=>openModal("brochureModal")) }
+    return
+  }
   if(name === "Competition Arena"){
     body.innerHTML = `
       <div style="font-weight:700;margin-bottom:8px;">Competition Arena (Bottom Panel)</div>
@@ -3600,26 +3612,87 @@ function renderApp(name){
     return
   }
   if(name === "Shopify Products"){
+    const digitalProducts = [
+      {id:"premium35", title:"ARIA Puzzle Tier", desc:"$35 monthly digital guidance tier with puzzle unlock flow and routine support.", price:"$35/mo", image:"/static/images/brochure-shampoo.jpg", link:LINKS.premium},
+      {id:"pro50", title:"Unlimited ARIA Professional", desc:"$50 monthly unlimited ARIA support with direct deal channel.", price:"$50/mo", image:"/static/images/brochure-hero.jpg", link:LINKS.pro},
+      {id:"bingo100", title:"Bingo Fantasy", desc:"Calm, humorous daily support voice pack for high-stress routines.", price:"$100/mo", image:"/static/images/brochure-social.jpg", link:LINKS.bingo100},
+      {id:"family200", title:"Family Fantasy Pack", desc:"Family-safe narrative themes to coach hair routines with personality.", price:"$200/mo", image:"/static/images/brochure-contacts.jpg", link:LINKS.family200},
+      {id:"basic300", title:"21+ Basic Fantasy", desc:"Flirty but non-explicit hair narrative mode with confident tone.", price:"$300/mo", image:"/static/images/brochure-bright-droplets.jpg", link:LINKS.fantasy300},
+      {id:"adv600", title:"21+ Advanced Fantasy", desc:"Premium storytelling mode with personalized romantic tone and pacing.", price:"$600/mo", image:"/static/images/brochure-fast-dropper.jpg", link:LINKS.fantasy600}
+    ]
     body.innerHTML = `<div style="font-weight:700;margin-bottom:8px;">SupportRD Products</div>
-      <div style="color:var(--muted);margin-bottom:10px;">Browse the lineup, open My Orders, and checkout fast with Shopify cart.</div>
+      <div style="color:var(--muted);margin-bottom:10px;">Professional digital lineup with visual previews and fast checkout.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
         <button class="btn" id="openMyOrders">Open My Orders</button>
         <button class="btn ghost" id="openShopifyCart">Open Shopify Cart</button>
       </div>
-      <div class="gift-grid" style="margin-bottom:10px;">
-        <div class="gift-card"><div style="font-weight:700;">Bingo Fantasy</div><div class="gift-price">$100 / month</div><button class="btn ghost" id="buyBingo100">Checkout</button></div>
-        <div class="gift-card"><div style="font-weight:700;">Family Fantasy</div><div class="gift-price">$200 / month</div><button class="btn ghost" id="buyFamily200">Checkout</button></div>
-        <div class="gift-card"><div style="font-weight:700;">Basic Fantasy 21+</div><div class="gift-price">$300 / month</div><button class="btn ghost" id="buyFantasy300">Checkout</button></div>
-        <div class="gift-card"><div style="font-weight:700;">Advanced Fantasy 21+</div><div class="gift-price">$600 / month</div><button class="btn ghost" id="buyFantasy600">Checkout</button></div>
+      <div class="digital-product-grid" style="margin-bottom:10px;">
+        ${digitalProducts.map(p=>`<article class="digital-product-card">
+          <img src="${p.image}" alt="${p.title}" loading="lazy">
+          <div class="digital-product-body">
+            <div class="digital-product-title">${p.title}</div>
+            <div class="gift-price">${p.price}</div>
+            <div class="digital-product-desc">${p.desc}</div>
+            <div class="digital-product-actions">
+              <button class="btn ghost product-preview-btn" data-product="${p.id}">Preview</button>
+              <button class="btn product-buy-btn" data-product="${p.id}">Buy Now</button>
+            </div>
+          </div>
+        </article>`).join("")}
+      </div>
+      <div id="productPreviewPop" class="product-preview-pop" style="display:none;">
+        <div class="product-preview-card glass">
+          <button class="btn ghost" id="closeProductPreview">Close</button>
+          <img id="previewImage" src="" alt="Product Preview">
+          <div id="previewTitle" class="digital-product-title"></div>
+          <div id="previewPrice" class="gift-price"></div>
+          <div id="previewDesc" class="digital-product-desc"></div>
+          <button class="btn" id="previewBuyNow">Buy This Product</button>
+        </div>
       </div>
       <div id="shopifyLineup" class="gift-grid"></div>
       <button class="btn" id="openCustomShop">Open Custom Order</button>`
     qs("#openMyOrders").addEventListener("click", ()=>openLinkModal(LINKS.myOrders, "My Orders"))
     qs("#openShopifyCart").addEventListener("click", ()=>openLinkModal(LINKS.cart, "Shopify Cart"))
-    qs("#buyBingo100").addEventListener("click", ()=>openLinkModal(LINKS.bingo100, "Bingo Fantasy"))
-    qs("#buyFamily200").addEventListener("click", ()=>openLinkModal(LINKS.family200, "Family Fantasy"))
-    qs("#buyFantasy300").addEventListener("click", ()=>openLinkModal(LINKS.fantasy300, "Basic Fantasy 21+"))
-    qs("#buyFantasy600").addEventListener("click", ()=>openLinkModal(LINKS.fantasy600, "Advanced Fantasy 21+"))
+    let activeProduct = null
+    const showPreview = (id)=>{
+      const product = digitalProducts.find(p=>p.id === id)
+      if(!product) return
+      activeProduct = product
+      const pop = qs("#productPreviewPop")
+      if(!pop) return
+      const previewImage = qs("#previewImage")
+      const previewTitle = qs("#previewTitle")
+      const previewPrice = qs("#previewPrice")
+      const previewDesc = qs("#previewDesc")
+      if(previewImage) previewImage.src = product.image
+      if(previewTitle) previewTitle.textContent = product.title
+      if(previewPrice) previewPrice.textContent = product.price
+      if(previewDesc) previewDesc.textContent = product.desc
+      pop.style.display = "flex"
+    }
+    qsa(".product-preview-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>showPreview(btn.dataset.product || ""))
+    })
+    qsa(".product-buy-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const product = digitalProducts.find(p=>p.id === (btn.dataset.product || ""))
+        if(product){ openLinkModal(product.link, product.title) }
+      })
+    })
+    const closePreview = qs("#closeProductPreview")
+    if(closePreview){
+      closePreview.addEventListener("click", ()=>{
+        const pop = qs("#productPreviewPop")
+        if(pop) pop.style.display = "none"
+      })
+    }
+    const previewBuy = qs("#previewBuyNow")
+    if(previewBuy){
+      previewBuy.addEventListener("click", ()=>{
+        if(activeProduct){ openLinkModal(activeProduct.link, activeProduct.title) }
+      })
+    }
     qs("#openCustomShop").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
     loadProducts().then(items=>{
       const fallback = [
@@ -3685,6 +3758,7 @@ function setupAppsDock(){
     "Blog",
     "Competition Arena",
     "TV Reel",
+    "Brochure",
     "Snapshot Coder Idea",
     "Live Coder Suggestions",
     "Donate to the Poor · Auto Dissolve Bar",

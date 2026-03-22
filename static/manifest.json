@@ -8,9 +8,15 @@
   "theme_color": "#1f2329",
   "icons": [
     {
-      "src": "/static/icons/supportrd-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/static/icons/app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],

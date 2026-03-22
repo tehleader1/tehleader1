@@ -5,7 +5,8 @@ const APP_ASSETS = [
   "/static/style.v20260320h.css",
   "/static/app.v20260320h.js",
   "/static/auth.js",
-  "/static/icons/supportrd-icon.svg"
+  "/static/icons/app-192.png",
+  "/static/icons/app-512.png"
 ]
 
 self.addEventListener("install", (event) => {
