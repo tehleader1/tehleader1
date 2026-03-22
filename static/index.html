@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SupportRD AI</title>
+<meta name="theme-color" content="#1f2329">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/static/icons/supportrd-icon.svg">
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -197,7 +200,6 @@
             <option>Custom Order Payment</option>
             <option>With Evelyn Custom Order</option>
           </select>
-          <button class="btn ghost" id="contactEvelyn">Contact Evelyn Directly</button>
         </div>
       </div>
     </div>
@@ -587,6 +589,7 @@
       <div class="apps-row" id="appsRow">
         <button class="app-card" draggable="true" data-app="Live Hair Score">Live Hair Score</button>
         <button class="app-card" draggable="true" data-app="Competition Arena">Competition Arena</button>
+        <button class="app-card" draggable="true" data-app="TV Reel">TV Reel</button>
         <button class="app-card" draggable="true" data-app="Blog">Blog</button>
         <button class="app-card" draggable="true" data-app="Snapshot Coder Idea">Snapshot Coder Idea</button>
         <button class="app-card" draggable="true" data-app="Donate to the Poor · Auto Dissolve Bar" data-link="https://supportrd.com/products/auto-dissolve-soap-bar">Donate to the Poor · Auto Dissolve Bar</button>
@@ -597,6 +600,7 @@
         <div class="apps-library-label">Available Apps (Drag onto a tab to replace)</div>
         <div class="apps-row library" id="appsLibrary">
           <button class="app-card app-library" draggable="true" data-app="Competition Arena">Competition Arena</button>
+          <button class="app-card app-library" draggable="true" data-app="TV Reel">TV Reel</button>
           <button class="app-card app-library" draggable="true" data-app="Shopify Products">Shopify Products</button>
           <button class="app-card app-library" draggable="true" data-app="SEO Engine Viewer">SEO Engine Viewer</button>
           <button class="app-card app-library" draggable="true" data-app="Occasion Editor">Occasion Editor</button>
@@ -944,6 +948,9 @@
 <div class="info-tray glass" id="infoTray">
   <div class="info-title">SupportRD Info</div>
   <div class="info-links">
+    <button class="chip" id="infoAria" data-info="ARIA">ARIA</button>
+    <button class="chip" id="infoAppInstall" data-info="Click the 3 buttons to download the app">Click the 3 buttons to download the app</button>
+    <button class="chip" id="infoBrochure" data-info="Brochure">Brochure</button>
     <button class="chip" id="infoPrivacy" data-info="Privacy">Privacy</button>
     <button class="chip" id="infoPolitics" data-info="Politics">Politics</button>
     <button class="chip" id="infoDonate" data-info="Donate">Donate</button>

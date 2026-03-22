@@ -2,8 +2,28 @@
   "name": "SupportRD AI",
   "short_name": "SupportRD",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#07080b",
-  "theme_color": "#0b0c10",
-  "icons": []
+  "background_color": "#1f2329",
+  "theme_color": "#1f2329",
+  "icons": [
+    {
+      "src": "/static/icons/supportrd-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open TV Reel",
+      "short_name": "TV Reel",
+      "url": "/?app=tvreel"
+    },
+    {
+      "name": "Open Hair Score",
+      "short_name": "Hair Score",
+      "url": "/?app=hairscore"
+    }
+  ]
 }

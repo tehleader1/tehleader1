@@ -424,6 +424,25 @@ body.resort-brochure #logoutBtn{
   color:#111a29;
   border-color:rgba(120,146,190,0.72);
 }
+#liteModeBtn,
+#postSocials,
+#askAriaProductsAgain,
+#closeApp,
+#closeHairScan{
+  background:linear-gradient(120deg, #ffffff, #eaf2ff);
+  color:#0f1724 !important;
+  border:1px solid rgba(120,146,190,0.65);
+  box-shadow:0 6px 18px rgba(0,0,0,0.2);
+}
+body.resort-brochure #liteModeBtn,
+body.resort-brochure #postSocials,
+body.resort-brochure #askAriaProductsAgain,
+body.resort-brochure #closeApp,
+body.resort-brochure #closeHairScan{
+  background:linear-gradient(120deg, #ffffff, #eef4ff);
+  color:#111a29 !important;
+  border-color:rgba(120,146,190,0.72);
+}
 .user-badge{
   display:inline-flex;
   align-items:center;
@@ -701,11 +720,20 @@ body.listening .bg-layers{animation-play-state:paused;}
 .info-tray{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;align-items:center;padding:12px 16px;border-radius:16px;border:1px solid rgba(255,255,255,0.12);z-index:80;max-width:min(90vw,680px);}
 .info-title{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.7);}
 .info-links{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+#infoAppInstall{
+  max-width:min(88vw,360px);
+  white-space:normal;
+  line-height:1.2;
+  text-align:center;
+  font-size:11px;
+}
 
 @media (max-width:900px){.topbar{flex-direction:column;align-items:flex-start;} .center-stage{min-height:auto;}}
 @media (max-width:900px){
   .top-middle{width:100%;justify-content:center;order:2;}
   .status{width:100%;order:3;justify-content:flex-start;}
+  #appsDock{display:block !important;}
+  .reel-panel{display:none !important;}
   .trust-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
   .center-head{flex-direction:column;align-items:stretch;}
   .center-actions{justify-content:space-between;flex-wrap:wrap;}
@@ -720,7 +748,6 @@ body.listening .bg-layers{animation-play-state:paused;}
 }
 
 @media (max-width:900px){
-  body.natural-pro #appsDock,
   body.natural-pro .info-tray,
   body.natural-pro .reel-panel,
   body.natural-pro .tab-btn[data-tab="ai"],

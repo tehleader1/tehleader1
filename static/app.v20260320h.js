@@ -334,7 +334,26 @@ function setupInfoTray(){
   tray.addEventListener("click", (e)=>{
     const btn = e.target.closest("button")
     if(!btn) return
-    const label = btn.dataset.info || btn.textContent || "Info"
+    const label = String(btn.dataset.info || btn.textContent || "Info").trim()
+    if(label === "ARIA"){
+      const tab = qs('.tab-btn[data-tab="aria"]')
+      if(tab){ tab.click() }
+      openMiniWindow("ARIA", "ARIA is ready. Tap ARIA • Tap to Talk, then ask your hair question.")
+      return
+    }
+    if(label === "Brochure"){
+      openModal("brochureModal")
+      openMiniWindow("Brochure", "Full brochure opened.")
+      return
+    }
+    if(label === "Click the 3 buttons to download the app"){
+      const installBtn = qs("#installBtn")
+      if(installBtn && getComputedStyle(installBtn).display !== "none"){
+        installBtn.click()
+      }
+      openMiniWindow("Download App", "Click: 1) ARIA, 2) Brochure, 3) Install + Subscribe or browser menu > Add to Home screen.")
+      return
+    }
     const linkMap = {
       "Privacy": "https://supportrd.com/policies/privacy-policy",
       "Politics": "https://supportrd.com/pages/politics",
@@ -1001,6 +1020,10 @@ function setupModals(){
         }
         if(name === "Subscription Banner"){
           openModal("subscriptionModal")
+          return
+        }
+        if(name === "TV Reel"){
+          openModal("reelModal")
           return
         }
         bumpHairScore(1)
@@ -2920,6 +2943,17 @@ function setupFamilyMode(){
   })
 }
 
+function setupAppDeepLinks(){
+  const params = new URLSearchParams(window.location.search || "")
+  const app = String(params.get("app") || "").toLowerCase()
+  if(app === "tvreel"){
+    openModal("reelModal")
+  } else if(app === "hairscore"){
+    renderApp("Live Hair Score")
+    openModal("appModal")
+  }
+}
+
 function setupLoginGate(){
   try{
     const saved = JSON.parse(localStorage.getItem('socialLinks') || '{}')
@@ -3415,6 +3449,10 @@ function renderApp(name){
         <div class="score-legend">
           <div class="tag">SupportRD Live · Plus500‑style momentum</div>
           <div style="color:var(--muted);margin-bottom:10px;">Tap the score to reveal your ARIA level and unlocks.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <input id="scoreFastCode" maxlength="7" placeholder="Fast code" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.22);background:rgba(0,0,0,0.35);color:#fff;min-width:120px;">
+            <button class="btn" id="scoreFastLoad">Fast Load Visual</button>
+          </div>
           <div class="score-bars">
             <div>Consistency</div>
             <div class="score-bar"><span style="width:${Math.min(100, score + 10)}%"></span></div>
@@ -3442,6 +3480,8 @@ function renderApp(name){
     const ring = qs("#scoreRing")
     const levels = qs("#scoreLevels")
     const side = qs("#levelSide")
+    const fastCode = qs("#scoreFastCode")
+    const fastLoad = qs("#scoreFastLoad")
     if(ring){
       ring.addEventListener("click", ()=>{
         levels.style.display = levels.style.display === "none" ? "block" : "none"
@@ -3467,6 +3507,43 @@ function renderApp(name){
     })
     const pro = qs("#proDetails")
     if(pro && level === "pro" && sub === "pro"){ pro.style.display = "block" }
+    if(fastLoad){
+      const runFastLoad = ()=>{
+        const code = String((fastCode && fastCode.value) || "").trim()
+        if(code !== "1234567"){
+          toast("Use fast code 1234567")
+          return
+        }
+        state.hairScore = 97
+        renderApp("Live Hair Score")
+        const ringEl = qs("#scoreRing")
+        if(ringEl){
+          ringEl.animate(
+            [
+              {transform:"scale(0.93)", filter:"brightness(1)"},
+              {transform:"scale(1.05)", filter:"brightness(1.25)"},
+              {transform:"scale(1)", filter:"brightness(1)"}
+            ],
+            {duration:450, easing:"ease-out"}
+          )
+        }
+        toast("Hair score fast-loaded")
+      }
+      fastLoad.addEventListener("click", runFastLoad)
+      if(fastCode){
+        fastCode.addEventListener("keydown", (e)=>{
+          if(e.key === "Enter"){ runFastLoad() }
+        })
+      }
+    }
+    return
+  }
+  if(name === "TV Reel"){
+    body.innerHTML = `<div style="font-weight:700;margin-bottom:8px;">SupportRD TV Reel</div>
+      <div style="color:var(--muted);margin-bottom:10px;">Open the reel in full mode with hair clips rotating every 10 seconds.</div>
+      <button class="btn" id="openTvReelFromApp">Open TV Reel</button>`
+    const open = qs("#openTvReelFromApp")
+    if(open){ open.addEventListener("click", ()=>openModal("reelModal")) }
     return
   }
   if(name === "Competition Arena"){
@@ -3607,6 +3684,7 @@ function setupAppsDock(){
   const allApps = [
     "Blog",
     "Competition Arena",
+    "TV Reel",
     "Snapshot Coder Idea",
     "Live Coder Suggestions",
     "Donate to the Poor · Auto Dissolve Bar",
@@ -3871,9 +3949,10 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupVRScan)
   safe(setupBrochure)
   safe(setupPwa)
-    safe(setupFamilyMode)
-    safe(initHairScore)
-    safe(setupAppsDock)
+  safe(setupFamilyMode)
+  safe(initHairScore)
+  safe(setupAppsDock)
+  safe(setupAppDeepLinks)
   safe(setupLoginGate)
   safe(loadProducts)
   safe(setupMiniWindow)
