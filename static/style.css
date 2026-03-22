@@ -378,6 +378,11 @@ body.theme-ice{--accent:#74f0ff;--accent-2:#ff7ae6;--hero-bg:linear-gradient(120
 body.theme-ember{--accent:#ff8a3d;--accent-2:#ff3b6b;--hero-bg:linear-gradient(120deg,rgba(255,138,61,0.45),rgba(255,59,107,0.15)),url("/static/images/Have healthy hair.jpeg");--page-bg:radial-gradient(1200px 600px at 18% 10%, rgba(255,138,61,0.28), transparent 60%),linear-gradient(135deg,#1b0d05 0%,#23110c 55%,#120909 100%);}
 body.theme-carbon{--accent:#a8ff5c;--accent-2:#00e2ff;--hero-bg:linear-gradient(120deg,rgba(168,255,92,0.35),rgba(0,226,255,0.14)),url("/static/images/Have healthy hair.jpeg");--page-bg:radial-gradient(1200px 600px at 16% 12%, rgba(168,255,92,0.2), transparent 60%),linear-gradient(135deg,#0a120a 0%,#0b1a18 55%,#070b0f 100%);}
 body.theme-nebula{--accent:#c77dff;--accent-2:#ffb657;--hero-bg:linear-gradient(120deg,rgba(199,125,255,0.4),rgba(255,182,87,0.12)),url("/static/images/Have healthy hair.jpeg");--page-bg:radial-gradient(1200px 600px at 16% 12%, rgba(199,125,255,0.25), transparent 60%),linear-gradient(135deg,#110a1a 0%,#150f24 55%,#0b0a14 100%);}
+body.theme-aurora{--tab-a:#0e3f64;--tab-b:#1460a0;}
+body.theme-ice{--tab-a:#4a2a68;--tab-b:#1278ad;}
+body.theme-ember{--tab-a:#5a2b1e;--tab-b:#8f213a;}
+body.theme-carbon{--tab-a:#1f3f1b;--tab-b:#17596b;}
+body.theme-nebula{--tab-a:#34214d;--tab-b:#5f3f1d;}
 
   *{box-sizing:border-box;}
   body{background:var(--page-bg);}
@@ -395,7 +400,7 @@ body::before{content:"";position:fixed;inset:0;background:url('/static/images/wo
 .tagline{color:var(--muted);font-size:14px;margin-top:4px;} 
 .brand{max-width:760px;}
 .big-menu{display:flex;gap:6px;flex-wrap:wrap;} 
-.menu-btn{background:rgba(255,255,255,0.08);color:var(--text);border:1px solid rgba(255,255,255,0.18);padding:7px 10px;border-radius:10px;font-weight:600;font-size:12px;} 
+.menu-btn{background:linear-gradient(120deg,var(--tab-a,rgba(255,255,255,0.16)),var(--tab-b,rgba(255,255,255,0.08)));color:#f2f7ff;border:1px solid rgba(255,255,255,0.26);padding:7px 10px;border-radius:10px;font-weight:700;font-size:12px;} 
 .status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;} 
 .toggle-wrap{display:flex;align-items:center;}
 .big-menu{
@@ -428,7 +433,15 @@ body.resort-brochure #logoutBtn{
 #postSocials,
 #askAriaProductsAgain,
 #closeApp,
-#closeHairScan{
+#closeHairScan,
+#campaignBlogCta,
+#closeReel,
+#adult21Enable,
+#adult21Disable,
+#saveFamilyFantasyTheme,
+#openSocialCircuitFeed,
+#launchSensualAriaPost,
+#startBingoFantasy{
   background:linear-gradient(120deg, #ffffff, #eaf2ff);
   color:#0f1724 !important;
   border:1px solid rgba(120,146,190,0.65);
@@ -438,7 +451,15 @@ body.resort-brochure #liteModeBtn,
 body.resort-brochure #postSocials,
 body.resort-brochure #askAriaProductsAgain,
 body.resort-brochure #closeApp,
-body.resort-brochure #closeHairScan{
+body.resort-brochure #closeHairScan,
+body.resort-brochure #campaignBlogCta,
+body.resort-brochure #closeReel,
+body.resort-brochure #adult21Enable,
+body.resort-brochure #adult21Disable,
+body.resort-brochure #saveFamilyFantasyTheme,
+body.resort-brochure #openSocialCircuitFeed,
+body.resort-brochure #launchSensualAriaPost,
+body.resort-brochure #startBingoFantasy{
   background:linear-gradient(120deg, #ffffff, #eef4ff);
   color:#111a29 !important;
   border-color:rgba(120,146,190,0.72);
@@ -531,7 +552,7 @@ body.family-mode .aria-sphere{box-shadow:0 0 12px rgba(124,243,209,0.35);}
 .center-tabs-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
 .center-tabs{display:flex;gap:10px;flex-wrap:wrap;}
 .level-select{margin-left:auto;}
-.tab-btn{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:var(--text);font-weight:600;cursor:pointer;} 
+.tab-btn{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.28);background:linear-gradient(120deg,var(--tab-a,rgba(255,255,255,0.14)),var(--tab-b,rgba(255,255,255,0.08)));color:#f2f7ff;font-weight:700;cursor:pointer;} 
 .tab-btn.active{background:linear-gradient(120deg,var(--accent),var(--accent-2));color:#0b0c10;border-color:transparent;} 
 .tab-panel{display:none;max-height:100%;overflow:auto;padding-right:4px;}
 .tab-panel.active{display:block;}
@@ -631,7 +652,7 @@ body:hover .theme-side{opacity:0.8;box-shadow:0 0 40px rgba(124,243,209,0.35);}
 .apps-row.library{margin-top:8px;} 
 .apps-library{margin-top:14px;padding-top:10px;border-top:1px dashed rgba(255,255,255,0.08);} 
 .apps-library-label{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:8px;} 
-.app-card{padding:14px 16px;border-radius:16px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);font-size:13px;color:var(--muted);cursor:grab;white-space:nowrap;flex:0 0 auto;min-width:180px;transition:transform .2s ease, box-shadow .2s ease;} 
+.app-card{padding:14px 16px;border-radius:16px;background:linear-gradient(120deg,var(--tab-a,rgba(255,255,255,0.14)),var(--tab-b,rgba(255,255,255,0.06)));border:1px solid rgba(255,255,255,0.16);font-size:13px;color:#edf3ff;cursor:grab;white-space:nowrap;flex:0 0 auto;min-width:180px;transition:transform .2s ease, box-shadow .2s ease;} 
 .app-card.app-library{background:rgba(77,160,255,0.16);border-color:rgba(77,160,255,0.35);} 
 .app-card.active{border-color:rgba(124,243,209,0.6);color:var(--text);} 
 .app-card.drag-over{outline:2px solid rgba(132,234,255,0.55);box-shadow:0 0 0 4px rgba(0,0,0,0.3);} 
@@ -715,6 +736,15 @@ body.listening .bg-layers{animation-play-state:paused;}
 .product-preview-pop{position:fixed;inset:0;z-index:320;background:rgba(0,0,0,0.58);display:flex;align-items:center;justify-content:center;padding:20px;}
 .product-preview-card{width:min(560px,94vw);padding:16px;border-radius:16px;display:grid;gap:10px;}
 .product-preview-card img{width:100%;max-height:250px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,0.16);}
+.launch-splash{position:fixed;inset:0;z-index:450;display:none;background:#000;}
+.launch-splash.show{display:block;animation:launchFade 1.6s ease forwards;}
+.launch-splash img{width:100%;height:100%;object-fit:cover;}
+@keyframes launchFade{
+  0%{opacity:0;}
+  12%{opacity:1;}
+  76%{opacity:1;}
+  100%{opacity:0;visibility:hidden;}
+}
 
 .log-stream{font-family:monospace;font-size:12px;line-height:1.6;max-height:300px;overflow:auto;background:rgba(0,0,0,0.4);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);} 
 

@@ -6,89 +6,23 @@
 <title>SupportRD TV Reel</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  body{
-    margin:0;
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:
-      radial-gradient(1200px 600px at 20% 20%, rgba(116,224,184,0.25), transparent 60%),
-      radial-gradient(900px 500px at 80% 30%, rgba(255,214,153,0.22), transparent 60%),
-      linear-gradient(135deg, #0d1412 0%, #0b1a14 40%, #111c26 100%);
-    color:#fff;
-    font-family:'DM Sans', sans-serif;
-  }
-  .reel-wrap{
-    width:min(980px, 92vw);
-    display:grid;
-    gap:14px;
-  }
-  .reel-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    padding:14px 16px;
-    border-radius:16px;
-    border:1px solid rgba(255,255,255,0.12);
-    background:rgba(0,0,0,0.35);
-  }
-  .reel-title{
-    font-size:18px;
-    font-weight:700;
-  }
-  .reel-sub{
-    font-size:12px;
-    color:rgba(255,255,255,0.7);
-  }
-  .reel-actions{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-  }
-  .chip{
-    padding:8px 12px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,0.2);
-    background:rgba(255,255,255,0.08);
-    color:#fff;
-    font-size:12px;
-    font-weight:600;
-    cursor:pointer;
-  }
-  .chip.active{
-    background:linear-gradient(120deg, rgba(47,230,200,0.75), rgba(58,125,255,0.75));
-    color:#0b0f14;
-    border-color:transparent;
-  }
-  .chip.secondary{
-    border-style:dashed;
-    opacity:0.9;
-  }
-  .reel-frame{
-    width:100%;
-    height:62vh;
-    border-radius:18px;
-    border:1px solid rgba(255,255,255,0.16);
-    background:#000;
-  }
-  .reel-foot{
-    font-family:'Space Mono', monospace;
-    font-size:10px;
-    letter-spacing:0.16em;
-    text-transform:uppercase;
-    color:rgba(255,255,255,0.6);
-    text-align:center;
-  }
-  .reel-status{
-    font-size:11px;
-    color:rgba(255,255,255,0.65);
-  }
-  @media (max-width:700px){
-    .reel-frame{height:52vh;}
-    .reel-head{flex-direction:column;align-items:flex-start;}
-  }
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 600px at 20% 20%, rgba(116,224,184,0.25), transparent 60%),radial-gradient(900px 500px at 80% 30%, rgba(255,214,153,0.22), transparent 60%),linear-gradient(135deg, #0d1412 0%, #0b1a14 40%, #111c26 100%);color:#fff;font-family:'DM Sans', sans-serif;}
+  .reel-wrap{width:min(980px, 92vw);display:grid;gap:14px;}
+  .reel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.35);} 
+  .reel-title{font-size:18px;font-weight:700;}
+  .reel-sub{font-size:12px;color:rgba(255,255,255,0.7);} 
+  .reel-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:12px;font-weight:600;cursor:pointer;}
+  .chip.active{background:linear-gradient(120deg, rgba(47,230,200,0.75), rgba(58,125,255,0.75));color:#0b0f14;border-color:transparent;}
+  .chip.secondary{border-style:dashed;opacity:0.9;}
+  .reel-frame-wrap{position:relative;}
+  .reel-frame{width:100%;height:62vh;border-radius:18px;border:1px solid rgba(255,255,255,0.16);background:#000;object-fit:cover;}
+  .reel-overlay{position:absolute;left:12px;right:12px;bottom:14px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;pointer-events:none;}
+  .reel-meme{background:rgba(0,0,0,0.52);border:1px solid rgba(255,255,255,0.28);border-radius:10px;padding:8px 10px;font-size:12px;max-width:70%;}
+  .reel-filter{background:linear-gradient(120deg,#6fffe0,#8cc4ff);color:#09131d;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:700;}
+  .reel-foot{font-family:'Space Mono', monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.6);text-align:center;}
+  .reel-status{font-size:11px;color:rgba(255,255,255,0.65);}
+  @media (max-width:700px){.reel-frame{height:52vh;}.reel-head{flex-direction:column;align-items:flex-start;}}
 </style>
 </head>
 <body>
@@ -96,8 +30,8 @@
     <div class="reel-head">
       <div>
         <div class="reel-title">SupportRD TV Reel</div>
-        <div class="reel-sub">TikTok-style hair clip stream · 10 second rotations.</div>
-        <div class="reel-status" id="reelStatus">Loading hair clips…</div>
+        <div class="reel-sub">10-second social hair clips with meme/filter vibe.</div>
+        <div class="reel-status" id="reelStatus">Loading social hair reel...</div>
       </div>
       <div class="reel-actions">
         <button class="chip active" data-topic="hair">Hair Growth</button>
@@ -108,129 +42,93 @@
         <button class="chip secondary" id="openTiktok">Open TikTok Topic</button>
       </div>
     </div>
-    <video id="reelFrame" class="reel-frame" title="SupportRD Hair Reel" autoplay muted playsinline controls></video>
-    <div class="reel-foot">hair clip reel • tap a topic to switch • auto-rotates every 10 seconds</div>
+    <div class="reel-frame-wrap">
+      <video id="reelFrame" class="reel-frame" autoplay muted playsinline controls></video>
+      <div class="reel-overlay">
+        <div class="reel-meme" id="reelMeme">New filter, new hair glow. Post it.</div>
+        <div class="reel-filter" id="reelFilter">Filter: Aurora</div>
+      </div>
+    </div>
+    <div class="reel-foot">social hair reel • new meme text • filter mood • auto-rotates every 10 seconds</div>
   </div>
-
 <script>
-  (function(){
-    var frame = document.getElementById("reelFrame");
-    var statusEl = document.getElementById("reelStatus");
-    var nextBtn = document.getElementById("nextClip");
-    var openBtn = document.getElementById("openTiktok");
-    var topicButtons = Array.prototype.slice.call(document.querySelectorAll("[data-topic]"));
-    var currentTopic = "hair";
-    var autoTimer = null;
-    var currentLink = "";
-    var cursor = 0;
-    var TOPIC_LINKS = {
-      hair: [
-        "https://cdn.coverr.co/videos/coverr-young-woman-touching-her-curly-hair-1578/1080p.mp4",
-        "https://cdn.coverr.co/videos/coverr-woman-flipping-her-long-hair-1577/1080p.mp4",
-        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
-      ],
-      haircare: [
-        "https://cdn.coverr.co/videos/coverr-woman-applying-hair-oil-1576/1080p.mp4",
-        "https://cdn.coverr.co/videos/coverr-healthy-hair-routine-shot-1581/1080p.mp4",
-        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
-      ],
-      curly: [
-        "https://cdn.coverr.co/videos/coverr-woman-with-curly-hair-posing-1575/1080p.mp4",
-        "https://cdn.coverr.co/videos/coverr-curls-shaking-in-slow-motion-1580/1080p.mp4",
-        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
-      ],
-      scalp: [
-        "https://cdn.coverr.co/videos/coverr-scalp-care-close-up-1574/1080p.mp4",
-        "https://cdn.coverr.co/videos/coverr-hair-scalp-massage-1582/1080p.mp4",
-        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
-      ]
-    };
-    var TOPIC_TIKTOK = {
-      hair: "https://www.tiktok.com/tag/hair",
-      haircare: "https://www.tiktok.com/tag/haircare",
-      curly: "https://www.tiktok.com/tag/curlyhair",
-      scalp: "https://www.tiktok.com/search?q=scalp%20care"
-    };
+(function(){
+  var frame = document.getElementById('reelFrame');
+  var statusEl = document.getElementById('reelStatus');
+  var nextBtn = document.getElementById('nextClip');
+  var openBtn = document.getElementById('openTiktok');
+  var memeEl = document.getElementById('reelMeme');
+  var filterEl = document.getElementById('reelFilter');
+  var topicButtons = Array.prototype.slice.call(document.querySelectorAll('[data-topic]'));
+  var currentTopic = 'hair';
+  var cursor = -1;
+  var autoTimer = null;
+  var TOPIC_CLIPS = {
+    hair: ['/static/videos/reel-1.mp4','/static/videos/reel-2.mp4','/static/videos/sample-10s.mp4'],
+    haircare: ['/static/videos/reel-3.mp4','/static/videos/reel-2.mp4','/static/videos/sample-10s.mp4'],
+    curly: ['/static/videos/reel-4.mp4','/static/videos/reel-1.mp4','/static/videos/sample-10s.mp4'],
+    scalp: ['/static/videos/reel-6.mp4','/static/videos/reel-3.mp4','/static/videos/sample-10s.mp4']
+  };
+  var TIKTOK_TOPIC = {
+    hair: 'https://www.tiktok.com/tag/hair',
+    haircare: 'https://www.tiktok.com/tag/haircare',
+    curly: 'https://www.tiktok.com/tag/curlyhair',
+    scalp: 'https://www.tiktok.com/search?q=scalp%20care'
+  };
+  var MEMES = [
+    'New meme: day 7 curls went viral.',
+    'Hair check challenge: post your before/after.',
+    'Filter drop: shine mode looks unreal.',
+    'Scalp care post loading... keep it clean.',
+    'POV: you found your perfect routine.'
+  ];
+  var FILTERS = ['Aurora','Cinema','Glow Up','Vintage Hair','Neon Bounce'];
 
-    function setStatus(msg){
-      if(statusEl){ statusEl.textContent = msg; }
-    }
-
-    function pickNext(list){
-      if(!list || !list.length) return null;
-      cursor = (cursor + 1) % list.length;
-      return list[cursor];
-    }
-
-    function hardSeekToTenSeconds(){
-      try{
-        if(!frame.duration || !isFinite(frame.duration)) return;
-        if(frame.duration <= 10) return;
+  function setStatus(msg){ if(statusEl) statusEl.textContent = msg; }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function pickNextClip(){
+    var clips = TOPIC_CLIPS[currentTopic] || TOPIC_CLIPS.hair;
+    cursor = (cursor + 1) % clips.length;
+    return clips[cursor];
+  }
+  function styleOverlay(){
+    if(memeEl) memeEl.textContent = pick(MEMES);
+    if(filterEl) filterEl.textContent = 'Filter: ' + pick(FILTERS);
+  }
+  function playClip(){
+    var clip = pickNextClip();
+    if(!clip){ setStatus('No clips configured.'); return; }
+    frame.src = clip;
+    frame.load();
+    frame.play().catch(function(){ setStatus('Tap play to start reel.'); });
+    styleOverlay();
+    setStatus('Now playing ' + currentTopic + ' social hair clip.');
+  }
+  function setTopic(topic){
+    currentTopic = topic;
+    cursor = -1;
+    topicButtons.forEach(function(btn){ btn.classList.toggle('active', btn.getAttribute('data-topic') === topic); });
+    playClip();
+    startAuto();
+  }
+  function startAuto(){
+    clearInterval(autoTimer);
+    autoTimer = setInterval(playClip, 10000);
+  }
+  frame.addEventListener('loadedmetadata', function(){
+    try{
+      if(frame.duration && frame.duration > 10){
         var maxStart = Math.max(0, Math.floor(frame.duration - 10));
         frame.currentTime = Math.floor(Math.random() * maxStart);
-      }catch(_){}
-    }
-
-    function rotate(){
-      var links = TOPIC_LINKS[currentTopic] || TOPIC_LINKS.hair;
-      var link = pickNext(links);
-      if(!link){
-        setStatus("No reel clips found for this topic.");
-        return;
       }
-      currentLink = link;
-      frame.src = link;
-      frame.load();
-      var playPromise = frame.play();
-      if(playPromise && playPromise.catch){
-        playPromise.catch(function(){
-          setStatus("Tap play to start the reel.");
-        });
-      }
-      setStatus("Now playing " + currentTopic + " clip.");
-    }
-
-    function ensureTopic(topic){
-      currentTopic = topic;
-      cursor = -1;
-      topicButtons.forEach(function(btn){
-        btn.classList.toggle("active", btn.getAttribute("data-topic") === topic);
-      });
-      rotate();
-    }
-
-    function startAuto(){
-      clearInterval(autoTimer);
-      autoTimer = setInterval(rotate, 10000);
-    }
-
-    topicButtons.forEach(function(btn){
-      btn.addEventListener("click", function(){
-        var topic = btn.getAttribute("data-topic");
-        ensureTopic(topic);
-        startAuto();
-      });
-    });
-
-    if(nextBtn){
-      nextBtn.addEventListener("click", function(){
-        rotate();
-      });
-    }
-    if(openBtn){
-      openBtn.addEventListener("click", function(){
-        window.open(TOPIC_TIKTOK[currentTopic] || TOPIC_TIKTOK.hair, "_blank", "noopener");
-      });
-    }
-    frame.addEventListener("loadedmetadata", hardSeekToTenSeconds);
-    frame.addEventListener("error", function(){
-      setStatus("Clip failed, loading next source...");
-      setTimeout(rotate, 300);
-    });
-
-    ensureTopic(currentTopic);
-    startAuto();
-  })();
+    }catch(_){ }
+  });
+  frame.addEventListener('error', function(){ setStatus('Clip error. Loading next...'); setTimeout(playClip, 300); });
+  topicButtons.forEach(function(btn){ btn.addEventListener('click', function(){ setTopic(btn.getAttribute('data-topic')); }); });
+  if(nextBtn){ nextBtn.addEventListener('click', playClip); }
+  if(openBtn){ openBtn.addEventListener('click', function(){ window.open(TIKTOK_TOPIC[currentTopic] || TIKTOK_TOPIC.hair, '_blank', 'noopener'); }); }
+  setTopic(currentTopic);
+})();
 </script>
 </body>
 </html>

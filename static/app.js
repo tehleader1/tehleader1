@@ -74,6 +74,15 @@ const LINKS = {
   donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
   custom: "https://supportrd.com/pages/custom-order"
 }
+const PLAN_MEDIA = {
+  premium: {title:"ARIA Puzzle Tier", price:"$35/mo", image:"/static/images/brochure-shampoo.jpg", desc:"Puzzle unlocks + guided routine depth.", link:LINKS.premium},
+  pro: {title:"Unlimited ARIA Professional", price:"$50/mo", image:"/static/images/brochure-hero.jpg", desc:"Unlimited responses + pro-level support lane.", link:LINKS.pro},
+  bingo100: {title:"Bingo Fantasy", price:"$100/mo", image:"/static/images/brochure-social.jpg", desc:"Chill narrative mode with humor and confidence.", link:LINKS.bingo100},
+  family200: {title:"Family Fantasy Pack", price:"$200/mo", image:"/static/images/brochure-contacts.jpg", desc:"Family-safe themed coaching and style prep.", link:LINKS.family200},
+  fantasy300: {title:"21+ Basic Fantasy", price:"$300/mo", image:"/static/images/brochure-bright-droplets.jpg", desc:"Playful 21+ tone in a hair-first experience.", link:LINKS.fantasy300},
+  fantasy600: {title:"21+ Advanced Fantasy", price:"$600/mo", image:"/static/images/brochure-fast-dropper.jpg", desc:"Premium emotional narrative with advanced tone.", link:LINKS.fantasy600},
+  yoda: {title:"Yoda Pass", price:"$20/mo", image:"/static/images/brochure-lacceador.jpg", desc:"Focused builder mode for consistent progress.", link:LINKS.yoda}
+}
 const AI_LINKS = {
   dan_martell: "https://archive.org/search?query=Dan%20Martell%20AI%20business%20mediatype%3Amovies",
   ai_millionaire: "https://archive.org/search?query=AI%20millionaire%20mediatype%3Amovies",
@@ -1109,6 +1118,19 @@ function setupPaymentChooser(){
   const select = qs("#paymentSelect")
   const view = qs("#paymentView")
   if(!select || !view) return
+  function planCard(key, extra){
+    const p = PLAN_MEDIA[key]
+    if(!p) return ""
+    return `<div class="digital-product-card" style="margin-bottom:10px;">
+      <img src="${p.image}" alt="${p.title}" loading="lazy">
+      <div class="digital-product-body">
+        <div class="digital-product-title">${p.title}</div>
+        <div class="gift-price">${p.price}</div>
+        <div class="digital-product-desc">${p.desc}</div>
+        ${extra || ""}
+      </div>
+    </div>`
+  }
 
   async function checkUpgrade(){
     const email = (state.socialLinks && state.socialLinks.email) ? state.socialLinks.email : ""
@@ -1137,43 +1159,43 @@ function setupPaymentChooser(){
       return
     }
     if(val === "premium"){
-      view.innerHTML = `<p>$35 PREMIUM subscription.</p><div class="lock-pill">Unlocks 2 ARIA levels + puzzles to continue</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div><button class="btn" id="goPremium">Pay $35</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `${planCard("premium", `<button class="btn" id="goPremium">Pay $35</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">Unlocks 2 ARIA levels + puzzles to continue</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div>`
       qs("#goPremium").addEventListener("click", ()=>openLinkModal(LINKS.premium, "Premium Subscription"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     if(val === "bingo100"){
-      view.innerHTML = `<p>$100/MONTH BINGO FANTASY.</p><div class="lock-pill">“You worked hard — relax, I got your hair.” chill support lane.</div><div class="lock-pill">Funny flow + confidence style for 5-to-9 builders (non-21+ mode).</div><button class="btn" id="goBingo100">Pay $100/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `${planCard("bingo100", `<button class="btn" id="goBingo100">Pay $100/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">“You worked hard — relax, I got your hair.” chill support lane.</div><div class="lock-pill">Funny flow + confidence style for 5-to-9 builders (non-21+ mode).</div>`
       qs("#goBingo100").addEventListener("click", ()=>openLinkModal(LINKS.bingo100, "Bingo Fantasy"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     if(val === "family200"){
-      view.innerHTML = `<p>$200/MONTH FAMILY FANTASY.</p><div class="lock-pill">Choose your Family Fantasy scene pack and let ARIA prep your next movie moment.</div><div class="lock-pill">Family-safe, high-energy, hair-first coaching style.</div><button class="btn" id="goFamily200">Pay $200/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `${planCard("family200", `<button class="btn" id="goFamily200">Pay $200/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">Choose your Family Fantasy scene pack and let ARIA prep your next movie moment.</div><div class="lock-pill">Family-safe, high-energy, hair-first coaching style.</div>`
       qs("#goFamily200").addEventListener("click", ()=>openLinkModal(LINKS.family200 || LINKS.custom, "Family Fantasy"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     if(val === "yoda"){
-      view.innerHTML = `<p>$20 YODA PASS.</p><div class="lock-pill">A focused build version of unlimited ARIA for style-first creators.</div><div class="lock-pill">Talk-to-us deal lane stays in $50 Unlimited ARIA.</div><button class="btn" id="goYoda">Pay $20</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `${planCard("yoda", `<button class="btn" id="goYoda">Pay $20</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">A focused build version of unlimited ARIA for style-first creators.</div><div class="lock-pill">Talk-to-us deal lane stays in $50 Unlimited ARIA.</div>`
       qs("#goYoda").addEventListener("click", ()=>openLinkModal(LINKS.yoda, "Yoda Pass"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     if(val === "fantasy300"){
-      view.innerHTML = `<p>$300/MONTH BASIC FANTASY (21+).</p><div class="lock-pill">Flirty-light vibe: “I like your style” and dinner-ready hair energy.</div><div class="lock-pill">Playful 21+ tone, non-explicit, hair-first.</div><button class="btn" id="goFantasy300">Pay $300/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `${planCard("fantasy300", `<button class="btn" id="goFantasy300">Pay $300/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">Flirty-light vibe: “I like your style” and dinner-ready hair energy.</div><div class="lock-pill">Playful 21+ tone, non-explicit, hair-first.</div>`
       qs("#goFantasy300").addEventListener("click", ()=>openLinkModal(LINKS.fantasy300, "Basic Fantasy 21+"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     if(val === "fantasy600"){
-      view.innerHTML = `<p>$600/MONTH ADVANCED FANTASY (21+).</p><div class="lock-pill">Meaningful romance storytelling with premium emotional tone.</div><div class="lock-pill">Cinematic, affectionate, non-explicit, hair-first guidance.</div><button class="btn" id="goFantasy600">Pay $600/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `${planCard("fantasy600", `<button class="btn" id="goFantasy600">Pay $600/mo</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">Meaningful romance storytelling with premium emotional tone.</div><div class="lock-pill">Cinematic, affectionate, non-explicit, hair-first guidance.</div>`
       qs("#goFantasy600").addEventListener("click", ()=>openLinkModal(LINKS.fantasy600, "Advanced Fantasy 21+"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
     if(val === "pro"){
-      view.innerHTML = `<p>$50 PROFESSIONAL subscription.</p><div class="lock-pill">All 4 levels + unlimited ARIA</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div><button class="btn" id="goPro">Pay $50</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`
+      view.innerHTML = `${planCard("pro", `<button class="btn" id="goPro">Pay $50</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">All 4 levels + unlimited ARIA</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div>`
       qs("#goPro").addEventListener("click", ()=>openLinkModal(LINKS.pro, "Professional Subscription"))
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
@@ -2204,12 +2226,14 @@ function setupAdult21Mode(){
     state.adult21 = true
     localStorage.setItem("adult21Mode", "true")
     render()
+    openLinkModal(LINKS.fantasy300, "21+ Basic Fantasy Checkout")
     openMiniWindow("21+ Mode", "Activated. No drugs or gang content allowed.")
   })
   offBtn.addEventListener("click", ()=>{
     state.adult21 = false
     localStorage.setItem("adult21Mode", "false")
     render()
+    openLinkModal(LINKS.premium, "Premium Checkout")
   })
   if(feedBtn){
     feedBtn.addEventListener("click", async ()=>{
@@ -2219,6 +2243,7 @@ function setupAdult21Mode(){
         if(d && d.ok){
           const lines = (d.circuits || []).map(c=>`${c.name}: ${c.state}`).join(" · ")
           if(circuitStatus) circuitStatus.textContent = `Live circuits: ${lines}`
+          openLinkModal(LINKS.pro, "Unlimited ARIA Checkout")
           openMiniWindow("Social Circuits", "SupportRD source feed is active.")
         } else {
           if(circuitStatus) circuitStatus.textContent = `Source mode error: ${d.error || "unknown"}`
@@ -2234,6 +2259,7 @@ function setupAdult21Mode(){
       const msg = "SupportRD Social Source: style pulse, hydration pulse, repair pulse, and attraction pulse are live. Clean, respectful, hair-focused guidance for everyone."
       if(post) post.value = msg
       if(circuitStatus) circuitStatus.textContent = "SupportRD circuit post staged to Social Source."
+      openLinkModal(LINKS.pro, "Unlimited ARIA Checkout")
       openMiniWindow("SupportRD Circuits", "Post staged for everybody. Keep it clean and hair-focused.")
     })
   }
@@ -2257,6 +2283,7 @@ function setupAdult21Mode(){
       state.socialLinks.familyFantasyTheme = selected
       localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
       renderFamilyTheme()
+      openLinkModal(LINKS.family200 || LINKS.custom, "Family Fantasy Checkout")
       openMiniWindow("Family Fantasy", "Theme saved for your $200 Family Fantasy pack.")
     })
   }
@@ -2958,6 +2985,17 @@ function setupAppDeepLinks(){
   }
 }
 
+function setupStartupSplash(){
+  const splash = qs("#launchSplash")
+  if(!splash) return
+  const params = new URLSearchParams(window.location.search || "")
+  const fromPwa = params.get("source") === "pwa"
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true
+  if(!(fromPwa || isStandalone)) return
+  splash.classList.add("show")
+  setTimeout(()=>{ splash.classList.remove("show") }, 1700)
+}
+
 function setupLoginGate(){
   try{
     const saved = JSON.parse(localStorage.getItem('socialLinks') || '{}')
@@ -3445,10 +3483,10 @@ function renderApp(name){
               </linearGradient>
             </defs>
             <circle cx="80" cy="80" r="70" stroke="rgba(255,255,255,0.15)" stroke-width="12" fill="none"/>
-            <circle cx="80" cy="80" r="70" stroke="url(#scoreGrad)" stroke-width="12" fill="none" stroke-linecap="round"
-              stroke-dasharray="${dash} ${Math.round(circumference - dash)}"/>
+            <circle id="scoreProgressCircle" cx="80" cy="80" r="70" stroke="url(#scoreGrad)" stroke-width="12" fill="none" stroke-linecap="round"
+              stroke-dasharray="0 ${Math.round(circumference)}"/>
           </svg>
-          <div class="score-value"><div>${score}%</div><span>Live Hair Score</span></div>
+          <div class="score-value"><div id="scoreValueNum">0%</div><span>Live Hair Score</span></div>
         </div>
         <div class="score-legend">
           <div class="tag">SupportRD Live · Plus500‑style momentum</div>
@@ -3511,6 +3549,24 @@ function renderApp(name){
     })
     const pro = qs("#proDetails")
     if(pro && level === "pro" && sub === "pro"){ pro.style.display = "block" }
+    const progressCircle = qs("#scoreProgressCircle")
+    const valueNum = qs("#scoreValueNum")
+    const totalLen = Math.round(circumference)
+    const targetLen = dash
+    if(progressCircle || valueNum){
+      const startTs = performance.now()
+      const duration = 900
+      function anim(ts){
+        const t = Math.min(1, (ts - startTs) / duration)
+        const eased = 1 - Math.pow(1 - t, 3)
+        const currentScore = Math.round(score * eased)
+        const currentLen = Math.round(targetLen * eased)
+        if(valueNum) valueNum.textContent = `${currentScore}%`
+        if(progressCircle) progressCircle.setAttribute("stroke-dasharray", `${currentLen} ${Math.max(0, totalLen - currentLen)}`)
+        if(t < 1) requestAnimationFrame(anim)
+      }
+      requestAnimationFrame(anim)
+    }
     if(fastLoad){
       const runFastLoad = ()=>{
         const code = String((fastCode && fastCode.value) || "").trim()
@@ -4027,6 +4083,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(initHairScore)
   safe(setupAppsDock)
   safe(setupAppDeepLinks)
+  safe(setupStartupSplash)
   safe(setupLoginGate)
   safe(loadProducts)
   safe(setupMiniWindow)
