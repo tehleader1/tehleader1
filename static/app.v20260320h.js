@@ -1636,6 +1636,7 @@ function setupGPS(){
   const optSel = qs("#offRoadOption")
   const offGo = qs("#offRoadGo")
   const offPing = qs("#offRoadDRPing")
+  const offToHelp = qs("#offRoadToHelp")
   const offStatus = qs("#offRoadStatus")
   function setOffStatus(text){ if(offStatus) offStatus.textContent = text }
   if(offGo){
@@ -1675,6 +1676,12 @@ function setupGPS(){
       const msg = encodeURIComponent("SupportRD request: help connect contacts in Santiago Dominican Republic. Reference: Figueroa / Ramlin / Crystal / Kito.")
       openLinkModal(`mailto:agentanthony@supportrd.com?subject=DR%20Contact%20Ping&body=${msg}`, "DR Contact Ping")
       setOffStatus("DR contact ping sent. Awaiting response for known contacts in Santiago.")
+    })
+  }
+  if(offToHelp){
+    offToHelp.addEventListener("click", ()=>{
+      const t = qs('.tab-btn[data-tab="ariahelp"]')
+      if(t) t.click()
     })
   }
 }
@@ -2476,6 +2483,7 @@ function setupAriaHelp(){
   const rc = qs("#ariaHelpRedCross")
   const n911 = qs("#ariaHelp911")
   const n988 = qs("#ariaHelp988")
+  const toOffRoad = qs("#ariaHelpToOffRoad")
   if(!out) return
   if(gen){
     gen.addEventListener("click", ()=>{
@@ -2506,6 +2514,12 @@ function setupAriaHelp(){
   if(rc){ rc.addEventListener("click", ()=>openLinkModal("https://www.redcross.org/get-help.html", "Red Cross Assistance")) }
   if(n911){ n911.addEventListener("click", ()=>{ window.location.href = "tel:911" }) }
   if(n988){ n988.addEventListener("click", ()=>{ window.location.href = "tel:988" }) }
+  if(toOffRoad){
+    toOffRoad.addEventListener("click", ()=>{
+      const t = qs('.tab-btn[data-tab="gps"]')
+      if(t) t.click()
+    })
+  }
 }
 
 function setupCashOps(){
