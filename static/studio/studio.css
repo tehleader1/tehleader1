@@ -202,6 +202,21 @@ textarea{
   overflow:hidden;
   box-shadow:0 10px 22px rgba(0,0,0,.28);
 }
+.timeline-waveform{
+  position:absolute;
+  inset:6px 10px 8px 10px;
+  display:flex;
+  align-items:flex-end;
+  gap:2px;
+  opacity:.74;
+  pointer-events:none;
+}
+.wave-bar{
+  flex:1 1 auto;
+  min-width:2px;
+  border-radius:999px 999px 3px 3px;
+  background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(198,227,255,.34));
+}
 .timeline-clip::after{
   content:"";
   position:absolute;
@@ -213,12 +228,19 @@ textarea{
 .timeline-clip.mp3{background:linear-gradient(180deg,#215db2,#143a6f);}
 .timeline-clip.recorded{background:linear-gradient(180deg,#8f2139,#591326);}
 .timeline-clip.instrument{background:linear-gradient(180deg,#6a3bb0,#3e236a);}
+.timeline-clip.recorded .wave-bar{background:linear-gradient(180deg,rgba(255,230,238,.96),rgba(255,120,146,.34));}
+.timeline-clip.instrument .wave-bar{background:linear-gradient(180deg,rgba(242,232,255,.96),rgba(179,131,255,.34));}
 .timeline-clip-label{
   position:relative;
   z-index:1;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+  margin-top:18px;
+}
+.timeline-clip.selected{
+  outline:2px solid rgba(255,255,255,.82);
+  box-shadow:0 0 0 2px rgba(117,193,255,.42),0 14px 28px rgba(0,0,0,.34);
 }
 .studio-jake-orb{
   position:fixed;

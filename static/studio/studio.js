@@ -9,6 +9,11 @@ let placementAudioFiles = [];
 let lastRenderedMixBlob = null;
 let lastRenderedMixName = "";
 let selectedTimelineAudioId = 0;
+let selectedPlacementId = 0;
+let mediaRecorder = null;
+let recordingChunks = [];
+let recordingTick = null;
+let currentRecordingPlacementId = 0;
 let trackState = [
   { id: "mp3-1", type: "mp3", title: "MP3 Lane 1" },
   { id: "recorded-1", type: "recorded", title: "Recorded Lane 1" },
@@ -28,6 +33,16 @@ function addTrack(type) {
   const count = trackState.filter((t) => t.type === type).length + 1;
   trackState.push({ id: `${type}-${count}`, type, title: `${type.charAt(0).toUpperCase() + type.slice(1)} Lane ${count}` });
   renderPlacements();
+}
+
+function buildWaveMarkup(seedText = "", emphasis = 1) {
+  const chars = String(seedText || "support");
+  const bars = Array.from({ length: 24 }).map((_, idx) => {
+    const code = chars.charCodeAt(idx % chars.length) || 80;
+    const height = 18 + ((code + idx * 7) % 32) * emphasis;
+    return `<span class="wave-bar" style="height:${Math.min(64, height)}%"></span>`;
+  }).join("");
+  return `<div class="timeline-waveform">${bars}</div>`;
 }
 
 async function applyStudioMicProfile() {
@@ -105,9 +120,11 @@ function renderPlacements() {
         const left = Math.max(0, Math.min(100, (p.timeSec / timelineDurationSec) * 100));
         const width = Math.max(10, Math.min(42, ((p.durationSec || 8) / timelineDurationSec) * 100));
         const label = p.audioName || `${p.kind.toUpperCase()} · ${p.wave.toUpperCase()}`;
-        return `<div class="timeline-clip ${p.kind}" style="left:${left}%;width:${width}%;" title="${label}">
+        const selected = p.id === selectedPlacementId ? " selected" : "";
+        return `<button class="timeline-clip ${p.kind}${selected}" type="button" data-placement-id="${p.id}" style="left:${left}%;width:${width}%;" title="${label}">
+          ${buildWaveMarkup(label, p.live ? 1.4 : 1)}
           <span class="timeline-clip-label">${label}</span>
-        </div>`;
+        </button>`;
       }).join("");
     return `<div class="timeline-track">
       <div class="timeline-track-head">
@@ -118,10 +135,19 @@ function renderPlacements() {
     </div>`;
   }).join("");
   tracksWrap.innerHTML = lanesHtml;
+  qsa("#timelineTracks [data-placement-id]").forEach((node) => {
+    node.addEventListener("click", () => {
+      selectedPlacementId = Number(node.getAttribute("data-placement-id") || 0);
+      if (select) select.value = String(selectedPlacementId);
+      renderPlacements();
+      if (status) status.textContent = `Placement #${selectedPlacementId} selected. Delete Selected will remove it.`;
+    });
+  });
   if (select) {
     select.innerHTML = placements.length
       ? placements.map((p) => `<option value="${p.id}">#${p.id} · ${p.kind.toUpperCase()} · ${p.wave.toUpperCase()} · ${p.timeSec.toFixed(1)}s${p.audioName ? " · " + p.audioName : ""}</option>`).join("")
       : "<option value=''>No placements</option>";
+    if (selectedPlacementId) select.value = String(selectedPlacementId);
   }
   if (status) status.textContent = placements.length ? `${placements.length} placement(s) active.` : "No placements yet.";
 }
@@ -362,6 +388,7 @@ function createPlacement(out, kind = "mp3") {
   if (out) out.textContent = next.audioName
     ? `${kind.toUpperCase()} placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s · ${next.audioName}`
     : `${kind.toUpperCase()} placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s`;
+  return next;
 }
 
 function deleteLastPlacement(out) {
@@ -370,6 +397,7 @@ function deleteLastPlacement(out) {
     return;
   }
   const last = placements.pop();
+  if (last?.id === selectedPlacementId) selectedPlacementId = 0;
   renderPlacements();
   if (out) out.textContent = `Deleted last placement #${last.id}.`;
 }
@@ -412,9 +440,10 @@ function setupTransport() {
   addRecordedLaneBtn?.addEventListener("click", () => { addTrack("recorded"); out.textContent = "Added recorded lane."; });
   addInstrumentLaneBtn?.addEventListener("click", () => { addTrack("instrument"); out.textContent = "Added instrument lane."; });
   deleteSelectedBtn?.addEventListener("click", () => {
-    const id = Number(select?.value || 0);
+    const id = Number(select?.value || selectedPlacementId || 0);
     if (!id) return;
     placements = placements.filter((p) => p.id !== id);
+    if (selectedPlacementId === id) selectedPlacementId = 0;
     renderPlacements();
     out.textContent = `Deleted placement #${id}.`;
   });
@@ -442,7 +471,7 @@ function setupTransport() {
     audioUpload.value = "";
   });
   attachAudioBtn?.addEventListener("click", () => {
-    const placementId = Number(select?.value || 0);
+    const placementId = Number(select?.value || selectedPlacementId || 0);
     const audioId = Number(selectedTimelineAudioId || 0);
     if (!placementId || !audioId) {
       out.textContent = "Pick a placement and arm a clip from the imported track bank first.";
@@ -453,15 +482,91 @@ function setupTransport() {
     if (!audio || idx < 0) return;
     placements[idx].audioId = audio.id;
     placements[idx].audioName = audio.name;
+    placements[idx].durationSec = audio.durationSec || placements[idx].durationSec || 8;
+    selectedPlacementId = placementId;
     renderPlacements();
     out.textContent = `Attached ${audio.name} to placement #${placementId}.`;
   });
-  const toggleRecording = () => {
-    isRecording = !isRecording;
-    recBtn?.classList.toggle("is-recording", isRecording);
-    timelineRecordBtn?.classList.toggle("is-recording", isRecording);
-    renderPlacements();
-    out.textContent = isRecording ? "Recording ON · red dot active." : "Recording OFF.";
+  const stopRecordingVisuals = () => {
+    isRecording = false;
+    recBtn?.classList.toggle("is-recording", false);
+    timelineRecordBtn?.classList.toggle("is-recording", false);
+    if (recordingTick) {
+      clearInterval(recordingTick);
+      recordingTick = null;
+    }
+  };
+  const stopRecording = async () => {
+    if (!isRecording) return;
+    stopRecordingVisuals();
+    try {
+      mediaRecorder?.stop();
+    } catch {}
+    out.textContent = "Recording saved to recorded lane.";
+  };
+  const startRecording = async () => {
+    if (isRecording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) recordingChunks.push(event.data);
+      };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordingChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+        const placement = placements.find((p) => p.id === currentRecordingPlacementId);
+        if (placement) {
+          const audioId = Date.now() + Math.floor(Math.random() * 1000);
+          const url = URL.createObjectURL(blob);
+          placementAudioFiles.push({
+            id: audioId,
+            name: `Recorded-${new Date().toISOString().slice(11,19).replace(/:/g,"-")}.webm`,
+            url,
+            type: blob.type || "audio/webm",
+            durationSec: placement.durationSec || 6
+          });
+          placement.audioId = audioId;
+          placement.audioName = "Recorded Layer";
+          placement.live = false;
+          renderPlacementAudioOptions();
+          renderPlacements();
+        }
+        stream.getTracks().forEach((t) => t.stop());
+        mediaRecorder = null;
+        currentRecordingPlacementId = 0;
+      };
+      addTrack("recorded");
+      const placement = createPlacement(out, "recorded");
+      if (placement) {
+        placement.trackId = ensureTrack("recorded");
+        placement.live = true;
+        placement.audioName = "Live Recording";
+        placement.durationSec = 2;
+        currentRecordingPlacementId = placement.id;
+        renderPlacements();
+      }
+      mediaRecorder.start(250);
+      isRecording = true;
+      recBtn?.classList.toggle("is-recording", true);
+      timelineRecordBtn?.classList.toggle("is-recording", true);
+      recordingTick = setInterval(() => {
+        const livePlacement = placements.find((p) => p.id === currentRecordingPlacementId);
+        if (!livePlacement) return;
+        livePlacement.durationSec = Math.min(30, (livePlacement.durationSec || 2) + 0.35);
+        renderPlacements();
+      }, 300);
+      out.textContent = "Recording ON · live wave is growing on recorded lane.";
+    } catch {
+      out.textContent = "Recording needs microphone permission.";
+    }
+  };
+  const toggleRecording = async () => {
+    if (isRecording) {
+      await stopRecording();
+      return;
+    }
+    await startRecording();
   };
   recBtn?.addEventListener("click", toggleRecording);
   timelineRecordBtn?.addEventListener("click", toggleRecording);

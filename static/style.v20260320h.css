@@ -392,7 +392,7 @@ body.theme-nebula{--tab-a:#34214d;--tab-b:#5f3f1d;}
   *{box-sizing:border-box;}
   body{background:var(--page-bg);}
 body{margin:0;font-family:"Space Grotesk",system-ui,sans-serif;background:#07080b url('/static/images/woman-waking-up12.jpg') center/cover no-repeat fixed;color:var(--text);min-height:100vh;overflow-x:hidden;}
-body::before{content:"";position:fixed;inset:0;background:url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;z-index:-2;}
+body::before{content:"";position:fixed;inset:0;background:url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;opacity:.92;filter:saturate(1.02) contrast(1.04);z-index:-2;}
 .bg-layers{position:fixed;inset:0;background:none;pointer-events:none;z-index:-1;}
 
 #app{padding:26px 22px 140px;}
@@ -550,7 +550,7 @@ body.sar-red::before{content:"SAR RED · DETECTIVE + LEGAL MODE ACTIVE";position
   background:
     linear-gradient(180deg,rgba(8,12,18,.18),rgba(8,12,18,.34)),
     url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
-  opacity:.22;
+  opacity:.56;
   z-index:0;
 }
 .center-icon{position:absolute;top:14px;left:14px;width:42px;height:42px;border-radius:14px;border:1px solid rgba(255,255,255,0.25);overflow:hidden;box-shadow:0 10px 20px rgba(0,0,0,0.35);}

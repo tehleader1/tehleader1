@@ -3899,7 +3899,7 @@ function setupStudioMode(){
   const blogBtn = qs("#studioBlogBtn")
   let studioBootTimer = null
   if(!shell) return
-  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260323h"
+  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260323i"
 
   const isLoggedIn = ()=>localStorage.getItem("loggedIn") === "true"
   const promptStudioLogin = ()=>{
