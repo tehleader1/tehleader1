@@ -120,16 +120,17 @@
     </div>
     <div class="top-middle">
       <button class="btn ghost" id="liteModeBtn">Accessible Version</button>
+      <button class="btn ghost" id="simpleUiToggle">Simple View: On</button>
       <button class="btn ghost" id="openStudioTop">Go To Jake (2s)</button>
     </div>
     <div class="status">
       <div class="big-menu">
-        <button class="menu-btn" id="menuOccasion">Occasion Editor</button>
+        <button class="menu-btn advanced-menu" id="menuOccasion">Occasion Editor</button>
         <button class="menu-btn" id="menuGift">Gift Shop</button>
         <button class="menu-btn" id="menuCustomOrderTop">Custom Order</button>
-        <button class="menu-btn" id="menuSellAria">Sell ARIA</button>
-        <button class="menu-btn" id="menuCreditTop">Credit</button>
-        <button class="menu-btn" id="menuStudio">Jake Studio</button>
+        <button class="menu-btn advanced-menu" id="menuSellAria">Sell ARIA</button>
+        <button class="menu-btn advanced-menu" id="menuCreditTop">Credit</button>
+        <button class="menu-btn advanced-menu" id="menuStudio">Jake Studio</button>
         <button class="menu-btn" id="menuSettings">Settings</button>
         <button class="menu-btn glow" id="menuSubscription">Product Purchase</button>
       </div>
@@ -203,13 +204,13 @@
       <div class="center-tabs-row">
         <div class="center-tabs">
           <button class="tab-btn active" data-tab="post">Post</button>
-          <button class="tab-btn" data-tab="gps">GPS</button>
+          <button class="tab-btn advanced-tab" data-tab="gps">GPS</button>
           <button class="tab-btn" data-tab="handsfree">Hands‑Free</button>
           <button class="tab-btn" data-tab="analysis">Hair Analysis</button>
           <button class="tab-btn" data-tab="ariahelp">Aria Help!</button>
-          <button class="tab-btn" data-tab="ai">AI Millionaire</button>
-          <button class="tab-btn" data-tab="communications">Communications</button>
-          <button class="tab-btn" data-tab="adult">Aria Narrative</button>
+          <button class="tab-btn advanced-tab" data-tab="ai">AI Millionaire</button>
+          <button class="tab-btn advanced-tab" data-tab="communications">Communications</button>
+          <button class="tab-btn advanced-tab" data-tab="adult">Aria Narrative</button>
         </div>
         <div class="level-select">
           <label class="analysis-level">ARIA Level
@@ -229,10 +230,10 @@
           <div class="post-user">You · Santiago, Dominican Republic</div>
           <div class="post-actions">
             <button class="chip" id="liveStatus">Live Status</button>
-            <button class="chip" id="sendSocials">Send to All Socials</button>
-            <button class="chip" id="vrScanBtn">VR Code Scan</button>
-            <button class="chip admin-only" id="seoQuick">Activate SEO 4x/Day</button>
-            <button class="chip admin-only" id="testEmailQuick">Send Test Email</button>
+            <button class="chip advanced-chip" id="sendSocials">Send to All Socials</button>
+            <button class="chip advanced-chip" id="vrScanBtn">VR Code Scan</button>
+            <button class="chip advanced-chip admin-only" id="seoQuick">Activate SEO 4x/Day</button>
+            <button class="chip advanced-chip admin-only" id="testEmailQuick">Send Test Email</button>
           </div>
         </div>
 
@@ -361,6 +362,7 @@
               <option value="hi-IN">हिन्दी (Hindi)</option>
             </select>
           </div>
+          <div class="system-sub now-playing" id="audioNowPlaying">Currently Playing Audio Feedback: Idle</div>
           <div class="history">
             <h3>Recorded History</h3>
             <div id="ariaHistory" class="mini-list">No history yet.</div>

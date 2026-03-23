@@ -1363,3 +1363,37 @@ body.studio-mode-open{
   background:#05070b;
 }
 
+.now-playing{
+  margin-top:8px;
+  font-size:12px;
+  color:#dce8ff;
+}
+
+body.simple-ui .advanced-menu,
+body.simple-ui .advanced-tab,
+body.simple-ui .advanced-chip{
+  display:none !important;
+}
+
+body.simple-ui .campaign-strip,
+body.simple-ui .ad-banner,
+body.simple-ui #reelPanel{
+  display:none !important;
+}
+
+body.simple-ui .center-tabs{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  scrollbar-width:thin;
+}
+
+body.simple-ui .topbar{
+  padding:8px 12px;
+}
+
+body.simple-ui .tagline{
+  font-size:12px;
+  line-height:1.3;
+}
+

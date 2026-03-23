@@ -236,6 +236,35 @@ function setupAccessibilityMode(){
     })
   }
 }
+
+function applySimpleUi(enabled){
+  document.body.classList.toggle("simple-ui", !!enabled)
+  const btn = qs("#simpleUiToggle")
+  if(btn){ btn.textContent = enabled ? "Simple View: On" : "Simple View: Off" }
+  if(enabled){
+    const activeAdvanced = qs(".tab-btn.active.advanced-tab")
+    if(activeAdvanced){
+      const fallback = qs('.tab-btn[data-tab="post"]')
+      if(fallback){ fallback.click() }
+    }
+  }
+}
+
+function setupSimpleUi(){
+  const btn = qs("#simpleUiToggle")
+  if(!btn) return
+  const key = "supportrd_simple_ui"
+  const saved = localStorage.getItem(key)
+  const enabled = saved === null ? true : saved === "1"
+  applySimpleUi(enabled)
+  btn.addEventListener("click", ()=>{
+    const next = !document.body.classList.contains("simple-ui")
+    applySimpleUi(next)
+    localStorage.setItem(key, next ? "1" : "0")
+    uiToast(next ? "Simple view on" : "Full view on")
+  })
+}
+
 let transcribeFailures = 0
 let handsFreeMode = false
 const SUPPRESS_ERROR_TEXT = false
@@ -699,6 +728,7 @@ function setAriaFlow(state){
   const overlay = qs("#listeningOverlay")
   const textEl = qs("#ariaFlowText")
   const transcriptEl = qs("#ariaTranscript")
+  const nowPlaying = qs("#audioNowPlaying")
   const gpsActive = qs("#tab-gps")?.classList.contains("active")
   document.body.classList.toggle("gps-active", !!gpsActive)
   document.body.classList.toggle("aria-speaking", state === "speaking")
@@ -706,19 +736,23 @@ function setAriaFlow(state){
   if(state === "listening"){
     document.body.classList.add("listening")
     textEl.textContent = "Listening…"
+    if(nowPlaying){ nowPlaying.textContent = "Currently Playing Audio Feedback: Listening tone" }
     if(transcriptEl){ transcriptEl.textContent = "Say something about your hair…" }
   }else if(state === "processing"){
     document.body.classList.add("listening")
     textEl.textContent = "Processing…"
+    if(nowPlaying){ nowPlaying.textContent = "Currently Playing Audio Feedback: Processing tone" }
     if(transcriptEl){ transcriptEl.textContent = "Analyzing your words…" }
   }else if(state === "speaking"){
     document.body.classList.add("listening")
     textEl.textContent = "ARIA Speaking…"
+    if(nowPlaying){ nowPlaying.textContent = "Currently Playing Audio Feedback: ARIA voice response" }
     if(transcriptEl){ transcriptEl.textContent = "Replying with hair guidance…" }
   }else{
     document.body.classList.remove("listening")
     document.body.classList.remove("aria-speaking")
     document.body.classList.remove("gps-active")
+    if(nowPlaying){ nowPlaying.textContent = "Currently Playing Audio Feedback: Idle" }
   }
 }
 
@@ -4638,6 +4672,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   openModal("appModal")
   safe(setupTabs)
   safe(setupAccessibilityMode)
+  safe(setupSimpleUi)
   safe(setupAdult21Mode)
   safe(setupCampaign)
   safe(setupInHouseAd)
