@@ -267,6 +267,30 @@
           <button class="btn" id="findSalons">Find Salons Near Me</button>
           <button class="btn ghost" id="gpsHandsFree">Hands‑Free ARIA</button>
         </div>
+        <div class="offroad-panel">
+          <div class="offroad-head">
+            <strong>Off-Road Feature</strong>
+            <span id="cautionAriaBadge" class="caution-aria-badge">! Caution ARIA</span>
+          </div>
+          <div class="offroad-grid">
+            <select id="offRoadLevel">
+              <option value="airport">Level AirPort</option>
+              <option value="caution">Level Caution</option>
+              <option value="organic">Level Organic</option>
+            </select>
+            <select id="offRoadOption">
+              <option value="eat">Get a bite to eat</option>
+              <option value="meet">Meet someone personally</option>
+              <option value="trails">Trails</option>
+              <option value="haircuts">Haircuts</option>
+              <option value="music">Music Scene</option>
+            </select>
+            <button class="btn" id="offRoadGo">Run Off-Road</button>
+            <button class="btn ghost" id="offRoadDRPing">DR Contact Ping</button>
+          </div>
+          <div id="offRoadStatus" class="system-sub">Off-Road ready. Pick level + option for guided direction.</div>
+          <div class="system-sub">Emergency reference: for severe damage (burned, broken apart, heavy tangles, parasites, color reaction), use Caution ARIA + 911/988.</div>
+        </div>
         <div id="salonResults" class="mini-list">Waiting for location.</div>
       </div>
     </div>

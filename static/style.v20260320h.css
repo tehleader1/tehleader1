@@ -777,6 +777,14 @@ body.listening .bg-layers{animation-play-state:paused;}
   .launch-actions,.launch-offers{grid-template-columns:1fr;}
   #launchTitle{font-size:38px;}
 }
+.offroad-panel{margin-top:10px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.18);background:rgba(0,0,0,0.28);}
+.offroad-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;}
+.offroad-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:8px;}
+.caution-aria-badge{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:#ffe100;color:#101010;font-weight:800;padding:4px 10px;border-radius:999px;
+  border:2px solid #000;
+}
 
 .log-stream{font-family:monospace;font-size:12px;line-height:1.6;max-height:300px;overflow:auto;background:rgba(0,0,0,0.4);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);} 
 

@@ -1632,6 +1632,51 @@ function setupGPS(){
       if(window.startAriaListening){ window.startAriaListening() }
     })
   }
+  const levelSel = qs("#offRoadLevel")
+  const optSel = qs("#offRoadOption")
+  const offGo = qs("#offRoadGo")
+  const offPing = qs("#offRoadDRPing")
+  const offStatus = qs("#offRoadStatus")
+  function setOffStatus(text){ if(offStatus) offStatus.textContent = text }
+  if(offGo){
+    offGo.addEventListener("click", ()=>{
+      const level = (levelSel && levelSel.value) || "organic"
+      const opt = (optSel && optSel.value) || "eat"
+      const optLabel = {
+        eat:"Get a bite to eat",
+        meet:"Meet someone personally",
+        trails:"Trails",
+        haircuts:"Haircuts",
+        music:"Music Scene"
+      }[opt] || "Option"
+      if(level === "organic"){
+        setOffStatus(`Organic route: ${optLabel}. Culture mode ON — Formula Exclusiva + ARIA Digital Product support, respondent in keeping the peace with a politically democratic community tone.`)
+        if(opt === "eat"){ openLinkModal("https://www.google.com/maps/search/restaurant+near+Santiago+Dominican+Republic", "Restaurant Route") }
+        if(opt === "haircuts"){ openLinkModal("https://www.google.com/maps/search/barber+near+Santiago+Dominican+Republic", "Haircut Route") }
+        if(opt === "music"){ openLinkModal("https://www.google.com/maps/search/music+venue+Santiago+Dominican+Republic", "Music Scene") }
+        if(opt === "trails"){ openLinkModal("https://www.google.com/maps/search/trails+Santiago+Dominican+Republic", "Trails Santiago") }
+        if(opt === "meet"){ openLinkModal(LINKS.family200 || LINKS.custom, "Premium Personal Meet Route") }
+        return
+      }
+      if(level === "caution"){
+        setOffStatus(`Caution route active for ${optLabel}. Caution ARIA scans extreme scenarios and directs to emergency sequence + doctor route.`)
+        const helpTab = qs('.tab-btn[data-tab="ariahelp"]')
+        if(helpTab) helpTab.click()
+        return
+      }
+      if(level === "airport"){
+        setOffStatus(`Airport route active: terminal path + low-key boat routing references (island hop planning like Puerto Rico).`)
+        openLinkModal("https://www.google.com/maps/search/Santiago+airport+Dominican+Republic", "Airport Route")
+      }
+    })
+  }
+  if(offPing){
+    offPing.addEventListener("click", ()=>{
+      const msg = encodeURIComponent("SupportRD request: help connect contacts in Santiago Dominican Republic. Reference: Figueroa / Ramlin / Crystal / Kito.")
+      openLinkModal(`mailto:agentanthony@supportrd.com?subject=DR%20Contact%20Ping&body=${msg}`, "DR Contact Ping")
+      setOffStatus("DR contact ping sent. Awaiting response for known contacts in Santiago.")
+    })
+  }
 }
 
 function setupSEOLogs(){
@@ -2435,9 +2480,9 @@ function setupAriaHelp(){
   if(gen){
     gen.addEventListener("click", ()=>{
       const lines = [
-        "1) If there is severe pain, bleeding, or chemical burn risk, call 911 first, rinse safely, and stop all styling/heat immediately.",
-        "2) Run the hair scan now, then use ARIA for fast next steps and go straight to Premium/Pro for priority route support and product guidance.",
-        "3) For supply access, check healthy-hair stores plus SupportRD routes (including Dominican Republic founder reference in Santiago, Villa Gonzalez) and keep Red Cross/988 numbers available if crisis support is needed."
+        "1) In an extreme case (burn, blood, severe tangles, breakage, parasites, or color reaction), call 911 first, protect breathing/eyes, and stop all chemical or heat exposure immediately.",
+        "2) Start the hair scan right now and let Caution ARIA give a fast, fair sequence to urgent care, dermatologist routing, and next-step stabilization.",
+        "3) For follow-up recovery and supply, use the fastest Premium/Pro route and verified healthy-hair stores, including SupportRD international routing in Santiago (Villa Gonzalez), while keeping Red Cross/988 contacts available."
       ]
       out.innerHTML = lines.map(l=>`<div>${l}</div>`).join("")
     })
