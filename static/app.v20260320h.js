@@ -126,7 +126,8 @@ const state = {
     livePopupActive: false,
     ariaLevel: 'greeting',
     resolverContext: null,
-    adult21: false
+    adult21: false,
+    isAdmin: false
 }
 
 const PROHIBITED_TERMS = ["drug","drugs","cocaine","meth","weed","marijuana","heroin","fentanyl","gang","gangs","cartel","crip","bloods","ms-13"]
@@ -306,6 +307,7 @@ function syncLevelButtons(){
 }
 
 function setAdminVisibility(isAdmin){
+  state.isAdmin = !!isAdmin
   qsa(".admin-only").forEach((el)=>{
     if(isAdmin){
       const display = el.dataset.adminDisplay || ((el.tagName || "").toLowerCase() === "button" ? "inline-flex" : (el.classList.contains("chip") ? "inline-flex" : "block"))
@@ -314,6 +316,10 @@ function setAdminVisibility(isAdmin){
       el.style.display = "none"
     }
   })
+}
+
+function canUseTransferLane(){
+  return !!state.isAdmin || state.ariaLevel === "inner" || state.ariaLevel === "pro"
 }
 
 async function setSeoAuto(enabled, stream){
@@ -3248,6 +3254,80 @@ function setupLaunchMenu(){
   })
 }
 
+function setupSatelliteQuick(){
+  const openBtn = qs("#satQuickOpen")
+  const closeBtn = qs("#satQuickClose")
+  const prayerBtn = qs("#satQuickPrayer")
+  const directBtn = qs("#satQuickDirect")
+  const transferBtn = qs("#satQuickTransfer")
+  const rescueBtn = qs("#satQuickRescue")
+  const status = qs("#satQuickStatus")
+  if(!openBtn) return
+  function setSatStatus(message, level){
+    if(!status) return
+    status.textContent = message
+    status.classList.remove("ok","warn","alert")
+    if(level){ status.classList.add(level) }
+  }
+  openBtn.addEventListener("click", ()=>openModal("satQuickModal"))
+  if(closeBtn){
+    closeBtn.addEventListener("click", ()=>closeModal("satQuickModal"))
+  }
+  if(prayerBtn){
+    prayerBtn.addEventListener("click", ()=>{
+      setSatStatus("Prayer sent: May Allah protect your path, your people, and your clean mission.", "ok")
+      openMiniWindow("Prayer", "May Allah protect your path, your people, and your clean mission.")
+    })
+  }
+  if(directBtn){
+    directBtn.addEventListener("click", ()=>{
+      const body = encodeURIComponent("SupportRD satellite contact request")
+      window.location.href = `mailto:agentanthony@supportrd.com?subject=SupportRD%20Satellite%20Contact&body=${body}`
+      setSatStatus("Direct contact opened for satellite support.", "ok")
+    })
+  }
+  if(transferBtn){
+    transferBtn.addEventListener("click", async ()=>{
+      if(!canUseTransferLane()){
+        setSatStatus("Transfer Data Lane locked: CEO + Inner Circle only.", "warn")
+        openMiniWindow("Transfer Lane", "Locked: CEO + Inner Circle only.")
+        return
+      }
+      const sourceEmail = ((state.socialLinks && state.socialLinks.email) || "inner-circle").toLowerCase()
+      try{
+        await fetch("/api/engine-glass/snapshot", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({
+            content: `Satellite transfer lane ping from ${sourceEmail}. Direct data channel active.`,
+            source: sourceEmail
+          })
+        })
+      }catch{}
+      setSatStatus("Transfer Data Lane active. Direct data relay armed for satellite mission updates.", "ok")
+      openMiniWindow("Transfer Lane", "Data transfer lane armed. CEO / Inner Circle access confirmed.")
+    })
+  }
+  if(rescueBtn){
+    rescueBtn.addEventListener("click", async ()=>{
+      document.body.classList.add("sar-red")
+      const sourceEmail = ((state.socialLinks && state.socialLinks.email) || "satellite-rescue").toLowerCase()
+      try{
+        await fetch("/api/engine-glass/snapshot", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({
+            content: `SAR-RED activated by ${sourceEmail}. Last-minute search and rescue + legal detective mode requested.`,
+            source: sourceEmail
+          })
+        })
+      }catch{}
+      setSatStatus("SAR-RED active: detectives + legal lane notified for last-minute search and rescue attempts.", "alert")
+      openMiniWindow("SAR RED", "Search & Rescue legal mode is now active.")
+    })
+  }
+}
+
 function setupLoginGate(){
   try{
     const saved = JSON.parse(localStorage.getItem('socialLinks') || '{}')
@@ -4339,6 +4419,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupAppDeepLinks)
   safe(setupStartupSplash)
   safe(setupLaunchMenu)
+  safe(setupSatelliteQuick)
   safe(setupLoginGate)
   safe(loadProducts)
   safe(setupMiniWindow)
