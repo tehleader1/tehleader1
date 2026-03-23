@@ -3312,7 +3312,26 @@ function setupSatelliteQuick(){
     rescueBtn.addEventListener("click", async ()=>{
       document.body.classList.add("sar-red")
       const sourceEmail = ((state.socialLinks && state.socialLinks.email) || "satellite-rescue").toLowerCase()
+      let location = "SupportRD location pending"
       try{
+        if(state.resolverContext && state.resolverContext.coords){
+          const c = state.resolverContext.coords
+          location = `${c.lat}, ${c.lon}`
+        }
+      }catch{}
+      try{
+        const alertRes = await fetch("/api/alerts/sar", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({
+            mode: "search_rescue_legal",
+            level: "code_red",
+            location,
+            include_prayer: true,
+            note: "Detective and legal escalation requested from SAR RED quick button."
+          })
+        })
+        const alertData = await alertRes.json().catch(()=>({}))
         await fetch("/api/engine-glass/snapshot", {
           method:"POST",
           headers:{"Content-Type":"application/json"},
@@ -3321,6 +3340,11 @@ function setupSatelliteQuick(){
             source: sourceEmail
           })
         })
+        if(alertData && alertData.ok){
+          setSatStatus(`SAR-RED active: alert ${alertData.request_id} dispatched to admin contacts.`, "alert")
+          openMiniWindow("SAR RED", `Search & Rescue legal mode active. Alert ${alertData.request_id} sent.`)
+          return
+        }
       }catch{}
       setSatStatus("SAR-RED active: detectives + legal lane notified for last-minute search and rescue attempts.", "alert")
       openMiniWindow("SAR RED", "Search & Rescue legal mode is now active.")

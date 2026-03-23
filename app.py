@@ -2298,6 +2298,39 @@ def admin_alerts_dispatch():
             append_credit_audit(request_id, lead.get("email"), "admin_alert_dispatch", {"event_type": event_type, "priority": priority, "location": location})
     return result
 
+@app.route("/api/alerts/sar", methods=["POST"])
+def alerts_sar():
+    user = session.get("user") or {}
+    email = (user.get("email") or "").strip().lower()
+    if not email and not is_admin():
+        return {"ok": False, "error": "login_required"}, 401
+    data = request.json or {}
+    mode = (data.get("mode") or "search_rescue").strip().lower()[:50]
+    location = (data.get("location") or "").strip()[:200]
+    note = (data.get("note") or "").strip()[:300]
+    include_prayer = bool(data.get("include_prayer"))
+    level = (data.get("level") or "code_red").strip().lower()[:30]
+    request_id = f"SAR-{uuid.uuid4().hex[:10].upper()}"
+    source = email or "admin"
+    if not location:
+        location = "SupportRD - location pending"
+    summary = f"SAR {level.upper()} requested by {source}. Mode={mode}. {note}".strip()
+    if include_prayer:
+        summary += " Prayer requested."
+    result = send_admin_alert("search_rescue_code_red", "urgent", request_id, location, summary)
+    append_credit_audit(
+        request_id,
+        source,
+        "sar_red_activated",
+        {"mode": mode, "location": location, "level": level, "include_prayer": include_prayer, "note": note},
+    )
+    out = dict(result or {})
+    out["request_id"] = request_id
+    out["source"] = source
+    out["mode"] = mode
+    out["level"] = level
+    return out
+
 @app.route("/api/account-transfer/request", methods=["POST"])
 def account_transfer_request():
     user = session.get("user") or {}
