@@ -7,6 +7,7 @@ import threading
 import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 import os
 import requests
 import time
@@ -642,11 +643,15 @@ def append_cash_point_event(request_id, email, flow_type, event_type, location="
         return False
 
 def send_admin_alert(event_type, priority, request_id, location, summary):
-    recipients = []
-    for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL] + COMMUNITY_ALERT_EXTRA_EMAILS:
-        v = (em or "").strip().lower()
-        if v and "@" in v and v not in recipients:
-            recipients.append(v)
+    def alert_recipients():
+        out = []
+        for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL] + COMMUNITY_ALERT_EXTRA_EMAILS:
+            v = (em or "").strip().lower()
+            if v and "@" in v and v not in out:
+                out.append(v)
+        return out
+
+    recipients = alert_recipients()
     if not recipients:
         return {"ok": False, "error": "no_recipients"}
     subject = f"SupportRD Alert · {(event_type or 'general').strip()[:40]}"
@@ -673,6 +678,109 @@ def send_admin_alert(event_type, priority, request_id, location, summary):
         ok, _detail = send_smtp_html(COMMUNITY_ALERT_SMS_EMAIL, subject, html)
         sms_fallback = bool(ok)
     return {"ok": sent > 0 or sms_fallback, "sent": sent, "failed": failed, "recipients": len(recipients), "sms_fallback": sms_fallback}
+
+def _alert_recipients_list():
+    recipients = []
+    for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL] + COMMUNITY_ALERT_EXTRA_EMAILS:
+        v = (em or "").strip().lower()
+        if v and "@" in v and v not in recipients:
+            recipients.append(v)
+    return recipients
+
+def _pdf_escape(text):
+    return str(text or "").replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+def _build_intro_brochure_pdf():
+    lines = [
+        "SupportRD - Admin Introduction Brochure",
+        "",
+        "Welcome to the Special Admin Lane.",
+        "You are receiving this because your channel is trusted for emergency and business continuity alerts.",
+        "",
+        "What is active now:",
+        "- SAR RED emergency lane",
+        "- Search + rescue + legal escalation routing",
+        "- Direct contacts and alert fan-out",
+        "- CEO / Inner Circle transfer-lane controls",
+        "",
+        "Core contacts:",
+        f"- Primary: {COMMUNITY_ALERT_PRIMARY_EMAIL}",
+        f"- Secondary: {COMMUNITY_ALERT_SECONDARY_EMAIL}",
+        f"- Phone: {COMMUNITY_ALERT_PHONE}",
+        "",
+        "#SupportRD is moving",
+    ]
+    y = 760
+    content = ["BT", "/F1 13 Tf", "50 800 Td", f"({_pdf_escape(lines[0])}) Tj", "ET", "BT", "/F1 11 Tf"]
+    for line in lines[1:]:
+        content.append(f"50 {y} Td")
+        content.append(f"({_pdf_escape(line)}) Tj")
+        y -= 20
+    content.append("ET")
+    stream = "\n".join(content).encode("latin-1", "replace")
+    objs = []
+    objs.append(b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n")
+    objs.append(b"2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n")
+    objs.append(b"3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj\n")
+    objs.append(b"4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n")
+    objs.append(f"5 0 obj << /Length {len(stream)} >> stream\n".encode("latin-1") + stream + b"\nendstream endobj\n")
+    out = bytearray(b"%PDF-1.4\n")
+    xref = [0]
+    for obj in objs:
+        xref.append(len(out))
+        out.extend(obj)
+    xref_pos = len(out)
+    out.extend(f"xref\n0 {len(xref)}\n".encode("latin-1"))
+    out.extend(b"0000000000 65535 f \n")
+    for off in xref[1:]:
+        out.extend(f"{off:010d} 00000 n \n".encode("latin-1"))
+    out.extend(f"trailer << /Size {len(xref)} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n".encode("latin-1"))
+    return bytes(out)
+
+def send_intro_brochure_email(to_email, subject="SupportRD Admin Introduction Brochure"):
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and (FROM_EMAIL or SMTP_USER)):
+        return {"ok": False, "error": "email_not_configured"}
+    target = (to_email or "").strip().lower()
+    if not target or "@" not in target:
+        return {"ok": False, "error": "valid_email_required"}
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;background:#f6f8fc;padding:18px;">
+      <div style="max-width:680px;margin:0 auto;background:#fff;border:1px solid #e1e6f0;border-radius:14px;padding:20px;">
+        <h1 style="margin:0 0 8px;font-size:26px;color:#0f1b2e;">SupportRD Admin Introduction</h1>
+        <p style="margin:0 0 12px;color:#384860;">Special admin lane is active for emergency, legal escalation, and clean operations.</p>
+        <div style="background:linear-gradient(120deg,#0f223f,#173c6f);color:#fff;padding:14px 16px;border-radius:12px;">
+          <strong>#SupportRD is moving</strong><br>
+          SAR RED, direct contact lane, and secure transfer controls are now active.
+        </div>
+        <ul style="margin:14px 0 0 18px;color:#23324a;">
+          <li>Search & rescue + legal escalation routing</li>
+          <li>CEO / Inner Circle transfer-lane protections</li>
+          <li>Admin alert fan-out to special contacts</li>
+        </ul>
+        <p style="margin-top:14px;color:#4c5a70;">The PDF brochure is attached.</p>
+      </div>
+    </div>
+    """
+    msg = MIMEMultipart("mixed")
+    msg["Subject"] = subject
+    msg["From"] = FROM_EMAIL or SMTP_USER
+    msg["To"] = target
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(html, "html"))
+    msg.attach(alt)
+    pdf_bytes = _build_intro_brochure_pdf()
+    part = MIMEApplication(pdf_bytes, _subtype="pdf")
+    part.add_header("Content-Disposition", "attachment", filename="SupportRD-Admin-Introduction-Brochure.pdf")
+    msg.attach(part)
+    context = ssl.create_default_context()
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
+            server.starttls(context=context)
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(msg["From"], [target], msg.as_string())
+        return {"ok": True, "to": target, "subject": subject}
+    except Exception as e:
+        return {"ok": False, "error": "email_send_failed", "detail": str(e)[:300]}
 
 def hash_sensitive(label, value):
     raw = f"{label}|{(value or '').strip()}|{app.secret_key}"
@@ -2307,6 +2415,18 @@ def admin_alerts_dispatch():
         lead = get_lead_request(request_id)
         if lead:
             append_credit_audit(request_id, lead.get("email"), "admin_alert_dispatch", {"event_type": event_type, "priority": priority, "location": location})
+    return result
+
+@app.route("/api/admin/send-intro-brochure", methods=["POST"])
+def admin_send_intro_brochure():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    data = request.json or {}
+    to_email = (data.get("to_email") or COMMUNITY_ALERT_SECONDARY_EMAIL or "").strip().lower()
+    subject = (data.get("subject") or "SupportRD Admin Introduction Brochure").strip()[:160]
+    result = send_intro_brochure_email(to_email, subject=subject)
+    if result.get("ok"):
+        append_credit_audit("BROCHURE-EMAIL", to_email, "intro_brochure_sent", {"subject": subject})
     return result
 
 @app.route("/api/alerts/sar", methods=["POST"])
