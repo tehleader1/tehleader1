@@ -2421,6 +2421,48 @@ function setupEmergencyAssist(){
   }
 }
 
+function setupAriaHelp(){
+  const out = qs("#ariaHelpLines")
+  const gen = qs("#ariaHelpGenerate")
+  const scan = qs("#ariaHelpScan")
+  const vr = qs("#ariaHelpVR")
+  const premium = qs("#ariaHelpPremium")
+  const stores = qs("#ariaHelpStores")
+  const rc = qs("#ariaHelpRedCross")
+  const n911 = qs("#ariaHelp911")
+  const n988 = qs("#ariaHelp988")
+  if(!out) return
+  if(gen){
+    gen.addEventListener("click", ()=>{
+      const lines = [
+        "1) If there is severe pain, bleeding, or chemical burn risk, call 911 first, rinse safely, and stop all styling/heat immediately.",
+        "2) Run the hair scan now, then use ARIA for fast next steps and go straight to Premium/Pro for priority route support and product guidance.",
+        "3) For supply access, check healthy-hair stores plus SupportRD routes (including Dominican Republic founder reference in Santiago, Villa Gonzalez) and keep Red Cross/988 numbers available if crisis support is needed."
+      ]
+      out.innerHTML = lines.map(l=>`<div>${l}</div>`).join("")
+    })
+  }
+  if(scan){
+    scan.addEventListener("click", ()=>{
+      const btn = qs("#startHairScan")
+      if(btn) btn.click()
+      const tab = qs('.tab-btn[data-tab="analysis"]')
+      if(tab) tab.click()
+    })
+  }
+  if(vr){ vr.addEventListener("click", ()=>{ const btn = qs("#vrScanBtn"); if(btn) btn.click() }) }
+  if(premium){ premium.addEventListener("click", ()=>openModal("subscriptionModal")) }
+  if(stores){
+    stores.addEventListener("click", ()=>{
+      openMiniWindow("Stores Route", "Fast route: SupportRD Gift Shop + Shopify lineup + DR founder reference route for stock checks.")
+      openLinkModal(LINKS.custom, "SupportRD Store Route")
+    })
+  }
+  if(rc){ rc.addEventListener("click", ()=>openLinkModal("https://www.redcross.org/get-help.html", "Red Cross Assistance")) }
+  if(n911){ n911.addEventListener("click", ()=>{ window.location.href = "tel:911" }) }
+  if(n988){ n988.addEventListener("click", ()=>{ window.location.href = "tel:988" }) }
+}
+
 function setupCashOps(){
   const checkBtn = qs("#cashCheckinBtn")
   const confirmBtn = qs("#cashConfirmBtn")
@@ -4207,6 +4249,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupInHouseAd)
   safe(setupRequestCall)
   safe(setupEmergencyAssist)
+  safe(setupAriaHelp)
   safe(setupThemeArrows)
   safe(setupModals)
   safe(setupPaymentChooser)
