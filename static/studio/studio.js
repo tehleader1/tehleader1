@@ -9,6 +9,30 @@ let placementAudioFiles = [];
 let lastRenderedMixBlob = null;
 let lastRenderedMixName = "";
 
+async function applyStudioMicProfile() {
+  const out = qs("#transportStatus");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (out) out.textContent = "Studio mic profile: browser mic API unavailable.";
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 48000
+      }
+    });
+    stream.getTracks().forEach((t) => t.stop());
+    localStorage.setItem("studio_mic_profile", "audiology-fast");
+    if (out) out.textContent = "Studio mic profile applied (audiology-fast).";
+  } catch {
+    if (out) out.textContent = "Studio mic profile pending: allow microphone permission.";
+  }
+}
+
 async function loadPlan() {
   const badge = qs("#planBadge");
   try {
@@ -473,4 +497,11 @@ window.addEventListener("DOMContentLoaded", () => {
       if (out) out.textContent = "Export failed.";
     }
   });
+  applyStudioMicProfile();
+});
+
+window.addEventListener("message", (event) => {
+  const data = event && event.data;
+  if (!data || data.type !== "studio-enter") return;
+  applyStudioMicProfile();
 });

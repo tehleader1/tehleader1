@@ -3783,11 +3783,17 @@ function setupStudioMode(){
     state.activeAssistant = "projake"
     applyAssistantUI(true)
     if(studioBootTimer){ clearTimeout(studioBootTimer) }
-    // Keep black/white static overlay visible for at least 2 seconds.
+    try{
+      frame?.contentWindow?.postMessage({ type: "studio-enter", micProfile: "audiology-fast" }, "*")
+    }catch{}
+    // Fast studio load feel.
     studioBootTimer = setTimeout(()=>{
       shell.classList.remove("booting")
       shell.classList.add("ready")
-    }, 2100)
+      try{
+        frame?.contentWindow?.postMessage({ type: "studio-enter", micProfile: "audiology-fast" }, "*")
+      }catch{}
+    }, 320)
   }
   const closeStudio = ()=>{
     if(studioBootTimer){ clearTimeout(studioBootTimer); studioBootTimer = null }
