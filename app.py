@@ -65,6 +65,14 @@ COMMUNITY_ALERT_PRIMARY_EMAIL = os.environ.get("COMMUNITY_ALERT_PRIMARY_EMAIL", 
 COMMUNITY_ALERT_SECONDARY_EMAIL = os.environ.get("COMMUNITY_ALERT_SECONDARY_EMAIL", "xxfigueroa1993@yahoo.com")
 COMMUNITY_ALERT_PHONE = os.environ.get("COMMUNITY_ALERT_PHONE", "980-375-9197")
 COMMUNITY_ALERT_SMS_EMAIL = os.environ.get("COMMUNITY_ALERT_SMS_EMAIL", "")
+COMMUNITY_ALERT_EXTRA_EMAILS = [
+    e.strip().lower()
+    for e in os.environ.get(
+        "COMMUNITY_ALERT_EXTRA_EMAILS",
+        "agentanhony@supportrd.com,agentanthony@supportrd.com",
+    ).split(",")
+    if e.strip()
+]
 COMMUNITY_ALERT_THRESHOLD = float(os.environ.get("COMMUNITY_ALERT_THRESHOLD", "75"))
 COMMUNITY_TARGET_RATIO = float(os.environ.get("COMMUNITY_TARGET_RATIO", "0.70"))
 MONEY_GUARD_DROP_PCT = float(os.environ.get("MONEY_GUARD_DROP_PCT", "35"))
@@ -635,7 +643,7 @@ def append_cash_point_event(request_id, email, flow_type, event_type, location="
 
 def send_admin_alert(event_type, priority, request_id, location, summary):
     recipients = []
-    for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL]:
+    for em in [COMMUNITY_ALERT_PRIMARY_EMAIL, COMMUNITY_ALERT_SECONDARY_EMAIL, DEVELOPER_EMAIL, ADMIN_EMAIL] + COMMUNITY_ALERT_EXTRA_EMAILS:
         v = (em or "").strip().lower()
         if v and "@" in v and v not in recipients:
             recipients.append(v)
@@ -1909,6 +1917,9 @@ def community_alert_contacts():
         "ok": True,
         "primary_email": COMMUNITY_ALERT_PRIMARY_EMAIL,
         "secondary_email": COMMUNITY_ALERT_SECONDARY_EMAIL,
+        "extra_emails": COMMUNITY_ALERT_EXTRA_EMAILS,
+        "developer_email": DEVELOPER_EMAIL,
+        "admin_email": ADMIN_EMAIL,
         "phone": COMMUNITY_ALERT_PHONE,
     }
 
