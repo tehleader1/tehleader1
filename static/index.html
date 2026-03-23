@@ -118,8 +118,9 @@
         <button class="menu-btn" id="menuCustomOrderTop">Custom Order</button>
         <button class="menu-btn" id="menuSellAria">Sell ARIA</button>
         <button class="menu-btn" id="menuCreditTop">Credit</button>
+        <button class="menu-btn" id="menuStudio">Studio Mode</button>
         <button class="menu-btn" id="menuSettings">Settings</button>
-        <button class="menu-btn glow" id="menuSubscription">Subscription</button>
+        <button class="menu-btn glow" id="menuSubscription">Product Purchase</button>
       </div>
       <div class="toggle-wrap">
         <div class="login-actions-top">
@@ -181,7 +182,7 @@
         <div class="center-actions">
           <div class="aria-badge">
             <div class="aria-title">Professional Hair Advisor</div>
-            <div class="aria-sub">ARIA · Problems / Solutions</div>
+            <div class="aria-sub" id="ariaAssistantSub">ARIA · Problems / Solutions</div>
           </div>
           <button class="aria-sphere" id="ariaSphere" aria-label="Open ARIA"></button>
         </div>
@@ -316,7 +317,23 @@
 
     <div class="tab-panel" id="tab-handsfree">
         <div class="handsfree-wrap">
-          <div class="aria-large">ARIA Professional Hair Specialist</div>
+          <div class="aria-large" id="assistantLargeTitle">ARIA Professional Hair Specialist</div>
+          <div class="system-actions">
+            <button class="btn" id="assistantSwitchBtn">Switch Assistant</button>
+            <span class="system-badge" id="assistantNowBadge">Now: ARIA</span>
+            <button class="btn ghost" id="openProJakeStudio">Open Pro Jake Studio</button>
+          </div>
+          <label class="analysis-level">Assistant Topic
+            <select id="assistantTopic">
+              <option value="hair_core">Hair Problems and Solutions</option>
+              <option value="women_support">Stand up for women facing hair damage abuse</option>
+              <option value="cancer_support">Cancer hair-loss support and confidence</option>
+              <option value="burning_recovery">Burning incidents and no-growth recovery</option>
+              <option value="tiktok_love">TikTok love for hair bloggers</option>
+              <option value="stress_business">Stress hair support for business people</option>
+              <option value="pricing_value">Premium value without charging thousands</option>
+            </select>
+          </label>
           <div class="aria-tools">
               <button class="btn ghost aria-pulse" id="voiceToggle">ARIA • Tap to Talk</button>
               <button class="btn" id="handsfreeToggle">Hands‑Free Mode: Off</button>
@@ -1133,6 +1150,28 @@
     <div class="level-dot"><span></span> Thorough Info</div>
     <div class="level-dot"><span></span> Inner Circle</div>
     <div class="level-dot"><span></span> Professional · Making Money</div>
+  </div>
+</div>
+
+<div id="studioModeShell" class="studio-mode-shell" aria-hidden="true">
+  <div class="studio-static"></div>
+  <div class="studio-mode-topbar glass">
+    <div class="studio-mode-title">
+      <div class="studio-kicker">PRO JAKE</div>
+      <h2>SupportRD Studio Mode</h2>
+      <p>Studio features loaded on the main SupportRD link.</p>
+    </div>
+    <div class="studio-mode-actions">
+      <button class="btn ghost" id="studioImportantBtn">Important Information</button>
+      <button class="btn ghost" id="studioSettingsBtn">Settings</button>
+      <button class="btn ghost" id="studioPurchaseBtn">Product Purchase</button>
+      <button class="btn ghost" id="studioThemeBtn">Theme Color</button>
+      <button class="btn ghost" id="studioBlogBtn">Blog</button>
+      <button class="btn" id="studioExitBtn">Exit Studio</button>
+    </div>
+  </div>
+  <div class="studio-mode-frame-wrap glass">
+    <iframe id="studioModeFrame" class="studio-mode-frame" src="/studioaria" title="SupportRD Studio"></iframe>
   </div>
 </div>
 

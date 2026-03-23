@@ -21,11 +21,13 @@ from openai import OpenAI
 
 from engine_routes import engine
 from content_engine import trending_products, reorder_suggestions
+from backend.render_status import render_status_bp
 
 app = Flask(__name__, static_folder="static")
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
 
 app.register_blueprint(engine)
+app.register_blueprint(render_status_bp)
 
 #################################################
 # ENVIRONMENT
@@ -3974,6 +3976,19 @@ def sw():
 @app.route("/favicon.ico")
 def favicon():
     return send_from_directory("static/images", "woman-waking-up12.jpg")
+
+@app.errorhandler(502)
+def bad_gateway_error(_err):
+    return jsonify({
+        "ok": False,
+        "error": "bad_gateway",
+        "message": "SupportRD upstream is temporarily unavailable.",
+        "help": {
+            "status_page": "https://status.render.com",
+            "troubleshooting": "https://render.com/docs/troubleshooting-deploys",
+            "local_fallback": "/status/502",
+        },
+    }), 502
 
 #################################################
 

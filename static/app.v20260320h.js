@@ -17,11 +17,34 @@ function showBannedOverlay(reason){
   }
 }
 
+function showGatewayOverlay(){
+  let el = qs("#gatewayOverlay")
+  if(!el){
+    el = document.createElement("div")
+    el.id = "gatewayOverlay"
+    el.style.cssText = "position:fixed;right:14px;top:14px;z-index:99995;max-width:340px;padding:12px 14px;border-radius:12px;background:rgba(28,10,10,0.95);border:1px solid rgba(255,90,90,0.55);color:#ffe7e7;box-shadow:0 10px 28px rgba(0,0,0,0.45);"
+    el.innerHTML = `
+      <div style="font-weight:700; margin-bottom:6px;">Temporary 502 / Gateway Issue</div>
+      <div style="font-size:12px;line-height:1.45;opacity:.95;">Use official Render pages while SupportRD reconnects.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <a href="https://status.render.com" target="_blank" rel="noopener" style="color:#fff;">Render Status</a>
+        <a href="https://render.com/docs/troubleshooting-deploys" target="_blank" rel="noopener" style="color:#fff;">Troubleshoot</a>
+        <a href="/status/502" target="_blank" rel="noopener" style="color:#fff;">SupportRD 502 Help</a>
+      </div>
+    `
+    document.body.appendChild(el)
+    setTimeout(()=>{ try{ el.remove() }catch{} }, 12000)
+  }
+}
+
 ;(function patchFetchForBan(){
   if(!window.fetch || window.__banFetchPatched) return
   const orig = window.fetch.bind(window)
   window.fetch = async (...args)=>{
     const res = await orig(...args)
+    if(res && (res.status === 502 || res.status === 503 || res.status === 504)){
+      showGatewayOverlay()
+    }
     if(res && res.status === 403){
       try{
         const clone = res.clone()
@@ -127,7 +150,22 @@ const state = {
     ariaLevel: 'greeting',
     resolverContext: null,
     adult21: false,
-    isAdmin: false
+    isAdmin: false,
+    activeAssistant: localStorage.getItem("activeAssistant") || "aria",
+    assistantTopic: localStorage.getItem("assistantTopic") || "hair_core"
+}
+
+const ASSISTANTS = [
+  { id: "aria", name: "ARIA", title: "ARIA Professional Hair Specialist", sub: "ARIA · Problems / Solutions" },
+  { id: "projake", name: "Pro Jake", title: "Pro Jake Studio Specialist", sub: "Pro Jake · Studio / Coaching" }
+]
+
+function getActiveAssistant(){
+  return ASSISTANTS.find(a => a.id === state.activeAssistant) || ASSISTANTS[0]
+}
+
+function getActiveAssistantName(){
+  return getActiveAssistant().name
 }
 
 const PROHIBITED_TERMS = ["drug","drugs","cocaine","meth","weed","marijuana","heroin","fentanyl","gang","gangs","cartel","crip","bloods","ms-13"]
@@ -598,6 +636,9 @@ function bumpHairScore(delta){
       openModal("puzzleModal")
       return
     }
+    const assistant = getActiveAssistant()
+    const topicContext = (state.assistantTopic || "hair_core").replace(/_/g, " ")
+    const personaPrompt = `Assistant persona: ${assistant.name}. Topic focus: ${topicContext}.`
     appendAria(`You: ${msg}`)
     appendConversation("user", msg)
     if(state.livePopupActive){
@@ -620,7 +661,7 @@ function bumpHairScore(delta){
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          message: msg + '\n\nResponse level: ' + ariaLevelPrompt,
+          message: msg + '\n\n' + personaPrompt + '\n\nResponse level: ' + ariaLevelPrompt,
           membership_tier: state.subscription || "free",
           adult_mode: !!state.adult21,
           family_theme: (state.socialLinks && state.socialLinks.familyFantasyTheme) ? state.socialLinks.familyFantasyTheme : "",
@@ -633,9 +674,9 @@ function bumpHairScore(delta){
       })
       const d = await r.json()
       const reply = d.reply || "AI unavailable"
-      appendAria(`ARIA: ${reply}`)
+      appendAria(`${assistant.name}: ${reply}`)
       appendConversation("aria", reply)
-      showSpeechPopup("ARIA", reply)
+      showSpeechPopup(assistant.name, reply)
       bumpHairScore(1)
       speakReply(reply)
       state.ariaCount += 1
@@ -645,9 +686,9 @@ function bumpHairScore(delta){
       openModal("puzzleModal")
     }
     }catch{
-      appendAria("ARIA: AI unavailable")
+      appendAria(`${assistant.name}: AI unavailable`)
       appendConversation("aria", "AI unavailable")
-      showSpeechPopup("ARIA", "AI unavailable")
+      showSpeechPopup(assistant.name, "AI unavailable")
       setAriaFlow("idle")
     }
   }
@@ -3518,6 +3559,118 @@ function setupHairAnalysis(){
 
 
 
+function setActiveTab(tabId){
+  qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
+  qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
+  const btn = qs(`.tab-btn[data-tab="${tabId}"]`)
+  const panel = qs(`#tab-${tabId}`)
+  if(btn) btn.classList.add("active")
+  if(panel) panel.classList.add("active")
+}
+
+function animateAssistantLabel(el, text){
+  if(!el) return
+  el.classList.remove("assistant-enter")
+  el.classList.add("assistant-leave")
+  setTimeout(()=>{
+    el.textContent = text
+    el.classList.remove("assistant-leave")
+    el.classList.add("assistant-enter")
+    setTimeout(()=>el.classList.remove("assistant-enter"), 380)
+  }, 220)
+}
+
+function applyAssistantUI(withFx){
+  const assistant = getActiveAssistant()
+  const badge = qs("#assistantNowBadge")
+  const sub = qs("#ariaAssistantSub")
+  const title = qs("#assistantLargeTitle")
+  const voiceBtn = qs("#voiceToggle")
+  const topicSel = qs("#assistantTopic")
+  if(topicSel && state.assistantTopic){ topicSel.value = state.assistantTopic }
+  const badgeText = `Now: ${assistant.name}`
+  const voiceText = `${assistant.name} • Tap to Talk`
+  if(withFx){
+    animateAssistantLabel(badge, badgeText)
+    animateAssistantLabel(sub, assistant.sub)
+    animateAssistantLabel(title, assistant.title)
+    animateAssistantLabel(voiceBtn, voiceText)
+  }else{
+    if(badge) badge.textContent = badgeText
+    if(sub) sub.textContent = assistant.sub
+    if(title) title.textContent = assistant.title
+    if(voiceBtn) voiceBtn.textContent = voiceText
+  }
+  localStorage.setItem("activeAssistant", state.activeAssistant)
+}
+
+function setupAssistantSystem(){
+  const switchBtn = qs("#assistantSwitchBtn")
+  const topicSel = qs("#assistantTopic")
+  applyAssistantUI(false)
+  if(topicSel){
+    topicSel.addEventListener("change", ()=>{
+      state.assistantTopic = topicSel.value || "hair_core"
+      localStorage.setItem("assistantTopic", state.assistantTopic)
+    })
+  }
+  if(switchBtn){
+    switchBtn.addEventListener("click", ()=>{
+      const current = ASSISTANTS.findIndex(a => a.id === state.activeAssistant)
+      const next = ASSISTANTS[(current + 1) % ASSISTANTS.length]
+      state.activeAssistant = next.id
+      applyAssistantUI(true)
+      openMiniWindow("Assistant Swap", `${next.name} is now active.`)
+    })
+  }
+}
+
+function setupStudioMode(){
+  const shell = qs("#studioModeShell")
+  const frame = qs("#studioModeFrame")
+  const openBtn = qs("#menuStudio")
+  const openHandsBtn = qs("#openProJakeStudio")
+  const exitBtn = qs("#studioExitBtn")
+  const importantBtn = qs("#studioImportantBtn")
+  const settingsBtn = qs("#studioSettingsBtn")
+  const purchaseBtn = qs("#studioPurchaseBtn")
+  const themeBtn = qs("#studioThemeBtn")
+  const blogBtn = qs("#studioBlogBtn")
+  if(!shell) return
+
+  const openStudio = ()=>{
+    document.body.classList.add("studio-mode-open")
+    shell.classList.add("active")
+    shell.setAttribute("aria-hidden", "false")
+    if(frame && !frame.src){ frame.src = "/studioaria" }
+    state.activeAssistant = "projake"
+    applyAssistantUI(true)
+  }
+  const closeStudio = ()=>{
+    document.body.classList.remove("studio-mode-open")
+    shell.classList.remove("active")
+    shell.setAttribute("aria-hidden", "true")
+    state.activeAssistant = "aria"
+    applyAssistantUI(true)
+    setActiveTab("post")
+    openMiniWindow("SupportRD Main Console", "Returned to ARIA post page.")
+  }
+
+  if(openBtn){ openBtn.addEventListener("click", openStudio) }
+  if(openHandsBtn){ openHandsBtn.addEventListener("click", openStudio) }
+  if(exitBtn){ exitBtn.addEventListener("click", closeStudio) }
+  if(importantBtn){ importantBtn.addEventListener("click", ()=>openMiniWindow("Important Information", "Use Studio for creation. Use Main Console for live customer support and posts.")) }
+  if(settingsBtn){ settingsBtn.addEventListener("click", ()=>openModal("settingsModal")) }
+  if(purchaseBtn){ purchaseBtn.addEventListener("click", ()=>openModal("subscriptionModal")) }
+  if(themeBtn){
+    themeBtn.addEventListener("click", ()=>{
+      const next = qs("#themeNextSide")
+      if(next) next.click()
+    })
+  }
+  if(blogBtn){ blogBtn.addEventListener("click", ()=>openModal("blogModal")) }
+}
+
 function setupAria(){
   const btn = qs("#voiceToggle")
   const sphere = qs("#ariaSphere")
@@ -3533,11 +3686,14 @@ function setupAria(){
   let transcribeBusy = false
   let transcribeFailures = 0
   function ariaMasterGreeting(){
+    const assistantName = getActiveAssistantName()
     const proUnlocked = state.subscription === "pro" || isProOverride()
-    const line = proUnlocked ? "How can I serve you master." : "How can I support your hair goals today?"
+    const line = assistantName === "Pro Jake"
+      ? "Pro Jake online. Studio and hair support are ready."
+      : (proUnlocked ? "How can I serve you master." : "How can I support your hair goals today?")
     const transcriptEl = qs("#ariaTranscript")
     if(transcriptEl){ transcriptEl.textContent = line }
-    showSpeechPopup("ARIA", line)
+    showSpeechPopup(assistantName, line)
   }
 
   function syncHandsFree(){
@@ -4423,6 +4579,8 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupScanUpload)
   safe(setupProfileUpload)
   safe(setupHairAnalysis)
+  safe(setupAssistantSystem)
+  safe(setupStudioMode)
   safe(setupGPS)
   safe(setupAria)
   safe(setupPuzzle)

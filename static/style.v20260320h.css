@@ -1243,3 +1243,99 @@ body.resort-brochure .campaign-strip{
   border-radius:12px;
 }
 
+.assistant-leave{
+  animation:assistantLeave .22s ease forwards;
+}
+.assistant-enter{
+  animation:assistantEnter .34s ease forwards;
+}
+@keyframes assistantLeave{
+  from{opacity:1;transform:rotate(0deg) scale(1);}
+  to{opacity:0;transform:rotate(-16deg) scale(.92);}
+}
+@keyframes assistantEnter{
+  from{opacity:0;transform:rotate(16deg) scale(.92);}
+  to{opacity:1;transform:rotate(0deg) scale(1);}
+}
+
+.studio-mode-shell{
+  position:fixed;
+  inset:0;
+  z-index:230;
+  display:none;
+  background:rgba(4,5,8,0.94);
+}
+.studio-mode-shell.active{display:block;}
+body.studio-mode-open{
+  overflow:hidden;
+}
+.studio-mode-shell .studio-static{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.2;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 1px, transparent 1px 3px);
+  animation:studioStatic 220ms steps(2,end) infinite;
+}
+@keyframes studioStatic{
+  0%{transform:translate(0,0)}
+  50%{transform:translate(-2px,1px)}
+  100%{transform:translate(2px,-1px)}
+}
+.studio-mode-topbar{
+  position:relative;
+  z-index:2;
+  margin:10px;
+  padding:12px 14px;
+  border-radius:14px;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.studio-kicker{
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:#7fe8ff;
+}
+.studio-mode-title h2{
+  margin:2px 0;
+  font-size:22px;
+}
+.studio-mode-title p{
+  margin:0;
+  color:var(--muted);
+  font-size:12px;
+}
+.studio-mode-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.studio-mode-actions .btn{
+  color:#eef3ff;
+  background:rgba(24,31,43,.86);
+  border-color:rgba(150,190,255,.45);
+}
+.studio-mode-actions .btn:hover{
+  border-color:#7fe8ff;
+}
+.studio-mode-frame-wrap{
+  position:relative;
+  z-index:2;
+  margin:8px 10px 10px;
+  height:calc(100vh - 108px);
+  border-radius:14px;
+  overflow:hidden;
+}
+.studio-mode-frame{
+  width:100%;
+  height:100%;
+  border:0;
+  background:#05070b;
+}
+
