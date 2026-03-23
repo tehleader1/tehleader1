@@ -2853,6 +2853,67 @@ def subscription_status():
         return {"ok": False, "error": "email_required"}, 400
     return {"ok": True, "subscription": get_subscription_for_email(email)}
 
+@app.route("/api/admin/ops-status")
+def admin_ops_status():
+    if not is_admin():
+        return {"ok": False, "error": "unauthorized"}, 401
+    now_iso = datetime.utcnow().isoformat() + "Z"
+    bot_state = get_trade_bot_state()
+    recent = get_recent_credit_audit(limit=80)
+    recent_events = [str((x or {}).get("event_type") or "").lower() for x in recent]
+    emergency_events = sum(1 for x in recent_events if "emergency" in x)
+    refresh_events = sum(1 for x in recent_events if "refresh" in x or "rotation" in x or "heartbeat" in x)
+    transcribe_ok = bool(OPENAI_KEY)
+    competition_counts = {"active": 0, "live_sessions": 0}
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(1) FROM competitions WHERE status IN ('active','pending')")
+        competition_counts["active"] = int((cur.fetchone() or [0])[0] or 0)
+        cur.execute("SELECT COUNT(1) FROM competition_sessions WHERE status = 'live'")
+        competition_counts["live_sessions"] = int((cur.fetchone() or [0])[0] or 0)
+        conn.close()
+    except:
+        pass
+    systems = [
+        {"key": "emergency", "label": "Emergency", "status": "active", "detail": f"{emergency_events} emergency rows in recent audit logs"},
+        {"key": "refresh", "label": "Refresh", "status": "active", "detail": f"{refresh_events} refresh/rotation rows in recent audit logs"},
+        {"key": "logging", "label": "Logging", "status": "active", "detail": f"{len(recent)} audit rows available for engine glass"},
+        {"key": "ceo", "label": "Active CEO", "status": "active", "detail": ADMIN_EMAIL or "admin email not configured"},
+        {"key": "competition", "label": "Competition", "status": "active", "detail": f"{competition_counts['active']} active options · {competition_counts['live_sessions']} live sessions"},
+        {"key": "gps", "label": "GPS", "status": "active", "detail": "Route + Off-Road (Airport/Caution/Organic) controls are available"},
+        {"key": "hair_scan", "label": "Hair Scan Technology", "status": "active", "detail": f"Hair scan UI is available · ARIA transcribe key {'configured' if transcribe_ok else 'missing'}"},
+    ]
+    bots = []
+    for bid in ("risk", "ops", "comms"):
+        row = bot_state.get(bid, {})
+        bots.append({
+            "bot_id": bid,
+            "last_run_at": row.get("last_run_at", ""),
+            "last_status": row.get("last_status", "idle"),
+            "last_summary": row.get("last_summary", "No run yet."),
+            "metrics": row.get("metrics", {}),
+            "functions": TRADE_BOT_FUNCTIONS.get(bid, []),
+        })
+    return {
+        "ok": True,
+        "as_of": now_iso,
+        "systems": systems,
+        "seo": {
+            "enabled": bool(SEO_RANDOM_ENABLED),
+            "jobs_scheduled": len(SEO_RANDOM_JOB_IDS),
+            "trigger_enabled": bool(SEO_TRIGGER_TOKEN),
+        },
+        "security": {
+            "money_guard_enabled": money_guard_enabled(),
+            "sell_aria_release_open": trade_release_open(),
+            "rate_window_sec": SEC_RATE_WINDOW_SEC,
+            "rate_max_per_window": SEC_RATE_MAX_PER_WINDOW,
+        },
+        "bots": bots,
+        "recent_logs": recent[:12],
+    }
+
 @app.route("/webhooks/shopify/orders-paid", methods=["POST"])
 def shopify_orders_paid_webhook():
     if not SHOPIFY_WEBHOOK_SECRET:
@@ -3641,6 +3702,12 @@ except:
 @app.route("/")
 def home():
     return send_from_directory("static", "index.html")
+
+@app.route("/admin/workbench")
+def admin_workbench():
+    if not is_admin():
+        return redirect("/")
+    return send_from_directory("static", "admin-workbench.html")
 
 @app.route("/ok")
 def prevention_ok():
