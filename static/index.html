@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="/static/style.v20260320h.css">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
-<body class="theme-aurora plus500 system-theme natural-pro">
+<body class="theme-aurora plus500 system-theme natural-pro resort-brochure">
 <div id="launchMenu" class="launch-menu">
   <div class="launch-topbar">
     <button class="btn ghost" id="launchPaymentBtn">Payment Options</button>
@@ -37,12 +37,21 @@
     <div id="launchPanel" class="launch-panel">
       <div class="launch-panel-title" id="menuTitle">SupportRD Menu</div>
       <div class="launch-actions">
-        <button class="btn" data-launch="login" id="menuLogin">Login</button>
-        <button class="btn ghost" data-launch="signup" id="menuCreate">Create Account</button>
-        <button class="btn ghost" data-launch="forgot" id="menuForgot">Forgot Password?</button>
+        <button class="btn" data-launch="account" id="menuAccount">Account Access</button>
         <button class="btn" data-launch="payment" id="menuPayment">Open Payments</button>
         <button class="btn ghost" data-launch="satellite" id="menuSatellite">Satellite Watch</button>
         <button class="btn" data-launch="enter" id="menuEnter">Enter App</button>
+      </div>
+      <div id="launchAccountPanel" class="launch-account-panel">
+        <div class="launch-panel-title">Login / Create / Forgot</div>
+        <input id="launchAccountEmail" class="input" placeholder="Email or Username">
+        <input id="launchAccountPassword" class="input" type="password" placeholder="Password">
+        <div class="launch-account-actions">
+          <button class="btn" id="launchAccountLogin">Log In</button>
+          <button class="btn ghost" id="launchAccountCreate">Create Account</button>
+          <button class="btn ghost" id="launchAccountForgot">Forgot Password</button>
+        </div>
+        <div class="system-sub">All account actions start from this same intro menu panel.</div>
       </div>
       <button class="btn ghost launch-default" data-launch="default" id="menuDefault">Default View (Secret)</button>
     </div>
@@ -66,7 +75,7 @@
 <div id="launchSplash" class="launch-splash" aria-hidden="true">
   <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD Launch">
 </div>
-<button class="sat-quick-btn" id="satQuickOpen">SAR RED</button>
+<button class="sat-quick-btn" id="satQuickOpen" title="Satellite Search and Rescue">SAR</button>
 <div id="satQuickModal" class="modal">
   <div class="modal-card glass">
     <div class="modal-head">
@@ -78,6 +87,7 @@
       <button class="btn" id="satQuickDirect">Direct Contact</button>
       <button class="btn ghost" id="satQuickPrayer">Prayer</button>
       <button class="btn ghost" id="satQuickTransfer">Transfer Data Lane</button>
+      <button class="btn ghost" id="satQuickBrochure">Open Brochure</button>
       <button class="btn danger" id="satQuickRescue">Search & Rescue (Red)</button>
     </div>
     <div id="satQuickStatus" class="system-sub sat-status" style="margin-top:8px;">CEO + Inner Circle only for transfer data capabilities.</div>
@@ -110,6 +120,7 @@
     </div>
     <div class="top-middle">
       <button class="btn ghost" id="liteModeBtn">Accessible Version</button>
+      <button class="btn ghost" id="openStudioTop">Go To Jake (2s)</button>
     </div>
     <div class="status">
       <div class="big-menu">
@@ -118,7 +129,7 @@
         <button class="menu-btn" id="menuCustomOrderTop">Custom Order</button>
         <button class="menu-btn" id="menuSellAria">Sell ARIA</button>
         <button class="menu-btn" id="menuCreditTop">Credit</button>
-        <button class="menu-btn" id="menuStudio">Studio Mode</button>
+        <button class="menu-btn" id="menuStudio">Jake Studio</button>
         <button class="menu-btn" id="menuSettings">Settings</button>
         <button class="menu-btn glow" id="menuSubscription">Product Purchase</button>
       </div>
@@ -167,6 +178,7 @@
 
   <div class="brochure-float" id="brochureFloat">
     <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
+    <button class="brochure-float-btn sar-mini" id="satQuickMini">SAR</button>
   </div>
 
     <section class="center-stage glass" id="centerStage">
@@ -321,7 +333,7 @@
           <div class="system-actions">
             <button class="btn" id="assistantSwitchBtn">Switch Assistant</button>
             <span class="system-badge" id="assistantNowBadge">Now: ARIA</span>
-            <button class="btn ghost" id="openProJakeStudio">Open Pro Jake Studio</button>
+            <button class="btn ghost" id="openProJakeStudio">Transfer To Jake (2s)</button>
           </div>
           <label class="analysis-level">Assistant Topic
             <select id="assistantTopic">
@@ -731,6 +743,7 @@
         <button class="app-card" draggable="true" data-app="Competition Arena">Competition Arena</button>
         <button class="app-card" draggable="true" data-app="TV Reel">TV Reel</button>
         <button class="app-card" draggable="true" data-app="Brochure">Brochure</button>
+        <button class="app-card" draggable="true" data-app="Studio Mode">Studio Mode</button>
         <button class="app-card" draggable="true" data-app="Blog">Blog</button>
         <button class="app-card" draggable="true" data-app="Snapshot Coder Idea">Snapshot Coder Idea</button>
         <button class="app-card" draggable="true" data-app="Donate to the Poor · Auto Dissolve Bar" data-link="https://supportrd.com/products/auto-dissolve-soap-bar">Donate to the Poor · Auto Dissolve Bar</button>
@@ -743,6 +756,7 @@
           <button class="app-card app-library" draggable="true" data-app="Competition Arena">Competition Arena</button>
           <button class="app-card app-library" draggable="true" data-app="TV Reel">TV Reel</button>
           <button class="app-card app-library" draggable="true" data-app="Brochure">Brochure</button>
+          <button class="app-card app-library" draggable="true" data-app="Studio Mode">Studio Mode</button>
           <button class="app-card app-library" draggable="true" data-app="Shopify Products">Shopify Products</button>
           <button class="app-card app-library" draggable="true" data-app="SEO Engine Viewer">SEO Engine Viewer</button>
           <button class="app-card app-library" draggable="true" data-app="Occasion Editor">Occasion Editor</button>

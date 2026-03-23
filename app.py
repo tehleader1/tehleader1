@@ -3374,6 +3374,7 @@ def login():
     session["oauth_state"] = state
     provider = request.args.get("provider")
     mode = request.args.get("mode", "").lower()
+    login_hint = (request.args.get("login_hint") or "").strip()
     authorize_url = f"https://{AUTH0_DOMAIN}/authorize"
     params = {
         "response_type": "code",
@@ -3386,6 +3387,11 @@ def login():
         params["connection"] = provider
     if mode == "signup":
         params["screen_hint"] = "signup"
+    elif mode == "forgot":
+        params["prompt"] = "login"
+        params["screen_hint"] = "reset_password"
+    if login_hint:
+        params["login_hint"] = login_hint
     query = "&".join([f"{k}={requests.utils.quote(str(v))}" for k, v in params.items()])
     return redirect(f"{authorize_url}?{query}")
 
@@ -3958,7 +3964,7 @@ def studioaria_extensions():
     return {
         "ok": True,
         "formats": ["mp4", "m4a", "wav", "mp3", "flac", "aac", "ogg"],
-        "message": "SupportRD StudioARIA extension lane is active."
+        "message": "SupportRD Pro Jake Studio extension lane is active."
     }
 
 @app.route("/ok")

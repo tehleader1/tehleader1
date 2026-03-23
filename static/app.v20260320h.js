@@ -1083,6 +1083,12 @@ function setupModals(){
           openModal("brochureModal")
           return
         }
+        if(name === "Studio Mode"){
+          if(typeof window.openStudioMode === "function"){
+            window.openStudioMode()
+            return
+          }
+        }
         if(name === "TV Reel"){
           openModal("reelModal")
           return
@@ -3219,6 +3225,12 @@ function setupLaunchMenu(){
   const payBtn = qs("#launchPaymentBtn")
   const payPanel = qs("#launchPaymentPanel")
   const payClose = qs("#closeLaunchPayment")
+  const accountPanel = qs("#launchAccountPanel")
+  const accountEmail = qs("#launchAccountEmail")
+  const accountLogin = qs("#launchAccountLogin")
+  const accountCreate = qs("#launchAccountCreate")
+  const accountForgot = qs("#launchAccountForgot")
+  const enterBtn = qs("#menuEnter")
   const lang = qs("#launchLang")
   if(!launch || !menuBtn) return
   const labels = {
@@ -3248,6 +3260,9 @@ function setupLaunchMenu(){
     launch.classList.toggle("open")
     try{ beep(980, 90) }catch{}
   })
+  if(enterBtn){
+    setTimeout(()=>enterBtn.classList.add("ready-glow"), 1100)
+  }
   if(payBtn){
     payBtn.addEventListener("click", ()=>{
       if(payPanel) payPanel.classList.toggle("show")
@@ -3280,6 +3295,9 @@ function setupLaunchMenu(){
   qsa("[data-launch]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const action = btn.dataset.launch
+      if(action === "account"){
+        if(accountPanel) accountPanel.classList.toggle("show")
+      }
       if(action === "login"){ window.location.href = "/login" }
       if(action === "signup"){ window.location.href = "/login?mode=signup" }
       if(action === "forgot"){ window.location.href = "/login" }
@@ -3293,14 +3311,34 @@ function setupLaunchMenu(){
       }
     })
   })
+  if(accountLogin){
+    accountLogin.addEventListener("click", ()=>{
+      const hint = encodeURIComponent((accountEmail && accountEmail.value || "").trim())
+      window.location.href = hint ? `/login?login_hint=${hint}` : "/login"
+    })
+  }
+  if(accountCreate){
+    accountCreate.addEventListener("click", ()=>{
+      const hint = encodeURIComponent((accountEmail && accountEmail.value || "").trim())
+      window.location.href = hint ? `/login?mode=signup&login_hint=${hint}` : "/login?mode=signup"
+    })
+  }
+  if(accountForgot){
+    accountForgot.addEventListener("click", ()=>{
+      const hint = encodeURIComponent((accountEmail && accountEmail.value || "").trim())
+      window.location.href = hint ? `/login?mode=forgot&login_hint=${hint}` : "/login?mode=forgot"
+    })
+  }
 }
 
 function setupSatelliteQuick(){
   const openBtn = qs("#satQuickOpen")
+  const miniBtn = qs("#satQuickMini")
   const closeBtn = qs("#satQuickClose")
   const prayerBtn = qs("#satQuickPrayer")
   const directBtn = qs("#satQuickDirect")
   const transferBtn = qs("#satQuickTransfer")
+  const brochureBtn = qs("#satQuickBrochure")
   const rescueBtn = qs("#satQuickRescue")
   const status = qs("#satQuickStatus")
   if(!openBtn) return
@@ -3311,8 +3349,15 @@ function setupSatelliteQuick(){
     if(level){ status.classList.add(level) }
   }
   openBtn.addEventListener("click", ()=>openModal("satQuickModal"))
+  if(miniBtn){ miniBtn.addEventListener("click", ()=>openModal("satQuickModal")) }
   if(closeBtn){
     closeBtn.addEventListener("click", ()=>closeModal("satQuickModal"))
+  }
+  if(brochureBtn){
+    brochureBtn.addEventListener("click", ()=>{
+      openModal("brochureModal")
+      setSatStatus("Brochure opened from SAR quick lane.", "ok")
+    })
   }
   if(prayerBtn){
     prayerBtn.addEventListener("click", ()=>{
@@ -3629,6 +3674,7 @@ function setupStudioMode(){
   const shell = qs("#studioModeShell")
   const frame = qs("#studioModeFrame")
   const openBtn = qs("#menuStudio")
+  const openTopBtn = qs("#openStudioTop")
   const openHandsBtn = qs("#openProJakeStudio")
   const exitBtn = qs("#studioExitBtn")
   const importantBtn = qs("#studioImportantBtn")
@@ -3669,6 +3715,7 @@ function setupStudioMode(){
   }
 
   if(openBtn){ openBtn.addEventListener("click", openStudio) }
+  if(openTopBtn){ openTopBtn.addEventListener("click", openStudio) }
   if(openHandsBtn){ openHandsBtn.addEventListener("click", openStudio) }
   if(exitBtn){ exitBtn.addEventListener("click", closeStudio) }
   if(importantBtn){ importantBtn.addEventListener("click", ()=>openMiniWindow("Important Information", "Use Studio for creation. Use Main Console for live customer support and posts.")) }
@@ -3681,6 +3728,8 @@ function setupStudioMode(){
     })
   }
   if(blogBtn){ blogBtn.addEventListener("click", ()=>openModal("blogModal")) }
+  window.openStudioMode = openStudio
+  window.closeStudioMode = closeStudio
 }
 
 function setupAria(){
@@ -4325,6 +4374,19 @@ function renderApp(name){
     qs("#aiHubStories").addEventListener("click", ()=>openLinkModal(AI_LINKS.ai_millionaire, "AI Millionaire Stories"))
     return
   }
+  if(name === "Studio Mode"){
+    body.innerHTML = `<div style="font-weight:700;margin-bottom:8px;">Pro Jake Studio Mode</div>
+      <div style="color:var(--muted);margin-bottom:10px;">One tap switches from SupportRD main console into full Studio mode.</div>
+      <button class="btn primary" id="openStudioFromAppCard">Open Studio</button>`
+    const btn = qs("#openStudioFromAppCard")
+    if(btn){
+      btn.addEventListener("click", ()=>{
+        closeModal("appModal")
+        if(typeof window.openStudioMode === "function"){ window.openStudioMode() }
+      })
+    }
+    return
+  }
   body.textContent = name
 }
 
@@ -4339,6 +4401,7 @@ function setupAppsDock(){
     "Competition Arena",
     "TV Reel",
     "Brochure",
+    "Studio Mode",
     "Snapshot Coder Idea",
     "Live Coder Suggestions",
     "Donate to the Poor · Auto Dissolve Bar",
