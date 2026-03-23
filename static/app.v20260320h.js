@@ -3268,6 +3268,10 @@ function setupFamilyMode(){
 function setupAppDeepLinks(){
   const params = new URLSearchParams(window.location.search || "")
   const app = String(params.get("app") || "").toLowerCase()
+  const studio = params.get("studio") === "1"
+  if(studio && typeof window.openStudioMode === "function"){
+    setTimeout(()=>window.openStudioMode(), 120)
+  }
   if(app === "tvreel"){
     openModal("reelModal")
   } else if(app === "hairscore"){
