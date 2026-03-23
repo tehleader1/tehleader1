@@ -531,6 +531,41 @@ function beep(freq = 880, duration = 120){
   }catch{}
 }
 
+function playSpaceHoverTone(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const oscA = ctx.createOscillator()
+    const oscB = ctx.createOscillator()
+    const gain = ctx.createGain()
+    oscA.type = "triangle"
+    oscB.type = "sine"
+    oscA.frequency.setValueAtTime(620, ctx.currentTime)
+    oscA.frequency.exponentialRampToValueAtTime(980, ctx.currentTime + 0.09)
+    oscB.frequency.setValueAtTime(1240, ctx.currentTime)
+    oscB.frequency.exponentialRampToValueAtTime(760, ctx.currentTime + 0.09)
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.045, ctx.currentTime + 0.015)
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12)
+    oscA.connect(gain)
+    oscB.connect(gain)
+    gain.connect(ctx.destination)
+    oscA.start()
+    oscB.start()
+    setTimeout(()=>{ oscA.stop(); oscB.stop(); ctx.close() }, 140)
+  }catch{}
+}
+
+function setupMenuHoverFx(){
+  const targets = [
+    ...qsa("#launchMenu .launch-actions .btn"),
+    ...qsa(".topbar .menu-btn"),
+    ...qsa(".topbar .btn")
+  ]
+  targets.forEach((el)=>{
+    el.addEventListener("mouseenter", ()=>playSpaceHoverTone(), {passive:true})
+  })
+}
+
 function initHairScore(){
   state.hairScore = 100
   localStorage.setItem("hairScore", "100")
@@ -4680,6 +4715,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupTabs)
   safe(setupAccessibilityMode)
   safe(setupSimpleUi)
+  safe(setupMenuHoverFx)
   safe(setupAdult21Mode)
   safe(setupCampaign)
   safe(setupInHouseAd)

@@ -10,7 +10,10 @@
 *{box-sizing:border-box}
 body{
   margin:0;
-  background:radial-gradient(1200px 500px at 10% -20%, #1d2f4f, transparent 55%), var(--bg);
+  background:
+    radial-gradient(1100px 520px at 8% -18%, #1f3b66, transparent 56%),
+    radial-gradient(900px 420px at 92% 0%, rgba(94, 235, 255, 0.14), transparent 58%),
+    var(--bg);
   color:var(--text);
   font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -21,19 +24,32 @@ body{
 .badge-wrap{display:flex;gap:8px;flex-wrap:wrap}
 .badge{background:#22334f;border:1px solid #46628f;color:#dcebff;padding:6px 10px;border-radius:999px;font-size:12px}
 .studio-grid{margin-top:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:14px;padding:12px}
+.card{
+  background:
+    linear-gradient(180deg, rgba(31,45,69,.95), rgba(15,24,38,.95)),
+    repeating-linear-gradient(120deg, rgba(98,206,255,.06) 0 1px, transparent 1px 8px);
+  border:1px solid var(--line);
+  box-shadow:0 10px 22px rgba(0,0,0,.3), inset 0 0 0 1px rgba(124,187,255,.08);
+  border-radius:14px;
+  padding:12px
+}
 .card.wide{grid-column:1/-1}
 h2{margin:0 0 10px;font-size:16px}
 .controls,.row{display:flex;gap:8px;flex-wrap:wrap}
 button{
   border:1px solid #5d79aa;
-  background:#27406d;
+  background:linear-gradient(180deg,#325285,#203a64);
   color:#fff;
   border-radius:10px;
   padding:8px 12px;
   cursor:pointer;
+  transition:transform .14s ease, filter .14s ease, box-shadow .14s ease;
 }
-button:hover{filter:brightness(1.08)}
+button:hover{
+  filter:brightness(1.09);
+  transform:translateY(-1px);
+  box-shadow:0 0 14px rgba(102,163,255,.36);
+}
 .status{margin-top:10px;color:var(--muted);font-size:13px}
 .fx-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 label{display:grid;gap:6px;font-size:13px;color:var(--muted)}
@@ -64,6 +80,23 @@ textarea{
   box-shadow:0 0 8px rgba(115,177,255,.8);
 }
 .result-list{margin:8px 0 0;padding-left:16px;color:var(--muted)}
+.board-meter{
+  position:relative;
+  height:12px;
+  border-radius:999px;
+  background:#0b121d;
+  border:1px solid #34537e;
+  margin-top:8px;
+  overflow:hidden;
+}
+.board-meter span{
+  display:block;
+  height:100%;
+  width:22%;
+  background:linear-gradient(90deg,#54cfff,#72ffa8,#f3ff7b);
+  box-shadow:0 0 12px rgba(114,255,168,.5);
+  transition:width .2s ease;
+}
 @media (max-width:860px){
   .studio-grid{grid-template-columns:1fr}
 }

@@ -64,6 +64,31 @@ function setupFx() {
   });
 }
 
+function setupFxBoard() {
+  const power = qs("#fxBoardPower");
+  const input = qs("#fxBoardInput");
+  const glue = qs("#fxBoardGlue");
+  const meter = qs("#fxBoardMeter");
+  const out = qs("#fxBoardStatus");
+  if (!power || !input || !glue || !meter || !out) return;
+  let t = 0;
+  let raf = 0;
+  const render = () => {
+    t += 0.08;
+    const level = power.value === "off" ? 2 : Math.max(8, Math.min(100, (Number(glue.value) * 0.72) + (Math.sin(t) * 18 + 20)));
+    meter.style.width = `${level}%`;
+    meter.style.opacity = power.value === "standby" ? "0.55" : "1";
+    raf = requestAnimationFrame(render);
+  };
+  const update = () => {
+    out.textContent = `FX board ${power.value.toUpperCase()} · ${input.value.toUpperCase()} · Master Glue ${glue.value}%`;
+  };
+  [power, input, glue].forEach((el) => el.addEventListener("input", update));
+  update();
+  cancelAnimationFrame(raf);
+  render();
+}
+
 async function runEchoPlacement() {
   const t = (qs("#echoTranscript")?.value || "").trim();
   const results = qs("#echoResults");
@@ -168,9 +193,17 @@ window.addEventListener("DOMContentLoaded", () => {
   loadExtensions();
   setupTransport();
   setupFx();
+  setupFxBoard();
   setupBots();
   setupRecordingMath();
   qs("#voiceIntroBtn")?.addEventListener("click", playIntroVoice);
+  qs("#backMainBtn")?.addEventListener("click", () => {
+    if (window.parent && window.parent !== window && typeof window.parent.closeStudioMode === "function") {
+      window.parent.closeStudioMode();
+      return;
+    }
+    window.location.href = "/";
+  });
   qs("#runEchoPlacementBtn")?.addEventListener("click", runEchoPlacement);
   qs("#saveSessionBtn")?.addEventListener("click", saveSession);
   qs("#loadSessionBtn")?.addEventListener("click", loadSession);

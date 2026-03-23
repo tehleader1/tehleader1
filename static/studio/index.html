@@ -10,13 +10,14 @@
   <main class="studio-page">
     <header class="studio-top">
       <div>
-        <h1>SupportRD Pro Jake Studio</h1>
+        <h1>SupportRD Pro Jake Studio · In the Booth</h1>
         <p>Introducing SupportRD Studio - this gets the job done for a dembow party or an occasional get together.</p>
       </div>
       <div class="badge-wrap">
         <span class="badge">PUBLIC BETA</span>
         <span class="badge" id="planBadge">Plan: loading...</span>
         <button id="voiceIntroBtn">Play Intro Voice</button>
+        <button id="backMainBtn">Back To Main Console</button>
       </div>
     </header>
 
@@ -46,6 +47,31 @@
           <label>Voice Rewind <input type="range" id="fxRewind" min="0" max="100" value="0"></label>
         </div>
         <div class="status" id="fxStatus">FX panel online.</div>
+      </article>
+
+      <article class="card">
+        <h2>FX Board Hookup</h2>
+        <div class="fx-grid">
+          <label>Board Power
+            <select id="fxBoardPower">
+              <option value="on">On</option>
+              <option value="standby">Standby</option>
+              <option value="off">Off</option>
+            </select>
+          </label>
+          <label>Input Bus
+            <select id="fxBoardInput">
+              <option value="mic-a">Mic A</option>
+              <option value="mic-b">Mic B</option>
+              <option value="line-in">Line In</option>
+            </select>
+          </label>
+          <label>Master Glue %
+            <input type="range" id="fxBoardGlue" min="0" max="100" value="46">
+          </label>
+        </div>
+        <div class="board-meter"><span id="fxBoardMeter"></span></div>
+        <div class="status" id="fxBoardStatus">FX board online · ready for live routing.</div>
       </article>
 
       <article class="card">
