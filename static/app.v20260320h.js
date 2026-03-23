@@ -3336,6 +3336,13 @@ function setupLaunchMenu(){
       if(action === "signup"){ window.location.href = "/login?mode=signup" }
       if(action === "forgot"){ window.location.href = "/login" }
       if(action === "payment"){ if(payPanel) payPanel.classList.add("show") }
+      if(action === "studio"){
+        if(typeof window.openStudioMode === "function"){
+          window.openStudioMode()
+        }else{
+          window.location.href = "/studioaria"
+        }
+      }
       if(action === "satellite"){ openMiniWindow("Satellite Watch", "We can stage alerts and contact routing. For emergency launch updates, keep your admin contact active.") }
       if(action === "enter"){ launch.classList.add("hide") }
       if(action === "default"){
