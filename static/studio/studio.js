@@ -273,6 +273,10 @@ function downloadBlob(blob, fileName) {
 function createPlacement(out) {
   const timeInput = qs("#placementTime");
   const waveInput = qs("#placementWave");
+  const timeInput2 = qs("#timelinePlacementTime");
+  const waveInput2 = qs("#timelinePlacementWave");
+  if (timeInput && timeInput2 && timeInput2.value !== "") timeInput.value = timeInput2.value;
+  if (waveInput && waveInput2 && waveInput2.value) waveInput.value = waveInput2.value;
   const timeSec = Math.max(0, Number(timeInput?.value || 0));
   const wave = String(waveInput?.value || "echo");
   const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -301,9 +305,26 @@ function setupTransport() {
   const audioSelect = qs("#placementAudioSelect");
   const attachAudioBtn = qs("#attachAudioToPlacementBtn");
   const recBtn = qs("#recordMainBtn");
+  const timelineRecordBtn = qs("#timelineRecordBtn");
+  const addEmptyBtn = qs("#addEmptyPlacementBtn");
+  const deleteBackPostBtn = qs("#deleteBackPostBtn");
+  const timelineTime = qs("#timelinePlacementTime");
+  const timelineWave = qs("#timelinePlacementWave");
+  const placementTime = qs("#placementTime");
+  const placementWave = qs("#placementWave");
+
+  const syncInputs = () => {
+    if (placementTime && timelineTime && timelineTime.value !== "") placementTime.value = timelineTime.value;
+    if (placementWave && timelineWave && timelineWave.value) placementWave.value = timelineWave.value;
+  };
+  timelineTime?.addEventListener("input", syncInputs);
+  timelineWave?.addEventListener("change", syncInputs);
+  syncInputs();
 
   createBtn?.addEventListener("click", () => createPlacement(out));
   deleteLastBtn?.addEventListener("click", () => deleteLastPlacement(out));
+  addEmptyBtn?.addEventListener("click", () => createPlacement(out));
+  deleteBackPostBtn?.addEventListener("click", () => deleteLastPlacement(out));
   deleteSelectedBtn?.addEventListener("click", () => {
     const id = Number(select?.value || 0);
     if (!id) return;
@@ -341,11 +362,14 @@ function setupTransport() {
     renderPlacements();
     out.textContent = `Attached ${audio.name} to placement #${placementId}.`;
   });
-  recBtn?.addEventListener("click", () => {
+  const toggleRecording = () => {
     isRecording = !isRecording;
-    recBtn.classList.toggle("is-recording", isRecording);
+    recBtn?.classList.toggle("is-recording", isRecording);
+    timelineRecordBtn?.classList.toggle("is-recording", isRecording);
     out.textContent = isRecording ? "Recording ON · red dot active." : "Recording OFF.";
-  });
+  };
+  recBtn?.addEventListener("click", toggleRecording);
+  timelineRecordBtn?.addEventListener("click", toggleRecording);
 
   renderPlacements();
   renderPlacementAudioOptions();
@@ -546,6 +570,20 @@ window.addEventListener("DOMContentLoaded", () => {
       if (out) out.textContent = `Exported: ${lastRenderedMixName || "supportrd-constructed-mix.wav"}`;
     } catch {
       if (out) out.textContent = "Export failed.";
+    }
+  });
+  qs("#exportFullMp3Btn")?.addEventListener("click", async () => {
+    const out = qs("#mixExportStatus");
+    try {
+      if (!lastRenderedMixBlob) {
+        const built = await buildConstructedMix();
+        if (!built) return;
+      }
+      const mp3Name = (lastRenderedMixName || "supportrd-constructed-mix.wav").replace(/\.wav$/i, ".mp3");
+      downloadBlob(lastRenderedMixBlob, mp3Name);
+      if (out) out.textContent = `Exported MP3 button file: ${mp3Name} (wav-core mix).`;
+    } catch {
+      if (out) out.textContent = "Export MP3 failed.";
     }
   });
   applyStudioMicProfile();
