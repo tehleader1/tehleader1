@@ -1,4 +1,4 @@
-const CACHE_NAME = "supportrd-pwa-v1"
+const CACHE_NAME = "supportrd-pwa-v2"
 const APP_ASSETS = [
   "/",
   "/manifest.json",
@@ -29,6 +29,12 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return
+  const url = new URL(event.request.url)
+  // Always fetch latest Studio assets to avoid stale "In the Booth" UI.
+  if (url.pathname.startsWith("/static/studio/")) {
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)))
+    return
+  }
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached

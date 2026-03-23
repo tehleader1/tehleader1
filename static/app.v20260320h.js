@@ -3869,7 +3869,7 @@ function setupStudioMode(){
     shell.classList.add("booting")
     shell.classList.remove("ready")
     shell.setAttribute("aria-hidden", "false")
-    if(frame && !frame.src){ frame.src = "/static/studio/index.html" }
+    if(frame && !frame.src){ frame.src = "/static/studio/index.html?v=20260323c" }
     state.activeAssistant = "projake"
     applyAssistantUI(true)
     if(studioBootTimer){ clearTimeout(studioBootTimer) }
