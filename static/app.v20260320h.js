@@ -962,6 +962,7 @@ function setupModals(){
   bindClose("closeBrochure", "brochureModal")
   bindClose("closeOccasion6Q", "occasion6qModal")
   bindClose("closeRequestCall", "requestCallModal")
+  bindClose("closeEmergencyAssist", "emergencyAssistModal")
 
   // Real-work quick close: tap random outside spots to dismiss current modal.
   document.addEventListener("click", (e)=>{
@@ -2353,6 +2354,73 @@ function setupRequestCall(){
   })
 }
 
+function setupEmergencyAssist(){
+  const openBtn = qs("#openEmergencyAssist")
+  const runScan = qs("#emergencyRunScan")
+  const ariaTest = qs("#emergencyAriaTest")
+  const doctorRoute = qs("#emergencyDoctorRoute")
+  const directBill = qs("#emergencyDirectBill")
+  const typeSel = qs("#emergencyType")
+  const log = qs("#emergencyLog")
+  if(openBtn){
+    openBtn.addEventListener("click", ()=>openModal("emergencyAssistModal"))
+  }
+  if(runScan){
+    runScan.addEventListener("click", ()=>{
+      const startScan = qs("#startHairScan")
+      if(startScan){ startScan.click() }
+      if(log) log.textContent = "Status: scan started. Follow left-right guide and keep camera steady."
+    })
+  }
+  if(ariaTest){
+    ariaTest.addEventListener("click", ()=>{
+      const t = (typeSel && typeSel.value) || "unknown"
+      const prompt = `Emergency hair incident (${t}). Give fast, fair general sequence: immediate safety, stop damage, clean care steps, when to seek ER/urgent care, and how to find scalp/hair medicine doctor. Keep it direct and short.`
+      const input = qs("#ariaInput")
+      const send = qs("#sendAria")
+      if(input) input.value = prompt
+      if(send) send.click()
+      if(log) log.textContent = "Status: ARIA emergency test triggered."
+    })
+  }
+  if(doctorRoute){
+    doctorRoute.addEventListener("click", ()=>{
+      openLinkModal("https://www.aad.org/public/find-a-derm", "Find Dermatologist")
+      if(log) log.textContent = "Status: doctor route opened."
+    })
+  }
+  if(directBill){
+    directBill.addEventListener("click", async ()=>{
+      try{
+        const email = ((state.socialLinks && state.socialLinks.email) || "").trim().toLowerCase()
+        const type = (typeSel && typeSel.value) || "unknown"
+        const payload = {
+          name: (state.socialLinks && state.socialLinks.name) || "SupportRD Emergency User",
+          phone: (state.socialLinks && state.socialLinks.phone) || "",
+          email: email || "unknown@supportrd.com",
+          address: "Emergency Assist Request",
+          notes: `Direct bill medical assist requested. Incident type: ${type}. 3 months pro + all themes requested.`,
+          consent: true
+        }
+        const r = await fetch("/api/leads/request-call", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(payload)
+        })
+        const d = await r.json()
+        if(d && d.status === "pending"){
+          if(log) log.textContent = `Status: direct bill request submitted (${d.request_id || "pending"}).`
+          openMiniWindow("Emergency Billing", "Request submitted. Team will follow up for fair medical-assist routing.")
+        } else {
+          if(log) log.textContent = `Status: request failed (${d.error || "unknown"}).`
+        }
+      }catch{
+        if(log) log.textContent = "Status: request failed (network_error)."
+      }
+    })
+  }
+}
+
 function setupCashOps(){
   const checkBtn = qs("#cashCheckinBtn")
   const confirmBtn = qs("#cashConfirmBtn")
@@ -2994,6 +3062,89 @@ function setupStartupSplash(){
   if(!(fromPwa || isStandalone)) return
   splash.classList.add("show")
   setTimeout(()=>{ splash.classList.remove("show") }, 1700)
+}
+
+function setupLaunchMenu(){
+  const launch = qs("#launchMenu")
+  const menuBtn = qs("#launchMenuBtn")
+  const panel = qs("#launchPanel")
+  const payBtn = qs("#launchPaymentBtn")
+  const payPanel = qs("#launchPaymentPanel")
+  const payClose = qs("#closeLaunchPayment")
+  const lang = qs("#launchLang")
+  if(!launch || !menuBtn) return
+  const labels = {
+    en: {title:"SupportRD", menu:"SupportRD Menu", menuBtn:"Menu", payment:"Payment Options"},
+    es: {title:"SupportRD", menu:"Menu SupportRD", menuBtn:"Menu", payment:"Opciones de Pago"},
+    fr: {title:"SupportRD", menu:"Menu SupportRD", menuBtn:"Menu", payment:"Options de Paiement"},
+    de: {title:"SupportRD", menu:"SupportRD Menu", menuBtn:"Menu", payment:"Zahlungsoptionen"},
+    ar: {title:"SupportRD", menu:"قائمة SupportRD", menuBtn:"القائمة", payment:"خيارات الدفع"},
+    sw: {title:"SupportRD", menu:"Menyu ya SupportRD", menuBtn:"Menyu", payment:"Chaguo la Malipo"}
+  }
+  function applyLang(code){
+    const t = labels[code] || labels.en
+    const title = qs("#launchTitle")
+    const menuTitle = qs("#menuTitle")
+    if(title) title.textContent = t.title
+    if(menuTitle) menuTitle.textContent = t.menu
+    menuBtn.textContent = t.menuBtn
+    if(payBtn) payBtn.textContent = t.payment
+  }
+  if(lang){
+    applyLang(lang.value)
+    lang.addEventListener("change", ()=>applyLang(lang.value))
+  }
+  setInterval(()=>{ menuBtn.classList.toggle("blink") }, 1500)
+  menuBtn.addEventListener("click", ()=>{
+    panel.classList.toggle("show")
+    launch.classList.toggle("open")
+    try{ beep(980, 90) }catch{}
+  })
+  if(payBtn){
+    payBtn.addEventListener("click", ()=>{
+      if(payPanel) payPanel.classList.toggle("show")
+      try{ beep(760, 90) }catch{}
+    })
+  }
+  if(payClose){ payClose.addEventListener("click", ()=>{ if(payPanel) payPanel.classList.remove("show") }) }
+  qsa("[data-pay]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const k = btn.dataset.pay
+      const map = {
+        family200: LINKS.family200 || LINKS.custom,
+        premium: LINKS.premium,
+        pro: LINKS.pro,
+        bingo100: LINKS.bingo100,
+        yoda: LINKS.yoda,
+        tip: LINKS.donate
+      }
+      const labelMap = {
+        family200:"Family Pack",
+        premium:"ARIA Original",
+        pro:"ARIA Professional",
+        bingo100:"Bingo",
+        yoda:"Slow / Yoda",
+        tip:"Tip Owners & Workers"
+      }
+      openLinkModal(map[k] || LINKS.custom, labelMap[k] || "Payment")
+    })
+  })
+  qsa("[data-launch]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const action = btn.dataset.launch
+      if(action === "login"){ window.location.href = "/login" }
+      if(action === "signup"){ window.location.href = "/login?mode=signup" }
+      if(action === "forgot"){ window.location.href = "/login" }
+      if(action === "payment"){ if(payPanel) payPanel.classList.add("show") }
+      if(action === "satellite"){ openMiniWindow("Satellite Watch", "We can stage alerts and contact routing. For emergency launch updates, keep your admin contact active.") }
+      if(action === "enter"){ launch.classList.add("hide") }
+      if(action === "default"){
+        panel.classList.remove("show")
+        if(payPanel) payPanel.classList.remove("show")
+        launch.classList.remove("open")
+      }
+    })
+  })
 }
 
 function setupLoginGate(){
@@ -4055,6 +4206,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupCampaign)
   safe(setupInHouseAd)
   safe(setupRequestCall)
+  safe(setupEmergencyAssist)
   safe(setupThemeArrows)
   safe(setupModals)
   safe(setupPaymentChooser)
@@ -4084,6 +4236,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupAppsDock)
   safe(setupAppDeepLinks)
   safe(setupStartupSplash)
+  safe(setupLaunchMenu)
   safe(setupLoginGate)
   safe(loadProducts)
   safe(setupMiniWindow)

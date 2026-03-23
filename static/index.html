@@ -16,6 +16,53 @@
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
 <body class="theme-aurora plus500 system-theme natural-pro">
+<div id="launchMenu" class="launch-menu">
+  <div class="launch-topbar">
+    <button class="btn ghost" id="launchPaymentBtn">Payment Options</button>
+    <select id="launchLang" class="launch-lang">
+      <option value="en">English</option>
+      <option value="es">Espanol</option>
+      <option value="fr">Francais</option>
+      <option value="de">Deutsch</option>
+      <option value="ar">Arabic</option>
+      <option value="sw">Swahili</option>
+    </select>
+  </div>
+  <div class="launch-watermark">
+    <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD Watermark">
+  </div>
+  <div class="launch-center">
+    <h1 id="launchTitle">SupportRD</h1>
+    <button id="launchMenuBtn" class="launch-main-btn">Menu</button>
+    <div id="launchPanel" class="launch-panel">
+      <div class="launch-panel-title" id="menuTitle">SupportRD Menu</div>
+      <div class="launch-actions">
+        <button class="btn" data-launch="login" id="menuLogin">Login</button>
+        <button class="btn ghost" data-launch="signup" id="menuCreate">Create Account</button>
+        <button class="btn ghost" data-launch="forgot" id="menuForgot">Forgot Password?</button>
+        <button class="btn" data-launch="payment" id="menuPayment">Open Payments</button>
+        <button class="btn ghost" data-launch="satellite" id="menuSatellite">Satellite Watch</button>
+        <button class="btn" data-launch="enter" id="menuEnter">Enter App</button>
+      </div>
+      <button class="btn ghost launch-default" data-launch="default" id="menuDefault">Default View (Secret)</button>
+    </div>
+    <div id="launchPaymentPanel" class="launch-payment-panel">
+      <div class="launch-panel-title">Payment Options</div>
+      <div class="launch-offers">
+        <button class="btn" data-pay="family200">$200 Family Pack</button>
+        <button class="btn" data-pay="premium">$35 ARIA Original</button>
+        <button class="btn" data-pay="pro">$50 ARIA Professional</button>
+        <button class="btn" data-pay="bingo100">Bingo $100</button>
+        <button class="btn" data-pay="yoda">$20 Slow / Yoda</button>
+        <button class="btn ghost" data-pay="tip">Tip Owners & Workers</button>
+      </div>
+      <button class="btn ghost" id="closeLaunchPayment">Close</button>
+    </div>
+  </div>
+  <div class="launch-sponsors">
+    <strong>Sponsors:</strong> Visa · Mastercard · U.S. Bank · Bank of America · Wells Fargo · Woodforest
+  </div>
+</div>
 <div id="launchSplash" class="launch-splash" aria-hidden="true">
   <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD Launch">
 </div>
@@ -182,6 +229,7 @@
         </div>
 
         <div class="post-bottom">
+          <button class="btn primary" id="openEmergencyAssist">Hair Emergency Assist</button>
           <button class="btn" id="postSocials">Post to All Socials</button>
           <button class="btn ghost" id="askAriaProductsAgain">What products again?</button>
           <select class="payment-dropdown" id="socialSelect">
@@ -937,6 +985,31 @@
   </div>
 </div>
 
+<div id="emergencyAssistModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Hair Emergency Assist</h2>
+      <button class="btn ghost" id="closeEmergencyAssist">Close</button>
+    </div>
+    <div class="system-sub">For severe injuries, active bleeding, breathing issues, or chemical exposure to eyes: call 911 immediately.</div>
+    <div class="request-grid" style="margin-top:10px;">
+      <select id="emergencyType">
+        <option value="burn">Burn / Chemical Burn</option>
+        <option value="fight">Trauma from Fight / Pulling</option>
+        <option value="blood">Blood / Open Wound Around Hairline</option>
+        <option value="stain">Severe Staining / Reaction</option>
+        <option value="unknown">Unknown Extreme Situation</option>
+      </select>
+      <button class="btn" id="emergencyRunScan">Run Hair Scan Now</button>
+      <button class="btn" id="emergencyAriaTest">Test Run ARIA Emergency</button>
+      <button class="btn ghost" id="emergencyDoctorRoute">Find Hair/Scalp Doctor</button>
+      <button class="btn ghost" id="emergencyDirectBill">Direct Bill Medical Assist</button>
+    </div>
+    <div id="emergencyLog" class="system-log" style="margin-top:10px;">Status: waiting.</div>
+    <div class="lock-pill" style="margin-top:10px;">Extreme Incident Support: 3 months Pro + all themes included.</div>
+  </div>
+</div>
+
 
 <div id="brochureModal" class="modal">
   <div class="modal-card glass brochure-card">
@@ -992,6 +1065,12 @@
 
 <script src="/static/auth.js"></script>
 <script src="/static/app.v20260320h.js"></script>
+<footer class="launch-footer-links">
+  <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
+  <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>
+  <a href="https://supportrd.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy</a>
+  <a href="https://supportrd.com/policies/terms-of-service" target="_blank" rel="noopener">Terms</a>
+</footer>
 </body>
 </html>
 
