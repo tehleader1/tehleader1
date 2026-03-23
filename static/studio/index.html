@@ -24,15 +24,46 @@
     <section class="studio-grid">
       <article class="card">
         <h2>Transport</h2>
-        <div class="controls">
+        <div class="transport-inline">
+        <div class="controls transport-controls">
           <button data-transport="rewind">Rewind</button>
           <button data-transport="back">Back</button>
+          <button id="recordMainBtn" class="record-main-btn" aria-label="Record">
+            <span class="record-dot"></span>Record
+          </button>
           <button data-transport="play">Play</button>
           <button data-transport="forward">Forward</button>
           <button data-transport="next">Next</button>
           <button data-transport="loop">Loop</button>
           <button data-transport="once">Play Once</button>
+          <button data-transport="placeonce">Place Once</button>
         </div>
+        <div class="placement-inline">
+          <label>Time (s)
+            <input type="number" id="placementTime" min="0" step="0.1" value="12.0">
+          </label>
+          <label>Wave
+            <select id="placementWave">
+              <option value="echo">Echo</option>
+              <option value="reverb">Reverb</option>
+              <option value="delay">Delay</option>
+              <option value="chop">Chop</option>
+            </select>
+          </label>
+        </div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button id="createPlacementBtn">Create Placement</button>
+          <button id="deleteLastPlacementBtn">Delete Last Placement</button>
+        </div>
+        <details class="placement-menu">
+          <summary>Placement Menu</summary>
+          <div class="row">
+            <select id="placementSelect"></select>
+            <button id="deletePlacementBtn">Delete Selected</button>
+          </div>
+          <div class="status" id="placementStatus">No placements yet.</div>
+        </details>
         <div class="status" id="transportStatus">Ready.</div>
       </article>
 
@@ -106,9 +137,6 @@
         <h2>Timeline + Wave Placement</h2>
         <div class="timeline" id="timeline">
           <div class="wave"></div>
-          <div class="marker" style="left:22%;"></div>
-          <div class="marker" style="left:51%;"></div>
-          <div class="marker" style="left:78%;"></div>
         </div>
         <div class="status">Blue-highlight editor mode active. Drag/drop clips and set markers.</div>
       </article>

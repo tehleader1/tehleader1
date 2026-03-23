@@ -1506,3 +1506,15 @@ body.system-theme .tab-btn.active{
   color:#fff;
 }
 
+.launch-main-actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+.launch-main-btn.alt{
+  background:linear-gradient(180deg,#2e78ef,#244f9b);
+  color:#fff;
+  border:1px solid #7ab2ff;
+}
+

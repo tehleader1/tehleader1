@@ -36,6 +36,31 @@ body{
 .card.wide{grid-column:1/-1}
 h2{margin:0 0 10px;font-size:16px}
 .controls,.row{display:flex;gap:8px;flex-wrap:wrap}
+.transport-inline{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:10px;
+  align-items:start;
+}
+.transport-controls{
+  align-items:center;
+}
+.placement-inline{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.placement-menu{
+  margin-top:8px;
+  border:1px solid #3b547d;
+  border-radius:10px;
+  padding:8px;
+  background:#0d1522;
+}
+.placement-menu summary{
+  cursor:pointer;
+  color:#cfe3ff;
+}
 button{
   border:1px solid #5d79aa;
   background:linear-gradient(180deg,#325285,#203a64);
@@ -97,6 +122,30 @@ textarea{
   box-shadow:0 0 12px rgba(114,255,168,.5);
   transition:width .2s ease;
 }
+.record-main-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:linear-gradient(180deg,#5a0f19,#3d0912);
+  border-color:#cf5f71;
+  color:#ffeef2;
+}
+.record-main-btn.is-recording{
+  box-shadow:0 0 0 1px rgba(255,130,148,.5), 0 0 18px rgba(255,89,116,.45);
+}
+.record-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#ff2f4f;
+  box-shadow:0 0 10px rgba(255,47,79,.8);
+}
+button[data-transport="play"]{ order:4; }
+button[data-transport="back"]{ order:2; }
+#recordMainBtn{ order:3; }
+button[data-transport="rewind"]{ order:1; }
 @media (max-width:860px){
   .studio-grid{grid-template-columns:1fr}
+  .transport-inline{grid-template-columns:1fr}
+  .placement-inline{grid-template-columns:1fr 1fr}
 }

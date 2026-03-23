@@ -3294,6 +3294,7 @@ function setupStartupSplash(){
 function setupLaunchMenu(){
   const launch = qs("#launchMenu")
   const menuBtn = qs("#launchMenuBtn")
+  const quickBooth = qs("#quickBoothStart")
   const panel = qs("#launchPanel")
   const payBtn = qs("#launchPaymentBtn")
   const payPanel = qs("#launchPaymentPanel")
@@ -3332,6 +3333,13 @@ function setupLaunchMenu(){
     panel.classList.toggle("show")
     launch.classList.toggle("open")
     try{ beep(980, 90) }catch{}
+  })
+  quickBooth?.addEventListener("click", ()=>{
+    if(typeof window.openStudioMode === "function"){
+      window.openStudioMode()
+    }else{
+      uiToast("In the Booth is loading in main page...")
+    }
   })
   if(enterBtn){
     setTimeout(()=>enterBtn.classList.add("ready-glow"), 1100)

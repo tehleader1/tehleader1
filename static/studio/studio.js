@@ -2,6 +2,9 @@ const qs = (s) => document.querySelector(s);
 const qsa = (s) => Array.from(document.querySelectorAll(s));
 
 let currentSessionId = localStorage.getItem("studioSessionId") || "";
+let placements = [];
+let isRecording = false;
+const timelineDurationSec = 120;
 
 async function loadPlan() {
   const badge = qs("#planBadge");
@@ -42,11 +45,84 @@ function playIntroVoice() {
   alert(line);
 }
 
+function renderPlacements() {
+  const timeline = qs("#timeline");
+  const select = qs("#placementSelect");
+  const status = qs("#placementStatus");
+  if (!timeline) return;
+  qsa("#timeline .marker").forEach((n) => n.remove());
+  placements.forEach((p) => {
+    const marker = document.createElement("div");
+    marker.className = "marker";
+    marker.style.left = `${Math.max(0, Math.min(100, (p.timeSec / timelineDurationSec) * 100))}%`;
+    marker.title = `${p.wave.toUpperCase()} @ ${p.timeSec.toFixed(1)}s`;
+    timeline.appendChild(marker);
+  });
+  if (select) {
+    select.innerHTML = placements.length
+      ? placements.map((p) => `<option value="${p.id}">#${p.id} · ${p.wave.toUpperCase()} · ${p.timeSec.toFixed(1)}s</option>`).join("")
+      : "<option value=''>No placements</option>";
+  }
+  if (status) status.textContent = placements.length ? `${placements.length} placement(s) active.` : "No placements yet.";
+}
+
+function createPlacement(out) {
+  const timeInput = qs("#placementTime");
+  const waveInput = qs("#placementWave");
+  const timeSec = Math.max(0, Number(timeInput?.value || 0));
+  const wave = String(waveInput?.value || "echo");
+  const id = Date.now() + Math.floor(Math.random() * 1000);
+  placements.push({ id, timeSec, wave });
+  renderPlacements();
+  if (out) out.textContent = `Placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s`;
+}
+
+function deleteLastPlacement(out) {
+  if (!placements.length) {
+    if (out) out.textContent = "No placement to delete.";
+    return;
+  }
+  const last = placements.pop();
+  renderPlacements();
+  if (out) out.textContent = `Deleted last placement #${last.id}.`;
+}
+
 function setupTransport() {
   const out = qs("#transportStatus");
+  const createBtn = qs("#createPlacementBtn");
+  const deleteLastBtn = qs("#deleteLastPlacementBtn");
+  const deleteSelectedBtn = qs("#deletePlacementBtn");
+  const select = qs("#placementSelect");
+  const recBtn = qs("#recordMainBtn");
+
+  createBtn?.addEventListener("click", () => createPlacement(out));
+  deleteLastBtn?.addEventListener("click", () => deleteLastPlacement(out));
+  deleteSelectedBtn?.addEventListener("click", () => {
+    const id = Number(select?.value || 0);
+    if (!id) return;
+    placements = placements.filter((p) => p.id !== id);
+    renderPlacements();
+    out.textContent = `Deleted placement #${id}.`;
+  });
+  recBtn?.addEventListener("click", () => {
+    isRecording = !isRecording;
+    recBtn.classList.toggle("is-recording", isRecording);
+    out.textContent = isRecording ? "Recording ON · red dot active." : "Recording OFF.";
+  });
+
+  renderPlacements();
   qsa("[data-transport]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const cmd = btn.dataset.transport;
+      if (cmd === "back") {
+        deleteLastPlacement(out);
+        return;
+      }
+      if (cmd === "placeonce") {
+        createPlacement(out);
+        out.textContent = `${out.textContent} · place once ready.`;
+        return;
+      }
       out.textContent = `Transport: ${cmd}`;
     });
   });
@@ -119,6 +195,7 @@ async function saveSession() {
       echo: Number(qs("#fxEcho")?.value || 0),
       bass: Number(qs("#fxBass")?.value || 0),
     },
+    placements,
     updated_at: new Date().toISOString(),
   };
   const out = qs("#lyricsStatus");
@@ -149,6 +226,8 @@ async function loadSession() {
     const d = await r.json();
     if (!(d && d.ok && d.payload)) throw new Error("load_error");
     qs("#lyricsInput").value = d.payload.lyrics || "";
+    placements = Array.isArray(d.payload.placements) ? d.payload.placements : [];
+    renderPlacements();
     out.textContent = `Loaded: ${currentSessionId}`;
   } catch {
     out.textContent = "Load failed.";
