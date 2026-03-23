@@ -3526,6 +3526,68 @@ function setupSatelliteQuick(){
   }
 }
 
+function setupLiveRadio(){
+  const playBtn = qs("#radioPlay")
+  const stopBtn = qs("#radioStop")
+  const prevBtn = qs("#radioPrev")
+  const nextBtn = qs("#radioNext")
+  const label = qs("#radioTrackLabel")
+  const status = qs("#radioStatus")
+  if(!playBtn || !stopBtn || !prevBtn || !nextBtn || !label || !status) return
+
+  const playlist = [
+    { title: "Clout - AgentAnthony.wav", src: "/static/audio/clout-agentanthony.wav" }
+  ]
+  let idx = 0
+  const audio = new Audio()
+  audio.preload = "auto"
+
+  function loadTrack(i){
+    idx = (i + playlist.length) % playlist.length
+    const track = playlist[idx]
+    audio.src = track.src
+    label.textContent = track.title
+    status.textContent = `Ready: ${track.title}`
+  }
+  async function playCurrent(){
+    try{
+      if(!audio.src) loadTrack(idx)
+      await audio.play()
+      playBtn.textContent = "Pause"
+      status.textContent = `Now playing: ${playlist[idx].title}`
+    }catch{
+      status.textContent = "Tap Play to allow audio."
+    }
+  }
+
+  playBtn.addEventListener("click", async ()=>{
+    if(audio.paused){
+      await playCurrent()
+    }else{
+      audio.pause()
+      playBtn.textContent = "Play"
+      status.textContent = "Paused."
+    }
+  })
+  stopBtn.addEventListener("click", ()=>{
+    audio.pause()
+    audio.currentTime = 0
+    playBtn.textContent = "Play"
+    status.textContent = "Stopped."
+  })
+  prevBtn.addEventListener("click", async ()=>{
+    loadTrack(idx - 1)
+    await playCurrent()
+  })
+  nextBtn.addEventListener("click", async ()=>{
+    loadTrack(idx + 1)
+    await playCurrent()
+  })
+  audio.addEventListener("ended", async ()=>{ await playCurrent() })
+  loadTrack(0)
+  setTimeout(()=>{ playCurrent() }, 220)
+}
+
 function setupLoginGate(){
   try{
     const saved = JSON.parse(localStorage.getItem('socialLinks') || '{}')
@@ -4773,6 +4835,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupStartupSplash)
   safe(setupLaunchMenu)
   safe(setupSatelliteQuick)
+  safe(setupLiveRadio)
   safe(setupLoginGate)
   safe(loadProducts)
   safe(setupMiniWindow)

@@ -1540,3 +1540,40 @@ body.system-theme .tab-btn.active{
   border:1px solid #7ab2ff;
 }
 
+.live-radio{
+  position:fixed;
+  left:14px;
+  bottom:12px;
+  z-index:240;
+  min-width:300px;
+  padding:10px;
+  border-radius:14px;
+}
+.live-radio-title{
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  opacity:.9;
+}
+.live-radio-track{
+  font-size:13px;
+  font-weight:700;
+  margin:3px 0 8px;
+}
+.live-radio-actions{
+  display:flex;
+  gap:6px;
+}
+.live-radio-actions .btn{
+  padding:6px 10px;
+  font-size:12px;
+}
+@media (max-width:900px){
+  .live-radio{
+    left:8px;
+    right:8px;
+    min-width:0;
+    bottom:74px;
+  }
+}
+

@@ -145,6 +145,56 @@ function audioBufferToWavBlob(buffer) {
   return new Blob([ab], { type: "audio/wav" });
 }
 
+function setupStudioRadio() {
+  const prevBtn = qs("#studioRadioPrev");
+  const playBtn = qs("#studioRadioPlay");
+  const stopBtn = qs("#studioRadioStop");
+  const nextBtn = qs("#studioRadioNext");
+  const track = qs("#studioRadioTrack");
+  const status = qs("#studioRadioStatus");
+  if (!prevBtn || !playBtn || !stopBtn || !nextBtn || !track || !status) return;
+
+  const playlist = [{ title: "Clout - AgentAnthony.wav", src: "/static/audio/clout-agentanthony.wav" }];
+  let idx = 0;
+  const audio = new Audio();
+  audio.preload = "auto";
+  const load = (i) => {
+    idx = (i + playlist.length) % playlist.length;
+    audio.src = playlist[idx].src;
+    track.textContent = `Track: ${playlist[idx].title}`;
+    status.textContent = "Ready.";
+  };
+  const play = async () => {
+    try {
+      if (!audio.src) load(idx);
+      await audio.play();
+      playBtn.textContent = "Pause";
+      status.textContent = `Now playing: ${playlist[idx].title}`;
+    } catch {
+      status.textContent = "Tap Play to allow audio.";
+    }
+  };
+  playBtn.addEventListener("click", async () => {
+    if (audio.paused) await play();
+    else {
+      audio.pause();
+      playBtn.textContent = "Play";
+      status.textContent = "Paused.";
+    }
+  });
+  stopBtn.addEventListener("click", () => {
+    audio.pause();
+    audio.currentTime = 0;
+    playBtn.textContent = "Play";
+    status.textContent = "Stopped.";
+  });
+  prevBtn.addEventListener("click", async () => { load(idx - 1); await play(); });
+  nextBtn.addEventListener("click", async () => { load(idx + 1); await play(); });
+  audio.addEventListener("ended", async () => { await play(); });
+  load(0);
+  setTimeout(() => { play(); }, 180);
+}
+
 async function buildConstructedMix() {
   const out = qs("#mixExportStatus");
   const active = placements.filter((p) => p.audioId && Number.isFinite(Number(p.timeSec)));
@@ -463,6 +513,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupTransport();
   setupFx();
   setupFxBoard();
+  setupStudioRadio();
   setupBots();
   setupRecordingMath();
   qs("#voiceIntroBtn")?.addEventListener("click", playIntroVoice);
