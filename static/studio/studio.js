@@ -5,6 +5,7 @@ let currentSessionId = localStorage.getItem("studioSessionId") || "";
 let placements = [];
 let isRecording = false;
 const timelineDurationSec = 120;
+let placementAudioFiles = [];
 
 async function loadPlan() {
   const badge = qs("#planBadge");
@@ -60,10 +61,18 @@ function renderPlacements() {
   });
   if (select) {
     select.innerHTML = placements.length
-      ? placements.map((p) => `<option value="${p.id}">#${p.id} · ${p.wave.toUpperCase()} · ${p.timeSec.toFixed(1)}s</option>`).join("")
+      ? placements.map((p) => `<option value="${p.id}">#${p.id} · ${p.wave.toUpperCase()} · ${p.timeSec.toFixed(1)}s${p.audioName ? " · " + p.audioName : ""}</option>`).join("")
       : "<option value=''>No placements</option>";
   }
   if (status) status.textContent = placements.length ? `${placements.length} placement(s) active.` : "No placements yet.";
+}
+
+function renderPlacementAudioOptions() {
+  const audioSelect = qs("#placementAudioSelect");
+  if (!audioSelect) return;
+  audioSelect.innerHTML = placementAudioFiles.length
+    ? placementAudioFiles.map((a) => `<option value="${a.id}">${a.name}</option>`).join("")
+    : "<option value=''>No audio uploaded</option>";
 }
 
 function createPlacement(out) {
@@ -93,6 +102,9 @@ function setupTransport() {
   const deleteLastBtn = qs("#deleteLastPlacementBtn");
   const deleteSelectedBtn = qs("#deletePlacementBtn");
   const select = qs("#placementSelect");
+  const audioUpload = qs("#placementAudioUpload");
+  const audioSelect = qs("#placementAudioSelect");
+  const attachAudioBtn = qs("#attachAudioToPlacementBtn");
   const recBtn = qs("#recordMainBtn");
 
   createBtn?.addEventListener("click", () => createPlacement(out));
@@ -104,6 +116,36 @@ function setupTransport() {
     renderPlacements();
     out.textContent = `Deleted placement #${id}.`;
   });
+  audioUpload?.addEventListener("change", () => {
+    const files = Array.from(audioUpload.files || []);
+    if (!files.length) return;
+    files.forEach((file) => {
+      const name = String(file.name || "").toLowerCase();
+      const ok = name.endsWith(".mp3") || name.endsWith(".m4a") || (file.type || "").startsWith("audio/");
+      if (!ok) return;
+      const id = Date.now() + Math.floor(Math.random() * 1000);
+      const url = URL.createObjectURL(file);
+      placementAudioFiles.push({ id, name: file.name, url, type: file.type || "audio/*" });
+    });
+    renderPlacementAudioOptions();
+    out.textContent = `${placementAudioFiles.length} audio file(s) ready for placement.`;
+    audioUpload.value = "";
+  });
+  attachAudioBtn?.addEventListener("click", () => {
+    const placementId = Number(select?.value || 0);
+    const audioId = Number(audioSelect?.value || 0);
+    if (!placementId || !audioId) {
+      out.textContent = "Pick a placement and an uploaded MP3/M4A first.";
+      return;
+    }
+    const audio = placementAudioFiles.find((a) => a.id === audioId);
+    const idx = placements.findIndex((p) => p.id === placementId);
+    if (!audio || idx < 0) return;
+    placements[idx].audioId = audio.id;
+    placements[idx].audioName = audio.name;
+    renderPlacements();
+    out.textContent = `Attached ${audio.name} to placement #${placementId}.`;
+  });
   recBtn?.addEventListener("click", () => {
     isRecording = !isRecording;
     recBtn.classList.toggle("is-recording", isRecording);
@@ -111,6 +153,7 @@ function setupTransport() {
   });
 
   renderPlacements();
+  renderPlacementAudioOptions();
   qsa("[data-transport]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const cmd = btn.dataset.transport;
@@ -227,6 +270,8 @@ async function loadSession() {
     if (!(d && d.ok && d.payload)) throw new Error("load_error");
     qs("#lyricsInput").value = d.payload.lyrics || "";
     placements = Array.isArray(d.payload.placements) ? d.payload.placements : [];
+    placementAudioFiles = [];
+    renderPlacementAudioOptions();
     renderPlacements();
     out.textContent = `Loaded: ${currentSessionId}`;
   } catch {

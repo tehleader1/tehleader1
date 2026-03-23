@@ -62,6 +62,15 @@
             <select id="placementSelect"></select>
             <button id="deletePlacementBtn">Delete Selected</button>
           </div>
+          <div class="row">
+            <label>Upload MP3 / M4A
+              <input type="file" id="placementAudioUpload" accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/*">
+            </label>
+            <select id="placementAudioSelect">
+              <option value="">No audio uploaded</option>
+            </select>
+            <button id="attachAudioToPlacementBtn">Attach Audio</button>
+          </div>
           <div class="status" id="placementStatus">No placements yet.</div>
         </details>
         <div class="status" id="transportStatus">Ready.</div>
