@@ -1,9 +1,9 @@
-const CACHE_NAME = "supportrd-pwa-v3"
+const CACHE_NAME = "supportrd-pwa-v4"
 const APP_ASSETS = [
   "/",
   "/manifest.json",
-  "/static/style.v20260320h.css?v=20260323f",
-  "/static/app.v20260320h.js?v=20260323f",
+  "/static/style.v20260320h.css?v=20260323g",
+  "/static/app.v20260320h.js?v=20260323g",
   "/static/auth.js",
   "/static/icons/app-192.png",
   "/static/icons/app-512.png"

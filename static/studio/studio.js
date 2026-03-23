@@ -8,6 +8,7 @@ const timelineDurationSec = 120;
 let placementAudioFiles = [];
 let lastRenderedMixBlob = null;
 let lastRenderedMixName = "";
+let selectedTimelineAudioId = 0;
 
 async function applyStudioMicProfile() {
   const out = qs("#transportStatus");
@@ -102,11 +103,28 @@ function renderPlacements() {
 }
 
 function renderPlacementAudioOptions() {
-  const audioSelect = qs("#placementAudioSelect");
-  if (!audioSelect) return;
-  audioSelect.innerHTML = placementAudioFiles.length
-    ? placementAudioFiles.map((a) => `<option value="${a.id}">${a.name}</option>`).join("")
-    : "<option value=''>No audio uploaded</option>";
+  const bank = qs("#timelineClipBank");
+  if (!bank) return;
+  if (!placementAudioFiles.length) {
+    selectedTimelineAudioId = 0;
+    bank.innerHTML = "<button class=\"clip-chip empty\" type=\"button\">Import a track to begin</button>";
+    return;
+  }
+  if (!placementAudioFiles.some((a) => a.id === selectedTimelineAudioId)) {
+    selectedTimelineAudioId = placementAudioFiles[0].id;
+  }
+  bank.innerHTML = placementAudioFiles.map((a) => {
+    const selected = a.id === selectedTimelineAudioId ? " selected" : "";
+    return `<button class="clip-chip${selected}" type="button" data-audio-id="${a.id}">${a.name}</button>`;
+  }).join("");
+  qsa("#timelineClipBank [data-audio-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedTimelineAudioId = Number(btn.dataset.audioId || 0);
+      renderPlacementAudioOptions();
+      const out = qs("#placementStatus");
+      if (out) out.textContent = `Clip armed: ${btn.textContent}`;
+    });
+  });
 }
 
 function audioBufferToWavBlob(buffer) {
@@ -301,9 +319,17 @@ function createPlacement(out) {
   const timeSec = Math.max(0, Number(timeInput?.value || 0));
   const wave = String(waveInput?.value || "echo");
   const id = Date.now() + Math.floor(Math.random() * 1000);
-  placements.push({ id, timeSec, wave });
+  const next = { id, timeSec, wave };
+  const armedAudio = placementAudioFiles.find((a) => a.id === selectedTimelineAudioId);
+  if (armedAudio) {
+    next.audioId = armedAudio.id;
+    next.audioName = armedAudio.name;
+  }
+  placements.push(next);
   renderPlacements();
-  if (out) out.textContent = `Placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s`;
+  if (out) out.textContent = armedAudio
+    ? `Placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s · ${armedAudio.name}`
+    : `Placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s`;
 }
 
 function deleteLastPlacement(out) {
@@ -323,12 +349,9 @@ function setupTransport() {
   const deleteSelectedBtn = qs("#deletePlacementBtn");
   const select = qs("#placementSelect");
   const audioUpload = qs("#placementAudioUpload");
-  const audioSelect = qs("#placementAudioSelect");
   const attachAudioBtn = qs("#attachAudioToPlacementBtn");
   const recBtn = qs("#recordMainBtn");
   const timelineRecordBtn = qs("#timelineRecordBtn");
-  const addEmptyBtn = qs("#addEmptyPlacementBtn");
-  const deleteBackPostBtn = qs("#deleteBackPostBtn");
   const timelineTime = qs("#timelinePlacementTime");
   const timelineWave = qs("#timelinePlacementWave");
   const placementTime = qs("#placementTime");
@@ -344,8 +367,6 @@ function setupTransport() {
 
   createBtn?.addEventListener("click", () => createPlacement(out));
   deleteLastBtn?.addEventListener("click", () => deleteLastPlacement(out));
-  addEmptyBtn?.addEventListener("click", () => createPlacement(out));
-  deleteBackPostBtn?.addEventListener("click", () => deleteLastPlacement(out));
   deleteSelectedBtn?.addEventListener("click", () => {
     const id = Number(select?.value || 0);
     if (!id) return;
@@ -371,9 +392,9 @@ function setupTransport() {
   });
   attachAudioBtn?.addEventListener("click", () => {
     const placementId = Number(select?.value || 0);
-    const audioId = Number(audioSelect?.value || 0);
+    const audioId = Number(selectedTimelineAudioId || 0);
     if (!placementId || !audioId) {
-      out.textContent = "Pick a placement and an uploaded MP3/M4A first.";
+      out.textContent = "Pick a placement and arm a clip from the imported track bank first.";
       return;
     }
     const audio = placementAudioFiles.find((a) => a.id === audioId);

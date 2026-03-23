@@ -3330,6 +3330,10 @@ function setupLaunchMenu(){
     lang.addEventListener("change", ()=>applyLang(lang.value))
   }
   setInterval(()=>{ menuBtn.classList.toggle("blink") }, 1500)
+  qsa("#launchMenu button").forEach((btn)=>{
+    btn.addEventListener("mouseenter", ()=>{ try{ beep(620, 30) }catch{} })
+    btn.addEventListener("click", ()=>{ try{ beep(760, 50) }catch{} })
+  })
   menuBtn.addEventListener("click", ()=>{
     panel.classList.toggle("show")
     launch.classList.toggle("open")
@@ -3397,6 +3401,14 @@ function setupLaunchMenu(){
       if(action === "payment"){ if(payPanel) payPanel.classList.add("show") }
       if(action === "studio"){
         launchStudio()
+      }
+      if(action === "brochure"){
+        const brochureBtn = qs("#openBrochureFloat")
+        if(brochureBtn) brochureBtn.click()
+      }
+      if(action === "gift"){
+        const giftBtn = qs("#menuGift")
+        if(giftBtn) giftBtn.click()
       }
       if(action === "satellite"){ openMiniWindow("Satellite Watch", "We can stage alerts and contact routing. For emergency launch updates, keep your admin contact active.") }
       if(action === "enter"){
@@ -3887,7 +3899,7 @@ function setupStudioMode(){
   const blogBtn = qs("#studioBlogBtn")
   let studioBootTimer = null
   if(!shell) return
-  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260323f"
+  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260323g"
 
   const isLoggedIn = ()=>localStorage.getItem("loggedIn") === "true"
   const promptStudioLogin = ()=>{

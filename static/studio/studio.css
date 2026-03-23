@@ -68,6 +68,32 @@ h2{margin:0 0 10px;font-size:16px}
 .timeline-placement-row label{
   min-width:110px;
 }
+.timeline-import-label input{
+  display:block;
+  margin-top:6px;
+}
+.timeline-clip-bank{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:10px 0;
+}
+.clip-chip{
+  border:1px solid #6a88b9;
+  background:linear-gradient(180deg,#15304f,#22486f);
+  color:#f2f7ff;
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:12px;
+}
+.clip-chip.selected{
+  background:linear-gradient(180deg,#58a0ff,#2667d9);
+  box-shadow:0 0 16px rgba(88,160,255,.35);
+}
+.clip-chip.empty{
+  opacity:.8;
+  background:linear-gradient(180deg,#243247,#192536);
+}
 button{
   border:1px solid #5d79aa;
   background:linear-gradient(180deg,#325285,#203a64);

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SupportRD Pro Jake Studio</title>
-  <link rel="stylesheet" href="/static/studio/studio.css?v=20260323f">
+  <link rel="stylesheet" href="/static/studio/studio.css?v=20260323g">
 </head>
 <body>
   <main class="studio-page">
@@ -52,28 +52,7 @@
           </label>
         </div>
         </div>
-        <div class="row" style="margin-top:8px;">
-          <button id="createPlacementBtn">Create Placement</button>
-          <button id="deleteLastPlacementBtn">Delete Last Placement</button>
-        </div>
-        <details class="placement-menu">
-          <summary>Placement Menu</summary>
-          <div class="row">
-            <select id="placementSelect"></select>
-            <button id="deletePlacementBtn">Delete Selected</button>
-          </div>
-          <div class="row">
-            <label>Upload MP3 / M4A
-              <input type="file" id="placementAudioUpload" accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/*">
-            </label>
-            <select id="placementAudioSelect">
-              <option value="">No audio uploaded</option>
-            </select>
-            <button id="attachAudioToPlacementBtn">Attach Audio</button>
-          </div>
-          <div class="status" id="placementStatus">No placements yet.</div>
-        </details>
-        <div class="status" id="transportStatus">Ready.</div>
+        <div class="status" id="transportStatus">Transport ready. Use the timeline lane below for clip importing and placement work.</div>
       </article>
 
       <article class="card">
@@ -178,14 +157,20 @@
               <option value="chop">Chop</option>
             </select>
           </label>
-          <button data-transport="rewind">Rewind</button>
-          <button data-transport="back">Back</button>
-          <button data-transport="play">Play</button>
-          <button data-transport="forward">Forward</button>
-          <button data-transport="next">Next</button>
-          <button id="addEmptyPlacementBtn">Add Empty Placement</button>
-          <button id="deleteBackPostBtn">Delete Back Post</button>
+          <label class="timeline-import-label">Import MP3 / M4A
+            <input type="file" id="placementAudioUpload" accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/*">
+          </label>
+          <button id="createPlacementBtn">Drop Placement</button>
+          <button id="deleteLastPlacementBtn">Delete Last</button>
           <button id="timelineRecordBtn" class="record-main-btn"><span class="record-dot"></span>Record</button>
+        </div>
+        <div id="timelineClipBank" class="timeline-clip-bank">
+          <button class="clip-chip empty" type="button">Import a track to begin</button>
+        </div>
+        <div class="row">
+          <select id="placementSelect"></select>
+          <button id="attachAudioToPlacementBtn">Set Clip On Placement</button>
+          <button id="deletePlacementBtn">Delete Selected</button>
         </div>
         <div class="timeline" id="timeline">
           <div class="wave"></div>
@@ -193,7 +178,7 @@
         <div class="timeline timeline-secondary" id="timelineSecondary">
           <div class="wave"></div>
         </div>
-        <div class="status">Blue-highlight editor mode active. Drag/drop clips and set markers.</div>
+        <div class="status" id="placementStatus">Import clips, select a placement, then set a clip onto the lane.</div>
       </article>
 
       <article class="card">
@@ -225,6 +210,6 @@
       </article>
     </section>
   </main>
-  <script src="/static/studio/studio.js?v=20260323f"></script>
+  <script src="/static/studio/studio.js?v=20260323g"></script>
 </body>
 </html>
