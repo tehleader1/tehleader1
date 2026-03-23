@@ -131,7 +131,7 @@ textarea{
   color:#ffeef2;
 }
 .record-main-btn.is-recording{
-  box-shadow:0 0 0 1px rgba(255,130,148,.5), 0 0 18px rgba(255,89,116,.45);
+  box-shadow:0 0 0 2px rgba(255,130,148,.58), 0 0 28px rgba(255,89,116,.65);
 }
 .record-dot{
   width:10px;
@@ -139,6 +139,14 @@ textarea{
   border-radius:50%;
   background:#ff2f4f;
   box-shadow:0 0 10px rgba(255,47,79,.8);
+}
+.record-main-btn.is-recording .record-dot{
+  animation:recordPulse .78s ease-in-out infinite;
+}
+@keyframes recordPulse{
+  0%{transform:scale(1);box-shadow:0 0 6px rgba(255,47,79,.85)}
+  50%{transform:scale(1.34);box-shadow:0 0 18px rgba(255,47,79,1)}
+  100%{transform:scale(1);box-shadow:0 0 6px rgba(255,47,79,.85)}
 }
 button[data-transport="play"]{ order:4; }
 button[data-transport="back"]{ order:2; }
