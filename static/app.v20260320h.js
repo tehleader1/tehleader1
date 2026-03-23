@@ -3336,12 +3336,15 @@ function setupLaunchMenu(){
       if(action === "signup"){ window.location.href = "/login?mode=signup" }
       if(action === "forgot"){ window.location.href = "/login" }
       if(action === "payment"){ if(payPanel) payPanel.classList.add("show") }
-      if(action === "studio"){
+      if(action === "studio-main"){
         if(typeof window.openStudioMode === "function"){
           window.openStudioMode()
         }else{
-          window.location.href = "/studioaria"
+          window.location.href = "/studio"
         }
+      }
+      if(action === "studio-render"){
+        window.open("https://ai-hair-advisor.onrender.com/studio", "_blank", "noopener")
       }
       if(action === "satellite"){ openMiniWindow("Satellite Watch", "We can stage alerts and contact routing. For emergency launch updates, keep your admin contact active.") }
       if(action === "enter"){ launch.classList.add("hide") }
@@ -3732,7 +3735,7 @@ function setupStudioMode(){
     shell.classList.add("booting")
     shell.classList.remove("ready")
     shell.setAttribute("aria-hidden", "false")
-    if(frame && !frame.src){ frame.src = "/studioaria" }
+    if(frame && !frame.src){ frame.src = "/studio" }
     state.activeAssistant = "projake"
     applyAssistantUI(true)
     if(studioBootTimer){ clearTimeout(studioBootTimer) }
