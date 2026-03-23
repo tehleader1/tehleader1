@@ -9,6 +9,26 @@ let placementAudioFiles = [];
 let lastRenderedMixBlob = null;
 let lastRenderedMixName = "";
 let selectedTimelineAudioId = 0;
+let trackState = [
+  { id: "mp3-1", type: "mp3", title: "MP3 Lane 1" },
+  { id: "recorded-1", type: "recorded", title: "Recorded Lane 1" },
+  { id: "instrument-1", type: "instrument", title: "Instrument Lane 1" }
+];
+
+function ensureTrack(type) {
+  const existing = [...trackState].reverse().find((t) => t.type === type);
+  if (existing) return existing.id;
+  const count = trackState.filter((t) => t.type === type).length + 1;
+  const lane = { id: `${type}-${count}`, type, title: `${type.charAt(0).toUpperCase() + type.slice(1)} Lane ${count}` };
+  trackState.push(lane);
+  return lane.id;
+}
+
+function addTrack(type) {
+  const count = trackState.filter((t) => t.type === type).length + 1;
+  trackState.push({ id: `${type}-${count}`, type, title: `${type.charAt(0).toUpperCase() + type.slice(1)} Lane ${count}` });
+  renderPlacements();
+}
 
 async function applyStudioMicProfile() {
   const out = qs("#transportStatus");
@@ -74,29 +94,33 @@ function playIntroVoice() {
 }
 
 function renderPlacements() {
-  const timeline = qs("#timeline");
-  const timelineSecondary = qs("#timelineSecondary");
+  const tracksWrap = qs("#timelineTracks");
   const select = qs("#placementSelect");
   const status = qs("#placementStatus");
-  if (!timeline) return;
-  qsa("#timeline .marker, #timelineSecondary .marker").forEach((n) => n.remove());
-  const secondaryActive = isRecording || placements.length > 0 || placementAudioFiles.length > 0;
-  timelineSecondary?.classList.toggle("active", secondaryActive);
-  placements.forEach((p) => {
-    const leftPct = `${Math.max(0, Math.min(100, (p.timeSec / timelineDurationSec) * 100))}%`;
-    const title = `${p.wave.toUpperCase()} @ ${p.timeSec.toFixed(1)}s`;
-    [timeline, timelineSecondary].forEach((target) => {
-      if (!target) return;
-      const marker = document.createElement("div");
-      marker.className = "marker";
-      marker.style.left = leftPct;
-      marker.title = title;
-      target.appendChild(marker);
-    });
-  });
+  if (!tracksWrap) return;
+  const lanesHtml = trackState.map((track) => {
+    const clips = placements
+      .filter((p) => p.trackId === track.id)
+      .map((p) => {
+        const left = Math.max(0, Math.min(100, (p.timeSec / timelineDurationSec) * 100));
+        const width = Math.max(10, Math.min(42, ((p.durationSec || 8) / timelineDurationSec) * 100));
+        const label = p.audioName || `${p.kind.toUpperCase()} · ${p.wave.toUpperCase()}`;
+        return `<div class="timeline-clip ${p.kind}" style="left:${left}%;width:${width}%;" title="${label}">
+          <span class="timeline-clip-label">${label}</span>
+        </div>`;
+      }).join("");
+    return `<div class="timeline-track">
+      <div class="timeline-track-head">
+        <div class="timeline-track-title">${track.title}</div>
+        <div class="timeline-track-type">${track.type.toUpperCase()}</div>
+      </div>
+      <div class="timeline-track-body">${clips}</div>
+    </div>`;
+  }).join("");
+  tracksWrap.innerHTML = lanesHtml;
   if (select) {
     select.innerHTML = placements.length
-      ? placements.map((p) => `<option value="${p.id}">#${p.id} · ${p.wave.toUpperCase()} · ${p.timeSec.toFixed(1)}s${p.audioName ? " · " + p.audioName : ""}</option>`).join("")
+      ? placements.map((p) => `<option value="${p.id}">#${p.id} · ${p.kind.toUpperCase()} · ${p.wave.toUpperCase()} · ${p.timeSec.toFixed(1)}s${p.audioName ? " · " + p.audioName : ""}</option>`).join("")
       : "<option value=''>No placements</option>";
   }
   if (status) status.textContent = placements.length ? `${placements.length} placement(s) active.` : "No placements yet.";
@@ -309,7 +333,7 @@ function downloadBlob(blob, fileName) {
   setTimeout(() => URL.revokeObjectURL(url), 1200);
 }
 
-function createPlacement(out) {
+function createPlacement(out, kind = "mp3") {
   const timeInput = qs("#placementTime");
   const waveInput = qs("#placementWave");
   const timeInput2 = qs("#timelinePlacementTime");
@@ -319,17 +343,25 @@ function createPlacement(out) {
   const timeSec = Math.max(0, Number(timeInput?.value || 0));
   const wave = String(waveInput?.value || "echo");
   const id = Date.now() + Math.floor(Math.random() * 1000);
-  const next = { id, timeSec, wave };
+  const next = { id, timeSec, wave, kind, durationSec: kind === "recorded" ? 6 : kind === "instrument" ? 10 : 8 };
+  next.trackId = ensureTrack(kind);
   const armedAudio = placementAudioFiles.find((a) => a.id === selectedTimelineAudioId);
-  if (armedAudio) {
+  if (kind === "mp3" && armedAudio) {
     next.audioId = armedAudio.id;
     next.audioName = armedAudio.name;
+    next.durationSec = armedAudio.durationSec || 8;
+  }
+  if (kind === "instrument") {
+    next.audioName = "Instrument Layer";
+  }
+  if (kind === "recorded") {
+    next.audioName = "Recorded Layer";
   }
   placements.push(next);
   renderPlacements();
-  if (out) out.textContent = armedAudio
-    ? `Placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s · ${armedAudio.name}`
-    : `Placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s`;
+  if (out) out.textContent = next.audioName
+    ? `${kind.toUpperCase()} placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s · ${next.audioName}`
+    : `${kind.toUpperCase()} placement created · ${wave.toUpperCase()} @ ${timeSec.toFixed(1)}s`;
 }
 
 function deleteLastPlacement(out) {
@@ -345,6 +377,9 @@ function deleteLastPlacement(out) {
 function setupTransport() {
   const out = qs("#transportStatus");
   const createBtn = qs("#createPlacementBtn");
+  const createMp3Btn = qs("#createMp3PlacementBtn");
+  const createRecordedBtn = qs("#createRecordedPlacementBtn");
+  const createInstrumentBtn = qs("#createInstrumentPlacementBtn");
   const deleteLastBtn = qs("#deleteLastPlacementBtn");
   const deleteSelectedBtn = qs("#deletePlacementBtn");
   const select = qs("#placementSelect");
@@ -352,6 +387,9 @@ function setupTransport() {
   const attachAudioBtn = qs("#attachAudioToPlacementBtn");
   const recBtn = qs("#recordMainBtn");
   const timelineRecordBtn = qs("#timelineRecordBtn");
+  const addMp3LaneBtn = qs("#addMp3LaneBtn");
+  const addRecordedLaneBtn = qs("#addRecordedLaneBtn");
+  const addInstrumentLaneBtn = qs("#addInstrumentLaneBtn");
   const timelineTime = qs("#timelinePlacementTime");
   const timelineWave = qs("#timelinePlacementWave");
   const placementTime = qs("#placementTime");
@@ -365,8 +403,14 @@ function setupTransport() {
   timelineWave?.addEventListener("change", syncInputs);
   syncInputs();
 
-  createBtn?.addEventListener("click", () => createPlacement(out));
+  createBtn?.addEventListener("click", () => createPlacement(out, "mp3"));
+  createMp3Btn?.addEventListener("click", () => createPlacement(out, "mp3"));
+  createRecordedBtn?.addEventListener("click", () => createPlacement(out, "recorded"));
+  createInstrumentBtn?.addEventListener("click", () => createPlacement(out, "instrument"));
   deleteLastBtn?.addEventListener("click", () => deleteLastPlacement(out));
+  addMp3LaneBtn?.addEventListener("click", () => { addTrack("mp3"); out.textContent = "Added MP3 lane."; });
+  addRecordedLaneBtn?.addEventListener("click", () => { addTrack("recorded"); out.textContent = "Added recorded lane."; });
+  addInstrumentLaneBtn?.addEventListener("click", () => { addTrack("instrument"); out.textContent = "Added instrument lane."; });
   deleteSelectedBtn?.addEventListener("click", () => {
     const id = Number(select?.value || 0);
     if (!id) return;
@@ -383,7 +427,14 @@ function setupTransport() {
       if (!ok) return;
       const id = Date.now() + Math.floor(Math.random() * 1000);
       const url = URL.createObjectURL(file);
-      placementAudioFiles.push({ id, name: file.name, url, type: file.type || "audio/*" });
+      placementAudioFiles.push({ id, name: file.name, url, type: file.type || "audio/*", durationSec: 8 });
+      try {
+        const probe = new Audio(url);
+        probe.addEventListener("loadedmetadata", () => {
+          const found = placementAudioFiles.find((a) => a.id === id);
+          if (found && Number.isFinite(probe.duration) && probe.duration > 0) found.durationSec = probe.duration;
+        }, { once: true });
+      } catch {}
     });
     renderPlacementAudioOptions();
     renderPlacements();
@@ -425,7 +476,7 @@ function setupTransport() {
         return;
       }
       if (cmd === "placeonce") {
-        createPlacement(out);
+        createPlacement(out, "mp3");
         out.textContent = `${out.textContent} · place once ready.`;
         return;
       }
@@ -584,6 +635,10 @@ window.addEventListener("DOMContentLoaded", () => {
   setupStudioRadio();
   setupBots();
   setupRecordingMath();
+  qs("#studioJakeOrb")?.addEventListener("click", () => {
+    const out = qs("#botStatus");
+    if (out) out.textContent = "Pro Jake orb active. Booth focus locked on studio creation.";
+  });
   qs("#voiceIntroBtn")?.addEventListener("click", playIntroVoice);
   qs("#backMainBtn")?.addEventListener("click", () => {
     if (window.parent && window.parent !== window && typeof window.parent.closeStudioMode === "function") {

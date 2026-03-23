@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SupportRD Pro Jake Studio</title>
-  <link rel="stylesheet" href="/static/studio/studio.css?v=20260323g">
+  <link rel="stylesheet" href="/static/studio/studio.css?v=20260323h">
 </head>
 <body>
   <main class="studio-page">
@@ -20,24 +20,12 @@
         <button id="backMainBtn">Back To Main Console</button>
       </div>
     </header>
+    <button id="studioJakeOrb" class="studio-jake-orb" title="Pro Jake"></button>
 
     <section class="studio-grid">
       <article class="card">
         <h2>Transport</h2>
         <div class="transport-inline">
-        <div class="controls transport-controls">
-          <button data-transport="rewind">Rewind</button>
-          <button data-transport="back">Back</button>
-          <button id="recordMainBtn" class="record-main-btn" aria-label="Record">
-            <span class="record-dot"></span>Record
-          </button>
-          <button data-transport="play">Play</button>
-          <button data-transport="forward">Forward</button>
-          <button data-transport="next">Next</button>
-          <button data-transport="loop">Loop</button>
-          <button data-transport="once">Play Once</button>
-          <button data-transport="placeonce">Place Once</button>
-        </div>
         <div class="placement-inline">
           <label>Time (s)
             <input type="number" id="placementTime" min="0" step="0.1" value="12.0">
@@ -52,7 +40,12 @@
           </label>
         </div>
         </div>
-        <div class="status" id="transportStatus">Transport ready. Use the timeline lane below for clip importing and placement work.</div>
+        <div class="row">
+          <button id="recordMainBtn" class="record-main-btn" aria-label="Record">
+            <span class="record-dot"></span>Record
+          </button>
+        </div>
+        <div class="status" id="transportStatus">Use the timeline controls below for rewind, back, play, forward, next, loop, and placement work.</div>
       </article>
 
       <article class="card">
@@ -145,6 +138,15 @@
 
       <article class="card wide">
         <h2>Timeline + Wave Placement</h2>
+        <div class="controls transport-controls timeline-transport">
+          <button data-transport="rewind">Rewind</button>
+          <button data-transport="back">Back</button>
+          <button data-transport="play">Play</button>
+          <button data-transport="forward">Forward</button>
+          <button data-transport="next">Next</button>
+          <button data-transport="loop">Loop</button>
+          <button data-transport="once">Play Once</button>
+        </div>
         <div class="row timeline-placement-row">
           <label>Time (s)
             <input type="number" id="timelinePlacementTime" min="0" step="0.1" value="12.0">
@@ -160,25 +162,28 @@
           <label class="timeline-import-label">Import MP3 / M4A
             <input type="file" id="placementAudioUpload" accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/*">
           </label>
-          <button id="createPlacementBtn">Drop Placement</button>
+          <button id="createPlacementBtn">Add New Placement</button>
+          <button id="createMp3PlacementBtn">Add MP3 Placement</button>
+          <button id="createRecordedPlacementBtn">Add Recorded Placement</button>
+          <button id="createInstrumentPlacementBtn">Add Instrument Placement</button>
           <button id="deleteLastPlacementBtn">Delete Last</button>
           <button id="timelineRecordBtn" class="record-main-btn"><span class="record-dot"></span>Record</button>
         </div>
         <div id="timelineClipBank" class="timeline-clip-bank">
           <button class="clip-chip empty" type="button">Import a track to begin</button>
         </div>
+        <div class="timeline-lane-actions">
+          <button id="addMp3LaneBtn">Add MP3 Lane</button>
+          <button id="addRecordedLaneBtn">Add Recorded Lane</button>
+          <button id="addInstrumentLaneBtn">Add Instrument Lane</button>
+        </div>
         <div class="row">
           <select id="placementSelect"></select>
           <button id="attachAudioToPlacementBtn">Set Clip On Placement</button>
           <button id="deletePlacementBtn">Delete Selected</button>
         </div>
-        <div class="timeline" id="timeline">
-          <div class="wave"></div>
-        </div>
-        <div class="timeline timeline-secondary" id="timelineSecondary">
-          <div class="wave"></div>
-        </div>
-        <div class="status" id="placementStatus">Import clips, select a placement, then set a clip onto the lane.</div>
+        <div id="timelineTracks" class="timeline-tracks"></div>
+        <div class="status" id="placementStatus">Import clips, then place MP3, recorded, or instrument blocks on any visible lane.</div>
       </article>
 
       <article class="card">
@@ -210,6 +215,6 @@
       </article>
     </section>
   </main>
-  <script src="/static/studio/studio.js?v=20260323g"></script>
+  <script src="/static/studio/studio.js?v=20260323h"></script>
 </body>
 </html>

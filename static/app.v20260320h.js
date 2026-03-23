@@ -3899,7 +3899,7 @@ function setupStudioMode(){
   const blogBtn = qs("#studioBlogBtn")
   let studioBootTimer = null
   if(!shell) return
-  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260323g"
+  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260323h"
 
   const isLoggedIn = ()=>localStorage.getItem("loggedIn") === "true"
   const promptStudioLogin = ()=>{
@@ -3976,6 +3976,7 @@ function setupStudioMode(){
 function setupJakeQuickSwitch(){
   const mini = qs("#miniSwitchJake")
   const orb = qs("#proJakeOrb")
+  if(!mini && !orb) return
   function switchJake(){
     state.activeAssistant = "projake"
     applyAssistantUI(true)
