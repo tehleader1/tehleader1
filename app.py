@@ -1292,6 +1292,49 @@ def init_app_settings_db():
     except:
         pass
 
+def init_studio_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS studio_sessions ("
+            "session_id TEXT PRIMARY KEY,"
+            "owner_email TEXT,"
+            "payload_json TEXT,"
+            "updated_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+def _studio_echo_suggestions(transcript, duration_sec):
+    txt = (transcript or "").strip()
+    words = [w for w in txt.replace("\n", " ").split(" ") if w.strip()]
+    dur = max(10.0, min(float(duration_sec or 60), 3600.0))
+    if not words:
+        return [
+            {"time_sec": round(dur * 0.25, 2), "mode": "tight", "feedback": 0.28, "mix": 0.18},
+            {"time_sec": round(dur * 0.50, 2), "mode": "wide", "feedback": 0.42, "mix": 0.22},
+            {"time_sec": round(dur * 0.78, 2), "mode": "cinematic", "feedback": 0.55, "mix": 0.26},
+        ]
+    step = dur / max(3, min(8, len(words)))
+    picks = []
+    cursor = step
+    modes = ["tight", "wide", "cinematic"]
+    for i in range(3):
+        picks.append(
+            {
+                "time_sec": round(min(dur - 0.1, cursor), 2),
+                "mode": modes[i],
+                "feedback": round(0.26 + (i * 0.14), 2),
+                "mix": round(0.16 + (i * 0.05), 2),
+            }
+        )
+        cursor += step * (1.2 + i * 0.35)
+    return picks
+
 def get_setting(key, default=""):
     try:
         conn = sqlite3.connect(CREDIT_DB_PATH)
@@ -2429,6 +2472,19 @@ def admin_send_intro_brochure():
         append_credit_audit("BROCHURE-EMAIL", to_email, "intro_brochure_sent", {"subject": subject})
     return result
 
+@app.route("/admin/send-intro-brochure-now")
+def admin_send_intro_brochure_now():
+    token = (request.args.get("token") or "").strip()
+    if not SEO_TRIGGER_TOKEN or token != SEO_TRIGGER_TOKEN:
+        return "unauthorized", 401
+    to_email = (request.args.get("to") or COMMUNITY_ALERT_SECONDARY_EMAIL or "").strip().lower()
+    subject = (request.args.get("subject") or "SupportRD Admin Introduction Brochure").strip()[:160]
+    result = send_intro_brochure_email(to_email, subject=subject)
+    if result.get("ok"):
+        append_credit_audit("BROCHURE-EMAIL", to_email, "intro_brochure_sent_token_link", {"subject": subject})
+        return f"ok: sent brochure to {to_email}"
+    return f"error: {result.get('error','send_failed')}", 500
+
 @app.route("/api/alerts/sar", methods=["POST"])
 def alerts_sar():
     user = session.get("user") or {}
@@ -3016,6 +3072,86 @@ def subscription_status():
     if not email:
         return {"ok": False, "error": "email_required"}, 400
     return {"ok": True, "subscription": get_subscription_for_email(email)}
+
+@app.route("/api/studio/plan")
+def studio_plan():
+    user = session.get("user") or {}
+    email = (user.get("email") or "").strip().lower()
+    plan = get_subscription_for_email(email) if email else "free"
+    tier = "free"
+    if plan in ("premium", "bingo100", "family200", "fantasy300", "fantasy600"):
+        tier = "premium100"
+    if plan == "pro":
+        tier = "pro500"
+    return {
+        "ok": True,
+        "beta_public": True,
+        "one_page": True,
+        "tier": tier,
+        "email": email or "",
+        "features": {
+            "base_transport": True,
+            "recording": True,
+            "lyrics_safety": True,
+            "echo_placement_2026": True,
+            "edit_bot": tier in ("premium100", "pro500"),
+            "technical_bot": tier == "pro500",
+        },
+    }
+
+@app.route("/api/studio/echo/place", methods=["POST"])
+def studio_echo_place():
+    data = request.json or {}
+    transcript = (data.get("transcript") or "").strip()[:4000]
+    duration_sec = data.get("duration_sec") or 60
+    style = (data.get("style") or "auto").strip().lower()[:20]
+    suggestions = _studio_echo_suggestions(transcript, duration_sec)
+    return {
+        "ok": True,
+        "style": style,
+        "engine": "echo-placement-2026-beta",
+        "suggestions": suggestions,
+    }
+
+@app.route("/api/studio/session/save", methods=["POST"])
+def studio_session_save():
+    data = request.json or {}
+    session_id = (data.get("session_id") or f"SES-{uuid.uuid4().hex[:10].upper()}").strip()[:40]
+    payload = data.get("payload") or {}
+    user = session.get("user") or {}
+    owner_email = (user.get("email") or "").strip().lower()
+    try:
+        payload_json = json.dumps(payload, ensure_ascii=False)
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO studio_sessions (session_id, owner_email, payload_json, updated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(session_id) DO UPDATE SET owner_email=excluded.owner_email, payload_json=excluded.payload_json, updated_at=excluded.updated_at",
+            (session_id, owner_email, payload_json, datetime.utcnow().isoformat() + "Z"),
+        )
+        conn.commit()
+        conn.close()
+        return {"ok": True, "session_id": session_id}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
+
+@app.route("/api/studio/session/load")
+def studio_session_load():
+    session_id = (request.args.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT payload_json, updated_at FROM studio_sessions WHERE session_id = ? LIMIT 1", (session_id,))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return {"ok": False, "error": "not_found"}, 404
+        payload = json.loads(row[0] or "{}")
+        return {"ok": True, "session_id": session_id, "payload": payload, "updated_at": row[1]}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120]}, 500
 
 @app.route("/webhooks/shopify/orders-paid", methods=["POST"])
 def shopify_orders_paid_webhook():
@@ -3792,6 +3928,7 @@ init_community_db()
 init_subscription_db()
 init_app_settings_db()
 init_security_db()
+init_studio_db()
 set_setting("money_guard_enabled", "1")
 try:
     run_trade_bots()
@@ -3805,6 +3942,22 @@ except:
 @app.route("/")
 def home():
     return send_from_directory("static", "index.html")
+
+@app.route("/studio")
+def studio_home():
+    return send_from_directory("static/studio", "index.html")
+
+@app.route("/studioaria")
+def studioaria_home():
+    return send_from_directory("static/studio", "index.html")
+
+@app.route("/studioaria/extensions")
+def studioaria_extensions():
+    return {
+        "ok": True,
+        "formats": ["mp4", "m4a", "wav", "mp3", "flac", "aac", "ogg"],
+        "message": "SupportRD StudioARIA extension lane is active."
+    }
 
 @app.route("/ok")
 def prevention_ok():

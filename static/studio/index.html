@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SupportRD StudioARIA Beta</title>
+  <link rel="stylesheet" href="/static/studio/studio.css">
+</head>
+<body>
+  <main class="studio-page">
+    <header class="studio-top">
+      <div>
+        <h1>SupportRD StudioARIA</h1>
+        <p>Introducing SupportRD Studio - this gets the job done for a dembow party or an occasional get together.</p>
+      </div>
+      <div class="badge-wrap">
+        <span class="badge">PUBLIC BETA</span>
+        <span class="badge" id="planBadge">Plan: loading...</span>
+        <button id="voiceIntroBtn">Play Intro Voice</button>
+      </div>
+    </header>
+
+    <section class="studio-grid">
+      <article class="card">
+        <h2>Transport</h2>
+        <div class="controls">
+          <button data-transport="rewind">Rewind</button>
+          <button data-transport="back">Back</button>
+          <button data-transport="play">Play</button>
+          <button data-transport="forward">Forward</button>
+          <button data-transport="next">Next</button>
+          <button data-transport="loop">Loop</button>
+          <button data-transport="once">Play Once</button>
+        </div>
+        <div class="status" id="transportStatus">Ready.</div>
+      </article>
+
+      <article class="card">
+        <h2>FX Rack</h2>
+        <div class="fx-grid">
+          <label>Reverb <input type="range" id="fxReverb" min="0" max="100" value="25"></label>
+          <label>Echo <input type="range" id="fxEcho" min="0" max="100" value="30"></label>
+          <label>Bass <input type="range" id="fxBass" min="0" max="100" value="40"></label>
+          <label>Slow <input type="range" id="fxSlow" min="0" max="100" value="0"></label>
+          <label>Speed <input type="range" id="fxSpeed" min="0" max="100" value="0"></label>
+          <label>Voice Rewind <input type="range" id="fxRewind" min="0" max="100" value="0"></label>
+        </div>
+        <div class="status" id="fxStatus">FX panel online.</div>
+      </article>
+
+      <article class="card">
+        <h2>Extensions</h2>
+        <ul id="extList" class="result-list">
+          <li>Loading extensions...</li>
+        </ul>
+        <div class="status">StudioARIA URL: <strong>/studioaria</strong></div>
+      </article>
+
+      <article class="card wide">
+        <h2>Recording Seconds Math (Exclusive)</h2>
+        <p class="status">Formula: <strong>seconds = sampleIndex / sampleRate</strong> and <strong>samples = sampleRate x seconds</strong>.</p>
+        <div class="fx-grid">
+          <label>Sample Rate (Hz)
+            <input type="number" id="mathSampleRate" value="48000" min="8000" step="1">
+          </label>
+          <label>Buffer Size (samples)
+            <input type="number" id="mathBufferSize" value="512" min="64" step="1">
+          </label>
+          <label>Current Sample Index
+            <input type="number" id="mathSampleIndex" value="96000" min="0" step="1">
+          </label>
+          <label>Target Seconds
+            <input type="number" id="mathTargetSeconds" value="2.0" min="0" step="0.01">
+          </label>
+        </div>
+        <div class="status" id="mathOutput">Calculating...</div>
+      </article>
+
+      <article class="card wide">
+        <h2>Timeline + Wave Placement</h2>
+        <div class="timeline" id="timeline">
+          <div class="wave"></div>
+          <div class="marker" style="left:22%;"></div>
+          <div class="marker" style="left:51%;"></div>
+          <div class="marker" style="left:78%;"></div>
+        </div>
+        <div class="status">Blue-highlight editor mode active. Drag/drop clips and set markers.</div>
+      </article>
+
+      <article class="card">
+        <h2>Lyrics Safe</h2>
+        <textarea id="lyricsInput" placeholder="Write your bars here. Autosave is on."></textarea>
+        <div class="row">
+          <button id="saveSessionBtn">Save Session</button>
+          <button id="loadSessionBtn">Load Session</button>
+        </div>
+        <div class="status" id="lyricsStatus">No session saved yet.</div>
+      </article>
+
+      <article class="card">
+        <h2>2026 AI Echo Placement</h2>
+        <textarea id="echoTranscript" placeholder="Paste a verse or hook for AI echo placement suggestions."></textarea>
+        <div class="row">
+          <button id="runEchoPlacementBtn">Run Echo Placement 2026</button>
+        </div>
+        <ul id="echoResults" class="result-list"></ul>
+      </article>
+
+      <article class="card">
+        <h2>Bots</h2>
+        <div class="row">
+          <button id="editBotBtn">Edit Bot</button>
+          <button id="techBotBtn">Technical Bot</button>
+        </div>
+        <div class="status" id="botStatus">Bot lane ready.</div>
+      </article>
+    </section>
+  </main>
+  <script src="/static/studio/studio.js"></script>
+</body>
+</html>

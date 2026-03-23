@@ -1,0 +1,177 @@
+const qs = (s) => document.querySelector(s);
+const qsa = (s) => Array.from(document.querySelectorAll(s));
+
+let currentSessionId = localStorage.getItem("studioSessionId") || "";
+
+async function loadPlan() {
+  const badge = qs("#planBadge");
+  try {
+    const r = await fetch("/api/studio/plan");
+    const d = await r.json();
+    if (!d || !d.ok) throw new Error("plan_error");
+    badge.textContent = `Plan: ${d.tier} · Public Beta`;
+    qs("#techBotBtn").disabled = d.tier !== "pro500";
+  } catch {
+    badge.textContent = "Plan: free · Public Beta";
+  }
+}
+
+async function loadExtensions() {
+  const list = qs("#extList");
+  if (!list) return;
+  try {
+    const r = await fetch("/studioaria/extensions");
+    const d = await r.json();
+    if (!(d && d.ok && Array.isArray(d.formats))) throw new Error("ext_error");
+    list.innerHTML = d.formats.map((f) => `<li>.${f}</li>`).join("");
+  } catch {
+    list.innerHTML = "<li>mp4</li><li>m4a</li><li>wav</li><li>mp3</li>";
+  }
+}
+
+function playIntroVoice() {
+  const line = "Introducing SupportRD Studio. This will get the job done, even if you are throwing a dembow party or just an occasional get together.";
+  if ("speechSynthesis" in window) {
+    const u = new SpeechSynthesisUtterance(line);
+    u.rate = 0.95;
+    u.pitch = 1.0;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+    return;
+  }
+  alert(line);
+}
+
+function setupTransport() {
+  const out = qs("#transportStatus");
+  qsa("[data-transport]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const cmd = btn.dataset.transport;
+      out.textContent = `Transport: ${cmd}`;
+    });
+  });
+}
+
+function setupFx() {
+  const ids = ["fxReverb", "fxEcho", "fxBass", "fxSlow", "fxSpeed", "fxRewind"];
+  const out = qs("#fxStatus");
+  ids.forEach((id) => {
+    const el = qs(`#${id}`);
+    if (!el) return;
+    el.addEventListener("input", () => {
+      out.textContent = `FX updated · Reverb ${qs("#fxReverb").value}% · Echo ${qs("#fxEcho").value}% · Bass ${qs("#fxBass").value}%`;
+    });
+  });
+}
+
+async function runEchoPlacement() {
+  const t = (qs("#echoTranscript")?.value || "").trim();
+  const results = qs("#echoResults");
+  results.innerHTML = "";
+  try {
+    const r = await fetch("/api/studio/echo/place", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ transcript: t, duration_sec: 75, style: "auto" }),
+    });
+    const d = await r.json();
+    if (!(d && d.ok && Array.isArray(d.suggestions))) throw new Error("echo_error");
+    d.suggestions.forEach((s) => {
+      const li = document.createElement("li");
+      li.textContent = `${s.mode.toUpperCase()} @ ${s.time_sec}s · feedback ${s.feedback} · mix ${s.mix}`;
+      results.appendChild(li);
+    });
+  } catch {
+    results.innerHTML = "<li>Echo suggestions unavailable.</li>";
+  }
+}
+
+async function saveSession() {
+  const payload = {
+    lyrics: qs("#lyricsInput")?.value || "",
+    fx: {
+      reverb: Number(qs("#fxReverb")?.value || 0),
+      echo: Number(qs("#fxEcho")?.value || 0),
+      bass: Number(qs("#fxBass")?.value || 0),
+    },
+    updated_at: new Date().toISOString(),
+  };
+  const out = qs("#lyricsStatus");
+  try {
+    const r = await fetch("/api/studio/session/save", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ session_id: currentSessionId, payload }),
+    });
+    const d = await r.json();
+    if (!(d && d.ok)) throw new Error("save_error");
+    currentSessionId = d.session_id;
+    localStorage.setItem("studioSessionId", currentSessionId);
+    out.textContent = `Saved: ${currentSessionId}`;
+  } catch {
+    out.textContent = "Save failed.";
+  }
+}
+
+async function loadSession() {
+  const out = qs("#lyricsStatus");
+  if (!currentSessionId) {
+    out.textContent = "No session id yet.";
+    return;
+  }
+  try {
+    const r = await fetch(`/api/studio/session/load?session_id=${encodeURIComponent(currentSessionId)}`);
+    const d = await r.json();
+    if (!(d && d.ok && d.payload)) throw new Error("load_error");
+    qs("#lyricsInput").value = d.payload.lyrics || "";
+    out.textContent = `Loaded: ${currentSessionId}`;
+  } catch {
+    out.textContent = "Load failed.";
+  }
+}
+
+function setupBots() {
+  const out = qs("#botStatus");
+  qs("#editBotBtn")?.addEventListener("click", () => {
+    out.textContent = "Edit Bot: tighten your hook entry by 120ms and double the ad-lib tail.";
+  });
+  qs("#techBotBtn")?.addEventListener("click", () => {
+    out.textContent = "Technical Bot: set input gain -12dB peak, monitor latency under 8ms.";
+  });
+}
+
+function setupRecordingMath() {
+  const ids = ["mathSampleRate", "mathBufferSize", "mathSampleIndex", "mathTargetSeconds"];
+  const out = qs("#mathOutput");
+  if (!out) return;
+  const calc = () => {
+    const sr = Math.max(1, Number(qs("#mathSampleRate")?.value || 48000));
+    const buf = Math.max(1, Number(qs("#mathBufferSize")?.value || 512));
+    const idx = Math.max(0, Number(qs("#mathSampleIndex")?.value || 0));
+    const tgtSec = Math.max(0, Number(qs("#mathTargetSeconds")?.value || 0));
+    const currentSec = idx / sr;
+    const targetSamples = tgtSec * sr;
+    const bufferMs = (buf / sr) * 1000;
+    const framesPerSec = sr / buf;
+    out.textContent =
+      `currentSec = ${idx} / ${sr} = ${currentSec.toFixed(6)}s · ` +
+      `targetSamples = ${sr} x ${tgtSec.toFixed(3)} = ${Math.round(targetSamples)} samples · ` +
+      `bufferDuration = (${buf}/${sr}) x 1000 = ${bufferMs.toFixed(3)}ms · ` +
+      `framesPerSecond = ${framesPerSec.toFixed(3)}`;
+  };
+  ids.forEach((id) => qs(`#${id}`)?.addEventListener("input", calc));
+  calc();
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  loadPlan();
+  loadExtensions();
+  setupTransport();
+  setupFx();
+  setupBots();
+  setupRecordingMath();
+  qs("#voiceIntroBtn")?.addEventListener("click", playIntroVoice);
+  qs("#runEchoPlacementBtn")?.addEventListener("click", runEchoPlacement);
+  qs("#saveSessionBtn")?.addEventListener("click", saveSession);
+  qs("#loadSessionBtn")?.addEventListener("click", loadSession);
+});

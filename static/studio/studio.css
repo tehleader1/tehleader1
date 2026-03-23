@@ -1,0 +1,69 @@
+:root{
+  --bg:#0f141c;
+  --panel:#182131;
+  --panel-2:#101925;
+  --line:#314059;
+  --text:#e9f0ff;
+  --muted:#9db2d6;
+  --blue:#66a3ff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(1200px 500px at 10% -20%, #1d2f4f, transparent 55%), var(--bg);
+  color:var(--text);
+  font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+}
+.studio-page{max-width:1200px;margin:0 auto;padding:16px}
+.studio-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.studio-top h1{margin:0 0 6px}
+.studio-top p{margin:0;color:var(--muted)}
+.badge-wrap{display:flex;gap:8px;flex-wrap:wrap}
+.badge{background:#22334f;border:1px solid #46628f;color:#dcebff;padding:6px 10px;border-radius:999px;font-size:12px}
+.studio-grid{margin-top:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:14px;padding:12px}
+.card.wide{grid-column:1/-1}
+h2{margin:0 0 10px;font-size:16px}
+.controls,.row{display:flex;gap:8px;flex-wrap:wrap}
+button{
+  border:1px solid #5d79aa;
+  background:#27406d;
+  color:#fff;
+  border-radius:10px;
+  padding:8px 12px;
+  cursor:pointer;
+}
+button:hover{filter:brightness(1.08)}
+.status{margin-top:10px;color:var(--muted);font-size:13px}
+.fx-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+label{display:grid;gap:6px;font-size:13px;color:var(--muted)}
+textarea{
+  width:100%;
+  min-height:110px;
+  border:1px solid #47608a;
+  background:#0e1624;
+  color:#eff5ff;
+  border-radius:10px;
+  padding:10px;
+}
+.timeline{
+  position:relative;
+  height:130px;
+  background:#0d1522;
+  border:1px solid #3d5276;
+  border-radius:10px;
+  overflow:hidden;
+}
+.timeline .wave{
+  position:absolute;left:0;top:0;right:0;bottom:0;
+  background:repeating-linear-gradient(90deg,#5f85c8 0 2px,transparent 2px 8px);
+  opacity:.45;
+}
+.timeline .marker{
+  position:absolute;top:0;bottom:0;width:2px;background:#73b1ff;
+  box-shadow:0 0 8px rgba(115,177,255,.8);
+}
+.result-list{margin:8px 0 0;padding-left:16px;color:var(--muted)}
+@media (max-width:860px){
+  .studio-grid{grid-template-columns:1fr}
+}
