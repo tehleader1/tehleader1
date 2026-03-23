@@ -937,10 +937,6 @@ function setupModals(){
   bindOpen("menuSellAria", "sellAriaModal")
   bindOpen("menuSettings", "settingsModal")
   bindOpen("menuSubscription", "subscriptionModal")
-  const adminOpsBtn = qs("#menuAdminOps")
-  if(adminOpsBtn){
-    adminOpsBtn.addEventListener("click", ()=>window.open("/admin/workbench", "_blank"))
-  }
   const creditTop = qs("#menuCreditTop")
   if(creditTop){
     creditTop.addEventListener("click", ()=>{
@@ -3870,9 +3866,9 @@ function renderApp(name){
     if(open){ open.addEventListener("click", ()=>openModal("brochureModal")) }
     return
   }
-  if(name === "Competition" || name === "Competition Arena"){
+  if(name === "Competition Arena"){
     body.innerHTML = `
-      <div style="font-weight:700;margin-bottom:8px;">Competition (Bottom Panel)</div>
+      <div style="font-weight:700;margin-bottom:8px;">Competition Arena (Bottom Panel)</div>
       <div style="color:var(--muted);margin-bottom:10px;">Start 30-minute or 1-hour live attention challenge. Winner is measured by laughs, excitement, and votes.</div>
       <div class="request-grid" style="margin-bottom:10px;">
         <select id="arenaDuration">
@@ -4068,7 +4064,7 @@ function setupAppsDock(){
 
   const allApps = [
     "Blog",
-    "Competition",
+    "Competition Arena",
     "TV Reel",
     "Brochure",
     "Snapshot Coder Idea",
