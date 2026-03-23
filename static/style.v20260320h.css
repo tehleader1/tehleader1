@@ -1279,10 +1279,21 @@ body.studio-mode-open{
     repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 1px, transparent 1px 3px);
   animation:studioStatic 220ms steps(2,end) infinite;
 }
+.studio-mode-shell.booting .studio-static{
+  opacity:.62;
+}
 @keyframes studioStatic{
   0%{transform:translate(0,0)}
   50%{transform:translate(-2px,1px)}
   100%{transform:translate(2px,-1px)}
+}
+.studio-mode-shell.booting .studio-mode-frame-wrap{
+  opacity:0;
+  pointer-events:none;
+}
+.studio-mode-shell.ready .studio-mode-frame-wrap{
+  opacity:1;
+  transition:opacity .28s ease;
 }
 .studio-mode-topbar{
   position:relative;

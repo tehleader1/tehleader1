@@ -3636,19 +3636,31 @@ function setupStudioMode(){
   const purchaseBtn = qs("#studioPurchaseBtn")
   const themeBtn = qs("#studioThemeBtn")
   const blogBtn = qs("#studioBlogBtn")
+  let studioBootTimer = null
   if(!shell) return
 
   const openStudio = ()=>{
     document.body.classList.add("studio-mode-open")
     shell.classList.add("active")
+    shell.classList.add("booting")
+    shell.classList.remove("ready")
     shell.setAttribute("aria-hidden", "false")
     if(frame && !frame.src){ frame.src = "/studioaria" }
     state.activeAssistant = "projake"
     applyAssistantUI(true)
+    if(studioBootTimer){ clearTimeout(studioBootTimer) }
+    // Keep black/white static overlay visible for at least 2 seconds.
+    studioBootTimer = setTimeout(()=>{
+      shell.classList.remove("booting")
+      shell.classList.add("ready")
+    }, 2100)
   }
   const closeStudio = ()=>{
+    if(studioBootTimer){ clearTimeout(studioBootTimer); studioBootTimer = null }
     document.body.classList.remove("studio-mode-open")
     shell.classList.remove("active")
+    shell.classList.remove("booting")
+    shell.classList.remove("ready")
     shell.setAttribute("aria-hidden", "true")
     state.activeAssistant = "aria"
     applyAssistantUI(true)
