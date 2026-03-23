@@ -3588,6 +3588,34 @@ function setupLiveRadio(){
   setTimeout(()=>{ playCurrent() }, 220)
 }
 
+function setupShopifyConnectorBadge(){
+  const badge = qs("#shopifyConnectorBadge")
+  if(!badge) return
+  const apply = (status, text)=>{
+    badge.classList.remove("connector-badge-healthy","connector-badge-watch","connector-badge-critical")
+    if(status === "healthy") badge.classList.add("connector-badge-healthy")
+    if(status === "watch") badge.classList.add("connector-badge-watch")
+    if(status === "critical") badge.classList.add("connector-badge-critical")
+    badge.textContent = text
+  }
+  async function refresh(){
+    try{
+      const r = await fetch("/api/shopify/connector-health")
+      const d = await r.json()
+      if(!(d && d.ok)){
+        apply("critical", "Shopify: health unavailable")
+        return
+      }
+      const txt = `Shopify: ${String(d.status || "unknown").toUpperCase()} (${Number(d.score || 0)}%)`
+      apply(d.status, txt)
+    }catch{
+      apply("critical", "Shopify: network issue")
+    }
+  }
+  refresh()
+  setInterval(refresh, 60000)
+}
+
 function setupLoginGate(){
   try{
     const saved = JSON.parse(localStorage.getItem('socialLinks') || '{}')
@@ -4836,6 +4864,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupLaunchMenu)
   safe(setupSatelliteQuick)
   safe(setupLiveRadio)
+  safe(setupShopifyConnectorBadge)
   safe(setupLoginGate)
   safe(loadProducts)
   safe(setupMiniWindow)

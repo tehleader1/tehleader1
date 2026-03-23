@@ -1568,6 +1568,21 @@ body.system-theme .tab-btn.active{
   padding:6px 10px;
   font-size:12px;
 }
+.connector-badge-healthy{
+  background:linear-gradient(180deg,#1e7f5e,#14624a);
+  color:#dfffee;
+  border:1px solid rgba(128,255,211,.55);
+}
+.connector-badge-watch{
+  background:linear-gradient(180deg,#8b6a24,#6f541d);
+  color:#fff2cf;
+  border:1px solid rgba(255,216,126,.6);
+}
+.connector-badge-critical{
+  background:linear-gradient(180deg,#8d2b2b,#6f1f1f);
+  color:#ffe3e3;
+  border:1px solid rgba(255,132,132,.65);
+}
 @media (max-width:900px){
   .live-radio{
     left:8px;

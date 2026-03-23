@@ -9,6 +9,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 import os
+import re
 import requests
 import time
 import sqlite3
@@ -45,6 +46,8 @@ SHOPIFY_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
 SHOPIFY_ADMIN_TOKEN = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
 SHOPIFY_BLOG_ID = os.environ.get("SHOPIFY_BLOG_ID", "")
 SHOPIFY_WEBHOOK_SECRET = os.environ.get("SHOPIFY_WEBHOOK_SECRET", "")
+SHOPIFY_PLAN_VARIANT_MAP_JSON = os.environ.get("SHOPIFY_PLAN_VARIANT_MAP_JSON", "")
+SHOPIFY_PLAN_SKU_MAP_JSON = os.environ.get("SHOPIFY_PLAN_SKU_MAP_JSON", "")
 
 SEO_ENABLED = os.environ.get("SEO_ENABLED", "false").lower() == "true"
 SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "72"))
@@ -76,6 +79,76 @@ COMMUNITY_ALERT_EXTRA_EMAILS = [
     ).split(",")
     if e.strip()
 ]
+
+DEFAULT_SHOPIFY_PLAN_SKU_MAP = {
+    "premium": {"hairadvisorpremium", "premium35", "srdpremium35"},
+    "pro": {"professionalhairadvisor", "pro50", "srdpro50"},
+    "bingo100": {"bingofantasy100", "bingo100", "srdbingo100"},
+    "family200": {"familyfantasy200", "family200", "srdfamily200"},
+    "yoda": {"yodapass", "yoda20", "srdyoda20"},
+    "fantasy300": {"basicfantasy21plus300", "fantasy300", "srdfantasy300"},
+    "fantasy600": {"advancedfantasy21plus600", "fantasy600", "srdfantasy600"},
+}
+
+DEFAULT_SHOPIFY_PLAN_TITLE_PATTERNS = [
+    ("fantasy600", ["advanced fantasy 21+", "advanced fantasy"]),
+    ("fantasy300", ["basic fantasy 21+", "basic fantasy"]),
+    ("family200", ["family fantasy pack", "family fantasy"]),
+    ("bingo100", ["bingo fantasy"]),
+    ("yoda", ["yoda pass"]),
+    ("pro", ["unlimited aria professional", "professional hair advisor"]),
+    ("premium", ["aria puzzle tier", "hair advisor premium"]),
+]
+
+def _normalize_key(value):
+    return re.sub(r"[^a-z0-9]+", "", (value or "").strip().lower())
+
+def _load_shopify_plan_maps():
+    sku_map = {k: set(v) for k, v in DEFAULT_SHOPIFY_PLAN_SKU_MAP.items()}
+    variant_map = {}
+    try:
+        if SHOPIFY_PLAN_SKU_MAP_JSON:
+            custom = json.loads(SHOPIFY_PLAN_SKU_MAP_JSON)
+            if isinstance(custom, dict):
+                for plan, vals in custom.items():
+                    if isinstance(vals, list):
+                        sku_map[str(plan).strip().lower()] = {_normalize_key(v) for v in vals if str(v).strip()}
+    except Exception:
+        pass
+    try:
+        if SHOPIFY_PLAN_VARIANT_MAP_JSON:
+            custom_variants = json.loads(SHOPIFY_PLAN_VARIANT_MAP_JSON)
+            if isinstance(custom_variants, dict):
+                for variant_id, plan in custom_variants.items():
+                    vid = str(variant_id).strip()
+                    p = str(plan).strip().lower()
+                    if vid and p:
+                        variant_map[vid] = p
+    except Exception:
+        pass
+    return sku_map, variant_map
+
+SHOPIFY_PLAN_SKU_MAP, SHOPIFY_PLAN_VARIANT_MAP = _load_shopify_plan_maps()
+
+def infer_shopify_plan_from_line_items(items):
+    rows = items if isinstance(items, list) else []
+    for item in rows:
+        variant_id = str(item.get("variant_id") or "").strip()
+        if variant_id and variant_id in SHOPIFY_PLAN_VARIANT_MAP:
+            return SHOPIFY_PLAN_VARIANT_MAP[variant_id], f"variant_id:{variant_id}"
+    for item in rows:
+        sku_norm = _normalize_key(item.get("sku") or "")
+        if not sku_norm:
+            continue
+        for plan, sku_set in SHOPIFY_PLAN_SKU_MAP.items():
+            if sku_norm in sku_set:
+                return plan, f"sku:{sku_norm}"
+    for item in rows:
+        title = (item.get("title") or "").strip().lower()
+        for plan, patterns in DEFAULT_SHOPIFY_PLAN_TITLE_PATTERNS:
+            if any(pat in title for pat in patterns):
+                return plan, f"title:{patterns[0]}"
+    return None, "no_match"
 COMMUNITY_ALERT_THRESHOLD = float(os.environ.get("COMMUNITY_ALERT_THRESHOLD", "75"))
 COMMUNITY_TARGET_RATIO = float(os.environ.get("COMMUNITY_TARGET_RATIO", "0.70"))
 MONEY_GUARD_DROP_PCT = float(os.environ.get("MONEY_GUARD_DROP_PCT", "35"))
@@ -3176,37 +3249,78 @@ def shopify_orders_paid_webhook():
             return {"ok": True, "ignored": "missing_email"}
         order_id = str(payload.get("id") or "")
         items = payload.get("line_items", []) or []
-        plan = None
-        for item in items:
-            title = (item.get("title") or "").lower()
-            sku = (item.get("sku") or "").lower()
-            check = f"{title} {sku}"
-            if "bingo fantasy" in check or "$100" in check or "bingo100" in check:
-                plan = "bingo100"
-                break
-            if "advanced fantasy" in check or "$600" in check or "fantasy600" in check:
-                plan = "fantasy600"
-                break
-            if "basic fantasy" in check or "$300" in check or "fantasy300" in check or "21+ sexual aria" in check:
-                plan = "fantasy300"
-                break
-            if "family fantasy" in check or "$200" in check or "family200" in check:
-                plan = "family200"
-                break
-            if "professional hair advisor" in check or "$50" in check or "pro" in check:
-                plan = "pro"
-                break
-            if "yoda pass" in check or "$20" in check or "yoda" in check:
-                plan = "yoda"
-                break
-            if "hair advisor premium" in check or "$35" in check or "premium" in check:
-                plan = "premium"
+        plan, match_reason = infer_shopify_plan_from_line_items(items)
         if not plan:
             return {"ok": True, "ignored": "not_subscription_order"}
         ok = set_subscription_for_email(email, plan, source="shopify_webhook_paid", order_id=order_id)
-        return {"ok": bool(ok), "email": email, "plan": plan}
+        return {"ok": bool(ok), "email": email, "plan": plan, "match_reason": match_reason}
     except Exception as e:
         return {"ok": False, "error": str(e)[:200]}, 500
+
+@app.route("/api/webhooks/shopify/test-map", methods=["POST"])
+def test_shopify_webhook_mapping():
+    if not is_admin():
+        return {"ok": False, "error": "admin_required"}, 403
+    data = request.json or {}
+    items = data.get("line_items") or []
+    plan, reason = infer_shopify_plan_from_line_items(items)
+    return {
+        "ok": True,
+        "plan": plan,
+        "match_reason": reason,
+        "sku_map_loaded": bool(SHOPIFY_PLAN_SKU_MAP),
+        "variant_map_loaded": bool(SHOPIFY_PLAN_VARIANT_MAP),
+        "item_count": len(items),
+    }
+
+@app.route("/api/shopify/connector-health")
+def shopify_connector_health():
+    storefront_configured = bool(SHOPIFY_STORE and SHOPIFY_TOKEN)
+    admin_configured = bool(SHOPIFY_STORE and SHOPIFY_ADMIN_TOKEN)
+    webhook_configured = bool(SHOPIFY_WEBHOOK_SECRET)
+
+    missing = []
+    if not SHOPIFY_STORE:
+        missing.append("SHOPIFY_STORE")
+    if not SHOPIFY_TOKEN:
+        missing.append("SHOPIFY_STOREFRONT_TOKEN")
+    if not SHOPIFY_ADMIN_TOKEN:
+        missing.append("SHOPIFY_ADMIN_TOKEN")
+    if not SHOPIFY_WEBHOOK_SECRET:
+        missing.append("SHOPIFY_WEBHOOK_SECRET")
+
+    products_live = False
+    product_count = 0
+    products_error = ""
+    if storefront_configured:
+        try:
+            products = get_products() or []
+            product_count = len(products)
+            products_live = product_count > 0
+            if not products_live:
+                products_error = "no_products_from_storefront"
+        except Exception as e:
+            products_error = str(e)[:120]
+
+    score = 0
+    score += 30 if storefront_configured else 0
+    score += 30 if admin_configured else 0
+    score += 25 if webhook_configured else 0
+    score += 15 if products_live else 0
+    status = "critical" if score < 55 else ("watch" if score < 85 else "healthy")
+
+    return {
+        "ok": True,
+        "status": status,
+        "score": score,
+        "storefront_configured": storefront_configured,
+        "admin_configured": admin_configured,
+        "webhook_configured": webhook_configured,
+        "products_live": products_live,
+        "product_count": product_count,
+        "missing": missing,
+        "products_error": products_error,
+    }
 
 @app.route("/api/claim-name", methods=["POST"])
 def claim_name():
