@@ -39,12 +39,11 @@
       <div class="launch-actions">
         <button class="btn" data-launch="account" id="menuAccount">Account Access</button>
         <button class="btn" data-launch="payment" id="menuPayment">Open Payments</button>
-        <button class="btn" data-launch="studio-main" id="menuStudioLaunch">Test Studio (Main)</button>
-        <button class="btn ghost" data-launch="studio-render" id="menuStudioRenderLaunch">Studio (Render Direct)</button>
+        <button class="btn" data-launch="studio" id="menuStudioLaunch">Open Studio</button>
         <button class="btn ghost" data-launch="satellite" id="menuSatellite">Satellite Watch</button>
         <button class="btn" data-launch="enter" id="menuEnter">Enter App</button>
       </div>
-      <div class="system-sub">If Studio shows a 502 error, use <strong>Studio (Render Direct)</strong> first, then retry Main.</div>
+      <div class="system-sub">Studio now opens inside the main SupportRD page only.</div>
       <div id="launchAccountPanel" class="launch-account-panel">
         <div class="launch-panel-title">Login / Create / Forgot</div>
         <input id="launchAccountEmail" class="input" placeholder="Email or Username">
@@ -134,7 +133,7 @@
         <button class="menu-btn" id="menuCustomOrderTop">Custom Order</button>
         <button class="menu-btn advanced-menu" id="menuSellAria">Sell ARIA</button>
         <button class="menu-btn advanced-menu" id="menuCreditTop">Credit</button>
-        <button class="menu-btn advanced-menu" id="menuStudio">Studio (Main/Render)</button>
+        <button class="menu-btn advanced-menu" id="menuStudio">Studio</button>
         <button class="menu-btn" id="menuSettings">Settings</button>
         <button class="menu-btn glow" id="menuSubscription">Product Purchase</button>
       </div>
@@ -1191,7 +1190,7 @@
     </div>
   </div>
   <div class="studio-mode-frame-wrap glass">
-    <iframe id="studioModeFrame" class="studio-mode-frame" src="/studio" title="SupportRD Studio"></iframe>
+    <iframe id="studioModeFrame" class="studio-mode-frame" src="/static/studio/index.html" title="SupportRD Studio"></iframe>
   </div>
 </div>
 
