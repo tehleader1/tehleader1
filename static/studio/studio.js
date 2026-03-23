@@ -6,6 +6,8 @@ let placements = [];
 let isRecording = false;
 const timelineDurationSec = 120;
 let placementAudioFiles = [];
+let lastRenderedMixBlob = null;
+let lastRenderedMixName = "";
 
 async function loadPlan() {
   const badge = qs("#planBadge");
@@ -73,6 +75,125 @@ function renderPlacementAudioOptions() {
   audioSelect.innerHTML = placementAudioFiles.length
     ? placementAudioFiles.map((a) => `<option value="${a.id}">${a.name}</option>`).join("")
     : "<option value=''>No audio uploaded</option>";
+}
+
+function audioBufferToWavBlob(buffer) {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const format = 1;
+  const bitDepth = 16;
+  const samples = buffer.length;
+  const blockAlign = numChannels * (bitDepth / 8);
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = samples * blockAlign;
+  const wavSize = 44 + dataSize;
+  const ab = new ArrayBuffer(wavSize);
+  const view = new DataView(ab);
+
+  let offset = 0;
+  const writeString = (s) => { for (let i = 0; i < s.length; i += 1) view.setUint8(offset + i, s.charCodeAt(i)); offset += s.length; };
+  const writeUint32 = (v) => { view.setUint32(offset, v, true); offset += 4; };
+  const writeUint16 = (v) => { view.setUint16(offset, v, true); offset += 2; };
+
+  writeString("RIFF");
+  writeUint32(wavSize - 8);
+  writeString("WAVE");
+  writeString("fmt ");
+  writeUint32(16);
+  writeUint16(format);
+  writeUint16(numChannels);
+  writeUint32(sampleRate);
+  writeUint32(byteRate);
+  writeUint16(blockAlign);
+  writeUint16(bitDepth);
+  writeString("data");
+  writeUint32(dataSize);
+
+  const channels = [];
+  for (let c = 0; c < numChannels; c += 1) channels.push(buffer.getChannelData(c));
+  for (let i = 0; i < samples; i += 1) {
+    for (let c = 0; c < numChannels; c += 1) {
+      const sample = Math.max(-1, Math.min(1, channels[c][i] || 0));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+  return new Blob([ab], { type: "audio/wav" });
+}
+
+async function buildConstructedMix() {
+  const out = qs("#mixExportStatus");
+  const active = placements.filter((p) => p.audioId && Number.isFinite(Number(p.timeSec)));
+  if (!active.length) {
+    if (out) out.textContent = "No placements with attached audio found.";
+    return null;
+  }
+  if (out) out.textContent = "Building full mix...";
+
+  const sourceCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const decodedById = new Map();
+
+  try {
+    for (const p of active) {
+      const audio = placementAudioFiles.find((a) => a.id === p.audioId);
+      if (!audio) continue;
+      if (decodedById.has(audio.id)) continue;
+      const arr = await fetch(audio.url).then((r) => r.arrayBuffer());
+      const decoded = await sourceCtx.decodeAudioData(arr.slice(0));
+      decodedById.set(audio.id, decoded);
+    }
+  } finally {
+    sourceCtx.close();
+  }
+
+  if (!decodedById.size) {
+    if (out) out.textContent = "No decodable audio found for placements.";
+    return null;
+  }
+
+  let durationSec = 0;
+  active.forEach((p) => {
+    const b = decodedById.get(p.audioId);
+    if (!b) return;
+    durationSec = Math.max(durationSec, Number(p.timeSec) + b.duration + 0.25);
+  });
+  durationSec = Math.max(1, durationSec);
+
+  const sampleRate = 44100;
+  const offline = new OfflineAudioContext(2, Math.ceil(durationSec * sampleRate), sampleRate);
+
+  active.forEach((p) => {
+    const b = decodedById.get(p.audioId);
+    if (!b) return;
+    const src = offline.createBufferSource();
+    src.buffer = b;
+    const gain = offline.createGain();
+    const baseGain = 0.9 + (Number(qs("#fxBass")?.value || 0) / 100) * 0.1;
+    gain.gain.value = Math.max(0.1, Math.min(1.2, baseGain));
+    src.connect(gain);
+    gain.connect(offline.destination);
+    src.start(Math.max(0, Number(p.timeSec)));
+  });
+
+  const rendered = await offline.startRendering();
+  const blob = audioBufferToWavBlob(rendered);
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const fileName = `supportrd-constructed-mix-${stamp}.wav`;
+  lastRenderedMixBlob = blob;
+  lastRenderedMixName = fileName;
+  if (out) out.textContent = `Mix ready: ${fileName}`;
+  return { blob, fileName };
+}
+
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
 }
 
 function createPlacement(out) {
@@ -331,4 +452,25 @@ window.addEventListener("DOMContentLoaded", () => {
   qs("#runEchoPlacementBtn")?.addEventListener("click", runEchoPlacement);
   qs("#saveSessionBtn")?.addEventListener("click", saveSession);
   qs("#loadSessionBtn")?.addEventListener("click", loadSession);
+  qs("#buildMixBtn")?.addEventListener("click", async () => {
+    try {
+      await buildConstructedMix();
+    } catch {
+      const out = qs("#mixExportStatus");
+      if (out) out.textContent = "Mix build failed. Check attached audio files.";
+    }
+  });
+  qs("#exportMixBtn")?.addEventListener("click", async () => {
+    const out = qs("#mixExportStatus");
+    try {
+      if (!lastRenderedMixBlob) {
+        const built = await buildConstructedMix();
+        if (!built) return;
+      }
+      downloadBlob(lastRenderedMixBlob, lastRenderedMixName || "supportrd-constructed-mix.wav");
+      if (out) out.textContent = `Exported: ${lastRenderedMixName || "supportrd-constructed-mix.wav"}`;
+    } catch {
+      if (out) out.textContent = "Export failed.";
+    }
+  });
 });
