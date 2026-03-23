@@ -1,9 +1,9 @@
-const CACHE_NAME = "supportrd-pwa-v2"
+const CACHE_NAME = "supportrd-pwa-v3"
 const APP_ASSETS = [
   "/",
   "/manifest.json",
-  "/static/style.v20260320h.css",
-  "/static/app.v20260320h.js",
+  "/static/style.v20260320h.css?v=20260323f",
+  "/static/app.v20260320h.js?v=20260323f",
   "/static/auth.js",
   "/static/icons/app-192.png",
   "/static/icons/app-512.png"
@@ -30,8 +30,24 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return
   const url = new URL(event.request.url)
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((res) => {
+          const copy = res.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put("/", copy))
+          return res
+        })
+        .catch(() => caches.match("/") || caches.match(event.request))
+    )
+    return
+  }
   // Always fetch latest Studio assets to avoid stale "In the Booth" UI.
-  if (url.pathname.startsWith("/static/studio/")) {
+  if (
+    url.pathname.startsWith("/static/studio/") ||
+    url.pathname.endsWith("/static/app.v20260320h.js") ||
+    url.pathname.endsWith("/static/style.v20260320h.css")
+  ) {
     event.respondWith(fetch(event.request).catch(() => caches.match(event.request)))
     return
   }

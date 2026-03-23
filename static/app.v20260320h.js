@@ -3307,6 +3307,7 @@ function setupLaunchMenu(){
   const enterBtn = qs("#menuEnter")
   const lang = qs("#launchLang")
   if(!launch || !menuBtn) return
+  document.body.classList.add("launch-active")
   const labels = {
     en: {title:"SupportRD", menu:"SupportRD Menu", menuBtn:"Menu", payment:"Payment Options"},
     es: {title:"SupportRD", menu:"Menu SupportRD", menuBtn:"Menu", payment:"Opciones de Pago"},
@@ -3334,13 +3335,24 @@ function setupLaunchMenu(){
     launch.classList.toggle("open")
     try{ beep(980, 90) }catch{}
   })
-  quickBooth?.addEventListener("click", ()=>{
+  const launchStudio = ()=>{
+    const isLogged = localStorage.getItem("loggedIn") === "true"
+    if(!isLogged){
+      const gate = qs("#loginGate")
+      if(gate){ gate.style.display = "flex" }
+      document.body.classList.add("login-active")
+      uiToast("Sign in required before entering In the Booth.")
+      return
+    }
+    launch.classList.add("hide")
+    document.body.classList.remove("launch-active")
     if(typeof window.openStudioMode === "function"){
       window.openStudioMode()
     }else{
       uiToast("In the Booth is loading in main page...")
     }
-  })
+  }
+  quickBooth?.addEventListener("click", launchStudio)
   if(enterBtn){
     setTimeout(()=>enterBtn.classList.add("ready-glow"), 1100)
   }
@@ -3384,14 +3396,13 @@ function setupLaunchMenu(){
       if(action === "forgot"){ window.location.href = "/login" }
       if(action === "payment"){ if(payPanel) payPanel.classList.add("show") }
       if(action === "studio"){
-        if(typeof window.openStudioMode === "function"){
-          window.openStudioMode()
-        }else{
-          uiToast("Studio opens inside this main page.")
-        }
+        launchStudio()
       }
       if(action === "satellite"){ openMiniWindow("Satellite Watch", "We can stage alerts and contact routing. For emergency launch updates, keep your admin contact active.") }
-      if(action === "enter"){ launch.classList.add("hide") }
+      if(action === "enter"){
+        launch.classList.add("hide")
+        document.body.classList.remove("launch-active")
+      }
       if(action === "default"){
         panel.classList.remove("show")
         if(payPanel) payPanel.classList.remove("show")
@@ -3586,6 +3597,20 @@ function setupLiveRadio(){
   audio.addEventListener("ended", async ()=>{ await playCurrent() })
   loadTrack(0)
   setTimeout(()=>{ playCurrent() }, 220)
+  window.__mainRadio = {
+    play: playCurrent,
+    stop: ()=>{
+      audio.pause()
+      audio.currentTime = 0
+      playBtn.textContent = "Play"
+      status.textContent = "Stopped."
+    },
+    pause: ()=>{
+      audio.pause()
+      playBtn.textContent = "Play"
+      status.textContent = "Paused."
+    }
+  }
 }
 
 function setupShopifyConnectorBadge(){
@@ -3862,31 +3887,51 @@ function setupStudioMode(){
   const blogBtn = qs("#studioBlogBtn")
   let studioBootTimer = null
   if(!shell) return
+  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260323f"
+
+  const isLoggedIn = ()=>localStorage.getItem("loggedIn") === "true"
+  const promptStudioLogin = ()=>{
+    const gate = qs("#loginGate")
+    if(gate){ gate.style.display = "flex" }
+    document.body.classList.add("login-active")
+    uiToast("Sign in required before entering In the Booth.")
+  }
 
   const openStudio = ()=>{
+    if(!isLoggedIn()){
+      promptStudioLogin()
+      return
+    }
+    try{ window.__mainRadio?.stop?.() }catch{}
+    const launch = qs("#launchMenu")
+    if(launch){ launch.classList.add("hide") }
+    document.body.classList.remove("launch-active")
     document.body.classList.add("studio-mode-open")
     shell.classList.add("active")
     shell.classList.add("booting")
     shell.classList.remove("ready")
     shell.setAttribute("aria-hidden", "false")
-    if(frame && !frame.src){ frame.src = "/static/studio/index.html?v=20260323c" }
+    if(frame && frame.getAttribute("src") !== studioSrc){ frame.setAttribute("src", studioSrc) }
     state.activeAssistant = "projake"
     applyAssistantUI(true)
     if(studioBootTimer){ clearTimeout(studioBootTimer) }
     try{
-      frame?.contentWindow?.postMessage({ type: "studio-enter", micProfile: "audiology-fast" }, "*")
+      frame?.contentWindow?.postMessage({ type: "studio-enter", micProfile: "audiology-fast", autoplay: true }, "*")
     }catch{}
     // Fast studio load feel.
     studioBootTimer = setTimeout(()=>{
       shell.classList.remove("booting")
       shell.classList.add("ready")
       try{
-        frame?.contentWindow?.postMessage({ type: "studio-enter", micProfile: "audiology-fast" }, "*")
+        frame?.contentWindow?.postMessage({ type: "studio-enter", micProfile: "audiology-fast", autoplay: true }, "*")
       }catch{}
     }, 320)
   }
   const closeStudio = ()=>{
     if(studioBootTimer){ clearTimeout(studioBootTimer); studioBootTimer = null }
+    try{
+      frame?.contentWindow?.postMessage({ type: "studio-leave" }, "*")
+    }catch{}
     document.body.classList.remove("studio-mode-open")
     shell.classList.remove("active")
     shell.classList.remove("booting")
@@ -3914,6 +3959,18 @@ function setupStudioMode(){
   if(blogBtn){ blogBtn.addEventListener("click", ()=>openModal("blogModal")) }
   window.openStudioMode = openStudio
   window.closeStudioMode = closeStudio
+}
+
+function setupJakeQuickSwitch(){
+  const mini = qs("#miniSwitchJake")
+  const orb = qs("#proJakeOrb")
+  function switchJake(){
+    state.activeAssistant = "projake"
+    applyAssistantUI(true)
+    openMiniWindow("Pro Jake", "Pro Jake is now active.")
+  }
+  mini?.addEventListener("click", switchJake)
+  orb?.addEventListener("click", switchJake)
 }
 
 function setupAria(){
@@ -4864,6 +4921,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupLaunchMenu)
   safe(setupSatelliteQuick)
   safe(setupLiveRadio)
+  safe(setupJakeQuickSwitch)
   safe(setupShopifyConnectorBadge)
   safe(setupLoginGate)
   safe(loadProducts)

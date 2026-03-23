@@ -74,16 +74,24 @@ function playIntroVoice() {
 
 function renderPlacements() {
   const timeline = qs("#timeline");
+  const timelineSecondary = qs("#timelineSecondary");
   const select = qs("#placementSelect");
   const status = qs("#placementStatus");
   if (!timeline) return;
-  qsa("#timeline .marker").forEach((n) => n.remove());
+  qsa("#timeline .marker, #timelineSecondary .marker").forEach((n) => n.remove());
+  const secondaryActive = isRecording || placements.length > 0 || placementAudioFiles.length > 0;
+  timelineSecondary?.classList.toggle("active", secondaryActive);
   placements.forEach((p) => {
-    const marker = document.createElement("div");
-    marker.className = "marker";
-    marker.style.left = `${Math.max(0, Math.min(100, (p.timeSec / timelineDurationSec) * 100))}%`;
-    marker.title = `${p.wave.toUpperCase()} @ ${p.timeSec.toFixed(1)}s`;
-    timeline.appendChild(marker);
+    const leftPct = `${Math.max(0, Math.min(100, (p.timeSec / timelineDurationSec) * 100))}%`;
+    const title = `${p.wave.toUpperCase()} @ ${p.timeSec.toFixed(1)}s`;
+    [timeline, timelineSecondary].forEach((target) => {
+      if (!target) return;
+      const marker = document.createElement("div");
+      marker.className = "marker";
+      marker.style.left = leftPct;
+      marker.title = title;
+      target.appendChild(marker);
+    });
   });
   if (select) {
     select.innerHTML = placements.length
@@ -192,7 +200,20 @@ function setupStudioRadio() {
   nextBtn.addEventListener("click", async () => { load(idx + 1); await play(); });
   audio.addEventListener("ended", async () => { await play(); });
   load(0);
-  setTimeout(() => { play(); }, 180);
+  window.__studioRadio = {
+    play,
+    stop: () => {
+      audio.pause();
+      audio.currentTime = 0;
+      playBtn.textContent = "Play";
+      status.textContent = "Stopped.";
+    },
+    pause: () => {
+      audio.pause();
+      playBtn.textContent = "Play";
+      status.textContent = "Paused.";
+    }
+  };
 }
 
 async function buildConstructedMix() {
@@ -344,6 +365,7 @@ function setupTransport() {
       placementAudioFiles.push({ id, name: file.name, url, type: file.type || "audio/*" });
     });
     renderPlacementAudioOptions();
+    renderPlacements();
     out.textContent = `${placementAudioFiles.length} audio file(s) ready for placement.`;
     audioUpload.value = "";
   });
@@ -366,6 +388,7 @@ function setupTransport() {
     isRecording = !isRecording;
     recBtn?.classList.toggle("is-recording", isRecording);
     timelineRecordBtn?.classList.toggle("is-recording", isRecording);
+    renderPlacements();
     out.textContent = isRecording ? "Recording ON · red dot active." : "Recording OFF.";
   };
   recBtn?.addEventListener("click", toggleRecording);
@@ -591,6 +614,17 @@ window.addEventListener("DOMContentLoaded", () => {
 
 window.addEventListener("message", (event) => {
   const data = event && event.data;
-  if (!data || data.type !== "studio-enter") return;
-  applyStudioMicProfile();
+  if (!data || !data.type) return;
+  if (data.type === "studio-enter") {
+    applyStudioMicProfile();
+    if (data.autoplay) {
+      setTimeout(() => {
+        try { window.__studioRadio?.play?.(); } catch {}
+      }, 180);
+    }
+    return;
+  }
+  if (data.type === "studio-leave") {
+    try { window.__studioRadio?.stop?.(); } catch {}
+  }
 });

@@ -111,6 +111,24 @@ textarea{
   position:absolute;top:0;bottom:0;width:2px;background:#73b1ff;
   box-shadow:0 0 8px rgba(115,177,255,.8);
 }
+.timeline-secondary{
+  margin-top:8px;
+  height:86px;
+  opacity:.35;
+  transition:opacity .18s ease, box-shadow .18s ease;
+}
+.timeline-secondary .wave{
+  opacity:.28;
+  background:repeating-linear-gradient(90deg,#8ec2ff 0 1px,transparent 1px 7px);
+}
+.timeline-secondary .marker{
+  background:#caa4ff;
+  box-shadow:0 0 10px rgba(202,164,255,.85);
+}
+.timeline-secondary.active{
+  opacity:.92;
+  box-shadow:0 0 18px rgba(136,174,255,.35);
+}
 .result-list{margin:8px 0 0;padding-left:16px;color:var(--muted)}
 .board-meter{
   position:relative;
