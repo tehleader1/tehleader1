@@ -82,8 +82,14 @@ textarea{min-height:120px;resize:vertical}
 .studio-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px}
 .studio-top h1{margin:0 0 8px;font-size:clamp(28px,4vw,40px);letter-spacing:.02em}
 .studio-top p{margin:0;color:var(--muted);max-width:760px;line-height:1.5}
+.competition-world-studio .studio-top h1{text-transform:uppercase;letter-spacing:.05em;text-shadow:0 0 18px rgba(113,199,255,.32)}
 .badge-wrap{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .badge{border:1px solid rgba(170,210,255,.28);background:rgba(19,31,49,.78);padding:8px 12px;border-radius:999px;font-size:12px;color:#e5f0ff}
+.competition-world-studio .studio-world-banner{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+.competition-world-studio .studio-world-copy h2{margin:6px 0 8px;font-size:22px}
+.competition-world-studio .studio-world-copy p{margin:0;color:var(--muted);max-width:760px;line-height:1.55}
+.competition-world-studio .studio-world-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.competition-world-studio .studio-world-pills span{display:inline-flex;align-items:center;padding:9px 12px;border-radius:999px;background:linear-gradient(180deg, rgba(255,255,255,.13), rgba(104,135,188,.18));border:1px solid rgba(132,180,247,.24);color:#eaf4ff;font-size:12px;letter-spacing:.05em}
 .studio-jake-orb{
   position:fixed;
   top:24px;
@@ -125,6 +131,8 @@ textarea{min-height:120px;resize:vertical}
   -webkit-backdrop-filter:blur(18px);
   box-shadow:0 14px 28px rgba(0,0,0,.22);
 }
+.competition-world-studio .studio-utility-bar,
+.competition-world-studio .studio-main-bar{box-shadow:0 18px 34px rgba(0,0,0,.26), inset 0 0 0 1px rgba(255,255,255,.04)}
 .studio-main-bar button{background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(104,135,188,.18))}
 .studio-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .card{
@@ -140,6 +148,9 @@ textarea{min-height:120px;resize:vertical}
 }
 .card::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.05),transparent 35%,transparent 65%,rgba(112,184,255,.04));pointer-events:none}
 .card.wide{grid-column:1/-1}
+.competition-world-studio .board-stage-card,
+.competition-world-studio .studio-hero-card,
+.competition-world-studio .profile-launch-card{border-color:rgba(133,196,255,.26)}
 .studio-hero-card,
 .profile-launch-card,
 .math-card,
@@ -432,4 +443,8 @@ textarea{min-height:120px;resize:vertical}
 }
 .profile-open{
   overflow:hidden;
+}
+@media (max-width: 900px){
+  .competition-world-studio .studio-world-banner{flex-direction:column}
+  .competition-world-studio .studio-world-pills{justify-content:flex-start}
 }
