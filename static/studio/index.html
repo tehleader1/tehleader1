@@ -21,8 +21,100 @@
       </div>
     </header>
     <button id="studioJakeOrb" class="studio-jake-orb" title="Pro Jake"></button>
+    <div class="studio-utility-bar">
+      <button id="studioSettingsLocalBtn">Settings</button>
+      <button id="studioBlogLocalBtn">Blog</button>
+      <button id="studioPurchaseLocalBtn">Product Purchase</button>
+      <button id="studioProfileLocalBtn">Profile</button>
+      <button id="studioGigLocalBtn">Gig 4K Record</button>
+      <button id="studioThemeLocalBtn">Theme Color</button>
+    </div>
 
     <section class="studio-grid">
+      <article class="card wide motherboard-card">
+        <div class="motherboard-head">
+          <div>
+            <h2>Main Motherboard</h2>
+            <p class="status">The FX Board is the brain. Sound lanes, dB, undo, import, export, and live recording stay connected here.</p>
+          </div>
+          <div class="motherboard-actions">
+            <button id="undoStudioBtn">Undo</button>
+            <button id="saveBoardBtn">Save Board</button>
+            <button id="exportBoardBtn">Export</button>
+          </div>
+        </div>
+        <div class="motherboard-grid">
+          <label>dB Quick Access
+            <input type="range" id="dbQuick" min="-24" max="24" value="0" step="1">
+          </label>
+          <label>FX Start Preset
+            <select id="fxPreset">
+              <option value="normal">Normal</option>
+              <option value="echo-bright">Echo Bright</option>
+              <option value="repeat-deep">Repeat Deep</option>
+              <option value="reverse-space">Reverse Space</option>
+            </select>
+          </label>
+          <label>Quick Hide Boards
+            <select id="boardCollapseMode">
+              <option value="3">Show 3 Boards</option>
+              <option value="5">Show 5 Boards</option>
+              <option value="all">Show All Boards</option>
+            </select>
+          </label>
+          <label>Sound Profile
+            <select id="soundProfile">
+              <option value="normal">Normal</option>
+              <option value="podcast">Podcast</option>
+              <option value="gig">Gig Session</option>
+              <option value="instrument">Instrument Focus</option>
+            </select>
+          </label>
+        </div>
+        <div class="motherboard-plus-row">
+          <button id="addMotherboardBtn">+ Motherboard</button>
+          <button id="createBlankMotherboardBtn">New Blank Motherboard</button>
+          <button id="restoreDeletedBtn">Restore Previous</button>
+          <button id="toggleBoardMenuBtn">Collapse / Reopen Boards</button>
+        </div>
+        <div class="status" id="motherboardStatus">dB is centered at 0. Use Undo to reverse board, clip, and lane changes quickly.</div>
+      </article>
+
+      <article class="card">
+        <h2>Gig Session Connector</h2>
+        <div class="row">
+          <button id="gigRecordBtn">Gig 4K Record</button>
+          <button id="gigConnectorBtn">Gig Session Connector</button>
+          <button id="cameraAccessBtn">Camera Access</button>
+        </div>
+        <div class="fx-grid">
+          <label>Video Effect
+            <select id="gigVideoEffect">
+              <option value="normal">Normal</option>
+              <option value="slow">Slow Motion</option>
+              <option value="fast">Speed Up</option>
+              <option value="scene-cut">Action Cuts</option>
+            </select>
+          </label>
+          <label>Connector Load
+            <input type="range" id="gigConnectorLoad" min="10" max="100" value="10" step="5">
+          </label>
+        </div>
+        <div class="status" id="gigStatus">Gig session ready. Recordings save into the board and can later connect to video layout.</div>
+      </article>
+
+      <article class="card">
+        <h2>Profile Panel</h2>
+        <div class="profile-mini">
+          <div class="profile-avatar">SR</div>
+          <div>
+            <div class="profile-name">SupportRD Creator Profile</div>
+            <div class="status" id="profileMiniPost">General post active. New work of art can publish here.</div>
+          </div>
+        </div>
+        <div class="profile-stats" id="profileStats"></div>
+      </article>
+
       <article class="card">
         <h2>Transport</h2>
         <div class="transport-inline">
@@ -213,8 +305,22 @@
         </div>
         <div class="status" id="botStatus">Bot lane ready.</div>
       </article>
+
+      <article class="card wide">
+        <h2>Previous Undo View</h2>
+        <div class="undo-history" id="undoHistory">No previous board changes yet.</div>
+      </article>
     </section>
+    <footer class="studio-footer">
+      <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
+      <a href="https://supportrd.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy</a>
+      <a href="https://supportrd.com/pages/faq" target="_blank" rel="noopener">FAQ</a>
+      <a href="https://supportrd.com/policies/terms-of-service" target="_blank" rel="noopener">Terms</a>
+      <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>
+    </footer>
   </main>
   <script src="/static/studio/studio.js?v=20260323i"></script>
 </body>
 </html>
+
+
