@@ -835,6 +835,35 @@ body.launch-active #app{display:none;}
   #launchTitle{font-size:38px;}
 }
 .offroad-panel{margin-top:10px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.18);background:rgba(0,0,0,0.28);}
+.virtual-warzone{
+  margin-top:14px;
+  padding:14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:
+    radial-gradient(circle at top right, rgba(124,243,209,0.14), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(104,166,255,0.12), transparent 32%),
+    rgba(0,0,0,0.22);
+}
+.virtual-warzone-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:10px;
+  margin:10px 0 12px;
+}
+.virtual-warzone-grid label{
+  display:grid;
+  gap:6px;
+  font-size:12px;
+  color:var(--muted);
+}
+.virtual-warzone-grid select{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(0,0,0,0.28);
+  color:var(--text);
+}
 .offroad-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;}
 .offroad-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:8px;}
 .caution-aria-badge{

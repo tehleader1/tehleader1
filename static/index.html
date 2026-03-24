@@ -646,10 +646,78 @@
               <button class="btn" id="createCompetitionBtn1v1">Create 1v1</button>
               <button class="btn ghost" id="createMovementChallengeBtn">Create 5v5</button>
             </div>
-            <div class="system-sub" id="movementChallengeResult">PvP judged on 5 keys: Health, Longevity, Care, Love, Issues. Modes: 1v1 and 5v5. Rules: no pornography. Best man is represented by exact laughs, excitement, and votes brought to the session.</div>
-          </div>
-        </div>
-          <div class="comms-launch">
+             <div class="system-sub" id="movementChallengeResult">PvP judged on 5 keys: Health, Longevity, Care, Love, Issues. Modes: 1v1 and 5v5. Rules: no pornography. Best man is represented by exact laughs, excitement, and votes brought to the session.</div>
+           </div>
+           <div class="virtual-warzone">
+             <div class="comms-flow-title">Competition Tab: Virtual Paintball Hair Arena</div>
+             <div class="comms-flow-sub">A cool-off game mode inside SupportRD: capture bases, respawn, earn defense perks, and pull in hearts/views while keeping the competition hair-brand safe.</div>
+             <div class="virtual-warzone-grid">
+               <label>Mode
+                 <select id="paintballMode">
+                   <option value="ctf-4v4">Capture The Flag 4v4</option>
+                   <option value="ctf-8v8">Capture The Flag 8v8</option>
+                   <option value="quick-1v1">Quick Match 1v1</option>
+                   <option value="quick-2v2">Quick Match 2v2</option>
+                   <option value="quick-3v3">Quick Match 3v3</option>
+                 </select>
+               </label>
+               <label>Map Set
+                 <select id="paintballMapSet">
+                   <option value="battlegrounds">Battle Grounds Big Field</option>
+                   <option value="quick">Quick Match Spots</option>
+                 </select>
+               </label>
+               <label>Featured Zone
+                 <select id="paintballZone">
+                   <option value="lumbermill">Lumbermill · Officials Lounge Respawn</option>
+                   <option value="riverhole">River Hole · First Line Defense</option>
+                   <option value="snowhill">Artificial Snow Hill · +2 Defense</option>
+                   <option value="island">Island by the Lake · +2 Defense</option>
+                   <option value="vip">VIP Spot · 2 Months Played = +2 Defense</option>
+                   <option value="tunnels">Tunnels · Quick Match</option>
+                   <option value="market">Market · Quick Match</option>
+                   <option value="lab">The Lab · Quick Match +3 Grenades</option>
+                 </select>
+               </label>
+               <label>Loadout
+                 <select id="paintballLoadout">
+                   <option value="standard">2 Gun Choices</option>
+                   <option value="vip3">3 Gun Choices + Grenades</option>
+                   <option value="simple">Simple No-Perk Loadout</option>
+                 </select>
+               </label>
+               <label>Promotion Goal
+                 <select id="paintballPromoGoal">
+                   <option value="20-hearts">20 hearts in the last 5 minutes</option>
+                   <option value="25-likes">25 likes in the last 5 minutes</option>
+                   <option value="15-comments">15 comments in the last 5 minutes</option>
+                   <option value="10-shares">10 shares in the last 5 minutes</option>
+                 </select>
+               </label>
+               <label>Respawn Style
+                 <select id="paintballRespawnRule">
+                   <option value="officials-lounge">Officials Lounge Lumbermill Respawn</option>
+                   <option value="dance-save">Unlimited if you dance on them 5 minutes</option>
+                   <option value="classic">Classic hit-and-respawn</option>
+                 </select>
+               </label>
+             </div>
+             <div class="comms-tags">
+               <span class="chip">Virtual Armed</span>
+               <span class="chip">Base Capture</span>
+               <span class="chip">Grenades</span>
+               <span class="chip">Respawn Lounge</span>
+               <span class="chip">Dance-On Star Perk</span>
+               <span class="chip">Hearts + Views Boost</span>
+             </div>
+             <div class="system-actions">
+               <button class="btn" id="buildPaintballModeBtn">Build Paintball Mode</button>
+               <button class="btn ghost" id="postPaintballModeBtn">Post To Feed</button>
+             </div>
+             <div class="system-sub" id="paintballBuildResult">Build a virtual paintball session for SupportRD Competition. Money/promo wagers stay compliance-gated until approved.</div>
+           </div>
+         </div>
+           <div class="comms-launch">
             <div class="comms-item"><strong>Launch Watch Alert:</strong> send admin alert with day + location so you can fly in for orbit day.</div>
             <input id="launchDay" placeholder="Launch Day (YYYY-MM-DD or text)">
             <input id="launchLocation" placeholder="Launch Location">

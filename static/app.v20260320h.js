@@ -2717,6 +2717,46 @@ function setupCommunications(){
   const createCompetitionBtn = qs("#createCompetitionBtn")
   const createMovementChallengeBtn = qs("#createMovementChallengeBtn")
   const createCompetitionBtn1v1 = qs("#createCompetitionBtn1v1")
+  const buildPaintballModeBtn = qs("#buildPaintballModeBtn")
+  const postPaintballModeBtn = qs("#postPaintballModeBtn")
+  const paintballBuildResult = qs("#paintballBuildResult")
+
+  const PAINTBALL_MAPS = {
+    lumbermill: {label:"Lumbermill", defense:"+1 defense", respawn:"Officials Lounge", notes:"Johndeer quality first line defense with the lumbermill lane locked in."},
+    riverhole: {label:"River Hole", defense:"+1 defense", respawn:"Field respawn", notes:"Best field-side hole near the flag for first line defense."},
+    snowhill: {label:"Artificial Snow Hill", defense:"+2 defense", respawn:"Snow ridge respawn", notes:"Artificial snow cover gives the hill a stronger defense bonus."},
+    island: {label:"Island by the Lake", defense:"+2 defense", respawn:"Lake edge respawn", notes:"Island side play adds lake pressure and extra defense."},
+    vip: {label:"VIP Spot", defense:"+2 defense", respawn:"VIP return lane", notes:"If you have been playing 2 months, VIP defense comes online."},
+    tunnels: {label:"Tunnels", defense:"quick spot", respawn:"Quick respawn", notes:"Tunnels is a direct-entry quick match route."},
+    market: {label:"Market", defense:"quick spot", respawn:"Quick respawn", notes:"Market stays simple and fast with no extra upgrade."},
+    lab: {label:"The Lab", defense:"quick spot", respawn:"Quick respawn", notes:"The Lab grants +3 grenades and no other upgrade."}
+  }
+  const PAINTBALL_LOADOUTS = {
+    standard: "2 gun choices with standard virtual grenades off.",
+    vip3: "3 gun choices with grenade access unlocked.",
+    simple: "Simple hide-behind-tires match. Get hit and you lose. No perks included."
+  }
+  function buildPaintballSummary(){
+    const mode = qs("#paintballMode")?.value || "ctf-4v4"
+    const mapSet = qs("#paintballMapSet")?.value || "battlegrounds"
+    const zoneKey = qs("#paintballZone")?.value || "lumbermill"
+    const loadoutKey = qs("#paintballLoadout")?.value || "standard"
+    const promoGoal = qs("#paintballPromoGoal")?.selectedOptions?.[0]?.textContent || "20 hearts in the last 5 minutes"
+    const respawnRule = qs("#paintballRespawnRule")?.value || "officials-lounge"
+    const zone = PAINTBALL_MAPS[zoneKey] || PAINTBALL_MAPS.lumbermill
+    const matchType = mode.startsWith("ctf") ? "Capture the Flag" : "Quick Match"
+    const respawnText = respawnRule === "dance-save"
+      ? "Dance-on save active: if you dance on somebody the whole walk back for 5 minutes, unlimited shots stay open."
+      : respawnRule === "classic"
+        ? "Classic respawn is active with no dance protection."
+        : `Respawn is set to ${zone.respawn}.`
+    const moneyLine = "Promo-money play is compliance-gated for now: hearts, views, likes, and stream traction can be tracked live, but real money wagers stay off until reviewed."
+    return {
+      title: `${matchType} · ${mode.replace("-", " ").toUpperCase()} · ${zone.label}`,
+      body: `${zone.notes} ${zone.defense}. ${PAINTBALL_LOADOUTS[loadoutKey]} ${respawnText} Goal: ${promoGoal}. ${moneyLine}`,
+      post: `SUPPORTRD VIRTUAL PAINTBALL · ${matchType} ${mode.toUpperCase()} · ${zone.label} · ${zone.defense} · ${PAINTBALL_LOADOUTS[loadoutKey]} Goal: ${promoGoal}. Respawn: ${respawnText}`
+    }
+  }
 
   const walletKey = "supportrdWallet"
   function loadWallet(){
@@ -3006,6 +3046,22 @@ function setupCommunications(){
       }catch{
         if(out) out.textContent = "Create failed: network_error"
       }
+    })
+  }
+  if(buildPaintballModeBtn){
+    buildPaintballModeBtn.addEventListener("click", ()=>{
+      const summary = buildPaintballSummary()
+      if(paintballBuildResult) paintballBuildResult.textContent = `${summary.title} · ${summary.body}`
+      openMiniWindow("Competition Paintball", `${summary.title} is built. Virtual mode is live and promo-wager logic remains compliance-gated.`)
+    })
+  }
+  if(postPaintballModeBtn){
+    postPaintballModeBtn.addEventListener("click", ()=>{
+      const summary = buildPaintballSummary()
+      const post = qs("#postInput")
+      if(post) post.value = summary.post
+      if(paintballBuildResult) paintballBuildResult.textContent = `${summary.title} posted to the main feed draft.`
+      openMiniWindow("Competition Feed", "Virtual paintball mode drafted into the SupportRD post panel.")
     })
   }
 }
