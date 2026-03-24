@@ -3108,6 +3108,7 @@ function setupLiveArena(){
   let startArmed = false
   let liveContentIndex = 0
   let energyTimer = null
+  if(tagModal) tagModal.hidden = true
   const contentSteps = [
     "Introduce the host with a sweep effect and company mission.",
     "Show the real action: code, game, dance, wilderness, or work scene.",
@@ -3173,19 +3174,21 @@ function setupLiveArena(){
     void flash.offsetWidth
     flash.classList.add("active")
   }
-  function pulseLiveEnergy(){
+  function pulseLiveEnergy(withWiggle = false){
     if(!shell || shell.hidden) return
     shell.classList.add("live-energized")
-    document.body.classList.remove("live-jello")
-    void document.body.offsetWidth
-    document.body.classList.add("live-jello")
-    setTimeout(()=>document.body.classList.remove("live-jello"), 820)
+    if(withWiggle){
+      document.body.classList.remove("live-jello")
+      void document.body.offsetWidth
+      document.body.classList.add("live-jello")
+      setTimeout(()=>document.body.classList.remove("live-jello"), 820)
+    }
   }
   function startLiveEnergy(){
     if(energyTimer) clearInterval(energyTimer)
-    pulseLiveEnergy()
+    pulseLiveEnergy(false)
     energyTimer = setInterval(()=>{
-      pulseLiveEnergy()
+      pulseLiveEnergy(true)
       const steps = contentList?.querySelectorAll(".live-content-step") || []
       const step = steps[liveContentIndex]
       if(step){
@@ -3193,7 +3196,7 @@ function setupLiveArena(){
         void step.offsetWidth
         step.classList.add("active")
       }
-    }, 5200)
+    }, 300000)
   }
   function stopLiveEnergy(){
     if(energyTimer){
