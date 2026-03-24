@@ -1065,6 +1065,9 @@ body.launch-active #app{display:none;}
   backdrop-filter:blur(12px);
   z-index:6;
 }
+.live-tag-modal[hidden]{
+  display:none !important;
+}
 .live-tag-card{
   width:min(440px,92vw);
   padding:24px;
