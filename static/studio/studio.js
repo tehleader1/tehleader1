@@ -29,6 +29,8 @@ let currentTheme = 0;
 let recentSessionSaves = [];
 const THEMES = ["", "theme-signal", "theme-ember"];
 const timelineDurationSec = 120;
+let timelineZoom = 1;
+let draggedPlacementId = 0;
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -323,20 +325,43 @@ function renderPlacementAudioOptions() {
   });
 }
 
+function trimSelectedPlacement(edge = "right") {
+  const placement = placements.find((item) => item.id === selectedPlacementId);
+  if (!placement) {
+    setStatus("#placementStatus", "Highlight a waveform first to trim it.");
+    return;
+  }
+  pushUndoSnapshot(`Trim ${edge} ${placement.audioName || placement.wave}`);
+  if (edge === "left") {
+    placement.timeSec = Math.max(0, placement.timeSec + 0.5);
+    placement.durationSec = Math.max(0.8, placement.durationSec - 0.5);
+  } else {
+    placement.durationSec = Math.max(0.8, placement.durationSec - 0.5);
+  }
+  renderPlacements();
+  setStatus("#placementStatus", `Trimmed ${edge} side of ${placement.audioName || 'selected waveform'}.`);
+}
+
+function setTimelineZoom(delta = 0) {
+  timelineZoom = Math.max(1, Math.min(8, Number((timelineZoom + delta).toFixed(2))));
+  renderPlacements();
+  setStatus("#placementStatus", `Wave zoom is now ${timelineZoom.toFixed(2)}x for precise editing.`);
+}
 function renderPlacements() {
   const wrap = qs("#timelineTracks");
   const select = qs("#placementSelect");
   if (!wrap) return;
   const collapseMode = qs("#boardCollapseMode")?.value || "3";
   const visibleCount = collapseMode === "all" ? Number.MAX_SAFE_INTEGER : Math.max(1, Number(collapseMode));
+  const laneWidth = Math.max(100, timelineZoom * 100);
   wrap.innerHTML = trackState.map((track, index) => {
     const hiddenClass = index >= visibleCount ? " hidden-track" : "";
     const clips = placements.filter((placement) => placement.trackId === track.id).map((placement) => {
-      const left = Math.max(0, Math.min(92, (placement.timeSec / timelineDurationSec) * 100));
+      const left = Math.max(0, Math.min(98, (placement.timeSec / timelineDurationSec) * 100));
       const width = Math.max(26, Math.min(94, ((placement.durationSec || 6) / timelineDurationSec) * 100));
       const selected = placement.id === selectedPlacementId ? " selected" : "";
       const waveData = Array.isArray(placement.waveData) ? placement.waveData : generateWaveData(placement.audioName || placement.wave);
-      return `<button class="timeline-clip ${placement.kind}${selected}" type="button" data-placement-id="${placement.id}" style="left:${left}%;width:${width}%;">
+      return `<button class="timeline-clip ${placement.kind}${selected}" draggable="true" type="button" data-placement-id="${placement.id}" style="left:${left}%;width:${width}%;">
         ${buildWaveMarkup(waveData)}
         <span class="timeline-clip-label"><span class="clip-name">${placement.audioName || placement.wave}</span><span class="clip-meta">${placement.durationSec.toFixed(1)}s</span></span>
       </button>`;
@@ -344,9 +369,9 @@ function renderPlacements() {
     return `<div class="timeline-track${hiddenClass}" data-track-id="${track.id}">
       <div class="timeline-track-head">
         <div class="timeline-track-title">${track.title}</div>
-        <div class="timeline-track-type">Active</div>
+        <div class="timeline-track-type">Zoom ${timelineZoom.toFixed(2)}x</div>
       </div>
-      <div class="timeline-track-body">${clips || '<div class="timeline-empty">This motherboard is ready for clips, live recording, or instruments.</div>'}</div>
+      <div class="timeline-track-body" data-track-drop="${track.id}"><div class="timeline-track-lane" style="width:${laneWidth}%">${clips || '<div class="timeline-empty">This motherboard is ready for clips, live recording, or instruments.</div>'}</div></div>
     </div>`;
   }).join("");
 
@@ -358,6 +383,35 @@ function renderPlacements() {
       const placement = placements.find((item) => item.id === selectedPlacementId);
       setStatus("#placementStatus", placement ? `Selected: ${summarizePlacement(placement)}.` : "Placement selected.");
     });
+    node.addEventListener("dragstart", (event) => {
+      draggedPlacementId = Number(node.getAttribute("data-placement-id") || 0);
+      event.dataTransfer?.setData("text/plain", String(draggedPlacementId));
+    });
+  });
+
+  qsa("#timelineTracks [data-track-drop]").forEach((node) => {
+    node.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      node.classList.add("drag-over");
+    });
+    node.addEventListener("dragleave", () => node.classList.remove("drag-over"));
+    node.addEventListener("drop", (event) => {
+      event.preventDefault();
+      node.classList.remove("drag-over");
+      const trackId = node.getAttribute("data-track-drop") || "";
+      const placementId = Number(event.dataTransfer?.getData("text/plain") || draggedPlacementId || 0);
+      const placement = placements.find((item) => item.id === placementId);
+      const lane = node.querySelector('.timeline-track-lane');
+      if (!placement || !lane) return;
+      const rect = lane.getBoundingClientRect();
+      const ratio = rect.width ? (event.clientX - rect.left) / rect.width : 0;
+      pushUndoSnapshot(`Move ${placement.audioName || placement.wave}`);
+      placement.trackId = trackId;
+      placement.timeSec = Math.max(0, Math.min(timelineDurationSec, ratio * timelineDurationSec));
+      selectedPlacementId = placement.id;
+      renderPlacements();
+      setStatus("#placementStatus", `Moved ${placement.audioName || 'waveform'} to ${trackId}.`);
+    });
   });
 
   if (select) {
@@ -367,7 +421,6 @@ function renderPlacements() {
     if (selectedPlacementId) select.value = String(selectedPlacementId);
   }
 }
-
 function renderRecentBoards() {
   const wrap = qs("#recentBoardsList");
   if (!wrap) return;
@@ -1025,6 +1078,114 @@ function setupGigPanel() {
   });
 }
 
+function applyFxToSelection() {
+  const placement = placements.find((item) => item.id === selectedPlacementId);
+  if (!placement) {
+    setStatus("#placementStatus", "Highlight a wave clip first to add an effect.");
+    return;
+  }
+  const mode = qs("#timelinePlacementWave")?.value || "echo";
+  placement.wave = mode;
+  placement.waveData = generateWaveData(`${placement.audioName}-${mode}`, 64, placement.kind === "instrument" ? "instrument" : placement.kind === "recorded" ? "live" : "steady", 1.08);
+  renderPlacements();
+  setStatus("#placementStatus", `Effect applied: ${mode.toUpperCase()} on ${placement.audioName || 'selected clip'}.`);
+}
+
+function setupStickyWorkbench() {
+  const stickyBar = qs("#stickyEditorBar");
+  const stickyGigBar = qs("#stickyGigBar");
+  const board = qs(".motherboard-card");
+  const timeline = qs("#timelineTracks");
+  const undoPanel = qs("#undoHistory");
+  const gigShell = qs("#gigEditorShell");
+  const updateStickyState = () => {
+    const boardRect = board?.getBoundingClientRect();
+    const timelineRect = timeline?.getBoundingClientRect();
+    const undoRect = undoPanel?.getBoundingClientRect();
+    const lowerBound = undoRect ? undoRect.bottom : Number.MAX_SAFE_INTEGER;
+    const active = Boolean(boardRect && timelineRect && boardRect.top < 120 && timelineRect.bottom > 180 && lowerBound > 140);
+    stickyEditorVisible = active;
+    if (stickyBar) stickyBar.hidden = !active;
+    const gigActive = Boolean(document.querySelector('.studio-page')?.classList.contains('gig-active') && gigShell && !gigShell.hidden && gigShell.getBoundingClientRect().bottom > 180 && gigShell.getBoundingClientRect().top < window.innerHeight - 120);
+    stickyGigVisible = gigActive;
+    if (stickyGigBar) stickyGigBar.hidden = !gigActive;
+    document.querySelector('.studio-page')?.classList.toggle('sticky-editor-live', active || gigActive);
+  };
+
+  qsa('[data-sticky-transport]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const cmd = btn.getAttribute('data-sticky-transport');
+      if (cmd === 'back') {
+        undoLastAction();
+        return;
+      }
+      if (cmd === 'stop') {
+        await stopRecording();
+        window.__studioRadio?.stop?.();
+        setStatus('#transportStatus', 'Stopped current recording and default player.');
+        return;
+      }
+      if (cmd === 'play') window.__studioRadio?.play?.();
+      if (cmd === 'next') window.__studioRadio?.next?.();
+      if (cmd === 'rewind') window.__studioRadio?.prev?.();
+      setStatus('#transportStatus', `Transport: ${String(cmd || '').toUpperCase()} ready near the motherboard.`);
+    });
+  });
+  qs('[data-sticky-record]')?.addEventListener('click', async () => {
+    if (isRecording) await stopRecording();
+    else await startRecording();
+  });
+  qs('#stickyImportBtn')?.addEventListener('click', () => qs('#placementAudioUpload')?.click());
+  qs('#stickyInstrumentBtn')?.addEventListener('click', () => qs('#createInstrumentPlacementBtn')?.click());
+  qs('#stickyUndoBtn')?.addEventListener('click', () => undoLastAction());
+  qs('#stickyDeleteBtn')?.addEventListener('click', () => {
+    const id = Number(qs('#placementSelect')?.value || selectedPlacementId || 0);
+    if (id) removePlacement(id);
+  });
+  qs('#stickyFxBtn')?.addEventListener('click', applyFxToSelection);
+  qs('#stickyZoomInBtn')?.addEventListener('click', () => setTimelineZoom(0.25));
+  qs('#stickyZoomOutBtn')?.addEventListener('click', () => setTimelineZoom(-0.25));
+  qs('#stickyTrimLeftBtn')?.addEventListener('click', () => trimSelectedPlacement('left'));
+  qs('#stickyTrimRightBtn')?.addEventListener('click', () => trimSelectedPlacement('right'));
+  qs('#stickyBoardBtn')?.addEventListener('click', () => qs('#fxBoardStatus')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+
+  const gigButtonMap = {
+    cut: '#gigCutBtn',
+    highlight: '#gigHighlightBtn',
+    erase: '#gigEraseBtn',
+    effect: '#gigEffectBtn',
+    speed: '#gigSpeedBtn',
+    play: '[data-sticky-transport="play"]',
+    stop: '[data-sticky-transport="stop"]',
+    record: '[data-sticky-record]',
+    slow: '#gigSlowBtn',
+    panorama: '#gigPanoramaBtn',
+    drone: '#gigDroneBtn',
+    'zoom-in': '#gigZoomInBtn',
+    'zoom-out': '#gigZoomOutBtn',
+    reactive: '#gigReactiveBtn'
+  };
+  qsa('[data-gig-main],[data-gig-live]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-gig-main') || btn.getAttribute('data-gig-live');
+      const target = qs(gigButtonMap[key]);
+      target?.click();
+    });
+  });
+
+  document.addEventListener('keydown', (event) => {
+    const targetTag = event.target?.tagName || '';
+    if (['INPUT','TEXTAREA','SELECT'].includes(targetTag)) return;
+    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedPlacementId) {
+      event.preventDefault();
+      removePlacement(selectedPlacementId);
+    }
+  });
+
+  window.addEventListener('scroll', updateStickyState, { passive: true });
+  window.addEventListener('resize', updateStickyState);
+  updateStickyState();
+}
 function setupUtilityButtons() {
   qs("#studioSettingsLocalBtn")?.addEventListener("click", () => qs("#motherboardStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioBlogLocalBtn")?.addEventListener("click", () => qs("#lyricsInput")?.scrollIntoView({ behavior: "smooth", block: "center" }));
@@ -1152,6 +1313,14 @@ window.addEventListener("message", (event) => {
     window.__studioRadio?.stop?.();
   }
 });
+
+
+
+
+
+
+
+
 
 
 

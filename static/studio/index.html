@@ -30,6 +30,47 @@
       <button id="studioThemeLocalBtn">Theme Color</button>
     </div>
 
+    <div class="sticky-editor-bar" id="stickyEditorBar" hidden>
+      <div class="sticky-editor-group">
+        <button type="button" data-sticky-transport="rewind">Rewind</button>
+        <button type="button" data-sticky-transport="back">Back</button>
+        <button type="button" data-sticky-transport="play">Play</button>
+        <button type="button" data-sticky-transport="stop">Stop</button>
+        <button type="button" data-sticky-record>Record</button>
+        <button type="button" data-sticky-transport="forward">Forward</button>
+        <button type="button" data-sticky-transport="next">Next</button>
+      </div>
+      <div class="sticky-editor-group">
+        <button type="button" id="stickyImportBtn">Add MP3 File</button>
+        <button type="button" id="stickyInstrumentBtn">Add Instrument Placement</button>
+        <button type="button" id="stickyUndoBtn">Undo</button>
+        <button type="button" id="stickyDeleteBtn">Delete</button>
+        <button type="button" id="stickyFxBtn">FX Effects Hook Up</button>`r`n        <button type="button" id="stickyZoomInBtn">Zoom In</button>`r`n        <button type="button" id="stickyZoomOutBtn">Zoom Out</button>`r`n        <button type="button" id="stickyTrimLeftBtn">Cut Left</button>`r`n        <button type="button" id="stickyTrimRightBtn">Cut Right</button>
+        <button type="button" id="stickyBoardBtn">FX Board</button>
+      </div>
+    </div>
+
+    <div class="sticky-editor-bar sticky-gig-bar" id="stickyGigBar" hidden>
+      <div class="sticky-editor-group">
+        <button type="button" data-gig-main="cut">Cut</button>
+        <button type="button" data-gig-main="highlight">Highlight</button>
+        <button type="button" data-gig-main="erase">Erase</button>
+        <button type="button" data-gig-main="effect">Effect Add</button>
+        <button type="button" data-gig-main="speed">Speed</button>
+        <button type="button" data-gig-main="play">Play</button>
+        <button type="button" data-gig-main="stop">Stop</button>
+        <button type="button" data-gig-main="record">Record</button>
+      </div>
+      <div class="sticky-editor-group">
+        <button type="button" data-gig-live="slow">Slow Down</button>
+        <button type="button" data-gig-live="panorama">Panorama</button>
+        <button type="button" data-gig-live="drone">4K Drone</button>
+        <button type="button" data-gig-live="zoom-in">Zoom In</button>
+        <button type="button" data-gig-live="zoom-out">Zoom Out</button>
+        <button type="button" data-gig-live="reactive">Reactive Camera</button>
+      </div>
+    </div>
+
     <section class="studio-grid">
       <article class="card wide motherboard-card">
         <div class="motherboard-head">
@@ -242,18 +283,7 @@
       </article>
 
       <article class="card wide">
-        <h2>Timeline + Wave Placement</h2>
-        <div class="controls transport-controls timeline-transport">
-          <button data-transport="rewind">Rewind</button>
-          <button data-transport="back">Back</button>
-          <button data-transport="play">Play</button>
-          <button data-transport="stop">Stop</button>
-          <button data-transport="forward">Forward</button>
-          <button data-transport="next">Next</button>
-          <button data-transport="loop">Loop</button>
-          <button data-transport="once">Play Once</button>
-        </div>
-        <div class="row timeline-placement-row">
+        <h2>Timeline + Wave Placement</h2><div class="row timeline-placement-row">
           <label>Time (s)
             <input type="number" id="timelinePlacementTime" min="0" step="0.1" value="12.0">
           </label>
@@ -277,13 +307,7 @@
         </div>
         <div id="timelineClipBank" class="timeline-clip-bank">
           <button class="clip-chip empty" type="button">Import a track to begin</button>
-        </div>
-        <div class="timeline-lane-actions">
-          <button id="addMp3LaneBtn">Add MP3 Lane</button>
-          <button id="addRecordedLaneBtn">Add Recorded Lane</button>
-          <button id="addInstrumentLaneBtn">Add Instrument Lane</button>
-        </div>
-        <div class="row">
+        </div><div class="row">
           <select id="placementSelect"></select>
           <button id="attachAudioToPlacementBtn">Place On Motherboard</button>
           <button id="deletePlacementBtn">Delete Selected</button>
@@ -385,6 +409,9 @@
   <script src="/static/studio/studio.js?v=20260323j"></script>
 </body>
 </html>
+
+
+
 
 
 
