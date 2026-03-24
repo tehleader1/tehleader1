@@ -3125,9 +3125,9 @@ function setupLiveArena(){
   function updateRefBot(){
     const mode = modeSel?.value || "solo"
     if(mode === "solo"){
-      if(botStatus) botStatus.textContent = "Signal Bot watches solo motion for glitches and stays light until more people naturally link up."
+      if(botStatus) botStatus.textContent = "Signal Bot watches personal routes for glitches and stays light until more people naturally link up."
     } else {
-      if(botStatus) botStatus.textContent = `Signal Bot watches ${mode} motion for technical trouble and can help pause things if active people naturally link up and request it.`
+      if(botStatus) botStatus.textContent = `Signal Bot watches ${mode} routes for technical trouble and can help pause things if active people naturally link up and request it.`
     }
   }
   function ensureSponsorTag(){
@@ -3242,7 +3242,7 @@ function setupLiveArena(){
   if(postBtn){
     postBtn.addEventListener("click", ()=>{
       const post = qs("#postInput")
-      if(post) post.value = `LIVE SUPPORT RD · ${modeSel?.selectedOptions?.[0]?.textContent || "Solo Motion"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
+      if(post) post.value = `LIVE SUPPORT RD · ${modeSel?.selectedOptions?.[0]?.textContent || "Personal Route"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
       flashCamera()
       openMiniWindow("Post Blast", "Laser post effect fired. Live post staged for checked social channels.")
     })
