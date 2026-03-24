@@ -20,7 +20,9 @@
         <button id="backMainBtn">Back To Main Console</button>
       </div>
     </header>
+
     <button id="studioJakeOrb" class="studio-jake-orb" title="Pro Jake"></button>
+
     <div class="studio-utility-bar">
       <button id="studioSettingsLocalBtn">Settings</button>
       <button id="studioBlogLocalBtn">Blog</button>
@@ -28,6 +30,18 @@
       <button id="studioProfileLocalBtn">Profile</button>
       <button id="studioGigLocalBtn">Gig 4K Record</button>
       <button id="studioThemeLocalBtn">Theme Color</button>
+    </div>
+
+    <div class="studio-main-bar">
+      <button id="studioMainMenuBtn">Main</button>
+      <button id="studioMainSaveBtn">Save Files</button>
+      <button id="studioMainExportBtn">Export Files</button>
+      <button id="studioMainUndoBtn">General Undo</button>
+      <button id="studioMainSettingsBtn">Settings</button>
+      <button id="studioMainInstrumentBtn">Instruments</button>
+      <button id="studioMainFxBtn">FX Board</button>
+      <button id="studioMainVideoBtn">Video Settings</button>
+      <button id="studioMainDroneBtn">4K Drone Hookup</button>
     </div>
 
     <div class="sticky-editor-bar" id="stickyEditorBar" hidden>
@@ -43,9 +57,15 @@
       <div class="sticky-editor-group">
         <button type="button" id="stickyImportBtn">Add MP3 File</button>
         <button type="button" id="stickyInstrumentBtn">Add Instrument Placement</button>
+        <button type="button" id="stickyNewBoardBtn">New Motherboard</button>
+        <button type="button" id="stickySelectedBoardBtn">Selected Motherboard</button>
         <button type="button" id="stickyUndoBtn">Undo</button>
         <button type="button" id="stickyDeleteBtn">Delete</button>
-        <button type="button" id="stickyFxBtn">FX Effects Hook Up</button>`r`n        <button type="button" id="stickyZoomInBtn">Zoom In</button>`r`n        <button type="button" id="stickyZoomOutBtn">Zoom Out</button>`r`n        <button type="button" id="stickyTrimLeftBtn">Cut Left</button>`r`n        <button type="button" id="stickyTrimRightBtn">Cut Right</button>
+        <button type="button" id="stickyFxBtn">FX Effects Hook Up</button>
+        <button type="button" id="stickyZoomInBtn">Zoom In</button>
+        <button type="button" id="stickyZoomOutBtn">Zoom Out</button>
+        <button type="button" id="stickyTrimLeftBtn">Cut Left</button>
+        <button type="button" id="stickyTrimRightBtn">Cut Right</button>
         <button type="button" id="stickyBoardBtn">FX Board</button>
       </div>
     </div>
@@ -57,6 +77,7 @@
         <button type="button" data-gig-main="erase">Erase</button>
         <button type="button" data-gig-main="effect">Effect Add</button>
         <button type="button" data-gig-main="speed">Speed</button>
+        <button type="button" data-gig-main="off">Turn Off 4K</button>
         <button type="button" data-gig-main="play">Play</button>
         <button type="button" data-gig-main="stop">Stop</button>
         <button type="button" data-gig-main="record">Record</button>
@@ -72,64 +93,14 @@
     </div>
 
     <section class="studio-grid">
-      <article class="card wide motherboard-card">
-        <div class="motherboard-head">
-          <div>
-            <h2>Main Motherboard</h2>
-            <p class="status">The FX Board is the brain. Sound lanes, dB, undo, import, export, and live recording stay connected here.</p>
-          </div>
-          <div class="motherboard-actions">
-            <button id="undoStudioBtn">Undo</button>
-            <button id="saveBoardBtn">Save Board</button>
-            <button id="exportBoardBtn">Export</button>
-          </div>
-        </div>
-        <div class="motherboard-grid">
-          <label>dB Quick Access
-            <input type="range" id="dbQuick" min="-24" max="24" value="0" step="1">
-          </label>
-          <label>FX Start Preset
-            <select id="fxPreset">
-              <option value="normal">Normal</option>
-              <option value="echo-bright">Echo Bright</option>
-              <option value="repeat-deep">Repeat Deep</option>
-              <option value="reverse-space">Reverse Space</option>
-            </select>
-          </label>
-          <label>Quick Hide Boards
-            <select id="boardCollapseMode">
-              <option value="3">Show 3 Boards</option>
-              <option value="5">Show 5 Boards</option>
-              <option value="all">Show All Boards</option>
-            </select>
-          </label>
-          <label>Sound Profile
-            <select id="soundProfile">
-              <option value="normal">Normal</option>
-              <option value="podcast">Podcast</option>
-              <option value="gig">Gig Session</option>
-              <option value="instrument">Instrument Focus</option>
-            </select>
-          </label>
-        </div>
-        <div class="motherboard-plus-row">
-          <button id="addMotherboardBtn">+ Motherboard</button>
-          <button id="createBlankMotherboardBtn">New Blank Motherboard</button>
-          <button id="deleteMotherboardBtn">Delete Last Motherboard</button>
-          <button id="restoreDeletedBtn">Restore Previous</button>
-          <button id="toggleBoardMenuBtn">Collapse / Reopen Boards</button>
-        </div>
-        <div class="status" id="motherboardStatus">dB is centered at 0. Use Undo to reverse board, clip, and lane changes quickly.</div>
-      </article>
-
-      <article class="card">
+      <article class="card studio-hero-card">
         <h2>Gig Session Connector</h2>
         <div class="row">
           <button id="gigRecordBtn">Gig 4K Record</button>
-          <button id="gigConnectorBtn">Gig Session Connector</button>
+          <button id="gigConnectorBtn">Open Gig Connector</button>
           <button id="cameraAccessBtn">Camera Access</button>
         </div>
-        <div class="fx-grid">
+        <div class="fx-grid compact-settings">
           <label>Video Effect
             <select id="gigVideoEffect">
               <option value="normal">Normal</option>
@@ -145,124 +116,19 @@
         <div class="status" id="gigStatus">Gig session ready. Recordings save into the board and can later connect to video layout.</div>
       </article>
 
-      <article class="card">
-        <h2>Profile Panel</h2>
-        <div class="profile-mini">
-          <div class="profile-avatar">SR</div>
-          <div>
-            <div class="profile-name">SupportRD Creator Profile</div>
-            <div class="status" id="profileMiniPost">General post active. New work of art can publish here.</div>
+      <article class="card profile-launch-card">
+        <button id="openProfilePanelBtn" class="profile-launch-button" type="button">
+          <div class="profile-mini">
+            <div class="profile-avatar">SR</div>
+            <div>
+              <div class="profile-name">SupportRD Creator Profile</div>
+              <div class="status" id="profileMiniPost">Profile button with picture, email, and username opens front and center.</div>
+            </div>
           </div>
-        </div>
-        <div class="profile-stats" id="profileStats"></div>
+        </button>
       </article>
 
-      <article class="card">
-        <h2>Transport</h2>
-        <div class="transport-inline">
-        <div class="placement-inline">
-          <label>Time (s)
-            <input type="number" id="placementTime" min="0" step="0.1" value="12.0">
-          </label>
-          <label>Wave
-            <select id="placementWave">
-              <option value="echo">Echo</option>
-              <option value="reverb">Reverb</option>
-              <option value="delay">Delay</option>
-              <option value="chop">Chop</option>
-            </select>
-          </label>
-        </div>
-        </div>
-        <div class="row">
-          <button id="recordMainBtn" class="record-main-btn" aria-label="Record">
-            <span class="record-dot"></span>Record
-          </button>
-        </div>
-        <div class="status" id="transportStatus">Use the timeline controls below for rewind, back, play, forward, next, loop, and placement work.</div>
-      </article>
-
-      <article class="card">
-        <h2>FX Rack</h2>
-        <div class="fx-grid">
-          <label>Reverb <input type="range" id="fxReverb" min="0" max="100" value="25"></label>
-          <label>Echo <input type="range" id="fxEcho" min="0" max="100" value="30"></label>
-          <label>Bass <input type="range" id="fxBass" min="0" max="100" value="40"></label>
-          <label>Slow <input type="range" id="fxSlow" min="0" max="100" value="0"></label>
-          <label>Speed <input type="range" id="fxSpeed" min="0" max="100" value="0"></label>
-          <label>Voice Rewind <input type="range" id="fxRewind" min="0" max="100" value="0"></label>
-        </div>
-        <div class="status" id="fxStatus">FX panel online.</div>
-      </article>
-
-      <article class="card">
-        <h2>FX Board Hookup</h2>
-        <div class="fx-grid">
-          <label>Board Power
-            <select id="fxBoardPower">
-              <option value="on">On</option>
-              <option value="standby">Standby</option>
-              <option value="off">Off</option>
-            </select>
-          </label>
-          <label>Input Bus
-            <select id="fxBoardInput">
-              <option value="mic-a">Mic A</option>
-              <option value="mic-b">Mic B</option>
-              <option value="line-in">Line In</option>
-            </select>
-          </label>
-          <label>Master Glue %
-            <input type="range" id="fxBoardGlue" min="0" max="100" value="46">
-          </label>
-        </div>
-        <div class="board-meter"><span id="fxBoardMeter"></span></div>
-        <div class="status" id="fxBoardStatus">FX board online · ready for live routing.</div>
-      </article>
-
-      <article class="card">
-        <h2>Extensions</h2>
-        <ul id="extList" class="result-list">
-          <li>Loading extensions...</li>
-        </ul>
-        <div class="status">Pro Jake Studio URL: <strong>/studioaria</strong></div>
-      </article>
-
-      <article class="card">
-        <h2>Mix Export</h2>
-        <div class="row">
-          <button id="buildMixBtn">Build Full Mix</button>
-          <button id="exportMixBtn">Export WAV</button>
-          <button id="exportFullMp3Btn">Export Full MP3</button>
-          <button id="exportSessionStateBtn">Export Session</button>
-        </div>
-        <div class="status" id="mixExportStatus">Ready to build from placements with attached MP3/M4A.</div>
-      </article>
-
-      <article class="card">
-        <h2>Recent Saved Files</h2>
-        <div class="row">
-          <select id="recentSessionSelect"></select>
-          <button id="loadRecentSessionBtn">Load Saved</button>
-          <button id="replaceRecentSessionBtn">Replace Current</button>
-          <button id="exportRecentSessionBtn">Export Saved</button>
-        </div>
-        <div class="status" id="recentSessionStatus">Save a motherboard session to see recent files here.</div>
-      </article>
-
-      <article class="card">
-        <h2>In the Booth Radio</h2>
-        <div class="row">
-          <button id="studioRadioPrev">Prev</button>
-          <button id="studioRadioPlay">Play</button>
-          <button id="studioRadioStop">Stop</button>
-          <button id="studioRadioNext">Next</button>
-        </div>
-        <div class="status" id="studioRadioTrack">Track: Clout - AgentAnthony.wav</div>
-        <div class="status" id="studioRadioStatus">Ready.</div>
-      </article>
-
-      <article class="card wide">
+      <article class="card wide math-card">
         <h2>Recording Seconds Math (Exclusive)</h2>
         <p class="status">Formula: <strong>seconds = sampleIndex / sampleRate</strong> and <strong>samples = sampleRate x seconds</strong>.</p>
         <div class="fx-grid">
@@ -282,8 +148,84 @@
         <div class="status" id="mathOutput">Calculating...</div>
       </article>
 
-      <article class="card wide">
-        <h2>Timeline + Wave Placement</h2><div class="row timeline-placement-row">
+      <article class="card wide board-stage-card">
+        <div class="stage-head">
+          <div>
+            <h2>Motherboard Stack</h2>
+            <div class="status" id="motherboardStatus">Choose a motherboard, import or record sound, then trim, drag, zoom, and build the track.</div>
+          </div>
+          <div class="stage-board-controls">
+            <button id="addMotherboardBtn">+ Motherboard</button>
+            <button id="createBlankMotherboardBtn">New Blank Motherboard</button>
+            <button id="deleteMotherboardBtn">Delete Last Motherboard</button>
+            <button id="restoreDeletedBtn">Restore Previous</button>
+            <button id="toggleBoardMenuBtn">Collapse / Reopen Boards</button>
+          </div>
+        </div>
+
+        <div class="motherboard-grid compact-settings">
+          <label>dB Quick Access
+            <input type="range" id="dbQuick" min="-24" max="24" value="0" step="1">
+          </label>
+          <label>FX Start Preset
+            <select id="fxPreset">
+              <option value="normal">Normal</option>
+              <option value="echo-bright">Echo Bright</option>
+              <option value="repeat-deep">Repeat Deep</option>
+              <option value="reverse-space">Reverse Space</option>
+            </select>
+          </label>
+          <label>Quick Hide Boards
+            <select id="boardCollapseMode">
+              <option value="4">Show 4 Boards</option>
+              <option value="5">Show 5 Boards</option>
+              <option value="all">Show All Boards</option>
+            </select>
+          </label>
+          <label>Sound Profile
+            <select id="soundProfile">
+              <option value="normal">Normal</option>
+              <option value="podcast">Podcast</option>
+              <option value="gig">Gig Session</option>
+              <option value="instrument">Instrument Focus</option>
+            </select>
+          </label>
+          <label>Microphone
+            <select id="micSourceSelect">
+              <option value="default">Default Mic</option>
+              <option value="usb">USB Mic</option>
+              <option value="wireless">Wireless Mic</option>
+            </select>
+          </label>
+          <label>Video Type
+            <select id="videoTypeSelect">
+              <option value="mp4">MP4</option>
+              <option value="m4a">M4A</option>
+            </select>
+          </label>
+          <label>Board Power
+            <select id="fxBoardPower">
+              <option value="on">On</option>
+              <option value="standby">Standby</option>
+              <option value="off">Off</option>
+            </select>
+          </label>
+          <label>Input Bus
+            <select id="fxBoardInput">
+              <option value="mic-a">Mic A</option>
+              <option value="mic-b">Mic B</option>
+              <option value="line-in">Line In</option>
+            </select>
+          </label>
+          <label>Master Glue %
+            <input type="range" id="fxBoardGlue" min="0" max="100" value="46">
+          </label>
+          <label>Reverb <input type="range" id="fxReverb" min="0" max="100" value="25"></label>
+          <label>Echo <input type="range" id="fxEcho" min="0" max="100" value="30"></label>
+          <label>Bass <input type="range" id="fxBass" min="0" max="100" value="40"></label>
+          <label>Slow <input type="range" id="fxSlow" min="0" max="100" value="0"></label>
+          <label>Speed <input type="range" id="fxSpeed" min="0" max="100" value="0"></label>
+          <label>Voice Rewind <input type="range" id="fxRewind" min="0" max="100" value="0"></label>
           <label>Time (s)
             <input type="number" id="timelinePlacementTime" min="0" step="0.1" value="12.0">
           </label>
@@ -298,19 +240,30 @@
           <label class="timeline-import-label">Import MP3 / M4A
             <input type="file" id="placementAudioUpload" accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/*">
           </label>
+        </div>
+
+        <div class="board-hidden-actions">
+          <select id="placementSelect"></select>
+          <button id="attachAudioToPlacementBtn">Place On Motherboard</button>
+          <button id="deletePlacementBtn">Delete Selected</button>
           <button id="createPlacementBtn">Add New Placement</button>
           <button id="createMp3PlacementBtn">Add MP3 Placement</button>
           <button id="createRecordedPlacementBtn">Add Recorded Placement</button>
           <button id="createInstrumentPlacementBtn">Add Instrument Placement</button>
           <button id="deleteLastPlacementBtn">Delete Last</button>
           <button id="timelineRecordBtn" class="record-main-btn"><span class="record-dot"></span>Record</button>
+          <button id="recordMainBtn" class="record-main-btn"><span class="record-dot"></span>Record</button>
         </div>
+
+        <div class="board-meter"><span id="fxBoardMeter"></span></div>
+        <div class="status" id="fxBoardStatus">FX board online · ready for live routing.</div>
+        <div class="status" id="transportStatus">Sticky controls will take over when you enter the motherboard zone.</div>
+        <div class="status" id="fxStatus">FX panel online.</div>
+        <div class="status" id="mixExportStatus">Ready to build from placements with attached MP3/M4A.</div>
+        <div class="status" id="recentSessionStatus">Save a motherboard session to see recent files here.</div>
+
         <div id="timelineClipBank" class="timeline-clip-bank">
           <button class="clip-chip empty" type="button">Import a track to begin</button>
-        </div><div class="row">
-          <select id="placementSelect"></select>
-          <button id="attachAudioToPlacementBtn">Place On Motherboard</button>
-          <button id="deletePlacementBtn">Delete Selected</button>
         </div>
         <div id="timelineTracks" class="timeline-tracks"></div>
         <details class="recent-boards" id="recentBoardsWrap">
@@ -329,8 +282,15 @@
           <button id="closeGigEditorBtn" class="ghost giga-close-btn">X</button>
         </div>
         <div class="gig-editor-grid">
+          <section class="gig-panel preview">
+            <h3>Live Watch</h3>
+            <div class="gig-preview-window" id="gigPreviewWindow">
+              <div class="gig-preview-glow"></div>
+              <div class="gig-preview-copy">Live session preview will appear here with your active motherboards and video stream.</div>
+            </div>
+          </section>
           <section class="gig-panel">
-            <h3>Video Edit</h3>
+            <h3>Main Edit View</h3>
             <div class="row gig-edit-tools">
               <button id="gigCutBtn">Cut</button>
               <button id="gigHighlightBtn">Highlight</button>
@@ -352,45 +312,27 @@
               <div class="profile-stat"><strong id="gigAudioStat">Stereo</strong>Audio</div>
               <div class="profile-stat"><strong id="gigFrameStat">60 fps</strong>Frame Rate</div>
               <div class="profile-stat"><strong id="gigQualityStat">4K</strong>Quality</div>
-              <div class="profile-stat"><strong id="gigBoardStat">3</strong>Motherboards Linked</div>
-            </div>
-          </section>
-          <section class="gig-panel preview">
-            <h3>Live Watch</h3>
-            <div class="gig-preview-window" id="gigPreviewWindow">
-              <div class="gig-preview-glow"></div>
-              <div class="gig-preview-copy">Live session preview will appear here with your active motherboards and video stream.</div>
+              <div class="profile-stat"><strong id="gigBoardStat">4</strong>Motherboards Linked</div>
             </div>
           </section>
         </div>
       </article>
 
-      <article class="card">
-        <h2>Lyrics Safe</h2>
+      <article class="card wide studio-guidance-card">
+        <div class="guidance-head">
+          <div>
+            <h2>Lyrics Safe + Featured Bots</h2>
+            <div class="status" id="lyricsStatus">No session saved yet.</div>
+          </div>
+          <div class="row">
+            <button id="visualGuideBotBtn">Visual Bot</button>
+            <button id="settingsGuideBotBtn">Settings Bot</button>
+            <button id="closeGuideBotBtn" class="ghost">X</button>
+          </div>
+        </div>
         <textarea id="lyricsInput" placeholder="Write your bars here. Autosave is on."></textarea>
-        <div class="row">
-          <button id="saveSessionBtn">Save Session</button>
-          <button id="loadSessionBtn">Load Session</button>
-        </div>
-        <div class="status" id="lyricsStatus">No session saved yet.</div>
-      </article>
-
-      <article class="card">
-        <h2>2026 AI Echo Placement</h2>
         <textarea id="echoTranscript" placeholder="Paste a verse or hook for AI echo placement suggestions."></textarea>
-        <div class="row">
-          <button id="runEchoPlacementBtn">Run Echo Placement 2026</button>
-        </div>
         <ul id="echoResults" class="result-list"></ul>
-      </article>
-
-      <article class="card">
-        <h2>Bots</h2>
-        <div class="row">
-          <button id="editBotBtn">Edit Bot</button>
-          <button id="techBotBtn">Technical Bot</button>
-        </div>
-        <div class="status" id="botStatus">Bot lane ready.</div>
       </article>
 
       <article class="card wide">
@@ -398,6 +340,33 @@
         <div class="undo-history" id="undoHistory">No previous board changes yet.</div>
       </article>
     </section>
+
+    <section class="studio-profile-overlay" id="studioProfileOverlay" hidden>
+      <div class="studio-profile-modal">
+        <button id="closeProfilePanelBtn" class="ghost profile-close-btn">X</button>
+        <div class="profile-mini overlay">
+          <div class="profile-avatar">SR</div>
+          <div>
+            <div class="profile-name">SupportRD Creator Profile</div>
+            <div class="status">support@example.com · @supportrdcreator</div>
+          </div>
+        </div>
+        <textarea id="profileStatusPost" placeholder="Post a quick feed status for your studio profile."></textarea>
+        <div class="row">
+          <button id="saveProfileStatusBtn">Save Feed Status</button>
+        </div>
+        <div class="profile-stats" id="profileStats"></div>
+      </div>
+    </section>
+
+    <section class="studio-guide-overlay" id="studioGuideOverlay" hidden>
+      <div class="studio-guide-modal">
+        <button id="closeGuideOverlayBtn" class="ghost profile-close-btn">X</button>
+        <h2 id="guideOverlayTitle">Studio Guide</h2>
+        <div class="status" id="guideOverlayStatus">We will scroll you through the studio options fast.</div>
+      </div>
+    </section>
+
     <footer class="studio-footer">
       <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
       <a href="https://supportrd.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy</a>
@@ -409,18 +378,3 @@
   <script src="/static/studio/studio.js?v=20260323j"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

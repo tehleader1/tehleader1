@@ -103,6 +103,24 @@ textarea{min-height:120px;resize:vertical}
 }
 .studio-utility-bar{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .studio-utility-bar button{background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(147,176,220,.12));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.studio-main-bar{
+  position:sticky;
+  top:10px;
+  z-index:32;
+  display:flex;
+  justify-content:flex-start;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:0 0 14px;
+  padding:10px 12px;
+  border-radius:18px;
+  border:1px solid rgba(132,180,247,.2);
+  background:rgba(7,13,22,.72);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  box-shadow:0 14px 28px rgba(0,0,0,.22);
+}
+.studio-main-bar button{background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(104,135,188,.18))}
 .studio-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .card{
   background:linear-gradient(180deg,rgba(18,29,47,.88),rgba(8,14,24,.88));
@@ -117,6 +135,55 @@ textarea{min-height:120px;resize:vertical}
 }
 .card::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.05),transparent 35%,transparent 65%,rgba(112,184,255,.04));pointer-events:none}
 .card.wide{grid-column:1/-1}
+.studio-hero-card,
+.profile-launch-card,
+.math-card,
+.board-stage-card,
+.studio-guidance-card{scroll-margin-top:190px}
+.profile-launch-button{
+  width:100%;
+  display:block;
+  padding:0;
+  background:transparent;
+  border:none;
+  text-align:left;
+}
+.profile-mini.overlay{margin-bottom:14px}
+.stage-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.stage-board-controls{display:none}
+.compact-settings{
+  margin-bottom:14px;
+}
+.board-stage-card{
+  overflow:visible;
+}
+.board-hidden-actions{
+  display:none;
+}
+.timeline-track.selected-track{
+  border-color:rgba(113,199,255,.62);
+  box-shadow:0 0 0 1px rgba(113,199,255,.32), 0 24px 36px rgba(0,0,0,.22);
+}
+.timeline-track-title-button{
+  border:none;
+  background:transparent;
+  padding:0;
+  color:#dce9ff;
+  font-weight:700;
+  letter-spacing:.04em;
+  cursor:pointer;
+}
+.timeline-track.selected-track .timeline-track-title-button{
+  color:#9ad9ff;
+  text-shadow:0 0 14px rgba(113,199,255,.34);
+}
 .motherboard-card{padding:18px 18px 16px}
 .motherboard-head,.timeline-topline,.profile-mini,.timeline-track-head,.timeline-top-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .motherboard-head h2,.card h2{margin:0 0 8px;font-size:18px}
@@ -216,10 +283,10 @@ textarea{min-height:120px;resize:vertical}
 #recentSessionSelect{min-width:240px}
 .sticky-editor-bar{
   position:fixed;
-  left:50%;
-  transform:translateX(-50%);
+  left:18px;
+  right:18px;
   top:78px;
-  width:min(1220px,calc(100vw - 28px));
+  width:auto;
   z-index:48;
   display:flex;
   flex-wrap:wrap;
@@ -237,7 +304,7 @@ textarea{min-height:120px;resize:vertical}
 .sticky-editor-group{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sticky-editor-bar button{padding:9px 12px}
 .sticky-gig-bar{top:144px}
-.studio-page.sticky-editor-live .motherboard-card,
+.studio-page.sticky-editor-live .board-stage-card,
 .studio-page.sticky-editor-live #gigEditorShell{scroll-margin-top:170px}
 @media (max-width:720px){
   .sticky-editor-bar{top:66px;width:calc(100vw - 18px);padding:8px}
@@ -246,3 +313,41 @@ textarea{min-height:120px;resize:vertical}
 }
 .timeline-track-lane{position:relative;min-height:118px;min-width:100%;}
 .timeline-track-body.drag-over{box-shadow:inset 0 0 0 2px rgba(113,199,255,.65)}
+.studio-profile-overlay,
+.studio-guide-overlay{
+  position:fixed;
+  inset:0;
+  z-index:70;
+  display:grid;
+  place-items:center;
+  padding:22px;
+  background:rgba(4,10,17,.66);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.studio-profile-modal,
+.studio-guide-modal{
+  width:min(760px,100%);
+  border-radius:24px;
+  border:1px solid rgba(132,180,247,.22);
+  background:linear-gradient(180deg,rgba(18,29,47,.94),rgba(8,14,24,.94));
+  box-shadow:0 26px 48px rgba(0,0,0,.34);
+  padding:22px;
+  position:relative;
+}
+.profile-close-btn{
+  position:absolute;
+  top:16px;
+  right:16px;
+}
+.guidance-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.profile-open{
+  overflow:hidden;
+}

@@ -7,7 +7,8 @@ let placementAudioFiles = [];
 let trackState = [
   { id: "mp3-1", type: "mp3", title: "Motherboard 1" },
   { id: "recorded-1", type: "recorded", title: "Motherboard 2" },
-  { id: "instrument-1", type: "instrument", title: "Motherboard 3" }
+  { id: "instrument-1", type: "instrument", title: "Motherboard 3" },
+  { id: "blank-4", type: "blank", title: "Motherboard 4" }
 ];
 let selectedTimelineAudioId = 0;
 let selectedPlacementId = 0;
@@ -31,6 +32,7 @@ const THEMES = ["", "theme-signal", "theme-ember"];
 const timelineDurationSec = 120;
 let timelineZoom = 1;
 let draggedPlacementId = 0;
+let selectedTrackId = "mp3-1";
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -63,7 +65,9 @@ function captureSessionState() {
       url: item.url || ""
     }))),
     selectedTimelineAudioId,
-    selectedPlacementId
+    selectedPlacementId,
+    selectedTrackId,
+    timelineZoom
   };
 }
 
@@ -74,6 +78,8 @@ function applySessionState(snapshot, label = "Session loaded.") {
   placementAudioFiles = deepClone(snapshot.placementAudioFiles || []);
   selectedTimelineAudioId = snapshot.selectedTimelineAudioId || 0;
   selectedPlacementId = snapshot.selectedPlacementId || 0;
+  selectedTrackId = snapshot.selectedTrackId || trackState[0]?.id || "mp3-1";
+  timelineZoom = Number(snapshot.timelineZoom || 1);
   if (qs("#lyricsInput")) qs("#lyricsInput").value = snapshot.lyrics || "";
   if (qs("#fxReverb")) qs("#fxReverb").value = String(snapshot.fx?.reverb ?? 25);
   if (qs("#fxEcho")) qs("#fxEcho").value = String(snapshot.fx?.echo ?? 30);
@@ -351,11 +357,12 @@ function renderPlacements() {
   const wrap = qs("#timelineTracks");
   const select = qs("#placementSelect");
   if (!wrap) return;
-  const collapseMode = qs("#boardCollapseMode")?.value || "3";
+  const collapseMode = qs("#boardCollapseMode")?.value || "4";
   const visibleCount = collapseMode === "all" ? Number.MAX_SAFE_INTEGER : Math.max(1, Number(collapseMode));
   const laneWidth = Math.max(100, timelineZoom * 100);
   wrap.innerHTML = trackState.map((track, index) => {
     const hiddenClass = index >= visibleCount ? " hidden-track" : "";
+    const selectedTrackClass = track.id === selectedTrackId ? " selected-track" : "";
     const clips = placements.filter((placement) => placement.trackId === track.id).map((placement) => {
       const left = Math.max(0, Math.min(98, (placement.timeSec / timelineDurationSec) * 100));
       const width = Math.max(26, Math.min(94, ((placement.durationSec || 6) / timelineDurationSec) * 100));
@@ -366,14 +373,22 @@ function renderPlacements() {
         <span class="timeline-clip-label"><span class="clip-name">${placement.audioName || placement.wave}</span><span class="clip-meta">${placement.durationSec.toFixed(1)}s</span></span>
       </button>`;
     }).join("");
-    return `<div class="timeline-track${hiddenClass}" data-track-id="${track.id}">
+    return `<div class="timeline-track${hiddenClass}${selectedTrackClass}" data-track-id="${track.id}">
       <div class="timeline-track-head">
-        <div class="timeline-track-title">${track.title}</div>
+        <button class="timeline-track-title-button" type="button" data-track-select="${track.id}">${track.title}</button>
         <div class="timeline-track-type">Zoom ${timelineZoom.toFixed(2)}x</div>
       </div>
       <div class="timeline-track-body" data-track-drop="${track.id}"><div class="timeline-track-lane" style="width:${laneWidth}%">${clips || '<div class="timeline-empty">This motherboard is ready for clips, live recording, or instruments.</div>'}</div></div>
     </div>`;
   }).join("");
+
+  qsa("#timelineTracks [data-track-select]").forEach((node) => {
+    node.addEventListener("click", () => {
+      selectedTrackId = node.getAttribute("data-track-select") || selectedTrackId;
+      renderPlacements();
+      setStatus("#motherboardStatus", `${node.textContent} selected.`);
+    });
+  });
 
   qsa("#timelineTracks [data-placement-id]").forEach((node) => {
     node.addEventListener("click", () => {
@@ -409,6 +424,7 @@ function renderPlacements() {
       placement.trackId = trackId;
       placement.timeSec = Math.max(0, Math.min(timelineDurationSec, ratio * timelineDurationSec));
       selectedPlacementId = placement.id;
+      selectedTrackId = trackId;
       renderPlacements();
       setStatus("#placementStatus", `Moved ${placement.audioName || 'waveform'} to ${trackId}.`);
     });
@@ -925,8 +941,8 @@ function setupTransport() {
   qs("#addMp3LaneBtn")?.addEventListener("click", () => addTrack("mp3"));
   qs("#addRecordedLaneBtn")?.addEventListener("click", () => addTrack("recorded"));
   qs("#addInstrumentLaneBtn")?.addEventListener("click", () => addTrack("instrument"));
-  qs("#addMotherboardBtn")?.addEventListener("click", () => addTrack("recorded"));
-  qs("#createBlankMotherboardBtn")?.addEventListener("click", () => addTrack("blank"));
+  qs("#addMotherboardBtn")?.addEventListener("click", () => { const track = addTrack("recorded"); selectedTrackId = track.id; renderPlacements(); });
+  qs("#createBlankMotherboardBtn")?.addEventListener("click", () => { const track = addTrack("blank"); selectedTrackId = track.id; renderPlacements(); });
   qs("#deleteMotherboardBtn")?.addEventListener("click", deleteLastMotherboard);
   qs("#attachAudioToPlacementBtn")?.addEventListener("click", () => {
     let placementId = Number(qs("#placementSelect")?.value || selectedPlacementId || 0);
@@ -937,7 +953,7 @@ function setupTransport() {
     }
     let placement = placements.find((item) => item.id === placementId);
     if (!placement) {
-      placement = createPlacement("mp3", { audio, audioName: audio.name, durationSec: audio.durationSec || 8 });
+      placement = createPlacement("mp3", { audio, audioName: audio.name, durationSec: audio.durationSec || 8, trackId: selectedTrackId || undefined });
       placementId = placement.id;
     }
     pushUndoSnapshot(`Attach ${audio.name}`);
@@ -1094,22 +1110,42 @@ function applyFxToSelection() {
 function setupStickyWorkbench() {
   const stickyBar = qs("#stickyEditorBar");
   const stickyGigBar = qs("#stickyGigBar");
-  const board = qs(".motherboard-card");
-  const timeline = qs("#timelineTracks");
+  const boardZone = qs(".board-stage-card");
   const undoPanel = qs("#undoHistory");
   const gigShell = qs("#gigEditorShell");
+  const page = qs(".studio-page");
+  const footer = qs(".studio-footer");
+  const updateSelectedBoardButton = () => {
+    const selected = trackState.find((track) => track.id === selectedTrackId);
+    const btn = qs("#stickySelectedBoardBtn");
+    if (btn) btn.textContent = selected ? `${selected.title} Selected` : "Selected Motherboard";
+  };
   const updateStickyState = () => {
-    const boardRect = board?.getBoundingClientRect();
-    const timelineRect = timeline?.getBoundingClientRect();
+    const boardRect = boardZone?.getBoundingClientRect();
     const undoRect = undoPanel?.getBoundingClientRect();
-    const lowerBound = undoRect ? undoRect.bottom : Number.MAX_SAFE_INTEGER;
-    const active = Boolean(boardRect && timelineRect && boardRect.top < 120 && timelineRect.bottom > 180 && lowerBound > 140);
-    stickyEditorVisible = active;
-    if (stickyBar) stickyBar.hidden = !active;
-    const gigActive = Boolean(document.querySelector('.studio-page')?.classList.contains('gig-active') && gigShell && !gigShell.hidden && gigShell.getBoundingClientRect().bottom > 180 && gigShell.getBoundingClientRect().top < window.innerHeight - 120);
+    const footerRect = footer?.getBoundingClientRect();
+    const inBoardZone = Boolean(
+      boardRect &&
+      boardRect.top < 180 &&
+      boardRect.bottom > 220 &&
+      (!undoRect || undoRect.top > 180) &&
+      (!footerRect || footerRect.top > 160)
+    );
+    stickyEditorVisible = inBoardZone;
+    if (stickyBar) stickyBar.hidden = !inBoardZone;
+    const gigRect = gigShell?.getBoundingClientRect();
+    const gigActive = Boolean(
+      page?.classList.contains("gig-active") &&
+      gigShell &&
+      !gigShell.hidden &&
+      gigRect &&
+      gigRect.top < 220 &&
+      gigRect.bottom > 180
+    );
     stickyGigVisible = gigActive;
     if (stickyGigBar) stickyGigBar.hidden = !gigActive;
-    document.querySelector('.studio-page')?.classList.toggle('sticky-editor-live', active || gigActive);
+    page?.classList.toggle("sticky-editor-live", inBoardZone || gigActive);
+    updateSelectedBoardButton();
   };
 
   qsa('[data-sticky-transport]').forEach((btn) => {
@@ -1136,7 +1172,24 @@ function setupStickyWorkbench() {
     else await startRecording();
   });
   qs('#stickyImportBtn')?.addEventListener('click', () => qs('#placementAudioUpload')?.click());
-  qs('#stickyInstrumentBtn')?.addEventListener('click', () => qs('#createInstrumentPlacementBtn')?.click());
+  qs('#stickyInstrumentBtn')?.addEventListener('click', () => {
+    createPlacement('instrument', {
+      trackId: selectedTrackId || undefined,
+      waveData: generateWaveData('Instrument', 64, 'instrument', 1.08)
+    });
+    updateSelectedBoardButton();
+  });
+  qs('#stickyNewBoardBtn')?.addEventListener('click', () => {
+    const track = addTrack('blank');
+    selectedTrackId = track.id;
+    renderPlacements();
+    updateSelectedBoardButton();
+    setStatus('#motherboardStatus', `${track.title} created and selected.`);
+  });
+  qs('#stickySelectedBoardBtn')?.addEventListener('click', () => {
+    const selected = trackState.find((track) => track.id === selectedTrackId);
+    if (selected) setStatus('#motherboardStatus', `${selected.title} is active. Import, record, or edit on this motherboard.`);
+  });
   qs('#stickyUndoBtn')?.addEventListener('click', () => undoLastAction());
   qs('#stickyDeleteBtn')?.addEventListener('click', () => {
     const id = Number(qs('#placementSelect')?.value || selectedPlacementId || 0);
@@ -1155,6 +1208,7 @@ function setupStickyWorkbench() {
     erase: '#gigEraseBtn',
     effect: '#gigEffectBtn',
     speed: '#gigSpeedBtn',
+    off: '#closeGigEditorBtn',
     play: '[data-sticky-transport="play"]',
     stop: '[data-sticky-transport="stop"]',
     record: '[data-sticky-record]',
@@ -1186,11 +1240,64 @@ function setupStickyWorkbench() {
   window.addEventListener('resize', updateStickyState);
   updateStickyState();
 }
+function runGuideDemo(mode = "visual") {
+  const overlay = qs("#studioGuideOverlay");
+  const title = qs("#guideOverlayTitle");
+  const status = qs("#guideOverlayStatus");
+  const targets = mode === "settings"
+    ? [qs(".studio-main-bar"), qs(".profile-launch-card"), qs(".board-stage-card")]
+    : [qs(".board-stage-card"), qs("#gigEditorShell"), qs(".studio-guidance-card")];
+  if (!overlay || !title || !status) return;
+  overlay.hidden = false;
+  title.textContent = mode === "settings" ? "Settings Bot" : "Visual Bot";
+  status.textContent = mode === "settings" ? "Running a settings walkthrough." : "Running a visual workflow walkthrough.";
+  let delay = 0;
+  targets.filter(Boolean).forEach((target, index) => {
+    setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      status.textContent = `Step ${index + 1}: ${target.querySelector("h2,h3")?.textContent || "Studio section"}`;
+    }, delay);
+    delay += 1200;
+  });
+}
+
+function setupProfileAndMain() {
+  const openProfile = () => {
+    qs("#studioProfileOverlay")?.removeAttribute("hidden");
+    document.body.classList.add("profile-open");
+  };
+  const closeProfile = () => {
+    qs("#studioProfileOverlay")?.setAttribute("hidden", "hidden");
+    document.body.classList.remove("profile-open");
+  };
+  qs("#openProfilePanelBtn")?.addEventListener("click", openProfile);
+  qs("#studioProfileLocalBtn")?.addEventListener("click", openProfile);
+  qs("#closeProfilePanelBtn")?.addEventListener("click", closeProfile);
+  qs("#saveProfileStatusBtn")?.addEventListener("click", () => {
+    const post = qs("#profileStatusPost")?.value?.trim() || "Studio profile updated.";
+    setStatus("#profileMiniPost", post);
+    closeProfile();
+  });
+  qs("#studioMainSaveBtn")?.addEventListener("click", saveSession);
+  qs("#studioMainExportBtn")?.addEventListener("click", () => exportSessionSnapshot(captureSessionState(), `supportrd-session-${Date.now()}.json`));
+  qs("#studioMainUndoBtn")?.addEventListener("click", undoLastAction);
+  qs("#studioMainSettingsBtn")?.addEventListener("click", () => qs(".board-stage-card")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  qs("#studioMainInstrumentBtn")?.addEventListener("click", () => qs("#stickyInstrumentBtn")?.click());
+  qs("#studioMainFxBtn")?.addEventListener("click", () => qs("#stickyBoardBtn")?.click());
+  qs("#studioMainVideoBtn")?.addEventListener("click", () => qs("#gigStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  qs("#studioMainDroneBtn")?.addEventListener("click", () => qs("#gigDroneBtn")?.click());
+  qs("#studioMainMenuBtn")?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  qs("#visualGuideBotBtn")?.addEventListener("click", () => runGuideDemo("visual"));
+  qs("#settingsGuideBotBtn")?.addEventListener("click", () => runGuideDemo("settings"));
+  const closeGuide = () => qs("#studioGuideOverlay")?.setAttribute("hidden", "hidden");
+  qs("#closeGuideBotBtn")?.addEventListener("click", closeGuide);
+  qs("#closeGuideOverlayBtn")?.addEventListener("click", closeGuide);
+}
 function setupUtilityButtons() {
   qs("#studioSettingsLocalBtn")?.addEventListener("click", () => qs("#motherboardStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioBlogLocalBtn")?.addEventListener("click", () => qs("#lyricsInput")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioPurchaseLocalBtn")?.addEventListener("click", () => { window.location.href = "/?open=subscription"; });
-  qs("#studioProfileLocalBtn")?.addEventListener("click", () => qs("#profileStats")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  qs("#studioProfileLocalBtn")?.addEventListener("click", () => qs("#openProfilePanelBtn")?.click());
   qs("#studioGigLocalBtn")?.addEventListener("click", () => qs("#gigStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioThemeLocalBtn")?.addEventListener("click", () => {
     currentTheme = (currentTheme + 1) % THEMES.length;
@@ -1234,7 +1341,7 @@ function setupUtilityButtons() {
   qs("#toggleBoardMenuBtn")?.addEventListener("click", () => {
     const select = qs("#boardCollapseMode");
     if (!select) return;
-    select.value = select.value === "all" ? "3" : "all";
+    select.value = select.value === "all" ? "4" : "all";
     renderPlacements();
     setStatus("#motherboardStatus", select.value === "all" ? "All motherboards reopened." : "Motherboards collapsed back to quick view.");
   });
@@ -1265,6 +1372,8 @@ window.addEventListener("DOMContentLoaded", () => {
   setupRecordingMath();
   setupGigPanel();
   setupUtilityButtons();
+  setupProfileAndMain();
+  setupStickyWorkbench();
   renderPlacementAudioOptions();
   renderPlacements();
   renderProfileStats();
@@ -1313,42 +1422,3 @@ window.addEventListener("message", (event) => {
     window.__studioRadio?.stop?.();
   }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
