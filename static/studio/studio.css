@@ -325,6 +325,10 @@ textarea{min-height:120px;resize:vertical}
   backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);
 }
+.studio-profile-overlay[hidden],
+.studio-guide-overlay[hidden]{
+  display:none !important;
+}
 .studio-profile-modal,
 .studio-guide-modal{
   width:min(760px,100%);
