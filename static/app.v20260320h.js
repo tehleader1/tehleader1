@@ -5170,7 +5170,7 @@ function setupUnlockViewsButton(){
     const view = WORLD_VIEWS.find(v=>v.key === key) || WORLD_VIEWS[0]
     if(subtitle) subtitle.textContent = view.label
     const stage = qs("#ariaAssistantSub")
-    if(stage) stage.textContent = `ARIA · Arena Support / ${view.label}`
+    if(stage) stage.textContent = `ARIA · Free Roam / ${view.label}`
   }
   const saved = localStorage.getItem("worldView")
   applyView((saved && WORLD_VIEWS.some(v=>v.key === saved)) ? saved : WORLD_VIEWS[0].key)
