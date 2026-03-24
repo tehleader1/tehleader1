@@ -3098,6 +3098,7 @@ function setupLiveArena(){
   const contentList = qs("#liveArenaContentList")
   const mission = qs("#liveArenaMission")
   const flash = qs("#liveCameraFlash")
+  const sponsorTagOpenBtn = qs("#sponsorTagOpenBtn")
   const tagModal = qs("#sponsorTagModal")
   const tagInput = qs("#sponsorTagInput")
   const tagCreateBtn = qs("#sponsorTagCreateBtn")
@@ -3149,10 +3150,8 @@ function setupLiveArena(){
   function ensureSponsorTag(){
     const key = "supportrdSponsorTag"
     let value = localStorage.getItem(key)
-    if(!value){
-      openSponsorTagModal()
-    }
     if(sponsorStatus) sponsorStatus.textContent = value ? `SponsorTag HQ ready: ${value}` : "SponsorTag HQ is waiting for one-time account creation. Example: ^^SupportRD"
+    if(sponsorTagOpenBtn) sponsorTagOpenBtn.textContent = value ? "Edit SponsorTag" : "Add SponsorTag"
     return value
   }
   function saveSponsorTag(rawValue){
@@ -3333,9 +3332,8 @@ function setupLiveArena(){
     if(botStatus) botStatus.textContent = "Jake is active for harder stream energy, booth hype, and technical creative support."
   })
   qs("#liveArenaRefBtn")?.addEventListener("click", updateRefBot)
-  sponsorStatus?.addEventListener("click", ()=>{
-    if(!localStorage.getItem("supportrdSponsorTag")) openSponsorTagModal()
-  })
+  sponsorStatus?.addEventListener("click", openSponsorTagModal)
+  sponsorTagOpenBtn?.addEventListener("click", openSponsorTagModal)
   tagCreateBtn?.addEventListener("click", ()=>saveSponsorTag(tagInput?.value || ""))
   tagSkipBtn?.addEventListener("click", ()=>{
     closeSponsorTagModal()
