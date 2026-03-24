@@ -2737,14 +2737,14 @@ function setupCommunications(){
     simple: "Simple hide-behind-tires match. Get hit and you lose. No perks included."
   }
   function buildPaintballSummary(){
-    const mode = qs("#paintballMode")?.value || "ctf-4v4"
+    const mode = qs("#paintballMode")?.value || "capture"
     const mapSet = qs("#paintballMapSet")?.value || "battlegrounds"
     const zoneKey = qs("#paintballZone")?.value || "lumbermill"
     const loadoutKey = qs("#paintballLoadout")?.value || "standard"
     const promoGoal = qs("#paintballPromoGoal")?.selectedOptions?.[0]?.textContent || "20 hearts in the last 5 minutes"
     const respawnRule = qs("#paintballRespawnRule")?.value || "officials-lounge"
     const zone = PAINTBALL_MAPS[zoneKey] || PAINTBALL_MAPS.lumbermill
-    const matchType = mode.startsWith("ctf") ? "Capture the Flag" : "Quick Match"
+    const matchType = mode === "capture" ? "Capture the Flag" : "Open Route"
     const respawnText = respawnRule === "dance-save"
       ? "Dance-on save active: if you dance on somebody the whole walk back for 5 minutes, unlimited shots stay open."
       : respawnRule === "classic"
@@ -2752,9 +2752,9 @@ function setupCommunications(){
         : `Respawn is set to ${zone.respawn}.`
     const moneyLine = "Promo-money play is compliance-gated for now: hearts, views, likes, and stream traction can be tracked live, but real money wagers stay off until reviewed."
     return {
-      title: `${matchType} · ${mode.replace("-", " ").toUpperCase()} · ${zone.label}`,
-      body: `${zone.notes} ${zone.defense}. ${PAINTBALL_LOADOUTS[loadoutKey]} ${respawnText} Goal: ${promoGoal}. ${moneyLine}`,
-      post: `SUPPORTRD VIRTUAL PAINTBALL · ${matchType} ${mode.toUpperCase()} · ${zone.label} · ${zone.defense} · ${PAINTBALL_LOADOUTS[loadoutKey]} Goal: ${promoGoal}. Respawn: ${respawnText}`
+      title: `${matchType} · ${zone.label}`,
+      body: `${zone.notes} ${zone.defense}. Route feel: ${mode}. ${PAINTBALL_LOADOUTS[loadoutKey]} ${respawnText} Goal: ${promoGoal}. ${moneyLine}`,
+      post: `SUPPORTRD VIRTUAL ROUTE · ${matchType} · ${zone.label} · ${zone.defense} · Route feel: ${mode}. ${PAINTBALL_LOADOUTS[loadoutKey]} Goal: ${promoGoal}. Respawn: ${respawnText}`
     }
   }
 
@@ -3112,37 +3112,35 @@ function setupLiveArena(){
     "Wrap with next move, brand line, and call to action."
   ]
   const loadMap = {
-    "1v1": {seconds: 6, label: "1-minute style setup"},
-    "2v2": {seconds: 8, label: "2-minute style setup"},
-    "4v4": {seconds: 8, label: "2-minute style setup"},
-    "5v5": {seconds: 12, label: "5-minute style setup"},
-    "7v7": {seconds: 12, label: "5-minute style setup"},
-    "8v8": {seconds: 12, label: "5-minute style setup"}
+    "solo": {seconds: 6, label: "1-minute style setup"},
+    "street": {seconds: 8, label: "2-minute style setup"},
+    "crew": {seconds: 8, label: "2-minute style setup"},
+    "field": {seconds: 12, label: "5-minute style setup"},
+    "world": {seconds: 12, label: "5-minute style setup"}
   }
   function renderContentSteps(){
     if(!contentList) return
     contentList.innerHTML = contentSteps.map((step, idx)=>`<div class="live-content-step${idx===liveContentIndex ? " active" : ""}">Step ${idx+1}: ${step}</div>`).join("")
   }
   function updateRefBot(){
-    const mode = modeSel?.value || "1v1"
-    const teamSize = Number((mode.match(/\d+/) || ["1"])[0])
-    if(mode === "1v1"){
-      if(botStatus) botStatus.textContent = "Ref Bot watches 1v1 for glitches, but official halt voting starts at 2v2 and above."
+    const mode = modeSel?.value || "solo"
+    if(mode === "solo"){
+      if(botStatus) botStatus.textContent = "Signal Bot watches solo motion for glitches and stays light until more people naturally link up."
     } else {
-      if(botStatus) botStatus.textContent = `Ref Bot can halt ${mode} if at least ${teamSize} official players from the live side request a stop for technical difficulty.`
+      if(botStatus) botStatus.textContent = `Signal Bot watches ${mode} motion for technical trouble and can help pause things if active people naturally link up and request it.`
     }
   }
   function ensureSponsorTag(){
     const key = "supportrdSponsorTag"
     let value = localStorage.getItem(key)
     if(!value){
-      const raw = (window.prompt("Create your SupportRD SponsorTag once. Use letters/numbers only after ^^", "cooldude3") || "").trim().replace(/[^a-z0-9]/gi,"").toLowerCase()
+      const raw = (window.prompt("Create your SupportRD SponsorTag once. Use letters/numbers only after ^^", "AgentAnthony") || "").trim().replace(/[^a-z0-9]/gi,"")
       if(raw){
         value = `^^${raw}`
         localStorage.setItem(key, value)
       }
     }
-    if(sponsorStatus) sponsorStatus.textContent = value ? `SponsorTag HQ ready: ${value}` : "SponsorTag HQ is waiting for one-time account creation."
+    if(sponsorStatus) sponsorStatus.textContent = value ? `SponsorTag HQ ready: ${value}` : "SponsorTag HQ is waiting for one-time account creation. Example: ^^SupportRD"
     return value
   }
   function flashCamera(){
@@ -3166,13 +3164,13 @@ function setupLiveArena(){
     flashCamera()
   }
   function runLoader(){
-    const mode = modeSel?.value || "1v1"
-    const conf = loadMap[mode] || loadMap["1v1"]
+    const mode = modeSel?.value || "solo"
+    const conf = loadMap[mode] || loadMap["solo"]
     if(!overlay || !shell || !loader) return
     overlay.hidden = false
     shell.hidden = true
     loader.hidden = false
-    if(loaderText) loaderText.textContent = `Preparing ${mode} stream route · ${conf.label} estimated setup.`
+      if(loaderText) loaderText.textContent = `Preparing ${mode} stream route · ${conf.label} estimated setup.`
     let step = 10
     if(loaderBar) loaderBar.style.width = "10%"
     const timer = setInterval(()=>{
@@ -3244,7 +3242,7 @@ function setupLiveArena(){
   if(postBtn){
     postBtn.addEventListener("click", ()=>{
       const post = qs("#postInput")
-      if(post) post.value = `LIVE SUPPORT RD · ${modeSel?.value || "1v1"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
+      if(post) post.value = `LIVE SUPPORT RD · ${modeSel?.selectedOptions?.[0]?.textContent || "Solo Motion"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
       flashCamera()
       openMiniWindow("Post Blast", "Laser post effect fired. Live post staged for checked social channels.")
     })

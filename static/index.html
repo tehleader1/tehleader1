@@ -337,12 +337,11 @@
                 </div>
                 <div class="request-grid">
                   <select id="liveArenaMode">
-                    <option value="1v1">1v1 · 1 minute load</option>
-                    <option value="2v2">2v2 · 2 minute load</option>
-                    <option value="4v4">4v4 · 2 minute load</option>
-                    <option value="5v5">5v5 · 5 minute load</option>
-                    <option value="7v7">7v7 · 5 minute load</option>
-                    <option value="8v8">8v8 · 5 minute load</option>
+                    <option value="solo">Solo Motion · 1 minute load</option>
+                    <option value="street">Street Motion · 2 minute load</option>
+                    <option value="crew">Crew Motion · 2 minute load</option>
+                    <option value="field">Field Motion · 5 minute load</option>
+                    <option value="world">World Motion · 5 minute load</option>
                   </select>
                   <select id="liveArenaDevice">
                     <option value="camera">Device: Camera</option>
@@ -375,17 +374,17 @@
               <div class="system-card glass live-bot-card">
                 <div class="system-head">
                   <div>
-                    <div class="system-title">Aria / Jake / Ref Bot</div>
-                    <div class="system-sub">Live support, glitches, and official pause logic.</div>
+                    <div class="system-title">Aria / Jake / Signal Bot</div>
+                    <div class="system-sub">Live support, glitch handling, and soft technical pause help.</div>
                   </div>
                   <span class="system-badge" id="liveArenaBotBadge">ARIA Ready</span>
                 </div>
                 <div class="system-actions">
                   <button class="btn ghost" id="liveArenaAriaBtn">Aria</button>
                   <button class="btn ghost" id="liveArenaJakeBtn">Jake</button>
-                  <button class="btn ghost" id="liveArenaRefBtn">Ref Bot</button>
+                  <button class="btn ghost" id="liveArenaRefBtn">Signal Bot</button>
                 </div>
-                <div class="system-sub" id="liveArenaBotStatus">Ref Bot can halt 2v2+ only when enough official team requests are present.</div>
+                <div class="system-sub" id="liveArenaBotStatus">Signal Bot watches for technical trouble and helps when active people naturally link up and try something new.</div>
               </div>
             </div>
           </div>
@@ -393,7 +392,7 @@
             <div class="live-middle-head">
               <div class="live-sponsor-hq">
                 <div class="system-title">SponsorTag HQ</div>
-                <div class="system-sub" id="sponsorTagStatus">SponsorTag pending. New accounts can create one once: ^^username.</div>
+                <div class="system-sub" id="sponsorTagStatus">SponsorTag pending. New accounts can create one once: ^^AgentAnthony / ^^SupportRD / ^^anything.</div>
               </div>
               <div class="live-center-logo">LIVE</div>
               <div class="live-money-box">
@@ -789,28 +788,27 @@
             <div class="comms-flow-title">Movement vs Movement Challenge</div>
             <input id="movementUrls" placeholder="Participant URLs (comma separated)">
             <div class="system-actions">
-              <button class="btn" id="createCompetitionBtn1v1">Create 1v1</button>
-              <button class="btn ghost" id="createMovementChallengeBtn">Create 5v5</button>
+              <button class="btn" id="createCompetitionBtn1v1">Create Encounter</button>
+              <button class="btn ghost" id="createMovementChallengeBtn">Create Crew Push</button>
             </div>
-             <div class="system-sub" id="movementChallengeResult">PvP judged on 5 keys: Health, Longevity, Care, Love, Issues. Modes: 1v1 and 5v5. Rules: no pornography. Best man is represented by exact laughs, excitement, and votes brought to the session.</div>
+             <div class="system-sub" id="movementChallengeResult">Movement is judged on 5 keys: Health, Longevity, Care, Love, Issues. Rules: no pornography. Let the people figure out how the encounter forms on their own.</div>
            </div>
            <div class="virtual-warzone">
              <div class="comms-flow-title">Competition Tab: Virtual Paintball Hair Arena</div>
              <div class="comms-flow-sub">The world is the main thing. Quick matches can still happen inside the map if people cross paths, but the bigger point is to roam, build, stream, and unlock more routes over time.</div>
              <div class="virtual-warzone-grid">
-               <label>Mode
+               <label>Route Feel
                  <select id="paintballMode">
-                   <option value="ctf-4v4">Capture The Flag 4v4</option>
-                   <option value="ctf-8v8">Capture The Flag 8v8</option>
-                   <option value="quick-1v1">Quick Match 1v1</option>
-                   <option value="quick-2v2">Quick Match 2v2</option>
-                   <option value="quick-3v3">Quick Match 3v3</option>
+                   <option value="capture">Capture The Flag</option>
+                   <option value="open">Open Encounter</option>
+                   <option value="rush">Rush Through</option>
+                   <option value="hold">Hold The Route</option>
                  </select>
                </label>
                <label>Map Set
                  <select id="paintballMapSet">
                    <option value="battlegrounds">Battle Grounds Big Field</option>
-                   <option value="quick">Quick Match Spots</option>
+                   <option value="quick">Fast Routes</option>
                  </select>
                </label>
                <label>Featured Zone
@@ -820,9 +818,9 @@
                    <option value="snowhill">Artificial Snow Hill · +2 Defense</option>
                    <option value="island">Island by the Lake · +2 Defense</option>
                    <option value="vip">VIP Spot · 2 Months Played = +2 Defense</option>
-                   <option value="tunnels">Tunnels · Quick Match</option>
-                   <option value="market">Market · Quick Match</option>
-                   <option value="lab">The Lab · Quick Match +3 Grenades</option>
+                   <option value="tunnels">Tunnels · Fast Route</option>
+                   <option value="market">Market · Fast Route</option>
+                   <option value="lab">The Lab · Fast Route +3 Grenades</option>
                  </select>
                </label>
                <label>Loadout
@@ -860,7 +858,7 @@
                <button class="btn" id="buildPaintballModeBtn">Build Paintball Mode</button>
                <button class="btn ghost" id="postPaintballModeBtn">Post To Feed</button>
              </div>
-             <div class="system-sub" id="paintballBuildResult">Build a virtual paintball session for SupportRD Competition. Money/promo wagers stay compliance-gated until approved.</div>
+             <div class="system-sub" id="paintballBuildResult">Build a virtual route session for SupportRD. If people naturally turn it into a faceoff, that is on them. Money/promo wagers stay compliance-gated until approved.</div>
            </div>
          </div>
            <div class="comms-launch">
