@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SupportRD Pro Jake Studio</title>
-  <link rel="stylesheet" href="/static/studio/studio.css?v=20260323k">
+  <link rel="stylesheet" href="/static/studio/studio.css?v=20260323l">
 </head>
 <body>
   <main class="studio-page">
@@ -46,13 +46,13 @@
 
     <div class="sticky-editor-bar" id="stickyEditorBar" hidden>
       <div class="sticky-editor-group">
-        <button type="button" data-sticky-transport="rewind">Rewind</button>
-        <button type="button" data-sticky-transport="back">Back</button>
-        <button type="button" data-sticky-transport="play">Play</button>
-        <button type="button" data-sticky-transport="stop">Stop</button>
-        <button type="button" data-sticky-record>Record</button>
-        <button type="button" data-sticky-transport="forward">Forward</button>
-        <button type="button" data-sticky-transport="next">Next</button>
+        <button type="button" data-sticky-transport="rewind" title="Rewind" aria-label="Rewind">|&lt;&lt;</button>
+        <button type="button" data-sticky-transport="back" title="Back / Undo" aria-label="Back / Undo">&lt;&lt;</button>
+        <button type="button" data-sticky-transport="play" title="Play" aria-label="Play">▶</button>
+        <button type="button" data-sticky-transport="stop" title="Stop" aria-label="Stop">■</button>
+        <button type="button" data-sticky-record title="Record" aria-label="Record">●</button>
+        <button type="button" data-sticky-transport="forward" title="Forward" aria-label="Forward">&gt;&gt;</button>
+        <button type="button" data-sticky-transport="next" title="Next" aria-label="Next">&gt;&gt;|</button>
       </div>
       <div class="sticky-editor-group">
         <button type="button" id="stickyImportBtn">Add MP3 File</button>
@@ -62,10 +62,10 @@
         <button type="button" id="stickyUndoBtn">Undo</button>
         <button type="button" id="stickyDeleteBtn">Delete</button>
         <button type="button" id="stickyFxBtn">FX Effects Hook Up</button>
-        <button type="button" id="stickyZoomInBtn">Zoom In</button>
-        <button type="button" id="stickyZoomOutBtn">Zoom Out</button>
-        <button type="button" id="stickyTrimLeftBtn">Cut Left</button>
-        <button type="button" id="stickyTrimRightBtn">Cut Right</button>
+        <button type="button" id="stickyZoomInBtn" title="Zoom In" aria-label="Zoom In">🔍+</button>
+        <button type="button" id="stickyZoomOutBtn" title="Zoom Out" aria-label="Zoom Out">🔍−</button>
+        <button type="button" id="stickyTrimLeftBtn" title="Cut Left" aria-label="Cut Left">&lt;</button>
+        <button type="button" id="stickyTrimRightBtn" title="Cut Right" aria-label="Cut Right">&gt;</button>
         <button type="button" id="stickyBoardBtn">FX Board</button>
       </div>
     </div>
@@ -367,6 +367,24 @@
       </div>
     </section>
 
+    <section class="studio-purchase-overlay" id="studioPurchaseOverlay" hidden>
+      <div class="studio-profile-modal">
+        <button id="closePurchasePanelBtn" class="ghost profile-close-btn">X</button>
+        <h2>Jake Premium $100</h2>
+        <div class="status">Included: extra FX features, deeper conversation with Jake, and theme additions for Gig 4K mode.</div>
+        <div class="profile-stats" style="margin-top:14px;">
+          <div class="profile-stat"><strong>Extra FX</strong>Expanded booth controls and premium sound shaping</div>
+          <div class="profile-stat"><strong>Deep Jake</strong>Longer guidance and studio help responses</div>
+          <div class="profile-stat"><strong>Gig Themes</strong>Extra visual themes and 4K booth styling</div>
+          <div class="profile-stat"><strong>$100</strong>Premium monthly studio option</div>
+        </div>
+        <div class="row" style="margin-top:14px;">
+          <button id="purchasePremium100Btn">Choose $100 Premium</button>
+        </div>
+        <div class="status" id="purchasePremiumStatus" style="margin-top:10px;">Premium panel ready.</div>
+      </div>
+    </section>
+
     <footer class="studio-footer">
       <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
       <a href="https://supportrd.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy</a>
@@ -375,6 +393,6 @@
       <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>
     </footer>
   </main>
-  <script src="/static/studio/studio.js?v=20260323k"></script>
+  <script src="/static/studio/studio.js?v=20260323l"></script>
 </body>
 </html>

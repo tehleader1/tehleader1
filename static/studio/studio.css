@@ -303,6 +303,7 @@ textarea{min-height:120px;resize:vertical}
 .sticky-editor-bar[hidden]{display:none}
 .sticky-editor-group{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sticky-editor-bar button{padding:9px 12px}
+.sticky-editor-bar button[aria-label]{min-width:54px;font-weight:700}
 .sticky-gig-bar{top:144px}
 .studio-page.sticky-editor-live .board-stage-card,
 .studio-page.sticky-editor-live #gigEditorShell{scroll-margin-top:170px}
@@ -314,7 +315,8 @@ textarea{min-height:120px;resize:vertical}
 .timeline-track-lane{position:relative;min-height:118px;min-width:100%;}
 .timeline-track-body.drag-over{box-shadow:inset 0 0 0 2px rgba(113,199,255,.65)}
 .studio-profile-overlay,
-.studio-guide-overlay{
+.studio-guide-overlay,
+.studio-purchase-overlay{
   position:fixed;
   inset:0;
   z-index:70;
@@ -326,7 +328,8 @@ textarea{min-height:120px;resize:vertical}
   -webkit-backdrop-filter:blur(18px);
 }
 .studio-profile-overlay[hidden],
-.studio-guide-overlay[hidden]{
+.studio-guide-overlay[hidden],
+.studio-purchase-overlay[hidden]{
   display:none !important;
 }
 .studio-profile-modal,

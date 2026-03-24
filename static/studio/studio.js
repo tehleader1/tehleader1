@@ -390,6 +390,15 @@ function renderPlacements() {
     });
   });
 
+  qsa("#timelineTracks [data-track-drop]").forEach((node) => {
+    node.addEventListener("click", () => {
+      selectedTrackId = node.getAttribute("data-track-drop") || selectedTrackId;
+      renderPlacements();
+      const track = trackState.find((item) => item.id === selectedTrackId);
+      setStatus("#motherboardStatus", `${track?.title || "Motherboard"} selected.`);
+    });
+  });
+
   qsa("#timelineTracks [data-placement-id]").forEach((node) => {
     node.addEventListener("click", () => {
       selectedPlacementId = Number(node.getAttribute("data-placement-id") || 0);
@@ -884,8 +893,7 @@ async function startRecording() {
       setStatus("#placementStatus", "Recording saved to the recorded motherboard.");
     };
 
-    addTrack("recorded");
-    const targetTrack = [...trackState].reverse().find((track) => track.type === "recorded")?.id || ensureTrack("recorded");
+    const targetTrack = selectedTrackId || trackState[0]?.id || ensureTrack("recorded");
     const placement = createPlacement("recorded", {
       trackId: targetTrack,
       live: true,
@@ -987,8 +995,21 @@ function setupTransport() {
       }
       placementAudioFiles.push(entry);
       selectedTimelineAudioId = entry.id;
+      const targetTrackId = selectedTrackId || trackState[0]?.id || ensureTrack("mp3");
+      const existing = placements.find((item) => item.trackId === targetTrackId);
+      if (!existing) {
+        const placement = createPlacement("mp3", {
+          audio: entry,
+          audioName: entry.name,
+          durationSec: entry.durationSec || 8,
+          trackId: targetTrackId,
+          waveData: entry.waveData || generateWaveData(entry.name, 64, "steady", 1)
+        });
+        placement.audioId = entry.id;
+      }
     }
     renderPlacementAudioOptions();
+    renderPlacements();
     setStatus("#placementStatus", `${placementAudioFiles.length} imported audio file(s) are ready for the motherboard.`);
     qs("#placementAudioUpload").value = "";
   });
@@ -1296,7 +1317,9 @@ function setupProfileAndMain() {
 function setupUtilityButtons() {
   qs("#studioSettingsLocalBtn")?.addEventListener("click", () => qs("#motherboardStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioBlogLocalBtn")?.addEventListener("click", () => qs("#lyricsInput")?.scrollIntoView({ behavior: "smooth", block: "center" }));
-  qs("#studioPurchaseLocalBtn")?.addEventListener("click", () => { window.location.href = "/?open=subscription"; });
+  qs("#studioPurchaseLocalBtn")?.addEventListener("click", () => {
+    qs("#studioPurchaseOverlay")?.removeAttribute("hidden");
+  });
   qs("#studioProfileLocalBtn")?.addEventListener("click", () => qs("#openProfilePanelBtn")?.click());
   qs("#studioGigLocalBtn")?.addEventListener("click", () => qs("#gigStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioThemeLocalBtn")?.addEventListener("click", () => {
@@ -1352,6 +1375,10 @@ function setupUtilityButtons() {
   qs("#dbQuick")?.addEventListener("input", updateDbQuickLabel);
   qs("#fxPreset")?.addEventListener("change", () => setStatus("#fxStatus", `FX preset engaged: ${qs("#fxPreset")?.selectedOptions?.[0]?.textContent || "Normal"}.`));
   qs("#soundProfile")?.addEventListener("change", () => setStatus("#transportStatus", `Sound profile switched to ${qs("#soundProfile")?.selectedOptions?.[0]?.textContent || "Normal"}.`));
+  qs("#closePurchasePanelBtn")?.addEventListener("click", () => qs("#studioPurchaseOverlay")?.setAttribute("hidden", "hidden"));
+  qs("#purchasePremium100Btn")?.addEventListener("click", () => {
+    setStatus("#purchasePremiumStatus", "Jake Premium $100 selected. Extra FX, deeper Jake conversation, and Gig 4K themes are staged.");
+  });
 }
 
 window.addEventListener("DOMContentLoaded", () => {
