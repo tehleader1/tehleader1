@@ -28,6 +28,7 @@ let lastRenderedMixBlob = null;
 let lastRenderedMixName = "";
 let currentTheme = 0;
 let recentSessionSaves = [];
+let videoAssets = [];
 const THEMES = ["", "theme-signal", "theme-ember"];
 const timelineDurationSec = 120;
 let timelineZoom = 1;
@@ -399,6 +400,15 @@ function renderPlacements() {
     });
   });
 
+  qsa("#timelineTracks [data-track-drop]").forEach((node) => {
+    node.addEventListener("click", () => {
+      selectedTrackId = node.getAttribute("data-track-drop") || selectedTrackId;
+      renderPlacements();
+      const track = trackState.find((item) => item.id === selectedTrackId);
+      setStatus("#motherboardStatus", `${track?.title || "Motherboard"} selected.`);
+    });
+  });
+
   qsa("#timelineTracks [data-placement-id]").forEach((node) => {
     node.addEventListener("click", () => {
       selectedPlacementId = Number(node.getAttribute("data-placement-id") || 0);
@@ -485,6 +495,19 @@ function renderProfileStats() {
     <div class="profile-stat"><strong>${overlayTitle}</strong>Overlay achievement</div>
     <div class="profile-stat"><strong>${placements.filter((p) => p.kind === "instrument").length}</strong>Instrument logs captured</div>
   `;
+}
+
+function renderGigPreviewSummary() {
+  const preview = qs("#gigPreviewWindow .gig-preview-copy");
+  if (!preview) return;
+  const videoCount = videoAssets.length;
+  const boardCount = trackState.length;
+  preview.innerHTML = `
+    <strong>${boardCount}</strong> motherboards linked<br>
+    <strong>${videoCount}</strong> video clip${videoCount === 1 ? "" : "s"} loaded<br>
+    ${videoAssets[0] ? `Latest video: ${videoAssets[0].name}` : "Add an MP4 to join the current motherboards with video content."}
+  `;
+  setStatus("#gigBoardStat", String(boardCount));
 }
 
 async function applyStudioMicProfile() {
@@ -902,6 +925,7 @@ async function startRecording() {
       waveData: generateWaveData("Live", 48, "live", 1)
     });
     currentRecordingPlacementId = placement.id;
+    selectedTrackId = targetTrack;
     mediaRecorder.start(200);
     isRecording = true;
     qs("#recordMainBtn")?.classList.add("is-recording");
@@ -1068,8 +1092,10 @@ function setupGigPanel() {
     const shellStatus = qs("#gigEditorStatus");
     const boardStat = qs("#gigBoardStat");
     const page = qs(".studio-page");
+    const opener = qs("#gigConnectorBtn");
     const steps = [12, 24, 38, 55, 72, 85, 100];
     page?.classList.add("gig-active");
+    if (opener) opener.textContent = "Close Gig Connector";
     for (const step of steps) {
       if (slider) slider.value = String(step);
       setStatus("#gigStatus", `Gig 4K Record loading ${step}%...`);
@@ -1080,6 +1106,7 @@ function setupGigPanel() {
     if (boardStat) boardStat.textContent = String(trackState.length);
     setStatus("#gigStatus", "Gig connector ready. Dual-panel editor is open in the middle of the page.");
     if (shellStatus) shellStatus.textContent = "Dual-panel video editor is live. Edit on one side, watch on the other.";
+    renderGigPreviewSummary();
     shell?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
@@ -1099,16 +1126,42 @@ function setupGigPanel() {
     gigReactiveBtn: "Reactive camera mode is following the session energy."
   };
 
-  qs("#gigConnectorBtn")?.addEventListener("click", runGigLoad);
+  qs("#gigConnectorBtn")?.addEventListener("click", () => {
+    if (qs(".studio-page")?.classList.contains("gig-active")) {
+      qs("#closeGigEditorBtn")?.click();
+      return;
+    }
+    runGigLoad();
+  });
   qs("#gigRecordBtn")?.addEventListener("click", runGigLoad);
   qs("#studioGigLocalBtn")?.addEventListener("click", runGigLoad);
   qs("#cameraAccessBtn")?.addEventListener("click", () => setStatus("#gigStatus", "Camera access requested. Kodak, Samsung, iPhone, and drone-ready workflow can connect here."));
   qs("#closeGigEditorBtn")?.addEventListener("click", () => {
     const shell = qs("#gigEditorShell");
     const page = qs(".studio-page");
+    const opener = qs("#gigConnectorBtn");
     if (shell) shell.hidden = true;
     page?.classList.remove("gig-active");
+    if (opener) opener.textContent = "Open Gig Connector";
     setStatus("#gigStatus", "Returned to the main booth view.");
+  });
+  qs("#gigVideoUpload")?.addEventListener("change", () => {
+    const files = Array.from(qs("#gigVideoUpload")?.files || []);
+    if (!files.length) return;
+    files.forEach((file) => {
+      const ok = String(file.name || "").match(/\.(mp4|mov|webm|m4v)$/i) || (file.type || "").startsWith("video/");
+      if (!ok) return;
+      videoAssets.unshift({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        name: file.name,
+        type: file.type || "video/mp4",
+        url: URL.createObjectURL(file)
+      });
+    });
+    videoAssets = videoAssets.slice(0, 12);
+    renderGigPreviewSummary();
+    setStatus("#gigStatus", `${videoAssets.length} video file(s) are now joined with the current motherboards.`);
+    qs("#gigVideoUpload").value = "";
   });
   Object.entries(gigMessages).forEach(([id, message]) => {
     qs(`#${id}`)?.addEventListener("click", () => setStatus("#gigEditorStatus", message));
@@ -1145,6 +1198,7 @@ function setupStickyWorkbench() {
     const boardRect = boardZone?.getBoundingClientRect();
     const undoRect = undoPanel?.getBoundingClientRect();
     const footerRect = footer?.getBoundingClientRect();
+    const gigAlways = Boolean(page?.classList.contains("gig-active"));
     const inBoardZone = Boolean(
       boardRect &&
       boardRect.top < 180 &&
@@ -1152,20 +1206,16 @@ function setupStickyWorkbench() {
       (!undoRect || undoRect.top > 180) &&
       (!footerRect || footerRect.top > 160)
     );
-    stickyEditorVisible = inBoardZone;
-    if (stickyBar) stickyBar.hidden = !inBoardZone;
-    const gigRect = gigShell?.getBoundingClientRect();
+    stickyEditorVisible = inBoardZone && !gigAlways;
+    if (stickyBar) stickyBar.hidden = !stickyEditorVisible;
     const gigActive = Boolean(
-      page?.classList.contains("gig-active") &&
+      gigAlways &&
       gigShell &&
-      !gigShell.hidden &&
-      gigRect &&
-      gigRect.top < 220 &&
-      gigRect.bottom > 180
+      !gigShell.hidden
     );
     stickyGigVisible = gigActive;
     if (stickyGigBar) stickyGigBar.hidden = !gigActive;
-    page?.classList.toggle("sticky-editor-live", inBoardZone || gigActive);
+    page?.classList.toggle("sticky-editor-live", stickyEditorVisible || gigActive);
     updateSelectedBoardButton();
   };
 

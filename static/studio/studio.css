@@ -304,6 +304,28 @@ textarea{min-height:120px;resize:vertical}
 .sticky-editor-group{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sticky-editor-bar button{padding:9px 12px}
 .sticky-editor-bar button[aria-label]{min-width:54px;font-weight:700}
+.sticky-record-core{
+  width:14px;
+  height:14px;
+  display:inline-block;
+  border-radius:50%;
+  background:#ff314f;
+  box-shadow:0 0 0 2px rgba(255,255,255,.18),0 0 14px rgba(255,49,79,.55);
+}
+.gig-mp4-upload{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  border-radius:14px;
+  border:1px solid rgba(187,220,255,.28);
+  background:linear-gradient(180deg,rgba(69,108,179,.96),rgba(33,60,103,.96));
+  color:#fff;
+  cursor:pointer;
+}
+.gig-mp4-upload input{
+  display:none;
+}
 .sticky-gig-bar{top:144px}
 .studio-page.sticky-editor-live .board-stage-card,
 .studio-page.sticky-editor-live #gigEditorShell{scroll-margin-top:170px}
