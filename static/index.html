@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260324a">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260324b">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
 <body class="theme-aurora plus500 system-theme natural-pro resort-brochure competition-world">
@@ -374,7 +374,7 @@
               <div class="system-card glass live-bot-card">
                 <div class="system-head">
                   <div>
-                    <div class="system-title">Aria / Jake / Signal Bot</div>
+                    <div class="system-title">Aria / Jake / Ref Bot</div>
                     <div class="system-sub">Live support, glitch handling, and soft technical pause help.</div>
                   </div>
                   <span class="system-badge" id="liveArenaBotBadge">ARIA Ready</span>
@@ -382,9 +382,9 @@
                 <div class="system-actions">
                   <button class="btn ghost" id="liveArenaAriaBtn">Aria</button>
                   <button class="btn ghost" id="liveArenaJakeBtn">Jake</button>
-                  <button class="btn ghost" id="liveArenaRefBtn">Signal Bot</button>
+                  <button class="btn ghost" id="liveArenaRefBtn">Ref Bot</button>
                 </div>
-                <div class="system-sub" id="liveArenaBotStatus">Signal Bot watches for technical trouble and helps when active people naturally link up and try something new.</div>
+                <div class="system-sub" id="liveArenaBotStatus">Ref Bot watches for technical trouble, can halt a session cleanly, and keeps the stream mission moving if people naturally link up and try something new.</div>
               </div>
             </div>
           </div>
@@ -433,6 +433,23 @@
               <div class="system-title">Glitch To Codex</div>
               <div class="system-sub" id="liveArenaGlitchStatus">If stream money or match issues appear, this lane gathers a clean developer handoff for Codex.</div>
             </div>
+          </div>
+        </div>
+      </div>
+      <div class="live-tag-modal" id="sponsorTagModal" hidden>
+        <div class="live-tag-card glass">
+          <div class="live-tag-kicker">One-Time SupportRD Tag</div>
+          <div class="system-title">Claim Your SponsorTag</div>
+          <div class="system-sub">Create the one tag people will know you by when it matters. It stays subtle until you need it.</div>
+          <label class="live-tag-label" for="sponsorTagInput">Use letters and numbers after <strong>^^</strong></label>
+          <div class="live-tag-row">
+            <span class="live-tag-prefix">^^</span>
+            <input id="sponsorTagInput" class="live-tag-input" maxlength="24" placeholder="AgentAnthony" autocomplete="off">
+          </div>
+          <div class="live-tag-examples">Examples: ^^AgentAnthony · ^^SupportRD · ^^FreeRoam</div>
+          <div class="live-tag-actions">
+            <button class="btn ghost" id="sponsorTagSkipBtn">Not Now</button>
+            <button class="btn" id="sponsorTagCreateBtn">Create SponsorTag</button>
           </div>
         </div>
       </div>
@@ -1423,7 +1440,7 @@
 </div>
 
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260324a"></script>
+<script src="/static/app.v20260320h.js?v=20260324b"></script>
 <footer class="launch-footer-links">
   <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
   <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>

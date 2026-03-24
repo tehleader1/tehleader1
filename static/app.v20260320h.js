@@ -3098,10 +3098,15 @@ function setupLiveArena(){
   const contentList = qs("#liveArenaContentList")
   const mission = qs("#liveArenaMission")
   const flash = qs("#liveCameraFlash")
+  const tagModal = qs("#sponsorTagModal")
+  const tagInput = qs("#sponsorTagInput")
+  const tagCreateBtn = qs("#sponsorTagCreateBtn")
+  const tagSkipBtn = qs("#sponsorTagSkipBtn")
   const walletKey = "supportrdWallet"
   let openArmed = false
   let startArmed = false
   let liveContentIndex = 0
+  let energyTimer = null
   const contentSteps = [
     "Introduce the host with a sweep effect and company mission.",
     "Show the real action: code, game, dance, wilderness, or work scene.",
@@ -3125,22 +3130,42 @@ function setupLiveArena(){
   function updateRefBot(){
     const mode = modeSel?.value || "solo"
     if(mode === "solo"){
-      if(botStatus) botStatus.textContent = "Signal Bot watches personal routes for glitches and stays light until more people naturally link up."
+      if(botStatus) botStatus.textContent = "Ref Bot watches personal routes for glitches and stays light until more people naturally link up."
     } else {
-      if(botStatus) botStatus.textContent = `Signal Bot watches ${mode} routes for technical trouble and can help pause things if active people naturally link up and request it.`
+      if(botStatus) botStatus.textContent = `Ref Bot watches ${mode} routes for technical trouble and can help halt the session cleanly if active people naturally link up and request it.`
+    }
+  }
+  function closeSponsorTagModal(){
+    if(tagModal) tagModal.hidden = true
+  }
+  function openSponsorTagModal(){
+    if(!tagModal) return
+    tagModal.hidden = false
+    if(tagInput){
+      tagInput.value = ""
+      setTimeout(()=>tagInput.focus(), 30)
     }
   }
   function ensureSponsorTag(){
     const key = "supportrdSponsorTag"
     let value = localStorage.getItem(key)
     if(!value){
-      const raw = (window.prompt("Create your SupportRD SponsorTag once. Use letters/numbers only after ^^", "AgentAnthony") || "").trim().replace(/[^a-z0-9]/gi,"")
-      if(raw){
-        value = `^^${raw}`
-        localStorage.setItem(key, value)
-      }
+      openSponsorTagModal()
     }
     if(sponsorStatus) sponsorStatus.textContent = value ? `SponsorTag HQ ready: ${value}` : "SponsorTag HQ is waiting for one-time account creation. Example: ^^SupportRD"
+    return value
+  }
+  function saveSponsorTag(rawValue){
+    const raw = String(rawValue || "").trim().replace(/[^a-z0-9]/gi, "")
+    if(!raw){
+      openMiniWindow("SponsorTag", "Use at least one letter or number after ^^ so your tag can lock in clean.")
+      return ""
+    }
+    const value = `^^${raw}`
+    localStorage.setItem("supportrdSponsorTag", value)
+    if(sponsorStatus) sponsorStatus.textContent = `SponsorTag HQ ready: ${value}`
+    closeSponsorTagModal()
+    openMiniWindow("SponsorTag Ready", `${value} is now staged for your account and will stay subtle until you want it shown.`)
     return value
   }
   function flashCamera(){
@@ -3148,6 +3173,35 @@ function setupLiveArena(){
     flash.classList.remove("active")
     void flash.offsetWidth
     flash.classList.add("active")
+  }
+  function pulseLiveEnergy(){
+    if(!shell || shell.hidden) return
+    shell.classList.add("live-energized")
+    document.body.classList.remove("live-jello")
+    void document.body.offsetWidth
+    document.body.classList.add("live-jello")
+    setTimeout(()=>document.body.classList.remove("live-jello"), 820)
+  }
+  function startLiveEnergy(){
+    if(energyTimer) clearInterval(energyTimer)
+    pulseLiveEnergy()
+    energyTimer = setInterval(()=>{
+      pulseLiveEnergy()
+      const steps = contentList?.querySelectorAll(".live-content-step") || []
+      const step = steps[liveContentIndex]
+      if(step){
+        step.classList.remove("active")
+        void step.offsetWidth
+        step.classList.add("active")
+      }
+    }, 5200)
+  }
+  function stopLiveEnergy(){
+    if(energyTimer){
+      clearInterval(energyTimer)
+      energyTimer = null
+    }
+    shell?.classList.remove("live-energized")
   }
   function openLiveShell(){
     if(!overlay || !shell || !loader) return
@@ -3162,6 +3216,7 @@ function setupLiveArena(){
     if(mission) mission.textContent = "SupportRD is an innocent company out of Dominican Republic and United States. We deliver solutions to the health of your hair. Period. We are on a mission."
     if(mainStream) mainStream.textContent = "Sweep effect loaded. Introduce the host, show the purpose fast, then put the real content in motion."
     flashCamera()
+    startLiveEnergy()
   }
   function runLoader(){
     const mode = modeSel?.value || "solo"
@@ -3200,6 +3255,8 @@ function setupLiveArena(){
       if(overlay) overlay.hidden = true
       if(shell) shell.hidden = true
       if(loader) loader.hidden = true
+      closeSponsorTagModal()
+      stopLiveEnergy()
       document.body.classList.remove("live-jello")
       openMiniWindow("LIVE Arena", "Returned to the normal center dashboard.")
     })
@@ -3216,6 +3273,7 @@ function setupLiveArena(){
       document.body.classList.add("live-jello")
       setTimeout(()=>document.body.classList.remove("live-jello"), 900)
       flashCamera()
+      startLiveEnergy()
       if(mainStream) mainStream.textContent = `LIVE now · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · keep the action moving.`
       openMiniWindow("LIVE Started", "Sweep effect complete. Stream is introduced, sponsors can load, and the center panel is now in live mode.")
     })
@@ -3275,6 +3333,20 @@ function setupLiveArena(){
     if(botStatus) botStatus.textContent = "Jake is active for harder stream energy, booth hype, and technical creative support."
   })
   qs("#liveArenaRefBtn")?.addEventListener("click", updateRefBot)
+  sponsorStatus?.addEventListener("click", ()=>{
+    if(!localStorage.getItem("supportrdSponsorTag")) openSponsorTagModal()
+  })
+  tagCreateBtn?.addEventListener("click", ()=>saveSponsorTag(tagInput?.value || ""))
+  tagSkipBtn?.addEventListener("click", ()=>{
+    closeSponsorTagModal()
+    openMiniWindow("SponsorTag", "You can claim your one-time SponsorTag later from SponsorTag HQ.")
+  })
+  tagInput?.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter"){
+      e.preventDefault()
+      saveSponsorTag(tagInput.value)
+    }
+  })
   ;[modeSel,lensSel,deviceSel,audioSel,filterSel].forEach(el=>{
     if(el) el.addEventListener("change", ()=>{
       updateRefBot()
@@ -3282,6 +3354,12 @@ function setupLiveArena(){
     })
   })
   renderContentSteps()
+  updateRefBot()
+  setTimeout(()=>{
+    if(overlay?.hidden !== false || shell?.hidden !== false){
+      openLiveShell()
+    }
+  }, 180)
 }
 
 function setupReel(){
@@ -5181,6 +5259,23 @@ function setupUnlockViewsButton(){
   })
 }
 
+function setupDashboardSweep(){
+  const stage = qs("#centerStage")
+  if(!stage || typeof IntersectionObserver !== "function") return
+  let armed = true
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach((entry)=>{
+      if(entry.isIntersecting && entry.intersectionRatio > 0.58 && armed){
+        armed = false
+        document.body.classList.add("dashboard-sweep-active")
+        setTimeout(()=>document.body.classList.remove("dashboard-sweep-active"), 1250)
+        setTimeout(()=>{ armed = true }, 3200)
+      }
+    })
+  }, { threshold:[0.58, 0.7] })
+  observer.observe(stage)
+}
+
 
 window.addEventListener("DOMContentLoaded", ()=>{
   try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init start'; }catch{}
@@ -5243,6 +5338,7 @@ safe(setupReel)
   safe(setupLaunchMenu)
   safe(setupSatelliteQuick)
   safe(setupLiveRadio)
+  safe(setupDashboardSweep)
   safe(setupJakeQuickSwitch)
   safe(setupShopifyConnectorBadge)
   safe(setupLoginGate)
