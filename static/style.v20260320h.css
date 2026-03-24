@@ -577,6 +577,56 @@ body.sar-red::before{content:"SAR RED · DETECTIVE + LEGAL MODE ACTIVE";position
 .center-hero p{margin:0;line-height:1.5;font-size:clamp(13px,1.65vw,16px);max-width:64ch;}
 .center-head{display:flex;justify-content:space-between;align-items:center;gap:12px;} 
 .center-actions{display:flex;gap:10px;align-items:center;}
+.unlock-views-btn{
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  min-width:240px;
+  padding:14px 18px;
+  border-radius:22px;
+  border:1px solid rgba(96,184,255,.45);
+  background:linear-gradient(135deg, rgba(74,180,255,.98), rgba(51,118,241,.96));
+  color:#fff;
+  box-shadow:0 12px 28px rgba(53,123,229,.28), inset 0 1px 0 rgba(255,255,255,.28);
+  transform-origin:center;
+  transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+.unlock-views-btn::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(120deg, transparent 12%, rgba(255,255,255,.34) 28%, transparent 44%);
+  transform:translateX(-130%);
+  animation:viewGlimmer 2.8s ease-in-out infinite;
+}
+.unlock-views-btn:hover{
+  transform:translateY(-1px) scale(1.02);
+  box-shadow:0 18px 34px rgba(53,123,229,.34), 0 0 0 1px rgba(181,228,255,.34);
+  filter:saturate(1.06);
+}
+.unlock-views-btn:active{transform:scale(.97);}
+.unlock-main-label{
+  position:relative;
+  z-index:1;
+  font-size:14px;
+  font-weight:800;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.unlock-main-sub{
+  position:relative;
+  z-index:1;
+  font-size:11px;
+  color:rgba(245,250,255,.9);
+  letter-spacing:.04em;
+}
+@keyframes viewGlimmer{
+  0%,100%{transform:translateX(-130%)}
+  52%{transform:translateX(135%)}
+}
 .aria-badge{
   min-width:220px;
   padding:16px 18px;
@@ -990,6 +1040,7 @@ body.launch-active #app{display:none;}
   .trust-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
   .center-head{flex-direction:column;align-items:stretch;}
   .center-actions{justify-content:space-between;flex-wrap:wrap;}
+  .unlock-views-btn{min-width:100%;}
   .center-stage{width:min(95vw,760px);padding:16px;aspect-ratio:auto;}
   .center-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;}
   .tab-btn{text-align:center;}
@@ -1711,6 +1762,36 @@ body.competition-world .center-stage{background:linear-gradient(180deg, rgba(255
 body.competition-world .live-main-stream{
   border:1px solid rgba(93,167,255,.28);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.28), 0 16px 30px rgba(44,92,168,.14);
+}
+body.competition-world.world-view-lumbermill::before{
+  background:
+    linear-gradient(180deg, rgba(50,34,21,.34), rgba(18,18,18,.24)),
+    radial-gradient(900px 420px at 20% 18%, rgba(176,132,74,.24), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}
+body.competition-world.world-view-river::before{
+  background:
+    linear-gradient(180deg, rgba(10,38,48,.28), rgba(13,26,18,.18)),
+    radial-gradient(900px 420px at 20% 18%, rgba(83,188,214,.24), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}
+body.competition-world.world-view-snow::before{
+  background:
+    linear-gradient(180deg, rgba(220,232,255,.22), rgba(38,56,82,.24)),
+    radial-gradient(900px 420px at 20% 18%, rgba(220,240,255,.28), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}
+body.competition-world.world-view-island::before{
+  background:
+    linear-gradient(180deg, rgba(18,66,88,.22), rgba(14,32,42,.18)),
+    radial-gradient(900px 420px at 20% 18%, rgba(52,230,203,.22), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}
+body.competition-world.world-view-vip::before{
+  background:
+    linear-gradient(180deg, rgba(36,24,12,.28), rgba(13,16,28,.2)),
+    radial-gradient(900px 420px at 20% 18%, rgba(255,206,104,.26), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
 }
 
 .launch-main-actions{

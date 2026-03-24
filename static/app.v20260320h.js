@@ -5150,6 +5150,39 @@ function setupEngineGlassViewer(){
   setInterval(refreshFeed, 12000)
 }
 
+const WORLD_VIEWS = [
+  { key:"lumbermill", label:"Lumbermill Defense" },
+  { key:"river", label:"River Hole Motion" },
+  { key:"snow", label:"Artificial Snow Hill" },
+  { key:"island", label:"Island Control" },
+  { key:"vip", label:"VIP Spot Energy" }
+]
+
+function setupUnlockViewsButton(){
+  const btn = qs("#unlockViewsBtn")
+  if(!btn) return
+  const classes = WORLD_VIEWS.map(v=>`world-view-${v.key}`)
+  const subtitle = btn.querySelector(".unlock-main-sub")
+  function applyView(key){
+    document.body.classList.remove(...classes)
+    document.body.classList.add(`world-view-${key}`)
+    localStorage.setItem("worldView", key)
+    const view = WORLD_VIEWS.find(v=>v.key === key) || WORLD_VIEWS[0]
+    if(subtitle) subtitle.textContent = view.label
+    const stage = qs("#ariaAssistantSub")
+    if(stage) stage.textContent = `ARIA · Arena Support / ${view.label}`
+  }
+  const saved = localStorage.getItem("worldView")
+  applyView((saved && WORLD_VIEWS.some(v=>v.key === saved)) ? saved : WORLD_VIEWS[0].key)
+  btn.addEventListener("click", ()=>{
+    const current = localStorage.getItem("worldView") || WORLD_VIEWS[0].key
+    const index = WORLD_VIEWS.findIndex(v=>v.key === current)
+    const next = WORLD_VIEWS[(index + 1) % WORLD_VIEWS.length]
+    applyView(next.key)
+    openMiniWindow("World View", `${next.label} unlocked. SupportRD shifted the view.`)
+  })
+}
+
 
 window.addEventListener("DOMContentLoaded", ()=>{
   try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init start'; }catch{}
@@ -5177,6 +5210,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupEmergencyAssist)
   safe(setupAriaHelp)
   safe(setupThemeArrows)
+  safe(setupUnlockViewsButton)
   safe(setupModals)
   safe(setupPaymentChooser)
   safe(setupSettings)
