@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SupportRD Pro Jake Studio</title>
-  <link rel="stylesheet" href="/static/studio/studio.css?v=20260323i">
+  <link rel="stylesheet" href="/static/studio/studio.css?v=20260323j">
 </head>
 <body>
   <main class="studio-page">
@@ -74,6 +74,7 @@
         <div class="motherboard-plus-row">
           <button id="addMotherboardBtn">+ Motherboard</button>
           <button id="createBlankMotherboardBtn">New Blank Motherboard</button>
+          <button id="deleteMotherboardBtn">Delete Last Motherboard</button>
           <button id="restoreDeletedBtn">Restore Previous</button>
           <button id="toggleBoardMenuBtn">Collapse / Reopen Boards</button>
         </div>
@@ -192,8 +193,20 @@
           <button id="buildMixBtn">Build Full Mix</button>
           <button id="exportMixBtn">Export WAV</button>
           <button id="exportFullMp3Btn">Export Full MP3</button>
+          <button id="exportSessionStateBtn">Export Session</button>
         </div>
         <div class="status" id="mixExportStatus">Ready to build from placements with attached MP3/M4A.</div>
+      </article>
+
+      <article class="card">
+        <h2>Recent Saved Files</h2>
+        <div class="row">
+          <select id="recentSessionSelect"></select>
+          <button id="loadRecentSessionBtn">Load Saved</button>
+          <button id="replaceRecentSessionBtn">Replace Current</button>
+          <button id="exportRecentSessionBtn">Export Saved</button>
+        </div>
+        <div class="status" id="recentSessionStatus">Save a motherboard session to see recent files here.</div>
       </article>
 
       <article class="card">
@@ -234,6 +247,7 @@
           <button data-transport="rewind">Rewind</button>
           <button data-transport="back">Back</button>
           <button data-transport="play">Play</button>
+          <button data-transport="stop">Stop</button>
           <button data-transport="forward">Forward</button>
           <button data-transport="next">Next</button>
           <button data-transport="loop">Loop</button>
@@ -271,11 +285,60 @@
         </div>
         <div class="row">
           <select id="placementSelect"></select>
-          <button id="attachAudioToPlacementBtn">Set Clip On Placement</button>
+          <button id="attachAudioToPlacementBtn">Place On Motherboard</button>
           <button id="deletePlacementBtn">Delete Selected</button>
         </div>
         <div id="timelineTracks" class="timeline-tracks"></div>
+        <details class="recent-boards" id="recentBoardsWrap">
+          <summary>Recent Motherboards</summary>
+          <div id="recentBoardsList" class="recent-boards-list">No recent motherboard changes yet.</div>
+        </details>
         <div class="status" id="placementStatus">Import clips, then place MP3, recorded, or instrument blocks on any visible lane.</div>
+      </article>
+
+      <article class="card wide gig-editor-shell" id="gigEditorShell" hidden>
+        <div class="gig-editor-head">
+          <div>
+            <h2>Gig Video Connector</h2>
+            <div class="status" id="gigEditorStatus">Loading the dual-panel gig editor...</div>
+          </div>
+          <button id="closeGigEditorBtn" class="ghost giga-close-btn">X</button>
+        </div>
+        <div class="gig-editor-grid">
+          <section class="gig-panel">
+            <h3>Video Edit</h3>
+            <div class="row gig-edit-tools">
+              <button id="gigCutBtn">Cut</button>
+              <button id="gigHighlightBtn">Highlight</button>
+              <button id="gigEraseBtn">Erase</button>
+              <button id="gigExtendBtn">Extend</button>
+              <button id="gigCompactBtn">Compact</button>
+              <button id="gigEffectBtn">Effect Add</button>
+              <button id="gigSpeedBtn">Speed</button>
+            </div>
+            <div class="row gig-edit-tools gig-live-tools">
+              <button id="gigSlowBtn">Slow Down</button>
+              <button id="gigPanoramaBtn">Panorama</button>
+              <button id="gigDroneBtn">4K Drone</button>
+              <button id="gigZoomInBtn">Zoom In</button>
+              <button id="gigZoomOutBtn">Zoom Out</button>
+              <button id="gigReactiveBtn">Reactive Camera</button>
+            </div>
+            <div class="gig-stats-grid">
+              <div class="profile-stat"><strong id="gigAudioStat">Stereo</strong>Audio</div>
+              <div class="profile-stat"><strong id="gigFrameStat">60 fps</strong>Frame Rate</div>
+              <div class="profile-stat"><strong id="gigQualityStat">4K</strong>Quality</div>
+              <div class="profile-stat"><strong id="gigBoardStat">3</strong>Motherboards Linked</div>
+            </div>
+          </section>
+          <section class="gig-panel preview">
+            <h3>Live Watch</h3>
+            <div class="gig-preview-window" id="gigPreviewWindow">
+              <div class="gig-preview-glow"></div>
+              <div class="gig-preview-copy">Live session preview will appear here with your active motherboards and video stream.</div>
+            </div>
+          </section>
+        </div>
       </article>
 
       <article class="card">
@@ -319,8 +382,18 @@
       <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>
     </footer>
   </main>
-  <script src="/static/studio/studio.js?v=20260323i"></script>
+  <script src="/static/studio/studio.js?v=20260323j"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
 
 

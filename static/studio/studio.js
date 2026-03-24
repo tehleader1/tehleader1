@@ -5,9 +5,9 @@ let currentSessionId = localStorage.getItem("studioSessionId") || "";
 let placements = [];
 let placementAudioFiles = [];
 let trackState = [
-  { id: "mp3-1", type: "mp3", title: "MP3 Motherboard 1" },
-  { id: "recorded-1", type: "recorded", title: "Recorded Motherboard 1" },
-  { id: "instrument-1", type: "instrument", title: "Instrument Motherboard 1" }
+  { id: "mp3-1", type: "mp3", title: "Motherboard 1" },
+  { id: "recorded-1", type: "recorded", title: "Motherboard 2" },
+  { id: "instrument-1", type: "instrument", title: "Motherboard 3" }
 ];
 let selectedTimelineAudioId = 0;
 let selectedPlacementId = 0;
@@ -22,9 +22,11 @@ let currentAnalyser = null;
 let currentWaveProbe = null;
 let mixHistory = [];
 let deletedSnapshots = [];
+let recentBoards = [];
 let lastRenderedMixBlob = null;
 let lastRenderedMixName = "";
 let currentTheme = 0;
+let recentSessionSaves = [];
 const THEMES = ["", "theme-signal", "theme-ember"];
 const timelineDurationSec = 120;
 
@@ -35,6 +37,86 @@ function deepClone(value) {
 function setStatus(id, message) {
   const el = qs(id);
   if (el) el.textContent = message;
+}
+function captureSessionState() {
+  return {
+    session_id: currentSessionId || `studio-${Date.now()}`,
+    saved_at: new Date().toISOString(),
+    lyrics: qs("#lyricsInput")?.value || "",
+    fx: {
+      reverb: Number(qs("#fxReverb")?.value || 0),
+      echo: Number(qs("#fxEcho")?.value || 0),
+      bass: Number(qs("#fxBass")?.value || 0),
+      dbQuick: Number(qs("#dbQuick")?.value || 0),
+      preset: qs("#fxPreset")?.value || "normal"
+    },
+    placements: deepClone(placements),
+    trackState: deepClone(trackState),
+    placementAudioFiles: deepClone(placementAudioFiles.map((item) => ({
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      durationSec: item.durationSec,
+      waveData: item.waveData || [],
+      url: item.url || ""
+    }))),
+    selectedTimelineAudioId,
+    selectedPlacementId
+  };
+}
+
+function applySessionState(snapshot, label = "Session loaded.") {
+  if (!snapshot) return;
+  placements = deepClone(snapshot.placements || []);
+  trackState = deepClone(snapshot.trackState || trackState);
+  placementAudioFiles = deepClone(snapshot.placementAudioFiles || []);
+  selectedTimelineAudioId = snapshot.selectedTimelineAudioId || 0;
+  selectedPlacementId = snapshot.selectedPlacementId || 0;
+  if (qs("#lyricsInput")) qs("#lyricsInput").value = snapshot.lyrics || "";
+  if (qs("#fxReverb")) qs("#fxReverb").value = String(snapshot.fx?.reverb ?? 25);
+  if (qs("#fxEcho")) qs("#fxEcho").value = String(snapshot.fx?.echo ?? 30);
+  if (qs("#fxBass")) qs("#fxBass").value = String(snapshot.fx?.bass ?? 40);
+  if (qs("#dbQuick")) qs("#dbQuick").value = String(snapshot.fx?.dbQuick ?? 0);
+  if (qs("#fxPreset")) qs("#fxPreset").value = snapshot.fx?.preset || "normal";
+  renderPlacementAudioOptions();
+  renderPlacements();
+  renderProfileStats();
+  renderUndoHistory();
+  renderRecentSessionSaves();
+  updateDbQuickLabel();
+  setStatus("#lyricsStatus", label);
+  setStatus("#recentSessionStatus", label);
+}
+
+function renderRecentSessionSaves() {
+  const select = qs("#recentSessionSelect");
+  if (!select) return;
+  if (!recentSessionSaves.length) {
+    select.innerHTML = "<option value=''>No saved files yet</option>";
+    return;
+  }
+  select.innerHTML = recentSessionSaves.map((item, index) => `<option value="${index}">${item.name}</option>`).join("");
+}
+
+function persistRecentSessionSave(snapshot) {
+  const entry = {
+    name: `Motherboard Session · ${new Date(snapshot.saved_at).toLocaleString()}`,
+    snapshot
+  };
+  recentSessionSaves.unshift(entry);
+  recentSessionSaves = recentSessionSaves.slice(0, 12);
+  localStorage.setItem("studioRecentSessionSaves", JSON.stringify(recentSessionSaves));
+  renderRecentSessionSaves();
+}
+
+function exportSessionSnapshot(snapshot, fileName = `supportrd-session-${Date.now()}.json`) {
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+  downloadBlob(blob, fileName);
+}
+function pushRecentBoard(action, title) {
+  recentBoards.unshift({ action, title, at: new Date().toLocaleTimeString() });
+  recentBoards = recentBoards.slice(0, 12);
+  renderRecentBoards();
 }
 
 function summarizePlacement(p) {
@@ -103,6 +185,32 @@ function generateWaveData(seedText = "SupportRD", length = 48, mode = "steady", 
   return data;
 }
 
+async function decodeAudioVisual(file) {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    const ctx = new Ctx();
+    const buffer = await file.arrayBuffer();
+    const decoded = await ctx.decodeAudioData(buffer.slice(0));
+    const channel = decoded.getChannelData(0);
+    const bars = 64;
+    const chunk = Math.max(1, Math.floor(channel.length / bars));
+    const waveData = [];
+    for (let i = 0; i < bars; i += 1) {
+      const start = i * chunk;
+      let peak = 0;
+      for (let j = start; j < Math.min(start + chunk, channel.length); j += 1) {
+        const val = Math.abs(channel[j] || 0);
+        if (val > peak) peak = val;
+      }
+      waveData.push(Math.max(10, Math.min(98, Math.round(peak * 100))));
+    }
+    await ctx.close();
+    return { durationSec: decoded.duration || 8, waveData };
+  } catch {
+    return null;
+  }
+}
 function buildWaveMarkup(waveData = []) {
   const bars = (waveData.length ? waveData : generateWaveData())
     .map((height) => `<span class="wave-bar" style="height:${height}%"></span>`)
@@ -122,29 +230,45 @@ function ensureTrack(type) {
 }
 
 function addTrack(type = "recorded", snapshot = true) {
-  if (snapshot) pushUndoSnapshot(`Add ${type} motherboard`);
-  const count = trackState.filter((t) => t.type === type).length + 1;
+  if (snapshot) pushUndoSnapshot(`Add motherboard`);
+  const count = trackState.length + 1;
   const track = {
     id: `${type}-${count}`,
     type,
-    title: `${type.charAt(0).toUpperCase() + type.slice(1)} Motherboard ${count}`
+    title: `Motherboard ${count}`
   };
   trackState.push(track);
+  pushRecentBoard("Added", track.title);
   renderPlacements();
   renderProfileStats();
   setStatus("#placementStatus", `${track.title} added.`);
   return track;
 }
 
+function deleteLastMotherboard() {
+  if (trackState.length <= 1) {
+    setStatus("#motherboardStatus", "Keep at least one motherboard active.");
+    return;
+  }
+  pushUndoSnapshot("Delete motherboard");
+  const removed = trackState.pop();
+  placements = placements.filter((placement) => placement.trackId !== removed.id);
+  pushRecentBoard("Deleted", removed.title);
+  renderPlacements();
+  renderProfileStats();
+  setStatus("#motherboardStatus", `${removed.title} removed.`);
+}
 function removePlacement(id) {
   const idx = placements.findIndex((p) => p.id === id);
   if (idx < 0) return;
   pushUndoSnapshot(`Delete ${summarizePlacement(placements[idx])}`);
+  const removed = placements[idx];
   placements.splice(idx, 1);
   if (selectedPlacementId === id) selectedPlacementId = 0;
+  deletedSnapshots.unshift({ action: `Deleted clip`, at: new Date().toLocaleTimeString(), placements: deepClone(placements), trackState: deepClone(trackState), placementAudioFiles: deepClone(placementAudioFiles), selectedTimelineAudioId, selectedPlacementId });
   renderPlacements();
   renderProfileStats();
-  setStatus("#placementStatus", `Deleted placement #${id}.`);
+  setStatus("#placementStatus", `Deleted ${removed.audioName || removed.wave}.`);
 }
 
 function createPlacement(kind = "mp3", options = {}) {
@@ -159,7 +283,7 @@ function createPlacement(kind = "mp3", options = {}) {
     timeSec: Math.max(0, time),
     wave,
     audioId: audio?.id || 0,
-    audioName: options.audioName || audio?.name || (kind === "recorded" ? "Recorded Lane" : kind === "instrument" ? "Instrument Lane" : "MP3 Layer"),
+    audioName: options.audioName || audio?.name || "Audio Layer",
     durationSec: Math.max(3, Number(options.durationSec || audio?.durationSec || (kind === "recorded" ? 6 : kind === "instrument" ? 9 : 8))),
     trackId: options.trackId || ensureTrack(kind),
     waveData: options.waveData || generateWaveData(options.audioName || audio?.name || kind, kind === "recorded" ? 56 : 48, kind === "instrument" ? "instrument" : "steady", kind === "recorded" ? 0.92 : 1),
@@ -209,7 +333,7 @@ function renderPlacements() {
     const hiddenClass = index >= visibleCount ? " hidden-track" : "";
     const clips = placements.filter((placement) => placement.trackId === track.id).map((placement) => {
       const left = Math.max(0, Math.min(92, (placement.timeSec / timelineDurationSec) * 100));
-      const width = Math.max(16, Math.min(84, ((placement.durationSec || 6) / timelineDurationSec) * 100));
+      const width = Math.max(26, Math.min(94, ((placement.durationSec || 6) / timelineDurationSec) * 100));
       const selected = placement.id === selectedPlacementId ? " selected" : "";
       const waveData = Array.isArray(placement.waveData) ? placement.waveData : generateWaveData(placement.audioName || placement.wave);
       return `<button class="timeline-clip ${placement.kind}${selected}" type="button" data-placement-id="${placement.id}" style="left:${left}%;width:${width}%;">
@@ -220,7 +344,7 @@ function renderPlacements() {
     return `<div class="timeline-track${hiddenClass}" data-track-id="${track.id}">
       <div class="timeline-track-head">
         <div class="timeline-track-title">${track.title}</div>
-        <div class="timeline-track-type">${track.type.toUpperCase()}</div>
+        <div class="timeline-track-type">Active</div>
       </div>
       <div class="timeline-track-body">${clips || '<div class="timeline-empty">This motherboard is ready for clips, live recording, or instruments.</div>'}</div>
     </div>`;
@@ -244,6 +368,15 @@ function renderPlacements() {
   }
 }
 
+function renderRecentBoards() {
+  const wrap = qs("#recentBoardsList");
+  if (!wrap) return;
+  if (!recentBoards.length) {
+    wrap.innerHTML = "No recent motherboard changes yet.";
+    return;
+  }
+  wrap.innerHTML = recentBoards.map((item) => `<div class="recent-board-item"><strong>${item.action}</strong> · ${item.title}<div>${item.at}</div></div>`).join("");
+}
 function renderUndoHistory() {
   const history = qs("#undoHistory");
   if (!history) return;
@@ -571,17 +704,9 @@ async function runEchoPlacement() {
   }
 }
 async function saveSession() {
-  const payload = {
-    lyrics: qs("#lyricsInput")?.value || "",
-    fx: {
-      reverb: Number(qs("#fxReverb")?.value || 0),
-      echo: Number(qs("#fxEcho")?.value || 0),
-      bass: Number(qs("#fxBass")?.value || 0)
-    },
-    placements,
-    trackState,
-    updated_at: new Date().toISOString()
-  };
+  const payload = captureSessionState();
+  payload.updated_at = new Date().toISOString();
+  persistRecentSessionSave(payload);
   try {
     const response = await fetch("/api/studio/session/save", {
       method: "POST",
@@ -593,8 +718,12 @@ async function saveSession() {
     currentSessionId = data.session_id;
     localStorage.setItem("studioSessionId", currentSessionId);
     setStatus("#lyricsStatus", `Saved: ${currentSessionId}`);
+    setStatus("#recentSessionStatus", `Saved: ${currentSessionId}`);
   } catch {
-    setStatus("#lyricsStatus", "Save failed.");
+    currentSessionId = payload.session_id;
+    localStorage.setItem("studioSessionId", currentSessionId);
+    setStatus("#lyricsStatus", `Saved locally: ${currentSessionId}`);
+    setStatus("#recentSessionStatus", `Saved locally: ${currentSessionId}`);
   }
 }
 
@@ -607,17 +736,16 @@ async function loadSession() {
     const response = await fetch(`/api/studio/session/load?session_id=${encodeURIComponent(currentSessionId)}`);
     const data = await response.json();
     if (!(data && data.ok && data.payload)) throw new Error("load_error");
-    qs("#lyricsInput").value = data.payload.lyrics || "";
-    placements = Array.isArray(data.payload.placements) ? data.payload.placements : [];
-    trackState = Array.isArray(data.payload.trackState) && data.payload.trackState.length ? data.payload.trackState : trackState;
-    renderPlacements();
-    renderProfileStats();
-    setStatus("#lyricsStatus", `Loaded: ${currentSessionId}`);
+    applySessionState(data.payload, `Loaded: ${currentSessionId}`);
   } catch {
+    const local = recentSessionSaves.find((item) => item.snapshot?.session_id === currentSessionId);
+    if (local) {
+      applySessionState(local.snapshot, `Loaded local save: ${currentSessionId}`);
+      return;
+    }
     setStatus("#lyricsStatus", "Load failed.");
   }
 }
-
 function updateLiveWaveFromMic() {
   const placement = placements.find((item) => item.id === currentRecordingPlacementId);
   if (!placement) return;
@@ -672,7 +800,7 @@ async function startRecording() {
           waveData: placement.waveData || generateWaveData("Recorded", 48, "live", 1)
         });
         placement.audioId = audioId;
-        placement.audioName = "Recorded Lane";
+        placement.audioName = "Live Recording";
         placement.live = false;
       }
       currentMicStream?.getTracks().forEach((track) => track.stop());
@@ -746,13 +874,18 @@ function setupTransport() {
   qs("#addInstrumentLaneBtn")?.addEventListener("click", () => addTrack("instrument"));
   qs("#addMotherboardBtn")?.addEventListener("click", () => addTrack("recorded"));
   qs("#createBlankMotherboardBtn")?.addEventListener("click", () => addTrack("blank"));
+  qs("#deleteMotherboardBtn")?.addEventListener("click", deleteLastMotherboard);
   qs("#attachAudioToPlacementBtn")?.addEventListener("click", () => {
-    const placementId = Number(qs("#placementSelect")?.value || selectedPlacementId || 0);
+    let placementId = Number(qs("#placementSelect")?.value || selectedPlacementId || 0);
     const audio = placementAudioFiles.find((item) => item.id === selectedTimelineAudioId);
-    const placement = placements.find((item) => item.id === placementId);
-    if (!placement || !audio) {
-      setStatus("#placementStatus", "Pick a placement and arm an imported clip first.");
+    if (!audio) {
+      setStatus("#placementStatus", "Arm an imported clip first.");
       return;
+    }
+    let placement = placements.find((item) => item.id === placementId);
+    if (!placement) {
+      placement = createPlacement("mp3", { audio, audioName: audio.name, durationSec: audio.durationSec || 8 });
+      placementId = placement.id;
     }
     pushUndoSnapshot(`Attach ${audio.name}`);
     placement.audioId = audio.id;
@@ -760,14 +893,14 @@ function setupTransport() {
     placement.durationSec = audio.durationSec || placement.durationSec || 6;
     placement.waveData = audio.waveData || generateWaveData(audio.name, 48, placement.kind === "instrument" ? "instrument" : "steady", 1);
     renderPlacements();
-    setStatus("#placementStatus", `Attached ${audio.name} to placement #${placementId}.`);
+    setStatus("#placementStatus", `Placed ${audio.name} on ${placement.trackId}.`);
   });
-  qs("#placementAudioUpload")?.addEventListener("change", () => {
+  qs("#placementAudioUpload")?.addEventListener("change", async () => {
     const files = Array.from(qs("#placementAudioUpload")?.files || []);
     if (!files.length) return;
-    files.forEach((file) => {
+    for (const file of files) {
       const ok = String(file.name || "").match(/\.(mp3|m4a|wav|aac|ogg)$/i) || (file.type || "").startsWith("audio/");
-      if (!ok) return;
+      if (!ok) continue;
       const id = Date.now() + Math.floor(Math.random() * 1000);
       const url = URL.createObjectURL(file);
       const entry = {
@@ -776,19 +909,16 @@ function setupTransport() {
         url,
         type: file.type || "audio/*",
         durationSec: 8,
-        waveData: generateWaveData(file.name, 48, "steady", 1)
+        waveData: generateWaveData(file.name, 64, "steady", 1)
       };
+      const decoded = await decodeAudioVisual(file);
+      if (decoded) {
+        entry.durationSec = decoded.durationSec;
+        entry.waveData = decoded.waveData;
+      }
       placementAudioFiles.push(entry);
-      try {
-        const probe = new Audio(url);
-        probe.addEventListener("loadedmetadata", () => {
-          const found = placementAudioFiles.find((item) => item.id === id);
-          if (found && Number.isFinite(probe.duration) && probe.duration > 0) found.durationSec = probe.duration;
-          if (found) found.waveData = generateWaveData(found.name, 48, "steady", Math.min(1.15, 0.75 + ((probe.duration || 8) / 20)));
-          renderPlacementAudioOptions();
-        }, { once: true });
-      } catch {}
-    });
+      selectedTimelineAudioId = entry.id;
+    }
     renderPlacementAudioOptions();
     setStatus("#placementStatus", `${placementAudioFiles.length} imported audio file(s) are ready for the motherboard.`);
     qs("#placementAudioUpload").value = "";
@@ -806,6 +936,15 @@ function setupTransport() {
         undoLastAction();
         return;
       }
+      if (cmd === "stop") {
+        stopRecording();
+        window.__studioRadio?.stop?.();
+        transportStatus.textContent = "Stopped current recording and default player.";
+        return;
+      }
+      if (cmd === "play") { window.__studioRadio?.play?.(); }
+      if (cmd === "next") { window.__studioRadio?.next?.(); }
+      if (cmd === "rewind") { window.__studioRadio?.prev?.(); }
       transportStatus.textContent = `Transport: ${cmd.toUpperCase()} ready near the motherboard.`;
     });
   });
@@ -833,18 +972,57 @@ function setupRecordingMath() {
 }
 
 function setupGigPanel() {
-  qs("#gigConnectorBtn")?.addEventListener("click", async () => {
+  const runGigLoad = async () => {
     const slider = qs("#gigConnectorLoad");
-    const steps = [10, 20, 55, 85, 100];
+    const shell = qs("#gigEditorShell");
+    const shellStatus = qs("#gigEditorStatus");
+    const boardStat = qs("#gigBoardStat");
+    const page = qs(".studio-page");
+    const steps = [12, 24, 38, 55, 72, 85, 100];
+    page?.classList.add("gig-active");
     for (const step of steps) {
       if (slider) slider.value = String(step);
-      setStatus("#gigStatus", `Gig Session Connector loading ${step}%...`);
-      await new Promise((resolve) => setTimeout(resolve, 240));
+      setStatus("#gigStatus", `Gig 4K Record loading ${step}%...`);
+      if (shellStatus) shellStatus.textContent = `Gig 4K Record loading ${step}%...`;
+      await new Promise((resolve) => setTimeout(resolve, 900));
     }
-    setStatus("#gigStatus", "Gig Session Connector ready. Glass edit view can now bridge the motherboard with video cuts.");
-  });
-  qs("#gigRecordBtn")?.addEventListener("click", () => setStatus("#gigStatus", "Gig 4K Record armed. Record, stop, and save to storage with preview routing next."));
+    if (shell) shell.hidden = false;
+    if (boardStat) boardStat.textContent = String(trackState.length);
+    setStatus("#gigStatus", "Gig connector ready. Dual-panel editor is open in the middle of the page.");
+    if (shellStatus) shellStatus.textContent = "Dual-panel video editor is live. Edit on one side, watch on the other.";
+    shell?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const gigMessages = {
+    gigCutBtn: "Cut ready across the live stream and connected motherboards.",
+    gigHighlightBtn: "Highlight points marked for fast scene review.",
+    gigEraseBtn: "Erase tool armed for selected scene slices.",
+    gigExtendBtn: "Extend mode applied to the current scene timing.",
+    gigCompactBtn: "Compact mode tightened the current scene layout.",
+    gigEffectBtn: "Effect layer added to the dual-panel session.",
+    gigSpeedBtn: "Speed controls are active for the current gig stream.",
+    gigSlowBtn: "Slow motion panel is shaping the current shot.",
+    gigPanoramaBtn: "Panorama view is stretching the frame smoothly.",
+    gigDroneBtn: "4K drone pass armed for the live connector.",
+    gigZoomInBtn: "Zoom in locked on the active scene.",
+    gigZoomOutBtn: "Zoom out opened the whole action view.",
+    gigReactiveBtn: "Reactive camera mode is following the session energy."
+  };
+
+  qs("#gigConnectorBtn")?.addEventListener("click", runGigLoad);
+  qs("#gigRecordBtn")?.addEventListener("click", runGigLoad);
+  qs("#studioGigLocalBtn")?.addEventListener("click", runGigLoad);
   qs("#cameraAccessBtn")?.addEventListener("click", () => setStatus("#gigStatus", "Camera access requested. Kodak, Samsung, iPhone, and drone-ready workflow can connect here."));
+  qs("#closeGigEditorBtn")?.addEventListener("click", () => {
+    const shell = qs("#gigEditorShell");
+    const page = qs(".studio-page");
+    if (shell) shell.hidden = true;
+    page?.classList.remove("gig-active");
+    setStatus("#gigStatus", "Returned to the main booth view.");
+  });
+  Object.entries(gigMessages).forEach(([id, message]) => {
+    qs(`#${id}`)?.addEventListener("click", () => setStatus("#gigEditorStatus", message));
+  });
 }
 
 function setupUtilityButtons() {
@@ -860,9 +1038,35 @@ function setupUtilityButtons() {
     setStatus("#motherboardStatus", "Theme shifted across the whole studio glass layout.");
   });
   qs("#saveBoardBtn")?.addEventListener("click", saveSession);
-  qs("#exportBoardBtn")?.addEventListener("click", async () => {
-    const built = await buildConstructedMix();
-    if (built) downloadBlob(built.blob, built.fileName);
+  qs("#exportBoardBtn")?.addEventListener("click", () => {
+    const snapshot = captureSessionState();
+    exportSessionSnapshot(snapshot, `supportrd-session-${Date.now()}.json`);
+    setStatus("#recentSessionStatus", "Exported current motherboard session.");
+  });
+  qs("#exportSessionStateBtn")?.addEventListener("click", () => {
+    const snapshot = captureSessionState();
+    exportSessionSnapshot(snapshot, `supportrd-session-${Date.now()}.json`);
+    setStatus("#recentSessionStatus", "Exported current motherboard session.");
+  });
+  qs("#loadRecentSessionBtn")?.addEventListener("click", () => {
+    const idx = Number(qs("#recentSessionSelect")?.value || -1);
+    const item = recentSessionSaves[idx];
+    if (!item) return;
+    applySessionState(item.snapshot, `Loaded saved file: ${item.name}`);
+  });
+  qs("#replaceRecentSessionBtn")?.addEventListener("click", () => {
+    const idx = Number(qs("#recentSessionSelect")?.value || -1);
+    const item = recentSessionSaves[idx];
+    if (!item) return;
+    pushUndoSnapshot("Replace motherboard session");
+    applySessionState(item.snapshot, `Replaced current session with: ${item.name}`);
+  });
+  qs("#exportRecentSessionBtn")?.addEventListener("click", () => {
+    const idx = Number(qs("#recentSessionSelect")?.value || -1);
+    const item = recentSessionSaves[idx];
+    if (!item) return;
+    exportSessionSnapshot(item.snapshot, `${item.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.json`);
+    setStatus("#recentSessionStatus", `Exported saved file: ${item.name}`);
   });
   qs("#undoStudioBtn")?.addEventListener("click", undoLastAction);
   qs("#restoreDeletedBtn")?.addEventListener("click", restoreDeletedAction);
@@ -883,6 +1087,13 @@ function setupUtilityButtons() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  try {
+    recentSessionSaves = JSON.parse(localStorage.getItem("studioRecentSessionSaves") || "[]");
+    if (!Array.isArray(recentSessionSaves)) recentSessionSaves = [];
+  } catch {
+    recentSessionSaves = [];
+  }
+  renderRecentSessionSaves();
   loadPlan();
   loadExtensions();
   setupStudioRadio();
@@ -941,6 +1152,31 @@ window.addEventListener("message", (event) => {
     window.__studioRadio?.stop?.();
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
