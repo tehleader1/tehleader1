@@ -34,6 +34,8 @@ const timelineDurationSec = 120;
 let timelineZoom = 1;
 let draggedPlacementId = 0;
 let selectedTrackId = "mp3-1";
+let activeCameraStream = null;
+let currentGuideTimer = null;
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -42,6 +44,14 @@ function deepClone(value) {
 function setStatus(id, message) {
   const el = qs(id);
   if (el) el.textContent = message;
+}
+function getSelectedTrack() {
+  return trackState.find((track) => track.id === selectedTrackId) || null;
+}
+function updateSelectedBoardLabels() {
+  const selected = getSelectedTrack();
+  const btn = qs("#stickySelectedBoardBtn");
+  if (btn) btn.textContent = selected ? `${selected.title} Selected` : "Selected Motherboard";
 }
 function captureSessionState() {
   return {
@@ -159,6 +169,7 @@ function restoreSnapshot(snapshot, label) {
   renderUndoHistory();
   setStatus("#motherboardStatus", label);
   setStatus("#placementStatus", label);
+  updateSelectedBoardLabels();
 }
 
 function undoLastAction() {
@@ -262,9 +273,11 @@ function deleteLastMotherboard() {
   pushUndoSnapshot("Delete motherboard");
   const removed = trackState.pop();
   placements = placements.filter((placement) => placement.trackId !== removed.id);
+  if (selectedTrackId === removed.id) selectedTrackId = trackState[trackState.length - 1]?.id || trackState[0]?.id || "";
   pushRecentBoard("Deleted", removed.title);
   renderPlacements();
   renderProfileStats();
+  updateSelectedBoardLabels();
   setStatus("#motherboardStatus", `${removed.title} removed.`);
 }
 function removePlacement(id) {
@@ -283,7 +296,7 @@ function removePlacement(id) {
 function createPlacement(kind = "mp3", options = {}) {
   pushUndoSnapshot(`Create ${kind} placement`);
   const time = Number(options.timeSec ?? qs("#timelinePlacementTime")?.value ?? qs("#placementTime")?.value ?? 0);
-  const wave = String(options.wave ?? qs("#timelinePlacementWave")?.value ?? qs("#placementWave")?.value ?? "echo");
+  const wave = String(options.wave ?? qs("#fxPreset")?.value ?? "echo");
   const audio = options.audio || placementAudioFiles.find((item) => item.id === selectedTimelineAudioId) || null;
   const id = Date.now() + Math.floor(Math.random() * 1000);
   const placement = {
@@ -294,7 +307,7 @@ function createPlacement(kind = "mp3", options = {}) {
     audioId: audio?.id || 0,
     audioName: options.audioName || audio?.name || "Audio Layer",
     durationSec: Math.max(3, Number(options.durationSec || audio?.durationSec || (kind === "recorded" ? 6 : kind === "instrument" ? 9 : 8))),
-    trackId: options.trackId || ensureTrack(kind),
+    trackId: options.trackId || selectedTrackId || ensureTrack(kind),
     waveData: options.waveData || generateWaveData(options.audioName || audio?.name || kind, kind === "recorded" ? 56 : 48, kind === "instrument" ? "instrument" : "steady", kind === "recorded" ? 0.92 : 1),
     live: Boolean(options.live)
   };
@@ -302,6 +315,7 @@ function createPlacement(kind = "mp3", options = {}) {
   selectedPlacementId = id;
   renderPlacements();
   renderProfileStats();
+  updateSelectedBoardLabels();
   setStatus("#placementStatus", `${kind.toUpperCase()} placement added on ${placement.trackId}.`);
   return placement;
 }
@@ -311,7 +325,7 @@ function renderPlacementAudioOptions() {
   if (!bank) return;
   if (!placementAudioFiles.length) {
     selectedTimelineAudioId = 0;
-    bank.innerHTML = '<button class="clip-chip empty" type="button">Import a track to begin</button>';
+    bank.innerHTML = "";
     return;
   }
   if (!placementAudioFiles.some((item) => item.id === selectedTimelineAudioId)) {
@@ -354,6 +368,13 @@ function setTimelineZoom(delta = 0) {
   renderPlacements();
   setStatus("#placementStatus", `Wave zoom is now ${timelineZoom.toFixed(2)}x for precise editing.`);
 }
+function renderClipHandles(placement) {
+  if (placement.id !== selectedPlacementId) return "";
+  return `
+    <button class="clip-handle left" type="button" data-handle="left" data-placement-id="${placement.id}" aria-label="Resize Left"></button>
+    <button class="clip-handle right" type="button" data-handle="right" data-placement-id="${placement.id}" aria-label="Resize Right"></button>
+  `;
+}
 function renderPlacements() {
   const wrap = qs("#timelineTracks");
   const select = qs("#placementSelect");
@@ -370,7 +391,9 @@ function renderPlacements() {
       const selected = placement.id === selectedPlacementId ? " selected" : "";
       const waveData = Array.isArray(placement.waveData) ? placement.waveData : generateWaveData(placement.audioName || placement.wave);
       return `<button class="timeline-clip ${placement.kind}${selected}" draggable="true" type="button" data-placement-id="${placement.id}" style="left:${left}%;width:${width}%;">
+        <span class="timeline-clip-live"></span>
         ${buildWaveMarkup(waveData)}
+        ${renderClipHandles(placement)}
         <span class="timeline-clip-label"><span class="clip-name">${placement.audioName || placement.wave}</span><span class="clip-meta">${placement.durationSec.toFixed(1)}s</span></span>
       </button>`;
     }).join("");
@@ -387,6 +410,7 @@ function renderPlacements() {
     node.addEventListener("click", () => {
       selectedTrackId = node.getAttribute("data-track-select") || selectedTrackId;
       renderPlacements();
+      updateSelectedBoardLabels();
       setStatus("#motherboardStatus", `${node.textContent} selected.`);
     });
   });
@@ -396,15 +420,7 @@ function renderPlacements() {
       selectedTrackId = node.getAttribute("data-track-drop") || selectedTrackId;
       renderPlacements();
       const track = trackState.find((item) => item.id === selectedTrackId);
-      setStatus("#motherboardStatus", `${track?.title || "Motherboard"} selected.`);
-    });
-  });
-
-  qsa("#timelineTracks [data-track-drop]").forEach((node) => {
-    node.addEventListener("click", () => {
-      selectedTrackId = node.getAttribute("data-track-drop") || selectedTrackId;
-      renderPlacements();
-      const track = trackState.find((item) => item.id === selectedTrackId);
+      updateSelectedBoardLabels();
       setStatus("#motherboardStatus", `${track?.title || "Motherboard"} selected.`);
     });
   });
@@ -420,6 +436,40 @@ function renderPlacements() {
     node.addEventListener("dragstart", (event) => {
       draggedPlacementId = Number(node.getAttribute("data-placement-id") || 0);
       event.dataTransfer?.setData("text/plain", String(draggedPlacementId));
+    });
+  });
+  qsa("#timelineTracks [data-handle]").forEach((node) => {
+    node.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const placementId = Number(node.getAttribute("data-placement-id") || 0);
+      const edge = node.getAttribute("data-handle");
+      const placement = placements.find((item) => item.id === placementId);
+      const clip = node.closest(".timeline-clip");
+      const lane = clip?.closest(".timeline-track-lane");
+      if (!placement || !lane || !edge) return;
+      const laneWidth = lane.getBoundingClientRect().width || 1;
+      const secondsPerPixel = timelineDurationSec / laneWidth;
+      const startX = event.clientX;
+      const startTime = placement.timeSec;
+      const startDuration = placement.durationSec;
+      const move = (moveEvent) => {
+        const deltaSec = (moveEvent.clientX - startX) * secondsPerPixel;
+        if (edge === "left") {
+          placement.timeSec = Math.max(0, Math.min(startTime + deltaSec, startTime + startDuration - 0.4));
+          placement.durationSec = Math.max(0.4, startDuration - deltaSec);
+        } else {
+          placement.durationSec = Math.max(0.4, startDuration + deltaSec);
+        }
+        renderPlacements();
+      };
+      const up = () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        setStatus("#placementStatus", `Adjusted ${placement.audioName || "selected clip"} on ${placement.trackId}.`);
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
     });
   });
 
@@ -455,6 +505,7 @@ function renderPlacements() {
       : "<option value=''>No placements</option>";
     if (selectedPlacementId) select.value = String(selectedPlacementId);
   }
+  updateSelectedBoardLabels();
 }
 function renderRecentBoards() {
   const wrap = qs("#recentBoardsList");
@@ -509,9 +560,26 @@ function renderGigPreviewSummary() {
   `;
   setStatus("#gigBoardStat", String(boardCount));
 }
+function handleGigVideoFiles(files = []) {
+  if (!files.length) return;
+  files.forEach((file) => {
+    const ok = String(file.name || "").match(/\.(mp4|mov|webm|m4v)$/i) || (file.type || "").startsWith("video/");
+    if (!ok) return;
+    videoAssets.unshift({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      name: file.name,
+      type: file.type || "video/mp4",
+      url: URL.createObjectURL(file)
+    });
+  });
+  videoAssets = videoAssets.slice(0, 12);
+  renderGigPreviewSummary();
+  setStatus("#gigStatus", `${videoAssets.length} video file(s) are now joined with the current motherboards.`);
+}
 
 async function applyStudioMicProfile() {
   try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error("mic_unavailable");
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: true,
@@ -521,9 +589,18 @@ async function applyStudioMicProfile() {
         channelCount: 1
       }
     });
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const micSelect = qs("#micSourceSelect");
+    if (micSelect) {
+      const audioInputs = devices.filter((device) => device.kind === "audioinput");
+      micSelect.innerHTML = audioInputs.length
+        ? audioInputs.map((device, index) => `<option value="${device.deviceId || `mic-${index}`}">${device.label || `Microphone ${index + 1}`}</option>`).join("")
+        : "<option value='default'>Default Mic</option>";
+    }
+    const micLabel = stream.getAudioTracks()[0]?.label || "your microphone";
     stream.getTracks().forEach((track) => track.stop());
     localStorage.setItem("studio_mic_profile", "normal");
-    setStatus("#transportStatus", "Normal voice pickup is active by default.");
+    setStatus("#transportStatus", `Normal voice pickup is active by default on ${micLabel}.`);
   } catch {
     setStatus("#transportStatus", "Mic profile is ready once microphone permission is allowed.");
   }
@@ -873,7 +950,12 @@ function updateLiveWaveFromMic() {
 async function startRecording() {
   if (isRecording) return;
   try {
-    currentMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const selectedMicId = qs("#micSourceSelect")?.value || "default";
+    currentMicStream = await navigator.mediaDevices.getUserMedia({
+      audio: selectedMicId && selectedMicId !== "default"
+        ? { deviceId: { exact: selectedMicId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        : true
+    });
     currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
     const source = currentAudioContext.createMediaStreamSource(currentMicStream);
     currentAnalyser = currentAudioContext.createAnalyser();
@@ -913,7 +995,7 @@ async function startRecording() {
       renderPlacementAudioOptions();
       renderPlacements();
       renderProfileStats();
-      setStatus("#placementStatus", "Recording saved to the recorded motherboard.");
+      setStatus("#placementStatus", `Recording saved to ${placement?.trackId || "the selected motherboard"}.`);
     };
 
     const targetTrack = selectedTrackId || trackState[0]?.id || ensureTrack("recorded");
@@ -953,10 +1035,6 @@ function setupTransport() {
   qs("#timelinePlacementTime")?.addEventListener("input", () => {
     const twin = qs("#placementTime");
     if (twin) twin.value = qs("#timelinePlacementTime").value;
-  });
-  qs("#timelinePlacementWave")?.addEventListener("change", () => {
-    const twin = qs("#placementWave");
-    if (twin) twin.value = qs("#timelinePlacementWave").value;
   });
   qs("#createPlacementBtn")?.addEventListener("click", () => createPlacement("mp3"));
   qs("#createMp3PlacementBtn")?.addEventListener("click", () => createPlacement("mp3"));
@@ -1020,17 +1098,14 @@ function setupTransport() {
       placementAudioFiles.push(entry);
       selectedTimelineAudioId = entry.id;
       const targetTrackId = selectedTrackId || trackState[0]?.id || ensureTrack("mp3");
-      const existing = placements.find((item) => item.trackId === targetTrackId);
-      if (!existing) {
-        const placement = createPlacement("mp3", {
-          audio: entry,
-          audioName: entry.name,
-          durationSec: entry.durationSec || 8,
-          trackId: targetTrackId,
-          waveData: entry.waveData || generateWaveData(entry.name, 64, "steady", 1)
-        });
-        placement.audioId = entry.id;
-      }
+      const placement = createPlacement("mp3", {
+        audio: entry,
+        audioName: entry.name,
+        durationSec: entry.durationSec || 8,
+        trackId: targetTrackId,
+        waveData: entry.waveData || generateWaveData(entry.name, 64, "steady", 1)
+      });
+      placement.audioId = entry.id;
     }
     renderPlacementAudioOptions();
     renderPlacements();
@@ -1065,9 +1140,13 @@ function setupTransport() {
 }
 
 function setupBots() {
-  qs("#editBotBtn")?.addEventListener("click", () => setStatus("#botStatus", "Edit Bot: tighten your hook entry by 120ms and widen the ad-lib tail."));
-  qs("#techBotBtn")?.addEventListener("click", () => setStatus("#botStatus", "Technical Bot: keep peaks near 0 dB, monitor latency, and export clean stems."));
-  qs("#studioJakeOrb")?.addEventListener("click", () => setStatus("#botStatus", "Pro Jake orb active. Booth focus locked on studio creation."));
+  qs("#studioJakeOrb")?.addEventListener("click", () => {
+    const overlay = qs("#studioGuideOverlay");
+    if (overlay) overlay.hidden = false;
+    setStatus("#guideOverlayTitle", "Pro Jake");
+    setStatus("#guideOverlayStatus", "Pro Jake is live: select a motherboard, add an MP3 or record live, then shape the booth with FX and export.");
+    setStatus("#botResponseStatus", "Pro Jake: I’m live in the booth. Pick a motherboard, bring in your sound, and I’ll guide the session.");
+  });
 }
 
 function setupRecordingMath() {
@@ -1135,7 +1214,16 @@ function setupGigPanel() {
   });
   qs("#gigRecordBtn")?.addEventListener("click", runGigLoad);
   qs("#studioGigLocalBtn")?.addEventListener("click", runGigLoad);
-  qs("#cameraAccessBtn")?.addEventListener("click", () => setStatus("#gigStatus", "Camera access requested. Kodak, Samsung, iPhone, and drone-ready workflow can connect here."));
+  qs("#cameraAccessBtn")?.addEventListener("click", async () => {
+    try {
+      activeCameraStream?.getTracks()?.forEach((track) => track.stop());
+      activeCameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      setStatus("#gigStatus", "Camera access is live. Kodak, Samsung, iPhone, and drone-ready preview is armed.");
+      setStatus("#gigEditorStatus", "Camera stream is connected for the Gig 4K session.");
+    } catch {
+      setStatus("#gigStatus", "Camera access needs permission before the Gig panel can use live visuals.");
+    }
+  });
   qs("#closeGigEditorBtn")?.addEventListener("click", () => {
     const shell = qs("#gigEditorShell");
     const page = qs(".studio-page");
@@ -1147,20 +1235,7 @@ function setupGigPanel() {
   });
   qs("#gigVideoUpload")?.addEventListener("change", () => {
     const files = Array.from(qs("#gigVideoUpload")?.files || []);
-    if (!files.length) return;
-    files.forEach((file) => {
-      const ok = String(file.name || "").match(/\.(mp4|mov|webm|m4v)$/i) || (file.type || "").startsWith("video/");
-      if (!ok) return;
-      videoAssets.unshift({
-        id: Date.now() + Math.floor(Math.random() * 1000),
-        name: file.name,
-        type: file.type || "video/mp4",
-        url: URL.createObjectURL(file)
-      });
-    });
-    videoAssets = videoAssets.slice(0, 12);
-    renderGigPreviewSummary();
-    setStatus("#gigStatus", `${videoAssets.length} video file(s) are now joined with the current motherboards.`);
+    handleGigVideoFiles(files);
     qs("#gigVideoUpload").value = "";
   });
   Object.entries(gigMessages).forEach(([id, message]) => {
@@ -1174,7 +1249,7 @@ function applyFxToSelection() {
     setStatus("#placementStatus", "Highlight a wave clip first to add an effect.");
     return;
   }
-  const mode = qs("#timelinePlacementWave")?.value || "echo";
+  const mode = qs("#fxPreset")?.value || "echo";
   placement.wave = mode;
   placement.waveData = generateWaveData(`${placement.audioName}-${mode}`, 64, placement.kind === "instrument" ? "instrument" : placement.kind === "recorded" ? "live" : "steady", 1.08);
   renderPlacements();
@@ -1189,11 +1264,6 @@ function setupStickyWorkbench() {
   const gigShell = qs("#gigEditorShell");
   const page = qs(".studio-page");
   const footer = qs(".studio-footer");
-  const updateSelectedBoardButton = () => {
-    const selected = trackState.find((track) => track.id === selectedTrackId);
-    const btn = qs("#stickySelectedBoardBtn");
-    if (btn) btn.textContent = selected ? `${selected.title} Selected` : "Selected Motherboard";
-  };
   const updateStickyState = () => {
     const boardRect = boardZone?.getBoundingClientRect();
     const undoRect = undoPanel?.getBoundingClientRect();
@@ -1203,7 +1273,7 @@ function setupStickyWorkbench() {
       boardRect &&
       boardRect.top < 180 &&
       boardRect.bottom > 220 &&
-      (!undoRect || undoRect.top > 180) &&
+      (!undoRect || undoRect.top > 70) &&
       (!footerRect || footerRect.top > 160)
     );
     stickyEditorVisible = inBoardZone && !gigAlways;
@@ -1216,7 +1286,7 @@ function setupStickyWorkbench() {
     stickyGigVisible = gigActive;
     if (stickyGigBar) stickyGigBar.hidden = !gigActive;
     page?.classList.toggle("sticky-editor-live", stickyEditorVisible || gigActive);
-    updateSelectedBoardButton();
+    updateSelectedBoardLabels();
   };
 
   qsa('[data-sticky-transport]').forEach((btn) => {
@@ -1243,22 +1313,26 @@ function setupStickyWorkbench() {
     else await startRecording();
   });
   qs('#stickyImportBtn')?.addEventListener('click', () => qs('#placementAudioUpload')?.click());
+  qs('#stickyGigVideoUpload')?.addEventListener('change', (event) => {
+    handleGigVideoFiles(Array.from(event.target.files || []));
+    event.target.value = '';
+  });
   qs('#stickyInstrumentBtn')?.addEventListener('click', () => {
     createPlacement('instrument', {
       trackId: selectedTrackId || undefined,
       waveData: generateWaveData('Instrument', 64, 'instrument', 1.08)
     });
-    updateSelectedBoardButton();
+    updateSelectedBoardLabels();
   });
   qs('#stickyNewBoardBtn')?.addEventListener('click', () => {
     const track = addTrack('blank');
     selectedTrackId = track.id;
     renderPlacements();
-    updateSelectedBoardButton();
+    updateSelectedBoardLabels();
     setStatus('#motherboardStatus', `${track.title} created and selected.`);
   });
   qs('#stickySelectedBoardBtn')?.addEventListener('click', () => {
-    const selected = trackState.find((track) => track.id === selectedTrackId);
+    const selected = getSelectedTrack();
     if (selected) setStatus('#motherboardStatus', `${selected.title} is active. Import, record, or edit on this motherboard.`);
   });
   qs('#stickyUndoBtn')?.addEventListener('click', () => undoLastAction());
@@ -1319,9 +1393,16 @@ function runGuideDemo(mode = "visual") {
     ? [qs(".studio-main-bar"), qs(".profile-launch-card"), qs(".board-stage-card")]
     : [qs(".board-stage-card"), qs("#gigEditorShell"), qs(".studio-guidance-card")];
   if (!overlay || !title || !status) return;
+  if (currentGuideTimer) {
+    clearTimeout(currentGuideTimer);
+    currentGuideTimer = null;
+  }
   overlay.hidden = false;
   title.textContent = mode === "settings" ? "Settings Bot" : "Visual Bot";
   status.textContent = mode === "settings" ? "Running a settings walkthrough." : "Running a visual workflow walkthrough.";
+  setStatus("#botResponseStatus", mode === "settings"
+    ? "Settings Bot is showing where to control the studio, mic, FX, save flow, and Gig options."
+    : "Visual Bot is showing waveform editing, Gig mode, and live scene controls.");
   let delay = 0;
   targets.filter(Boolean).forEach((target, index) => {
     setTimeout(() => {
@@ -1330,6 +1411,9 @@ function runGuideDemo(mode = "visual") {
     }, delay);
     delay += 1200;
   });
+  currentGuideTimer = setTimeout(() => {
+    overlay.hidden = true;
+  }, delay + 600);
 }
 
 function setupProfileAndMain() {
@@ -1349,6 +1433,17 @@ function setupProfileAndMain() {
     setStatus("#profileMiniPost", post);
     closeProfile();
   });
+  qs("#profileAvatarUpload")?.addEventListener("change", () => {
+    const file = qs("#profileAvatarUpload")?.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    qsa("#profileAvatarPreview, .profile-launch-card .profile-avatar").forEach((node) => {
+      node.style.backgroundImage = `url("${url}")`;
+      node.classList.add("has-image");
+      node.textContent = "";
+    });
+    setStatus("#profileMiniPost", "Profile picture updated for the studio profile.");
+  });
   qs("#studioMainSaveBtn")?.addEventListener("click", saveSession);
   qs("#studioMainExportBtn")?.addEventListener("click", () => exportSessionSnapshot(captureSessionState(), `supportrd-session-${Date.now()}.json`));
   qs("#studioMainUndoBtn")?.addEventListener("click", undoLastAction);
@@ -1360,7 +1455,13 @@ function setupProfileAndMain() {
   qs("#studioMainMenuBtn")?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
   qs("#visualGuideBotBtn")?.addEventListener("click", () => runGuideDemo("visual"));
   qs("#settingsGuideBotBtn")?.addEventListener("click", () => runGuideDemo("settings"));
-  const closeGuide = () => qs("#studioGuideOverlay")?.setAttribute("hidden", "hidden");
+  const closeGuide = () => {
+    if (currentGuideTimer) {
+      clearTimeout(currentGuideTimer);
+      currentGuideTimer = null;
+    }
+    qs("#studioGuideOverlay")?.setAttribute("hidden", "hidden");
+  };
   qs("#closeGuideBotBtn")?.addEventListener("click", closeGuide);
   qs("#closeGuideOverlayBtn")?.addEventListener("click", closeGuide);
 }
@@ -1372,12 +1473,14 @@ function setupUtilityButtons() {
   });
   qs("#studioProfileLocalBtn")?.addEventListener("click", () => qs("#openProfilePanelBtn")?.click());
   qs("#studioGigLocalBtn")?.addEventListener("click", () => qs("#gigStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
-  qs("#studioThemeLocalBtn")?.addEventListener("click", () => {
-    currentTheme = (currentTheme + 1) % THEMES.length;
+  const shiftTheme = (delta) => {
+    currentTheme = (currentTheme + delta + THEMES.length) % THEMES.length;
     document.body.classList.remove("theme-signal", "theme-ember");
     if (THEMES[currentTheme]) document.body.classList.add(THEMES[currentTheme]);
     setStatus("#motherboardStatus", "Theme shifted across the whole studio glass layout.");
-  });
+  };
+  qs("#studioThemePrevBtn")?.addEventListener("click", () => shiftTheme(-1));
+  qs("#studioThemeNextBtn")?.addEventListener("click", () => shiftTheme(1));
   qs("#saveBoardBtn")?.addEventListener("click", saveSession);
   qs("#exportBoardBtn")?.addEventListener("click", () => {
     const snapshot = captureSessionState();

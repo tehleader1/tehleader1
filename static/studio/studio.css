@@ -103,6 +103,11 @@ textarea{min-height:120px;resize:vertical}
 }
 .studio-utility-bar{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .studio-utility-bar button{background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(147,176,220,.12));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.theme-arrow{
+  min-width:46px;
+  padding:10px 0;
+  background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(97,130,188,.12));
+}
 .studio-main-bar{
   position:sticky;
   top:10px;
@@ -193,6 +198,12 @@ textarea{min-height:120px;resize:vertical}
 .motherboard-plus-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .profile-mini{margin-bottom:10px}
 .profile-avatar{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(113,199,255,.35),rgba(170,119,255,.42));font-weight:700;letter-spacing:.08em}
+.profile-avatar.has-image{
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  color:transparent;
+}
 .profile-name{font-weight:700;font-size:15px}
 .profile-stats{margin-top:10px}
 .profile-stat{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(173,201,255,.14)}
@@ -214,6 +225,7 @@ textarea{min-height:120px;resize:vertical}
 .timeline-import-label{min-width:220px;flex:1 1 260px}
 .timeline-import-label input{margin-top:6px}
 .timeline-clip-bank{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+.timeline-clip-bank:empty{display:none}
 .clip-chip{border-radius:999px;padding:9px 13px;background:linear-gradient(180deg,rgba(26,48,78,.98),rgba(18,31,53,.98));border:1px solid rgba(132,180,247,.28);font-size:12px}
 .clip-chip.selected{box-shadow:0 0 0 1px rgba(255,255,255,.08),0 0 20px rgba(113,199,255,.22);background:linear-gradient(180deg,rgba(82,150,255,.98),rgba(39,92,188,.98))}
 .clip-chip.empty{opacity:.84;background:linear-gradient(180deg,rgba(33,44,61,.92),rgba(16,23,34,.94))}
@@ -235,6 +247,27 @@ textarea{min-height:120px;resize:vertical}
 .timeline-clip.recorded{background:linear-gradient(180deg,rgba(171,42,76,.98),rgba(86,18,38,.98))}
 .timeline-clip.instrument{background:linear-gradient(180deg,rgba(122,72,204,.98),rgba(55,30,105,.98))}
 .timeline-clip.selected{outline:2px solid rgba(120,190,255,.95);box-shadow:0 0 0 3px rgba(72,148,255,.36),0 20px 36px rgba(0,0,0,.36)}
+.timeline-clip-live{position:absolute;inset:0;pointer-events:none}
+.clip-handle{
+  position:absolute;
+  top:8px;
+  width:18px;
+  height:34px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.28);
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(96,130,188,.12));
+  display:grid;
+  place-items:center;
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  z-index:2;
+  cursor:ew-resize;
+}
+.clip-handle.left{left:8px}
+.clip-handle.right{right:8px}
+.clip-handle::before{content:"↕"}
+.timeline-clip.selected .timeline-clip-label{padding:0 22px}
 .timeline-waveform{position:absolute;inset:10px 10px 24px 10px;display:flex;align-items:flex-end;gap:2px;pointer-events:none}
 .wave-bar{flex:1 1 auto;min-width:2px;border-radius:999px 999px 4px 4px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(205,227,255,.34))}
 .timeline-clip.recorded .wave-bar{background:linear-gradient(180deg,rgba(255,233,238,.96),rgba(255,122,146,.34))}
@@ -304,6 +337,18 @@ textarea{min-height:120px;resize:vertical}
 .sticky-editor-group{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sticky-editor-bar button{padding:9px 12px}
 .sticky-editor-bar button[aria-label]{min-width:54px;font-weight:700}
+.sticky-file-trigger{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 12px;
+  border-radius:14px;
+  border:1px solid rgba(187,220,255,.28);
+  background:linear-gradient(180deg,rgba(69,108,179,.96),rgba(33,60,103,.96));
+  color:#fff;
+  cursor:pointer;
+}
+.sticky-file-trigger input{display:none}
 .sticky-record-core{
   width:14px;
   height:14px;
@@ -376,6 +421,14 @@ textarea{min-height:120px;resize:vertical}
   gap:12px;
   flex-wrap:wrap;
   margin-bottom:12px;
+}
+.bot-response{
+  margin-bottom:12px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(173,201,255,.14);
+  color:#eef5ff;
 }
 .profile-open{
   overflow:hidden;

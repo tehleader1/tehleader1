@@ -29,7 +29,8 @@
       <button id="studioPurchaseLocalBtn">Product Purchase</button>
       <button id="studioProfileLocalBtn">Profile</button>
       <button id="studioGigLocalBtn">Gig 4K Record</button>
-      <button id="studioThemeLocalBtn">Theme Color</button>
+      <button id="studioThemePrevBtn" class="theme-arrow" aria-label="Previous Theme">←</button>
+      <button id="studioThemeNextBtn" class="theme-arrow" aria-label="Next Theme">→</button>
     </div>
 
     <div class="studio-main-bar">
@@ -56,6 +57,9 @@
       </div>
       <div class="sticky-editor-group">
         <button type="button" id="stickyImportBtn">Add MP3 File</button>
+        <label class="sticky-file-trigger" title="Add MP4">Add MP4
+          <input type="file" id="stickyGigVideoUpload" accept=".mp4,video/mp4,video/*">
+        </label>
         <button type="button" id="stickyInstrumentBtn">Add Instrument Placement</button>
         <button type="button" id="stickyNewBoardBtn">New Motherboard</button>
         <button type="button" id="stickySelectedBoardBtn">Selected Motherboard</button>
@@ -78,11 +82,14 @@
         <button type="button" data-gig-main="effect">Effect Add</button>
         <button type="button" data-gig-main="speed">Speed</button>
         <button type="button" data-gig-main="off">Turn Off 4K</button>
-        <button type="button" data-gig-main="play">Play</button>
-        <button type="button" data-gig-main="stop">Stop</button>
-        <button type="button" data-gig-main="record">Record</button>
+        <button type="button" data-gig-main="play" title="Play" aria-label="Play">▶</button>
+        <button type="button" data-gig-main="stop" title="Stop" aria-label="Stop">■</button>
+        <button type="button" data-gig-main="record" title="Record" aria-label="Record"><span class="sticky-record-core"></span></button>
       </div>
       <div class="sticky-editor-group">
+        <label class="sticky-file-trigger" title="Add MP4">Add MP4
+          <input type="file" id="gigVideoUpload" accept=".mp4,video/mp4,video/*">
+        </label>
         <button type="button" data-gig-live="slow">Slow Down</button>
         <button type="button" data-gig-live="panorama">Panorama</button>
         <button type="button" data-gig-live="drone">4K Drone</button>
@@ -99,9 +106,6 @@
           <button id="gigRecordBtn">Gig 4K Record</button>
           <button id="gigConnectorBtn">Open Gig Connector</button>
           <button id="cameraAccessBtn">Camera Access</button>
-          <label class="gig-mp4-upload">Add MP4
-            <input type="file" id="gigVideoUpload" accept=".mp4,video/mp4,video/*">
-          </label>
         </div>
         <div class="fx-grid compact-settings">
           <label>Video Effect
@@ -195,9 +199,7 @@
           </label>
           <label>Microphone
             <select id="micSourceSelect">
-              <option value="default">Default Mic</option>
-              <option value="usb">USB Mic</option>
-              <option value="wireless">Wireless Mic</option>
+              <option value="default">Loading microphones...</option>
             </select>
           </label>
           <label>Video Type
@@ -232,18 +234,9 @@
           <label>Time (s)
             <input type="number" id="timelinePlacementTime" min="0" step="0.1" value="12.0">
           </label>
-          <label>Wave
-            <select id="timelinePlacementWave">
-              <option value="echo">Echo</option>
-              <option value="reverb">Reverb</option>
-              <option value="delay">Delay</option>
-              <option value="chop">Chop</option>
-            </select>
-          </label>
-          <label class="timeline-import-label">Import MP3 / M4A
-            <input type="file" id="placementAudioUpload" accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/*">
-          </label>
         </div>
+
+        <input type="file" id="placementAudioUpload" accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/*" hidden>
 
         <div class="board-hidden-actions">
           <select id="placementSelect"></select>
@@ -265,9 +258,7 @@
         <div class="status" id="mixExportStatus">Ready to build from placements with attached MP3/M4A.</div>
         <div class="status" id="recentSessionStatus">Save a motherboard session to see recent files here.</div>
 
-        <div id="timelineClipBank" class="timeline-clip-bank">
-          <button class="clip-chip empty" type="button">Import a track to begin</button>
-        </div>
+        <div id="timelineClipBank" class="timeline-clip-bank"></div>
         <div id="timelineTracks" class="timeline-tracks"></div>
         <details class="recent-boards" id="recentBoardsWrap">
           <summary>Recent Motherboards</summary>
@@ -333,6 +324,7 @@
             <button id="closeGuideBotBtn" class="ghost">X</button>
           </div>
         </div>
+        <div class="status bot-response" id="botResponseStatus">Ask Visual Bot, Settings Bot, or tap Pro Jake to get help in the booth.</div>
         <textarea id="lyricsInput" placeholder="Write your bars here. Autosave is on."></textarea>
         <textarea id="echoTranscript" placeholder="Paste a verse or hook for AI echo placement suggestions."></textarea>
         <ul id="echoResults" class="result-list"></ul>
@@ -348,12 +340,15 @@
       <div class="studio-profile-modal">
         <button id="closeProfilePanelBtn" class="ghost profile-close-btn">X</button>
         <div class="profile-mini overlay">
-          <div class="profile-avatar">SR</div>
+          <div class="profile-avatar" id="profileAvatarPreview">SR</div>
           <div>
             <div class="profile-name">SupportRD Creator Profile</div>
             <div class="status">support@example.com · @supportrdcreator</div>
           </div>
         </div>
+        <label>Profile Picture
+          <input type="file" id="profileAvatarUpload" accept="image/png,image/jpeg,image/webp">
+        </label>
         <textarea id="profileStatusPost" placeholder="Post a quick feed status for your studio profile."></textarea>
         <div class="row">
           <button id="saveProfileStatusBtn">Save Feed Status</button>
