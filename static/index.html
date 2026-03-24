@@ -270,6 +270,7 @@
         <div class="post-bottom">
           <button class="btn primary" id="openEmergencyAssist">Hair Emergency Assist</button>
           <button class="btn" id="postSocials">Post to All Socials</button>
+          <button class="btn" id="openLiveArenaBtn">Open LIVE Arena</button>
           <button class="btn ghost" id="askAriaProductsAgain">What products again?</button>
           <select class="payment-dropdown" id="socialSelect">
             <option value="all">All Feeds</option>
@@ -289,6 +290,146 @@
           <select class="payment-dropdown" id="paySelect">
             <option>Custom Order Payment</option>
           </select>
+        </div>
+      </div>
+      <div class="live-arena-overlay" id="liveArenaOverlay" hidden>
+        <div class="live-arena-loader" id="liveArenaLoader" hidden>
+          <div class="live-loader-title">SupportRD LIVE Arena</div>
+          <div class="live-loader-bar"><span id="liveArenaLoaderBar"></span></div>
+          <div class="system-sub" id="liveArenaLoaderText">Preparing stream route...</div>
+        </div>
+        <div class="live-arena-shell" id="liveArenaShell" hidden>
+          <div class="live-arena-head">
+            <div class="live-arena-brand">
+              <div class="live-badge">LIVE</div>
+              <div>
+                <div class="system-title">SupportRD Competition Stream</div>
+                <div class="system-sub" id="liveArenaMission">SupportRD is an innocent company from Dominican Republic and the United States. We deliver solutions to the health of your hair. Period. We are on a mission.</div>
+              </div>
+            </div>
+            <div class="live-arena-actions">
+              <button class="btn ghost" id="liveArenaBreakBtn">Break</button>
+              <button class="btn ghost" id="liveArenaCloseBtn">Close LIVE</button>
+            </div>
+          </div>
+          <div class="live-arena-top">
+            <div class="live-camera-card glass">
+              <div class="live-camera-flash" id="liveCameraFlash"></div>
+              <div class="live-camera-title">Camera Direct</div>
+              <div class="live-camera-sub">Bright, shiny camera with live motion, sponsor intro, and stream sweep effect.</div>
+              <div class="live-camera-window" id="liveArenaCameraWindow">
+                <div class="live-camera-copy" id="liveArenaCameraCopy">Choose your lens, then go do something real: coding, gaming, dancing, exploring, or live field competition.</div>
+              </div>
+            </div>
+            <div class="live-right-stack">
+              <div class="system-card glass live-settings-card">
+                <div class="system-head">
+                  <div>
+                    <div class="system-title">Settings</div>
+                    <div class="system-sub">Device, audio, filters, lens, and live controls.</div>
+                  </div>
+                  <span class="system-badge">Top Right</span>
+                </div>
+                <div class="request-grid">
+                  <select id="liveArenaMode">
+                    <option value="1v1">1v1 · 1 minute load</option>
+                    <option value="2v2">2v2 · 2 minute load</option>
+                    <option value="4v4">4v4 · 2 minute load</option>
+                    <option value="5v5">5v5 · 5 minute load</option>
+                    <option value="7v7">7v7 · 5 minute load</option>
+                    <option value="8v8">8v8 · 5 minute load</option>
+                  </select>
+                  <select id="liveArenaDevice">
+                    <option value="camera">Device: Camera</option>
+                    <option value="usb-camera">Device: Camera + USB</option>
+                    <option value="drone">Device: 4K Drone</option>
+                  </select>
+                  <select id="liveArenaAudio">
+                    <option value="mic">Audio: Mic</option>
+                    <option value="headphones">Audio: Headphones</option>
+                    <option value="speakers">Audio: Speakers</option>
+                    <option value="boombox">Audio: Boombox</option>
+                  </select>
+                  <select id="liveArenaFilter">
+                    <option value="direct">Filter: Direct</option>
+                    <option value="sway">Filter: Live Sway</option>
+                    <option value="slow">Filter: Slow Motion</option>
+                    <option value="panorama">Filter: Panoramic</option>
+                  </select>
+                  <select id="liveArenaLens">
+                    <option value="laptop">Lens: Personal Laptop</option>
+                    <option value="group">Lens: Group Video</option>
+                    <option value="wilderness">Lens: Exploring in Wilderness</option>
+                    <option value="desktop">Lens: Personal Desktop</option>
+                    <option value="sport">Lens: Extreme Sport</option>
+                    <option value="work">Lens: Work Related</option>
+                  </select>
+                  <button class="btn" id="liveArenaCameraAccessBtn">Camera Access</button>
+                </div>
+              </div>
+              <div class="system-card glass live-bot-card">
+                <div class="system-head">
+                  <div>
+                    <div class="system-title">Aria / Jake / Ref Bot</div>
+                    <div class="system-sub">Live support, glitches, and official pause logic.</div>
+                  </div>
+                  <span class="system-badge" id="liveArenaBotBadge">ARIA Ready</span>
+                </div>
+                <div class="system-actions">
+                  <button class="btn ghost" id="liveArenaAriaBtn">Aria</button>
+                  <button class="btn ghost" id="liveArenaJakeBtn">Jake</button>
+                  <button class="btn ghost" id="liveArenaRefBtn">Ref Bot</button>
+                </div>
+                <div class="system-sub" id="liveArenaBotStatus">Ref Bot can halt 2v2+ only when enough official team requests are present.</div>
+              </div>
+            </div>
+          </div>
+          <div class="system-card glass live-middle-card">
+            <div class="live-middle-head">
+              <div class="live-sponsor-hq">
+                <div class="system-title">SponsorTag HQ</div>
+                <div class="system-sub" id="sponsorTagStatus">SponsorTag pending. New accounts can create one once: ^^username.</div>
+              </div>
+              <div class="live-center-logo">LIVE</div>
+              <div class="live-money-box">
+                <button class="btn" id="liveArenaFloodBtn">Flood Money Mode</button>
+                <div class="system-sub" id="liveArenaFloodStatus">Money flow stays compliance-gated and balance-safe.</div>
+              </div>
+            </div>
+            <div class="live-content-grid">
+              <div class="live-main-stream glass">
+                <div class="live-stream-title">Main Stream</div>
+                <div class="live-stream-body" id="liveArenaMainStream">
+                  Stream intro, sponsor sweep, and purposeful content load here.
+                </div>
+                <div class="system-actions">
+                  <button class="btn" id="liveArenaStartBtn">Start LIVE</button>
+                  <button class="btn ghost" id="liveArenaPostBtn">Send Post</button>
+                  <button class="btn ghost" id="liveArenaCheckBtn">Select Feeds</button>
+                </div>
+              </div>
+              <div class="live-content-wizard glass">
+                <div class="live-stream-title">Content Route</div>
+                <div class="system-sub" id="liveArenaContentStatus">7-step content route. Keep the content moving every 30 minutes.</div>
+                <div class="live-content-list" id="liveArenaContentList"></div>
+                <button class="btn live-next-btn" id="liveArenaNextBtn">Next</button>
+              </div>
+            </div>
+          </div>
+          <div class="live-bottom-grid">
+            <div class="system-card glass">
+              <div class="system-title">Profile / Group</div>
+              <div class="system-sub" id="liveArenaProfileStatus">Profile of the streamer or group appears here.</div>
+            </div>
+            <div class="system-card glass">
+              <div class="system-title">Sponsors / Audience / Quick Tips</div>
+              <div class="system-sub" id="liveArenaSponsorStatus">Current sponsors, general audience, and quick stream tips appear here.</div>
+            </div>
+            <div class="system-card glass">
+              <div class="system-title">Glitch To Codex</div>
+              <div class="system-sub" id="liveArenaGlitchStatus">If stream money or match issues appear, this lane gathers a clean developer handoff for Codex.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -864,6 +864,93 @@ body.launch-active #app{display:none;}
   background:rgba(0,0,0,0.28);
   color:var(--text);
 }
+.live-arena-overlay{
+  margin-top:14px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(4,9,18,0.42);
+  padding:14px;
+}
+.live-arena-loader{
+  display:grid;
+  gap:12px;
+  padding:18px;
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(5,13,24,.92),rgba(13,29,48,.86));
+  border:1px solid rgba(124,243,209,.22);
+}
+.live-loader-title{font-size:20px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
+.live-loader-bar{height:14px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;}
+.live-loader-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#7cf3d1,#68a6ff,#ffe27a);transition:width .35s ease;}
+.live-arena-shell{display:grid;gap:12px;}
+.live-arena-head,.live-middle-head,.live-arena-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+.live-arena-brand{display:flex;gap:12px;align-items:center;}
+.live-badge,.live-center-logo{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:74px;height:38px;border-radius:999px;
+  background:linear-gradient(120deg,#ffe27a,#7cf3d1,#68a6ff);
+  color:#081018;font-weight:900;letter-spacing:.18em;text-transform:uppercase;
+  box-shadow:0 0 18px rgba(124,243,209,.3);
+}
+.live-center-logo{
+  min-width:110px;
+  font-style:italic;
+  font-size:22px;
+  background:linear-gradient(120deg,rgba(255,255,255,.92),rgba(124,243,209,.9),rgba(104,166,255,.86));
+}
+.live-arena-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.live-camera-card{position:relative;flex:1;min-width:320px;padding:16px;border-radius:18px;overflow:hidden;}
+.live-camera-window{
+  min-height:240px;border-radius:18px;margin-top:12px;padding:16px;
+  display:flex;align-items:flex-end;
+  background:
+    linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.5)),
+    radial-gradient(circle at top right, rgba(255,255,255,.12), transparent 28%),
+    rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+}
+.live-camera-flash{
+  position:absolute;inset:-20%;
+  background:radial-gradient(circle, rgba(255,255,255,.18), transparent 34%);
+  opacity:.18;pointer-events:none;
+}
+.live-camera-flash.active{animation:liveFlash .55s ease;}
+@keyframes liveFlash{
+  0%{opacity:.1;transform:scale(.94)}
+  35%{opacity:.85;transform:scale(1.03)}
+  100%{opacity:.12;transform:scale(1)}
+}
+.live-right-stack{flex:1;min-width:320px;display:grid;gap:12px;}
+.live-settings-card,.live-bot-card,.live-middle-card{padding:14px;border-radius:18px;}
+.live-content-grid,.live-bottom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.live-bottom-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+.live-main-stream,.live-content-wizard{
+  padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);
+}
+.live-stream-title{font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;}
+.live-stream-body{
+  min-height:150px;border-radius:16px;padding:14px;border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(145deg,rgba(4,9,18,.88),rgba(12,26,44,.82));
+  line-height:1.6;
+}
+.live-content-list{display:grid;gap:8px;margin:10px 0;}
+.live-content-step{
+  padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:12px;
+}
+.live-content-step.active{border-color:rgba(124,243,209,.45);box-shadow:0 0 0 1px rgba(124,243,209,.22);}
+.live-next-btn{position:relative;transition:transform .18s ease;}
+.live-jello{animation:liveJello .7s ease;}
+@keyframes liveJello{
+  0%{transform:translateX(0)}
+  15%{transform:translateX(-10px) skewX(4deg)}
+  35%{transform:translateX(10px) skewX(-4deg)}
+  55%{transform:translateX(-6px)}
+  75%{transform:translateX(6px)}
+  100%{transform:translateX(0)}
+}
+@media (max-width:980px){
+  .live-content-grid,.live-bottom-grid{grid-template-columns:1fr;}
+}
 .offroad-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;}
 .offroad-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:8px;}
 .caution-aria-badge{

@@ -3066,6 +3066,226 @@ function setupCommunications(){
   }
 }
 
+function setupLiveArena(){
+  const openBtn = qs("#openLiveArenaBtn")
+  const overlay = qs("#liveArenaOverlay")
+  const shell = qs("#liveArenaShell")
+  const loader = qs("#liveArenaLoader")
+  const loaderBar = qs("#liveArenaLoaderBar")
+  const loaderText = qs("#liveArenaLoaderText")
+  const startBtn = qs("#liveArenaStartBtn")
+  const closeBtn = qs("#liveArenaCloseBtn")
+  const breakBtn = qs("#liveArenaBreakBtn")
+  const cameraBtn = qs("#liveArenaCameraAccessBtn")
+  const postBtn = qs("#liveArenaPostBtn")
+  const feedBtn = qs("#liveArenaCheckBtn")
+  const floodBtn = qs("#liveArenaFloodBtn")
+  const nextBtn = qs("#liveArenaNextBtn")
+  const modeSel = qs("#liveArenaMode")
+  const lensSel = qs("#liveArenaLens")
+  const deviceSel = qs("#liveArenaDevice")
+  const audioSel = qs("#liveArenaAudio")
+  const filterSel = qs("#liveArenaFilter")
+  const mainStream = qs("#liveArenaMainStream")
+  const botStatus = qs("#liveArenaBotStatus")
+  const botBadge = qs("#liveArenaBotBadge")
+  const sponsorStatus = qs("#sponsorTagStatus")
+  const profileStatus = qs("#liveArenaProfileStatus")
+  const glitchStatus = qs("#liveArenaGlitchStatus")
+  const floodStatus = qs("#liveArenaFloodStatus")
+  const sponsorLane = qs("#liveArenaSponsorStatus")
+  const contentStatus = qs("#liveArenaContentStatus")
+  const contentList = qs("#liveArenaContentList")
+  const mission = qs("#liveArenaMission")
+  const flash = qs("#liveCameraFlash")
+  const walletKey = "supportrdWallet"
+  let openArmed = false
+  let startArmed = false
+  let liveContentIndex = 0
+  const contentSteps = [
+    "Introduce the host with a sweep effect and company mission.",
+    "Show the real action: code, game, dance, wilderness, or work scene.",
+    "Put up the sponsor lane and current audience pull.",
+    "Drop a quick social update to all checked feeds.",
+    "Show the key content tabs or browser work if streaming desktop.",
+    "Run a clean competition or challenge explanation.",
+    "Wrap with next move, brand line, and call to action."
+  ]
+  const loadMap = {
+    "1v1": {seconds: 6, label: "1-minute style setup"},
+    "2v2": {seconds: 8, label: "2-minute style setup"},
+    "4v4": {seconds: 8, label: "2-minute style setup"},
+    "5v5": {seconds: 12, label: "5-minute style setup"},
+    "7v7": {seconds: 12, label: "5-minute style setup"},
+    "8v8": {seconds: 12, label: "5-minute style setup"}
+  }
+  function renderContentSteps(){
+    if(!contentList) return
+    contentList.innerHTML = contentSteps.map((step, idx)=>`<div class="live-content-step${idx===liveContentIndex ? " active" : ""}">Step ${idx+1}: ${step}</div>`).join("")
+  }
+  function updateRefBot(){
+    const mode = modeSel?.value || "1v1"
+    const teamSize = Number((mode.match(/\d+/) || ["1"])[0])
+    if(mode === "1v1"){
+      if(botStatus) botStatus.textContent = "Ref Bot watches 1v1 for glitches, but official halt voting starts at 2v2 and above."
+    } else {
+      if(botStatus) botStatus.textContent = `Ref Bot can halt ${mode} if at least ${teamSize} official players from the live side request a stop for technical difficulty.`
+    }
+  }
+  function ensureSponsorTag(){
+    const key = "supportrdSponsorTag"
+    let value = localStorage.getItem(key)
+    if(!value){
+      const raw = (window.prompt("Create your SupportRD SponsorTag once. Use letters/numbers only after ^^", "cooldude3") || "").trim().replace(/[^a-z0-9]/gi,"").toLowerCase()
+      if(raw){
+        value = `^^${raw}`
+        localStorage.setItem(key, value)
+      }
+    }
+    if(sponsorStatus) sponsorStatus.textContent = value ? `SponsorTag HQ ready: ${value}` : "SponsorTag HQ is waiting for one-time account creation."
+    return value
+  }
+  function flashCamera(){
+    if(!flash) return
+    flash.classList.remove("active")
+    void flash.offsetWidth
+    flash.classList.add("active")
+  }
+  function openLiveShell(){
+    if(!overlay || !shell || !loader) return
+    overlay.hidden = false
+    loader.hidden = true
+    shell.hidden = false
+    renderContentSteps()
+    ensureSponsorTag()
+    updateRefBot()
+    if(profileStatus) profileStatus.textContent = `Host profile ready · Lens ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Audio ${audioSel?.selectedOptions?.[0]?.textContent || "Mic"}`
+    if(sponsorLane) sponsorLane.textContent = "Sponsors lane armed: general audience, current supporters, future sponsor tags, blog sponsors, and clean crypto/company outreach flow."
+    if(mission) mission.textContent = "SupportRD is an innocent company out of Dominican Republic and United States. We deliver solutions to the health of your hair. Period. We are on a mission."
+    if(mainStream) mainStream.textContent = "Sweep effect loaded. Introduce the host, show the purpose fast, then put the real content in motion."
+    flashCamera()
+  }
+  function runLoader(){
+    const mode = modeSel?.value || "1v1"
+    const conf = loadMap[mode] || loadMap["1v1"]
+    if(!overlay || !shell || !loader) return
+    overlay.hidden = false
+    shell.hidden = true
+    loader.hidden = false
+    if(loaderText) loaderText.textContent = `Preparing ${mode} stream route · ${conf.label} estimated setup.`
+    let step = 10
+    if(loaderBar) loaderBar.style.width = "10%"
+    const timer = setInterval(()=>{
+      step += 15
+      if(loaderBar) loaderBar.style.width = `${Math.min(step,100)}%`
+      if(loaderText) loaderText.textContent = `Preparing ${mode} stream route · ${Math.min(step,100)}%`
+      if(step >= 100){
+        clearInterval(timer)
+        openLiveShell()
+      }
+    }, Math.max(400, Math.round((conf.seconds * 1000) / 6)))
+  }
+  if(openBtn){
+    openBtn.addEventListener("click", ()=>{
+      if(!openArmed){
+        openArmed = true
+        openMiniWindow("LIVE Arena", "Tap again to transform the center dashboard into live stream mode.")
+        setTimeout(()=>{ openArmed = false }, 4000)
+        return
+      }
+      openArmed = false
+      runLoader()
+    })
+  }
+  if(closeBtn){
+    closeBtn.addEventListener("click", ()=>{
+      if(overlay) overlay.hidden = true
+      if(shell) shell.hidden = true
+      if(loader) loader.hidden = true
+      document.body.classList.remove("live-jello")
+      openMiniWindow("LIVE Arena", "Returned to the normal center dashboard.")
+    })
+  }
+  if(startBtn){
+    startBtn.addEventListener("click", ()=>{
+      if(!startArmed){
+        startArmed = true
+        openMiniWindow("Start LIVE", "Tap Start LIVE again to launch the stream with the current lens and settings.")
+        setTimeout(()=>{ startArmed = false }, 4000)
+        return
+      }
+      startArmed = false
+      document.body.classList.add("live-jello")
+      setTimeout(()=>document.body.classList.remove("live-jello"), 900)
+      flashCamera()
+      if(mainStream) mainStream.textContent = `LIVE now · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · keep the action moving.`
+      openMiniWindow("LIVE Started", "Sweep effect complete. Stream is introduced, sponsors can load, and the center panel is now in live mode.")
+    })
+  }
+  if(breakBtn){
+    breakBtn.addEventListener("click", ()=>{
+      if(mainStream) mainStream.textContent = "Break mode active. Stream pending at console level while the host handles family, fixes, or technical pause."
+      if(glitchStatus) glitchStatus.textContent = "Pending state active. If there is a glitch with stream traffic or money, gather the issue here and route it to Codex."
+      openMiniWindow("Break Mode", "Stream is in pending state for a technical or personal pause.")
+    })
+  }
+  if(cameraBtn){
+    cameraBtn.addEventListener("click", ()=>{
+      flashCamera()
+      if(mainStream) mainStream.textContent = `Camera armed · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · flashlight pulse active.`
+      openMiniWindow("Camera", "Camera and visual route armed for the live center panel.")
+    })
+  }
+  if(feedBtn){
+    feedBtn.addEventListener("click", ()=>{
+      openMiniWindow("Feed Select", "Choose checked feeds in Settings / socials before sending the live post blast.")
+    })
+  }
+  if(postBtn){
+    postBtn.addEventListener("click", ()=>{
+      const post = qs("#postInput")
+      if(post) post.value = `LIVE SUPPORT RD · ${modeSel?.value || "1v1"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
+      flashCamera()
+      openMiniWindow("Post Blast", "Laser post effect fired. Live post staged for checked social channels.")
+    })
+  }
+  if(floodBtn){
+    floodBtn.addEventListener("click", ()=>{
+      const wallet = JSON.parse(localStorage.getItem(walletKey) || "{}")
+      wallet.balance = Number(wallet.balance || 0) + 250
+      localStorage.setItem(walletKey, JSON.stringify(wallet))
+      if(floodStatus) floodStatus.textContent = `Flood mode staged. Balance lane warmed to $${wallet.balance.toFixed(2)} while keeping payout flow compliance-gated and traffic-safe.`
+      openMiniWindow("Flood Money Mode", "Flood mode prepared the balance lane and response posture. Real payout routing still needs the proper processor/backend path.")
+    })
+  }
+  if(nextBtn){
+    nextBtn.addEventListener("click", ()=>{
+      liveContentIndex = (liveContentIndex + 1) % contentSteps.length
+      renderContentSteps()
+      if(contentStatus) contentStatus.textContent = `Step ${liveContentIndex + 1}/7 ready. Keep the content moving every 30 minutes.`
+      const x = (Math.random() * 34) - 17
+      const y = (Math.random() * 14) - 7
+      nextBtn.style.transform = `translate(${x}px, ${y}px)`
+    })
+  }
+  qs("#liveArenaAriaBtn")?.addEventListener("click", ()=>{
+    if(botBadge) botBadge.textContent = "ARIA Ready"
+    if(botStatus) botStatus.textContent = "ARIA is active for host guidance, content prompts, and calm stream support."
+  })
+  qs("#liveArenaJakeBtn")?.addEventListener("click", ()=>{
+    if(botBadge) botBadge.textContent = "Jake Ready"
+    if(botStatus) botStatus.textContent = "Jake is active for harder stream energy, booth hype, and technical creative support."
+  })
+  qs("#liveArenaRefBtn")?.addEventListener("click", updateRefBot)
+  ;[modeSel,lensSel,deviceSel,audioSel,filterSel].forEach(el=>{
+    if(el) el.addEventListener("change", ()=>{
+      updateRefBot()
+      if(profileStatus) profileStatus.textContent = `Host profile ready · ${lensSel?.selectedOptions?.[0]?.textContent || "Lens"} · ${audioSel?.selectedOptions?.[0]?.textContent || "Audio"}`
+    })
+  })
+  renderContentSteps()
+}
+
 function setupReel(){
   const btn = qs("#openReel")
   if(btn){ btn.addEventListener("click", ()=>openModal("reelModal")) }
@@ -4975,8 +5195,9 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupEngineGlassViewer)
   safe(setupCredit)
   safe(setupCashOps)
-  safe(setupCommunications)
-  safe(setupReel)
+safe(setupCommunications)
+safe(setupLiveArena)
+safe(setupReel)
   safe(setupAIMillionaireTab)
   safe(setupAdminQuickActions)
   safe(setupVRScan)
