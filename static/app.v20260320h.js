@@ -159,6 +159,85 @@ const ASSISTANTS = [
   { id: "aria", name: "ARIA", title: "ARIA Professional Hair Specialist", sub: "ARIA · Problems / Solutions" },
   { id: "projake", name: "Pro Jake", title: "Pro Jake Studio Specialist", sub: "Pro Jake · Studio / Coaching" }
 ]
+const LIFE_MOMENT_DEFAULTS = [
+  "Good moment billboard: a family update rolls by and SupportRD keeps the route warm.",
+  "Rough moment billboard: Aria slows the pace down and gives your personal life room to breathe.",
+  "Random update billboard: just streaming by with life and staying connected from far.",
+  "Celebration billboard: a win, a meme, a local laugh, and a reason to keep moving.",
+  "Juicy fruit billboard: simple life, bright color, and a moment worth remembering."
+]
+
+function getLifeMemory(){
+  return (state.socialLinks && state.socialLinks.lifeMemory) || {}
+}
+function csvList(value){
+  return String(value || "").split(",").map(part => part.trim()).filter(Boolean)
+}
+function getFeaturedFamilyMember(memory = getLifeMemory()){
+  const primary = csvList(memory.primaryFamily)
+  const extended = csvList(memory.extendedFamily)
+  const pool = [...primary, ...extended]
+  if(!pool.length) return "family"
+  const index = Math.floor(Date.now() / 20000) % pool.length
+  return pool[index]
+}
+function buildLifeReflection(assistantId = state.activeAssistant){
+  const memory = getLifeMemory()
+  const familyLead = getFeaturedFamilyMember(memory)
+  const religion = memory.religion || "freedom of choice"
+  const hobbies = memory.hobbies || "general hobbies"
+  const education = memory.education || "life learning"
+  const interests = memory.interests || "simple interests"
+  const moments = csvList(memory.lifeMoments)
+  const momentLead = moments[0] || "random updates"
+  if(assistantId === "projake"){
+    return `Jake transmission from far: ${familyLead} is on the mind, ${religion} stays respected, ${hobbies} and ${interests} keep the stream human, and today's billboard is ${momentLead}. Keep life moving and keep the route strong.`
+  }
+  return `Aria transmission from far: I remember ${familyLead}, your religion lane is ${religion}, your hobbies and education are ${hobbies} / ${education}, and your current life moment is ${momentLead}. There is beauty in the stairs and in the ordinary updates too.`
+}
+function buildLifeBillboards(memory = getLifeMemory()){
+  const familyLead = getFeaturedFamilyMember(memory)
+  const base = [
+    familyLead && familyLead !== "family" ? `Family billboard: ${familyLead} rolls across the route while you stream your day.` : "",
+    memory.religion ? `Religion billboard: ${memory.religion} stays visible only when you want it and respected the whole way through.` : "",
+    memory.hobbies ? `Hobby billboard: ${memory.hobbies} keeps your session grounded in real life.` : "",
+    memory.education ? `Education billboard: ${memory.education} is part of your transmit-from-far story.` : "",
+    memory.interests ? `Interest billboard: ${memory.interests} keeps the stream from feeling empty.` : "",
+    ...csvList(memory.lifeMoments).map(item => `Life moment billboard: ${item}.`)
+  ].filter(Boolean)
+  return base.length ? base : LIFE_MOMENT_DEFAULTS
+}
+function renderLifeMemorySurface(forceMessage){
+  const billboard = qs("#liveMemoryBillboard")
+  const status = qs("#lifeReflectionStatus")
+  const splash = qs("#launchSplashMessage")
+  const reward = qs("#liveRewardCard")
+  const rewardText = qs("#liveRewardText")
+  const memory = getLifeMemory()
+  const billboards = buildLifeBillboards(memory)
+  const message = forceMessage || billboards[Math.floor(Date.now() / 12000) % billboards.length]
+  if(billboard) billboard.textContent = message
+  if(status){
+    status.textContent = memory.primaryFamily || memory.extendedFamily || memory.religion || memory.hobbies || memory.education || memory.interests || memory.lifeMoments
+      ? `Saved transmit-from-far lane for ${getFeaturedFamilyMember(memory)}. Aria and Jake can now reflect family, religion, hobbies, education, interests, and life moments back to you.`
+      : "Save family, religion, hobbies, education, interests, and life moments so Aria and Jake can play your personal life back to you."
+  }
+  if(splash){
+    splash.textContent = `${message} ${memory.primaryFamily ? `Featured family member: ${getFeaturedFamilyMember(memory)}.` : "SupportRD keeps the route warm from far."}`
+  }
+  const hostedSessions = Number(localStorage.getItem("supportrdHostedSessions") || 0)
+  if(reward && rewardText){
+    reward.hidden = hostedSessions < 20
+    rewardText.textContent = hostedSessions >= 20
+      ? "A clean normal-car drive-by, bun up, international trip pending, and SupportRD reminding you to keep life moving toward main events and time to explore."
+      : `Reward picture unlocks after 20+ hosted sessions. Current hosted sessions: ${hostedSessions}.`
+  }
+}
+function startLifeBillboardCycle(){
+  if(window.__supportLifeBillboardTimer) return
+  renderLifeMemorySurface()
+  window.__supportLifeBillboardTimer = setInterval(()=>renderLifeMemorySurface(), 12000)
+}
 
 function getActiveAssistant(){
   return ASSISTANTS.find(a => a.id === state.activeAssistant) || ASSISTANTS[0]
@@ -3280,6 +3359,7 @@ function setupLiveArena(){
     if(sponsorLane) sponsorLane.textContent = "Sponsors lane armed: general audience, current supporters, future sponsor tags, blog sponsors, and clean crypto/company outreach flow."
     if(mission) mission.textContent = "SupportRD is an innocent company out of Dominican Republic and United States. We deliver solutions to the health of your hair. Period. We are on a mission."
     renderLivePanel()
+    renderLifeMemorySurface()
     flashCamera()
     startLiveEnergy()
     updateFloodState()
@@ -3343,6 +3423,9 @@ function setupLiveArena(){
       flashCamera()
       startLiveEnergy()
       bumpViews(180)
+      const hostedSessions = Number(localStorage.getItem("supportrdHostedSessions") || 0) + 1
+      localStorage.setItem("supportrdHostedSessions", String(hostedSessions))
+      renderLifeMemorySurface()
       if(mainStream && livePanelIndex === 0) mainStream.textContent = `LIVE now · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · keep the action moving.`
       openMiniWindow("LIVE Started", "Sweep effect complete. Stream is introduced, sponsors can load, and the center panel is now in live mode.")
     })
@@ -3417,15 +3500,19 @@ function setupLiveArena(){
   })
   qs("#liveArenaAriaBtn")?.addEventListener("click", ()=>{
     if(botBadge) botBadge.textContent = "ARIA Ready"
-    if(botStatus) botStatus.textContent = "ARIA is active for host guidance, content prompts, and calm stream support."
+    const reflection = buildLifeReflection("aria")
+    if(botStatus) botStatus.textContent = reflection
+    renderLifeMemorySurface(reflection)
     qs("#liveArenaContentList")?.scrollIntoView({behavior:"smooth", block:"center"})
-    openMiniWindow("ARIA Walkthrough", "ARIA is guiding you through the content route first so the session never feels empty.")
+    openMiniWindow("ARIA Walkthrough", reflection)
   })
   qs("#liveArenaJakeBtn")?.addEventListener("click", ()=>{
     if(botBadge) botBadge.textContent = "Jake Ready"
-    if(botStatus) botStatus.textContent = "Jake is active for harder stream energy, booth hype, and technical creative support."
+    const reflection = buildLifeReflection("projake")
+    if(botStatus) botStatus.textContent = reflection
+    renderLifeMemorySurface(reflection)
     qs("#liveArenaMainStream")?.scrollIntoView({behavior:"smooth", block:"center"})
-    openMiniWindow("Jake Walkthrough", "Jake is focusing the main stream area so you can keep the session active and responsive.")
+    openMiniWindow("Jake Walkthrough", reflection)
   })
   qs("#liveArenaRefBtn")?.addEventListener("click", ()=>{
     updateRefBot()
@@ -3625,6 +3712,13 @@ function setupSettings(){
   qs("#setSameFeelVoice").checked = !!saved.sameFeelVoice
   qs("#setVoiceReferencePack").value = saved.voiceReferencePack || ""
   qs("#setThoughtStyle").value = saved.thoughtStyle || "calm, descriptive, warm"
+  qs("#setPrimaryFamily").value = (saved.lifeMemory && saved.lifeMemory.primaryFamily) || ""
+  qs("#setExtendedFamily").value = (saved.lifeMemory && saved.lifeMemory.extendedFamily) || ""
+  qs("#setReligionChoice").value = (saved.lifeMemory && saved.lifeMemory.religion) || ""
+  qs("#setHobbies").value = (saved.lifeMemory && saved.lifeMemory.hobbies) || ""
+  qs("#setEducation").value = (saved.lifeMemory && saved.lifeMemory.education) || ""
+  qs("#setInterests").value = (saved.lifeMemory && saved.lifeMemory.interests) || ""
+  qs("#setLifeMoments").value = (saved.lifeMemory && saved.lifeMemory.lifeMoments) || ""
   const feeds = saved.feeds || {ig:true,tiktok:true,fb:true}
   qs("#feedIG").checked = !!feeds.ig
   qs("#feedTikTok").checked = !!feeds.tiktok
@@ -3661,6 +3755,15 @@ function setupSettings(){
         sameFeelVoice: qs("#setSameFeelVoice").checked,
         voiceReferencePack: qs("#setVoiceReferencePack").value.trim(),
         thoughtStyle: qs("#setThoughtStyle").value.trim(),
+        lifeMemory: {
+          primaryFamily: qs("#setPrimaryFamily").value.trim(),
+          extendedFamily: qs("#setExtendedFamily").value.trim(),
+          religion: qs("#setReligionChoice").value.trim(),
+          hobbies: qs("#setHobbies").value.trim(),
+          education: qs("#setEducation").value.trim(),
+          interests: qs("#setInterests").value.trim(),
+          lifeMoments: qs("#setLifeMoments").value.trim()
+        },
         familyFantasyTheme: (state.socialLinks && state.socialLinks.familyFantasyTheme) ? state.socialLinks.familyFantasyTheme : "boat_conductor",
         feeds: {
           ig: qs("#feedIG").checked,
@@ -3682,8 +3785,20 @@ function setupSettings(){
         const list = Object.keys(state.socialLinks.feeds || {}).filter(k=>state.socialLinks.feeds[k])
         indicator.textContent = list.length ? `Feeds: ${list.map(x=>x[0].toUpperCase()+x.slice(1)).join(", ")}` : "Feeds: none selected"
       }
+      renderLifeMemorySurface()
     })
   }
+  const reflectBtn = qs("#reflectLifeBtn")
+  if(reflectBtn){
+    reflectBtn.addEventListener("click", ()=>{
+      const assistant = getActiveAssistant()
+      const reflection = buildLifeReflection(assistant.id)
+      renderLifeMemorySurface(reflection)
+      openMiniWindow(`${assistant.name} Reflection`, reflection)
+      appendConversation("assistant", reflection)
+    })
+  }
+  renderLifeMemorySurface()
 }
 
 function setupPwa(){
@@ -3736,6 +3851,8 @@ function setupAppDeepLinks(){
 function setupStartupSplash(){
   const splash = qs("#launchSplash")
   if(!splash) return
+  renderLifeMemorySurface()
+  startLifeBillboardCycle()
   const params = new URLSearchParams(window.location.search || "")
   const fromPwa = params.get("source") === "pwa"
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true
@@ -4424,6 +4541,98 @@ function setupStudioMode(){
   if(blogBtn){ blogBtn.addEventListener("click", ()=>openModal("blogModal")) }
   window.openStudioMode = openStudio
   window.closeStudioMode = closeStudio
+}
+
+function setupFloatMode(){
+  const shell = qs("#floatModeShell")
+  const openBtn = qs("#menuFloatMode")
+  const studioBtn = qs("#studioFloatBtn")
+  const closeBtn = qs("#floatModeClose")
+  const returnMainBtn = qs("#floatModeReturnMain")
+  const openStudioBtn = qs("#floatModeOpenStudio")
+  const assistantStatus = qs("#floatAssistantStatus")
+  const deviceStatus = qs("#floatDeviceStatus")
+  const settingsStatus = qs("#floatSettingsStatus")
+  const profileName = qs("#floatProfileName")
+  const profileMeta = qs("#floatProfileMeta")
+  const mapBtn = qs("#floatMapBtn")
+  const themeBtn = qs("#floatThemeBtn")
+  const paymentBtn = qs("#floatPaymentBtn")
+  const cameraBtn = qs("#floatCameraBtn")
+  if(!shell) return
+
+  function syncProfile(){
+    const name = (state.socialLinks && (state.socialLinks.username || state.socialLinks.name)) || "SupportRD Host"
+    if(profileName) profileName.textContent = name
+    if(profileMeta){
+      profileMeta.textContent = `${getActiveAssistant().name} active · ${state.socialLinks?.hobbies || "hair mission"} · ${state.socialLinks?.interests || "general stream route"}`
+    }
+  }
+  function setActiveBoard(btn){
+    qsa(".float-board").forEach(el => el.classList.remove("active"))
+    btn?.classList.add("active")
+    const status = qs("#floatBoardStatus")
+    if(status && btn) status.textContent = `${btn.textContent} selected. Edit the piece of work, add audio, or keep the route light and fast.`
+  }
+  function openFloat(){
+    shell.hidden = false
+    shell.setAttribute("aria-hidden","false")
+    document.body.classList.add("float-mode-active")
+    syncProfile()
+    openMiniWindow("Float Mode", "SupportRD Personal Remote is open. Six big boxes now control the route.")
+    history.replaceState(null, "", `${window.location.pathname}?float=1`)
+  }
+  function closeFloat(){
+    shell.hidden = true
+    shell.setAttribute("aria-hidden","true")
+    document.body.classList.remove("float-mode-active")
+    history.replaceState(null, "", window.location.pathname)
+  }
+  openBtn?.addEventListener("click", openFloat)
+  studioBtn?.addEventListener("click", openFloat)
+  closeBtn?.addEventListener("click", closeFloat)
+  returnMainBtn?.addEventListener("click", closeFloat)
+  openStudioBtn?.addEventListener("click", ()=>{
+    closeFloat()
+    if(typeof window.openStudioMode === "function") window.openStudioMode()
+  })
+  qs("#floatAriaBtn")?.addEventListener("click", ()=>{
+    state.activeAssistant = "aria"
+    applyAssistantUI(true)
+    if(assistantStatus) assistantStatus.textContent = `${buildLifeReflection("aria")} Aria is now holding the general post side.`
+    syncProfile()
+  })
+  qs("#floatJakeBtn")?.addEventListener("click", ()=>{
+    state.activeAssistant = "projake"
+    applyAssistantUI(true)
+    if(assistantStatus) assistantStatus.textContent = `${buildLifeReflection("projake")} Jake is now holding the studio side.`
+    syncProfile()
+  })
+  qs("#floatMicBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "Mic selected. Lightweight remote is ready to record voice fast." })
+  qs("#floatInstrumentBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "Instrument lane armed. Plug in and move straight into the motherboard route." })
+  qs("#floatUsbBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "USB view armed. Bring external media into the SupportRD platform route." })
+  qs("#float4kBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "4K drone / live camera route armed with big-button access." })
+  qsa(".float-board").forEach(btn => btn.addEventListener("click", ()=>setActiveBoard(btn)))
+  qs("#floatBoardAddBtn")?.addEventListener("click", ()=>openMiniWindow("Motherboards", "Float Mode keeps three motherboards by default, with room to grow when needed."))
+  qs("#floatBoardEditBtn")?.addEventListener("click", ()=>openMiniWindow("Edit Motherboard", "Pick the active motherboard and tighten the piece of work you are building."))
+  qs("#floatRecordBtn")?.addEventListener("click", ()=>openMiniWindow("Record", "Record stays lowkey center in Float Mode so the page feels like a personal remote."))
+  qs("#floatDeleteBtn")?.addEventListener("click", ()=>openMiniWindow("Delete", "Delete the current highlighted piece quickly and keep moving."))
+  qs("#floatPostBtn")?.addEventListener("click", ()=>qs("#liveArenaPostBtn")?.click())
+  qs("#floatBreakBtn")?.addEventListener("click", ()=>qs("#liveArenaBreakBtn")?.click())
+  mapBtn?.addEventListener("click", ()=>qs("#unlockViewsBtnLive")?.click())
+  themeBtn?.addEventListener("click", ()=>{
+    qs("#themeNextSide")?.click()
+    if(settingsStatus) settingsStatus.textContent = "Theme changed. Caribbean brochure lightness is floating through the page."
+  })
+  paymentBtn?.addEventListener("click", ()=>openLinkModal(LINKS.pro || LINKS.custom, "SupportRD Product Purchase"))
+  cameraBtn?.addEventListener("click", ()=>qs("#liveArenaCameraAccessBtn")?.click())
+  window.addEventListener("message", (event)=>{
+    if(event?.data?.type === "open-float-mode") openFloat()
+  })
+  const params = new URLSearchParams(window.location.search || "")
+  if(params.get("float") === "1"){
+    setTimeout(openFloat, 180)
+  }
 }
 
 function setupJakeQuickSwitch(){
@@ -5448,6 +5657,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupHairAnalysis)
   safe(setupAssistantSystem)
   safe(setupStudioMode)
+  safe(setupFloatMode)
   safe(setupGPS)
   safe(setupAria)
   safe(setupPuzzle)

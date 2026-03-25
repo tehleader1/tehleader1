@@ -80,6 +80,14 @@
 </div>
 <div id="launchSplash" class="launch-splash" aria-hidden="true">
   <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD Launch">
+  <div class="launch-splash-copy">
+    <div class="launch-splash-kicker">Transmit From Far</div>
+    <div class="launch-splash-title">Old school ruins staircase loading in.</div>
+    <div class="launch-splash-sub" id="launchSplashMessage">Beauty can show up even in the stairs. SupportRD is lining up your next route.</div>
+    <div class="launch-stairs" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+  </div>
 </div>
 <button class="sat-quick-btn" id="satQuickOpen" title="Satellite Search and Rescue">SAR</button>
 <div id="satQuickModal" class="modal">
@@ -138,6 +146,7 @@
         <button class="menu-btn advanced-menu" id="menuSellAria">Sell ARIA</button>
         <button class="menu-btn advanced-menu" id="menuCreditTop">Credit</button>
         <button class="menu-btn advanced-menu" id="menuStudio">In the Booth</button>
+        <button class="menu-btn advanced-menu" id="menuFloatMode">Float Mode</button>
         <button class="menu-btn" id="menuSettings">Settings</button>
         <button class="menu-btn glow" id="menuSubscription">Product Purchase</button>
       </div>
@@ -385,6 +394,14 @@
                 <div class="live-stream-title" id="liveArenaPanelTitle">Main Stream</div>
                 <div class="live-stream-body" id="liveArenaMainStream">
                   Stream intro, sponsor sweep, and purposeful content load here.
+                </div>
+                <div class="live-memory-billboard" id="liveMemoryBillboard">Transmit from far lane: family, religion, hobbies, education, interests, and life moments can pass by here like billboards while you stream.</div>
+                <div class="live-reward-card" id="liveRewardCard" hidden>
+                  <div class="live-reward-copy">
+                    <div class="live-reward-kicker">20+ Hosted Sessions</div>
+                    <div class="live-reward-title">Reward scene unlocked</div>
+                    <div class="live-reward-sub" id="liveRewardText">A normal car rides by with a clean bun look, international trip pending, and SupportRD keeps life moving.</div>
+                  </div>
                 </div>
                 <div class="live-center-actions">
                   <button class="btn ghost" id="liveArenaPostBtn">Post</button>
@@ -1263,6 +1280,16 @@
       <label class="system-check"><input type="checkbox" id="setSameFeelVoice"> Same Feel Voice (safe consistency mode)</label>
       <textarea id="setVoiceReferencePack" placeholder="Voice reference pack (one sentence per line)"></textarea>
       <input id="setThoughtStyle" placeholder="Thought style (ex: calm, descriptive, poetic, concise)">
+      <div class="settings-section-title">Family.Religion Settings</div>
+      <input id="setPrimaryFamily" placeholder="Primary family (wife, daughter, son)">
+      <input id="setExtendedFamily" placeholder="Extended family (cousins, grandma, great grandma, uncle, auntie)">
+      <input id="setReligionChoice" placeholder="Religion / freedom of choice">
+      <input id="setHobbies" placeholder="Hobbies">
+      <input id="setEducation" placeholder="Education">
+      <input id="setInterests" placeholder="Interests">
+      <textarea id="setLifeMoments" placeholder="Life moments: good, rough, random updates, celebration, meme, local news, advanced topic news, juicy fruit moment"></textarea>
+      <button class="btn ghost" id="reflectLifeBtn">Reflect Back With Aria / Jake</button>
+      <div class="system-sub settings-life-status" id="lifeReflectionStatus">Save family, religion, hobbies, education, interests, and life moments so Aria and Jake can play your personal life back to you.</div>
       <div class="settings-checks">
         <label><input type="checkbox" id="feedIG"> Post to Instagram</label>
         <label><input type="checkbox" id="feedTikTok"> Post to TikTok</label>
@@ -1419,6 +1446,7 @@
       <button class="btn ghost" id="studioImportantBtn">Important Information</button>
       <button class="btn ghost" id="studioSettingsBtn">Settings</button>
       <button class="btn ghost" id="studioPurchaseBtn">Product Purchase</button>
+      <button class="btn ghost" id="studioFloatBtn">Float Mode</button>
       <button class="btn ghost" id="studioThemeBtn">Theme Color</button>
       <button class="btn ghost" id="studioBlogBtn">Blog</button>
       <button class="btn" id="studioExitBtn">Exit Studio</button>
@@ -1429,8 +1457,107 @@
   </div>
 </div>
 
+<div id="floatModeShell" class="float-mode-shell" hidden aria-hidden="true">
+  <div class="float-mode-backdrop"></div>
+  <div class="float-mode-top glass">
+    <div>
+      <div class="float-mode-kicker">SupportRD Personal Remote</div>
+      <h2>Float Mode</h2>
+      <p>Lightweight Caribbean motion with big-button control for live streaming, instruments, profile, maps, and recorded work.</p>
+    </div>
+    <div class="float-mode-actions">
+      <button class="btn ghost" id="floatModeReturnMain">Main Page</button>
+      <button class="btn ghost" id="floatModeOpenStudio">Studio</button>
+      <button class="btn" id="floatModeClose">Close Float</button>
+    </div>
+  </div>
+  <div class="float-mode-grid">
+    <section class="float-box glass" id="floatLiveBox">
+      <div class="float-box-head">
+        <span>Live Core</span>
+        <span class="float-box-badge">Center Action</span>
+      </div>
+      <div class="float-box-body float-live-body">
+        <button class="float-record-btn" id="floatRecordBtn"><span></span>Record</button>
+        <div class="float-mini-actions">
+          <button class="btn ghost" id="floatDeleteBtn">Delete</button>
+          <button class="btn ghost" id="floatPostBtn">Post</button>
+          <button class="btn ghost" id="floatBreakBtn">Break</button>
+        </div>
+      </div>
+    </section>
+    <section class="float-box glass" id="floatAssistantBox">
+      <div class="float-box-head">
+        <span>Aria / Jake</span>
+        <span class="float-box-badge">Interchangeable</span>
+      </div>
+      <div class="float-assistant-stage">
+        <button class="float-assistant-orb aria" id="floatAriaBtn">Aria</button>
+        <button class="float-assistant-orb jake" id="floatJakeBtn">Jake</button>
+      </div>
+      <div class="float-box-copy" id="floatAssistantStatus">Jake helps in the studio. Aria helps on the general post side. Tap either one to switch the remote.</div>
+    </section>
+    <section class="float-box glass" id="floatDeviceBox">
+      <div class="float-box-head">
+        <span>Device / Instrument</span>
+        <span class="float-box-badge">Plug In Fast</span>
+      </div>
+      <div class="float-big-buttons">
+        <button class="float-pill" id="floatMicBtn">Mic</button>
+        <button class="float-pill" id="floatInstrumentBtn">Instrument</button>
+        <button class="float-pill" id="floatUsbBtn">USB View</button>
+        <button class="float-pill" id="float4kBtn">4K Drone</button>
+      </div>
+      <div class="float-box-copy" id="floatDeviceStatus">Choose the recording device or instrument and keep the route lightweight.</div>
+    </section>
+    <section class="float-box glass" id="floatBoardsBox">
+      <div class="float-box-head">
+        <span>Motherboards</span>
+        <span class="float-box-badge">3 Default</span>
+      </div>
+      <div class="float-board-list">
+        <button class="float-board active" data-float-board="1">Motherboard 1</button>
+        <button class="float-board" data-float-board="2">Motherboard 2</button>
+        <button class="float-board" data-float-board="3">Motherboard 3</button>
+      </div>
+      <div class="float-mini-actions">
+        <button class="btn ghost" id="floatBoardEditBtn">Edit Board</button>
+        <button class="btn ghost" id="floatBoardAddBtn">Add Board</button>
+      </div>
+      <div class="float-box-copy" id="floatBoardStatus">Three motherboards by default. Big buttons, easy movement, ready for audio or video pieces.</div>
+    </section>
+    <section class="float-box glass" id="floatProfileBox">
+      <div class="float-box-head">
+        <span>Profile Viewer</span>
+        <span class="float-box-badge">Hair Identity</span>
+      </div>
+      <div class="float-profile-card">
+        <div class="float-profile-avatar"></div>
+        <div class="float-profile-lines">
+          <strong id="floatProfileName">SupportRD Host</strong>
+          <span id="floatProfileMeta">General stream profile · hair mission active</span>
+        </div>
+      </div>
+      <div class="float-box-copy">A self profile viewer that keeps your session identity visible while you move.</div>
+    </section>
+    <section class="float-box glass" id="floatSettingsBox">
+      <div class="float-box-head">
+        <span>Settings / Map</span>
+        <span class="float-box-badge">Wind Light</span>
+      </div>
+      <div class="float-big-buttons">
+        <button class="float-pill" id="floatMapBtn">Map</button>
+        <button class="float-pill" id="floatThemeBtn">Theme</button>
+        <button class="float-pill" id="floatPaymentBtn">Payment</button>
+        <button class="float-pill" id="floatCameraBtn">Camera</button>
+      </div>
+      <div class="float-box-copy" id="floatSettingsStatus">Float Mode keeps six big boxes on screen like a personal remote, on desktop and mobile.</div>
+    </section>
+  </div>
+</div>
+
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260324c"></script>
+<script src="/static/app.v20260320h.js?v=20260325a"></script>
 <footer class="launch-footer-links">
   <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
   <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>

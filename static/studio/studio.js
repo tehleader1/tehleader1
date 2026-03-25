@@ -1473,6 +1473,11 @@ function setupUtilityButtons() {
   });
   qs("#studioProfileLocalBtn")?.addEventListener("click", () => qs("#openProfilePanelBtn")?.click());
   qs("#studioGigLocalBtn")?.addEventListener("click", () => qs("#gigStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  qs("#studioFloatLocalBtn")?.addEventListener("click", () => {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: "open-float-mode" }, "*");
+    }
+  });
   const shiftTheme = (delta) => {
     currentTheme = (currentTheme + delta + THEMES.length) % THEMES.length;
     document.body.classList.remove("theme-signal", "theme-ember");
