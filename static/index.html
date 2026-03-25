@@ -304,38 +304,12 @@
           <div class="system-sub" id="liveArenaLoaderText">Preparing stream route...</div>
         </div>
         <div class="live-arena-shell" id="liveArenaShell" hidden>
-          <div class="live-arena-head">
-            <div class="live-arena-brand">
-              <div class="live-badge">LIVE</div>
-              <div>
-                <div class="system-title">SupportRD World Stream</div>
-                <div class="system-sub" id="liveArenaMission">SupportRD Free Roam World is built in Dominican Republic and the United States. We deliver solutions to the health of your hair, then turn that care into stream energy, useful motion, and a mission people can feel.</div>
-              </div>
-            </div>
-            <div class="live-arena-actions">
-              <button class="btn ghost" id="liveArenaBreakBtn">Break</button>
-              <button class="btn ghost" id="liveArenaCloseBtn">Close LIVE</button>
-            </div>
-          </div>
-          <div class="live-arena-top">
-            <div class="live-camera-card glass">
-              <div class="live-camera-flash" id="liveCameraFlash"></div>
-              <div class="live-camera-title">Camera Direct</div>
-              <div class="live-camera-sub">Bright, shiny camera with live motion, sponsor intro, and stream sweep effect.</div>
-              <div class="live-camera-window" id="liveArenaCameraWindow">
-                <div class="live-camera-copy" id="liveArenaCameraCopy">Choose your lens, then go do something real: code, build, work, move, teach, create, or take the audience into a stream that feels purposeful from the start.</div>
-              </div>
-            </div>
-            <div class="live-right-stack">
-              <div class="system-card glass live-settings-card">
-                <div class="system-head">
-                  <div>
-                    <div class="system-title">Settings</div>
-                    <div class="system-sub">Device, audio, filters, lens, and live controls.</div>
-                  </div>
-                  <span class="system-badge">Top Right</span>
-                </div>
-                <div class="request-grid">
+          <div class="live-mission-quote" id="liveArenaMission">SupportRD is an innocent company out of Dominican Republic and United States. We deliver solutions to the health of your hair. Period. We are on a mission.</div>
+          <div class="system-card glass live-middle-card">
+            <div class="live-panel-top">
+              <div class="live-panel-controls">
+                <div class="live-panel-kicker">Top Left Controls</div>
+                <div class="live-panel-grid">
                   <select id="liveArenaMode">
                     <option value="solo">Personal Route · 1 minute load</option>
                     <option value="street">Street Route · 2 minute load</option>
@@ -368,52 +342,63 @@
                     <option value="sport">Lens: Extreme Sport</option>
                     <option value="work">Lens: Work Related</option>
                   </select>
-                  <button class="btn" id="liveArenaCameraAccessBtn">Camera Access</button>
+                  <div class="live-panel-note">Lens is your default popup choice before posting the session. SponsorTag stays optional.</div>
                 </div>
-              </div>
-              <div class="system-card glass live-bot-card">
-                <div class="system-head">
-                  <div>
-                    <div class="system-title">Aria / Jake / Ref Bot</div>
-                    <div class="system-sub">Live support, glitch handling, and soft technical pause help.</div>
+                <div class="live-panel-inline">
+                  <div class="live-sponsor-hq">
+                    <div class="system-title">SponsorTag HQ</div>
+                    <div class="system-sub" id="sponsorTagStatus">SponsorTag pending. New accounts can create one once: ^^AgentAnthony / ^^SupportRD / ^^anything.</div>
                   </div>
-                  <span class="system-badge" id="liveArenaBotBadge">ARIA Ready</span>
-                </div>
-                <div class="system-actions">
-                  <button class="btn ghost" id="liveArenaAriaBtn">Aria</button>
-                  <button class="btn ghost" id="liveArenaJakeBtn">Jake</button>
-                  <button class="btn ghost" id="liveArenaRefBtn">Ref Bot</button>
-                </div>
-                <div class="system-sub" id="liveArenaBotStatus">Ref Bot watches for technical trouble, can halt a session cleanly, and keeps the stream mission moving if people naturally link up and try something new.</div>
-              </div>
-            </div>
-          </div>
-          <div class="system-card glass live-middle-card">
-            <div class="live-middle-head">
-              <div class="live-sponsor-hq">
-                <div class="system-title">SponsorTag HQ</div>
-                <div class="system-sub" id="sponsorTagStatus">SponsorTag pending. New accounts can create one once: ^^AgentAnthony / ^^SupportRD / ^^anything.</div>
-                <div class="system-actions">
                   <button class="btn ghost" id="sponsorTagOpenBtn">Add SponsorTag</button>
                 </div>
               </div>
-              <div class="live-center-logo">LIVE</div>
-              <div class="live-money-box">
-                <button class="btn" id="liveArenaFloodBtn">Flood Money Mode</button>
-                <div class="system-sub" id="liveArenaFloodStatus">Money flow stays compliance-gated and balance-safe.</div>
+              <div class="live-panel-bots">
+                <div class="live-orb-row">
+                  <button class="live-orb-btn" id="liveArenaAriaBtn" aria-label="Open Aria help">
+                    <span class="live-orb live-orb-aria"></span>
+                    <span class="live-orb-label">Aria</span>
+                  </button>
+                  <button class="live-orb-btn" id="liveArenaJakeBtn" aria-label="Open Jake help">
+                    <span class="live-orb live-orb-jake"></span>
+                    <span class="live-orb-label">Jake</span>
+                  </button>
+                </div>
+                <div class="system-sub" id="liveArenaBotBadge">ARIA Ready</div>
+                <div class="system-sub" id="liveArenaBotStatus">Ref Bot watches for technical trouble, can halt a session cleanly, and keeps the stream mission moving if people naturally link up and try something new.</div>
+                <div class="system-actions">
+                  <button class="btn ghost" id="liveArenaRefBtn">Ref Bot</button>
+                  <button class="btn ghost" id="liveArenaCloseBtn">Close LIVE</button>
+                </div>
               </div>
             </div>
-            <div class="live-content-grid">
-              <div class="live-main-stream glass">
-                <div class="live-stream-title">Main Stream</div>
+            <div class="live-panel-center">
+              <div class="live-camera-card glass">
+                <div class="live-camera-flash" id="liveCameraFlash"></div>
+                <div class="live-center-banner">
+                  <button class="live-view-arrow" id="liveArenaViewPrev" aria-label="Previous center view">‹</button>
+                  <div class="live-center-brandstack">
+                    <div class="live-center-logo">LIVE</div>
+                    <div class="live-center-view-meta" id="liveArenaViewMeta">Main Session View</div>
+                  </div>
+                  <button class="live-view-arrow" id="liveArenaViewNext" aria-label="Next center view">›</button>
+                </div>
+                <div class="live-stream-title" id="liveArenaPanelTitle">Main Stream</div>
                 <div class="live-stream-body" id="liveArenaMainStream">
                   Stream intro, sponsor sweep, and purposeful content load here.
                 </div>
-                <div class="system-actions">
+                <div class="live-center-actions">
+                  <button class="btn ghost" id="liveArenaPostBtn">Post</button>
+                  <button class="btn ghost" id="liveArenaFloodBtn">Flood Money Mode</button>
+                  <button class="btn ghost" id="liveArenaCameraAccessBtn">Camera</button>
+                  <button class="btn ghost" id="liveArenaBreakBtn">Break</button>
+                  <button class="btn ghost" id="unlockViewsBtnLive">Theme / Map Change</button>
+                </div>
+                <div class="live-center-subactions">
                   <button class="btn" id="liveArenaStartBtn">Start LIVE</button>
-                  <button class="btn ghost" id="liveArenaPostBtn">Send Post</button>
                   <button class="btn ghost" id="liveArenaCheckBtn">Select Feeds</button>
                 </div>
+                <div class="system-sub" id="liveArenaFloodStatus">Flood mode unlocks at 1000 views and prepares you for a viral hit without dropping the session.</div>
+                <div class="system-sub" id="liveArenaViewerStatus">Host control mode active. Viewer links open in watch-only mode.</div>
               </div>
               <div class="live-content-wizard glass">
                 <div class="live-stream-title">Content Route</div>
@@ -422,19 +407,21 @@
                 <button class="btn live-next-btn" id="liveArenaNextBtn">Next</button>
               </div>
             </div>
-          </div>
-          <div class="live-bottom-grid">
-            <div class="system-card glass">
-              <div class="system-title">Profile / Group</div>
-              <div class="system-sub" id="liveArenaProfileStatus">Profile of the streamer or group appears here.</div>
-            </div>
-            <div class="system-card glass">
-              <div class="system-title">Sponsors / Audience / Quick Tips</div>
-              <div class="system-sub" id="liveArenaSponsorStatus">Current sponsors, general audience, and quick stream tips appear here.</div>
-            </div>
-            <div class="system-card glass">
-              <div class="system-title">Glitch To Codex</div>
-              <div class="system-sub" id="liveArenaGlitchStatus">If stream money or match issues appear, this lane gathers a clean developer handoff for Codex.</div>
+            <div class="live-panel-bottom">
+              <div class="live-panel-quick">
+                <div class="quick-block">
+                  <div class="quick-title">Profile / Group</div>
+                  <div class="system-sub" id="liveArenaProfileStatus">Profile of the streamer or group appears here.</div>
+                </div>
+                <div class="quick-block">
+                  <div class="quick-title">Sponsors / Audience / Quick Tips</div>
+                  <div class="system-sub" id="liveArenaSponsorStatus">Current sponsors, general audience, and quick stream tips appear here.</div>
+                </div>
+                <div class="quick-block">
+                  <div class="quick-title">Glitch To Codex</div>
+                  <div class="system-sub" id="liveArenaGlitchStatus">If stream money or match issues appear, this lane gathers a clean developer handoff for Codex.</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

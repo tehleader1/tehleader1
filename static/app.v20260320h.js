@@ -3081,6 +3081,8 @@ function setupLiveArena(){
   const feedBtn = qs("#liveArenaCheckBtn")
   const floodBtn = qs("#liveArenaFloodBtn")
   const nextBtn = qs("#liveArenaNextBtn")
+  const prevViewBtn = qs("#liveArenaViewPrev")
+  const nextViewBtn = qs("#liveArenaViewNext")
   const modeSel = qs("#liveArenaMode")
   const lensSel = qs("#liveArenaLens")
   const deviceSel = qs("#liveArenaDevice")
@@ -3097,6 +3099,9 @@ function setupLiveArena(){
   const contentStatus = qs("#liveArenaContentStatus")
   const contentList = qs("#liveArenaContentList")
   const mission = qs("#liveArenaMission")
+  const panelTitle = qs("#liveArenaPanelTitle")
+  const panelMeta = qs("#liveArenaViewMeta")
+  const viewerStatus = qs("#liveArenaViewerStatus")
   const flash = qs("#liveCameraFlash")
   const sponsorTagOpenBtn = qs("#sponsorTagOpenBtn")
   const tagModal = qs("#sponsorTagModal")
@@ -3104,11 +3109,30 @@ function setupLiveArena(){
   const tagCreateBtn = qs("#sponsorTagCreateBtn")
   const tagSkipBtn = qs("#sponsorTagSkipBtn")
   const walletKey = "supportrdWallet"
+  const viewsKey = "supportrdLiveViews"
   let openArmed = false
   let startArmed = false
   let liveContentIndex = 0
+  let livePanelIndex = 0
   let energyTimer = null
+  let currentViews = Number(localStorage.getItem(viewsKey) || 220)
+  const viewerMode = /[?&]viewer=1\b/.test(location.search)
   if(tagModal) tagModal.hidden = true
+  const livePanels = [
+    { title:"Main Stream", meta:"Main Session View" },
+    { title:"Receiver Comments", meta:"Comments View" },
+    { title:"New Joiners", meta:"Joiners View" }
+  ]
+  const liveComments = [
+    "New comment: your route feels clean and purposeful.",
+    "Receiver note: hair mission is clear, keep showing real work.",
+    "Comment pulse: sponsor lane looks sharp from this side."
+  ]
+  const liveJoiners = [
+    "^^newviewer just joined in watch-only mode.",
+    "A fresh audience lane connected to this session.",
+    "New receiver entered the stream and can view only."
+  ]
   const contentSteps = [
     "Introduce the host with a sweep effect and company mission.",
     "Show the real action: code, game, dance, wilderness, or work scene.",
@@ -3128,6 +3152,45 @@ function setupLiveArena(){
   function renderContentSteps(){
     if(!contentList) return
     contentList.innerHTML = contentSteps.map((step, idx)=>`<div class="live-content-step${idx===liveContentIndex ? " active" : ""}">Step ${idx+1}: ${step}</div>`).join("")
+  }
+  function renderLivePanel(){
+    const current = livePanels[livePanelIndex] || livePanels[0]
+    if(panelTitle) panelTitle.textContent = current.title
+    if(panelMeta) panelMeta.textContent = current.meta
+    if(!mainStream) return
+    if(livePanelIndex === 0){
+      mainStream.textContent = "Stream intro, sponsor sweep, and purposeful content load here."
+    } else if(livePanelIndex === 1){
+      mainStream.textContent = liveComments.join("\n")
+    } else {
+      mainStream.textContent = liveJoiners.join("\n")
+    }
+  }
+  function setViewerMode(){
+    document.body.classList.toggle("viewer-mode", viewerMode)
+    if(viewerStatus){
+      viewerStatus.textContent = viewerMode
+        ? "Viewer watch mode active. You can see the session, comments, and joiners, but you cannot press host controls."
+        : "Host control mode active. Viewer links open in watch-only mode."
+    }
+  }
+  function updateFloodState(){
+    const ready = currentViews >= 1000
+    if(floodBtn){
+      floodBtn.disabled = !ready
+      floodBtn.style.opacity = ready ? "1" : ".46"
+      floodBtn.style.cursor = ready ? "pointer" : "not-allowed"
+    }
+    if(floodStatus){
+      floodStatus.textContent = ready
+        ? `Flood mode unlocked at ${currentViews} views. Press it to run the 10-second viral sponsor intro, then resume the session.`
+        : `Flood mode is locked until 1000 views. Current session views: ${currentViews}.`
+    }
+  }
+  function bumpViews(amount){
+    currentViews += amount
+    localStorage.setItem(viewsKey, String(currentViews))
+    updateFloodState()
   }
   function updateRefBot(){
     const mode = modeSel?.value || "solo"
@@ -3216,9 +3279,12 @@ function setupLiveArena(){
     if(profileStatus) profileStatus.textContent = `Host profile ready · Lens ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Audio ${audioSel?.selectedOptions?.[0]?.textContent || "Mic"}`
     if(sponsorLane) sponsorLane.textContent = "Sponsors lane armed: general audience, current supporters, future sponsor tags, blog sponsors, and clean crypto/company outreach flow."
     if(mission) mission.textContent = "SupportRD is an innocent company out of Dominican Republic and United States. We deliver solutions to the health of your hair. Period. We are on a mission."
-    if(mainStream) mainStream.textContent = "Sweep effect loaded. Introduce the host, show the purpose fast, then put the real content in motion."
+    renderLivePanel()
     flashCamera()
     startLiveEnergy()
+    updateFloodState()
+    setViewerMode()
+    openMiniWindow("Session Prep", `Lens ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} is staged. SponsorTag is optional and can be created from SponsorTag HQ any time.`)
   }
   function runLoader(){
     const mode = modeSel?.value || "solo"
@@ -3276,7 +3342,8 @@ function setupLiveArena(){
       setTimeout(()=>document.body.classList.remove("live-jello"), 900)
       flashCamera()
       startLiveEnergy()
-      if(mainStream) mainStream.textContent = `LIVE now · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · keep the action moving.`
+      bumpViews(180)
+      if(mainStream && livePanelIndex === 0) mainStream.textContent = `LIVE now · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · keep the action moving.`
       openMiniWindow("LIVE Started", "Sweep effect complete. Stream is introduced, sponsors can load, and the center panel is now in live mode.")
     })
   }
@@ -3290,7 +3357,7 @@ function setupLiveArena(){
   if(cameraBtn){
     cameraBtn.addEventListener("click", ()=>{
       flashCamera()
-      if(mainStream) mainStream.textContent = `Camera armed · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · flashlight pulse active.`
+      if(mainStream && livePanelIndex === 0) mainStream.textContent = `Camera armed · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · flashlight pulse active.`
       openMiniWindow("Camera", "Camera and visual route armed for the live center panel.")
     })
   }
@@ -3304,37 +3371,67 @@ function setupLiveArena(){
       const post = qs("#postInput")
       if(post) post.value = `LIVE SUPPORT RD · ${modeSel?.selectedOptions?.[0]?.textContent || "Personal Route"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
       flashCamera()
+      bumpViews(120)
+      liveComments.unshift(`Receiver comment: fresh post blast went out for ${lensSel?.selectedOptions?.[0]?.textContent || "this route"}.`)
+      liveComments.splice(3)
       openMiniWindow("Post Blast", "Laser post effect fired. Live post staged for checked social channels.")
+      if(livePanelIndex === 1) renderLivePanel()
     })
   }
   if(floodBtn){
     floodBtn.addEventListener("click", ()=>{
+      if(currentViews < 1000){
+        openMiniWindow("Flood Money Mode", `Flood mode is still locked. Current views: ${currentViews}. Reach 1000 to unlock it.`)
+        return
+      }
       const wallet = JSON.parse(localStorage.getItem(walletKey) || "{}")
       wallet.balance = Number(wallet.balance || 0) + 250
       localStorage.setItem(walletKey, JSON.stringify(wallet))
-      if(floodStatus) floodStatus.textContent = `Flood mode staged. Balance lane warmed to $${wallet.balance.toFixed(2)} while keeping payout flow compliance-gated and traffic-safe.`
-      openMiniWindow("Flood Money Mode", "Flood mode prepared the balance lane and response posture. Real payout routing still needs the proper processor/backend path.")
+      if(mainStream && livePanelIndex === 0) mainStream.textContent = "Flood Money Mode active. 10-second sponsor intro and viral TikTok announcement running, then the session will resume."
+      if(floodStatus) floodStatus.textContent = `Flood mode is live. Balance lane warmed to $${wallet.balance.toFixed(2)} while keeping payout flow compliance-gated and traffic-safe.`
+      flashCamera()
+      setTimeout(()=>{
+        if(mainStream && livePanelIndex === 0) mainStream.textContent = `Session resumed · ${currentViews} views in play · keep the content purposeful and fast.`
+      }, 10000)
+      openMiniWindow("Flood Money Mode", "A 10-second sponsor/viral intro is running before the live session drops back in.")
     })
   }
   if(nextBtn){
     nextBtn.addEventListener("click", ()=>{
       liveContentIndex = (liveContentIndex + 1) % contentSteps.length
       renderContentSteps()
+      bumpViews(80)
       if(contentStatus) contentStatus.textContent = `Step ${liveContentIndex + 1}/7 ready. Keep the content moving every 30 minutes.`
       const x = (Math.random() * 34) - 17
       const y = (Math.random() * 14) - 7
       nextBtn.style.transform = `translate(${x}px, ${y}px)`
     })
   }
+  prevViewBtn?.addEventListener("click", ()=>{
+    livePanelIndex = (livePanelIndex + livePanels.length - 1) % livePanels.length
+    renderLivePanel()
+  })
+  nextViewBtn?.addEventListener("click", ()=>{
+    livePanelIndex = (livePanelIndex + 1) % livePanels.length
+    renderLivePanel()
+  })
   qs("#liveArenaAriaBtn")?.addEventListener("click", ()=>{
     if(botBadge) botBadge.textContent = "ARIA Ready"
     if(botStatus) botStatus.textContent = "ARIA is active for host guidance, content prompts, and calm stream support."
+    qs("#liveArenaContentList")?.scrollIntoView({behavior:"smooth", block:"center"})
+    openMiniWindow("ARIA Walkthrough", "ARIA is guiding you through the content route first so the session never feels empty.")
   })
   qs("#liveArenaJakeBtn")?.addEventListener("click", ()=>{
     if(botBadge) botBadge.textContent = "Jake Ready"
     if(botStatus) botStatus.textContent = "Jake is active for harder stream energy, booth hype, and technical creative support."
+    qs("#liveArenaMainStream")?.scrollIntoView({behavior:"smooth", block:"center"})
+    openMiniWindow("Jake Walkthrough", "Jake is focusing the main stream area so you can keep the session active and responsive.")
   })
-  qs("#liveArenaRefBtn")?.addEventListener("click", updateRefBot)
+  qs("#liveArenaRefBtn")?.addEventListener("click", ()=>{
+    updateRefBot()
+    qs("#liveArenaGlitchStatus")?.scrollIntoView({behavior:"smooth", block:"center"})
+    openMiniWindow("Ref Bot", "Ref Bot is showing you the glitch-to-Codex lane and the clean stop point if technical help is needed.")
+  })
   sponsorStatus?.addEventListener("click", openSponsorTagModal)
   sponsorTagOpenBtn?.addEventListener("click", openSponsorTagModal)
   tagCreateBtn?.addEventListener("click", ()=>saveSponsorTag(tagInput?.value || ""))
@@ -3356,6 +3453,9 @@ function setupLiveArena(){
   })
   renderContentSteps()
   updateRefBot()
+  updateFloodState()
+  setViewerMode()
+  renderLivePanel()
   setTimeout(()=>{
     if(overlay?.hidden !== false || shell?.hidden !== false){
       openLiveShell()
@@ -5237,9 +5337,10 @@ const WORLD_VIEWS = [
 
 function setupUnlockViewsButton(){
   const btn = qs("#unlockViewsBtn")
-  if(!btn) return
+  const liveBtn = qs("#unlockViewsBtnLive")
+  if(!btn && !liveBtn) return
   const classes = WORLD_VIEWS.map(v=>`world-view-${v.key}`)
-  const subtitle = btn.querySelector(".unlock-main-sub")
+  const subtitle = btn?.querySelector(".unlock-main-sub")
   function applyView(key){
     document.body.classList.remove(...classes)
     document.body.classList.add(`world-view-${key}`)
@@ -5249,15 +5350,46 @@ function setupUnlockViewsButton(){
     const stage = qs("#ariaAssistantSub")
     if(stage) stage.textContent = `ARIA · Free Roam / ${view.label}`
   }
+  function queueViewLoad(targetKey){
+    const view = WORLD_VIEWS.find(v=>v.key === targetKey) || WORLD_VIEWS[0]
+    const mainStream = qs("#liveArenaMainStream")
+    const busyText = `Loading ${view.label} into your session background...`
+    if(btn){
+      btn.disabled = true
+      const mainLabel = btn.querySelector(".unlock-main-label")
+      const subLabel = btn.querySelector(".unlock-main-sub")
+      if(mainLabel) mainLabel.textContent = "Loading View"
+      if(subLabel) subLabel.textContent = view.label
+    }
+    if(liveBtn){
+      liveBtn.disabled = true
+      liveBtn.textContent = busyText
+    }
+    if(mainStream) mainStream.textContent = `${busyText} freebies are opening for being in the area, and premium benefits still come from the real work of bringing people live.`
+    setTimeout(()=>{
+      applyView(targetKey)
+      if(btn){
+        btn.disabled = false
+        btn.querySelector(".unlock-main-label")?.replaceChildren(document.createTextNode("Unlock + Change Views"))
+      }
+      if(liveBtn){
+        liveBtn.disabled = false
+        liveBtn.textContent = "Unlock + Change Views"
+      }
+      if(mainStream) mainStream.textContent = `${view.label} is now the active background for this session. Keep the route moving and make the area feel earned.`
+      openMiniWindow("World View", `${view.label} loaded in after the route setup.`)
+    }, 8000)
+  }
   const saved = localStorage.getItem("worldView")
   applyView((saved && WORLD_VIEWS.some(v=>v.key === saved)) ? saved : WORLD_VIEWS[0].key)
-  btn.addEventListener("click", ()=>{
+  function rotateView(){
     const current = localStorage.getItem("worldView") || WORLD_VIEWS[0].key
     const index = WORLD_VIEWS.findIndex(v=>v.key === current)
     const next = WORLD_VIEWS[(index + 1) % WORLD_VIEWS.length]
-    applyView(next.key)
-    openMiniWindow("World View", `${next.label} unlocked. SupportRD shifted the view.`)
-  })
+    queueViewLoad(next.key)
+  }
+  btn?.addEventListener("click", rotateView)
+  liveBtn?.addEventListener("click", rotateView)
 }
 
 function setupDashboardSweep(){
