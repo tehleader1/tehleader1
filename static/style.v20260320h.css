@@ -2534,13 +2534,20 @@ body.competition-world .bg-layers::before{
 .world-map-loader{margin-top:18px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.08);}
 .world-map-loader-label{font-weight:700;color:#eef4ff;margin-bottom:10px;}
 .world-map-loader-bar{height:12px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden;}
-.world-map-loader-bar span{display:block;width:0%;height:100%;border-radius:999px;background:linear-gradient(90deg,#7fd5ff,#4b7dff,#b6f6ff);transition:width .45s ease;}
-@media (max-width: 720px){
-  .world-map-panel{width:min(94vw,520px);padding:16px;}
-  .world-map-head{flex-direction:column;align-items:stretch;}
-  .world-map-bubbles{gap:10px;}
-  .world-map-bubble{min-width:108px;min-height:108px;font-size:.92rem;}
-}
+  .world-map-loader-bar span{display:block;width:0%;height:100%;border-radius:999px;background:linear-gradient(90deg,#7fd5ff,#4b7dff,#b6f6ff);transition:width .45s ease;}
+  .live-map-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;}
+  .live-map-actions[hidden]{display:none !important;}
+  .live-map-action{flex:1 1 220px;border:none;cursor:pointer;padding:14px 16px;border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(226,241,255,.72));box-shadow:0 16px 32px rgba(28,48,88,.18);color:#10315f;text-align:left;transition:transform .18s ease,box-shadow .18s ease,background .18s ease;}
+  .live-map-action strong{display:block;font-size:.95rem;letter-spacing:.03em;}
+  .live-map-action span{display:block;margin-top:6px;font-size:.82rem;line-height:1.45;color:rgba(16,49,95,.82);}
+  .live-map-action:hover,.live-map-action:focus-visible{transform:translateY(-2px);box-shadow:0 22px 38px rgba(28,48,88,.25);background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(214,235,255,.86));}
+  @media (max-width: 720px){
+    .world-map-panel{width:min(94vw,520px);padding:16px;}
+    .world-map-head{flex-direction:column;align-items:stretch;}
+    .world-map-bubbles{gap:10px;}
+    .world-map-bubble{min-width:108px;min-height:108px;font-size:.92rem;}
+    .live-map-action{flex-basis:100%;}
+  }
 
 body.competition-world{
   --world-accent: rgba(90,160,255,.35);

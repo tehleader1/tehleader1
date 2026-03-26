@@ -5611,17 +5611,17 @@ function setupEngineGlassViewer(){
 }
 
 const WORLD_VIEWS = [
-    { key:"lumbermill", label:"Lumbermill Defense", perk:"Defense hold + first-line pressure", helper:"Post work-ethic updates and progress shots from the yard.", prompt:"Realistic Dominican lumbermill at early morning, wet timber stacks, muddy tracks, rustic saw structure, fog, cinematic natural light" },
-    { key:"river", label:"River Hole Motion", perk:"Movement bonus + smart route positioning", helper:"Use short route posts and calm check-ins to keep people moving with you.", prompt:"Realistic river bend with rocks, mossy bank, shaded water, hidden crossing path, cinematic blue-green light" },
-    { key:"snow", label:"Artificial Snow Hill", perk:"High-visibility defense + clean focus", helper:"Post crisp update clips and clean premium service offers.", prompt:"Realistic artificial snow hill with white ridges, icy blue shadows, floodlights, elevated outlook, crisp winter atmosphere" },
-    { key:"island", label:"Island Control", perk:"Rare unlock + premium route energy", helper:"Push destination-style content and international travel mood from this base.", prompt:"Realistic small tropical island by a lake, teal water, low grass, dock crossing, bright premium Caribbean daylight" },
-    { key:"vip", label:"VIP Spot Energy", perk:"Sponsor visibility + elevated defense", helper:"Show sponsor wins, premium upgrades, and polished host moments here.", prompt:"Realistic luxury VIP overlook deck with glass railing, black and gold trim, sponsor glow, cinematic premium atmosphere" },
-    { key:"tunnels", label:"Tunnels Run", perk:"Quick-encounter movement + pressure", helper:"Run fast short-form post bursts and behind-the-scenes updates.", prompt:"Realistic concrete service tunnel with low fog, blue-red light strips, damp walls, close fast movement lanes" },
-    { key:"market", label:"Market Rush", perk:"Audience attention + social traction", helper:"Post active human-life clips, audience comments, and social prompts from this base.", prompt:"Realistic Dominican outdoor market street with colorful awnings, vendor tables, warm daylight, lively movement" },
-    { key:"lab", label:"The Lab", perk:"Precision tools + extra creative control", helper:"Show advanced studio, reverb, hair analysis, and technical feature highlights.", prompt:"Realistic futuristic lab with cyan glow, glass panels, dark metal surfaces, clean floor lines, premium science room" },
-    { key:"lounge", label:"Officials Lounge", perk:"Reset lane + protected regroup", helper:"Use this base for calm announcements, support updates, and trust-building posts.", prompt:"Realistic premium lounge with dark wood, polished black surfaces, leather seating, calm gold lighting" },
-    { key:"tower", label:"Watch Tower", perk:"Vision boost + field awareness", helper:"Share overview posts, direction, GPS routes, and big-picture session updates.", prompt:"Realistic lookout tower above mixed field terrain, open sky, wood and steel structure, panoramic horizon" }
-  ]
+    { key:"lumbermill", label:"Lumbermill Defense", perk:"Defense hold + first-line pressure", helper:"Post work-ethic updates and progress shots from the yard.", prompt:"Realistic Dominican lumbermill at early morning, wet timber stacks, muddy tracks, rustic saw structure, fog, cinematic natural light", actions:[{label:"Post Yard Update", detail:"Drop a gritty work update with strong first-line energy."},{label:"Hold The Line", detail:"Tell people SupportRD is steady, clean, and still moving."}] },
+    { key:"river", label:"River Hole Motion", perk:"Movement bonus + smart route positioning", helper:"Use short route posts and calm check-ins to keep people moving with you.", prompt:"Realistic river bend with rocks, mossy bank, shaded water, hidden crossing path, cinematic blue-green light", actions:[{label:"Quick Route Post", detail:"Run a calm movement check-in and show the next route."},{label:"Movement Check-In", detail:"Keep the stream light, active, and flowing with you."}] },
+    { key:"snow", label:"Artificial Snow Hill", perk:"High-visibility defense + clean focus", helper:"Post crisp update clips and clean premium service offers.", prompt:"Realistic artificial snow hill with white ridges, icy blue shadows, floodlights, elevated outlook, crisp winter atmosphere", actions:[{label:"Clean Offer Drop", detail:"Push a sharp premium offer with clean focus energy."},{label:"High Ground Focus", detail:"Show the clear view, clean service, and high-ground mood."}] },
+    { key:"island", label:"Island Control", perk:"Rare unlock + premium route energy", helper:"Push destination-style content and international travel mood from this base.", prompt:"Realistic small tropical island by a lake, teal water, low grass, dock crossing, bright premium Caribbean daylight", actions:[{label:"Travel Mood Post", detail:"Make the session feel rare, tropical, and worth checking in on."},{label:"Premium Route Push", detail:"Tie the destination vibe to premium products and motion."}] },
+    { key:"vip", label:"VIP Spot Energy", perk:"Sponsor visibility + elevated defense", helper:"Show sponsor wins, premium upgrades, and polished host moments here.", prompt:"Realistic luxury VIP overlook deck with glass railing, black and gold trim, sponsor glow, cinematic premium atmosphere", actions:[{label:"Sponsor Highlight", detail:"Put your best sponsors and supporters in the spotlight."},{label:"Premium Push", detail:"Lead with upgrades, sharp service, and premium momentum."}] },
+    { key:"tunnels", label:"Tunnels Run", perk:"Quick-encounter movement + pressure", helper:"Run fast short-form post bursts and behind-the-scenes updates.", prompt:"Realistic concrete service tunnel with low fog, blue-red light strips, damp walls, close fast movement lanes", actions:[{label:"Fast Burst Post", detail:"Drop a quick post burst and keep the pace moving."},{label:"Behind-The-Scenes", detail:"Show the grind and moving parts without slowing down."}] },
+    { key:"market", label:"Market Rush", perk:"Audience attention + social traction", helper:"Post active human-life clips, audience comments, and social prompts from this base.", prompt:"Realistic Dominican outdoor market street with colorful awnings, vendor tables, warm daylight, lively movement", actions:[{label:"Audience Pull", detail:"Call people in with social energy and active human moments."},{label:"Social Burst", detail:"Push a post designed to spark comments and attention fast."}] },
+    { key:"lab", label:"The Lab", perk:"Precision tools + extra creative control", helper:"Show advanced studio, reverb, hair analysis, and technical feature highlights.", prompt:"Realistic futuristic lab with cyan glow, glass panels, dark metal surfaces, clean floor lines, premium science room", actions:[{label:"Tool Highlight", detail:"Show the technical side: reverb, scan, and feature precision."},{label:"Precision Drop", detail:"Post the clean details that make the system feel serious."}] },
+    { key:"lounge", label:"Officials Lounge", perk:"Reset lane + protected regroup", helper:"Use this base for calm announcements, support updates, and trust-building posts.", prompt:"Realistic premium lounge with dark wood, polished black surfaces, leather seating, calm gold lighting", actions:[{label:"Calm Update", detail:"Give a composed update and keep the room settled."},{label:"Trust Builder", detail:"Remind people SupportRD is clean, helpful, and here to serve."}] },
+    { key:"tower", label:"Watch Tower", perk:"Vision boost + field awareness", helper:"Share overview posts, direction, GPS routes, and big-picture session updates.", prompt:"Realistic lookout tower above mixed field terrain, open sky, wood and steel structure, panoramic horizon", actions:[{label:"Overview Post", detail:"Give the big-picture update and where the session is headed."},{label:"GPS Direction", detail:"Use the tower view to guide people to the next move."}] }
+    ]
 
   function formatSubscriptionSummary(plan, details){
     const safePlan = (plan || "free").toString().trim() || "free"
@@ -5656,23 +5656,35 @@ const WORLD_VIEWS = [
     target.innerHTML = formatSubscriptionSummary(plan, details)
   }
 
-function setupUnlockViewsButton(){
+  function setupUnlockViewsButton(){
   const btn = qs("#unlockViewsBtn")
   const liveBtn = qs("#unlockViewsBtnLive")
   const panel = qs("#worldMapPanel")
   const closeBtn = qs("#closeWorldMapPanel")
-  const bubbles = qs("#worldMapBubbles")
-  const loader = qs("#worldMapLoader")
-  const loaderBar = qs("#worldMapLoaderBar")
-  const loaderLabel = qs("#worldMapLoaderLabel")
-  if(!btn && !liveBtn) return
-  const classes = WORLD_VIEWS.map(v=>`world-view-${v.key}`)
-  const subtitle = btn?.querySelector(".unlock-main-sub")
-  function applyView(key){
-    document.body.classList.remove(...classes)
-    document.body.classList.add(`world-view-${key}`)
-    localStorage.setItem("worldView", key)
-    const view = WORLD_VIEWS.find(v=>v.key === key) || WORLD_VIEWS[0]
+    const bubbles = qs("#worldMapBubbles")
+    const loader = qs("#worldMapLoader")
+    const loaderBar = qs("#worldMapLoaderBar")
+    const loaderLabel = qs("#worldMapLoaderLabel")
+    const liveMapActions = qs("#liveMapActions")
+    if(!btn && !liveBtn) return
+    const classes = WORLD_VIEWS.map(v=>`world-view-${v.key}`)
+    const subtitle = btn?.querySelector(".unlock-main-sub")
+    function renderLiveMapActions(view){
+      if(!liveMapActions) return
+      const actions = Array.isArray(view?.actions) ? view.actions : []
+      if(!actions.length){
+        liveMapActions.innerHTML = ""
+        liveMapActions.setAttribute("hidden","hidden")
+        return
+      }
+      liveMapActions.innerHTML = actions.map((action, index)=>`<button class="live-map-action" data-map-action="${index}" data-world-key="${view.key}"><strong>${action.label}</strong><span>${action.detail}</span></button>`).join("")
+      liveMapActions.removeAttribute("hidden")
+    }
+    function applyView(key){
+      document.body.classList.remove(...classes)
+      document.body.classList.add(`world-view-${key}`)
+      localStorage.setItem("worldView", key)
+      const view = WORLD_VIEWS.find(v=>v.key === key) || WORLD_VIEWS[0]
     if(subtitle) subtitle.textContent = view.label
     const stage = qs("#ariaAssistantSub")
     if(stage) stage.textContent = `ARIA · Free Roam / ${view.label}`
@@ -5682,11 +5694,12 @@ function setupUnlockViewsButton(){
     if(meta) meta.textContent = `${view.label} View`
     const sponsorStatus = qs("#liveArenaSponsorStatus")
     if(sponsorStatus) sponsorStatus.textContent = `Current sponsors, general audience, and quick tips now follow ${view.label}. Perk: ${view.perk}.`
-    const contentStatus = qs("#liveArenaContentStatus")
-    if(contentStatus) contentStatus.textContent = `${view.label} route active. ${view.helper}`
-    const floatStatus = qs("#floatSettingsStatus")
-    if(floatStatus) floatStatus.textContent = `${view.label} loaded. ${view.helper}`
-  }
+      const contentStatus = qs("#liveArenaContentStatus")
+      if(contentStatus) contentStatus.textContent = `${view.label} route active. ${view.helper}`
+      const floatStatus = qs("#floatSettingsStatus")
+      if(floatStatus) floatStatus.textContent = `${view.label} loaded. ${view.helper}`
+      renderLiveMapActions(view)
+    }
   function setButtonsBusy(label){
     if(btn){
       btn.disabled = true
@@ -5744,12 +5757,28 @@ function setupUnlockViewsButton(){
   btn?.addEventListener("click", openWorldMap)
   liveBtn?.addEventListener("click", openWorldMap)
   closeBtn?.addEventListener("click", ()=>panel?.setAttribute("hidden","hidden"))
-  bubbles?.addEventListener("click", (event)=>{
-    const bubble = event.target.closest("[data-world-key]")
-    if(!bubble) return
-    queueViewLoad(bubble.getAttribute("data-world-key"))
-  })
-}
+    bubbles?.addEventListener("click", (event)=>{
+      const bubble = event.target.closest("[data-world-key]")
+      if(!bubble) return
+      queueViewLoad(bubble.getAttribute("data-world-key"))
+    })
+    liveMapActions?.addEventListener("click", (event)=>{
+      const button = event.target.closest("[data-map-action]")
+      if(!button) return
+      const view = WORLD_VIEWS.find((item)=>item.key === button.getAttribute("data-world-key")) || WORLD_VIEWS[0]
+      const action = view.actions?.[Number(button.getAttribute("data-map-action"))]
+      if(!action) return
+      const mainStream = qs("#liveArenaMainStream")
+      if(mainStream) mainStream.textContent = `${view.label}: ${action.label}. ${action.detail} Perk active: ${view.perk}.`
+      const contentStatus = qs("#liveArenaContentStatus")
+      if(contentStatus) contentStatus.textContent = `${action.label} ready. ${action.detail}`
+      const panelTitle = qs("#liveArenaPanelTitle")
+      if(panelTitle) panelTitle.textContent = action.label
+      const meta = qs("#liveArenaViewMeta")
+      if(meta) meta.textContent = `${view.label} Action`
+      openMiniWindow(view.label, action.detail)
+    })
+  }
 
 function setupDashboardSweep(){
   const stage = qs("#centerStage")
