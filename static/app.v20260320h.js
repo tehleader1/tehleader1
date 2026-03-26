@@ -4918,8 +4918,12 @@ function setupRemoteFastPay(){
   const confirmCancel = qs("#remoteConfirmCancel")
   const confirmTouch = qs("#remoteConfirmTouch")
   const receiptSummary = qs("#remoteReceiptSummary")
+  const processingPanel = qs("#remoteProcessingPanel")
+  const processingFill = qs("#remoteProcessingFill")
+  const processingStatus = qs("#remoteProcessingStatus")
   if(!modal || !grid) return
   let selectedProduct = null
+  let processingTimer = null
 
   function buildRemoteReceipt(product){
     const stamp = new Date().toLocaleString()
@@ -4954,9 +4958,15 @@ function setupRemoteFastPay(){
     selectedProduct = null
     if(confirmWrap) confirmWrap.hidden = true
   }
+  function hideProcessing(){
+    if(processingTimer){ clearInterval(processingTimer); processingTimer = null }
+    if(processingPanel) processingPanel.hidden = true
+    if(processingFill) processingFill.style.width = "0%"
+  }
 
   function showConfirm(product){
     selectedProduct = product
+    hideProcessing()
     if(confirmWrap) confirmWrap.hidden = false
     if(confirmTitle) confirmTitle.textContent = `Touch To Confirm ${product.title}`
     if(confirmBody) confirmBody.textContent = `Choose your option, touch now, confirm details, and launch secure Shopify checkout for ${product.title}.`
@@ -5021,6 +5031,8 @@ function setupRemoteFastPay(){
   }
 
   function closeRemoteFastPay(){
+    hideProcessing()
+    hideConfirm()
     modal.hidden = true
     modal.setAttribute("aria-hidden","true")
     document.body.classList.remove("remote-fastpay-active")
@@ -5030,12 +5042,29 @@ function setupRemoteFastPay(){
   confirmCancel?.addEventListener("click", hideConfirm)
   confirmTouch?.addEventListener("click", ()=>{
     if(!selectedProduct) return
-    const receipt = buildRemoteReceipt(selectedProduct)
-    renderReceipt(receipt)
-    if(status) status.textContent = `Thank you. ${selectedProduct.title} checkout is confirmed for secure handoff. Complete payment in Shopify now.`
-    openMiniWindow("THANK YOU", "SupportRD loves you. Secure Shopify checkout is open now, and your receipt lane has been saved.")
-    openLinkModal(selectedProduct.link, `${selectedProduct.title} Checkout`)
+    const product = selectedProduct
     hideConfirm()
+    if(processingPanel) processingPanel.hidden = false
+    if(processingStatus) processingStatus.textContent = `${product.title} tap received. We are securing the purchase and getting your SupportRD ownership lane ready.`
+    let progress = 0
+    const step = 100 / 5
+    processingTimer = setInterval(()=>{
+      progress += step
+      if(processingFill) processingFill.style.width = `${Math.min(progress, 100)}%`
+      if(processingStatus){
+        if(progress < 40) processingStatus.textContent = `${product.title}: reading the tap and preparing the secure Shopify handoff.`
+        else if(progress < 80) processingStatus.textContent = `${product.title}: confirming ownership feel, receipt lane, and storefront directions.`
+        else processingStatus.textContent = `${product.title}: SupportRD is finalizing your thank-you moment and opening checkout now.`
+      }
+      if(progress >= 100){
+        hideProcessing()
+        const receipt = buildRemoteReceipt(product)
+        renderReceipt(receipt)
+        if(status) status.textContent = `Thank you. ${product.title} is ready. The buyer now feels like the new owner of this SupportRD premium lane.`
+        openMiniWindow("THANK YOU", "Confirmed. We here at SupportRD love you. Enjoy the refreshed feel in your hair and use the GPS route to find a SupportRD storefront near you.")
+        openLinkModal(product.link, `${product.title} Checkout`)
+      }
+    }, 1000)
   })
   modal.addEventListener("click", (event)=>{
     if(event.target === modal || event.target.classList?.contains("remote-fastpay-backdrop")) closeRemoteFastPay()
