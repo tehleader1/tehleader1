@@ -1718,7 +1718,23 @@
         <div class="remote-fastpay-meta" id="remoteFastPayStatus">SupportRD Remote is ready for the next in-person sale.</div>
       </div>
     </div>
+    <div class="remote-fastpay-confirm glass" id="remoteFastPayConfirm" hidden>
+      <div class="remote-fastpay-confirm-copy">
+        <div class="remote-fastpay-kicker">Choose Your Option</div>
+        <h4 id="remoteConfirmTitle">Touch To Confirm</h4>
+        <p id="remoteConfirmBody">Select a product to load its checkout details here.</p>
+        <div class="remote-fastpay-meta" id="remoteConfirmMeta">Shopify handles the secure payment. SupportRD saves the product choice and receipt lane.</div>
+      </div>
+      <div class="remote-fastpay-confirm-actions">
+        <button class="btn ghost" id="remoteConfirmCancel">Cancel</button>
+        <button class="btn" id="remoteConfirmTouch">Touch Now Confirm</button>
+      </div>
+    </div>
     <div class="remote-fastpay-grid" id="remoteFastPayGrid"></div>
+    <div class="remote-fastpay-receipt glass" id="remoteReceiptPanel">
+      <div class="remote-fastpay-kicker">Saved Receipt Lane</div>
+      <div id="remoteReceiptSummary">No remote checkout launched yet. The next touch-confirm purchase will save here.</div>
+    </div>
   </div>
 </div>
 

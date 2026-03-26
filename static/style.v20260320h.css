@@ -2606,6 +2606,19 @@ body.competition-world .bg-layers::before{
 }
 .remote-fastpay-scanner-copy{display:grid;align-content:center;gap:8px;}
 .remote-fastpay-meta{font-size:.98rem;color:rgba(239,244,255,.82);}
+.remote-fastpay-confirm,
+.remote-fastpay-receipt{
+  display:grid;
+  gap:12px;
+  padding:18px;
+  border-radius:24px;
+  background:linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.06));
+}
+.remote-fastpay-confirm-actions{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
 .remote-fastpay-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -2668,6 +2681,7 @@ body.competition-world .bg-layers::before{
   .float-mini-actions,.float-big-buttons,.float-assistant-stage{grid-template-columns:1fr 1fr;}
   .remote-product-actions{grid-template-columns:1fr;}
   .remote-fastpay-head{flex-direction:column;}
+  .remote-fastpay-confirm-actions{grid-template-columns:1fr;}
 }
 
 .launch-main-actions{
