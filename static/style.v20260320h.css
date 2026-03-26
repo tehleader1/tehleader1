@@ -2608,12 +2608,17 @@ body.competition-world .bg-layers::before{
 .remote-fastpay-meta{font-size:.98rem;color:rgba(239,244,255,.82);}
 .remote-fastpay-confirm,
 .remote-fastpay-receipt,
-.remote-fastpay-processing{
+.remote-fastpay-processing,
+.remote-fastpay-owner{
   display:grid;
   gap:12px;
   padding:18px;
   border-radius:24px;
   background:linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.06));
+}
+.remote-fastpay-owner{
+  border:1px solid rgba(143,227,180,.35);
+  box-shadow:0 18px 40px rgba(45,118,88,.18);
 }
 .remote-processing-bar{
   width:100%;

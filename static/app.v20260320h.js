@@ -4921,6 +4921,11 @@ function setupRemoteFastPay(){
   const processingPanel = qs("#remoteProcessingPanel")
   const processingFill = qs("#remoteProcessingFill")
   const processingStatus = qs("#remoteProcessingStatus")
+  const ownerPanel = qs("#remoteOwnerPanel")
+  const ownerTitle = qs("#remoteOwnerTitle")
+  const ownerBody = qs("#remoteOwnerBody")
+  const findStoreBtn = qs("#remoteFindStoreBtn")
+  const ownerCloseBtn = qs("#remoteOwnerCloseBtn")
   if(!modal || !grid) return
   let selectedProduct = null
   let processingTimer = null
@@ -4957,6 +4962,9 @@ function setupRemoteFastPay(){
   function hideConfirm(){
     selectedProduct = null
     if(confirmWrap) confirmWrap.hidden = true
+  }
+  function hideOwner(){
+    if(ownerPanel) ownerPanel.hidden = true
   }
   function hideProcessing(){
     if(processingTimer){ clearInterval(processingTimer); processingTimer = null }
@@ -5026,6 +5034,7 @@ function setupRemoteFastPay(){
       renderReceipt(null)
     }
     hideConfirm()
+    hideOwner()
     if(status) status.textContent = "SupportRD Remote is ready for the next in-person sale. Shopify checkout is the default route."
     openMiniWindow("Remote Fast Pay", "Card scanner is open. Pick the product and move straight into checkout.")
   }
@@ -5033,6 +5042,7 @@ function setupRemoteFastPay(){
   function closeRemoteFastPay(){
     hideProcessing()
     hideConfirm()
+    hideOwner()
     modal.hidden = true
     modal.setAttribute("aria-hidden","true")
     document.body.classList.remove("remote-fastpay-active")
@@ -5061,11 +5071,24 @@ function setupRemoteFastPay(){
         const receipt = buildRemoteReceipt(product)
         renderReceipt(receipt)
         if(status) status.textContent = `Thank you. ${product.title} is ready. The buyer now feels like the new owner of this SupportRD premium lane.`
+        if(ownerPanel) ownerPanel.hidden = false
+        if(ownerTitle) ownerTitle.textContent = `You now own ${product.title}`
+        if(ownerBody) ownerBody.textContent = "Feel refreshed in your hair. Your access follows your Shopify email / username and SupportRD is ready to serve you."
         openMiniWindow("THANK YOU", "Confirmed. We here at SupportRD love you. Enjoy the refreshed feel in your hair and use the GPS route to find a SupportRD storefront near you.")
         openLinkModal(product.link, `${product.title} Checkout`)
       }
     }, 1000)
   })
+  findStoreBtn?.addEventListener("click", ()=>{
+    const gpsTab = qs('.tab[data-tab="gps"]')
+    gpsTab?.click()
+    setTimeout(()=>{
+      qs("#gpsPanel")?.scrollIntoView({behavior:"smooth", block:"center"})
+      const routeBtn = qs("#gpsStorefrontRouteBtn")
+      routeBtn?.click()
+    }, 180)
+  })
+  ownerCloseBtn?.addEventListener("click", hideOwner)
   modal.addEventListener("click", (event)=>{
     if(event.target === modal || event.target.classList?.contains("remote-fastpay-backdrop")) closeRemoteFastPay()
   })
