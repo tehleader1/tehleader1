@@ -2480,14 +2480,28 @@ function refreshDealUnlock(){
 function setupCampaign(){
   const openRequest = qs("#openRequestCall")
   const closeRequest = qs("#closeRequestCall")
-  const blogCta = qs("#campaignBlogCta")
+  const acquisitionBtns = [
+    qs("#openAcquisitionBrief"),
+    qs("#saleSecondaryCta"),
+    qs("#centerSaleBriefBtn")
+  ].filter(Boolean)
+  const buyerCallBtns = [
+    qs("#salePrimaryCta"),
+    qs("#centerSaleCallBtn"),
+    qs("#acquisitionBuyerCall")
+  ].filter(Boolean)
+  const closeAcquisition = qs("#closeAcquisitionModal")
+  const founderEmail = qs("#acquisitionFounderEmail")
   if(openRequest){ openRequest.addEventListener("click", ()=>openModal("requestCallModal")) }
   if(closeRequest){ closeRequest.addEventListener("click", ()=>closeModal("requestCallModal")) }
-  if(blogCta){
-    blogCta.addEventListener("click", ()=>{
-      state.blogIndex = 0
-      renderBlog()
-      openModal("blogModal")
+  buyerCallBtns.forEach(btn=>btn.addEventListener("click", ()=>openModal("requestCallModal")))
+  acquisitionBtns.forEach(btn=>btn.addEventListener("click", ()=>openModal("acquisitionModal")))
+  if(closeAcquisition){ closeAcquisition.addEventListener("click", ()=>closeModal("acquisitionModal")) }
+  if(founderEmail){
+    founderEmail.addEventListener("click", ()=>{
+      const subject = encodeURIComponent("SupportRD Acquisition Inquiry")
+      const body = encodeURIComponent("I want to talk about acquiring SupportRD for $100,000 and reviewing the transition package.")
+      window.location.href = `mailto:agentanthony@supportrd.com?subject=${subject}&body=${body}`
     })
   }
 }

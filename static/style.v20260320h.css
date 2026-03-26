@@ -413,6 +413,32 @@ body::before{content:"";position:fixed;inset:0;background:url('/static/images/wo
 .founder-narrative{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent);margin-top:2px;}
 .tagline{color:var(--muted);font-size:14px;margin-top:4px;} 
 .brand{max-width:760px;}
+.sale-summary-strip{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:14px 0 0;
+}
+.sale-pill{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.24);
+  background:rgba(8,14,22,.42);
+  color:#eef6ff;
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.sale-cta-row{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:14px;
+}
 .big-menu{display:flex;gap:6px;flex-wrap:wrap;} 
 .menu-btn{background:linear-gradient(120deg,var(--tab-a,rgba(255,255,255,0.16)),var(--tab-b,rgba(255,255,255,0.08)));color:#f2f7ff;border:1px solid rgba(255,255,255,0.26);padding:7px 10px;border-radius:10px;font-weight:700;font-size:12px;} 
 .status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;} 
@@ -1636,6 +1662,12 @@ body.aria-speaking .aria-large{box-shadow:0 0 48px rgba(0,226,255,0.8),0 0 90px 
 .campaign-strip h3{margin:6px 0 8px;}
 .campaign-strip p{margin:0 0 10px;color:var(--muted);}
 .campaign-actions{display:flex;flex-wrap:wrap;gap:8px;}
+.campaign-tag{
+  font-size:11px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:#d8eeff;
+}
 .campaign-right{display:grid;gap:10px;}
 .campaign-block{padding:10px;border-radius:14px;border:1px solid rgba(255,255,255,0.18);background:rgba(6,10,16,0.5);}
 .campaign-title{font-size:12px;text-transform:uppercase;letter-spacing:.11em;color:#d3e6ff;margin-bottom:6px;}
