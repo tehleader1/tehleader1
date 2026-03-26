@@ -2521,3 +2521,87 @@ body.competition-world .bg-layers::before{
   }
 }
 
+
+.subscription-status-summary{grid-column:1 / -1;border:1px solid rgba(255,255,255,.16);background:rgba(9,16,28,.42);color:#eef4ff;padding:10px 12px;border-radius:16px;font-size:.92rem;line-height:1.45;box-shadow:0 10px 24px rgba(3,8,18,.18);}
+.subscription-status-summary strong{color:#ffffff;}
+.world-map-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,760px);padding:18px;border-radius:28px;z-index:1200;background:rgba(13,21,34,.72);backdrop-filter:blur(18px);box-shadow:0 24px 60px rgba(3,8,18,.35);}
+.world-map-panel[hidden]{display:none !important;}
+.world-map-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px;}
+.world-map-bubbles{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;}
+.world-map-bubble{border:none;cursor:pointer;min-width:132px;min-height:132px;padding:18px 16px;border-radius:999px;background:radial-gradient(circle at 30% 30%,rgba(137,201,255,.92),rgba(26,78,204,.94));color:#fff;font-weight:800;font-size:1rem;line-height:1.15;box-shadow:0 18px 40px rgba(20,61,160,.35);transition:transform .22s ease,box-shadow .22s ease,filter .22s ease;}
+.world-map-bubble small{display:block;margin-top:8px;font-size:.76rem;font-weight:600;opacity:.88;}
+.world-map-bubble:hover,.world-map-bubble:focus-visible{transform:translateY(-4px) scale(1.02);box-shadow:0 24px 48px rgba(20,61,160,.42);filter:saturate(1.1);}
+.world-map-loader{margin-top:18px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.08);}
+.world-map-loader-label{font-weight:700;color:#eef4ff;margin-bottom:10px;}
+.world-map-loader-bar{height:12px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden;}
+.world-map-loader-bar span{display:block;width:0%;height:100%;border-radius:999px;background:linear-gradient(90deg,#7fd5ff,#4b7dff,#b6f6ff);transition:width .45s ease;}
+@media (max-width: 720px){
+  .world-map-panel{width:min(94vw,520px);padding:16px;}
+  .world-map-head{flex-direction:column;align-items:stretch;}
+  .world-map-bubbles{gap:10px;}
+  .world-map-bubble{min-width:108px;min-height:108px;font-size:.92rem;}
+}
+
+body.competition-world{
+  --world-accent: rgba(90,160,255,.35);
+  --world-accent-strong: rgba(68,128,255,.92);
+  --world-chip: rgba(255,255,255,.12);
+}
+body.competition-world .unlock-views-btn,
+body.competition-world .btn,
+body.competition-world .chip,
+body.competition-world .float-pill{
+  border-color: rgba(255,255,255,.18);
+}
+body.competition-world .unlock-views-btn,
+body.competition-world .btn:not(.ghost),
+body.competition-world .float-pill{
+  background: linear-gradient(180deg, color-mix(in srgb, var(--world-accent-strong) 86%, white 14%), color-mix(in srgb, var(--world-accent-strong) 72%, black 28%));
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--world-accent) 70%, transparent 30%);
+}
+body.competition-world .btn.ghost,
+body.competition-world .chip,
+body.competition-world .world-pill{
+  background: color-mix(in srgb, var(--world-chip) 78%, transparent 22%);
+  border-color: color-mix(in srgb, var(--world-accent) 58%, rgba(255,255,255,.15) 42%);
+}
+body.competition-world.world-view-lumbermill{ --world-accent: rgba(176,132,74,.42); --world-accent-strong:#9e6b32; --world-chip:rgba(98,70,41,.26); }
+body.competition-world.world-view-river{ --world-accent: rgba(83,188,214,.42); --world-accent-strong:#2d7c8e; --world-chip:rgba(39,91,101,.24); }
+body.competition-world.world-view-snow{ --world-accent: rgba(220,240,255,.42); --world-accent-strong:#6f93b8; --world-chip:rgba(107,138,171,.22); }
+body.competition-world.world-view-island{ --world-accent: rgba(52,230,203,.36); --world-accent-strong:#2b9c89; --world-chip:rgba(28,110,102,.22); }
+body.competition-world.world-view-vip{ --world-accent: rgba(255,206,104,.42); --world-accent-strong:#b6882b; --world-chip:rgba(107,84,30,.24); }
+body.competition-world.world-view-tunnels{ --world-accent: rgba(153,93,255,.36); --world-accent-strong:#5d3d9c; --world-chip:rgba(74,48,106,.24); }
+body.competition-world.world-view-market{ --world-accent: rgba(255,154,92,.38); --world-accent-strong:#c96a27; --world-chip:rgba(126,71,33,.24); }
+body.competition-world.world-view-lab{ --world-accent: rgba(95,233,255,.38); --world-accent-strong:#27869c; --world-chip:rgba(23,87,96,.24); }
+body.competition-world.world-view-lounge{ --world-accent: rgba(217,180,119,.34); --world-accent-strong:#8f6a35; --world-chip:rgba(92,67,38,.24); }
+body.competition-world.world-view-tower{ --world-accent: rgba(126,188,255,.36); --world-accent-strong:#426ea8; --world-chip:rgba(54,81,112,.24); }
+body.competition-world.world-view-tunnels::before{
+  background:
+    linear-gradient(180deg, rgba(22,18,34,.52), rgba(13,17,26,.34)),
+    radial-gradient(860px 400px at 16% 20%, rgba(126,93,255,.25), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}
+body.competition-world.world-view-market::before{
+  background:
+    linear-gradient(180deg, rgba(68,34,18,.34), rgba(19,17,14,.24)),
+    radial-gradient(880px 420px at 20% 16%, rgba(255,155,92,.28), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}
+body.competition-world.world-view-lab::before{
+  background:
+    linear-gradient(180deg, rgba(10,28,38,.38), rgba(8,15,24,.26)),
+    radial-gradient(860px 400px at 18% 18%, rgba(95,233,255,.24), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}
+body.competition-world.world-view-lounge::before{
+  background:
+    linear-gradient(180deg, rgba(44,28,16,.34), rgba(15,14,18,.24)),
+    radial-gradient(900px 420px at 22% 18%, rgba(217,180,119,.22), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}
+body.competition-world.world-view-tower::before{
+  background:
+    linear-gradient(180deg, rgba(22,38,60,.32), rgba(12,17,28,.22)),
+    radial-gradient(900px 420px at 20% 18%, rgba(126,188,255,.24), transparent 58%),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}

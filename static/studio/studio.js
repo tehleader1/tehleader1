@@ -1,5 +1,6 @@
 const qs = (s) => document.querySelector(s);
 const qsa = (s) => Array.from(document.querySelectorAll(s));
+const STUDIO_PREMIUM_URL = "https://supportrd.com/products/jake-premium-100";
 
 let currentSessionId = localStorage.getItem("studioSessionId") || "";
 let placements = [];
@@ -1535,7 +1536,14 @@ function setupUtilityButtons() {
   qs("#soundProfile")?.addEventListener("change", () => setStatus("#transportStatus", `Sound profile switched to ${qs("#soundProfile")?.selectedOptions?.[0]?.textContent || "Normal"}.`));
   qs("#closePurchasePanelBtn")?.addEventListener("click", () => qs("#studioPurchaseOverlay")?.setAttribute("hidden", "hidden"));
   qs("#purchasePremium100Btn")?.addEventListener("click", () => {
-    setStatus("#purchasePremiumStatus", "Jake Premium $100 selected. Extra FX, deeper Jake conversation, and Gig 4K themes are staged.");
+    setStatus("#purchasePremiumStatus", "Jake Premium Studio $100/month selected. Opening Shopify checkout now.");
+    try {
+      if(window.top){
+        window.top.location.href = STUDIO_PREMIUM_URL;
+        return;
+      }
+    } catch {}
+    window.location.href = STUDIO_PREMIUM_URL;
   });
 }
 

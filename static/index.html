@@ -484,6 +484,20 @@
           </div>
         </div>
       </div>
+      <div class="world-map-panel glass" id="worldMapPanel" hidden>
+        <div class="world-map-head">
+          <div>
+            <div class="system-title">SupportRD World Map</div>
+            <div class="system-sub">Pick the next area and let the page restyle itself around the route.</div>
+          </div>
+          <button class="btn ghost" id="closeWorldMapPanel">Close</button>
+        </div>
+        <div class="world-map-bubbles" id="worldMapBubbles"></div>
+        <div class="world-map-loader" id="worldMapLoader" hidden>
+          <div class="world-map-loader-label" id="worldMapLoaderLabel">Loading world view...</div>
+          <div class="world-map-loader-bar"><span id="worldMapLoaderBar"></span></div>
+        </div>
+      </div>
     </div>
 
     <div class="tab-panel" id="tab-gps">
@@ -1281,10 +1295,11 @@
       <input id="setEmail" placeholder="Email">
       <input id="setPhone" placeholder="Phone">
       <input id="setUsername" placeholder="Username">
-      <input id="setPassword" type="password" placeholder="New Password">
-      <input id="setAddress" placeholder="Address">
-      <input id="setSubscription" placeholder="Current Subscription">
-      <input id="setCustomOrder" placeholder="Current Custom Order Link">
+        <input id="setPassword" type="password" placeholder="New Password">
+        <input id="setAddress" placeholder="Address">
+        <input id="setSubscription" placeholder="Current Subscription">
+        <div id="subscriptionStatusSummary" class="subscription-status-summary">Subscription status will appear here.</div>
+        <input id="setCustomOrder" placeholder="Current Custom Order Link">
       <input id="setEvelyn" placeholder="Evelyn WhatsApp Number">
       <input id="setIG" placeholder="Instagram link">
       <input id="setTikTok" placeholder="TikTok link">

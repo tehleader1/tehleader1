@@ -89,6 +89,7 @@ const LINKS = {
     cart: "https://supportrd.com/cart",
     premium: "https://supportrd.com/products/hair-advisor-premium",
   bingo100: "https://supportrd.com/products/bingo-fantasy-100",
+  studio100: "https://supportrd.com/products/jake-premium-100",
   family200: "https://supportrd.com/products/family-fantasy-200",
   yoda: "https://supportrd.com/products/yoda-pass",
   pro: "https://supportrd.com/products/professional-hair-advisor",
@@ -101,6 +102,7 @@ const LINKS = {
     { key:"premium", label:"ARIA Puzzle Tier", price:"$35/mo", url: LINKS.premium },
     { key:"pro", label:"Unlimited ARIA Professional", price:"$50/mo", url: LINKS.pro },
     { key:"bingo100", label:"Bingo Fantasy", price:"$100/mo", url: LINKS.bingo100 },
+    { key:"studio100", label:"Jake Premium Studio", price:"$100/mo", url: LINKS.studio100 },
     { key:"family200", label:"Family Fantasy Pack", price:"$200/mo", url: LINKS.family200 },
     { key:"yoda", label:"Yoda Pass", price:"$20/mo", url: LINKS.yoda },
     { key:"fantasy300", label:"21+ Basic Fantasy", price:"$300/mo", url: LINKS.fantasy300 },
@@ -111,6 +113,7 @@ const PLAN_MEDIA = {
   premium: {title:"ARIA Puzzle Tier", price:"$35/mo", image:"/static/images/brochure-shampoo.jpg", desc:"Puzzle unlocks + guided routine depth.", link:LINKS.premium},
   pro: {title:"Unlimited ARIA Professional", price:"$50/mo", image:"/static/images/brochure-hero.jpg", desc:"Unlimited responses + pro-level support lane.", link:LINKS.pro},
   bingo100: {title:"Bingo Fantasy", price:"$100/mo", image:"/static/images/brochure-social.jpg", desc:"Chill narrative mode with humor and confidence.", link:LINKS.bingo100},
+  studio100: {title:"Jake Premium Studio", price:"$100/mo", image:"/static/images/brochure-contacts.jpg", desc:"Extra FX, deeper Jake conversation, Gig 4K theme additions, and monthly studio premium access.", link:LINKS.studio100},
   family200: {title:"Family Fantasy Pack", price:"$200/mo", image:"/static/images/brochure-contacts.jpg", desc:"Family-safe themed coaching and style prep.", link:LINKS.family200},
   fantasy300: {title:"21+ Basic Fantasy", price:"$300/mo", image:"/static/images/brochure-bright-droplets.jpg", desc:"Playful 21+ tone in a hair-first experience.", link:LINKS.fantasy300},
   fantasy600: {title:"21+ Advanced Fantasy", price:"$600/mo", image:"/static/images/brochure-fast-dropper.jpg", desc:"Premium emotional narrative with advanced tone.", link:LINKS.fantasy600},
@@ -1375,13 +1378,18 @@ function setupPaymentChooser(){
       const d = await r.json()
       if(d && d.ok){
         state.subscription = d.subscription || "free"
+        state.subscriptionNextDue = d.next_due || d.next_due_at || d.renewal_date || d.expires_at || d.ends_at || ""
+        if(qs("#setSubscription")) qs("#setSubscription").value = state.subscription
+        updateSubscriptionSummary(state.subscription, d)
         setDefaultLevelBySubscription()
         refreshDealUnlock()
         toast(`Plan: ${(state.subscription || "free").toUpperCase()}`)
       } else {
+        updateSubscriptionSummary(qs("#setSubscription")?.value || state.subscription || "free", null)
         toast("Could not verify plan yet")
       }
     }catch{
+      updateSubscriptionSummary(qs("#setSubscription")?.value || state.subscription || "free", null)
       toast("Could not verify plan yet")
     }
   }
@@ -3753,6 +3761,7 @@ function setupSettings(){
   qs("#setPassword").value = ""
   qs("#setAddress").value = saved.address || ""
   qs("#setSubscription").value = isProOverride() ? "Pro (Admin)" : (saved.subscription || "")
+  updateSubscriptionSummary(qs("#setSubscription").value || state.subscription || "free", saved)
   qs("#setCustomOrder").value = saved.customOrder || ""
   qs("#setEvelyn").value = saved.evelyn || ""
   qs("#setIG").value = saved.ig || ""
@@ -3796,6 +3805,7 @@ function setupSettings(){
         username: qs("#setUsername").value.trim(),
         address: qs("#setAddress").value.trim(),
         subscription: qs("#setSubscription").value.trim(),
+        next_due: state.subscriptionNextDue || saved.next_due || "",
         customOrder: qs("#setCustomOrder").value.trim(),
         evelyn: qs("#setEvelyn").value.trim(),
         ig: qs("#setIG").value.trim(),
@@ -3833,11 +3843,12 @@ function setupSettings(){
         },
         pushAria: qs("#pushAria").checked
       }
-      localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
-      if(isProOverride()){ state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0 }
-      setDefaultLevelBySubscription()
-      refreshDealUnlock()
-      toast("Settings saved")
+        localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+        if(isProOverride()){ state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0 }
+        setDefaultLevelBySubscription()
+        refreshDealUnlock()
+        updateSubscriptionSummary(state.subscription || state.socialLinks.subscription || "free", state.socialLinks)
+        toast("Settings saved")
       const indicator = qs("#socialIndicator")
       if(indicator){
         const list = Object.keys(state.socialLinks.feeds || {}).filter(k=>state.socialLinks.feeds[k])
@@ -5595,16 +5606,60 @@ function setupEngineGlassViewer(){
 }
 
 const WORLD_VIEWS = [
-  { key:"lumbermill", label:"Lumbermill Defense" },
-  { key:"river", label:"River Hole Motion" },
-  { key:"snow", label:"Artificial Snow Hill" },
-  { key:"island", label:"Island Control" },
-  { key:"vip", label:"VIP Spot Energy" }
-]
+    { key:"lumbermill", label:"Lumbermill Defense", perk:"Defense hold + first-line pressure", helper:"Post work-ethic updates and progress shots from the yard.", prompt:"Realistic Dominican lumbermill at early morning, wet timber stacks, muddy tracks, rustic saw structure, fog, cinematic natural light" },
+    { key:"river", label:"River Hole Motion", perk:"Movement bonus + smart route positioning", helper:"Use short route posts and calm check-ins to keep people moving with you.", prompt:"Realistic river bend with rocks, mossy bank, shaded water, hidden crossing path, cinematic blue-green light" },
+    { key:"snow", label:"Artificial Snow Hill", perk:"High-visibility defense + clean focus", helper:"Post crisp update clips and clean premium service offers.", prompt:"Realistic artificial snow hill with white ridges, icy blue shadows, floodlights, elevated outlook, crisp winter atmosphere" },
+    { key:"island", label:"Island Control", perk:"Rare unlock + premium route energy", helper:"Push destination-style content and international travel mood from this base.", prompt:"Realistic small tropical island by a lake, teal water, low grass, dock crossing, bright premium Caribbean daylight" },
+    { key:"vip", label:"VIP Spot Energy", perk:"Sponsor visibility + elevated defense", helper:"Show sponsor wins, premium upgrades, and polished host moments here.", prompt:"Realistic luxury VIP overlook deck with glass railing, black and gold trim, sponsor glow, cinematic premium atmosphere" },
+    { key:"tunnels", label:"Tunnels Run", perk:"Quick-encounter movement + pressure", helper:"Run fast short-form post bursts and behind-the-scenes updates.", prompt:"Realistic concrete service tunnel with low fog, blue-red light strips, damp walls, close fast movement lanes" },
+    { key:"market", label:"Market Rush", perk:"Audience attention + social traction", helper:"Post active human-life clips, audience comments, and social prompts from this base.", prompt:"Realistic Dominican outdoor market street with colorful awnings, vendor tables, warm daylight, lively movement" },
+    { key:"lab", label:"The Lab", perk:"Precision tools + extra creative control", helper:"Show advanced studio, reverb, hair analysis, and technical feature highlights.", prompt:"Realistic futuristic lab with cyan glow, glass panels, dark metal surfaces, clean floor lines, premium science room" },
+    { key:"lounge", label:"Officials Lounge", perk:"Reset lane + protected regroup", helper:"Use this base for calm announcements, support updates, and trust-building posts.", prompt:"Realistic premium lounge with dark wood, polished black surfaces, leather seating, calm gold lighting" },
+    { key:"tower", label:"Watch Tower", perk:"Vision boost + field awareness", helper:"Share overview posts, direction, GPS routes, and big-picture session updates.", prompt:"Realistic lookout tower above mixed field terrain, open sky, wood and steel structure, panoramic horizon" }
+  ]
+
+  function formatSubscriptionSummary(plan, details){
+    const safePlan = (plan || "free").toString().trim() || "free"
+    const nextDueValue = details && (details.next_due || details.next_due_at || details.renewal_date || details.expires_at || details.ends_at)
+    if(!nextDueValue){
+      return `<strong>${safePlan}</strong> active. Next due date unavailable yet.`
+    }
+    const dueDate = new Date(nextDueValue)
+    if(Number.isNaN(dueDate.getTime())){
+      return `<strong>${safePlan}</strong> active. Next due date unavailable yet.`
+    }
+    const diff = dueDate.getTime() - Date.now()
+    let timeLeft = "Due now"
+    if(diff > 0){
+      const days = Math.floor(diff / 86400000)
+      const hours = Math.floor((diff % 86400000) / 3600000)
+      if(days > 0){
+        timeLeft = `${days} day${days === 1 ? "" : "s"} left`
+      } else if(hours > 0){
+        timeLeft = `${hours} hour${hours === 1 ? "" : "s"} left`
+      } else {
+        const mins = Math.max(1, Math.floor((diff % 3600000) / 60000))
+        timeLeft = `${mins} minute${mins === 1 ? "" : "s"} left`
+      }
+    }
+    return `<strong>${safePlan}</strong> active · ${timeLeft} · Next due ${dueDate.toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" })}`
+  }
+
+  function updateSubscriptionSummary(plan, details){
+    const target = qs("#subscriptionStatusSummary")
+    if(!target) return
+    target.innerHTML = formatSubscriptionSummary(plan, details)
+  }
 
 function setupUnlockViewsButton(){
   const btn = qs("#unlockViewsBtn")
   const liveBtn = qs("#unlockViewsBtnLive")
+  const panel = qs("#worldMapPanel")
+  const closeBtn = qs("#closeWorldMapPanel")
+  const bubbles = qs("#worldMapBubbles")
+  const loader = qs("#worldMapLoader")
+  const loaderBar = qs("#worldMapLoaderBar")
+  const loaderLabel = qs("#worldMapLoaderLabel")
   if(!btn && !liveBtn) return
   const classes = WORLD_VIEWS.map(v=>`world-view-${v.key}`)
   const subtitle = btn?.querySelector(".unlock-main-sub")
@@ -5616,47 +5671,79 @@ function setupUnlockViewsButton(){
     if(subtitle) subtitle.textContent = view.label
     const stage = qs("#ariaAssistantSub")
     if(stage) stage.textContent = `ARIA · Free Roam / ${view.label}`
+    const mainStream = qs("#liveArenaMainStream")
+    if(mainStream) mainStream.textContent = `${view.label} active. Perk: ${view.perk}. Helper: ${view.helper}`
+    const meta = qs("#liveArenaViewMeta")
+    if(meta) meta.textContent = `${view.label} View`
+    const sponsorStatus = qs("#liveArenaSponsorStatus")
+    if(sponsorStatus) sponsorStatus.textContent = `Current sponsors, general audience, and quick tips now follow ${view.label}. Perk: ${view.perk}.`
+    const contentStatus = qs("#liveArenaContentStatus")
+    if(contentStatus) contentStatus.textContent = `${view.label} route active. ${view.helper}`
+    const floatStatus = qs("#floatSettingsStatus")
+    if(floatStatus) floatStatus.textContent = `${view.label} loaded. ${view.helper}`
+  }
+  function setButtonsBusy(label){
+    if(btn){
+      btn.disabled = true
+      btn.querySelector(".unlock-main-label")?.replaceChildren(document.createTextNode("Loading View"))
+      btn.querySelector(".unlock-main-sub")?.replaceChildren(document.createTextNode(label))
+    }
+    if(liveBtn){
+      liveBtn.disabled = true
+      liveBtn.textContent = `Loading ${label}`
+    }
+  }
+  function resetButtons(){
+    if(btn){
+      btn.disabled = false
+      btn.querySelector(".unlock-main-label")?.replaceChildren(document.createTextNode("Unlock + Change Views"))
+    }
+    if(liveBtn){
+      liveBtn.disabled = false
+      liveBtn.textContent = "Theme / Map Change"
+    }
   }
   function queueViewLoad(targetKey){
     const view = WORLD_VIEWS.find(v=>v.key === targetKey) || WORLD_VIEWS[0]
     const mainStream = qs("#liveArenaMainStream")
-    const busyText = `Loading ${view.label} into your session background...`
-    if(btn){
-      btn.disabled = true
-      const mainLabel = btn.querySelector(".unlock-main-label")
-      const subLabel = btn.querySelector(".unlock-main-sub")
-      if(mainLabel) mainLabel.textContent = "Loading View"
-      if(subLabel) subLabel.textContent = view.label
-    }
-    if(liveBtn){
-      liveBtn.disabled = true
-      liveBtn.textContent = busyText
-    }
-    if(mainStream) mainStream.textContent = `${busyText} freebies are opening for being in the area, and premium benefits still come from the real work of bringing people live.`
-    setTimeout(()=>{
-      applyView(targetKey)
-      if(btn){
-        btn.disabled = false
-        btn.querySelector(".unlock-main-label")?.replaceChildren(document.createTextNode("Unlock + Change Views"))
+    const steps = [10, 22, 36, 52, 68, 84, 100]
+    let stepIndex = 0
+    panel?.setAttribute("hidden","hidden")
+    loader?.removeAttribute("hidden")
+    if(loaderBar) loaderBar.style.width = "0%"
+    if(loaderLabel) loaderLabel.textContent = `Loading ${view.label} into your session background...`
+    setButtonsBusy(view.label)
+    if(mainStream) mainStream.textContent = `Loading ${view.label} into your session background... freebies are opening for being in the area, and premium benefits still come from the real work of bringing people live.`
+    const timer = setInterval(()=>{
+      if(stepIndex >= steps.length){
+        clearInterval(timer)
+        applyView(targetKey)
+        loader?.setAttribute("hidden","hidden")
+        resetButtons()
+        openMiniWindow("World View", `${view.label} loaded in after the route setup.`)
+        return
       }
-      if(liveBtn){
-        liveBtn.disabled = false
-        liveBtn.textContent = "Unlock + Change Views"
-      }
-      if(mainStream) mainStream.textContent = `${view.label} is now the active background for this session. Keep the route moving and make the area feel earned.`
-      openMiniWindow("World View", `${view.label} loaded in after the route setup.`)
-    }, 8000)
+      if(loaderBar) loaderBar.style.width = `${steps[stepIndex]}%`
+      if(loaderLabel) loaderLabel.textContent = `Loading ${view.label} · ${steps[stepIndex]}%`
+      stepIndex += 1
+    }, 1000)
+  }
+  function openWorldMap(){
+    if(!panel || !bubbles) return
+    bubbles.innerHTML = WORLD_VIEWS.map((view)=>`<button class="world-map-bubble" data-world-key="${view.key}">${view.label}<small>${view.perk}</small></button>`).join("")
+    panel.removeAttribute("hidden")
+    loader?.setAttribute("hidden","hidden")
   }
   const saved = localStorage.getItem("worldView")
   applyView((saved && WORLD_VIEWS.some(v=>v.key === saved)) ? saved : WORLD_VIEWS[0].key)
-  function rotateView(){
-    const current = localStorage.getItem("worldView") || WORLD_VIEWS[0].key
-    const index = WORLD_VIEWS.findIndex(v=>v.key === current)
-    const next = WORLD_VIEWS[(index + 1) % WORLD_VIEWS.length]
-    queueViewLoad(next.key)
-  }
-  btn?.addEventListener("click", rotateView)
-  liveBtn?.addEventListener("click", rotateView)
+  btn?.addEventListener("click", openWorldMap)
+  liveBtn?.addEventListener("click", openWorldMap)
+  closeBtn?.addEventListener("click", ()=>panel?.setAttribute("hidden","hidden"))
+  bubbles?.addEventListener("click", (event)=>{
+    const bubble = event.target.closest("[data-world-key]")
+    if(!bubble) return
+    queueViewLoad(bubble.getAttribute("data-world-key"))
+  })
 }
 
 function setupDashboardSweep(){
