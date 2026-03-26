@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260324c">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260326b">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
 <body class="theme-aurora plus500 system-theme natural-pro resort-brochure competition-world">
@@ -1688,7 +1688,7 @@
       <div class="float-big-buttons">
         <button class="float-pill" id="floatMapBtn">Map</button>
         <button class="float-pill" id="floatThemeBtn">Theme</button>
-        <button class="float-pill" id="floatPaymentBtn">Payment</button>
+        <button class="float-pill" id="floatPaymentBtn">Fast Pay</button>
         <button class="float-pill" id="floatCameraBtn">Camera</button>
       </div>
       <div class="float-box-copy" id="floatSettingsStatus">Float Mode keeps six big boxes on screen like a personal remote, on desktop and mobile.</div>
@@ -1696,8 +1696,34 @@
   </div>
 </div>
 
+<div id="remoteFastPayModal" class="remote-fastpay-modal" hidden aria-hidden="true">
+  <div class="remote-fastpay-backdrop"></div>
+  <div class="remote-fastpay-card glass">
+    <div class="remote-fastpay-head">
+      <div>
+        <div class="remote-fastpay-kicker">SupportRD Remote Checkout</div>
+        <h3>Fast Pay Scanner</h3>
+        <p>Big-button Shopify checkout for in-person sales. Scan the card, choose the product, and keep the sale moving.</p>
+      </div>
+      <button class="btn ghost" id="closeRemoteFastPay">Close</button>
+    </div>
+    <div class="remote-fastpay-scanner glass">
+      <div class="remote-fastpay-reader" aria-hidden="true">
+        <div class="remote-fastpay-chip"></div>
+        <div class="remote-fastpay-scan-line"></div>
+      </div>
+      <div class="remote-fastpay-scanner-copy">
+        <strong>Card Ready</strong>
+        <span>Remote checkout sends buyers straight to Shopify product checkout lanes.</span>
+        <div class="remote-fastpay-meta" id="remoteFastPayStatus">SupportRD Remote is ready for the next in-person sale.</div>
+      </div>
+    </div>
+    <div class="remote-fastpay-grid" id="remoteFastPayGrid"></div>
+  </div>
+</div>
+
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260325a"></script>
+<script src="/static/app.v20260320h.js?v=20260326b"></script>
 <footer class="launch-footer-links">
   <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
   <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>
@@ -1706,6 +1732,7 @@
 </footer>
 </body>
 </html>
+
 
 
 

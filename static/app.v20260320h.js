@@ -119,6 +119,116 @@ const PLAN_MEDIA = {
   fantasy600: {title:"21+ Advanced Fantasy", price:"$600/mo", image:"/static/images/brochure-fast-dropper.jpg", desc:"Premium emotional narrative with advanced tone.", link:LINKS.fantasy600},
   yoda: {title:"Yoda Pass", price:"$20/mo", image:"/static/images/brochure-lacceador.jpg", desc:"Focused builder mode for consistent progress.", link:LINKS.yoda}
 }
+const REMOTE_PAY_PRODUCTS = [
+  {
+    key:"premium",
+    title:"ARIA Puzzle Tier",
+    price:"$35 / month",
+    image:(PLAN_MEDIA.premium && PLAN_MEDIA.premium.image) || "/static/images/brochure-shampoo.jpg",
+    short:"Fast guided hair support for customers who want a light monthly start.",
+    ingredients:"Aloe vera, moisture support, and a clean SupportRD starter routine feel.",
+    apply:"Use on damp hair, work through the scalp and ends, then move into the guided routine lane.",
+    does:"Starts the customer on a lighter monthly SupportRD access plan with ARIA guidance.",
+    after:"Purchase includes a Shopify confirmation number, email/username access lane, and a clean default product card after checkout.",
+    link: LINKS.premium
+  },
+  {
+    key:"pro",
+    title:"Unlimited ARIA Professional",
+    price:"$50 / month",
+    image:(PLAN_MEDIA.pro && PLAN_MEDIA.pro.image) || "/static/images/brochure-hero.jpg",
+    short:"Professional support lane with a stronger month-to-month service feel.",
+    ingredients:"Hair analysis support, premium response depth, and pro-level SupportRD access.",
+    apply:"Choose for customers who want stronger monthly help and quicker follow-up through SupportRD.",
+    does:"Unlocks the core pro service lane with more depth and stronger routing.",
+    after:"Purchase includes Shopify order confirmation, access through the buyer email/username, and a premium default purchase card.",
+    link: LINKS.pro
+  },
+  {
+    key:"studio100",
+    title:"Jake Premium Studio",
+    price:"$100 / month",
+    image:(PLAN_MEDIA.studio100 && PLAN_MEDIA.studio100.image) || "/static/images/brochure-contacts.jpg",
+    short:"Monthly studio premium for creators working the booth and remote together.",
+    ingredients:"Extra FX, deeper Jake conversation, and Gig 4K theme additions.",
+    apply:"Use when the customer wants the full studio premium lane with monthly access.",
+    does:"Powers the studio side with more help, more effects, and cleaner stream prep.",
+    after:"Purchase includes a confirmation number, studio premium access under the buyer login, and a default studio stock card in the receipt lane.",
+    link: LINKS.studio100
+  },
+  {
+    key:"bingo100",
+    title:"Bingo Fantasy",
+    price:"$100 / month",
+    image:(PLAN_MEDIA.bingo100 && PLAN_MEDIA.bingo100.image) || "/static/images/brochure-social.jpg",
+    short:"A lighter personality package with more playful customer energy.",
+    ingredients:"Social spark, lighter humor, and themed experience styling.",
+    apply:"Use for customers who want a fun monthly lane with personality and themed vibes.",
+    does:"Adds more social motion and character while staying in SupportRD.",
+    after:"Purchase includes a Shopify confirmation number, account access by email/username, and a themed stock product image in the receipt lane.",
+    link: LINKS.bingo100
+  },
+  {
+    key:"family200",
+    title:"Family Fantasy Pack",
+    price:"$200 / month",
+    image:(PLAN_MEDIA.family200 && PLAN_MEDIA.family200.image) || "/static/images/brochure-contacts.jpg",
+    short:"Family-first package for a bigger support lane across the household.",
+    ingredients:"Family route support, guided planning, and broader service coverage.",
+    apply:"Choose this for a stronger family route with a bigger care structure.",
+    does:"Expands SupportRD into a fuller family support experience.",
+    after:"Purchase includes confirmation details, family access tied to the buyer account, and a polished stock image in the purchase summary.",
+    link: LINKS.family200
+  },
+  {
+    key:"yoda",
+    title:"Yoda Pass",
+    price:"$20 / month",
+    image:(PLAN_MEDIA.yoda && PLAN_MEDIA.yoda.image) || "/static/images/brochure-lacceador.jpg",
+    short:"Smaller builder pass for customers easing into the platform.",
+    ingredients:"Focused check-ins, progress support, and a lower-friction monthly commitment.",
+    apply:"Use as the easiest monthly entry point for someone new to the platform.",
+    does:"Keeps the customer connected to SupportRD with a simple recurring pass.",
+    after:"Purchase includes a Shopify order number, email/username access, and a default stock card in the purchase lane.",
+    link: LINKS.yoda
+  },
+  {
+    key:"fantasy300",
+    title:"21+ Basic Fantasy",
+    price:"$300 / month",
+    image:(PLAN_MEDIA.fantasy300 && PLAN_MEDIA.fantasy300.image) || "/static/images/brochure-bright-droplets.jpg",
+    short:"Higher-tier themed service with a stronger premium feel.",
+    ingredients:"Enhanced themed guidance, premium support routing, and a bigger offer presentation.",
+    apply:"Choose for customers who want the stronger premium-themed lane.",
+    does:"Raises the service tone and monthly access level.",
+    after:"Purchase includes order confirmation, account-based access, and a premium stock purchase card.",
+    link: LINKS.fantasy300
+  },
+  {
+    key:"fantasy600",
+    title:"21+ Advanced Fantasy",
+    price:"$600 / month",
+    image:(PLAN_MEDIA.fantasy600 && PLAN_MEDIA.fantasy600.image) || "/static/images/brochure-fast-dropper.jpg",
+    short:"Top premium themed route for the highest monthly access lane.",
+    ingredients:"Advanced premium styling, higher-touch support, and the strongest themed access in the lineup.",
+    apply:"Choose when the customer wants the biggest premium package in the current SupportRD stack.",
+    does:"Gives the highest-level themed monthly package on the checkout board.",
+    after:"Purchase includes Shopify confirmation details, login access through email/username, and a top-tier default purchase image.",
+    link: LINKS.fantasy600
+  },
+  {
+    key:"donate",
+    title:"SupportRD Product Tip / Donate",
+    price:"Product checkout",
+    image:"/static/images/brochure-formula-exclusive.jpg",
+    short:"Fast support lane for tips, product support, and in-person goodwill checkout.",
+    ingredients:"Goodwill support, product-tip routing, and extra care for the SupportRD mission.",
+    apply:"Use when somebody wants to support the work or add a simple product-tip checkout.",
+    does:"Gives a quick direct-support button that still routes through Shopify checkout.",
+    after:"Purchase includes a Shopify receipt, buyer email reference, and a clean product image card for the order summary.",
+    link: LINKS.donate
+  }
+]
 const AI_LINKS = {
   dan_martell: "https://archive.org/search?query=Dan%20Martell%20AI%20business%20mediatype%3Amovies",
   ai_millionaire: "https://archive.org/search?query=AI%20millionaire%20mediatype%3Amovies",
@@ -4782,17 +4892,90 @@ function setupFloatMode(){
     qs("#themeNextSide")?.click()
     if(settingsStatus) settingsStatus.textContent = "Theme changed. Caribbean brochure lightness is floating through the page."
   })
-  paymentBtn?.addEventListener("click", ()=>openLinkModal(LINKS.pro || LINKS.custom, "SupportRD Product Purchase"))
+  paymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
   cameraBtn?.addEventListener("click", ()=>qs("#liveArenaCameraAccessBtn")?.click())
   window.addEventListener("message", (event)=>{
     if(event?.data?.type === "open-float-mode") openFloat()
   })
   const params = new URLSearchParams(window.location.search || "")
-  if(params.get("float") === "1"){
-    setTimeout(openFloat, 180)
+  if(params.get("float") === "1" || params.get("remote") === "1"){
+    setTimeout(()=>{
+      openFloat()
+      if(params.get("remote") === "1") setTimeout(()=>window.openRemoteFastPay?.(), 260)
+    }, 180)
   }
 }
 
+function setupRemoteFastPay(){
+  const modal = qs("#remoteFastPayModal")
+  const grid = qs("#remoteFastPayGrid")
+  const closeBtn = qs("#closeRemoteFastPay")
+  const status = qs("#remoteFastPayStatus")
+  if(!modal || !grid) return
+
+  function renderProducts(){
+    grid.innerHTML = REMOTE_PAY_PRODUCTS.map((product)=>`
+      <article class="remote-product-card glass" data-remote-product="${product.key}">
+        <div class="remote-product-photo-wrap">
+          <img class="remote-product-photo" src="${product.image}" alt="${product.title}">
+        </div>
+        <div class="remote-product-copy">
+          <div class="remote-product-title-row">
+            <h4>${product.title}</h4>
+            <div class="remote-product-price">${product.price}</div>
+          </div>
+          <p class="remote-product-short">${product.short}</p>
+          <div class="remote-product-detail"><strong>Ingredients:</strong> ${product.ingredients}</div>
+          <div class="remote-product-detail"><strong>Apply:</strong> ${product.apply}</div>
+          <div class="remote-product-detail"><strong>What It Does:</strong> ${product.does}</div>
+          <div class="remote-product-detail"><strong>After Purchase:</strong> ${product.after}</div>
+        </div>
+        <div class="remote-product-actions">
+          <button class="btn ghost remote-preview-btn" data-remote-open="${product.key}">View Details</button>
+          <button class="btn remote-buy-btn" data-remote-buy="${product.key}">Pay Now</button>
+        </div>
+      </article>
+    `).join("")
+
+    qsa(".remote-preview-btn").forEach((btn)=>{
+      btn.addEventListener("click", ()=>{
+        const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.dataset.remoteOpen)
+        if(!product) return
+        if(status) status.textContent = `${product.title} is loaded. Shopify receipt, buyer email access, and the default purchase card are all part of this lane.`
+      })
+    })
+    qsa(".remote-buy-btn").forEach((btn)=>{
+      btn.addEventListener("click", ()=>{
+        const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.dataset.remoteBuy)
+        if(!product) return
+        if(status) status.textContent = `${product.title} is opening Shopify checkout now. SupportRD Remote is moving the sale fast.`
+        openLinkModal(product.link, `${product.title} Checkout`)
+      })
+    })
+  }
+
+  function openRemoteFastPay(){
+    modal.hidden = false
+    modal.setAttribute("aria-hidden","false")
+    document.body.classList.add("remote-fastpay-active")
+    renderProducts()
+    if(status) status.textContent = "SupportRD Remote is ready for the next in-person sale. Shopify checkout is the default route."
+    openMiniWindow("Remote Fast Pay", "Card scanner is open. Pick the product and move straight into checkout.")
+  }
+
+  function closeRemoteFastPay(){
+    modal.hidden = true
+    modal.setAttribute("aria-hidden","true")
+    document.body.classList.remove("remote-fastpay-active")
+  }
+
+  closeBtn?.addEventListener("click", closeRemoteFastPay)
+  modal.addEventListener("click", (event)=>{
+    if(event.target === modal || event.target.classList?.contains("remote-fastpay-backdrop")) closeRemoteFastPay()
+  })
+  window.openRemoteFastPay = openRemoteFastPay
+  window.closeRemoteFastPay = closeRemoteFastPay
+}
 function setupJakeQuickSwitch(){
   const mini = qs("#miniSwitchJake")
   const orb = qs("#proJakeOrb")
@@ -5939,6 +6122,7 @@ safe(setupReel)
   safe(setupVRScan)
   safe(setupBrochure)
   safe(setupPwa)
+  safe(setupRemoteFastPay)
   safe(setupFamilyMode)
   safe(initHairScore)
   safe(setupAppsDock)
@@ -5968,3 +6152,4 @@ safe(setupReel)
     }
   })
 })
+
