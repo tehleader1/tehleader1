@@ -205,9 +205,22 @@
       <div class="center-head">
         <div class="center-hero">
           <img id="heroIcon" class="hero-icon" src="/static/images/woman-waking-up12.jpg" alt="SupportRD">
-          <h2>SupportRD Free Roam World</h2>
-        <p>Real hair solutions, live stream pressure, unlocked routes, and a mission-first brand. SupportRD should now feel like a world you can move through while actually doing something with your life.</p>
-      </div>
+            <h2>SupportRD Free Roam World</h2>
+            <p>Real hair solutions, live stream pressure, unlocked routes, and a mission-first brand. SupportRD should now feel like a world you can move through while actually doing something with your life.</p>
+            <div class="center-checkout-menu glass" id="centerCheckoutMenu">
+              <div class="center-checkout-title">SupportRD Checkout Lane</div>
+              <div class="center-checkout-actions">
+                <button class="btn" id="checkoutPremiumBtn">$35 Premium</button>
+                <button class="btn" id="checkoutProBtn">$50 Pro</button>
+                <button class="btn" id="checkoutFamilyBtn">$200 Family</button>
+                <button class="btn" id="checkoutBingoBtn">$100 Bingo</button>
+                <button class="btn ghost" id="checkoutDonateBtn">Tip / Donate</button>
+                <button class="btn ghost" id="checkoutCartBtn">Cart</button>
+                <button class="btn ghost" id="checkoutOrdersBtn">My Orders</button>
+                <button class="btn ghost" id="checkoutInquiryBtn">Custom Inquiry</button>
+              </div>
+            </div>
+        </div>
         <div class="competition-world-ribbon"><span class="world-pill">Free Roam Active</span><span class="world-pill">Live Stream Pressure</span><span class="world-pill">Hair Mission First</span><span class="world-pill">Studio Open Anytime</span></div>
         <div class="center-actions">
           <div class="aria-badge">
@@ -468,12 +481,14 @@
           <iframe id="gpsMap" title="OpenStreetMap" loading="lazy"></iframe>
           <div class="map-overlay">OpenStreetMap · salons + coding stores</div>
         </div>
-        <div class="gps-actions">
-          <input id="gpsDestination" class="gps-input" placeholder="Enter destination (address or lat,lng)">
-          <button class="btn" id="gpsRoute">Route Me</button>
-          <button class="btn" id="findSalons">Find Salons Near Me</button>
-          <button class="btn ghost" id="gpsHandsFree">Hands‑Free ARIA</button>
-        </div>
+          <div class="gps-actions">
+            <input id="gpsDestination" class="gps-input" placeholder="Enter destination (address or lat,lng)">
+            <button class="btn" id="gpsRoute">Route Me</button>
+            <button class="btn" id="findSalons">Find Salons Near Me</button>
+            <button class="btn ghost" id="openKeitoRoute">Keito Pickup Route</button>
+            <button class="btn ghost" id="openRolloutRoute">SupportRD Rollout</button>
+            <button class="btn ghost" id="gpsHandsFree">Hands‑Free ARIA</button>
+          </div>
         <div class="offroad-panel">
           <div class="offroad-head">
             <strong>Off-Road Feature</strong>
@@ -1108,20 +1123,21 @@
       <h2>Subscription</h2>
       <button class="btn ghost" id="closeSubscription">Close</button>
     </div>
-    <div class="payment-chooser">
-      <label>Choose Payment</label>
-      <select id="paymentSelect">
-        <option value="evelyn">With Evelyn Custom Order</option>
-        <option value="premium">$35 PREMIUM</option>
-        <option value="bingo100">$100/MO BINGO FANTASY</option>
-        <option value="family200">$200/MO FAMILY FANTASY</option>
-        <option value="yoda">$20 YODA PASS</option>
-        <option value="pro">$50 PROFESSIONAL</option>
-        <option value="fantasy300">$300/MO BASIC FANTASY (21+)</option>
-        <option value="fantasy600">$600/MO ADVANCED FANTASY (21+)</option>
-        <option value="tip5">$5 Tip</option>
-        <option value="tip10">$10 Tip</option>
-        <option value="tip20">$20 Tip</option>
+      <div class="payment-chooser">
+        <label>Choose Payment</label>
+        <select id="paymentSelect">
+          <option value="premium">$35 PREMIUM</option>
+          <option value="pro">$50 PROFESSIONAL</option>
+          <option value="bingo100">$100/MO BINGO FANTASY</option>
+          <option value="family200">$200/MO FAMILY FANTASY</option>
+          <option value="yoda">$20 YODA PASS</option>
+          <option value="fantasy300">$300/MO BASIC FANTASY (21+)</option>
+          <option value="fantasy600">$600/MO ADVANCED FANTASY (21+)</option>
+          <option value="donate">SupportRD Product Tip / Donate</option>
+          <option value="evelyn">Custom Order Inquiry</option>
+          <option value="tip5">$5 Tip</option>
+          <option value="tip10">$10 Tip</option>
+          <option value="tip20">$20 Tip</option>
       </select>
       <div id="paymentView"></div>
     </div>
@@ -1218,8 +1234,8 @@
 </div>
 
   <div id="linkModal" class="modal">
-    <div class="modal-card glass">
-      <div class="modal-head">
+      <div class="modal-card glass">
+        <div class="modal-head">
         <h2 id="linkTitle">Open Link</h2>
         <button class="btn ghost" id="closeLink">Close</button>
       </div>
@@ -1317,6 +1333,39 @@
         <button class="btn ghost" id="cashConfirmBtn">Confirm Funds Received</button>
       </div>
     </div>
+
+  <div id="keitoRouteModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2>Keito Pickup Route</h2>
+        <button class="btn ghost" id="closeKeitoRoute">Close</button>
+      </div>
+      <div class="system-sub">Founder's local pickup guide for real SupportRD shampoo reference in Santiago, Dominican Republic.</div>
+      <div class="mini-list" style="margin-top:10px;">
+        <div>1. Fly into <strong>STI Airport</strong> in Santiago, Dominican Republic.</div>
+        <div>2. Head toward <strong>Villa Gonzalez</strong>.</div>
+        <div>3. Ask locally for <strong>Keito with the chickens</strong> or say <strong>"Keito con lo pollo"</strong>.</div>
+        <div>4. Let them know you are looking for the <strong>SupportRD shampoo reference</strong>.</div>
+        <div>5. Confirm exact local turn-by-turn directions once you are in the area.</div>
+      </div>
+      <div class="system-sub" style="margin-top:10px;">This is a cultural pickup reference, not a guaranteed map pin. Exact final directions should be confirmed locally.</div>
+    </div>
+  </div>
+
+  <div id="rolloutRouteModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2>SupportRD Physical Rollout</h2>
+        <button class="btn ghost" id="closeRolloutRoute">Close</button>
+      </div>
+      <div class="mini-list">
+        <div><strong>Santiago, DR</strong> · founder route / shampoo pickup lane / STI access</div>
+        <div><strong>Santo Domingo, DR</strong> · city scale / broader DR service lane</div>
+        <div><strong>North Carolina</strong> · U.S. growth lane / local support presence</div>
+        <div><strong>South Carolina</strong> · next southeast expansion lane</div>
+      </div>
+    </div>
+  </div>
   </div>
 </div>
 

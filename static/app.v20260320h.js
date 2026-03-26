@@ -85,18 +85,28 @@ const HERO_FILTERS = [
 ]
 
 const LINKS = {
-  myOrders: "https://supportrd.com/account/orders",
-  cart: "https://supportrd.com/cart",
-  premium: "https://supportrd.com/products/hair-advisor-premium",
+    myOrders: "https://supportrd.com/account/orders",
+    cart: "https://supportrd.com/cart",
+    premium: "https://supportrd.com/products/hair-advisor-premium",
   bingo100: "https://supportrd.com/products/bingo-fantasy-100",
   family200: "https://supportrd.com/products/family-fantasy-200",
   yoda: "https://supportrd.com/products/yoda-pass",
   pro: "https://supportrd.com/products/professional-hair-advisor",
   fantasy300: "https://supportrd.com/products/basic-fantasy-21-plus-300",
   fantasy600: "https://supportrd.com/products/advanced-fantasy-21-plus-600",
-  donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
-  custom: "https://supportrd.com/pages/custom-order"
-}
+    donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
+    custom: "https://supportrd.com/pages/custom-order"
+  }
+  const SHOPIFY_ROLLOUTS = [
+    { key:"premium", label:"ARIA Puzzle Tier", price:"$35/mo", url: LINKS.premium },
+    { key:"pro", label:"Unlimited ARIA Professional", price:"$50/mo", url: LINKS.pro },
+    { key:"bingo100", label:"Bingo Fantasy", price:"$100/mo", url: LINKS.bingo100 },
+    { key:"family200", label:"Family Fantasy Pack", price:"$200/mo", url: LINKS.family200 },
+    { key:"yoda", label:"Yoda Pass", price:"$20/mo", url: LINKS.yoda },
+    { key:"fantasy300", label:"21+ Basic Fantasy", price:"$300/mo", url: LINKS.fantasy300 },
+    { key:"fantasy600", label:"21+ Advanced Fantasy", price:"$600/mo", url: LINKS.fantasy600 },
+    { key:"donate", label:"SupportRD Product Tip / Donate", price:"Product checkout", url: LINKS.donate }
+  ]
 const PLAN_MEDIA = {
   premium: {title:"ARIA Puzzle Tier", price:"$35/mo", image:"/static/images/brochure-shampoo.jpg", desc:"Puzzle unlocks + guided routine depth.", link:LINKS.premium},
   pro: {title:"Unlimited ARIA Professional", price:"$50/mo", image:"/static/images/brochure-hero.jpg", desc:"Unlimited responses + pro-level support lane.", link:LINKS.pro},
@@ -1275,13 +1285,18 @@ function bindClose(triggerId, modalId){
 }
 
 function openLinkModal(url, title){
-  const modal = qs("#linkModal")
-  const frame = qs("#linkFrame")
-  const header = qs("#linkTitle")
-  const notice = qs("#linkNotice")
-  const external = qs("#linkExternal")
-  if(!modal || !frame || !header) return
-  header.textContent = title || "Open Link"
+    const modal = qs("#linkModal")
+    const frame = qs("#linkFrame")
+    const header = qs("#linkTitle")
+    const notice = qs("#linkNotice")
+    const external = qs("#linkExternal")
+    if(!modal || !frame || !header) return
+    const isShopifyCommerceUrl = /^https:\/\/supportrd\.com\/(products\/|cart\b|account\/orders\b)/i.test(url || "")
+    if(isShopifyCommerceUrl){
+      window.location.href = url
+      return
+    }
+    header.textContent = title || "Open Link"
   if(url && url.startsWith("mailto:")){
     notice.style.display = "block"
     external.style.display = "inline-flex"
@@ -1292,8 +1307,26 @@ function openLinkModal(url, title){
     external.style.display = "none"
     frame.src = url || "about:blank"
   }
-  modal.style.display = "flex"
-}
+    modal.style.display = "flex"
+  }
+
+  function setupCenterCheckoutMenu(){
+    const map = {
+      checkoutPremiumBtn: [LINKS.premium, "Premium Subscription"],
+      checkoutProBtn: [LINKS.pro, "Professional Subscription"],
+      checkoutFamilyBtn: [LINKS.family200, "Family Fantasy Checkout"],
+      checkoutBingoBtn: [LINKS.bingo100, "Bingo Fantasy Checkout"],
+      checkoutDonateBtn: [LINKS.donate, "SupportRD Product Tip / Donate"],
+      checkoutCartBtn: [LINKS.cart, "Shopify Cart"],
+      checkoutOrdersBtn: [LINKS.myOrders, "My Orders"]
+    }
+    Object.entries(map).forEach(([id, [url, title]])=>{
+      const btn = qs("#" + id)
+      if(btn){ btn.addEventListener("click", ()=>openLinkModal(url, title)) }
+    })
+    const inquiry = qs("#checkoutInquiryBtn")
+    if(inquiry){ inquiry.addEventListener("click", ()=>openModal("customOrderModal")) }
+  }
 
 function renderBlog(){
   const post = BLOG_POSTS[state.blogIndex]
@@ -1355,11 +1388,11 @@ function setupPaymentChooser(){
 
   function render(){
     const val = select.value
-    if(val === "evelyn"){
-      view.innerHTML = `<p>Custom order with Evelyn.</p><div class="lock-pill">Premium: 2 ARIA levels + puzzles</div><div class="lock-pill">Pro: all 4 levels + unlimited</div><button class="btn" id="openCustomOrder">Open Custom Order</button>`
-      qs("#openCustomOrder").addEventListener("click", ()=>openModal("customOrderModal"))
-      return
-    }
+      if(val === "evelyn"){
+        view.innerHTML = `<p>Custom order inquiry lane.</p><div class="lock-pill">Use this for manual intake, not your default checkout.</div><div class="lock-pill">For direct Shopify payout routing, use the product checkout options above.</div><button class="btn" id="openCustomOrder">Open Custom Order</button>`
+        qs("#openCustomOrder").addEventListener("click", ()=>openModal("customOrderModal"))
+        return
+      }
     if(val === "premium"){
       view.innerHTML = `${planCard("premium", `<button class="btn" id="goPremium">Pay $35</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">Unlocks 2 ARIA levels + puzzles to continue</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div>`
       qs("#goPremium").addEventListener("click", ()=>openLinkModal(LINKS.premium, "Premium Subscription"))
@@ -1396,14 +1429,19 @@ function setupPaymentChooser(){
       qs("#checkPlanNow").addEventListener("click", checkUpgrade)
       return
     }
-    if(val === "pro"){
-      view.innerHTML = `${planCard("pro", `<button class="btn" id="goPro">Pay $50</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">All 4 levels + unlimited ARIA</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div>`
-      qs("#goPro").addEventListener("click", ()=>openLinkModal(LINKS.pro, "Professional Subscription"))
-      qs("#checkPlanNow").addEventListener("click", checkUpgrade)
-      return
-    }
-    view.innerHTML = `<p>Tip the team.</p><button class="btn" id="tipOrder">Open Tip</button>`
-    qs("#tipOrder").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
+      if(val === "pro"){
+        view.innerHTML = `${planCard("pro", `<button class="btn" id="goPro">Pay $50</button><button class="btn ghost" id="checkPlanNow">Check Upgrade Status</button>`)}<div class="lock-pill">All 4 levels + unlimited ARIA</div><div class="lock-pill">Activation happens after paid Shopify confirmation</div>`
+        qs("#goPro").addEventListener("click", ()=>openLinkModal(LINKS.pro, "Professional Subscription"))
+        qs("#checkPlanNow").addEventListener("click", checkUpgrade)
+        return
+      }
+      if(val === "donate"){
+        view.innerHTML = `<p>SupportRD product tip / donate route.</p><div class="lock-pill">Uses a Shopify product checkout path.</div><button class="btn" id="goDonateProduct">Open Product Checkout</button>`
+        qs("#goDonateProduct").addEventListener("click", ()=>openLinkModal(LINKS.donate, "SupportRD Product Tip / Donate"))
+        return
+      }
+      view.innerHTML = `<p>Tip the team.</p><button class="btn" id="tipOrder">Open Tip</button>`
+      qs("#tipOrder").addEventListener("click", ()=>openLinkModal(LINKS.donate, "SupportRD Product Tip / Donate"))
   }
 
   select.addEventListener("change", render)
@@ -1748,9 +1786,13 @@ function setupGPS(){
   const map = qs("#gpsMap")
   const destInput = qs("#gpsDestination")
   const routeBtn = qs("#gpsRoute")
+  const keitoBtn = qs("#openKeitoRoute")
+  const rolloutBtn = qs("#openRolloutRoute")
   if(map){
     map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-74.1%2C40.6%2C-73.7%2C40.9&layer=mapnik"
   }
+  if(keitoBtn){ keitoBtn.addEventListener("click", ()=>openModal("keitoRouteModal")) }
+  if(rolloutBtn){ rolloutBtn.addEventListener("click", ()=>openModal("rolloutRouteModal")) }
   async function routeToDestination(){
     if(!map || !destInput) return
     const dest = (destInput.value || "").trim()
@@ -1798,6 +1840,8 @@ function setupGPS(){
     }
   }
   if(routeBtn){ routeBtn.addEventListener("click", routeToDestination) }
+  bindClose("closeKeitoRoute", "keitoRouteModal")
+  bindClose("closeRolloutRoute", "rolloutRouteModal")
   const btn = qs("#findSalons")
   const list = qs("#salonResults")
   if(btn && list){
@@ -2289,7 +2333,7 @@ function setupCredit(){
     payMembership.addEventListener("click", ()=>openLinkModal(LINKS.pro, "Membership Payment"))
   }
   if(payProducts){
-    payProducts.addEventListener("click", ()=>openLinkModal(LINKS.custom, "Products Payment"))
+    payProducts.addEventListener("click", ()=>openLinkModal(LINKS.cart, "Products Payment"))
   }
   if(dealBtn){
     const unlock = state.subscription === "pro" || isProOverride()
@@ -5648,6 +5692,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupUnlockViewsButton)
   safe(setupModals)
   safe(setupPaymentChooser)
+  safe(setupCenterCheckoutMenu)
   safe(setupSettings)
   safe(setupPostActions)
   safe(setupOccasion)
