@@ -3218,7 +3218,6 @@ function setupLiveArena(){
   const loader = qs("#liveArenaLoader")
   const loaderBar = qs("#liveArenaLoaderBar")
   const loaderText = qs("#liveArenaLoaderText")
-  const startBtn = qs("#liveArenaStartBtn")
   const closeBtn = qs("#liveArenaCloseBtn")
   const breakBtn = qs("#liveArenaBreakBtn")
   const cameraBtn = qs("#liveArenaCameraAccessBtn")
@@ -3297,6 +3296,30 @@ function setupLiveArena(){
   function renderContentSteps(){
     if(!contentList) return
     contentList.innerHTML = contentSteps.map((step, idx)=>`<div class="live-content-step${idx===liveContentIndex ? " active" : ""}">Step ${idx+1}: ${step}</div>`).join("")
+  }
+  let contentPromptTimer = null
+  function scheduleContentPrompt(){
+    if(contentPromptTimer) clearInterval(contentPromptTimer)
+    contentPromptTimer = setInterval(()=>{
+      liveContentIndex = 0
+      renderContentSteps()
+      if(contentStatus) contentStatus.textContent = "Resume route ready. Click through all 7 steps to keep the session active."
+      if(panelTitle) panelTitle.textContent = "Resume Route"
+      if(panelMeta) panelMeta.textContent = "30 Minute Check-In"
+      if(mainStream) mainStream.textContent = "30-minute check-in active. Walk through the 7 resume steps to keep the session moving and avoid going idle."
+      contentList?.scrollIntoView({behavior:"smooth", block:"center"})
+      if(nextBtn){
+        nextBtn.style.transform = "translate(0, 0) scale(1.08)"
+        setTimeout(()=>{ if(nextBtn) nextBtn.style.transform = "translate(0, 0) scale(1)" }, 1200)
+      }
+      openMiniWindow("Resume Route", "Your 30-minute check-in is ready. Click through the 7 steps in the main console to resume the session.")
+    }, 1800000)
+  }
+  function stopContentPrompt(){
+    if(contentPromptTimer){
+      clearInterval(contentPromptTimer)
+      contentPromptTimer = null
+    }
   }
   function renderLivePanel(){
     const current = livePanels[livePanelIndex] || livePanels[0]
@@ -3430,6 +3453,7 @@ function setupLiveArena(){
     startLiveEnergy()
     updateFloodState()
     setViewerMode()
+    scheduleContentPrompt()
     openMiniWindow("Session Prep", `Lens ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} is staged. SponsorTag is optional and can be created from SponsorTag HQ any time.`)
   }
   function runLoader(){
@@ -3456,7 +3480,7 @@ function setupLiveArena(){
     openBtn.addEventListener("click", ()=>{
       if(!openArmed){
         openArmed = true
-        openMiniWindow("LIVE Arena", "Tap again to transform the center dashboard into live stream mode.")
+        openMiniWindow("Main Console", "Tap again to transform the center dashboard into the main console.")
         setTimeout(()=>{ openArmed = false }, 4000)
         return
       }
@@ -3471,29 +3495,9 @@ function setupLiveArena(){
       if(loader) loader.hidden = true
       closeSponsorTagModal()
       stopLiveEnergy()
+      stopContentPrompt()
       document.body.classList.remove("live-jello")
-      openMiniWindow("LIVE Arena", "Returned to the normal center dashboard.")
-    })
-  }
-  if(startBtn){
-    startBtn.addEventListener("click", ()=>{
-      if(!startArmed){
-        startArmed = true
-        openMiniWindow("Start LIVE", "Tap Start LIVE again to launch the stream with the current lens and settings.")
-        setTimeout(()=>{ startArmed = false }, 4000)
-        return
-      }
-      startArmed = false
-      document.body.classList.add("live-jello")
-      setTimeout(()=>document.body.classList.remove("live-jello"), 900)
-      flashCamera()
-      startLiveEnergy()
-      bumpViews(180)
-      const hostedSessions = Number(localStorage.getItem("supportrdHostedSessions") || 0) + 1
-      localStorage.setItem("supportrdHostedSessions", String(hostedSessions))
-      renderLifeMemorySurface()
-      if(mainStream && livePanelIndex === 0) mainStream.textContent = `LIVE now · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · keep the action moving.`
-      openMiniWindow("LIVE Started", "Sweep effect complete. Stream is introduced, sponsors can load, and the center panel is now in live mode.")
+      openMiniWindow("Main Console", "Returned to the normal center dashboard.")
     })
   }
   if(breakBtn){
@@ -3550,7 +3554,7 @@ function setupLiveArena(){
       liveContentIndex = (liveContentIndex + 1) % contentSteps.length
       renderContentSteps()
       bumpViews(80)
-      if(contentStatus) contentStatus.textContent = `Step ${liveContentIndex + 1}/7 ready. Keep the content moving every 30 minutes.`
+      if(contentStatus) contentStatus.textContent = `Step ${liveContentIndex + 1}/7 ready. Click through the resume route to keep the session active.`
       const x = (Math.random() * 34) - 17
       const y = (Math.random() * 14) - 7
       nextBtn.style.transform = `translate(${x}px, ${y}px)`
@@ -5172,9 +5176,9 @@ function renderApp(name){
     if(open){ open.addEventListener("click", ()=>openModal("brochureModal")) }
     return
   }
-  if(name === "Competition Arena"){
+  if(name === "Competition Console"){
     body.innerHTML = `
-      <div style="font-weight:700;margin-bottom:8px;">Competition Arena (Bottom Panel)</div>
+      <div style="font-weight:700;margin-bottom:8px;">Competition Console (Bottom Panel)</div>
       <div style="color:var(--muted);margin-bottom:10px;">Start 30-minute or 1-hour live attention challenge. Winner is measured by laughs, excitement, and votes.</div>
       <div class="request-grid" style="margin-bottom:10px;">
         <select id="arenaDuration">
@@ -5230,6 +5234,7 @@ function renderApp(name){
       {id:"premium35", title:"ARIA Puzzle Tier", desc:"$35 monthly digital guidance tier with puzzle unlock flow and routine support.", price:"$35/mo", image:"/static/images/brochure-shampoo.jpg", link:LINKS.premium},
       {id:"pro50", title:"Unlimited ARIA Professional", desc:"$50 monthly unlimited ARIA support with direct deal channel.", price:"$50/mo", image:"/static/images/brochure-hero.jpg", link:LINKS.pro},
       {id:"bingo100", title:"Bingo Fantasy", desc:"Calm, humorous daily support voice pack for high-stress routines.", price:"$100/mo", image:"/static/images/brochure-social.jpg", link:LINKS.bingo100},
+      {id:"studio100", title:"Jake Premium Studio", desc:"Extra FX, deeper Jake conversation, Gig 4K theme additions, and monthly studio premium access.", price:"$100/mo", image:"/static/images/brochure-contacts.jpg", link:LINKS.studio100},
       {id:"family200", title:"Family Fantasy Pack", desc:"Family-safe narrative themes to coach hair routines with personality.", price:"$200/mo", image:"/static/images/brochure-contacts.jpg", link:LINKS.family200},
       {id:"basic300", title:"21+ Basic Fantasy", desc:"Flirty but non-explicit hair narrative mode with confident tone.", price:"$300/mo", image:"/static/images/brochure-bright-droplets.jpg", link:LINKS.fantasy300},
       {id:"adv600", title:"21+ Advanced Fantasy", desc:"Premium storytelling mode with personalized romantic tone and pacing.", price:"$600/mo", image:"/static/images/brochure-fast-dropper.jpg", link:LINKS.fantasy600}
@@ -5383,7 +5388,7 @@ function setupAppsDock(){
 
   const allApps = [
     "Blog",
-    "Competition Arena",
+    "Competition Console",
     "TV Reel",
     "Brochure",
     "Studio Mode",

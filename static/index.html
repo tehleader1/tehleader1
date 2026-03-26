@@ -185,19 +185,7 @@
     <button class="btn ghost buy-optional" id="saleSecondaryCta">Included Assets</button>
     </section>
 
-  <section class="reel-panel glass" id="reelPanel">
-    <div class="panel-head">
-      <h3>SupportRD TV Reel</h3>
-      <button class="btn ghost" id="toggleReel">Hide</button>
-    </div>
-    <div class="reel-tab" id="reelTab">REEL</div>
-    <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel"></iframe>
-  </section>
-
-  <div class="brochure-float" id="brochureFloat">
-    <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
-  </div>
-
+  <div class="main-content-row">
     <section class="center-stage glass" id="centerStage">
     <div class="center-icon">
       <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD">
@@ -308,7 +296,7 @@
         <div class="post-bottom">
           <button class="btn primary" id="openEmergencyAssist">Hair Emergency Assist</button>
           <button class="btn" id="postSocials">Post to All Socials</button>
-          <button class="btn" id="openLiveArenaBtn">Open LIVE Arena</button>
+            <button class="btn" id="openLiveArenaBtn">Open Main Console</button>
           <button class="btn ghost" id="askAriaProductsAgain">What products again?</button>
           <select class="payment-dropdown" id="socialSelect">
             <option value="all">All Feeds</option>
@@ -331,8 +319,8 @@
         </div>
       </div>
       <div class="live-arena-overlay" id="liveArenaOverlay" hidden>
-        <div class="live-arena-loader" id="liveArenaLoader" hidden>
-          <div class="live-loader-title">SupportRD LIVE Arena</div>
+          <div class="live-arena-loader" id="liveArenaLoader" hidden>
+            <div class="live-loader-title">SupportRD Main Console</div>
           <div class="live-loader-bar"><span id="liveArenaLoaderBar"></span></div>
           <div class="system-sub" id="liveArenaLoaderText">Preparing stream route...</div>
         </div>
@@ -341,7 +329,7 @@
           <div class="system-card glass live-middle-card">
             <div class="live-panel-top">
               <div class="live-panel-controls">
-                <div class="live-panel-kicker">Top Left Controls</div>
+                <div class="live-panel-kicker">Main Console Controls</div>
                 <div class="live-panel-grid">
                   <select id="liveArenaMode">
                     <option value="solo">Personal Route · 1 minute load</option>
@@ -384,6 +372,14 @@
                   </div>
                   <button class="btn ghost" id="sponsorTagOpenBtn">Add SponsorTag</button>
                 </div>
+                <div class="live-center-actions live-center-actions-inline">
+                  <button class="btn ghost" id="liveArenaPostBtn">Post</button>
+                  <button class="btn ghost" id="liveArenaBreakBtn">Break</button>
+                  <button class="btn ghost" id="liveArenaFloodBtn">Flood Money Mode</button>
+                  <button class="btn ghost" id="liveArenaCameraAccessBtn">Camera</button>
+                  <button class="btn ghost" id="unlockViewsBtnLive">Theme / Map Change</button>
+                  <button class="btn ghost" id="liveArenaCheckBtn">Select Feeds</button>
+                </div>
               </div>
               <div class="live-panel-bots">
                 <div class="live-orb-row">
@@ -400,7 +396,7 @@
                 <div class="system-sub" id="liveArenaBotStatus">Ref Bot watches for technical trouble, can halt a session cleanly, and keeps the stream mission moving if people naturally link up and try something new.</div>
                 <div class="system-actions">
                   <button class="btn ghost" id="liveArenaRefBtn">Ref Bot</button>
-                  <button class="btn ghost" id="liveArenaCloseBtn">Close LIVE</button>
+                  <button class="btn ghost" id="liveArenaCloseBtn">Close Console</button>
                 </div>
               </div>
             </div>
@@ -427,23 +423,12 @@
                     <div class="live-reward-sub" id="liveRewardText">A normal car rides by with a clean bun look, international trip pending, and SupportRD keeps life moving.</div>
                   </div>
                 </div>
-                <div class="live-center-actions">
-                  <button class="btn ghost" id="liveArenaPostBtn">Post</button>
-                  <button class="btn ghost" id="liveArenaFloodBtn">Flood Money Mode</button>
-                  <button class="btn ghost" id="liveArenaCameraAccessBtn">Camera</button>
-                  <button class="btn ghost" id="liveArenaBreakBtn">Break</button>
-                  <button class="btn ghost" id="unlockViewsBtnLive">Theme / Map Change</button>
-                </div>
-                <div class="live-center-subactions">
-                  <button class="btn" id="liveArenaStartBtn">Start LIVE</button>
-                  <button class="btn ghost" id="liveArenaCheckBtn">Select Feeds</button>
-                </div>
                 <div class="system-sub" id="liveArenaFloodStatus">Flood mode unlocks at 1000 views and prepares you for a viral hit without dropping the session.</div>
                 <div class="system-sub" id="liveArenaViewerStatus">Host control mode active. Viewer links open in watch-only mode.</div>
               </div>
               <div class="live-content-wizard glass">
-                <div class="live-stream-title">Content Route</div>
-                <div class="system-sub" id="liveArenaContentStatus">7-step content route. Keep the content moving every 30 minutes.</div>
+                <div class="live-stream-title">Resume Route</div>
+                <div class="system-sub" id="liveArenaContentStatus">7-step resume route. This appears every 30 minutes to keep the session active.</div>
                 <div class="live-content-list" id="liveArenaContentList"></div>
                 <button class="btn live-next-btn" id="liveArenaNextBtn">Next</button>
               </div>
@@ -1025,7 +1010,7 @@
     </div>
       <div class="apps-row" id="appsRow">
         <button class="app-card" draggable="true" data-app="Live Hair Score">Live Hair Score</button>
-        <button class="app-card" draggable="true" data-app="Competition Arena">Competition Arena</button>
+          <button class="app-card" draggable="true" data-app="Competition Console">Competition Console</button>
         <button class="app-card" draggable="true" data-app="TV Reel">TV Reel</button>
         <button class="app-card" draggable="true" data-app="Brochure">Brochure</button>
         <button class="app-card" draggable="true" data-app="Studio Mode">Studio Mode</button>
@@ -1038,7 +1023,7 @@
       <div class="apps-library">
         <div class="apps-library-label">Available Apps (Drag onto a tab to replace)</div>
         <div class="apps-row library" id="appsLibrary">
-          <button class="app-card app-library" draggable="true" data-app="Competition Arena">Competition Arena</button>
+            <button class="app-card app-library" draggable="true" data-app="Competition Console">Competition Console</button>
           <button class="app-card app-library" draggable="true" data-app="TV Reel">TV Reel</button>
           <button class="app-card app-library" draggable="true" data-app="Brochure">Brochure</button>
           <button class="app-card app-library" draggable="true" data-app="Studio Mode">Studio Mode</button>
@@ -1582,6 +1567,19 @@
         </div>
       </div>
     </section>
+    <section class="reel-panel glass" id="reelPanel">
+      <div class="panel-head">
+        <h3>SupportRD TV Reel</h3>
+        <button class="btn ghost" id="toggleReel">Hide</button>
+      </div>
+      <div class="reel-tab" id="reelTab">REEL</div>
+      <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel"></iframe>
+    </section>
+  </div>
+
+  <div class="brochure-float" id="brochureFloat">
+    <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
+  </div>
     <section class="float-box glass" id="floatAssistantBox">
       <div class="float-box-head">
         <span>Aria / Jake</span>

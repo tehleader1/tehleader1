@@ -2605,3 +2605,37 @@ body.competition-world.world-view-tower::before{
     radial-gradient(900px 420px at 20% 18%, rgba(126,188,255,.24), transparent 58%),
     url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
 }
+.main-content-row{
+  display:grid;
+  grid-template-columns:minmax(0,1.12fr) minmax(320px,.64fr);
+  gap:22px;
+  align-items:start;
+  width:min(96vw,1180px);
+  margin:0 auto 22px;
+}
+.main-content-row .center-stage{
+  width:100% !important;
+  max-width:none !important;
+  margin:0 !important;
+}
+.main-content-row .reel-panel{
+  width:100% !important;
+  max-width:none !important;
+  margin:0 !important;
+  position:sticky;
+  top:92px;
+  align-self:start;
+}
+.live-center-actions-inline{
+  justify-content:flex-start;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+@media (max-width:980px){
+  .main-content-row{
+    grid-template-columns:1fr;
+  }
+  .main-content-row .reel-panel{
+    position:static;
+  }
+}
