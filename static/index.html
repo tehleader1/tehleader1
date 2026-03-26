@@ -490,7 +490,7 @@
       <div class="gps-wrap">
         <div class="map-box">
           <iframe id="gpsMap" title="OpenStreetMap" loading="lazy"></iframe>
-          <div class="map-overlay">OpenStreetMap · salons + coding stores</div>
+          <div class="map-overlay" id="gpsMapOverlay">OpenStreetMap · salons + coding stores</div>
         </div>
           <div class="gps-actions">
             <input id="gpsDestination" class="gps-input" placeholder="Enter destination (address or lat,lng)">
@@ -498,8 +498,37 @@
             <button class="btn" id="findSalons">Find Salons Near Me</button>
             <button class="btn ghost" id="openKeitoRoute">Keito Pickup Route</button>
             <button class="btn ghost" id="openRolloutRoute">SupportRD Rollout</button>
+            <button class="btn primary" id="gpsRerouteStorefront">Reroute To Live Storefront</button>
             <button class="btn ghost" id="gpsHandsFree">Hands‑Free ARIA</button>
           </div>
+        <div class="gps-storefront-card">
+          <div class="gps-storefront-head">
+            <div>
+              <div class="system-title">Reroute to Directions to Live Storefront of the Actual Shampoo Product</div>
+              <div class="system-sub">Supporting by Aria AI technology · Serving You</div>
+            </div>
+            <div class="wait-badge">Live Storefront</div>
+          </div>
+          <div class="gps-storefront-grid">
+            <div class="gps-storefront-stat">
+              <div class="system-sub">Live Storefront Balance</div>
+              <strong id="gpsStorefrontBalance">$0.00</strong>
+            </div>
+            <div class="gps-storefront-stat">
+              <div class="system-sub">Products Available</div>
+              <strong id="gpsStorefrontInventory">128</strong>
+            </div>
+            <div class="gps-storefront-stat">
+              <div class="system-sub">In Route Right Now</div>
+              <strong id="gpsStorefrontEnroute">0</strong>
+            </div>
+          </div>
+          <div class="gps-storefront-actions">
+            <button class="btn" id="gpsStorefrontCheckout">Open Storefront Product</button>
+            <button class="btn ghost" id="gpsStorefrontRefresh">Refresh Route Stats</button>
+          </div>
+          <div class="system-sub" id="gpsStorefrontStatus">Keito live storefront route ready. Bot can zoom the map from Santiago into Villa Gonzalez and prep the next move.</div>
+        </div>
         <div class="offroad-panel">
           <div class="offroad-head">
             <strong>Off-Road Feature</strong>
@@ -1384,15 +1413,23 @@
 <div id="requestCallModal" class="modal">
   <div class="modal-card glass">
     <div class="modal-head">
-      <h2>Request Call · #SupportRD is moving</h2>
+      <h2>Request Call · English Family Route</h2>
       <button class="btn ghost" id="closeRequestCall">Close</button>
     </div>
+    <div class="request-route-hero">
+      <div class="wait-badge">Accommodations Active</div>
+      <div class="wait-title">American English contacts can check in here.</div>
+      <div class="wait-copy">SupportRD routes this lane back through Anthony first so he can relay the message to family, keep service personal, and move the order faster.</div>
+      <div class="request-route-meta">Relay contact: <strong>xxfigueroa1993@yahoo.com</strong> · Text / call relay: <strong>980-375-9197</strong></div>
+      <div class="request-route-aria">ARIA says: Your order is coming, don't worry.</div>
+    </div>
     <div class="request-grid" id="requestCallFormWrap">
+      <input id="reqRouteLabel" value="English Family Route to Anthony" readonly>
       <input id="reqName" placeholder="Name">
       <input id="reqPhone" placeholder="Phone">
       <input id="reqEmail" placeholder="Email">
       <input id="reqAddress" placeholder="Address">
-      <textarea id="reqNotes" placeholder="Notes (optional)"></textarea>
+      <textarea id="reqNotes" placeholder="Notes (optional) · Who reached out, what they need, and anything Anthony should relay back."></textarea>
       <label class="system-check"><input id="reqConsent" type="checkbox"> I consent to SupportRD follow-up for payment and delivery support.</label>
       <button class="btn primary" id="submitRequestCall">Submit Request</button>
     </div>
@@ -1401,6 +1438,10 @@
       <div class="wait-title">You are checked in.</div>
       <div class="wait-copy" id="requestWaitMessage">Request received. Under review.</div>
       <div class="wait-id" id="requestWaitId"></div>
+      <div class="request-route-next">
+        <div><strong>Next:</strong> Anthony gets the relay first, then family is updated with the cleanest next step.</div>
+        <div><strong>ARIA:</strong> Your order is coming, don't worry.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -1457,6 +1498,10 @@
     <div class="modal-head">
       <h2>SupportRD Full Brochure</h2>
       <button class="btn ghost" id="closeBrochure">Close</button>
+    </div>
+    <div class="request-route-brochure">
+      <div class="wait-badge">English Family Route</div>
+      <div class="wait-copy">For English-speaking American contacts reaching out to wife and family, SupportRD can route the message back through Anthony first at <strong>xxfigueroa1993@yahoo.com</strong> and <strong>980-375-9197</strong> so the order flow stays personal and moves quicker.</div>
     </div>
     <iframe class="brochure-embed" src="/static/brochure.html" title="SupportRD Brochure"></iframe>
   </div>

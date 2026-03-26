@@ -2420,6 +2420,7 @@ def social_circuits():
 @app.route("/api/leads/request-call", methods=["POST"])
 def leads_request_call():
     data = request.json or {}
+    route_label = (data.get("route_label") or "English Family Route to Anthony").strip()[:120]
     name = (data.get("name") or "").strip()
     phone = (data.get("phone") or "").strip()
     email = (data.get("email") or "").strip().lower()
@@ -2433,14 +2434,17 @@ def leads_request_call():
     if not consent:
         return {"ok": False, "error": "consent_required"}, 400
     request_id = new_request_id()
-    wait_message = "Request received. Your SupportRD check-in is pending review and follow-up."
+    wait_message = (
+        "Anthony has the relay first for this English family route. "
+        "Your order is coming, don't worry."
+    )
     row = {
         "request_id": request_id,
         "name": name,
         "phone": phone,
         "email": email,
         "address": address,
-        "notes": notes,
+        "notes": f"[{route_label}] {notes}".strip(),
         "consent": True,
         "status": "pending",
         "wait_message": wait_message,
@@ -2448,6 +2452,16 @@ def leads_request_call():
     if not upsert_lead_request(row):
         return {"ok": False, "error": "save_failed"}, 500
     log_security_event(client_ip(), "/api/leads/request-call", "lead_request_created", f"{email} {request_id}")
+    try:
+        send_admin_alert(
+            "english_family_route",
+            "high",
+            request_id,
+            address,
+            f"{route_label}: {name} / {phone} / {email} needs relay support back through xxfigueroa1993@yahoo.com and 980-375-9197."
+        )
+    except Exception:
+        pass
     return {"ok": True, "request_id": request_id, "status": "pending", "wait_screen_message": wait_message}
 
 @app.route("/api/cash-points/checkin", methods=["POST"])

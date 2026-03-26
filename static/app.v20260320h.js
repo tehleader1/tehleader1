@@ -1792,22 +1792,52 @@ function setupScanUpload(){
 
 function setupGPS(){
   const map = qs("#gpsMap")
+  const mapOverlay = qs("#gpsMapOverlay")
   const destInput = qs("#gpsDestination")
   const routeBtn = qs("#gpsRoute")
   const keitoBtn = qs("#openKeitoRoute")
   const rolloutBtn = qs("#openRolloutRoute")
-  if(map){
-    map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-74.1%2C40.6%2C-73.7%2C40.9&layer=mapnik"
-  }
-  if(keitoBtn){ keitoBtn.addEventListener("click", ()=>openModal("keitoRouteModal")) }
-  if(rolloutBtn){ rolloutBtn.addEventListener("click", ()=>openModal("rolloutRouteModal")) }
-  async function routeToDestination(){
-    if(!map || !destInput) return
-    const dest = (destInput.value || "").trim()
-    if(!dest){
-      toast("Enter a destination")
-      return
+  const rerouteBtn = qs("#gpsRerouteStorefront")
+  const storefrontBtn = qs("#gpsStorefrontCheckout")
+  const refreshBtn = qs("#gpsStorefrontRefresh")
+  const storefrontBalance = qs("#gpsStorefrontBalance")
+  const storefrontInventory = qs("#gpsStorefrontInventory")
+  const storefrontEnroute = qs("#gpsStorefrontEnroute")
+  const storefrontStatus = qs("#gpsStorefrontStatus")
+  const gpsPanel = qs("#tab-gps")
+  const shampooStoreLink = LINKS.custom || LINKS.premium
+  const santiagoMap = "https://www.openstreetmap.org/?mlat=19.4517&mlon=-70.6970#map=11/19.4517/-70.6970"
+  const villaMap = "https://www.openstreetmap.org/?mlat=19.4740&mlon=-70.7940#map=13/19.4740/-70.7940"
+  function getStorefrontState(){
+    const raw = JSON.parse(localStorage.getItem("keitoStorefrontState") || "{}")
+    return {
+      balance: Number(raw.balance || 0),
+      inventory: Number.isFinite(Number(raw.inventory)) ? Number(raw.inventory) : 128,
+      enroute: Number.isFinite(Number(raw.enroute)) ? Number(raw.enroute) : 0
     }
+  }
+  function setStorefrontState(next){
+    localStorage.setItem("keitoStorefrontState", JSON.stringify(next))
+  }
+  function renderStorefrontState(){
+    const info = getStorefrontState()
+    if(storefrontBalance) storefrontBalance.textContent = `$${info.balance.toFixed(2)}`
+    if(storefrontInventory) storefrontInventory.textContent = String(Math.max(0, info.inventory))
+    if(storefrontEnroute) storefrontEnroute.textContent = String(Math.max(0, info.enroute))
+  }
+  function setGpsStatus(text){
+    if(storefrontStatus) storefrontStatus.textContent = text
+  }
+  function activateGpsTab(){
+    qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
+    qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
+    qs('[data-tab="gps"]')?.classList.add("active")
+    gpsPanel?.classList.add("active")
+    gpsPanel?.scrollIntoView({behavior:"smooth", block:"center"})
+  }
+  async function routeToDestinationText(dest){
+    if(!map || !destInput) return
+    destInput.value = dest
     const coordMatch = dest.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/)
     const getOrigin = ()=>new Promise((resolve)=>{
       if(!navigator.geolocation){ resolve(null); return }
@@ -1821,11 +1851,9 @@ function setupGPS(){
     if(coordMatch){
       const dLat = coordMatch[1]
       const dLng = coordMatch[3]
-      if(origin){
-        map.src = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.lat},${origin.lng};${dLat},${dLng}`
-      } else {
-        map.src = `https://www.openstreetmap.org/?mlat=${dLat}&mlon=${dLng}#map=13/${dLat}/${dLng}`
-      }
+      map.src = origin
+        ? `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.lat},${origin.lng};${dLat},${dLng}`
+        : `https://www.openstreetmap.org/?mlat=${dLat}&mlon=${dLng}#map=13/${dLat}/${dLng}`
       return
     }
     try{
@@ -1838,16 +1866,71 @@ function setupGPS(){
       }
       const dLat = data[0].lat
       const dLng = data[0].lon
-      if(origin){
-        map.src = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.lat},${origin.lng};${dLat},${dLng}`
-      } else {
-        map.src = `https://www.openstreetmap.org/?mlat=${dLat}&mlon=${dLng}#map=13/${dLat}/${dLng}`
-      }
+      map.src = origin
+        ? `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.lat},${origin.lng};${dLat},${dLng}`
+        : `https://www.openstreetmap.org/?mlat=${dLat}&mlon=${dLng}#map=13/${dLat}/${dLng}`
     }catch{
       toast("Route failed")
     }
   }
+  function runStorefrontRouteBot(){
+    activateGpsTab()
+    const current = getStorefrontState()
+    current.enroute += 1
+    setStorefrontState(current)
+    renderStorefrontState()
+    if(mapOverlay) mapOverlay.textContent = "Reroute bot: first zooming to Santiago, Dominican Republic..."
+    setGpsStatus("Reroute bot is active. Opening GPS and showing the route toward the live storefront lane.")
+    if(map){ map.src = santiagoMap }
+    openMiniWindow("Reroute Bot", "Opening GPS and easing into Santiago first. No blocking overlay — just follow the live route card.")
+    setTimeout(()=>{
+      if(map){ map.src = villaMap }
+      if(mapOverlay) mapOverlay.textContent = "Second zoom: Villa Gonzalez, Santiago, Dominican Republic."
+      setGpsStatus("Second zoom locked: Villa Gonzalez. Preparing the storefront route and local shampoo pickup lane.")
+    }, 1300)
+    setTimeout(async ()=>{
+      if(mapOverlay) mapOverlay.textContent = "Exact route lane: live storefront / shampoo pickup guide."
+      setGpsStatus("Storefront route ready. Use the product button or keep following the route to the live storefront lane.")
+      await routeToDestinationText("Villa Gonzalez, Santiago, Dominican Republic")
+    }, 2600)
+  }
+  if(map){
+    map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-74.1%2C40.6%2C-73.7%2C40.9&layer=mapnik"
+  }
+  renderStorefrontState()
+  if(keitoBtn){ keitoBtn.addEventListener("click", ()=>openModal("keitoRouteModal")) }
+  if(rolloutBtn){ rolloutBtn.addEventListener("click", ()=>openModal("rolloutRouteModal")) }
+  async function routeToDestination(){
+    if(!map || !destInput) return
+    const dest = (destInput.value || "").trim()
+    if(!dest){
+      toast("Enter a destination")
+      return
+    }
+    setGpsStatus(`Routing toward ${dest}.`)
+    if(mapOverlay) mapOverlay.textContent = `Routing to ${dest}...`
+    await routeToDestinationText(dest)
+  }
   if(routeBtn){ routeBtn.addEventListener("click", routeToDestination) }
+  if(rerouteBtn){ rerouteBtn.addEventListener("click", runStorefrontRouteBot) }
+  if(storefrontBtn){
+    storefrontBtn.addEventListener("click", ()=>{
+      const current = getStorefrontState()
+      current.balance += 20
+      current.inventory = Math.max(0, current.inventory - 1)
+      setStorefrontState(current)
+      renderStorefrontState()
+      setGpsStatus("Opening the live storefront lane for the shampoo product route.")
+      openLinkModal(shampooStoreLink, "SupportRD Live Storefront")
+    })
+  }
+  if(refreshBtn){
+    refreshBtn.addEventListener("click", ()=>{
+      renderStorefrontState()
+      setGpsStatus("Live storefront stats refreshed.")
+      openMiniWindow("Live Storefront", "Balance, inventory, and in-route numbers refreshed for the current storefront lane.")
+    })
+  }
   bindClose("closeKeitoRoute", "keitoRouteModal")
   bindClose("closeRolloutRoute", "rolloutRouteModal")
   const btn = qs("#findSalons")
@@ -2639,7 +2722,9 @@ function setupRequestCall(){
   const waitId = qs("#requestWaitId")
   if(!submit || !form || !wait || !waitMsg || !waitId) return
   submit.addEventListener("click", async ()=>{
+    const routeLabel = (qs("#reqRouteLabel")?.value || "English Family Route to Anthony").trim()
     const payload = {
+      route_label: routeLabel,
       name: (qs("#reqName")?.value || "").trim(),
       phone: (qs("#reqPhone")?.value || "").trim(),
       email: (qs("#reqEmail")?.value || "").trim(),
@@ -2665,7 +2750,7 @@ function setupRequestCall(){
       localStorage.setItem("lastRequestId", d.request_id || "")
       form.style.display = "none"
       wait.style.display = "block"
-      waitMsg.textContent = d.wait_screen_message || "Request received and pending."
+      waitMsg.textContent = d.wait_screen_message || "Anthony has the relay first. Your order is coming, don't worry."
       waitId.textContent = `Request ID: ${d.request_id || ""}`
     }catch{
       toast("Request failed: network_error")
@@ -5611,6 +5696,7 @@ function setupEngineGlassViewer(){
 }
 
 const WORLD_VIEWS = [
+    { key:"default", label:"SupportRD Default", perk:"Woman waking up · original light view", helper:"Stay in the clean waking-up background and keep the page light until you want a different base.", prompt:"Original SupportRD waking-up background, full-screen, light, airy, brochure-ready" },
     { key:"lumbermill", label:"Lumbermill Defense", perk:"Defense hold + first-line pressure", helper:"Post work-ethic updates and progress shots from the yard.", prompt:"Realistic Dominican lumbermill at early morning, wet timber stacks, muddy tracks, rustic saw structure, fog, cinematic natural light", actions:[{label:"Post Yard Update", detail:"Drop a gritty work update with strong first-line energy."},{label:"Hold The Line", detail:"Tell people SupportRD is steady, clean, and still moving."}] },
     { key:"river", label:"River Hole Motion", perk:"Movement bonus + smart route positioning", helper:"Use short route posts and calm check-ins to keep people moving with you.", prompt:"Realistic river bend with rocks, mossy bank, shaded water, hidden crossing path, cinematic blue-green light", actions:[{label:"Quick Route Post", detail:"Run a calm movement check-in and show the next route."},{label:"Movement Check-In", detail:"Keep the stream light, active, and flowing with you."}] },
     { key:"snow", label:"Artificial Snow Hill", perk:"High-visibility defense + clean focus", helper:"Post crisp update clips and clean premium service offers.", prompt:"Realistic artificial snow hill with white ridges, icy blue shadows, floodlights, elevated outlook, crisp winter atmosphere", actions:[{label:"Clean Offer Drop", detail:"Push a sharp premium offer with clean focus energy."},{label:"High Ground Focus", detail:"Show the clear view, clean service, and high-ground mood."}] },
