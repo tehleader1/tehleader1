@@ -607,7 +607,7 @@ body.sar-red::before{content:"SAR RED · DETECTIVE + LEGAL MODE ACTIVE";position
 .post-bottom,
 .post-head{position:relative;z-index:1;}
 .center-hero h2{margin:0 0 8px;font-size:clamp(22px,3vw,32px);}
-.center-hero p{margin:0;line-height:1.5;font-size:clamp(13px,1.65vw,16px);max-width:64ch;overflow-wrap:anywhere;}
+.center-hero p{margin:0;line-height:1.5;font-size:clamp(13px,1.65vw,16px);max-width:64ch;overflow-wrap:anywhere;word-break:break-word;}
 .center-checkout-menu{
   margin-top:14px;
   padding:12px;
@@ -630,8 +630,8 @@ body.sar-red::before{content:"SAR RED · DETECTIVE + LEGAL MODE ACTIVE";position
   flex:1 1 140px;
   justify-content:center;
 }
-.center-head{display:flex;justify-content:space-between;align-items:center;gap:12px;} 
-.center-actions{display:flex;gap:10px;align-items:center;}
+.center-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;} 
+.center-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;max-width:100%;}
 .unlock-views-btn{
   position:relative;
   overflow:hidden;
@@ -648,6 +648,7 @@ body.sar-red::before{content:"SAR RED · DETECTIVE + LEGAL MODE ACTIVE";position
   box-shadow:0 12px 28px rgba(53,123,229,.28), inset 0 1px 0 rgba(255,255,255,.28);
   transform-origin:center;
   transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
+  max-width:100%;
 }
 .unlock-views-btn::before{
   content:"";
@@ -702,12 +703,12 @@ body.sar-red::before{content:"SAR RED · DETECTIVE + LEGAL MODE ACTIVE";position
 .aria-title{font-size:12px;letter-spacing:0.16em;text-transform:uppercase;}
 .aria-sub{font-size:11px;color:var(--muted);}
 
-.center-tabs-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-.center-tabs{display:flex;gap:10px;flex-wrap:wrap;}
+.center-tabs-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;max-width:100%;}
+.center-tabs{display:flex;gap:10px;flex-wrap:wrap;max-width:100%;}
 .level-select{margin-left:auto;}
 .tab-btn{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.28);background:linear-gradient(120deg,var(--tab-a,rgba(255,255,255,0.14)),var(--tab-b,rgba(255,255,255,0.08)));color:#f2f7ff;font-weight:700;cursor:pointer;} 
 .tab-btn.active{background:linear-gradient(120deg,var(--accent),var(--accent-2));color:#0b0c10;border-color:transparent;} 
-.tab-panel{display:none;max-height:100%;overflow:auto;padding-right:4px;}
+.tab-panel{display:none;max-height:100%;overflow:auto;overflow-x:hidden;padding-right:4px;}
 .tab-panel.active{display:block;}
 
 .ai-wrap{display:grid;gap:16px;}
@@ -1498,6 +1499,10 @@ body.launch-active #app{display:none;}
   .tab-btn{text-align:center;}
   .post-bottom,.gps-actions,.aria-tools{display:grid;grid-template-columns:1fr;gap:8px;}
   .ad-banner{flex-direction:column;align-items:flex-start;}
+  .center-actions > *{width:100%;}
+  .unlock-views-btn,.aria-badge{min-width:0;width:100%;}
+  .competition-world-ribbon{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+  .world-pill{justify-content:center;min-height:48px;}
 }
 @media (max-width:560px){
   .trust-strip{grid-template-columns:1fr;}
@@ -2224,6 +2229,7 @@ body.competition-world .logo{letter-spacing:.12em;}
   box-shadow:0 6px 18px rgba(77,127,211,.12);
   white-space:normal;
   text-align:center;
+  word-break:break-word;
 }
 body.competition-world .center-hero h2{font-size:clamp(28px,4.1vw,42px);letter-spacing:.06em;}
 body.competition-world .center-hero p,
