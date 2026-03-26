@@ -4930,6 +4930,31 @@ function setupRemoteFastPay(){
   let selectedProduct = null
   let processingTimer = null
 
+  function extractMoneyAmount(label){
+    const match = String(label || "").match(/\$[\d,.]+/)
+    return match ? match[0] : "your payment"
+  }
+  function playAcceptTone(){
+    try{
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if(!AudioCtx) return
+      const ctx = new AudioCtx()
+      const oscillator = ctx.createOscillator()
+      const gain = ctx.createGain()
+      oscillator.type = "sine"
+      oscillator.frequency.setValueAtTime(740, ctx.currentTime)
+      oscillator.frequency.linearRampToValueAtTime(980, ctx.currentTime + 0.16)
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime)
+      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.03)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32)
+      oscillator.connect(gain)
+      gain.connect(ctx.destination)
+      oscillator.start()
+      oscillator.stop(ctx.currentTime + 0.34)
+      setTimeout(()=>{ try{ ctx.close() }catch{} }, 400)
+    }catch{}
+  }
+
   function buildRemoteReceipt(product){
     const stamp = new Date().toLocaleString()
     const receipt = {
@@ -5055,26 +5080,28 @@ function setupRemoteFastPay(){
     const product = selectedProduct
     hideConfirm()
     if(processingPanel) processingPanel.hidden = false
-    if(processingStatus) processingStatus.textContent = `${product.title} tap received. We are securing the purchase and getting your SupportRD ownership lane ready.`
+    if(processingStatus) processingStatus.textContent = `${product.title} tap received. We are running the 5-second search and capture and getting your SupportRD ownership lane ready.`
     let progress = 0
     const step = 100 / 5
     processingTimer = setInterval(()=>{
       progress += step
       if(processingFill) processingFill.style.width = `${Math.min(progress, 100)}%`
       if(processingStatus){
-        if(progress < 40) processingStatus.textContent = `${product.title}: reading the tap and preparing the secure Shopify handoff.`
+        if(progress < 40) processingStatus.textContent = `${product.title}: reading the tap and beginning the search and capture handoff.`
         else if(progress < 80) processingStatus.textContent = `${product.title}: confirming ownership feel, receipt lane, and storefront directions.`
-        else processingStatus.textContent = `${product.title}: SupportRD is finalizing your thank-you moment and opening checkout now.`
+        else processingStatus.textContent = `${product.title}: SupportRD is finalizing the capture, thank-you moment, and checkout handoff now.`
       }
       if(progress >= 100){
         hideProcessing()
         const receipt = buildRemoteReceipt(product)
         renderReceipt(receipt)
-        if(status) status.textContent = `Thank you. ${product.title} is ready. The buyer now feels like the new owner of this SupportRD premium lane.`
+        const amount = extractMoneyAmount(product.price)
+        playAcceptTone()
+        if(status) status.textContent = `Successfully received ${amount} for ${product.title}. The buyer now feels like the new owner of this SupportRD lane.`
         if(ownerPanel) ownerPanel.hidden = false
         if(ownerTitle) ownerTitle.textContent = `You now own ${product.title}`
-        if(ownerBody) ownerBody.textContent = "Feel refreshed in your hair. Your access follows your Shopify email / username and SupportRD is ready to serve you."
-        openMiniWindow("THANK YOU", "Confirmed. We here at SupportRD love you. Enjoy the refreshed feel in your hair and use the GPS route to find a SupportRD storefront near you.")
+        if(ownerBody) ownerBody.textContent = `Successfully received ${amount} for ${product.title}. Feel refreshed in your hair. Your access follows your Shopify email / username and SupportRD is ready to serve you.`
+        openMiniWindow("THANK YOU", `Successful search and capture complete. Successfully received ${amount} for ${product.title}. We here at SupportRD love you.`)
         openLinkModal(product.link, `${product.title} Checkout`)
       }
     }, 1000)
