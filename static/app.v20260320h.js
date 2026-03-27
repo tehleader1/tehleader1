@@ -3441,14 +3441,21 @@ function setupLiveArena(){
   const panelTitle = qs("#liveArenaPanelTitle")
   const panelMeta = qs("#liveArenaViewMeta")
   const viewerStatus = qs("#liveArenaViewerStatus")
+  const feedIdentity = qs("#liveFeedIdentity")
+  const viewerPayBtn = qs("#liveArenaViewerPayBtn")
   const flash = qs("#liveCameraFlash")
   const sponsorTagOpenBtn = qs("#sponsorTagOpenBtn")
   const tagModal = qs("#sponsorTagModal")
   const tagInput = qs("#sponsorTagInput")
   const tagCreateBtn = qs("#sponsorTagCreateBtn")
   const tagSkipBtn = qs("#sponsorTagSkipBtn")
+  const agreementModal = qs("#liveAgreementModal")
+  const agreementAcceptBtn = qs("#liveAgreementAcceptBtn")
+  const agreementLaterBtn = qs("#liveAgreementLaterBtn")
   const walletKey = "supportrdWallet"
   const viewsKey = "supportrdLiveViews"
+  const agreementKey = "supportrdLiveAgreementAccepted"
+  const promptKey = "supportrdLivePromptAt"
   let openArmed = false
   let startArmed = false
   let liveContentIndex = 0
@@ -3493,22 +3500,33 @@ function setupLiveArena(){
     contentList.innerHTML = contentSteps.map((step, idx)=>`<div class="live-content-step${idx===liveContentIndex ? " active" : ""}">Step ${idx+1}: ${step}</div>`).join("")
   }
   let contentPromptTimer = null
+  function getFeedHandle(){
+    const savedTag = localStorage.getItem("supportrdSponsorTag")
+    if(savedTag) return savedTag
+    const rawName = (state.socialLinks?.username || state.socialLinks?.name || "SupportRD").trim().replace(/[^a-z0-9]/gi, "")
+    return `^^${rawName || "SupportRD"}`
+  }
+  function maybeTriggerResumePrompt(force = false){
+    const lastAt = Number(localStorage.getItem(promptKey) || 0)
+    const due = force || !lastAt || (Date.now() - lastAt >= 1800000)
+    if(!due) return
+    localStorage.setItem(promptKey, String(Date.now()))
+    liveContentIndex = 0
+    renderContentSteps()
+    if(contentStatus) contentStatus.textContent = "Resume route ready. Click through all 7 steps to keep the session active."
+    if(panelTitle) panelTitle.textContent = "Resume Route"
+    if(panelMeta) panelMeta.textContent = "30 Minute Check-In"
+    if(mainStream) mainStream.textContent = `30-minute check-in active for ${getFeedHandle()}. Walk through the 7 resume steps to keep the session moving and avoid going idle.`
+    contentList?.scrollIntoView({behavior:"smooth", block:"center"})
+    if(nextBtn){
+      nextBtn.style.transform = "translate(0, 0) scale(1.08)"
+      setTimeout(()=>{ if(nextBtn) nextBtn.style.transform = "translate(0, 0) scale(1)" }, 1200)
+    }
+    openMiniWindow("Resume Route", "Your 30-minute check-in is ready. Click through the 7 steps in the main console to resume the session.")
+  }
   function scheduleContentPrompt(){
     if(contentPromptTimer) clearInterval(contentPromptTimer)
-    contentPromptTimer = setInterval(()=>{
-      liveContentIndex = 0
-      renderContentSteps()
-      if(contentStatus) contentStatus.textContent = "Resume route ready. Click through all 7 steps to keep the session active."
-      if(panelTitle) panelTitle.textContent = "Resume Route"
-      if(panelMeta) panelMeta.textContent = "30 Minute Check-In"
-      if(mainStream) mainStream.textContent = "30-minute check-in active. Walk through the 7 resume steps to keep the session moving and avoid going idle."
-      contentList?.scrollIntoView({behavior:"smooth", block:"center"})
-      if(nextBtn){
-        nextBtn.style.transform = "translate(0, 0) scale(1.08)"
-        setTimeout(()=>{ if(nextBtn) nextBtn.style.transform = "translate(0, 0) scale(1)" }, 1200)
-      }
-      openMiniWindow("Resume Route", "Your 30-minute check-in is ready. Click through the 7 steps in the main console to resume the session.")
-    }, 1800000)
+    contentPromptTimer = setInterval(()=>maybeTriggerResumePrompt(true), 1800000)
   }
   function stopContentPrompt(){
     if(contentPromptTimer){
@@ -3533,7 +3551,7 @@ function setupLiveArena(){
     document.body.classList.toggle("viewer-mode", viewerMode)
     if(viewerStatus){
       viewerStatus.textContent = viewerMode
-        ? "Viewer watch mode active. You can see the session, comments, and joiners, but you cannot press host controls."
+        ? `Viewer watch mode active for ${getFeedHandle()}. You can see the session, comments, and joiners, and you can support the live feed, but you cannot press host controls.`
         : "Host control mode active. Viewer links open in watch-only mode."
     }
   }
@@ -3639,9 +3657,11 @@ function setupLiveArena(){
     renderContentSteps()
     ensureSponsorTag()
     updateRefBot()
+    document.body.classList.add("live-console-active")
     if(profileStatus) profileStatus.textContent = `Host profile ready · Lens ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Audio ${audioSel?.selectedOptions?.[0]?.textContent || "Mic"}`
     if(sponsorLane) sponsorLane.textContent = "Sponsors lane armed: general audience, current supporters, future sponsor tags, blog sponsors, and clean crypto/company outreach flow."
     if(mission) mission.textContent = "SupportRD is an innocent company out of Dominican Republic and United States. We deliver solutions to the health of your hair. Period. We are on a mission."
+    if(feedIdentity) feedIdentity.textContent = `Feed running under ${getFeedHandle()}`
     renderLivePanel()
     renderLifeMemorySurface()
     flashCamera()
@@ -3649,6 +3669,8 @@ function setupLiveArena(){
     updateFloodState()
     setViewerMode()
     scheduleContentPrompt()
+    maybeTriggerResumePrompt(false)
+    if(agreementModal && localStorage.getItem(agreementKey) !== "yes") agreementModal.hidden = false
     openMiniWindow("Session Prep", `Lens ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} is staged. SponsorTag is optional and can be created from SponsorTag HQ any time.`)
   }
   function runLoader(){
@@ -3689,8 +3711,10 @@ function setupLiveArena(){
       if(shell) shell.hidden = true
       if(loader) loader.hidden = true
       closeSponsorTagModal()
+      if(agreementModal) agreementModal.hidden = true
       stopLiveEnergy()
       stopContentPrompt()
+      document.body.classList.remove("live-console-active")
       document.body.classList.remove("live-jello")
       openMiniWindow("Main Console", "Returned to the normal center dashboard.")
     })
@@ -3698,7 +3722,7 @@ function setupLiveArena(){
   if(breakBtn){
     breakBtn.addEventListener("click", ()=>{
       if(mainStream) mainStream.textContent = "Break mode active. Stream pending at console level while the host handles family, fixes, or technical pause."
-      if(glitchStatus) glitchStatus.textContent = "Pending state active. If there is a glitch with stream traffic or money, gather the issue here and route it to Codex."
+      if(glitchStatus) glitchStatus.textContent = "Pending state active. Use pure assistance mode if the camera is not working, a payment feature is not working, or the stream needs a clean Codex handoff."
       openMiniWindow("Break Mode", "Stream is in pending state for a technical or personal pause.")
     })
   }
@@ -3729,7 +3753,9 @@ function setupLiveArena(){
   if(floodBtn){
     floodBtn.addEventListener("click", ()=>{
       if(currentViews < 1000){
-        openMiniWindow("Flood Money Mode", `Flood mode is still locked. Current views: ${currentViews}. Reach 1000 to unlock it.`)
+        if(floodStatus) floodStatus.textContent = `Flood ready state active. ${currentViews} views so far. SupportRD is opening social supports, sponsor lane, and payment readiness while waiting for the 1000-view unlock.`
+        if(mainStream && livePanelIndex === 0) mainStream.textContent = `Flood ready state for ${getFeedHandle()}. Social supports are open, sponsor lane is warming, and payment readiness is being staged.`
+        openMiniWindow("Flood Money Mode", `Flood mode is in ready state. Current views: ${currentViews}. Support supports are opening while the stream pushes toward 1000.`)
         return
       }
       const wallet = JSON.parse(localStorage.getItem(walletKey) || "{}")
@@ -3782,7 +3808,8 @@ function setupLiveArena(){
   qs("#liveArenaRefBtn")?.addEventListener("click", ()=>{
     updateRefBot()
     qs("#liveArenaGlitchStatus")?.scrollIntoView({behavior:"smooth", block:"center"})
-    openMiniWindow("Ref Bot", "Ref Bot is showing you the glitch-to-Codex lane and the clean stop point if technical help is needed.")
+    if(glitchStatus) glitchStatus.textContent = "Pure assistance mode: use this when the camera is not working, a payment feature is not working, or the stream needs a clean technical handoff to Codex."
+    openMiniWindow("Ref Bot", "Pure assistance mode is open. Use this lane for camera failure, payment issues, or any technical glitch that needs Codex.")
   })
   sponsorStatus?.addEventListener("click", openSponsorTagModal)
   sponsorTagOpenBtn?.addEventListener("click", openSponsorTagModal)
@@ -3801,7 +3828,22 @@ function setupLiveArena(){
     if(el) el.addEventListener("change", ()=>{
       updateRefBot()
       if(profileStatus) profileStatus.textContent = `Host profile ready · ${lensSel?.selectedOptions?.[0]?.textContent || "Lens"} · ${audioSel?.selectedOptions?.[0]?.textContent || "Audio"}`
+      if(feedIdentity) feedIdentity.textContent = `Feed running under ${getFeedHandle()}`
     })
+  })
+  agreementAcceptBtn?.addEventListener("click", ()=>{
+    localStorage.setItem(agreementKey, "yes")
+    if(agreementModal) agreementModal.hidden = true
+    openMiniWindow("Agreement Accepted", "Stream payment agreement accepted. SupportRD is ready to receive support through secure checkout lanes.")
+  })
+  agreementLaterBtn?.addEventListener("click", ()=>{
+    if(agreementModal) agreementModal.hidden = true
+    openMiniWindow("Agreement Later", "You can accept the stream payment agreement later before using payment-focused live support lanes.")
+  })
+  viewerPayBtn?.addEventListener("click", ()=>{
+    const handle = getFeedHandle()
+    openMiniWindow("Support This Feed", `${handle} is live. Viewers can support this feed through Shopify checkout while the host stays in control.`)
+    openLinkModal(LINKS.pro, `${handle} Live Support Checkout`)
   })
   renderContentSteps()
   updateRefBot()

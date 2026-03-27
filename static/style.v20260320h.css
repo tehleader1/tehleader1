@@ -1058,7 +1058,25 @@ body.launch-active #app{display:none;}
 .live-loader-title{font-size:20px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
 .live-loader-bar{height:14px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;}
 .live-loader-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#7cf3d1,#68a6ff,#ffe27a);transition:width .35s ease;}
+.live-console-active .live-arena-overlay{
+  position:fixed;
+  left:50%;
+  top:118px;
+  transform:translateX(-50%);
+  width:min(960px, calc(100vw - 360px));
+  margin-top:0;
+  z-index:720;
+}
 .live-arena-shell{display:grid;gap:12px;}
+.live-console-active #reelPanel{
+  position:fixed;
+  left:max(18px, calc(50vw - 640px));
+  top:118px;
+  width:260px !important;
+  max-width:260px !important;
+  margin:0 !important;
+  z-index:710;
+}
 .live-arena-shell.live-energized .glass,
 .live-arena-shell.live-energized .live-main-stream,
 .live-arena-shell.live-energized .live-content-wizard{
@@ -1244,6 +1262,13 @@ body.launch-active #app{display:none;}
 .live-view-arrow:hover{
   background:rgba(124,243,209,.16);
 }
+.live-feed-identity{
+  margin-bottom:10px;
+  font-size:12px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:rgba(234,243,255,.76);
+}
 .live-center-actions,
 .live-center-subactions{
   display:flex;
@@ -1269,6 +1294,11 @@ body.launch-active #app{display:none;}
   opacity:.58;
   pointer-events:none;
   filter:grayscale(.15);
+}
+.viewer-mode .live-viewer-pay .btn{
+  opacity:1;
+  pointer-events:auto;
+  filter:none;
 }
 .viewer-mode #liveArenaViewerStatus{
   color:#ffe27a;
@@ -2323,31 +2353,31 @@ body.competition-world.world-view-lumbermill::before{
   background:
     linear-gradient(180deg, rgba(50,34,21,.34), rgba(18,18,18,.24)),
     radial-gradient(900px 420px at 20% 18%, rgba(176,132,74,.24), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/brochure-formula-exclusive.jpg') center/cover no-repeat;
 }
 body.competition-world.world-view-river::before{
   background:
     linear-gradient(180deg, rgba(10,38,48,.28), rgba(13,26,18,.18)),
     radial-gradient(900px 420px at 20% 18%, rgba(83,188,214,.24), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/tropical-hero.jpg') center/cover no-repeat;
 }
 body.competition-world.world-view-snow::before{
   background:
     linear-gradient(180deg, rgba(220,232,255,.22), rgba(38,56,82,.24)),
     radial-gradient(900px 420px at 20% 18%, rgba(220,240,255,.28), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/brochure-bright-droplets.jpg') center/cover no-repeat;
 }
 body.competition-world.world-view-island::before{
   background:
     linear-gradient(180deg, rgba(18,66,88,.22), rgba(14,32,42,.18)),
     radial-gradient(900px 420px at 20% 18%, rgba(52,230,203,.22), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/tropical-hero.jpg') center/cover no-repeat;
 }
 body.competition-world.world-view-vip::before{
   background:
     linear-gradient(180deg, rgba(36,24,12,.28), rgba(13,16,28,.2)),
     radial-gradient(900px 420px at 20% 18%, rgba(255,206,104,.26), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/brochure-contacts.jpg') center/cover no-repeat;
   }
 body.system-theme::before,
 body.competition-world::before,
@@ -2414,6 +2444,13 @@ body.competition-world .bg-layers::before{
   gap:14px;
   padding:0 18px 18px;
 }
+.float-mode-grid #reelPanel{grid-column:1;}
+#floatLiveBox{grid-column:2;}
+#floatAssistantBox{grid-column:3;}
+#floatProfileBox{grid-column:1;}
+#floatDeviceBox{grid-column:2;}
+#floatBoardsBox{grid-column:3;}
+#floatSettingsBox{grid-column:1 / span 3;}
 .float-box{
   min-height:210px;
   border-radius:26px;
@@ -2694,6 +2731,8 @@ body.competition-world .bg-layers::before{
 @media (max-width: 980px){
   .float-mode-grid{grid-template-columns:1fr 1fr;}
   .remote-fastpay-scanner{grid-template-columns:1fr;}
+  .live-console-active .live-arena-overlay{width:min(94vw, 860px);left:50%;transform:translateX(-50%);}
+  .live-console-active #reelPanel{left:12px;top:118px;width:220px !important;max-width:220px !important;}
 }
 @media (max-width: 700px){
   .float-mode-top{margin:10px;padding:14px;border-radius:22px;display:grid;}
@@ -2703,6 +2742,15 @@ body.competition-world .bg-layers::before{
   .remote-product-actions{grid-template-columns:1fr;}
   .remote-fastpay-head{flex-direction:column;}
   .remote-fastpay-confirm-actions{grid-template-columns:1fr;}
+  .float-mode-grid #reelPanel,
+  #floatLiveBox,
+  #floatAssistantBox,
+  #floatProfileBox,
+  #floatDeviceBox,
+  #floatBoardsBox,
+  #floatSettingsBox{grid-column:auto;}
+  .live-console-active .live-arena-overlay,
+  .live-console-active #reelPanel{position:static;width:auto !important;max-width:none !important;transform:none;}
 }
 
 .launch-main-actions{
@@ -2834,31 +2882,31 @@ body.competition-world.world-view-tunnels::before{
   background:
     linear-gradient(180deg, rgba(22,18,34,.52), rgba(13,17,26,.34)),
     radial-gradient(860px 400px at 16% 20%, rgba(126,93,255,.25), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/brochure-scroll.jpg') center/cover no-repeat;
 }
 body.competition-world.world-view-market::before{
   background:
     linear-gradient(180deg, rgba(68,34,18,.34), rgba(19,17,14,.24)),
     radial-gradient(880px 420px at 20% 16%, rgba(255,155,92,.28), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/brochure-social.jpg') center/cover no-repeat;
 }
 body.competition-world.world-view-lab::before{
   background:
     linear-gradient(180deg, rgba(10,28,38,.38), rgba(8,15,24,.26)),
     radial-gradient(860px 400px at 18% 18%, rgba(95,233,255,.24), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/brochure-fast-dropper.jpg') center/cover no-repeat;
 }
 body.competition-world.world-view-lounge::before{
   background:
     linear-gradient(180deg, rgba(44,28,16,.34), rgba(15,14,18,.24)),
     radial-gradient(900px 420px at 22% 18%, rgba(217,180,119,.22), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/brochure-mask.jpg') center/cover no-repeat;
 }
 body.competition-world.world-view-tower::before{
   background:
     linear-gradient(180deg, rgba(22,38,60,.32), rgba(12,17,28,.22)),
     radial-gradient(900px 420px at 20% 18%, rgba(126,188,255,.24), transparent 58%),
-    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+    url('/static/images/brochure-hero.jpg') center/cover no-repeat;
 }
 .main-content-row{
   display:grid;
@@ -2894,3 +2942,4 @@ body.competition-world.world-view-tower::before{
     position:static;
   }
 }
+

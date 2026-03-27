@@ -411,6 +411,7 @@
                   </div>
                   <button class="live-view-arrow" id="liveArenaViewNext" aria-label="Next center view">›</button>
                 </div>
+                <div class="live-feed-identity" id="liveFeedIdentity">Feed running under ^^SupportRD</div>
                 <div class="live-stream-title" id="liveArenaPanelTitle">Main Stream</div>
                 <div class="live-stream-body" id="liveArenaMainStream">
                   Stream intro, sponsor sweep, and purposeful content load here.
@@ -425,6 +426,9 @@
                 </div>
                 <div class="system-sub" id="liveArenaFloodStatus">Flood mode unlocks at 1000 views and prepares you for a viral hit without dropping the session.</div>
                 <div class="system-sub" id="liveArenaViewerStatus">Host control mode active. Viewer links open in watch-only mode.</div>
+                <div class="live-center-actions live-viewer-pay">
+                  <button class="btn" id="liveArenaViewerPayBtn">Support This Live Feed</button>
+                </div>
                 <div class="live-map-actions" id="liveMapActions"></div>
               </div>
               <div class="live-content-wizard glass">
@@ -467,6 +471,18 @@
           <div class="live-tag-actions">
             <button class="btn ghost" id="sponsorTagSkipBtn">Not Now</button>
             <button class="btn" id="sponsorTagCreateBtn">Create SponsorTag</button>
+          </div>
+        </div>
+      </div>
+      <div class="live-tag-modal" id="liveAgreementModal" hidden>
+        <div class="live-tag-card glass">
+          <div class="live-tag-kicker">Payment Agreement</div>
+          <div class="system-title">Accept Stream Payment Agreement</div>
+          <div class="system-sub">Before you receive payment on your stream, agree to keep the route honest, show what you are actually doing, and let SupportRD route real checkout through secure payment lanes.</div>
+          <div class="live-tag-examples">This agreement keeps payment, support, and glitch routing cleaner for everyone on the page.</div>
+          <div class="live-tag-actions">
+            <button class="btn ghost" id="liveAgreementLaterBtn">Later</button>
+            <button class="btn" id="liveAgreementAcceptBtn">Accept Agreement</button>
           </div>
         </div>
       </div>
@@ -1599,6 +1615,14 @@
     </div>
   </div>
   <div class="float-mode-grid">
+    <section class="reel-panel glass float-reel-panel" id="reelPanel">
+      <div class="panel-head">
+        <h3>SupportRD TV Reel</h3>
+        <button class="btn ghost" id="toggleReel">Hide</button>
+      </div>
+      <div class="reel-tab" id="reelTab">REEL</div>
+      <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel"></iframe>
+    </section>
     <section class="float-box glass" id="floatLiveBox">
       <div class="float-box-head">
         <span>Live Core</span>
@@ -1613,19 +1637,6 @@
         </div>
       </div>
     </section>
-    <section class="reel-panel glass" id="reelPanel">
-      <div class="panel-head">
-        <h3>SupportRD TV Reel</h3>
-        <button class="btn ghost" id="toggleReel">Hide</button>
-      </div>
-      <div class="reel-tab" id="reelTab">REEL</div>
-      <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel"></iframe>
-    </section>
-  </div>
-
-  <div class="brochure-float" id="brochureFloat">
-    <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
-  </div>
     <section class="float-box glass" id="floatAssistantBox">
       <div class="float-box-head">
         <span>Aria / Jake</span>
@@ -1693,6 +1704,9 @@
       </div>
       <div class="float-box-copy" id="floatSettingsStatus">Float Mode keeps six big boxes on screen like a personal remote, on desktop and mobile.</div>
     </section>
+  </div>
+  <div class="brochure-float" id="brochureFloat">
+    <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
   </div>
 </div>
 
