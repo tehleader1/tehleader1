@@ -1063,17 +1063,17 @@ body.launch-active #app{display:none;}
   left:50%;
   top:118px;
   transform:translateX(-50%);
-  width:min(960px, calc(100vw - 360px));
+  width:min(760px, calc(100vw - 320px));
   margin-top:0;
   z-index:720;
 }
 .live-arena-shell{display:grid;gap:12px;}
 .live-console-active #reelPanel{
   position:fixed;
-  left:max(18px, calc(50vw - 640px));
+  left:max(10px, calc(50vw - 640px));
   top:118px;
-  width:260px !important;
-  max-width:260px !important;
+  width:220px !important;
+  max-width:220px !important;
   margin:0 !important;
   z-index:710;
 }
@@ -2451,6 +2451,15 @@ body.competition-world .bg-layers::before{
 #floatDeviceBox{grid-column:2;}
 #floatBoardsBox{grid-column:3;}
 #floatSettingsBox{grid-column:1 / span 3;}
+.float-mode-active #reelPanel{display:none !important;}
+.float-mode-active #floatLiveBox,
+.float-mode-active #floatAssistantBox,
+.float-mode-active #floatProfileBox,
+.float-mode-active #floatDeviceBox,
+.float-mode-active #floatBoardsBox,
+.float-mode-active #floatSettingsBox{
+  grid-column:auto !important;
+}
 .float-box{
   min-height:210px;
   border-radius:26px;
@@ -2731,8 +2740,8 @@ body.competition-world .bg-layers::before{
 @media (max-width: 980px){
   .float-mode-grid{grid-template-columns:1fr 1fr;}
   .remote-fastpay-scanner{grid-template-columns:1fr;}
-  .live-console-active .live-arena-overlay{width:min(94vw, 860px);left:50%;transform:translateX(-50%);}
-  .live-console-active #reelPanel{left:12px;top:118px;width:220px !important;max-width:220px !important;}
+  .live-console-active .live-arena-overlay{width:min(92vw, 720px);left:50%;transform:translateX(-50%);}
+  .live-console-active #reelPanel{left:8px;top:118px;width:180px !important;max-width:180px !important;}
 }
 @media (max-width: 700px){
   .float-mode-top{margin:10px;padding:14px;border-radius:22px;display:grid;}
@@ -2749,6 +2758,7 @@ body.competition-world .bg-layers::before{
   #floatDeviceBox,
   #floatBoardsBox,
   #floatSettingsBox{grid-column:auto;}
+  .float-mode-grid{grid-template-columns:1fr 1fr;}
   .live-console-active .live-arena-overlay,
   .live-console-active #reelPanel{position:static;width:auto !important;max-width:none !important;transform:none;}
 }
