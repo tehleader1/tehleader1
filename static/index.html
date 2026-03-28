@@ -329,7 +329,22 @@
           <div class="system-card glass live-middle-card">
             <div class="live-panel-top">
               <div class="live-panel-controls">
+                <div class="live-session-strip">
+                  <div class="live-session-chip" id="liveSessionRole">Visitor View</div>
+                  <div class="live-session-chip" id="liveSessionTimer">Session 00:00:00</div>
+                  <div class="live-session-chip" id="liveDayClock">Day 00:00</div>
+                </div>
                 <div class="live-panel-kicker">Main Console Controls</div>
+                <div class="live-view-mode-form glass">
+                  <div class="live-view-mode-copy">
+                    <strong>First Load Test</strong>
+                    <span>Switch between visitor view and owner profile so we can verify both sides cleanly.</span>
+                  </div>
+                  <div class="live-view-mode-actions">
+                    <button class="btn ghost" id="liveVisitorModeBtn">Load Visitor Screen</button>
+                    <button class="btn ghost" id="liveOwnerModeBtn">Load My Profile</button>
+                  </div>
+                </div>
                 <div class="live-panel-grid">
                   <select id="liveArenaMode">
                     <option value="solo">Personal Route · 1 minute load</option>
@@ -412,9 +427,17 @@
                   <button class="live-view-arrow" id="liveArenaViewNext" aria-label="Next center view">›</button>
                 </div>
                 <div class="live-feed-identity" id="liveFeedIdentity">Feed running under ^^SupportRD</div>
+                <div class="live-presence-row">
+                  <div class="live-presence-chip" id="liveSessionOwner">Session owner: ^^SupportRD</div>
+                  <div class="live-presence-chip" id="liveVisitorAccess">Visitors can watch, send hearts, and support the feed.</div>
+                </div>
                 <div class="live-stream-title" id="liveArenaPanelTitle">Main Stream</div>
                 <div class="live-stream-body" id="liveArenaMainStream">
                   Stream intro, sponsor sweep, and purposeful content load here.
+                </div>
+                <div class="live-assistant-prompt glass" id="liveAssistantPrompt">
+                  <div class="live-assistant-title">How may I serve you?</div>
+                  <div class="system-sub" id="liveAssistantPromptText">Aria and Jake can walk you into the booth, point out payments, and keep the whole page feeling light while you respond.</div>
                 </div>
                 <div class="live-memory-billboard" id="liveMemoryBillboard">Transmit from far lane: family, religion, hobbies, education, interests, and life moments can pass by here like billboards while you stream.</div>
                 <div class="live-reward-card" id="liveRewardCard" hidden>
@@ -428,6 +451,8 @@
                 <div class="system-sub" id="liveArenaViewerStatus">Host control mode active. Viewer links open in watch-only mode.</div>
                 <div class="live-center-actions live-viewer-pay">
                   <button class="btn" id="liveArenaViewerPayBtn">Support This Live Feed</button>
+                  <button class="btn ghost" id="liveArenaSendHeartBtn">Send Heart</button>
+                  <div class="live-heart-count" id="liveHeartCount">0 hearts sent</div>
                 </div>
                 <div class="live-map-actions" id="liveMapActions"></div>
               </div>
@@ -452,6 +477,10 @@
                   <div class="quick-title">Glitch To Codex</div>
                   <div class="system-sub" id="liveArenaGlitchStatus">If stream money or match issues appear, this lane gathers a clean developer handoff for Codex.</div>
                 </div>
+              </div>
+              <div class="live-aria-history glass">
+                <div class="quick-title">Last 3 Aria / Jake Lines</div>
+                <div class="system-sub" id="liveAriaHistory">No assistant lines yet. Aria and Jake will keep a light trail here as they help.</div>
               </div>
             </div>
           </div>

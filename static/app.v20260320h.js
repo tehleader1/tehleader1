@@ -3435,6 +3435,17 @@ function setupLiveArena(){
   const glitchStatus = qs("#liveArenaGlitchStatus")
   const floodStatus = qs("#liveArenaFloodStatus")
   const sponsorLane = qs("#liveArenaSponsorStatus")
+  const sessionRoleEl = qs("#liveSessionRole")
+  const sessionTimerEl = qs("#liveSessionTimer")
+  const dayClockEl = qs("#liveDayClock")
+  const visitorModeBtn = qs("#liveVisitorModeBtn")
+  const ownerModeBtn = qs("#liveOwnerModeBtn")
+  const assistantPromptText = qs("#liveAssistantPromptText")
+  const sessionOwnerEl = qs("#liveSessionOwner")
+  const visitorAccessEl = qs("#liveVisitorAccess")
+  const heartCountEl = qs("#liveHeartCount")
+  const sendHeartBtn = qs("#liveArenaSendHeartBtn")
+  const ariaHistoryEl = qs("#liveAriaHistory")
   const contentStatus = qs("#liveArenaContentStatus")
   const contentList = qs("#liveArenaContentList")
   const mission = qs("#liveArenaMission")
@@ -3456,13 +3467,18 @@ function setupLiveArena(){
   const viewsKey = "supportrdLiveViews"
   const agreementKey = "supportrdLiveAgreementAccepted"
   const promptKey = "supportrdLivePromptAt"
+  const roleKey = "supportrdSessionRole"
+  const sessionStartKey = "supportrdSessionStart"
+  const dayStampKey = "supportrdSessionDayStamp"
+  const dayStatsKey = "supportrdSessionDayStats"
+  const heartKey = "supportrdSessionHearts"
   let openArmed = false
-  let startArmed = false
   let liveContentIndex = 0
   let livePanelIndex = 0
   let energyTimer = null
+  let timerLoop = null
   let currentViews = Number(localStorage.getItem(viewsKey) || 220)
-  const viewerMode = /[?&]viewer=1\b/.test(location.search)
+  let sessionRole = /[?&]host=1\b/.test(location.search) ? "owner" : ((/[?&]viewer=1\b/.test(location.search) ? "visitor" : (localStorage.getItem(roleKey) || "visitor")))
   if(tagModal) tagModal.hidden = true
   const livePanels = [
     { title:"Main Stream", meta:"Main Session View" },
@@ -3498,6 +3514,78 @@ function setupLiveArena(){
   function renderContentSteps(){
     if(!contentList) return
     contentList.innerHTML = contentSteps.map((step, idx)=>`<div class="live-content-step${idx===liveContentIndex ? " active" : ""}">Step ${idx+1}: ${step}</div>`).join("")
+  }
+  function currentDayStamp(){
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
+  }
+  function ensureDayState(){
+    const stamp = currentDayStamp()
+    if(localStorage.getItem(dayStampKey) !== stamp){
+      localStorage.setItem(dayStampKey, stamp)
+      localStorage.setItem(sessionStartKey, String(Date.now()))
+      localStorage.setItem(dayStatsKey, JSON.stringify({money:0, files:0, edits:0}))
+      localStorage.setItem(heartKey, "0")
+    }
+  }
+  function readDayStats(){
+    ensureDayState()
+    try{ return JSON.parse(localStorage.getItem(dayStatsKey) || "{}") }catch{ return {} }
+  }
+  function writeDayStats(patch){
+    const stats = {...readDayStats(), ...patch}
+    localStorage.setItem(dayStatsKey, JSON.stringify(stats))
+    return stats
+  }
+  function formatDuration(ms){
+    const total = Math.max(0, Math.floor(ms / 1000))
+    const h = String(Math.floor(total / 3600)).padStart(2,"0")
+    const m = String(Math.floor((total % 3600) / 60)).padStart(2,"0")
+    const s = String(total % 60).padStart(2,"0")
+    return `${h}:${m}:${s}`
+  }
+  function syncTimers(){
+    ensureDayState()
+    const now = new Date()
+    const startAt = Number(localStorage.getItem(sessionStartKey) || Date.now())
+    if(dayClockEl){
+      dayClockEl.textContent = `Day ${now.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}`
+    }
+    if(sessionTimerEl){
+      sessionTimerEl.textContent = `Session ${formatDuration(Date.now() - startAt)}`
+    }
+    const stats = readDayStats()
+    if(profileStatus){
+      profileStatus.textContent = `${sessionRole === "owner" ? "Owner" : "Visitor"} profile · ${lensSel?.selectedOptions?.[0]?.textContent || "Lens"} · ${audioSel?.selectedOptions?.[0]?.textContent || "Audio"} · $${Number(stats.money || 0).toFixed(2)} made · ${Number(stats.files || 0)} files · ${Number(stats.edits || 0)} edits`
+    }
+  }
+  function syncHearts(){
+    const hearts = Number(localStorage.getItem(heartKey) || 0)
+    if(heartCountEl) heartCountEl.textContent = `${hearts} hearts sent`
+  }
+  function pushAssistantLine(line){
+    const text = String(line || "").trim()
+    if(!text) return
+    const history = Array.isArray(state.ariaHistory) ? [...state.ariaHistory] : []
+    history.unshift(text)
+    state.ariaHistory = history.slice(0,3)
+    localStorage.setItem("supportrdAriaHistory", JSON.stringify(state.ariaHistory))
+    if(ariaHistoryEl) ariaHistoryEl.innerHTML = state.ariaHistory.map(item=>`<div>${item}</div>`).join("")
+  }
+  function syncAssistantHistory(){
+    let history = state.ariaHistory
+    if(!Array.isArray(history) || !history.length){
+      try{ history = JSON.parse(localStorage.getItem("supportrdAriaHistory") || "[]") }catch{ history = [] }
+      state.ariaHistory = Array.isArray(history) ? history.slice(0,3) : []
+    }
+    if(ariaHistoryEl){
+      ariaHistoryEl.innerHTML = state.ariaHistory.length
+        ? state.ariaHistory.map(item=>`<div>${item}</div>`).join("")
+        : "No assistant lines yet. Aria and Jake will keep a light trail here as they help."
+    }
+  }
+  function getIsViewer(){
+    return sessionRole !== "owner"
   }
   let contentPromptTimer = null
   function getFeedHandle(){
@@ -3547,8 +3635,25 @@ function setupLiveArena(){
       mainStream.textContent = liveJoiners.join("\n")
     }
   }
+  function updatePromptForFocus(target){
+    if(!assistantPromptText) return
+    const prompts = {
+      controls: "How may I serve you? I can guide you into posting, payments, the booth, or a light session setup.",
+      stream: "How may I serve you? This is the live center. Keep it purposeful, light, and ready for support.",
+      content: "How may I serve you? I can walk you through the 7-step resume route and keep you from going idle.",
+      support: "How may I serve you? I can explain glitches, support payments, and handoffs to Codex cleanly."
+    }
+    assistantPromptText.textContent = prompts[target] || prompts.controls
+  }
   function setViewerMode(){
+    const viewerMode = getIsViewer()
     document.body.classList.toggle("viewer-mode", viewerMode)
+    localStorage.setItem(roleKey, sessionRole)
+    if(sessionRoleEl) sessionRoleEl.textContent = viewerMode ? "Visitor View" : "Owner Profile"
+    if(sessionOwnerEl) sessionOwnerEl.textContent = `Session owner: ${getFeedHandle()}`
+    if(visitorAccessEl) visitorAccessEl.textContent = viewerMode
+      ? "Visitors can watch, send hearts, and support the feed."
+      : "You are running the owner view with personal controls and profile details."
     if(viewerStatus){
       viewerStatus.textContent = viewerMode
         ? `Viewer watch mode active for ${getFeedHandle()}. You can see the session, comments, and joiners, and you can support the live feed, but you cannot press host controls.`
@@ -3572,6 +3677,12 @@ function setupLiveArena(){
     currentViews += amount
     localStorage.setItem(viewsKey, String(currentViews))
     updateFloodState()
+  }
+  function bumpDayStat(key, amount){
+    const stats = readDayStats()
+    stats[key] = Number(stats[key] || 0) + amount
+    writeDayStats(stats)
+    syncTimers()
   }
   function updateRefBot(){
     const mode = modeSel?.value || "solo"
@@ -3668,9 +3779,14 @@ function setupLiveArena(){
     startLiveEnergy()
     updateFloodState()
     setViewerMode()
+    syncHearts()
+    syncAssistantHistory()
+    syncTimers()
     scheduleContentPrompt()
     maybeTriggerResumePrompt(false)
     if(agreementModal && localStorage.getItem(agreementKey) !== "yes") agreementModal.hidden = false
+    if(timerLoop) clearInterval(timerLoop)
+    timerLoop = setInterval(syncTimers, 1000)
     openMiniWindow("Session Prep", `Lens ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} is staged. SponsorTag is optional and can be created from SponsorTag HQ any time.`)
   }
   function runLoader(){
@@ -3714,6 +3830,7 @@ function setupLiveArena(){
       if(agreementModal) agreementModal.hidden = true
       stopLiveEnergy()
       stopContentPrompt()
+      if(timerLoop){ clearInterval(timerLoop); timerLoop = null }
       document.body.classList.remove("live-console-active")
       document.body.classList.remove("live-jello")
       openMiniWindow("Main Console", "Returned to the normal center dashboard.")
@@ -3729,7 +3846,9 @@ function setupLiveArena(){
   if(cameraBtn){
     cameraBtn.addEventListener("click", ()=>{
       flashCamera()
+      bumpDayStat("files", 1)
       if(mainStream && livePanelIndex === 0) mainStream.textContent = `Camera armed · ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · flashlight pulse active.`
+      updatePromptForFocus("stream")
       openMiniWindow("Camera", "Camera and visual route armed for the live center panel.")
     })
   }
@@ -3744,8 +3863,10 @@ function setupLiveArena(){
       if(post) post.value = `LIVE SUPPORT RD · ${modeSel?.selectedOptions?.[0]?.textContent || "Personal Route"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
       flashCamera()
       bumpViews(120)
+      bumpDayStat("files", 1)
       liveComments.unshift(`Receiver comment: fresh post blast went out for ${lensSel?.selectedOptions?.[0]?.textContent || "this route"}.`)
       liveComments.splice(3)
+      updatePromptForFocus("stream")
       openMiniWindow("Post Blast", "Laser post effect fired. Live post staged for checked social channels.")
       if(livePanelIndex === 1) renderLivePanel()
     })
@@ -3755,12 +3876,14 @@ function setupLiveArena(){
       if(currentViews < 1000){
         if(floodStatus) floodStatus.textContent = `Flood ready state active. ${currentViews} views so far. SupportRD is opening social supports, sponsor lane, and payment readiness while waiting for the 1000-view unlock.`
         if(mainStream && livePanelIndex === 0) mainStream.textContent = `Flood ready state for ${getFeedHandle()}. Social supports are open, sponsor lane is warming, and payment readiness is being staged.`
+        updatePromptForFocus("support")
         openMiniWindow("Flood Money Mode", `Flood mode is in ready state. Current views: ${currentViews}. Support supports are opening while the stream pushes toward 1000.`)
         return
       }
       const wallet = JSON.parse(localStorage.getItem(walletKey) || "{}")
       wallet.balance = Number(wallet.balance || 0) + 250
       localStorage.setItem(walletKey, JSON.stringify(wallet))
+      bumpDayStat("money", 250)
       if(mainStream && livePanelIndex === 0) mainStream.textContent = "Flood Money Mode active. 10-second sponsor intro and viral TikTok announcement running, then the session will resume."
       if(floodStatus) floodStatus.textContent = `Flood mode is live. Balance lane warmed to $${wallet.balance.toFixed(2)} while keeping payout flow compliance-gated and traffic-safe.`
       flashCamera()
@@ -3775,6 +3898,7 @@ function setupLiveArena(){
       liveContentIndex = (liveContentIndex + 1) % contentSteps.length
       renderContentSteps()
       bumpViews(80)
+      bumpDayStat("edits", 1)
       if(contentStatus) contentStatus.textContent = `Step ${liveContentIndex + 1}/7 ready. Click through the resume route to keep the session active.`
       const x = (Math.random() * 34) - 17
       const y = (Math.random() * 14) - 7
@@ -3794,6 +3918,8 @@ function setupLiveArena(){
     const reflection = buildLifeReflection("aria")
     if(botStatus) botStatus.textContent = reflection
     renderLifeMemorySurface(reflection)
+    pushAssistantLine(`Aria: ${reflection}`)
+    updatePromptForFocus("controls")
     qs("#liveArenaContentList")?.scrollIntoView({behavior:"smooth", block:"center"})
     openMiniWindow("ARIA Walkthrough", reflection)
   })
@@ -3802,6 +3928,8 @@ function setupLiveArena(){
     const reflection = buildLifeReflection("projake")
     if(botStatus) botStatus.textContent = reflection
     renderLifeMemorySurface(reflection)
+    pushAssistantLine(`Jake: ${reflection}`)
+    updatePromptForFocus("stream")
     qs("#liveArenaMainStream")?.scrollIntoView({behavior:"smooth", block:"center"})
     openMiniWindow("Jake Walkthrough", reflection)
   })
@@ -3809,7 +3937,20 @@ function setupLiveArena(){
     updateRefBot()
     qs("#liveArenaGlitchStatus")?.scrollIntoView({behavior:"smooth", block:"center"})
     if(glitchStatus) glitchStatus.textContent = "Pure assistance mode: use this when the camera is not working, a payment feature is not working, or the stream needs a clean technical handoff to Codex."
+    updatePromptForFocus("support")
     openMiniWindow("Ref Bot", "Pure assistance mode is open. Use this lane for camera failure, payment issues, or any technical glitch that needs Codex.")
+  })
+  visitorModeBtn?.addEventListener("click", ()=>{
+    sessionRole = "visitor"
+    setViewerMode()
+    updatePromptForFocus("controls")
+    openMiniWindow("Visitor Screen", `Loaded visitor watch mode for ${getFeedHandle()}. Hearts and support are live, host controls are locked.`)
+  })
+  ownerModeBtn?.addEventListener("click", ()=>{
+    sessionRole = "owner"
+    setViewerMode()
+    updatePromptForFocus("controls")
+    openMiniWindow("Owner Profile", `Loaded owner profile for ${getFeedHandle()}. Personal controls, posting, and payment prep are back live.`)
   })
   sponsorStatus?.addEventListener("click", openSponsorTagModal)
   sponsorTagOpenBtn?.addEventListener("click", openSponsorTagModal)
@@ -3842,12 +3983,46 @@ function setupLiveArena(){
   })
   viewerPayBtn?.addEventListener("click", ()=>{
     const handle = getFeedHandle()
+    bumpDayStat("money", 35)
     openMiniWindow("Support This Feed", `${handle} is live. Viewers can support this feed through Shopify checkout while the host stays in control.`)
     openLinkModal(LINKS.pro, `${handle} Live Support Checkout`)
   })
+  sendHeartBtn?.addEventListener("click", ()=>{
+    const hearts = Number(localStorage.getItem(heartKey) || 0) + 1
+    localStorage.setItem(heartKey, String(hearts))
+    syncHearts()
+    liveComments.unshift(`Receiver sent a heart to ${getFeedHandle()}.`)
+    liveComments.splice(3)
+    if(livePanelIndex === 1) renderLivePanel()
+    openMiniWindow("Heart Sent", `A heart was sent to ${getFeedHandle()} and the live feed feels more supported.`)
+  })
+  shell?.addEventListener("click", (e)=>{
+    const card = e.target instanceof Element ? e.target.closest(".live-panel-controls, .live-camera-card, .live-content-wizard, .quick-block, .live-panel-bots, .live-aria-history") : null
+    Array.from((shell || document).querySelectorAll(".focus-follow")).forEach(el=>el.classList.remove("focus-follow"))
+    if(card){
+      card.classList.add("focus-follow")
+      if(card.classList.contains("live-panel-controls")) updatePromptForFocus("controls")
+      if(card.classList.contains("live-camera-card")) updatePromptForFocus("stream")
+      if(card.classList.contains("live-content-wizard")) updatePromptForFocus("content")
+      if(card.classList.contains("quick-block")) updatePromptForFocus("support")
+    }
+  })
+  shell?.addEventListener("mouseover", (e)=>{
+    const card = e.target instanceof Element ? e.target.closest(".live-panel-controls, .live-camera-card, .live-content-wizard, .quick-block, .live-panel-bots, .live-aria-history") : null
+    if(card && !card.classList.contains("focus-follow")){
+      Array.from((shell || document).querySelectorAll(".focus-follow")).forEach(el=>el.classList.remove("focus-follow"))
+      card.classList.add("focus-follow")
+    }
+  })
+  window.addEventListener("scroll", ()=>{
+    Array.from((shell || document).querySelectorAll(".focus-follow")).forEach(el=>el.classList.remove("focus-follow"))
+  }, {passive:true})
   renderContentSteps()
   updateRefBot()
   updateFloodState()
+  syncHearts()
+  syncAssistantHistory()
+  syncTimers()
   setViewerMode()
   renderLivePanel()
   setTimeout(()=>{

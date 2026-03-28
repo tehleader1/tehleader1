@@ -1165,6 +1165,46 @@ body.launch-active #app{display:none;}
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:8px;
 }
+.live-session-strip{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:10px;
+}
+.live-session-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:#eaf3ff;
+  font-size:11px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+.live-view-mode-form{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);
+}
+.live-view-mode-copy{
+  display:grid;
+  gap:4px;
+  color:#dce9fb;
+  font-size:12px;
+}
+.live-view-mode-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
 .live-panel-note{
   grid-column:1 / -1;
   padding:10px 12px;
@@ -1269,6 +1309,33 @@ body.launch-active #app{display:none;}
   text-transform:uppercase;
   color:rgba(234,243,255,.76);
 }
+.live-presence-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:12px;
+}
+.live-presence-chip{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:#dce9fb;
+  font-size:12px;
+}
+.live-assistant-prompt{
+  margin-bottom:12px;
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.1);
+  background:linear-gradient(145deg,rgba(255,255,255,.06),rgba(95,159,255,.06));
+}
+.live-assistant-title{
+  font-weight:800;
+  font-size:18px;
+  color:#fff;
+  margin-bottom:4px;
+}
 .live-center-actions,
 .live-center-subactions{
   display:flex;
@@ -1300,6 +1367,31 @@ body.launch-active #app{display:none;}
   pointer-events:auto;
   filter:none;
 }
+.live-heart-count{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:120px;
+  padding:10px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  font-weight:700;
+}
+.viewer-mode #liveOwnerModeBtn,
+.viewer-mode #liveArenaPostBtn,
+.viewer-mode #liveArenaBreakBtn,
+.viewer-mode #liveArenaFloodBtn,
+.viewer-mode #liveArenaCameraAccessBtn,
+.viewer-mode #unlockViewsBtnLive,
+.viewer-mode #liveArenaCheckBtn,
+.viewer-mode #liveArenaRefBtn,
+.viewer-mode #sponsorTagOpenBtn{
+  opacity:.58;
+  pointer-events:none;
+  filter:grayscale(.15);
+}
 .viewer-mode #liveArenaViewerStatus{
   color:#ffe27a;
 }
@@ -1316,6 +1408,13 @@ body.launch-active #app{display:none;}
   text-transform:uppercase;
   margin-bottom:8px;
   color:rgba(255,255,255,.78);
+}
+.live-aria-history{
+  margin-top:12px;
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);
 }
 .live-stream-title{font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;}
 .live-stream-body{
@@ -1373,6 +1472,11 @@ body.launch-active #app{display:none;}
 .live-arena-shell.live-energized .live-content-step:nth-child(6){animation-delay:1.75s;}
 .live-arena-shell.live-energized .live-content-step:nth-child(7){animation-delay:2.1s;}
 .live-next-btn{position:relative;transition:transform .18s ease;}
+.focus-follow{
+  transform:translateY(-4px) scale(1.01);
+  box-shadow:0 16px 36px rgba(0,0,0,.22);
+  transition:transform .2s ease, box-shadow .2s ease;
+}
 .live-jello{animation:liveJello .7s ease;}
 .dashboard-sweep-active #centerStage{
   animation:dashboardSweep 1.15s cubic-bezier(.2,.7,.2,1);
@@ -1483,6 +1587,7 @@ body.launch-active #app{display:none;}
   .live-content-grid,.live-bottom-grid{grid-template-columns:1fr;}
   .live-panel-bots{justify-items:start;text-align:left;}
   .live-orb-row{justify-content:flex-start;}
+  .live-view-mode-form{flex-direction:column;align-items:flex-start;}
 }
 .offroad-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;}
 .offroad-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:8px;}
