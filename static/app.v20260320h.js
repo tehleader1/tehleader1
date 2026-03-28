@@ -3458,6 +3458,8 @@ function setupLiveArena(){
   const composeSendBtn = qs("#liveArenaComposeSendBtn")
   const reelToggle = qs("#toggleLiveConsoleReel")
   const liveConsoleReel = qs("#liveConsoleReel")
+  const conversationPanel = qs("#conversationPanel")
+  const conversationLog = qs("#conversationLog")
   const liveTabFeed = qs("#liveTabFeed")
   const liveTabBooth = qs("#liveTabBooth")
   const liveTabPayments = qs("#liveTabPayments")
@@ -3488,6 +3490,8 @@ function setupLiveArena(){
   let timerLoop = null
   let currentViews = Number(localStorage.getItem(viewsKey) || 220)
   let sessionRole = /[?&]host=1\b/.test(location.search) ? "owner" : ((/[?&]viewer=1\b/.test(location.search) ? "visitor" : (localStorage.getItem(roleKey) || "visitor")))
+  const conversationHomeParent = conversationPanel?.parentElement || null
+  const conversationHomeNext = conversationPanel?.nextElementSibling || null
   if(tagModal) tagModal.hidden = true
   const livePanels = [
     { title:"Main Stream", meta:"Main Session View" },
@@ -3814,6 +3818,10 @@ function setupLiveArena(){
     renderLivePanel()
     refreshRouteMood()
     renderLifeMemorySurface()
+    const liveBottom = shell?.querySelector(".live-panel-bottom")
+    if(conversationPanel && liveBottom && conversationPanel.parentElement !== liveBottom){
+      liveBottom.appendChild(conversationPanel)
+    }
     flashCamera()
     startLiveEnergy()
     updateFloodState()
@@ -3872,6 +3880,13 @@ function setupLiveArena(){
       if(timerLoop){ clearInterval(timerLoop); timerLoop = null }
       document.body.classList.remove("live-console-active")
       document.body.classList.remove("live-jello")
+      if(conversationPanel && conversationHomeParent){
+        if(conversationHomeNext && conversationHomeNext.parentElement === conversationHomeParent){
+          conversationHomeParent.insertBefore(conversationPanel, conversationHomeNext)
+        }else{
+          conversationHomeParent.appendChild(conversationPanel)
+        }
+      }
       openMiniWindow("Main Console", "Returned to the normal center dashboard.")
     })
   }
@@ -5087,8 +5102,21 @@ function setupStudioMode(){
     shell.classList.remove("booting")
     shell.classList.remove("ready")
     shell.setAttribute("aria-hidden", "true")
+    shell.style.display = "none"
     state.activeAssistant = "aria"
     applyAssistantUI(true)
+    document.body.classList.remove("live-jello")
+    const appRoot = qs("#app")
+    if(appRoot){
+      appRoot.style.filter = "none"
+      appRoot.style.backdropFilter = "none"
+      appRoot.style.opacity = "1"
+    }
+    setTimeout(()=>{
+      shell.style.display = ""
+      const launch = qs("#launchMenu")
+      if(launch) launch.classList.remove("hide")
+    }, 30)
     setActiveTab("post")
     openMiniWindow("SupportRD Main Console", "Returned to ARIA post page.")
   }
