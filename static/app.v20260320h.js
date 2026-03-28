@@ -3454,6 +3454,15 @@ function setupLiveArena(){
   const viewerStatus = qs("#liveArenaViewerStatus")
   const feedIdentity = qs("#liveFeedIdentity")
   const viewerPayBtn = qs("#liveArenaViewerPayBtn")
+  const composeInput = qs("#liveArenaComposeInput")
+  const composeSendBtn = qs("#liveArenaComposeSendBtn")
+  const reelToggle = qs("#toggleLiveConsoleReel")
+  const liveConsoleReel = qs("#liveConsoleReel")
+  const liveTabFeed = qs("#liveTabFeed")
+  const liveTabBooth = qs("#liveTabBooth")
+  const liveTabPayments = qs("#liveTabPayments")
+  const liveTabGPS = qs("#liveTabGPS")
+  const liveTabProfile = qs("#liveTabProfile")
   const flash = qs("#liveCameraFlash")
   const sponsorTagOpenBtn = qs("#sponsorTagOpenBtn")
   const tagModal = qs("#sponsorTagModal")
@@ -3504,6 +3513,35 @@ function setupLiveArena(){
     "Run a clean competition or challenge explanation.",
     "Wrap with next move, brand line, and call to action."
   ]
+  function refreshRouteMood(){
+    const lens = lensSel?.value || "laptop"
+    const filter = filterSel?.value || "direct"
+    const audio = audioSel?.value || "mic"
+    const device = deviceSel?.value || "camera"
+    const mode = modeSel?.value || "solo"
+    let line = "How may I serve you?"
+    if(lens === "laptop"){
+      line = "Casual: How are you feeling in this beautiful day? I can guide you into posting, payments, or the booth."
+    }else if(lens === "group"){
+      line = "Group route: who just stepped in with you? I can keep the whole room moving together."
+    }else if(lens === "wilderness"){
+      line = "Emergency hair problem? What happened to your hair? Do a quick scan so I can recommend the best services or medical direction."
+    }else if(lens === "desktop"){
+      line = "Professional: How are you looking today for that pro look? I can sharpen your content and service lane."
+    }else if(lens === "sport"){
+      line = "Extreme route: keep the energy up and let me guide the page while you move fast."
+    }else if(lens === "work"){
+      line = "Work route: keep it purposeful and let me keep your session clean and service-ready."
+    }
+    if(assistantPromptText) assistantPromptText.textContent = line
+    if(botBadge) botBadge.textContent = lens === "wilderness" ? "Aria Scan Ready" : (lens === "desktop" ? "Jake Pro Ready" : "ARIA Ready")
+    if(botStatus){
+      botStatus.textContent = `${line} Device ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · Audio ${audioSel?.selectedOptions?.[0]?.textContent || "Mic"} · Filter ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · Route ${modeSel?.selectedOptions?.[0]?.textContent || "Personal Route"}.`
+    }
+    if(mainStream && livePanelIndex === 0){
+      mainStream.textContent = `${line} Device ${deviceSel?.selectedOptions?.[0]?.textContent || "Camera"} · Audio ${audioSel?.selectedOptions?.[0]?.textContent || "Mic"} · Filter ${filterSel?.selectedOptions?.[0]?.textContent || "Direct"} · Route ${modeSel?.selectedOptions?.[0]?.textContent || "Personal Route"}.`
+    }
+  }
   const loadMap = {
     "solo": {seconds: 6, label: "1-minute style setup"},
     "street": {seconds: 8, label: "2-minute style setup"},
@@ -3774,6 +3812,7 @@ function setupLiveArena(){
     if(mission) mission.textContent = "SupportRD is an innocent company out of Dominican Republic and United States. We deliver solutions to the health of your hair. Period. We are on a mission."
     if(feedIdentity) feedIdentity.textContent = `Feed running under ${getFeedHandle()}`
     renderLivePanel()
+    refreshRouteMood()
     renderLifeMemorySurface()
     flashCamera()
     startLiveEnergy()
@@ -3857,10 +3896,27 @@ function setupLiveArena(){
       openMiniWindow("Feed Select", "Choose checked feeds in Settings / socials before sending the live post blast.")
     })
   }
+  composeSendBtn?.addEventListener("click", ()=>{
+    const text = (composeInput?.value || "").trim()
+    if(!text){
+      openMiniWindow("Original Post", "Type what is on your mind first so we can send the original post cleanly.")
+      return
+    }
+    const post = qs("#postInput")
+    if(post) post.value = text
+    if(mainStream && livePanelIndex === 0) mainStream.textContent = `Original post ready for ${getFeedHandle()}: ${text}`
+    liveComments.unshift(`Original post drafted for ${getFeedHandle()}.`)
+    liveComments.splice(3)
+    bumpViews(40)
+    bumpDayStat("files", 1)
+    openMiniWindow("Original Post", "Your original post is staged for social media and mirrored into the main post lane.")
+  })
   if(postBtn){
     postBtn.addEventListener("click", ()=>{
+      const drafted = (composeInput?.value || "").trim()
+      const finalText = drafted || `LIVE SUPPORT RD · ${modeSel?.selectedOptions?.[0]?.textContent || "Personal Route"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
       const post = qs("#postInput")
-      if(post) post.value = `LIVE SUPPORT RD · ${modeSel?.selectedOptions?.[0]?.textContent || "Personal Route"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
+      if(post) post.value = finalText
       flashCamera()
       bumpViews(120)
       bumpDayStat("files", 1)
@@ -3871,6 +3927,11 @@ function setupLiveArena(){
       if(livePanelIndex === 1) renderLivePanel()
     })
   }
+  reelToggle?.addEventListener("click", ()=>{
+    if(!liveConsoleReel) return
+    liveConsoleReel.classList.toggle("hidden")
+    reelToggle.textContent = liveConsoleReel.classList.contains("hidden") ? "Show" : "Hide"
+  })
   if(floodBtn){
     floodBtn.addEventListener("click", ()=>{
       if(currentViews < 1000){
@@ -3970,6 +4031,7 @@ function setupLiveArena(){
       updateRefBot()
       if(profileStatus) profileStatus.textContent = `Host profile ready · ${lensSel?.selectedOptions?.[0]?.textContent || "Lens"} · ${audioSel?.selectedOptions?.[0]?.textContent || "Audio"}`
       if(feedIdentity) feedIdentity.textContent = `Feed running under ${getFeedHandle()}`
+      refreshRouteMood()
     })
   })
   agreementAcceptBtn?.addEventListener("click", ()=>{
@@ -3995,6 +4057,26 @@ function setupLiveArena(){
     liveComments.splice(3)
     if(livePanelIndex === 1) renderLivePanel()
     openMiniWindow("Heart Sent", `A heart was sent to ${getFeedHandle()} and the live feed feels more supported.`)
+  })
+  liveTabFeed?.addEventListener("click", ()=>{
+    qs("#liveArenaMainStream")?.scrollIntoView({behavior:"smooth", block:"center"})
+    openMiniWindow("Main Feed", "Main feed is centered and ready.")
+  })
+  liveTabBooth?.addEventListener("click", ()=>{
+    if(typeof window.openStudioMode === "function") window.openStudioMode()
+  })
+  liveTabPayments?.addEventListener("click", ()=>{
+    openModal("subscriptionModal")
+    openMiniWindow("Payments", "Product purchase and payment lanes are open.")
+  })
+  liveTabGPS?.addEventListener("click", ()=>{
+    if(typeof setActiveTab === "function") setActiveTab("gps")
+    qs("#tab-gps")?.scrollIntoView({behavior:"smooth", block:"center"})
+    openMiniWindow("GPS", "GPS panel is open and ready.")
+  })
+  liveTabProfile?.addEventListener("click", ()=>{
+    openModal("settingsModal")
+    openMiniWindow("Profile", "Personal settings and profile links are open.")
   })
   shell?.addEventListener("click", (e)=>{
     const card = e.target instanceof Element ? e.target.closest(".live-panel-controls, .live-camera-card, .live-content-wizard, .quick-block, .live-panel-bots, .live-aria-history") : null
@@ -4025,6 +4107,7 @@ function setupLiveArena(){
   syncTimers()
   setViewerMode()
   renderLivePanel()
+  refreshRouteMood()
   setTimeout(()=>{
     if(overlay?.hidden !== false || shell?.hidden !== false){
       openLiveShell()
@@ -4458,12 +4541,12 @@ function setupLaunchMenu(){
         launchStudio()
       }
       if(action === "brochure"){
-        const brochureBtn = qs("#openBrochureFloat")
-        if(brochureBtn) brochureBtn.click()
+        openModal("brochureModal")
+        openMiniWindow("Brochure", "SupportRD brochure opened from the launch menu.")
       }
       if(action === "gift"){
-        const giftBtn = qs("#menuGift")
-        if(giftBtn) giftBtn.click()
+        openModal("giftModal")
+        openMiniWindow("Gift Shop", "Referral gifts and custom-order gift options are open.")
       }
       if(action === "satellite"){ openMiniWindow("Satellite Watch", "We can stage alerts and contact routing. For emergency launch updates, keep your admin contact active.") }
       if(action === "enter"){
@@ -5038,12 +5121,14 @@ function setupFloatMode(){
   const assistantStatus = qs("#floatAssistantStatus")
   const deviceStatus = qs("#floatDeviceStatus")
   const settingsStatus = qs("#floatSettingsStatus")
+  const liveStatus = qs("#floatLiveStatus")
   const profileName = qs("#floatProfileName")
   const profileMeta = qs("#floatProfileMeta")
   const mapBtn = qs("#floatMapBtn")
   const themeBtn = qs("#floatThemeBtn")
   const paymentBtn = qs("#floatPaymentBtn")
   const cameraBtn = qs("#floatCameraBtn")
+  const profilePostInput = qs("#floatProfilePostInput")
   if(!shell) return
 
   function syncProfile(){
@@ -5100,17 +5185,67 @@ function setupFloatMode(){
   qsa(".float-board").forEach(btn => btn.addEventListener("click", ()=>setActiveBoard(btn)))
   qs("#floatBoardAddBtn")?.addEventListener("click", ()=>openMiniWindow("Motherboards", "Float Mode keeps three motherboards by default, with room to grow when needed."))
   qs("#floatBoardEditBtn")?.addEventListener("click", ()=>openMiniWindow("Edit Motherboard", "Pick the active motherboard and tighten the piece of work you are building."))
-  qs("#floatRecordBtn")?.addEventListener("click", ()=>openMiniWindow("Record", "Record stays lowkey center in Float Mode so the page feels like a personal remote."))
+  qs("#floatRecordBtn")?.addEventListener("click", ()=>{
+    if(liveStatus) liveStatus.textContent = "Fast view edit active. You are staging a music/video piece here and can go to Studio for deeper cuts."
+    openMiniWindow("Record", "Fast view edit is active. Build the quick music/video piece here, then jump to Studio for deeper edits.")
+  })
   qs("#floatDeleteBtn")?.addEventListener("click", ()=>openMiniWindow("Delete", "Delete the current highlighted piece quickly and keep moving."))
   qs("#floatPostBtn")?.addEventListener("click", ()=>qs("#liveArenaPostBtn")?.click())
   qs("#floatBreakBtn")?.addEventListener("click", ()=>qs("#liveArenaBreakBtn")?.click())
-  mapBtn?.addEventListener("click", ()=>qs("#unlockViewsBtnLive")?.click())
+  qs("#floatQuickEditBtn")?.addEventListener("click", ()=>{
+    if(liveStatus) liveStatus.textContent = "Quick edit view loaded. Trim the idea here, then move to Studio for in-depth edits."
+    openMiniWindow("Quick Edit", "Quick edit view is ready for your current music/video piece.")
+  })
+  qs("#floatStudioDeepBtn")?.addEventListener("click", ()=>{
+    if(typeof window.openStudioMode === "function"){
+      closeFloat()
+      window.openStudioMode()
+    }else{
+      openMiniWindow("Studio", "Studio mode is getting ready for deeper edits.")
+    }
+  })
+  mapBtn?.addEventListener("click", ()=>{
+    if(typeof window.openWorldMapPanel === "function"){
+      window.openWorldMapPanel()
+      if(settingsStatus) settingsStatus.textContent = "Map change panel opened. Choose the background route you want."
+    }else{
+      qs("#unlockViewsBtnLive")?.click()
+    }
+  })
   themeBtn?.addEventListener("click", ()=>{
-    qs("#themeNextSide")?.click()
-    if(settingsStatus) settingsStatus.textContent = "Theme changed. Caribbean brochure lightness is floating through the page."
+    if(typeof window.openWorldMapPanel === "function"){
+      window.openWorldMapPanel()
+      if(settingsStatus) settingsStatus.textContent = "Theme / map chooser opened in-page instead of moving Float Mode around."
+    }
   })
   paymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
   cameraBtn?.addEventListener("click", ()=>qs("#liveArenaCameraAccessBtn")?.click())
+  qs("#floatAriaBtn")?.addEventListener("dblclick", ()=>{
+    if(typeof window.startAriaListening === "function") window.startAriaListening()
+  })
+  qs("#floatJakeBtn")?.addEventListener("dblclick", ()=>{
+    if(typeof window.openStudioMode === "function"){
+      closeFloat()
+      window.openStudioMode()
+    }
+  })
+  qs("#floatProfileSendBtn")?.addEventListener("click", ()=>{
+    const text = (profilePostInput?.value || "").trim()
+    const post = qs("#postInput")
+    if(!text){
+      openMiniWindow("Profile Post", "Write a quick profile update first so we can send it to socials.")
+      return
+    }
+    if(post) post.value = text
+    qs("#liveArenaComposeInput") && (qs("#liveArenaComposeInput").value = text)
+    openMiniWindow("Profile Post", "Profile update sent into the main social post lane.")
+  })
+  qs("#floatAriaBtn")?.addEventListener("click", ()=>{
+    openMiniWindow("Aria Remote", "Aria is holding the live post side in Float Mode. Tap again or double tap to talk.")
+  })
+  qs("#floatJakeBtn")?.addEventListener("click", ()=>{
+    openMiniWindow("Jake Remote", "Jake is holding the studio side in Float Mode. Tap again or double tap to jump deeper.")
+  })
   window.addEventListener("message", (event)=>{
     if(event?.data?.type === "open-float-mode") openFloat()
   })
@@ -6410,6 +6545,7 @@ const WORLD_VIEWS = [
       if(meta) meta.textContent = `${view.label} Action`
       openMiniWindow(view.label, action.detail)
     })
+    window.openWorldMapPanel = openWorldMap
   }
 
 function setupDashboardSweep(){

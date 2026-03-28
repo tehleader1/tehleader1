@@ -1061,21 +1061,36 @@ body.launch-active #app{display:none;}
 .live-console-active .live-arena-overlay{
   position:fixed;
   left:50%;
-  top:118px;
-  transform:translateX(-50%);
-  width:min(760px, calc(100vw - 320px));
+  top:50%;
+  transform:translate(-50%, -50%);
+  width:min(1120px, calc(100vw - 40px));
   margin-top:0;
+  max-height:calc(100vh - 34px);
+  overflow:auto;
   z-index:720;
 }
 .live-arena-shell{display:grid;gap:12px;}
+.live-console-layout{
+  display:grid;
+  grid-template-columns:minmax(220px, 250px) minmax(0, 1fr);
+  gap:18px;
+  align-items:start;
+}
+.live-top-tabs{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+  padding:12px;
+  border-radius:18px;
+}
+.live-console-reel{
+  position:sticky;
+  top:8px;
+  align-self:start;
+}
 .live-console-active #reelPanel{
-  position:fixed;
-  left:max(10px, calc(50vw - 640px));
-  top:118px;
-  width:220px !important;
-  max-width:220px !important;
-  margin:0 !important;
-  z-index:710;
+  display:none !important;
 }
 .live-arena-shell.live-energized .glass,
 .live-arena-shell.live-energized .live-main-stream,
@@ -1110,6 +1125,30 @@ body.launch-active #app{display:none;}
 }
 .live-arena-actions{display:flex;gap:8px;flex-wrap:wrap;}
 .live-camera-card{position:relative;flex:1;min-width:320px;padding:16px;border-radius:18px;overflow:hidden;}
+.live-compose-box{
+  margin-bottom:12px;
+  padding:12px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);
+}
+.live-compose-box textarea{
+  width:100%;
+  min-height:72px;
+  margin-top:8px;
+  padding:12px;
+  border:none;
+  outline:none;
+  resize:vertical;
+  border-radius:14px;
+  background:rgba(9,17,30,.68);
+  color:#fff;
+}
+.live-compose-actions{
+  margin-top:10px;
+  display:flex;
+  justify-content:flex-end;
+}
 .live-camera-window{
   min-height:240px;border-radius:18px;margin-top:12px;padding:16px;
   display:flex;align-items:flex-end;
@@ -1580,6 +1619,9 @@ body.launch-active #app{display:none;}
   50%{transform:scale(1.06);box-shadow:0 0 24px rgba(104,166,255,.42);}
 }
 @media (max-width:980px){
+  .live-console-layout{grid-template-columns:1fr;}
+  .live-console-reel{position:static;}
+  .live-top-tabs{justify-content:flex-start;}
   .live-panel-top,
   .live-panel-center,
   .live-panel-grid,
@@ -2572,6 +2614,7 @@ body.competition-world .bg-layers::before{
   display:grid;
   gap:14px;
 }
+.float-live-body{display:grid;gap:12px;}
 .float-box-head{
   display:flex;
   justify-content:space-between;
@@ -2677,6 +2720,17 @@ body.competition-world .bg-layers::before{
 .float-profile-lines strong{font-size:20px;color:#fff;}
 .float-profile-lines span{color:rgba(238,246,255,.88);}
 .float-box-copy{font-size:13px;line-height:1.55;color:rgba(235,245,255,.9);}
+#floatProfilePostInput{
+  width:100%;
+  min-height:72px;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  outline:none;
+  resize:vertical;
+}
 .remote-fastpay-modal[hidden]{display:none !important;}
 .remote-fastpay-modal{
   position:fixed;
@@ -2845,8 +2899,8 @@ body.competition-world .bg-layers::before{
 @media (max-width: 980px){
   .float-mode-grid{grid-template-columns:1fr 1fr;}
   .remote-fastpay-scanner{grid-template-columns:1fr;}
-  .live-console-active .live-arena-overlay{width:min(92vw, 720px);left:50%;transform:translateX(-50%);}
-  .live-console-active #reelPanel{left:8px;top:118px;width:180px !important;max-width:180px !important;}
+  .live-console-active .live-arena-overlay{width:min(96vw, 980px);left:50%;transform:translateX(-50%);}
+  .live-console-active #reelPanel{display:none !important;}
 }
 @media (max-width: 700px){
   .float-mode-top{margin:10px;padding:14px;border-radius:22px;display:grid;}
