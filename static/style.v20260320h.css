@@ -1063,16 +1063,16 @@ body.launch-active #app{display:none;}
   left:auto;
   top:auto;
   transform:none;
-  width:min(1450px, calc(100vw - 24px));
-  margin:18px auto 28px;
+  width:min(1320px, calc(100vw - 48px));
+  margin:4px auto 20px;
   max-height:none;
   overflow:visible;
   z-index:720;
 }
 .live-console-active #centerStage{
-  width:min(1480px, calc(100vw - 24px)) !important;
+  width:min(1360px, calc(100vw - 48px)) !important;
   max-width:none !important;
-  margin:0 auto !important;
+  margin:-6px auto 0 !important;
   overflow:visible;
 }
 .live-arena-shell{display:grid;gap:12px;}
@@ -1308,6 +1308,41 @@ body.launch-active #app{display:none;}
   gap:14px;
   align-items:stretch;
 }
+.live-content-wizard[hidden]{display:none !important;}
+.live-feed-panel-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:10px;
+}
+.live-feed-settings-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-top:10px;
+}
+.feed-check-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-top:12px;
+  color:#dce9fb;
+}
+.feed-check-grid label{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  padding:10px 12px;
+  border-radius:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+}
+.live-feed-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:14px;
+}
 .live-content-grid,.live-bottom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
 .live-bottom-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
 .live-main-stream,.live-content-wizard{
@@ -1396,6 +1431,24 @@ body.launch-active #app{display:none;}
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:12px;
+}
+.quick-open-btn{
+  margin-top:12px;
+}
+.gift-amount-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-top:12px;
+}
+.settings-account-summary{
+  grid-column:1 / -1;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(9,16,28,.5);
+  color:#eef4ff;
+  line-height:1.5;
 }
 .viewer-mode .live-center-actions .btn,
 .viewer-mode .live-center-subactions .btn,
@@ -3049,6 +3102,9 @@ body.competition-world .bg-layers::before{
   .float-mode-grid{grid-template-columns:1fr 1fr;}
   .live-console-active .live-arena-overlay,
   .live-console-active #reelPanel{position:static;width:auto !important;max-width:none !important;transform:none;}
+  .live-feed-settings-grid,
+  .feed-check-grid,
+  .gift-amount-grid{grid-template-columns:1fr;}
 }
 
 .launch-main-actions{

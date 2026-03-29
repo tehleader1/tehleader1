@@ -478,11 +478,33 @@
                 </div>
                 <div class="live-map-actions" id="liveMapActions"></div>
               </div>
-              <div class="live-content-wizard glass">
-                <div class="live-stream-title">Resume Route</div>
-                <div class="system-sub" id="liveArenaContentStatus">7-step resume route. This appears every 30 minutes to keep the session active.</div>
-                <div class="live-content-list" id="liveArenaContentList"></div>
-                <button class="btn live-next-btn" id="liveArenaNextBtn">Next</button>
+              <div class="live-content-wizard glass" id="liveFeedPanel" hidden>
+                <div class="live-feed-panel-head">
+                  <div>
+                    <div class="live-stream-title">Select Feeds</div>
+                    <div class="system-sub" id="liveArenaContentStatus">Save your social media links, choose where this session posts, and keep tags ready for clean posting.</div>
+                  </div>
+                  <button class="btn ghost" id="closeLiveFeedPanel">X</button>
+                </div>
+                <div class="live-feed-settings-grid">
+                  <input id="liveFeedInstagram" class="input" placeholder="Instagram link">
+                  <input id="liveFeedTikTok" class="input" placeholder="TikTok link">
+                  <input id="liveFeedFacebook" class="input" placeholder="Facebook link">
+                  <input id="liveFeedYouTube" class="input" placeholder="YouTube link">
+                  <input id="liveFeedX" class="input" placeholder="X / Twitter link">
+                  <input id="liveFeedThreads" class="input" placeholder="Threads link">
+                </div>
+                <div class="feed-check-grid">
+                  <label><input type="checkbox" id="livePostIG"> Post to Instagram</label>
+                  <label><input type="checkbox" id="livePostTikTok"> Post to TikTok</label>
+                  <label><input type="checkbox" id="livePostFacebook"> Post to Facebook</label>
+                  <label><input type="checkbox" id="livePostYouTube"> Post to YouTube</label>
+                  <label><input type="checkbox" id="livePostX"> Post to X</label>
+                  <label><input type="checkbox" id="livePostThreads"> Post to Threads</label>
+                </div>
+                <div class="live-feed-actions">
+                  <button class="btn" id="saveLiveFeedPanel">Save Social Media Links</button>
+                </div>
               </div>
             </div>
             <div class="live-panel-bottom">
@@ -490,14 +512,17 @@
                 <div class="quick-block">
                   <div class="quick-title">Profile / Group</div>
                   <div class="system-sub" id="liveArenaProfileStatus">Profile of the streamer or group appears here.</div>
+                  <button class="btn ghost quick-open-btn" id="openLiveProfileBtn">Open Profile</button>
                 </div>
                 <div class="quick-block">
                   <div class="quick-title">Sponsors / Audience / Quick Tips</div>
                   <div class="system-sub" id="liveArenaSponsorStatus">Current sponsors, general audience, and quick stream tips appear here.</div>
+                  <button class="btn ghost quick-open-btn" id="openGiftGiverBtn">Gift Giver</button>
                 </div>
                 <div class="quick-block">
                   <div class="quick-title">Glitch To Codex</div>
                   <div class="system-sub" id="liveArenaGlitchStatus">If stream money or match issues appear, this lane gathers a clean developer handoff for Codex.</div>
+                  <button class="btn ghost quick-open-btn" id="openGlitchHelpBtn">Get Help</button>
                 </div>
               </div>
               <div class="live-aria-history glass">
@@ -535,6 +560,23 @@
           <div class="live-tag-actions">
             <button class="btn ghost" id="liveAgreementLaterBtn">Later</button>
             <button class="btn" id="liveAgreementAcceptBtn">Accept Agreement</button>
+          </div>
+        </div>
+      </div>
+      <div class="live-tag-modal" id="liveGiftModal" hidden>
+        <div class="live-tag-card glass">
+          <div class="live-tag-kicker">Gift Giver</div>
+          <div class="system-title">Support This Session</div>
+          <div class="system-sub" id="liveGiftSummary">Choose an amount to support this session. Gift support appears in the session balance and purchase history.</div>
+          <div class="gift-amount-grid">
+            <button class="btn ghost" data-gift-amount="5">$5</button>
+            <button class="btn ghost" data-gift-amount="10">$10</button>
+            <button class="btn ghost" data-gift-amount="25">$25</button>
+            <button class="btn ghost" data-gift-amount="50">$50</button>
+          </div>
+          <div class="live-tag-actions">
+            <button class="btn ghost" id="closeLiveGiftBtn">Close</button>
+            <button class="btn" id="openLiveGiftCheckout">Open Checkout</button>
           </div>
         </div>
       </div>
@@ -1383,6 +1425,7 @@
       <button class="btn ghost" id="closeSettings">Close</button>
     </div>
     <div class="settings-grid">
+      <div id="settingsAccountSummary" class="settings-account-summary">Logged out · no saved account activity yet.</div>
       <input id="setName" placeholder="Name">
       <input id="setEmail" placeholder="Email">
       <input id="setPhone" placeholder="Phone">

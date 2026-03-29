@@ -3489,7 +3489,12 @@ function setupLiveArena(){
   let energyTimer = null
   let timerLoop = null
   let currentViews = Number(localStorage.getItem(viewsKey) || 220)
-  let sessionRole = /[?&]host=1\b/.test(location.search) ? "owner" : ((/[?&]viewer=1\b/.test(location.search) ? "visitor" : (localStorage.getItem(roleKey) || "visitor")))
+  const hasSavedAccount = !!localStorage.getItem("loggedIn") || !!localStorage.getItem("socialLinks")
+  let sessionRole = /[?&]host=1\b/.test(location.search)
+    ? "owner"
+    : ((/[?&]viewer=1\b/.test(location.search)
+      ? "visitor"
+      : (localStorage.getItem(roleKey) || (hasSavedAccount ? "owner" : "visitor"))))
   const conversationHomeParent = conversationPanel?.parentElement || null
   const conversationHomeNext = conversationPanel?.nextElementSibling || null
   if(tagModal) tagModal.hidden = true
@@ -3677,6 +3682,37 @@ function setupLiveArena(){
       mainStream.textContent = liveJoiners.join("\n")
     }
   }
+  function openFeedPanel(){
+    const panel = qs("#liveFeedPanel")
+    if(!panel) return
+    const saved = state.socialLinks || {}
+    const feeds = saved.feeds || {}
+    const map = {
+      liveFeedInstagram: saved.ig || "",
+      liveFeedTikTok: saved.tiktok || "",
+      liveFeedFacebook: saved.fb || "",
+      liveFeedYouTube: saved.yt || "",
+      liveFeedX: saved.x || "",
+      liveFeedThreads: saved.threads || ""
+    }
+    Object.entries(map).forEach(([id, value])=>{ const el = qs(`#${id}`); if(el) el.value = value })
+    const checks = {
+      livePostIG: !!feeds.ig,
+      livePostTikTok: !!feeds.tiktok,
+      livePostFacebook: !!feeds.fb,
+      livePostYouTube: !!feeds.yt,
+      livePostX: !!feeds.x,
+      livePostThreads: !!feeds.threads
+    }
+    Object.entries(checks).forEach(([id, value])=>{ const el = qs(`#${id}`); if(el) el.checked = value })
+    panel.hidden = false
+    panel.scrollIntoView({behavior:"smooth", block:"center"})
+    updatePromptForFocus("support")
+  }
+  function closeFeedPanel(){
+    const panel = qs("#liveFeedPanel")
+    if(panel) panel.hidden = true
+  }
   function updatePromptForFocus(target){
     if(!assistantPromptText) return
     const prompts = {
@@ -3725,6 +3761,16 @@ function setupLiveArena(){
     stats[key] = Number(stats[key] || 0) + amount
     writeDayStats(stats)
     syncTimers()
+  }
+  function recordRecentView(label){
+    const list = JSON.parse(localStorage.getItem("supportrdRecentViews") || "[]")
+    list.unshift({label, at:new Date().toISOString()})
+    localStorage.setItem("supportrdRecentViews", JSON.stringify(list.slice(0,12)))
+  }
+  function recordPurchaseHistory(label, amount){
+    const list = JSON.parse(localStorage.getItem("supportrdPurchaseHistory") || "[]")
+    list.unshift({label, amount, at:new Date().toISOString(), handle:getFeedHandle()})
+    localStorage.setItem("supportrdPurchaseHistory", JSON.stringify(list.slice(0,12)))
   }
   function updateRefBot(){
     const mode = modeSel?.value || "solo"
@@ -3829,6 +3875,7 @@ function setupLiveArena(){
     syncHearts()
     syncAssistantHistory()
     syncTimers()
+    recordRecentView("Main Console")
     scheduleContentPrompt()
     maybeTriggerResumePrompt(false)
     if(agreementModal && localStorage.getItem(agreementKey) !== "yes") agreementModal.hidden = false
@@ -3894,6 +3941,8 @@ function setupLiveArena(){
     breakBtn.addEventListener("click", ()=>{
       if(mainStream) mainStream.textContent = "Break mode active. Stream pending at console level while the host handles family, fixes, or technical pause."
       if(glitchStatus) glitchStatus.textContent = "Pending state active. Use pure assistance mode if the camera is not working, a payment feature is not working, or the stream needs a clean Codex handoff."
+      if(panelTitle) panelTitle.textContent = "Break Mode"
+      closeFeedPanel()
       openMiniWindow("Break Mode", "Stream is in pending state for a technical or personal pause.")
     })
   }
@@ -3908,9 +3957,36 @@ function setupLiveArena(){
   }
   if(feedBtn){
     feedBtn.addEventListener("click", ()=>{
-      openMiniWindow("Feed Select", "Choose checked feeds in Settings / socials before sending the live post blast.")
+      openFeedPanel()
+      openMiniWindow("Feed Select", "Select Feeds is open. Save your social links, choose your posting destinations, then send the session cleanly.")
     })
   }
+  qs("#closeLiveFeedPanel")?.addEventListener("click", closeFeedPanel)
+  qs("#saveLiveFeedPanel")?.addEventListener("click", ()=>{
+    state.socialLinks = state.socialLinks || {}
+    state.socialLinks.ig = qs("#liveFeedInstagram")?.value.trim() || ""
+    state.socialLinks.tiktok = qs("#liveFeedTikTok")?.value.trim() || ""
+    state.socialLinks.fb = qs("#liveFeedFacebook")?.value.trim() || ""
+    state.socialLinks.yt = qs("#liveFeedYouTube")?.value.trim() || ""
+    state.socialLinks.x = qs("#liveFeedX")?.value.trim() || ""
+    state.socialLinks.threads = qs("#liveFeedThreads")?.value.trim() || ""
+    state.socialLinks.feeds = {
+      ig: !!qs("#livePostIG")?.checked,
+      tiktok: !!qs("#livePostTikTok")?.checked,
+      fb: !!qs("#livePostFacebook")?.checked,
+      yt: !!qs("#livePostYouTube")?.checked,
+      x: !!qs("#livePostX")?.checked,
+      threads: !!qs("#livePostThreads")?.checked
+    }
+    localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+    const indicator = qs("#socialIndicator")
+    if(indicator){
+      const list = Object.keys(state.socialLinks.feeds).filter(k=>state.socialLinks.feeds[k])
+      indicator.textContent = list.length ? `Feeds: ${list.map(x=>x[0].toUpperCase()+x.slice(1)).join(", ")}` : "Feeds: none selected"
+    }
+    closeFeedPanel()
+    openMiniWindow("Feeds Saved", "Your social links and feed choices are saved. Tags are ready when you post.")
+  })
   composeSendBtn?.addEventListener("click", ()=>{
     const text = (composeInput?.value || "").trim()
     if(!text){
@@ -3928,6 +4004,8 @@ function setupLiveArena(){
   })
   if(postBtn){
     postBtn.addEventListener("click", ()=>{
+      composeInput?.scrollIntoView({behavior:"smooth", block:"center"})
+      composeInput?.focus()
       const drafted = (composeInput?.value || "").trim()
       const finalText = drafted || `LIVE SUPPORT RD · ${modeSel?.selectedOptions?.[0]?.textContent || "Personal Route"} · ${lensSel?.selectedOptions?.[0]?.textContent || "Personal Laptop"} · Sponsor lane active · Hair health mission active.`
       const post = qs("#postInput")
@@ -3938,7 +4016,7 @@ function setupLiveArena(){
       liveComments.unshift(`Receiver comment: fresh post blast went out for ${lensSel?.selectedOptions?.[0]?.textContent || "this route"}.`)
       liveComments.splice(3)
       updatePromptForFocus("stream")
-      openMiniWindow("Post Blast", "Laser post effect fired. Live post staged for checked social channels.")
+      openMiniWindow("Post Blast", "Post is live in the main composer now. Add your text or send the drafted social blast to the saved feeds.")
       if(livePanelIndex === 1) renderLivePanel()
     })
   }
@@ -4061,6 +4139,7 @@ function setupLiveArena(){
   viewerPayBtn?.addEventListener("click", ()=>{
     const handle = getFeedHandle()
     bumpDayStat("money", 35)
+    recordPurchaseHistory("Live Feed Support", 35)
     openMiniWindow("Support This Feed", `${handle} is live. Viewers can support this feed through Shopify checkout while the host stays in control.`)
     openLinkModal(LINKS.pro, `${handle} Live Support Checkout`)
   })
@@ -4074,24 +4153,63 @@ function setupLiveArena(){
     openMiniWindow("Heart Sent", `A heart was sent to ${getFeedHandle()} and the live feed feels more supported.`)
   })
   liveTabFeed?.addEventListener("click", ()=>{
+    recordRecentView("Main Feed")
     qs("#liveArenaMainStream")?.scrollIntoView({behavior:"smooth", block:"center"})
     openMiniWindow("Main Feed", "Main feed is centered and ready.")
   })
   liveTabBooth?.addEventListener("click", ()=>{
+    recordRecentView("Studio")
     if(typeof window.openStudioMode === "function") window.openStudioMode()
   })
   liveTabPayments?.addEventListener("click", ()=>{
+    recordRecentView("Payments")
     openModal("subscriptionModal")
     openMiniWindow("Payments", "Product purchase and payment lanes are open.")
   })
   liveTabGPS?.addEventListener("click", ()=>{
+    recordRecentView("GPS")
     if(typeof setActiveTab === "function") setActiveTab("gps")
     qs("#tab-gps")?.scrollIntoView({behavior:"smooth", block:"center"})
     openMiniWindow("GPS", "GPS panel is open and ready.")
   })
   liveTabProfile?.addEventListener("click", ()=>{
+    recordRecentView("Profile")
     openModal("settingsModal")
     openMiniWindow("Profile", "Personal settings and profile links are open.")
+  })
+  qs("#openLiveProfileBtn")?.addEventListener("click", ()=>{
+    openModal("settingsModal")
+    openMiniWindow("Profile / Group", "Profile settings, email, address, password, and subscription status are open.")
+  })
+  qs("#openGiftGiverBtn")?.addEventListener("click", ()=>{
+    const modal = qs("#liveGiftModal")
+    if(modal) modal.hidden = false
+    openMiniWindow("Gift Giver", "Choose a gift amount to support this session and add it into the host balance lane.")
+  })
+  qs("#closeLiveGiftBtn")?.addEventListener("click", ()=>{
+    const modal = qs("#liveGiftModal")
+    if(modal) modal.hidden = true
+  })
+  qsa("[data-gift-amount]").forEach(btn => btn.addEventListener("click", ()=>{
+    const amount = Number(btn.getAttribute("data-gift-amount") || 0)
+    const wallet = JSON.parse(localStorage.getItem(walletKey) || "{}")
+    wallet.balance = Number(wallet.balance || 0) + amount
+    wallet.lastGift = amount
+    localStorage.setItem(walletKey, JSON.stringify(wallet))
+    const gifts = JSON.parse(localStorage.getItem("supportrdGiftHistory") || "[]")
+    gifts.unshift({amount, handle:getFeedHandle(), at:new Date().toISOString()})
+    localStorage.setItem("supportrdGiftHistory", JSON.stringify(gifts.slice(0,12)))
+    bumpDayStat("money", amount)
+    recordPurchaseHistory("Gift Giver Support", amount)
+    const summary = qs("#liveGiftSummary")
+    if(summary) summary.textContent = `$${amount.toFixed(2)} added to ${getFeedHandle()} session balance. Continue to checkout if you want a clean payment handoff.`
+  }))
+  qs("#openLiveGiftCheckout")?.addEventListener("click", ()=>{
+    openLinkModal(LINKS.pro, `${getFeedHandle()} Gift Support Checkout`)
+  })
+  qs("#openGlitchHelpBtn")?.addEventListener("click", ()=>{
+    if(glitchStatus) glitchStatus.textContent = "Pure assistance mode open: camera, payment, social feed, or studio return glitches can be handed off here for Codex."
+    openMiniWindow("Glitch To Codex", "Pure assistance mode is open. Tell Codex if the camera, payment, select-feeds, or studio return is broken.")
   })
   shell?.addEventListener("click", (e)=>{
     const card = e.target instanceof Element ? e.target.closest(".live-panel-controls, .live-camera-card, .live-content-wizard, .quick-block, .live-panel-bots, .live-aria-history") : null
@@ -4264,6 +4382,17 @@ function isProOverride(){
 function setupSettings(){
   const saved = JSON.parse(localStorage.getItem("socialLinks") || "{}")
   state.socialLinks = saved
+  function renderSettingsAccountSummary(){
+    const accountSummary = qs("#settingsAccountSummary")
+    if(!accountSummary) return
+    const gifts = JSON.parse(localStorage.getItem("supportrdGiftHistory") || "[]")
+    const purchases = JSON.parse(localStorage.getItem("supportrdPurchaseHistory") || "[]")
+    const history = Array.isArray(state.ariaHistory) ? state.ariaHistory : []
+    const wallet = JSON.parse(localStorage.getItem("supportrdWallet") || "{}")
+    const recentViews = JSON.parse(localStorage.getItem("supportrdRecentViews") || "[]")
+    const lastViews = recentViews.slice(0,3).map(item=>item.label).join(", ") || "No recent page views yet"
+    accountSummary.innerHTML = `Logged ${localStorage.getItem("loggedIn")==="true" ? "in" : "out"} · Email: <strong>${saved.email || "not set"}</strong> · Address: <strong>${saved.address || "not set"}</strong><br>Subscription: <strong>${state.subscription || saved.subscription || "free"}</strong> · Next due: <strong>${state.subscriptionNextDue || saved.next_due || "not set"}</strong> · Session balance: <strong>$${Number(wallet.balance || 0).toFixed(2)}</strong><br>Purchase history: <strong>${purchases.length}</strong> · Gift support: <strong>${gifts.length}</strong> · Last 2 Aria lines: <strong>${history.slice(0,2).join(" / ") || "none yet"}</strong><br>Recent page views: <strong>${lastViews}</strong>`
+  }
   state.subscription = "free"
   if(isProOverride()) { state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0; localStorage.setItem('loggedIn','true') }
   setDefaultLevelBySubscription()
@@ -4276,6 +4405,7 @@ function setupSettings(){
   qs("#setAddress").value = saved.address || ""
   qs("#setSubscription").value = isProOverride() ? "Pro (Admin)" : (saved.subscription || "")
   updateSubscriptionSummary(qs("#setSubscription").value || state.subscription || "free", saved)
+  renderSettingsAccountSummary()
   qs("#setCustomOrder").value = saved.customOrder || ""
   qs("#setEvelyn").value = saved.evelyn || ""
   qs("#setIG").value = saved.ig || ""
@@ -4362,6 +4492,7 @@ function setupSettings(){
         setDefaultLevelBySubscription()
         refreshDealUnlock()
         updateSubscriptionSummary(state.subscription || state.socialLinks.subscription || "free", state.socialLinks)
+        renderSettingsAccountSummary()
         toast("Settings saved")
       const indicator = qs("#socialIndicator")
       if(indicator){
