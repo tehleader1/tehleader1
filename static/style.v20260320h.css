@@ -2587,6 +2587,75 @@ body.competition-world .bg-layers::before{
   gap:18px;
   align-items:flex-start;
 }
+.float-mode-launch{
+  margin:0 18px 14px;
+  padding:16px;
+  border-radius:28px;
+  display:grid;
+  grid-template-columns:repeat(6, minmax(0, 1fr));
+  gap:10px;
+  position:relative;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 24px 46px rgba(11,32,64,.18);
+}
+.float-mode-launch::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 12% 20%, rgba(144,224,239,.16), transparent 24%),
+    radial-gradient(circle at 82% 26%, rgba(255,214,102,.12), transparent 20%),
+    linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+  pointer-events:none;
+}
+.float-launch-btn{
+  min-height:66px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.18);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,.08)),
+    linear-gradient(135deg, rgba(116,179,255,.18), rgba(13,31,58,.12));
+  color:#eef7ff;
+  font-size:16px;
+  font-weight:700;
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  position:relative;
+  z-index:1;
+  letter-spacing:.02em;
+  text-align:center;
+  padding:10px 12px;
+}
+.float-launch-btn:hover,
+.float-launch-btn:focus-visible{
+  transform:translateY(-2px);
+  box-shadow:0 14px 28px rgba(23,87,205,.18);
+  border-color:rgba(146,197,255,.55);
+  outline:none;
+}
+.float-launch-btn::before{
+  content:"";
+  position:absolute;
+  top:10px;
+  left:12px;
+  width:26px;
+  height:8px;
+  border-radius:999px;
+  background:linear-gradient(90deg, rgba(255,255,255,.72), rgba(255,255,255,.12));
+  opacity:.72;
+}
+.float-launch-btn::after{
+  content:"";
+  position:absolute;
+  right:12px;
+  bottom:12px;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(157,233,255,.95), rgba(157,233,255,.18));
+  box-shadow:0 0 18px rgba(157,233,255,.42);
+}
 .float-mode-kicker{
   font-size:11px;
   letter-spacing:.3em;
@@ -2625,6 +2694,13 @@ body.competition-world .bg-layers::before{
   display:grid;
   gap:14px;
 }
+.float-box-focus{
+  box-shadow:0 0 0 2px rgba(133,206,255,.42), 0 28px 48px rgba(11,32,64,.28);
+  transform:translateY(-2px);
+}
+.float-box-head span:first-child{
+  font-weight:800;
+}
 .float-live-body{display:grid;gap:12px;}
 .float-box-head{
   display:flex;
@@ -2641,6 +2717,7 @@ body.competition-world .bg-layers::before{
   background:rgba(255,255,255,.12);
   border:1px solid rgba(255,255,255,.18);
   font-size:10px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
 }
 .float-live-body{align-content:center;}
 .float-record-btn{
@@ -2694,6 +2771,42 @@ body.competition-world .bg-layers::before{
   cursor:pointer;
 }
 .float-board-list{display:grid;grid-template-columns:1fr;gap:10px;}
+.float-upload-strip,
+.float-transport-strip{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.float-board-editor{
+  display:grid;
+  gap:12px;
+  padding:14px;
+  border-radius:20px;
+  background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.12);
+}
+.float-board-preview{
+  min-height:120px;
+  border-radius:18px;
+  padding:14px;
+  border:1px solid rgba(125,215,255,.22);
+  background:linear-gradient(180deg, rgba(9,17,30,.8), rgba(13,29,44,.7));
+  color:#eef7ff;
+  line-height:1.55;
+  white-space:pre-line;
+}
+.float-trim-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.float-trim-row label{
+  display:grid;
+  gap:6px;
+  font-size:12px;
+  color:#dce9fb;
+}
+.float-trim-row input{width:100%;}
 .float-board{
   min-height:64px;
   border-radius:18px;
@@ -2909,15 +3022,18 @@ body.competition-world .bg-layers::before{
 }
 @media (max-width: 980px){
   .float-mode-grid{grid-template-columns:1fr 1fr;}
+  .float-mode-launch{grid-template-columns:repeat(3, minmax(0, 1fr));}
   .remote-fastpay-scanner{grid-template-columns:1fr;}
   .live-console-active .live-arena-overlay{width:min(96vw, 980px);margin:12px auto 20px;}
   .live-console-active #reelPanel{display:none !important;}
 }
 @media (max-width: 700px){
   .float-mode-top{margin:10px;padding:14px;border-radius:22px;display:grid;}
+  .float-mode-launch{margin:0 10px 10px;padding:10px;grid-template-columns:1fr 1fr;}
   .float-mode-grid{grid-template-columns:1fr;padding:0 10px 10px;}
   .float-box{min-height:auto;}
   .float-mini-actions,.float-big-buttons,.float-assistant-stage{grid-template-columns:1fr 1fr;}
+  .float-upload-strip,.float-transport-strip,.float-trim-row{grid-template-columns:1fr;}
   .remote-product-actions{grid-template-columns:1fr;}
   .remote-fastpay-head{flex-direction:column;}
   .remote-fastpay-confirm-actions{grid-template-columns:1fr;}
@@ -2928,6 +3044,8 @@ body.competition-world .bg-layers::before{
   #floatDeviceBox,
   #floatBoardsBox,
   #floatSettingsBox{grid-column:auto;}
+  .float-launch-btn{min-height:62px;font-size:15px;}
+  .float-launch-btn::before{width:22px;}
   .float-mode-grid{grid-template-columns:1fr 1fr;}
   .live-console-active .live-arena-overlay,
   .live-console-active #reelPanel{position:static;width:auto !important;max-width:none !important;transform:none;}

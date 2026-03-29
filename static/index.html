@@ -1663,19 +1663,27 @@
 
 <div id="floatModeShell" class="float-mode-shell" hidden aria-hidden="true">
   <div class="float-mode-backdrop"></div>
-  <div class="float-mode-top glass">
-    <div>
-      <div class="float-mode-kicker">SupportRD Personal Remote</div>
-      <h2>Float Mode</h2>
-      <p>Lightweight Caribbean motion with big-button control for live streaming, instruments, profile, maps, and recorded work.</p>
+    <div class="float-mode-top glass">
+      <div>
+        <div class="float-mode-kicker">SupportRD Personal Remote</div>
+        <h2>Float Mode</h2>
+        <p>Lightweight Caribbean motion with big-button control for live streaming, instruments, profile, maps, and recorded work.</p>
+      </div>
+      <div class="float-mode-actions">
+        <button class="btn ghost" id="floatModeReturnMain">Main Page</button>
+        <button class="btn ghost" id="floatModeOpenStudio">Studio</button>
+        <button class="btn" id="floatModeClose">Close Float</button>
+      </div>
     </div>
-    <div class="float-mode-actions">
-      <button class="btn ghost" id="floatModeReturnMain">Main Page</button>
-      <button class="btn ghost" id="floatModeOpenStudio">Studio</button>
-      <button class="btn" id="floatModeClose">Close Float</button>
+    <div class="float-mode-launch glass">
+      <button class="float-launch-btn" id="floatLaunchProfile" data-float-target="floatAssistantBox">Profile</button>
+      <button class="float-launch-btn" id="floatLaunchStudioQuick" data-float-target="floatBoardsBox">Studio Quick Panel</button>
+      <button class="float-launch-btn" id="floatLaunchSettings" data-float-target="floatProfileBox">General Settings</button>
+      <button class="float-launch-btn" id="floatLaunchDiary" data-float-target="floatSettingsBox">Diary Mode</button>
+      <button class="float-launch-btn" id="floatLaunchMap" data-float-target="floatDeviceBox">Map Change</button>
+      <button class="float-launch-btn" id="floatLaunchFaq" data-float-target="floatLiveBox">FAQ Button</button>
     </div>
-  </div>
-  <div class="float-mode-grid">
+    <div class="float-mode-grid">
     <section class="reel-panel glass float-reel-panel" id="reelPanel">
       <div class="panel-head">
         <h3>SupportRD TV Reel</h3>
@@ -1684,58 +1692,99 @@
       <div class="reel-tab" id="reelTab">REEL</div>
       <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel"></iframe>
     </section>
-    <section class="float-box glass" id="floatLiveBox">
-      <div class="float-box-head">
-        <span>Live Core</span>
-        <span class="float-box-badge">Center Action</span>
-      </div>
-      <div class="float-box-body float-live-body">
-        <button class="float-record-btn" id="floatRecordBtn"><span></span>Record</button>
-        <div class="float-mini-actions">
-          <button class="btn ghost" id="floatDeleteBtn">Delete</button>
-          <button class="btn ghost" id="floatPostBtn">Post</button>
-          <button class="btn ghost" id="floatBreakBtn">Break</button>
+      <section class="float-box glass" id="floatLiveBox">
+        <div class="float-box-head">
+          <span>FAQ Button</span>
+          <span class="float-box-badge">Live Help</span>
         </div>
-        <div class="float-mini-actions">
-          <button class="btn ghost" id="floatQuickEditBtn">Quick Edit</button>
-          <button class="btn ghost" id="floatStudioDeepBtn">Go Studio</button>
+        <div class="float-box-body float-live-body">
+          <button class="float-record-btn" id="floatRecordBtn"><span></span>Record</button>
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatDeleteBtn">Delete</button>
+            <button class="btn ghost" id="floatPostBtn">Post</button>
+            <button class="btn ghost" id="floatBreakBtn">Break</button>
+          </div>
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatQuickEditBtn">Quick Edit</button>
+            <button class="btn ghost" id="floatStudioDeepBtn">Go Studio</button>
+          </div>
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatFaqReelBtn">Pull Up TV Reel</button>
+          </div>
+          <div class="float-box-copy" id="floatLiveStatus">Use this as the fast FAQ and live help lane. Record a quick piece, jump deeper into Studio, or get instant guidance without leaving Remote.</div>
         </div>
-        <div class="float-box-copy" id="floatLiveStatus">Use Record for a fast music/video piece, then jump to Studio for deeper edits.</div>
-      </div>
-    </section>
-    <section class="float-box glass" id="floatAssistantBox">
-      <div class="float-box-head">
-        <span>Aria / Jake</span>
-        <span class="float-box-badge">Interchangeable</span>
-      </div>
+      </section>
+      <section class="float-box glass" id="floatAssistantBox">
+        <div class="float-box-head">
+          <span>Profile</span>
+          <span class="float-box-badge">Hair Scan</span>
+        </div>
       <div class="float-assistant-stage">
         <button class="float-assistant-orb aria" id="floatAriaBtn">Aria</button>
         <button class="float-assistant-orb jake" id="floatJakeBtn">Jake</button>
       </div>
-      <div class="float-box-copy" id="floatAssistantStatus">Jake helps in the studio. Aria helps on the general post side. Tap either one to switch the remote.</div>
-    </section>
-    <section class="float-box glass" id="floatDeviceBox">
-      <div class="float-box-head">
-        <span>Device / Instrument</span>
-        <span class="float-box-badge">Plug In Fast</span>
+      <div class="float-box-copy" id="floatAssistantStatus">Run a full hair-state scan, see recommended products, get tutorial bot directions, and keep the last Aria/Jake help lines in view.</div>
+      <div class="float-board-preview" id="floatProfileScanSummary">Current hair state scan will appear here.</div>
+      <div class="float-mini-actions">
+        <button class="btn ghost" id="floatRunProfileScanBtn">Run Full Scan</button>
+        <button class="btn ghost" id="floatTutorialBotsBtn">Tutorial Bots</button>
       </div>
+    </section>
+      <section class="float-box glass" id="floatDeviceBox">
+        <div class="float-box-head">
+          <span>Map Change</span>
+          <span class="float-box-badge">Theme Switch</span>
+        </div>
       <div class="float-big-buttons">
-        <button class="float-pill" id="floatMicBtn">Mic</button>
-        <button class="float-pill" id="floatInstrumentBtn">Instrument</button>
-        <button class="float-pill" id="floatUsbBtn">USB View</button>
-        <button class="float-pill" id="float4kBtn">4K Drone</button>
+        <button class="float-pill" id="floatMapBtn">Map</button>
+        <button class="float-pill" id="floatThemeBtn">Theme</button>
+        <button class="float-pill" id="floatOccasionBtn">Occasion</button>
+        <button class="float-pill" id="floatThemeRotateBtn">Rotate View</button>
       </div>
-      <div class="float-box-copy" id="floatDeviceStatus">Choose the recording device or instrument and keep the route lightweight.</div>
+      <div class="float-box-copy" id="floatDeviceStatus">Change the whole feel of the app for different occasions and keep the route sale-ready.</div>
     </section>
-    <section class="float-box glass" id="floatBoardsBox">
-      <div class="float-box-head">
-        <span>Motherboards</span>
-        <span class="float-box-badge">3 Default</span>
+      <section class="float-box glass" id="floatBoardsBox">
+        <div class="float-box-head">
+          <span>Studio Quick Panel</span>
+          <span class="float-box-badge">3 Boards</span>
+        </div>
+      <div class="float-upload-strip">
+        <input id="floatUploadInput" type="file" accept=".mp3,.mp4,audio/*,video/*" hidden>
+        <button class="btn ghost" id="floatUploadBtn">Upload .mp3 / .mp4</button>
+        <button class="btn ghost" id="floatFreshBoardsBtn">Fresh 3 Boards</button>
       </div>
       <div class="float-board-list">
         <button class="float-board active" data-float-board="1">Motherboard 1</button>
         <button class="float-board" data-float-board="2">Motherboard 2</button>
         <button class="float-board" data-float-board="3">Motherboard 3</button>
+      </div>
+      <div class="float-transport-strip">
+        <button class="btn ghost" id="floatPrevBtn">Back</button>
+        <button class="btn ghost" id="floatPlayBtn">Play</button>
+        <button class="btn ghost" id="floatStopBtn">Stop</button>
+        <button class="btn ghost" id="floatNextBtn">Next</button>
+        <button class="btn ghost" id="floatRecordVoiceBtn">Record Voice</button>
+        <button class="btn ghost" id="floatInstrumentRecordBtn">Instrument → Record</button>
+      </div>
+      <div class="float-board-editor">
+        <div class="float-board-preview" id="floatBoardPreview">Upload material to start a fresh 3-board quick edit.</div>
+        <div class="float-trim-row">
+          <label>Start %<input id="floatTrimStart" type="range" min="0" max="95" value="10"></label>
+          <label>End %<input id="floatTrimEnd" type="range" min="5" max="100" value="90"></label>
+        </div>
+        <div class="float-mini-actions">
+          <button class="btn ghost" id="floatHighlightBtn">Highlight Section</button>
+          <button class="btn ghost" id="floatDeleteSectionBtn">Delete Highlight</button>
+          <button class="btn ghost" id="floatUndoBtn">Undo</button>
+          <button class="btn ghost" id="floatFxBtn">FX Change</button>
+          <button class="btn ghost" id="floatClearBoardBtn">Clear Board</button>
+        </div>
+        <div class="float-mini-actions">
+          <button class="btn" id="floatExportStudioBtn">Export Into Main Studio</button>
+          <button class="btn ghost" id="floatExportTikTokBtn">Export As TikTok</button>
+          <button class="btn ghost" id="floatExportSocialBtn">Export Social File</button>
+        </div>
+        <div class="float-box-copy" id="floatQuickEditStatus">Upload fresh material each time to reset the 3 motherboards, make quick edits, export, and keep it moving.</div>
       </div>
       <div class="float-mini-actions">
         <button class="btn ghost" id="floatBoardEditBtn">Edit Board</button>
@@ -1743,11 +1792,11 @@
       </div>
       <div class="float-box-copy" id="floatBoardStatus">Three motherboards by default. Big buttons, easy movement, ready for audio or video pieces.</div>
     </section>
-    <section class="float-box glass" id="floatProfileBox">
-      <div class="float-box-head">
-        <span>Profile Viewer</span>
-        <span class="float-box-badge">Hair Identity</span>
-      </div>
+      <section class="float-box glass" id="floatProfileBox">
+        <div class="float-box-head">
+          <span>General Settings</span>
+          <span class="float-box-badge">Account Control</span>
+        </div>
       <div class="float-profile-card">
         <div class="float-profile-avatar"></div>
         <div class="float-profile-lines">
@@ -1755,24 +1804,27 @@
           <span id="floatProfileMeta">General stream profile · hair mission active</span>
         </div>
       </div>
-      <div class="float-box-copy">A self profile viewer that keeps your session identity visible while you move.</div>
-      <textarea id="floatProfilePostInput" class="input" placeholder="Post a quick social update from your profile view."></textarea>
+      <div class="float-box-copy">Edit social links, login/logout, email/password, and jump straight to Main Menu or Studio from here.</div>
       <div class="float-mini-actions">
-        <button class="btn ghost" id="floatProfileSendBtn">Send To Socials</button>
+        <button class="btn ghost" id="floatSettingsOpenBtn">Open Settings</button>
+        <button class="btn ghost" id="floatMainMenuBtn">Main Menu</button>
+        <button class="btn ghost" id="floatStudioJumpBtn">Studio</button>
+        <button class="btn ghost" id="floatLoginStateBtn">Login / Logout</button>
       </div>
     </section>
-    <section class="float-box glass" id="floatSettingsBox">
-      <div class="float-box-head">
-        <span>Settings / Map</span>
-        <span class="float-box-badge">Wind Light</span>
-      </div>
+      <section class="float-box glass" id="floatSettingsBox">
+        <div class="float-box-head">
+          <span>Diary Mode</span>
+          <span class="float-box-badge">Notes + Translate</span>
+        </div>
+      <textarea id="floatDiaryInput" class="input" placeholder="Record a note, diary line, or message to translate."></textarea>
       <div class="float-big-buttons">
-        <button class="float-pill" id="floatMapBtn">Map</button>
-        <button class="float-pill" id="floatThemeBtn">Theme</button>
+        <button class="float-pill" id="floatDiaryRecordBtn">Record Note</button>
+        <button class="float-pill" id="floatTranslateBtn">Translate</button>
+        <button class="float-pill" id="floatFaqBtn">FAQ Lobby</button>
         <button class="float-pill" id="floatPaymentBtn">Fast Pay</button>
-        <button class="float-pill" id="floatCameraBtn">Camera</button>
       </div>
-      <div class="float-box-copy" id="floatSettingsStatus">Float Mode keeps six big boxes on screen like a personal remote, on desktop and mobile.</div>
+      <div class="float-box-copy" id="floatSettingsStatus">Float Mode keeps six serious boxes on screen like a personal remote, with diary, translation, and FAQ help ready.</div>
     </section>
   </div>
   <div class="brochure-float" id="brochureFloat">

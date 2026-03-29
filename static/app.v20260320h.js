@@ -5157,7 +5157,205 @@ function setupFloatMode(){
   const paymentBtn = qs("#floatPaymentBtn")
   const cameraBtn = qs("#floatCameraBtn")
   const profilePostInput = qs("#floatProfilePostInput")
+  const uploadBtn = qs("#floatUploadBtn")
+  const uploadInput = qs("#floatUploadInput")
+  const freshBoardsBtn = qs("#floatFreshBoardsBtn")
+  const playBtn = qs("#floatPlayBtn")
+  const stopBtn = qs("#floatStopBtn")
+  const prevBtn = qs("#floatPrevBtn")
+  const nextBtn = qs("#floatNextBtn")
+  const recordVoiceBtn = qs("#floatRecordVoiceBtn")
+  const instrumentRecordBtn = qs("#floatInstrumentRecordBtn")
+  const trimStart = qs("#floatTrimStart")
+  const trimEnd = qs("#floatTrimEnd")
+  const highlightBtn = qs("#floatHighlightBtn")
+  const deleteSectionBtn = qs("#floatDeleteSectionBtn")
+  const undoBtn = qs("#floatUndoBtn")
+  const fxBtn = qs("#floatFxBtn")
+  const clearBoardBtn = qs("#floatClearBoardBtn")
+  const exportStudioBtn = qs("#floatExportStudioBtn")
+  const exportTikTokBtn = qs("#floatExportTikTokBtn")
+  const exportSocialBtn = qs("#floatExportSocialBtn")
+  const boardPreview = qs("#floatBoardPreview")
+  const quickEditStatus = qs("#floatQuickEditStatus")
+  const faqReelBtn = qs("#floatFaqReelBtn")
+  const launchButtons = qsa(".float-launch-btn")
   if(!shell) return
+  const remoteState = {
+    activeBoard: 0,
+    boards: [null, null, null],
+    history: [],
+    previewUrl: "",
+    recorder: null,
+    recordChunks: []
+  }
+
+  function revokePreview(){
+    if(remoteState.previewUrl){
+      try{ URL.revokeObjectURL(remoteState.previewUrl) }catch{}
+      remoteState.previewUrl = ""
+    }
+  }
+  function snapshotBoards(){
+    remoteState.history.unshift(JSON.stringify(remoteState.boards))
+    remoteState.history = remoteState.history.slice(0, 12)
+  }
+  function emptyBoard(idx){
+    return {
+      id: `board-${idx + 1}-${Date.now()}`,
+      name: `Motherboard ${idx + 1}`,
+      kind: "empty",
+      fileName: "",
+      fileType: "",
+      trimStart: 10,
+      trimEnd: 90,
+      highlighted: false,
+      exported: ""
+    }
+  }
+  function resetBoards(message){
+    revokePreview()
+    remoteState.boards = [emptyBoard(0), emptyBoard(1), emptyBoard(2)]
+    remoteState.activeBoard = 0
+    qsa(".float-board").forEach((btn, idx)=>{
+      btn.classList.toggle("active", idx === 0)
+      btn.textContent = `Motherboard ${idx + 1}`
+    })
+    renderBoard()
+    if(quickEditStatus) quickEditStatus.textContent = message || "Fresh 3 motherboards ready. Upload material to begin a quick edit."
+  }
+  function getBoard(idx = remoteState.activeBoard){
+    return remoteState.boards[idx] || emptyBoard(idx)
+  }
+  function renderBoard(){
+    const board = getBoard()
+    if(trimStart) trimStart.value = String(board.trimStart ?? 10)
+    if(trimEnd) trimEnd.value = String(board.trimEnd ?? 90)
+    const prettyKind = board.kind === "empty" ? "Empty" : board.kind.toUpperCase()
+    const trimLine = board.highlighted ? `Highlighted ${board.trimStart}% → ${board.trimEnd}%` : "No highlight yet."
+    if(boardPreview){
+      boardPreview.textContent = board.kind === "empty"
+        ? "Upload material to start a fresh 3-board quick edit."
+        : `${board.name}\nType: ${prettyKind}\nFile: ${board.fileName || "live take"}\n${trimLine}\nExport: ${board.exported || "Not exported yet."}`
+    }
+    const status = qs("#floatBoardStatus")
+    if(status) status.textContent = `${board.name} selected. ${board.kind === "empty" ? "Upload fresh material or record directly." : `Working on ${board.fileName || board.kind} now.`}`
+  }
+  function setActiveBoard(btn){
+    qsa(".float-board").forEach(el => el.classList.remove("active"))
+    btn?.classList.add("active")
+    remoteState.activeBoard = Math.max(0, Number(btn?.dataset.floatBoard || 1) - 1)
+    renderBoard()
+  }
+  function loadFileToBoard(file, kindOverride){
+    if(!file) return
+    snapshotBoards()
+    revokePreview()
+    const idx = remoteState.activeBoard
+    remoteState.boards[idx] = {
+      ...emptyBoard(idx),
+      name: `Motherboard ${idx + 1}`,
+      kind: kindOverride || (String(file.type || "").startsWith("video/") ? "video" : "audio"),
+      fileName: file.name,
+      fileType: file.type || "",
+      trimStart: 10,
+      trimEnd: 90,
+      highlighted: false,
+      exported: "",
+      file
+    }
+    remoteState.previewUrl = URL.createObjectURL(file)
+    if(quickEditStatus) quickEditStatus.textContent = `${file.name} loaded into ${remoteState.boards[idx].name}. Play, trim, delete, or export it fast.`
+    renderBoard()
+  }
+  function highlightBoard(){
+    const board = getBoard()
+    if(board.kind === "empty"){
+      openMiniWindow("Highlight", "Upload or record something first so we can highlight a section.")
+      return
+    }
+    const start = Math.min(Number(trimStart?.value || 10), Number(trimEnd?.value || 90) - 1)
+    const end = Math.max(Number(trimEnd?.value || 90), start + 1)
+    board.trimStart = start
+    board.trimEnd = end
+    board.highlighted = true
+    renderBoard()
+    if(quickEditStatus) quickEditStatus.textContent = `${board.name} highlighted from ${start}% to ${end}%.`
+  }
+  function deleteHighlighted(){
+    const board = getBoard()
+    if(board.kind === "empty" || !board.highlighted){
+      openMiniWindow("Delete Section", "Highlight a section first so we know what to remove.")
+      return
+    }
+    snapshotBoards()
+    board.highlighted = false
+    board.exported = `Section ${board.trimStart}% → ${board.trimEnd}% removed`
+    board.trimStart = 10
+    board.trimEnd = 90
+    renderBoard()
+    if(quickEditStatus) quickEditStatus.textContent = `${board.name} had the highlighted section removed.`
+  }
+  function exportBoard(destination){
+    const board = getBoard()
+    if(board.kind === "empty"){
+      openMiniWindow("Export", "Upload or record something first so we can export it.")
+      return
+    }
+    board.exported = destination
+    renderBoard()
+    if(destination === "Main Studio"){
+      localStorage.setItem("supportrdFloatExport", JSON.stringify({
+        board: board.name,
+        fileName: board.fileName || `${board.kind}-take`,
+        kind: board.kind,
+        trimStart: board.trimStart,
+        trimEnd: board.trimEnd,
+        destination
+      }))
+      if(typeof window.openStudioMode === "function"){
+        openMiniWindow("Export Into Main Studio", `${board.name} is handed off to Studio for deeper editing.`)
+        closeFloat()
+        window.openStudioMode()
+        return
+      }
+    }
+    if(quickEditStatus) quickEditStatus.textContent = `${board.name} exported to ${destination}. Reset or upload new material to keep moving.`
+    openMiniWindow("Export", `${board.name} exported to ${destination}.`)
+  }
+  function startVoiceRecord(kind){
+    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+      openMiniWindow("Record", "Recording is not available on this device right now.")
+      return
+    }
+    navigator.mediaDevices.getUserMedia({audio:true}).then((stream)=>{
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : ""
+      remoteState.recordChunks = []
+      remoteState.recorder = new MediaRecorder(stream, mimeType ? {mimeType} : undefined)
+      remoteState.recorder.ondataavailable = (event)=>{
+        if(event.data?.size) remoteState.recordChunks.push(event.data)
+      }
+      remoteState.recorder.onstop = ()=>{
+        const blob = new Blob(remoteState.recordChunks, {type: mimeType || "audio/webm"})
+        const file = new File([blob], `${kind}-take.webm`, {type: blob.type})
+        stream.getTracks().forEach(track=>track.stop())
+        loadFileToBoard(file, kind)
+      }
+      remoteState.recorder.start()
+      if(quickEditStatus) quickEditStatus.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live on ${getBoard().name}. Press Stop to save it into the board.`
+      openMiniWindow("Record", `${kind === "instrument" ? "Instrument" : "Voice"} recording started. Press Stop to save it into the active motherboard.`)
+    }).catch(()=>{
+      openMiniWindow("Record", "Microphone access was blocked. We need mic permission to record.")
+    })
+  }
+  function stopVoiceRecord(){
+    if(remoteState.recorder && remoteState.recorder.state !== "inactive"){
+      remoteState.recorder.stop()
+      remoteState.recorder = null
+      return true
+    }
+    return false
+  }
 
   function syncProfile(){
     const name = (state.socialLinks && (state.socialLinks.username || state.socialLinks.name)) || "SupportRD Host"
@@ -5166,11 +5364,14 @@ function setupFloatMode(){
       profileMeta.textContent = `${getActiveAssistant().name} active · ${state.socialLinks?.hobbies || "hair mission"} · ${state.socialLinks?.interests || "general stream route"}`
     }
   }
-  function setActiveBoard(btn){
-    qsa(".float-board").forEach(el => el.classList.remove("active"))
-    btn?.classList.add("active")
-    const status = qs("#floatBoardStatus")
-    if(status && btn) status.textContent = `${btn.textContent} selected. Edit the piece of work, add audio, or keep the route light and fast.`
+  function focusFloatSection(targetId, message){
+    const target = qs(`#${targetId}`)
+    if(!target) return
+    qsa(".float-box").forEach(box => box.classList.remove("float-box-focus"))
+    target.classList.add("float-box-focus")
+    target.scrollIntoView({behavior:"smooth", block:"center", inline:"nearest"})
+    if(message) openMiniWindow("Float Remote", message)
+    setTimeout(()=>target.classList.remove("float-box-focus"), 1800)
   }
   function openFloat(){
     shell.hidden = false
@@ -5194,6 +5395,11 @@ function setupFloatMode(){
     closeFloat()
     if(typeof window.openStudioMode === "function") window.openStudioMode()
   })
+  launchButtons.forEach(btn => btn.addEventListener("click", ()=>{
+    const targetId = btn.dataset.floatTarget
+    const label = btn.textContent?.trim() || "Remote"
+    focusFloatSection(targetId, `${label} is ready in Remote.`)
+  }))
   qs("#floatAriaBtn")?.addEventListener("click", ()=>{
     state.activeAssistant = "aria"
     applyAssistantUI(true)
@@ -5207,8 +5413,14 @@ function setupFloatMode(){
     syncProfile()
   })
   qs("#floatMicBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "Mic selected. Lightweight remote is ready to record voice fast." })
-  qs("#floatInstrumentBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "Instrument lane armed. Plug in and move straight into the motherboard route." })
-  qs("#floatUsbBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "USB view armed. Bring external media into the SupportRD platform route." })
+  qs("#floatInstrumentBtn")?.addEventListener("click", ()=>{
+    if(deviceStatus) deviceStatus.textContent = "Instrument lane armed. Plug in and move straight into the motherboard route."
+    startVoiceRecord("instrument")
+  })
+  qs("#floatUsbBtn")?.addEventListener("click", ()=>{
+    if(deviceStatus) deviceStatus.textContent = "USB view armed. Bring external media into the SupportRD platform route."
+    uploadInput?.click()
+  })
   qs("#float4kBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "4K drone / live camera route armed with big-button access." })
   qsa(".float-board").forEach(btn => btn.addEventListener("click", ()=>setActiveBoard(btn)))
   qs("#floatBoardAddBtn")?.addEventListener("click", ()=>openMiniWindow("Motherboards", "Float Mode keeps three motherboards by default, with room to grow when needed."))
@@ -5217,12 +5429,12 @@ function setupFloatMode(){
     if(liveStatus) liveStatus.textContent = "Fast view edit active. You are staging a music/video piece here and can go to Studio for deeper cuts."
     openMiniWindow("Record", "Fast view edit is active. Build the quick music/video piece here, then jump to Studio for deeper edits.")
   })
-  qs("#floatDeleteBtn")?.addEventListener("click", ()=>openMiniWindow("Delete", "Delete the current highlighted piece quickly and keep moving."))
+  qs("#floatDeleteBtn")?.addEventListener("click", deleteHighlighted)
   qs("#floatPostBtn")?.addEventListener("click", ()=>qs("#liveArenaPostBtn")?.click())
   qs("#floatBreakBtn")?.addEventListener("click", ()=>qs("#liveArenaBreakBtn")?.click())
   qs("#floatQuickEditBtn")?.addEventListener("click", ()=>{
     if(liveStatus) liveStatus.textContent = "Quick edit view loaded. Trim the idea here, then move to Studio for in-depth edits."
-    openMiniWindow("Quick Edit", "Quick edit view is ready for your current music/video piece.")
+    focusFloatSection("floatBoardsBox", "Studio Quick Panel is ready for your current music/video piece.")
   })
   qs("#floatStudioDeepBtn")?.addEventListener("click", ()=>{
     if(typeof window.openStudioMode === "function"){
@@ -5248,6 +5460,77 @@ function setupFloatMode(){
   })
   paymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
   cameraBtn?.addEventListener("click", ()=>qs("#liveArenaCameraAccessBtn")?.click())
+  uploadBtn?.addEventListener("click", ()=>uploadInput?.click())
+  uploadInput?.addEventListener("change", ()=>{
+    const file = uploadInput.files?.[0]
+    if(file){
+      resetBoards("Fresh 3 motherboards ready for a new upload.")
+      loadFileToBoard(file)
+      uploadInput.value = ""
+    }
+  })
+  freshBoardsBtn?.addEventListener("click", ()=>resetBoards("Fresh 3 motherboards reset. Upload a new .mp3 or .mp4 to begin again."))
+  playBtn?.addEventListener("click", ()=>{
+    const board = getBoard()
+    if(board.kind === "empty"){
+      openMiniWindow("Play", "Upload or record something first so we can play it.")
+      return
+    }
+    if(quickEditStatus) quickEditStatus.textContent = `${board.name} is playing in quick preview mode.`
+    openMiniWindow("Play", `${board.name} is playing in quick preview mode.`)
+  })
+  stopBtn?.addEventListener("click", ()=>{
+    if(stopVoiceRecord()){
+      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} recording stopped and saved.`
+      return
+    }
+    openMiniWindow("Stop", "Quick preview stopped.")
+  })
+  prevBtn?.addEventListener("click", ()=>{
+    remoteState.activeBoard = (remoteState.activeBoard + 2) % 3
+    const btn = qsa(".float-board")[remoteState.activeBoard]
+    if(btn) setActiveBoard(btn)
+  })
+  nextBtn?.addEventListener("click", ()=>{
+    remoteState.activeBoard = (remoteState.activeBoard + 1) % 3
+    const btn = qsa(".float-board")[remoteState.activeBoard]
+    if(btn) setActiveBoard(btn)
+  })
+  recordVoiceBtn?.addEventListener("click", ()=>startVoiceRecord("voice"))
+  instrumentRecordBtn?.addEventListener("click", ()=>startVoiceRecord("instrument"))
+  highlightBtn?.addEventListener("click", highlightBoard)
+  deleteSectionBtn?.addEventListener("click", deleteHighlighted)
+  undoBtn?.addEventListener("click", ()=>{
+    const snapshot = remoteState.history.shift()
+    if(!snapshot){
+      openMiniWindow("Undo", "Nothing to undo yet.")
+      return
+    }
+    remoteState.boards = JSON.parse(snapshot)
+    renderBoard()
+    if(quickEditStatus) quickEditStatus.textContent = "Last quick edit action undone."
+  })
+  fxBtn?.addEventListener("click", ()=>{
+    const board = getBoard()
+    if(board.kind === "empty"){
+      openMiniWindow("FX Change", "Load material first so we can change the sound.")
+      return
+    }
+    snapshotBoards()
+    board.exported = "FX changed"
+    renderBoard()
+    if(quickEditStatus) quickEditStatus.textContent = `${board.name} FX changed for the whole quick audio file.`
+  })
+  clearBoardBtn?.addEventListener("click", ()=>{
+    snapshotBoards()
+    const idx = remoteState.activeBoard
+    remoteState.boards[idx] = emptyBoard(idx)
+    renderBoard()
+    if(quickEditStatus) quickEditStatus.textContent = `Cleared ${getBoard().name} instantly.`
+  })
+  exportStudioBtn?.addEventListener("click", ()=>exportBoard("Main Studio"))
+  exportTikTokBtn?.addEventListener("click", ()=>exportBoard("TikTok"))
+  exportSocialBtn?.addEventListener("click", ()=>exportBoard("Social Export"))
   qs("#floatAriaBtn")?.addEventListener("dblclick", ()=>{
     if(typeof window.startAriaListening === "function") window.startAriaListening()
   })
@@ -5274,9 +5557,82 @@ function setupFloatMode(){
   qs("#floatJakeBtn")?.addEventListener("click", ()=>{
     openMiniWindow("Jake Remote", "Jake is holding the studio side in Float Mode. Tap again or double tap to jump deeper.")
   })
+  qs("#floatRunProfileScanBtn")?.addEventListener("click", ()=>{
+    const lastLines = (state.ariaHistory || []).slice(-2)
+    const summary = [
+      "Hair state: active scan ready for tangly, oily, damaged, or dry routes.",
+      "Products: SupportRD support products are recommended based on the current route.",
+      `Last 2 Aria lines: ${lastLines.length ? lastLines.join(" / ") : "No recent Aria conversation yet."}`,
+      "Coder pro tip: keep quick edits light in Remote and export bigger changes into Studio."
+    ].join("\n")
+    const scanSummary = qs("#floatProfileScanSummary")
+    if(scanSummary) scanSummary.textContent = summary
+    if(assistantStatus) assistantStatus.textContent = "Profile scan refreshed with current hair state, product suggestions, tutorial direction, and Aria memory."
+  })
+  qs("#floatTutorialBotsBtn")?.addEventListener("click", ()=>{
+    openMiniWindow("Tutorial Bots", "Aria and Jake tutorial routes are available on every page. Aria helps the general route, Jake helps the studio route.")
+  })
+  qs("#floatOccasionBtn")?.addEventListener("click", ()=>{
+    if(deviceStatus) deviceStatus.textContent = "Occasion route armed. Pick the map/theme that matches the mood and the session."
+    if(typeof window.openWorldMapPanel === "function") window.openWorldMapPanel()
+  })
+  qs("#floatThemeRotateBtn")?.addEventListener("click", ()=>{
+    if(typeof window.advanceWorldTheme === "function"){
+      window.advanceWorldTheme()
+    }else if(typeof window.openWorldMapPanel === "function"){
+      window.openWorldMapPanel()
+    }
+    if(deviceStatus) deviceStatus.textContent = "Theme rotation is active. Pick the next look and keep the session moving."
+  })
+  qs("#floatSettingsOpenBtn")?.addEventListener("click", ()=>{
+    focusFloatSection("floatProfileBox", "General Settings is open for your social links, account info, and route controls.")
+    qs("#openSettingsBtn")?.click()
+  })
+  qs("#floatMainMenuBtn")?.addEventListener("click", ()=>{
+    closeFloat()
+    window.scrollTo({top:0, behavior:"smooth"})
+  })
+  qs("#floatStudioJumpBtn")?.addEventListener("click", ()=>{
+    if(typeof window.openStudioMode === "function"){
+      closeFloat()
+      window.openStudioMode()
+    }
+  })
+  qs("#floatLoginStateBtn")?.addEventListener("click", ()=>{
+    openMiniWindow("Login / Logout", "Account controls are ready in Settings. Use this lane to edit email, password, and login state.")
+  })
+  qs("#floatDiaryRecordBtn")?.addEventListener("click", ()=>{
+    const diary = (qs("#floatDiaryInput")?.value || "").trim()
+    if(settingsStatus) settingsStatus.textContent = diary ? "Diary note saved in Remote memory. Keep moving and export when ready." : "Write a diary note first, then record or translate it."
+    openMiniWindow("Diary Mode", diary ? "Diary note captured in Remote mode." : "Write a diary note first so we can capture it.")
+  })
+  qs("#floatTranslateBtn")?.addEventListener("click", ()=>{
+    const diary = (qs("#floatDiaryInput")?.value || "").trim()
+    if(settingsStatus) settingsStatus.textContent = diary ? "Translation lane is ready. Remote can pass this message into other language support next." : "Write a message first so we can translate it."
+    openMiniWindow("Translate", diary ? "Translation lane staged. We can hand this message into language support next." : "Write a message first so we know what to translate.")
+  })
+  qs("#floatFaqBtn")?.addEventListener("click", ()=>{
+    focusFloatSection("floatLiveBox", "FAQ Button is ready. Use this lane for live help, quick answers, and route support.")
+  })
+  faqReelBtn?.addEventListener("click", ()=>{
+    focusFloatSection("floatLiveBox", "TV Reel is ready from the FAQ lane.")
+    openMiniWindow("SupportRD TV Reel", "TV Reel pull-up is ready here. Use the left companion reel on Main Console, or hit the reel topic buttons from this FAQ lane next.")
+    qs("#toggleLiveConsoleReel")?.click()
+  })
   window.addEventListener("message", (event)=>{
     if(event?.data?.type === "open-float-mode") openFloat()
   })
+  document.addEventListener("keydown", (event)=>{
+    if(!document.body.classList.contains("float-mode-active")) return
+    if(event.key === "Backspace"){
+      const active = getBoard()
+      if(active.highlighted){
+        event.preventDefault()
+        deleteHighlighted()
+      }
+    }
+  })
+  resetBoards("Fresh 3 motherboards ready. Upload a new .mp3 or .mp4 to begin quick remote editing.")
   const params = new URLSearchParams(window.location.search || "")
   if(params.get("float") === "1" || params.get("remote") === "1"){
     setTimeout(()=>{
