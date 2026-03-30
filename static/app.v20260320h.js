@@ -5200,6 +5200,7 @@ function setupLiveRadio(){
   if(!playBtn || !stopBtn || !prevBtn || !nextBtn || !label || !status) return
 
   const playlist = [
+    { title: "Drill Anthony Mix.mp3", src: "/static/audio/drill-anthony.mp3" },
     { title: "Clout - AgentAnthony.wav", src: "/static/audio/clout-agentanthony.wav" }
   ]
   let idx = 0
