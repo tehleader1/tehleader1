@@ -873,8 +873,39 @@
           <div class="engine-pane active" id="engineViewAction">
             <div class="system-actions">
               <button class="btn ghost" id="engineRefreshAction">Refresh Action Bot</button>
+              <button class="btn ghost admin-only" id="engineActivateWeekdaySeo">Activate Workweek SEO</button>
             </div>
             <pre class="engine-feed" id="engineActionFeed">Loading action bot stream...</pre>
+            <div class="engine-weekday-grid">
+              <section class="system-card glass engine-weekday-card">
+                <div class="system-head">
+                  <div>
+                    <div class="system-title">Workday Hair Engine</div>
+                    <div class="system-sub">Friendly workplace hair topics that move with the week and keep SupportRD current.</div>
+                  </div>
+                  <span class="system-badge" id="seoWeekdayBadge">Today</span>
+                </div>
+                <div class="engine-weekday-strip" id="seoWeekdayStrip"></div>
+                <div class="engine-weekday-copy">
+                  <strong id="seoWeekdayTitle">Monday Rush</strong>
+                  <p id="seoWeekdayBody">Start the week clean with quick workplace hair resets and polished confidence.</p>
+                  <div class="engine-weekday-tags" id="seoWeekdayTags"></div>
+                </div>
+              </section>
+              <section class="system-card glass engine-weekday-card">
+                <div class="system-head">
+                  <div>
+                    <div class="system-title">Market Pulse</div>
+                    <div class="system-sub">Keep the page feeling current with money-moving language and a finance snapshot when available.</div>
+                  </div>
+                  <span class="system-badge" id="marketPulseBadge">Live</span>
+                </div>
+                <div class="system-actions">
+                  <button class="btn ghost" id="marketPulseRefresh">Refresh Pulse</button>
+                </div>
+                <pre class="engine-feed market-pulse-feed" id="marketPulseFeed">Loading market pulse...</pre>
+              </section>
+            </div>
           </div>
           <div class="engine-pane" id="engineViewRender">
             <div class="system-actions">

@@ -1071,9 +1071,21 @@ body.launch-active #app{display:none;}
 .launch-footer-links{position:fixed;left:50%;transform:translateX(-50%);bottom:4px;z-index:420;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:11px;}
 .launch-footer-links a{color:#dfe8f7;text-decoration:none;opacity:.9;}
 .launch-footer-links a:hover{text-decoration:underline;}
+.engine-weekday-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;margin-top:16px;}
+.engine-weekday-card{display:grid;gap:14px;}
+.engine-weekday-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
+.engine-weekday-btn{min-height:56px;border-radius:16px;border:1px solid rgba(176,194,214,.72);background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(236,245,255,.84));color:#25405d;font-weight:700;cursor:pointer;}
+.engine-weekday-btn.active{border-color:rgba(90,160,255,.78);box-shadow:0 10px 24px rgba(36,89,168,.16);transform:translateY(-1px);}
+.engine-weekday-copy strong{display:block;font-size:20px;color:#193554;margin-bottom:8px;}
+.engine-weekday-copy p{margin:0 0 10px;color:#355473;line-height:1.6;}
+.engine-weekday-tags{display:flex;flex-wrap:wrap;gap:8px;}
+.engine-weekday-tags span{padding:7px 12px;border-radius:999px;background:rgba(231,241,252,.95);border:1px solid rgba(183,203,228,.88);color:#32516f;font-size:12px;letter-spacing:.04em;}
+.market-pulse-feed{min-height:180px;}
 @media (max-width:700px){
   .launch-actions,.launch-offers,.launch-checkin-grid{grid-template-columns:1fr;}
   #launchTitle{font-size:34px;}
+  .engine-weekday-grid{grid-template-columns:1fr;}
+  .engine-weekday-strip{grid-template-columns:1fr 1fr;}
 }
 .offroad-panel{margin-top:10px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.18);background:rgba(0,0,0,0.28);}
 .virtual-warzone{

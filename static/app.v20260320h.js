@@ -2707,6 +2707,91 @@ function setupCampaign(){
   }
 }
 
+function setupWorkdaySeoEngine(){
+  const strip = qs("#seoWeekdayStrip")
+  const title = qs("#seoWeekdayTitle")
+  const body = qs("#seoWeekdayBody")
+  const tags = qs("#seoWeekdayTags")
+  const badge = qs("#seoWeekdayBadge")
+  const pulseFeed = qs("#marketPulseFeed")
+  const pulseBadge = qs("#marketPulseBadge")
+  const pulseRefresh = qs("#marketPulseRefresh")
+  const activateBtn = qs("#engineActivateWeekdaySeo")
+  if(!strip || !title || !body || !tags) return
+
+  const plans = [
+    { key:"monday", label:"Monday Rush", body:"Start the workweek clean with fast office-ready hair resets, scalp calm, and polished confidence before the meetings pile up.", tags:["workday reset","office-ready hair","monday rush","polished start"] },
+    { key:"tuesday", label:"Tuesday Depends", body:"Read what we are really working with today: oily roots, tangles, dryness, or damage, then match the right SupportRD lane.", tags:["hair type check","depends what we’re working with","support lane","quick diagnosis"] },
+    { key:"wednesday", label:"Wednesday Clear", body:"Clear the unsettled. Midweek is where we calm frizz, settle breakage, and restore the route before stress starts showing in the hair.", tags:["midweek repair","clear the unsettled","frizz control","repair routine"] },
+    { key:"thursday", label:"Thursday Sharpen", body:"Sharpen the look for the workplace. Clean professional finish, camera-ready hair, and confidence that can carry the next contract.", tags:["pro look","camera ready","contract energy","thursday sharpen"] },
+    { key:"friday", label:"Friday Build The Bag", body:"Friday is for building the bag: more contracts, more money, more premium presentation, and stronger social proof around your hair image.", tags:["build the bag","friday motion","premium presentation","more contracts"] }
+  ]
+  const todayIndex = Math.min(new Date().getDay(), 5) - 1
+  let activePlan = plans[Math.max(0, todayIndex)]
+
+  function renderPlan(plan){
+    activePlan = plan
+    title.textContent = plan.label
+    body.textContent = plan.body
+    tags.innerHTML = plan.tags.map(tag=>`<span>${tag}</span>`).join("")
+    if(badge) badge.textContent = `${plan.label} Active`
+    qsa(".engine-weekday-btn").forEach(btn=>btn.classList.toggle("active", btn.dataset.seoDay === plan.key))
+  }
+
+  strip.innerHTML = plans.map(plan=>`<button class="engine-weekday-btn" type="button" data-seo-day="${plan.key}">${plan.label}</button>`).join("")
+  qsa(".engine-weekday-btn").forEach((btn)=>{
+    btn.addEventListener("click", ()=>{
+      const plan = plans.find(item=>item.key === btn.dataset.seoDay) || plans[0]
+      renderPlan(plan)
+    })
+  })
+  renderPlan(activePlan)
+
+  async function refreshPulse(){
+    if(pulseFeed) pulseFeed.textContent = "Loading market pulse..."
+    try{
+      const lines = []
+      const now = new Date()
+      lines.push(`[${now.toLocaleTimeString()}] SupportRD workday pulse is active.`)
+      lines.push(`- ${activePlan.label}: ${activePlan.body}`)
+      try{
+        const r = await fetch("/api/finance/shopify-status")
+        const d = await r.json()
+        if(r.ok && d && d.ok){
+          const balance = d.balance ?? d.available_balance ?? d.amount ?? "live"
+          const nextPayout = d.next_payout || d.payout_date || "pending"
+          lines.push(`- Shopify finance snapshot: balance ${balance}`)
+          lines.push(`- Next payout: ${nextPayout}`)
+          if(pulseBadge) pulseBadge.textContent = "Finance Live"
+        }else{
+          lines.push("- Admin finance snapshot is private right now, but the page pulse is still live.")
+          if(pulseBadge) pulseBadge.textContent = "Public Pulse"
+        }
+      }catch{
+        lines.push("- Finance feed unavailable right now. Workday SEO rhythm is still active.")
+        if(pulseBadge) pulseBadge.textContent = "Fallback Pulse"
+      }
+      lines.push("- Penny-move language should stay contextual: contracts building, premium customers moving, support routes active.")
+      lines.push("- Latest public market feed can be added next with Alpha Vantage once the API key is ready.")
+      if(pulseFeed) pulseFeed.textContent = lines.join("\n")
+    }catch{
+      if(pulseFeed) pulseFeed.textContent = "Market pulse unavailable."
+    }
+  }
+
+  pulseRefresh?.addEventListener("click", refreshPulse)
+  activateBtn?.addEventListener("click", async ()=>{
+    const ok = await setSeoAuto(true, pulseFeed)
+    if(ok){
+      openMiniWindow("Workday SEO", `${activePlan.label} rhythm is active and SupportRD is set to push the workweek hair engine.`)
+      refreshPulse()
+    }else{
+      openMiniWindow("Workday SEO", "Activation failed. Check admin access for the SEO engine.")
+    }
+  })
+  refreshPulse()
+}
+
 function setupAdult21Mode(){
   const confirm = qs("#adult21Confirm")
   const onBtn = qs("#adult21Enable")
@@ -7803,6 +7888,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupAria)
   safe(setupPuzzle)
   safe(setupSEOLogs)
+  safe(setupWorkdaySeoEngine)
   safe(setupEngineGlassViewer)
   safe(setupCredit)
   safe(setupCashOps)
