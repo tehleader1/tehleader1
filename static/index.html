@@ -32,34 +32,33 @@
     <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD Watermark">
   </div>
   <div class="launch-center">
-    <h1 id="launchTitle">SupportRD Free Roam World</h1>
+    <h1 id="launchTitle">SupportRD Check-In</h1>
     <div class="launch-main-actions">
-      <button id="launchMenuBtn" class="launch-main-btn">Menu</button>
-      <button id="quickBoothStart" class="launch-main-btn alt">In the Booth</button>
+      <button id="launchMenuBtn" class="launch-main-btn">Enter SupportRD</button>
+      <button id="quickBoothStart" class="launch-main-btn alt">Open Booth</button>
     </div>
-    <div id="launchPanel" class="launch-panel">
-      <div class="launch-panel-title" id="menuTitle">SupportRD World Menu</div>
-      <div class="launch-actions">
-        <button class="btn" data-launch="account" id="menuAccount">Account Access</button>
-        <button class="btn" data-launch="payment" id="menuPayment">Open Payments</button>
-        <button class="btn ghost" data-launch="brochure" id="menuBrochure">Open Brochure</button>
-        <button class="btn ghost" data-launch="satellite" id="menuSatellite">Satellite Watch</button>
-        <button class="btn ghost" data-launch="gift" id="menuGiftLaunch">Gift Shop</button>
-        <button class="btn" data-launch="enter" id="menuEnter">Enter App</button>
-      </div>
-      <div class="system-sub">SupportRD now opens like a free-roam world. Build your motion, move through unlocked routes, drop into the booth whenever you want, and keep the mission going.</div>
-      <div id="launchAccountPanel" class="launch-account-panel">
-        <div class="launch-panel-title">Login / Create / Forgot</div>
+    <div id="launchPanel" class="launch-panel show launch-checkin-card">
+      <div class="launch-panel-title" id="menuTitle">Professional Check-In</div>
+      <div class="system-sub">Handle your hair help, account updates, and entry into SupportRD from one clear check-in page.</div>
+      <div class="launch-resort-note">Aloha from Hawaii · five-star resort calm · international friendly support with language changes right up front.</div>
+      <div class="launch-checkin-grid">
         <input id="launchAccountEmail" class="input" placeholder="Email or Username">
         <input id="launchAccountPassword" class="input" type="password" placeholder="Password">
-        <div class="launch-account-actions">
-          <button class="btn" id="launchAccountLogin">Log In</button>
-          <button class="btn ghost" id="launchAccountCreate">Create Account</button>
-          <button class="btn ghost" id="launchAccountForgot">Forgot Password</button>
-        </div>
-        <div class="system-sub">All account actions start from this same intro menu panel.</div>
+        <input id="launchCheckinChangeEmail" class="input" placeholder="Change Email">
+        <input id="launchCheckinChangePassword" class="input" type="password" placeholder="Change Password">
       </div>
-      <button class="btn ghost launch-default" data-launch="default" id="menuDefault">Default View (Secret)</button>
+      <label class="launch-checkin-option"><input type="checkbox" id="launchNewsletterOptIn"> Sign up for SupportRD subscriber letter</label>
+      <div class="launch-actions launch-checkin-actions">
+        <button class="btn" id="launchAccountLogin">Log In</button>
+        <button class="btn ghost" id="launchAccountCreate">Create Account</button>
+        <button class="btn ghost" id="launchAccountForgot">Forgot Password</button>
+        <button class="btn ghost" id="menuPayment">Payment Options</button>
+        <button class="btn ghost" id="menuBrochure">Open Brochure</button>
+        <button class="btn" id="menuEnter">Enter App</button>
+      </div>
+      <div class="launch-checkin-footer">
+        <span>Need direct help? `xxfigueroa1993@yahoo.com` · `980-375-9197`</span>
+      </div>
     </div>
     <div id="launchPaymentPanel" class="launch-payment-panel">
       <div class="launch-panel-title">Payment Options</div>
@@ -77,6 +76,20 @@
   <div class="launch-sponsors">
     <strong>Sponsors:</strong> Visa · Mastercard · U.S. Bank · Bank of America · Wells Fargo · Woodforest
   </div>
+</div>
+<div class="track-viewer glass" id="trackViewer">
+  <div class="track-viewer-head">
+    <strong>SupportRD Theme</strong>
+    <span id="trackViewerState">Tap play if audio is paused</span>
+  </div>
+  <div class="track-viewer-body">
+    <button class="btn ghost" id="trackViewerToggle">Play</button>
+    <button class="btn ghost" id="trackViewerRestart">Restart</button>
+  </div>
+  <div class="track-viewer-title">drill-anthony.mp3 · bottom-right preview</div>
+  <audio id="trackViewerAudio" preload="auto" loop>
+    <source src="/static/audio/drill-anthony.mp3" type="audio/mpeg">
+  </audio>
 </div>
 <div id="launchSplash" class="launch-splash" aria-hidden="true">
   <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD Launch">
@@ -1726,7 +1739,8 @@
       <div>
         <div class="float-mode-kicker">SupportRD Personal Remote</div>
         <h2>Float Mode</h2>
-        <p>Lightweight Caribbean motion with big-button control for live streaming, instruments, profile, maps, and recorded work.</p>
+        <p>Lightweight Caribbean motion with five-star resort calm, aloha warmth, international language support, and big-button control for hair help, maps, profile, and recorded work.</p>
+        <div class="float-mode-resort-note">Aloha from Hawaii · brochure-light pages · international friendly language changes right up front.</div>
       </div>
       <div class="float-mode-actions">
         <button class="btn ghost" id="floatModeReturnMain">Main Page</button>
@@ -1735,12 +1749,46 @@
       </div>
     </div>
     <div class="float-mode-launch glass">
-      <button class="float-launch-btn" id="floatLaunchProfile" data-float-target="floatAssistantBox">Profile</button>
-      <button class="float-launch-btn" id="floatLaunchStudioQuick" data-float-target="floatBoardsBox">Studio Quick Panel</button>
-      <button class="float-launch-btn" id="floatLaunchSettings" data-float-target="floatProfileBox">General Settings</button>
-      <button class="float-launch-btn" id="floatLaunchDiary" data-float-target="floatSettingsBox">Diary Mode</button>
-      <button class="float-launch-btn" id="floatLaunchMap" data-float-target="floatDeviceBox">Map Change</button>
-      <button class="float-launch-btn" id="floatLaunchFaq" data-float-target="floatLiveBox">FAQ Button</button>
+      <button class="float-launch-btn" id="floatLaunchStudioQuick" data-float-target="floatBoardsBox">
+        <span class="float-launch-letter">B</span>
+        <span class="float-launch-copy"><strong>Studio Quick Panel</strong><small>Booth controls</small></span>
+      </button>
+      <button class="float-launch-btn" id="floatLaunchSettings" data-float-target="floatProfileBox">
+        <span class="float-launch-letter">S</span>
+        <span class="float-launch-copy"><strong>General Settings</strong><small>Account + links</small></span>
+      </button>
+      <button class="float-launch-btn" id="floatLaunchDiary" data-float-target="floatSettingsBox">
+        <span class="float-launch-letter">D</span>
+        <span class="float-launch-copy"><strong>Diary Mode</strong><small>What's on your mind?</small></span>
+      </button>
+      <button class="float-launch-btn" id="floatLaunchMap" data-float-target="floatDeviceBox">
+        <span class="float-launch-letter">M</span>
+        <span class="float-launch-copy"><strong>Map Change</strong><small>Theme rotation</small></span>
+      </button>
+      <button class="float-launch-btn" id="floatLaunchFaq" data-float-target="floatLiveBox">
+        <span class="float-launch-letter">F</span>
+        <span class="float-launch-copy"><strong>FAQ Button</strong><small>Answers + reel</small></span>
+      </button>
+      <button class="float-launch-btn" id="floatLaunchProfile" data-float-target="floatAssistantBox">
+        <span class="float-launch-letter">P</span>
+        <span class="float-launch-copy"><strong>Profile</strong><small>Scan + social card</small></span>
+      </button>
+    </div>
+    <div class="float-mode-nav glass">
+      <button class="btn ghost" id="floatNavHome">Remote Home</button>
+      <button class="btn ghost" id="floatNavDiary">Diary</button>
+      <button class="btn ghost" id="floatNavProfile">Profile</button>
+      <button class="btn ghost" id="floatNavBooth">Booth</button>
+      <button class="btn ghost" id="floatNavGPS">GPS</button>
+      <button class="btn ghost" id="floatNavSettings">Settings</button>
+      <button class="btn ghost" id="floatNavClose">Exit</button>
+    </div>
+    <div class="float-mode-footer glass">
+      <button class="btn ghost" id="floatFooterSettings">General Settings</button>
+      <button class="btn ghost" id="floatFooterPayments">Payments</button>
+      <button class="btn ghost" id="floatFooterSubscribe">Subscribe In</button>
+      <button class="btn ghost" id="floatFooterBlog">Blog</button>
+      <button class="btn ghost" id="floatFooterOfficial">Official Websites</button>
     </div>
     <div class="float-mode-grid">
     <section class="reel-panel glass float-reel-panel" id="reelPanel">
@@ -1757,18 +1805,36 @@
           <span class="float-box-badge">Live Help</span>
         </div>
         <div class="float-box-body float-live-body">
-          <button class="float-record-btn" id="floatRecordBtn"><span></span>Record</button>
-          <div class="float-mini-actions">
-            <button class="btn ghost" id="floatDeleteBtn">Delete</button>
-            <button class="btn ghost" id="floatPostBtn">Post</button>
-            <button class="btn ghost" id="floatBreakBtn">Break</button>
-          </div>
-          <div class="float-mini-actions">
-            <button class="btn ghost" id="floatQuickEditBtn">Quick Edit</button>
-            <button class="btn ghost" id="floatStudioDeepBtn">Go Studio</button>
+          <div class="float-faq-stack">
+            <button class="float-faq-item" type="button">
+              <strong>How much is Formula Exclusiva?</strong>
+              <span>Answer: current product pricing is shown live in SupportRD checkout and fast pay.</span>
+            </button>
+            <button class="float-faq-item" type="button">
+              <strong>What is the goal of SupportRD?</strong>
+              <span>Answer: build a modern hair system that feels accessible, code-friendly, and strong across the market.</span>
+            </button>
+            <button class="float-faq-item" type="button">
+              <strong>What do I need to make a payment?</strong>
+              <span>Answer: a supported payment method, a saved email or username, and the checkout lane will guide the rest.</span>
+            </button>
+            <button class="float-faq-item" type="button">
+              <strong>How do I get premium access?</strong>
+              <span>Answer: choose a premium lane, confirm checkout, and SupportRD will connect access to your account.</span>
+            </button>
           </div>
           <div class="float-mini-actions">
             <button class="btn ghost" id="floatFaqReelBtn">Pull Up TV Reel</button>
+            <button class="btn ghost" id="floatFaqPaymentBtn">Fast Pay</button>
+            <button class="btn ghost" id="floatPostBtn">Post</button>
+          </div>
+          <div class="float-faq-reel-host" id="floatFaqReelHost" hidden>
+            <iframe class="float-faq-reel-frame" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel in FAQ"></iframe>
+          </div>
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatBreakBtn">Break</button>
+            <button class="btn ghost" id="floatQuickEditBtn">Quick Edit</button>
+            <button class="btn ghost" id="floatStudioDeepBtn">Go Studio</button>
           </div>
           <div class="float-box-copy" id="floatLiveStatus">Use this as the fast FAQ and live help lane. Record a quick piece, jump deeper into Studio, or get instant guidance without leaving Remote.</div>
         </div>
@@ -1783,10 +1849,25 @@
         <button class="float-assistant-orb jake" id="floatJakeBtn">Jake</button>
       </div>
       <div class="float-box-copy" id="floatAssistantStatus">Run a full hair-state scan, see recommended products, get tutorial bot directions, and keep the last Aria/Jake help lines in view.</div>
+      <div class="float-profile-hero">
+        <div class="float-profile-image" id="floatProfileHero">Profile Image</div>
+        <div class="float-profile-summary">
+          <strong id="floatProfileQualityTitle">LinkedIn-quality presentation</strong>
+          <span id="floatProfileQualityBody">Top qualities, top achievements, social links, email, and web presence all stay ready here.</span>
+        </div>
+      </div>
       <div class="float-board-preview" id="floatProfileScanSummary">Current hair state scan will appear here.</div>
+      <div class="float-profile-history" id="floatProfileHistory">Last 2 Aria/Jake lines will appear here.</div>
+      <textarea id="floatProfilePostInput" class="input" placeholder="Post an update from your profile card to send into socials."></textarea>
       <div class="float-mini-actions">
         <button class="btn ghost" id="floatRunProfileScanBtn">Run Full Scan</button>
         <button class="btn ghost" id="floatTutorialBotsBtn">Tutorial Bots</button>
+        <button class="btn ghost" id="floatProfileSendBtn">Send Social Post</button>
+      </div>
+      <div class="float-mini-actions">
+        <button class="btn ghost" id="floatProfileUpgradeBtn">Upgrade Aria / Jake</button>
+        <button class="btn ghost" id="floatProfileAchievementsBtn">Achievements</button>
+        <button class="btn ghost" id="floatProfileLinksBtn">Social Connections</button>
       </div>
     </section>
       <section class="float-box glass" id="floatDeviceBox">
@@ -1794,6 +1875,7 @@
           <span>Map Change</span>
           <span class="float-box-badge">Theme Switch</span>
         </div>
+      <div class="float-theme-rail" id="floatThemeCardRail"></div>
       <div class="float-big-buttons">
         <button class="float-pill" id="floatMapBtn">Map</button>
         <button class="float-pill" id="floatThemeBtn">Theme</button>
@@ -1807,6 +1889,20 @@
           <span>Studio Quick Panel</span>
           <span class="float-box-badge">3 Boards</span>
         </div>
+      <div class="float-triangle-grid">
+        <div class="float-subpanel">
+          <strong>Motherboards</strong>
+          <span>Fresh three-board upload flow for .mp3 and .mp4 work.</span>
+        </div>
+        <div class="float-subpanel">
+          <strong>Transport</strong>
+          <span>Back, rewind, forward, next, play, pause, record, and stop.</span>
+        </div>
+        <div class="float-subpanel">
+          <strong>FX Features</strong>
+          <span>Highlight, delete section, undo, full FX change, clear, and export.</span>
+        </div>
+      </div>
       <div class="float-upload-strip">
         <input id="floatUploadInput" type="file" accept=".mp3,.mp4,audio/*,video/*" hidden>
         <button class="btn ghost" id="floatUploadBtn">Upload .mp3 / .mp4</button>
@@ -1824,12 +1920,20 @@
         <button class="btn ghost" id="floatNextBtn">Next</button>
         <button class="btn ghost" id="floatRecordVoiceBtn">Record Voice</button>
         <button class="btn ghost" id="floatInstrumentRecordBtn">Instrument → Record</button>
+        <button class="btn ghost" id="floatMicBtn">Mic</button>
+        <button class="btn ghost" id="floatUsbBtn">USB View</button>
+        <button class="btn ghost" id="float4kBtn">4K Drone</button>
+        <button class="btn ghost" id="floatCameraBtn">Camera</button>
       </div>
       <div class="float-board-editor">
         <div class="float-board-preview" id="floatBoardPreview">Upload material to start a fresh 3-board quick edit.</div>
         <div class="float-trim-row">
           <label>Start %<input id="floatTrimStart" type="range" min="0" max="95" value="10"></label>
           <label>End %<input id="floatTrimEnd" type="range" min="5" max="100" value="90"></label>
+        </div>
+        <div class="float-trim-row">
+          <label>Precision Start %<input id="floatTrimStartNumber" class="input" type="number" min="0" max="95" value="10"></label>
+          <label>Precision End %<input id="floatTrimEndNumber" class="input" type="number" min="5" max="100" value="90"></label>
         </div>
         <div class="float-mini-actions">
           <button class="btn ghost" id="floatHighlightBtn">Highlight Section</button>
@@ -1863,8 +1967,48 @@
           <span id="floatProfileMeta">General stream profile · hair mission active</span>
         </div>
       </div>
-      <div class="float-box-copy">Edit social links, login/logout, email/password, and jump straight to Main Menu or Studio from here.</div>
+      <div class="float-settings-shortcuts">
+        <button class="float-settings-chip" id="floatSettingsEmailBtn">Change Email</button>
+        <button class="float-settings-chip" id="floatSettingsPasswordBtn">Change Password</button>
+        <button class="float-settings-chip" id="floatSettingsLinksBtn">Social Media URL Links</button>
+        <button class="float-settings-chip" id="floatSettingsPushBtn">Push Notification</button>
+        <button class="float-settings-chip" id="floatSettingsLanguageBtn">Languages</button>
+      </div>
+      <div class="float-config-grid">
+        <input id="floatConfigEmail" class="input" placeholder="Change Email">
+        <input id="floatConfigPassword" class="input" type="password" placeholder="Change Password">
+        <input id="floatConfigAddress" class="input" placeholder="Address">
+        <select id="floatConfigLanguage" class="input">
+          <option value="English">English</option>
+          <option value="Spanish">Spanish</option>
+          <option value="French">French</option>
+          <option value="Arabic">Arabic</option>
+          <option value="Portuguese">Portuguese</option>
+          <option value="Hindi">Hindi</option>
+          <option value="Mandarin">Mandarin</option>
+        </select>
+        <input id="floatLinkFacebook" class="input" placeholder="Facebook URL">
+        <input id="floatLinkGoogle" class="input" placeholder="Google URL">
+        <input id="floatLinkBing" class="input" placeholder="Bing URL">
+        <input id="floatLinkTikTok" class="input" placeholder="TikTok URL">
+        <input id="floatLinkInstagram" class="input" placeholder="Instagram URL">
+        <input id="floatLinkDiscord" class="input" placeholder="Discord URL">
+        <input id="floatLinkMessenger" class="input" placeholder="Messenger URL">
+        <input id="floatLinkWhatsApp" class="input" placeholder="WhatsApp URL">
+        <input id="floatLinkTelegram" class="input" placeholder="Telegram URL">
+        <input id="floatLinkSlack" class="input" placeholder="Slack URL">
+        <input id="floatLinkTrello" class="input" placeholder="Trello URL">
+        <input id="floatLinkYouTube" class="input" placeholder="YouTube URL">
+        <input id="floatLinkX" class="input" placeholder="X URL">
+        <input id="floatLinkPlayStore" class="input" placeholder="Play Store URL">
+        <input id="floatLinkUber" class="input" placeholder="Uber URL">
+        <input id="floatLinkDuolingo" class="input" placeholder="Duolingo URL">
+      </div>
+      <label class="float-switch-row"><input type="checkbox" id="floatConfigPush"> Turn on push notifications so you can text Aria / Jake</label>
+      <div class="float-box-copy" id="floatConfigStatus">Edit social links, login/logout, email/password, language, and jump straight to Main Menu or Studio from here.</div>
       <div class="float-mini-actions">
+        <button class="btn" id="floatSettingsSaveBtn">Save Remote Settings</button>
+        <button class="btn ghost" id="floatPushToggleBtn">Texting Mode</button>
         <button class="btn ghost" id="floatSettingsOpenBtn">Open Settings</button>
         <button class="btn ghost" id="floatMainMenuBtn">Main Menu</button>
         <button class="btn ghost" id="floatStudioJumpBtn">Studio</button>
@@ -1876,14 +2020,71 @@
           <span>Diary Mode</span>
           <span class="float-box-badge">Notes + Translate</span>
         </div>
-      <textarea id="floatDiaryInput" class="input" placeholder="Record a note, diary line, or message to translate."></textarea>
-      <div class="float-big-buttons">
-        <button class="float-pill" id="floatDiaryRecordBtn">Record Note</button>
-        <button class="float-pill" id="floatTranslateBtn">Translate</button>
-        <button class="float-pill" id="floatFaqBtn">FAQ Lobby</button>
-        <button class="float-pill" id="floatPaymentBtn">Fast Pay</button>
+      <div class="float-diary-welcome glass">
+        <strong>SupportRD Diary Console</strong>
+        <span>Your main panel energy now lives here: post, reflect, route people to help, and keep your hair session moving in one place.</span>
       </div>
-      <div class="float-box-copy" id="floatSettingsStatus">Float Mode keeps six serious boxes on screen like a personal remote, with diary, translation, and FAQ help ready.</div>
+      <div class="float-diary-shell" id="floatDiaryShell">
+        <div class="float-diary-panels" id="floatDiaryPanels">
+          <section class="float-diary-panel">
+            <div class="float-diary-panel-head">What's on your mind?</div>
+            <label class="float-diary-laser" for="floatDiaryInput">What's on your mind?</label>
+            <textarea id="floatDiaryInput" class="input float-diary-input" placeholder="Drop your thought, note, post, or hair update here."></textarea>
+            <div class="float-big-buttons">
+              <button class="float-pill" id="floatDiaryRecordBtn">Record Note</button>
+              <button class="float-pill" id="floatDiaryPostBtn">Send Diary Post</button>
+            </div>
+            <div class="float-mini-actions">
+              <button class="btn ghost" id="floatDiarySaveBtn">Save Diary</button>
+              <button class="btn ghost" id="floatDiaryClearBtn">Erase</button>
+              <button class="btn ghost" id="floatDiaryExportPdfBtn">Export PDF</button>
+            </div>
+          </section>
+          <section class="float-diary-panel">
+            <div class="float-diary-panel-head">Handsfree Mode</div>
+            <div class="float-handsfree-card">
+              <button class="float-pill" id="floatHandsfreeBtn">Handsfree Mode</button>
+              <div class="float-box-copy">Use voice and let SupportRD transcribe the conversation below while your hands stay free.</div>
+            </div>
+            <textarea id="floatHandsfreeTranscript" class="input float-handsfree-transcript" placeholder="Handsfree transcription appears here."></textarea>
+            <div class="float-mini-actions">
+              <button class="btn ghost" id="floatTranslateBtn">Translate</button>
+              <button class="btn ghost" id="floatDiaryStudioBtn">Booth Export</button>
+              <button class="btn ghost" id="floatDiaryFaqBtn">FAQ Lobby</button>
+            </div>
+          </section>
+          <section class="float-diary-panel">
+            <div class="float-diary-panel-head">GPS Mode</div>
+            <div class="float-box-copy">GPS Mode quickly shifts Diary into a full route view so you can focus on storefront direction, map guidance, and where the next move is headed.</div>
+            <div class="float-big-buttons">
+              <button class="float-pill" id="floatDiaryGpsBtn">GPS Mode</button>
+              <button class="float-pill" id="floatPaymentBtn">Fast Pay</button>
+            </div>
+            <div class="float-mini-actions">
+              <button class="btn ghost" id="floatDiaryGpsExplainBtn">What GPS Mode Does</button>
+              <button class="btn ghost" id="floatMapBtnDiary">Open Map Change</button>
+              <button class="btn ghost" id="floatDiaryExitGpsBtn" hidden>Back To Diary</button>
+            </div>
+          </section>
+        </div>
+        <section class="float-diary-gps-stage" id="floatDiaryGpsStage" hidden>
+          <div class="float-box-head">
+            <span>GPS Mode Active</span>
+            <span class="float-box-badge">Route View</span>
+          </div>
+          <div class="float-diary-gps-copy" id="floatDiaryGpsCopy">GPS Mode is taking over the diary panel with route direction, next move guidance, and storefront navigation.</div>
+          <div class="float-big-buttons">
+            <button class="float-pill" id="floatDiaryGpsStoreBtn">Live Storefront Route</button>
+            <button class="float-pill" id="floatDiaryGpsMainBtn">Open Main GPS</button>
+          </div>
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatDiaryGpsExitBtn">Return To Diary</button>
+            <button class="btn ghost" id="floatDiaryGpsMapBtn">Theme + Map</button>
+            <button class="btn ghost" id="floatDiaryGpsStudioBtn">Booth Export</button>
+          </div>
+        </section>
+      </div>
+      <div class="float-box-copy" id="floatSettingsStatus">Diary Mode is the default touch landing view, with a laser prompt, handsfree transcription, save / erase / export flow, and GPS takeover when you need direction fast.</div>
     </section>
   </div>
   <div class="brochure-float" id="brochureFloat">

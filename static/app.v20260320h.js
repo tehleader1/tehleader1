@@ -4726,10 +4726,15 @@ function setupLaunchMenu(){
   const quickBooth = qs("#quickBoothStart")
   const panel = qs("#launchPanel")
   const payBtn = qs("#launchPaymentBtn")
+  const menuPaymentBtn = qs("#menuPayment")
+  const menuBrochureBtn = qs("#menuBrochure")
   const payPanel = qs("#launchPaymentPanel")
   const payClose = qs("#closeLaunchPayment")
-  const accountPanel = qs("#launchAccountPanel")
   const accountEmail = qs("#launchAccountEmail")
+  const accountPassword = qs("#launchAccountPassword")
+  const changeEmail = qs("#launchCheckinChangeEmail")
+  const changePassword = qs("#launchCheckinChangePassword")
+  const newsletterOptIn = qs("#launchNewsletterOptIn")
   const accountLogin = qs("#launchAccountLogin")
   const accountCreate = qs("#launchAccountCreate")
   const accountForgot = qs("#launchAccountForgot")
@@ -4738,12 +4743,34 @@ function setupLaunchMenu(){
   if(!launch || !menuBtn) return
   document.body.classList.add("launch-active")
   const labels = {
-    en: {title:"SupportRD", menu:"SupportRD Menu", menuBtn:"Menu", payment:"Payment Options"},
-    es: {title:"SupportRD", menu:"Menu SupportRD", menuBtn:"Menu", payment:"Opciones de Pago"},
-    fr: {title:"SupportRD", menu:"Menu SupportRD", menuBtn:"Menu", payment:"Options de Paiement"},
-    de: {title:"SupportRD", menu:"SupportRD Menu", menuBtn:"Menu", payment:"Zahlungsoptionen"},
-    ar: {title:"SupportRD", menu:"قائمة SupportRD", menuBtn:"القائمة", payment:"خيارات الدفع"},
-    sw: {title:"SupportRD", menu:"Menyu ya SupportRD", menuBtn:"Menyu", payment:"Chaguo la Malipo"}
+    en: {title:"SupportRD Check-In", menu:"Professional Check-In", menuBtn:"Enter SupportRD", payment:"Payment Options"},
+    es: {title:"Entrada SupportRD", menu:"Entrada Profesional", menuBtn:"Entrar a SupportRD", payment:"Opciones de Pago"},
+    fr: {title:"Accueil SupportRD", menu:"Accueil Professionnel", menuBtn:"Entrer dans SupportRD", payment:"Options de Paiement"},
+    de: {title:"SupportRD Check-In", menu:"Professioneller Einstieg", menuBtn:"SupportRD betreten", payment:"Zahlungsoptionen"},
+    ar: {title:"تسجيل SupportRD", menu:"تسجيل احترافي", menuBtn:"ادخل SupportRD", payment:"خيارات الدفع"},
+    sw: {title:"Kuingia SupportRD", menu:"Ukaguzi wa Kitaalamu", menuBtn:"Ingia SupportRD", payment:"Chaguo la Malipo"}
+  }
+  function saveCheckinDetails(){
+    state.socialLinks = state.socialLinks || {}
+    const emailValue = (accountEmail?.value || "").trim()
+    const newEmailValue = (changeEmail?.value || "").trim()
+    const newPasswordValue = (changePassword?.value || "").trim()
+    if(emailValue) state.socialLinks.email = emailValue
+    if(newEmailValue){
+      state.socialLinks.email = newEmailValue
+      if(qs("#setEmail")) qs("#setEmail").value = newEmailValue
+    }
+    if(newPasswordValue){
+      state.socialLinks.passwordPreview = "updated"
+      if(qs("#setPassword")) qs("#setPassword").value = newPasswordValue
+    }
+    if(qs("#setAddress")) qs("#setAddress").value = state.socialLinks.address || ""
+    state.socialLinks.newsletter = !!newsletterOptIn?.checked
+    localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+    localStorage.setItem("supportrdNewsletterOptIn", state.socialLinks.newsletter ? "true" : "false")
+    if(newsletterOptIn?.checked){
+      uiToast("Subscriber letter enabled for this account.")
+    }
   }
   function applyLang(code){
     const t = labels[code] || labels.en
@@ -4758,14 +4785,21 @@ function setupLaunchMenu(){
     applyLang(lang.value)
     lang.addEventListener("change", ()=>applyLang(lang.value))
   }
+  const savedSocial = JSON.parse(localStorage.getItem("socialLinks") || "{}")
+  if(accountEmail) accountEmail.value = savedSocial.email || savedSocial.username || ""
+  if(changeEmail) changeEmail.value = savedSocial.email || ""
+  if(newsletterOptIn) newsletterOptIn.checked = localStorage.getItem("supportrdNewsletterOptIn") === "true" || !!savedSocial.newsletter
   setInterval(()=>{ menuBtn.classList.toggle("blink") }, 1500)
   qsa("#launchMenu button").forEach((btn)=>{
     btn.addEventListener("mouseenter", ()=>{ try{ beep(620, 30) }catch{} })
     btn.addEventListener("click", ()=>{ try{ beep(760, 50) }catch{} })
   })
   menuBtn.addEventListener("click", ()=>{
-    panel.classList.toggle("show")
-    launch.classList.toggle("open")
+    saveCheckinDetails()
+    launch.classList.add("hide")
+    document.body.classList.remove("launch-active")
+    try{ window.playSupportRDTheme?.() }catch{}
+    try{ window.openFloatMode?.({ preserveHome: true }) }catch{}
     try{ beep(980, 90) }catch{}
   })
   const launchStudio = ()=>{
@@ -4795,6 +4829,14 @@ function setupLaunchMenu(){
       try{ beep(760, 90) }catch{}
     })
   }
+  menuPaymentBtn?.addEventListener("click", ()=>{
+    if(payPanel) payPanel.classList.add("show")
+    saveCheckinDetails()
+  })
+  menuBrochureBtn?.addEventListener("click", ()=>{
+    openModal("brochureModal")
+    openMiniWindow("Brochure", "SupportRD brochure opened from check-in.")
+  })
   if(payClose){ payClose.addEventListener("click", ()=>{ if(payPanel) payPanel.classList.remove("show") }) }
   qsa("[data-pay]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -4818,57 +4860,75 @@ function setupLaunchMenu(){
       openLinkModal(map[k] || LINKS.custom, labelMap[k] || "Payment")
     })
   })
-  qsa("[data-launch]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const action = btn.dataset.launch
-      if(action === "account"){
-        if(accountPanel) accountPanel.classList.toggle("show")
-      }
-      if(action === "login"){ window.location.href = "/login" }
-      if(action === "signup"){ window.location.href = "/login?mode=signup" }
-      if(action === "forgot"){ window.location.href = "/login" }
-      if(action === "payment"){ if(payPanel) payPanel.classList.add("show") }
-      if(action === "studio"){
-        launchStudio()
-      }
-      if(action === "brochure"){
-        openModal("brochureModal")
-        openMiniWindow("Brochure", "SupportRD brochure opened from the launch menu.")
-      }
-      if(action === "gift"){
-        openModal("giftModal")
-        openMiniWindow("Gift Shop", "Referral gifts and custom-order gift options are open.")
-      }
-      if(action === "satellite"){ openMiniWindow("Satellite Watch", "We can stage alerts and contact routing. For emergency launch updates, keep your admin contact active.") }
-      if(action === "enter"){
-        launch.classList.add("hide")
-        document.body.classList.remove("launch-active")
-      }
-      if(action === "default"){
-        panel.classList.remove("show")
-        if(payPanel) payPanel.classList.remove("show")
-        launch.classList.remove("open")
-      }
-    })
-  })
   if(accountLogin){
     accountLogin.addEventListener("click", ()=>{
+      saveCheckinDetails()
       const hint = encodeURIComponent((accountEmail && accountEmail.value || "").trim())
       window.location.href = hint ? `/login?login_hint=${hint}` : "/login"
     })
   }
   if(accountCreate){
     accountCreate.addEventListener("click", ()=>{
+      saveCheckinDetails()
       const hint = encodeURIComponent((accountEmail && accountEmail.value || "").trim())
       window.location.href = hint ? `/login?mode=signup&login_hint=${hint}` : "/login?mode=signup"
     })
   }
   if(accountForgot){
     accountForgot.addEventListener("click", ()=>{
+      saveCheckinDetails()
       const hint = encodeURIComponent((accountEmail && accountEmail.value || "").trim())
       window.location.href = hint ? `/login?mode=forgot&login_hint=${hint}` : "/login?mode=forgot"
     })
   }
+  enterBtn?.addEventListener("click", ()=>{
+    saveCheckinDetails()
+    launch.classList.add("hide")
+    document.body.classList.remove("launch-active")
+    try{ window.playSupportRDTheme?.() }catch{}
+    try{ window.openFloatMode?.({ preserveHome: true }) }catch{}
+  })
+}
+
+function setupTrackViewer(){
+  const audio = qs("#trackViewerAudio")
+  const toggle = qs("#trackViewerToggle")
+  const restart = qs("#trackViewerRestart")
+  const stateLabel = qs("#trackViewerState")
+  if(!audio || !toggle) return
+  function render(){
+    const paused = audio.paused
+    toggle.textContent = paused ? "Play" : "Pause"
+    if(stateLabel){
+      stateLabel.textContent = paused ? "Tap play if audio is paused" : "Now playing on SupportRD"
+    }
+  }
+  async function playTheme(){
+    try{
+      audio.volume = 0.52
+      await audio.play()
+      render()
+    }catch{
+      render()
+    }
+  }
+  toggle.addEventListener("click", async ()=>{
+    if(audio.paused){
+      await playTheme()
+    }else{
+      audio.pause()
+      render()
+    }
+  })
+  restart?.addEventListener("click", async ()=>{
+    audio.currentTime = 0
+    await playTheme()
+  })
+  audio.addEventListener("play", render)
+  audio.addEventListener("pause", render)
+  document.addEventListener("click", ()=>{ if(audio.paused) playTheme() }, { once:true })
+  window.playSupportRDTheme = playTheme
+  render()
 }
 
 function setupSatelliteQuick(){
@@ -5339,6 +5399,8 @@ function setupStudioMode(){
   }
 
   const openStudio = ()=>{
+    const returnView = localStorage.getItem("supportrdStudioReturnView")
+      || (document.body.classList.contains("float-mode-active") ? "remote" : "main")
     if(!isLoggedIn()){
       promptStudioLogin()
       return
@@ -5348,10 +5410,13 @@ function setupStudioMode(){
     if(launch){ launch.classList.add("hide") }
     document.body.classList.remove("launch-active")
     document.body.classList.add("studio-mode-open")
+    document.body.classList.remove("float-mode-active")
+    document.body.classList.remove("remote-home-active")
     shell.classList.add("active")
     shell.classList.add("booting")
     shell.classList.remove("ready")
     shell.setAttribute("aria-hidden", "false")
+    shell.dataset.returnView = returnView
     if(frame && frame.getAttribute("src") !== studioSrc){ frame.setAttribute("src", studioSrc) }
     state.activeAssistant = "projake"
     applyAssistantUI(true)
@@ -5388,13 +5453,16 @@ function setupStudioMode(){
       appRoot.style.backdropFilter = "none"
       appRoot.style.opacity = "1"
     }
+    const returnView = shell.dataset.returnView || localStorage.getItem("supportrdStudioReturnView") || "main"
+    localStorage.removeItem("supportrdStudioReturnView")
     setTimeout(()=>{
       shell.style.display = ""
-      const launch = qs("#launchMenu")
-      if(launch) launch.classList.remove("hide")
+      if(returnView === "remote" && typeof window.openFloatMode === "function"){
+        window.openFloatMode({ source: "studio-return", preserveHome: true })
+      }
     }, 30)
     setActiveTab("post")
-    openMiniWindow("SupportRD Main Console", "Returned to ARIA post page.")
+    openMiniWindow(returnView === "remote" ? "SupportRD Remote" : "SupportRD Main Console", returnView === "remote" ? "Returned to the SupportRD Remote home." : "Returned to ARIA post page.")
   }
 
   if(openBtn){ openBtn.addEventListener("click", openStudio) }
@@ -5426,13 +5494,20 @@ function setupFloatMode(){
   const deviceStatus = qs("#floatDeviceStatus")
   const settingsStatus = qs("#floatSettingsStatus")
   const liveStatus = qs("#floatLiveStatus")
+  const configStatus = qs("#floatConfigStatus")
   const profileName = qs("#floatProfileName")
   const profileMeta = qs("#floatProfileMeta")
+  const profileHistory = qs("#floatProfileHistory")
+  const profileQualityTitle = qs("#floatProfileQualityTitle")
+  const profileQualityBody = qs("#floatProfileQualityBody")
   const mapBtn = qs("#floatMapBtn")
   const themeBtn = qs("#floatThemeBtn")
   const paymentBtn = qs("#floatPaymentBtn")
+  const faqPaymentBtn = qs("#floatFaqPaymentBtn")
   const cameraBtn = qs("#floatCameraBtn")
   const profilePostInput = qs("#floatProfilePostInput")
+  const faqReelHost = qs("#floatFaqReelHost")
+  const themeCardRail = qs("#floatThemeCardRail")
   const uploadBtn = qs("#floatUploadBtn")
   const uploadInput = qs("#floatUploadInput")
   const freshBoardsBtn = qs("#floatFreshBoardsBtn")
@@ -5444,6 +5519,8 @@ function setupFloatMode(){
   const instrumentRecordBtn = qs("#floatInstrumentRecordBtn")
   const trimStart = qs("#floatTrimStart")
   const trimEnd = qs("#floatTrimEnd")
+  const trimStartNumber = qs("#floatTrimStartNumber")
+  const trimEndNumber = qs("#floatTrimEndNumber")
   const highlightBtn = qs("#floatHighlightBtn")
   const deleteSectionBtn = qs("#floatDeleteSectionBtn")
   const undoBtn = qs("#floatUndoBtn")
@@ -5452,10 +5529,49 @@ function setupFloatMode(){
   const exportStudioBtn = qs("#floatExportStudioBtn")
   const exportTikTokBtn = qs("#floatExportTikTokBtn")
   const exportSocialBtn = qs("#floatExportSocialBtn")
+  const diaryPostBtn = qs("#floatDiaryPostBtn")
+  const diaryClearBtn = qs("#floatDiaryClearBtn")
+  const diaryStudioBtn = qs("#floatDiaryStudioBtn")
+  const diarySaveBtn = qs("#floatDiarySaveBtn")
+  const diaryExportPdfBtn = qs("#floatDiaryExportPdfBtn")
+  const handsfreeBtn = qs("#floatHandsfreeBtn")
+  const handsfreeTranscript = qs("#floatHandsfreeTranscript")
+  const diaryFaqBtn = qs("#floatDiaryFaqBtn")
+  const diaryGpsBtn = qs("#floatDiaryGpsBtn")
+  const diaryGpsExplainBtn = qs("#floatDiaryGpsExplainBtn")
+  const diaryGpsStage = qs("#floatDiaryGpsStage")
+  const diaryPanels = qs("#floatDiaryPanels")
+  const diaryGpsCopy = qs("#floatDiaryGpsCopy")
+  const diaryGpsExitBtn = qs("#floatDiaryGpsExitBtn")
+  const diaryExitGpsBtn = qs("#floatDiaryExitGpsBtn")
+  const diaryGpsStoreBtn = qs("#floatDiaryGpsStoreBtn")
+  const diaryGpsMainBtn = qs("#floatDiaryGpsMainBtn")
+  const diaryGpsMapBtn = qs("#floatDiaryGpsMapBtn")
+  const diaryGpsStudioBtn = qs("#floatDiaryGpsStudioBtn")
+  const mapBtnDiary = qs("#floatMapBtnDiary")
+  const settingsSaveBtn = qs("#floatSettingsSaveBtn")
+  const pushToggleBtn = qs("#floatPushToggleBtn")
+  const settingsEmailBtn = qs("#floatSettingsEmailBtn")
+  const settingsPasswordBtn = qs("#floatSettingsPasswordBtn")
+  const settingsLinksBtn = qs("#floatSettingsLinksBtn")
+  const settingsPushBtn = qs("#floatSettingsPushBtn")
+  const settingsLanguageBtn = qs("#floatSettingsLanguageBtn")
   const boardPreview = qs("#floatBoardPreview")
   const quickEditStatus = qs("#floatQuickEditStatus")
   const faqReelBtn = qs("#floatFaqReelBtn")
   const launchButtons = qsa(".float-launch-btn")
+  const navHomeBtn = qs("#floatNavHome")
+  const navDiaryBtn = qs("#floatNavDiary")
+  const navProfileBtn = qs("#floatNavProfile")
+  const navBoothBtn = qs("#floatNavBooth")
+  const navGpsBtn = qs("#floatNavGPS")
+  const navSettingsBtn = qs("#floatNavSettings")
+  const navCloseBtn = qs("#floatNavClose")
+  const footerSettingsBtn = qs("#floatFooterSettings")
+  const footerPaymentsBtn = qs("#floatFooterPayments")
+  const footerSubscribeBtn = qs("#floatFooterSubscribe")
+  const footerBlogBtn = qs("#floatFooterBlog")
+  const footerOfficialBtn = qs("#floatFooterOfficial")
   if(!shell) return
   const remoteState = {
     activeBoard: 0,
@@ -5463,7 +5579,25 @@ function setupFloatMode(){
     history: [],
     previewUrl: "",
     recorder: null,
-    recordChunks: []
+    recordChunks: [],
+    handsfreeRecognition: null,
+    handsfreeActive: false,
+    currentPanel: "floatSettingsBox"
+  }
+  const floatPanelKey = "supportrdFloatPanel"
+  const defaultFloatPanel = "floatSettingsBox"
+  const touchQuery = window.matchMedia ? window.matchMedia("(pointer: coarse), (max-width: 900px)") : null
+
+  function isTouchLayout(){
+    return touchQuery ? touchQuery.matches : (window.innerWidth <= 900)
+  }
+  function setFloatHome(message){
+    shell.classList.add("touch-home")
+    remoteState.currentPanel = defaultFloatPanel
+    localStorage.setItem(floatPanelKey, defaultFloatPanel)
+    launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
+    qsa(".float-box").forEach(box => box.hidden = true)
+    if(message) openMiniWindow("Float Remote", message)
   }
 
   function revokePreview(){
@@ -5507,6 +5641,8 @@ function setupFloatMode(){
     const board = getBoard()
     if(trimStart) trimStart.value = String(board.trimStart ?? 10)
     if(trimEnd) trimEnd.value = String(board.trimEnd ?? 90)
+    if(trimStartNumber) trimStartNumber.value = String(board.trimStart ?? 10)
+    if(trimEndNumber) trimEndNumber.value = String(board.trimEnd ?? 90)
     const prettyKind = board.kind === "empty" ? "Empty" : board.kind.toUpperCase()
     const trimLine = board.highlighted ? `Highlighted ${board.trimStart}% → ${board.trimEnd}%` : "No highlight yet."
     if(boardPreview){
@@ -5557,6 +5693,16 @@ function setupFloatMode(){
     board.highlighted = true
     renderBoard()
     if(quickEditStatus) quickEditStatus.textContent = `${board.name} highlighted from ${start}% to ${end}%.`
+  }
+  function syncTrimInputs(source){
+    const startVal = Number((source === "number" ? trimStartNumber?.value : trimStart?.value) || 10)
+    const endVal = Number((source === "number" ? trimEndNumber?.value : trimEnd?.value) || 90)
+    const safeStart = Math.max(0, Math.min(95, startVal))
+    const safeEnd = Math.max(safeStart + 1, Math.min(100, endVal))
+    if(trimStart) trimStart.value = String(safeStart)
+    if(trimEnd) trimEnd.value = String(safeEnd)
+    if(trimStartNumber) trimStartNumber.value = String(safeStart)
+    if(trimEndNumber) trimEndNumber.value = String(safeEnd)
   }
   function deleteHighlighted(){
     const board = getBoard()
@@ -5639,28 +5785,249 @@ function setupFloatMode(){
     if(profileMeta){
       profileMeta.textContent = `${getActiveAssistant().name} active · ${state.socialLinks?.hobbies || "hair mission"} · ${state.socialLinks?.interests || "general stream route"}`
     }
+    if(profileHistory){
+      const history = (state.ariaHistory || []).slice(0,2)
+      profileHistory.textContent = history.length
+        ? `Last 2 Aria / Jake lines: ${history.join(" / ")}`
+        : "Last 2 Aria / Jake lines will appear here after you talk with them."
+    }
+    if(profileQualityTitle){
+      profileQualityTitle.textContent = `^^${String(state.socialLinks?.username || state.socialLinks?.name || "SupportRD").replace(/^\^\^/, "").trim() || "SupportRD"} profile`
+    }
+    if(profileQualityBody){
+      profileQualityBody.textContent = `Top qualities: ${state.socialLinks?.thoughtStyle || "warm, sharp, and ready"} · Email: ${state.socialLinks?.email || "not set"} · WWW links stay ready from this profile card.`
+    }
+  }
+  function syncFloatSettings(){
+    const saved = state.socialLinks || {}
+    const valueMap = {
+      floatConfigEmail: saved.email || "",
+      floatConfigAddress: saved.address || "",
+      floatConfigPassword: "",
+      floatConfigLanguage: saved.language || "English",
+      floatLinkFacebook: saved.fb || "",
+      floatLinkGoogle: saved.google || "",
+      floatLinkBing: saved.bing || "",
+      floatLinkTikTok: saved.tiktok || "",
+      floatLinkInstagram: saved.ig || "",
+      floatLinkDiscord: saved.discord || "",
+      floatLinkMessenger: saved.messenger || "",
+      floatLinkWhatsApp: saved.whatsapp || saved.evelyn || "",
+      floatLinkTelegram: saved.telegram || "",
+      floatLinkSlack: saved.slack || "",
+      floatLinkTrello: saved.trello || "",
+      floatLinkYouTube: saved.yt || "",
+      floatLinkX: saved.x || "",
+      floatLinkPlayStore: saved.playstore || "",
+      floatLinkUber: saved.uber || "",
+      floatLinkDuolingo: saved.duolingo || ""
+    }
+    Object.entries(valueMap).forEach(([id, value])=>{
+      const el = qs(`#${id}`)
+      if(el) el.value = value
+    })
+    const push = qs("#floatConfigPush")
+    if(push) push.checked = !!saved.pushAria
+  }
+  function saveFloatSettings(){
+    state.socialLinks = state.socialLinks || {}
+    const email = qs("#floatConfigEmail")?.value.trim() || ""
+    const password = qs("#floatConfigPassword")?.value || ""
+    const address = qs("#floatConfigAddress")?.value.trim() || ""
+    const language = qs("#floatConfigLanguage")?.value.trim() || "English"
+    const extras = {
+      google: qs("#floatLinkGoogle")?.value.trim() || "",
+      bing: qs("#floatLinkBing")?.value.trim() || "",
+      discord: qs("#floatLinkDiscord")?.value.trim() || "",
+      messenger: qs("#floatLinkMessenger")?.value.trim() || "",
+      whatsapp: qs("#floatLinkWhatsApp")?.value.trim() || "",
+      telegram: qs("#floatLinkTelegram")?.value.trim() || "",
+      slack: qs("#floatLinkSlack")?.value.trim() || "",
+      trello: qs("#floatLinkTrello")?.value.trim() || "",
+      playstore: qs("#floatLinkPlayStore")?.value.trim() || "",
+      uber: qs("#floatLinkUber")?.value.trim() || "",
+      duolingo: qs("#floatLinkDuolingo")?.value.trim() || "",
+      language
+    }
+    const feedFields = {
+      setEmail: email,
+      setPassword: password,
+      setAddress: address,
+      setIG: qs("#floatLinkInstagram")?.value.trim() || "",
+      setTikTok: qs("#floatLinkTikTok")?.value.trim() || "",
+      setFB: qs("#floatLinkFacebook")?.value.trim() || "",
+      setYT: qs("#floatLinkYouTube")?.value.trim() || "",
+      setX: qs("#floatLinkX")?.value.trim() || "",
+      setEvelyn: extras.whatsapp
+    }
+    Object.entries(feedFields).forEach(([id, value])=>{
+      const el = qs(`#${id}`)
+      if(el) el.value = value
+    })
+    const pushAria = qs("#pushAria")
+    if(pushAria) pushAria.checked = !!qs("#floatConfigPush")?.checked
+    qs("#saveSettings")?.click()
+    state.socialLinks = {
+      ...(state.socialLinks || {}),
+      email,
+      address,
+      passwordPreview: password ? "updated" : (state.socialLinks?.passwordPreview || ""),
+      ig: feedFields.setIG,
+      tiktok: feedFields.setTikTok,
+      fb: feedFields.setFB,
+      yt: feedFields.setYT,
+      x: feedFields.setX,
+      evelyn: extras.whatsapp,
+      pushAria: !!qs("#floatConfigPush")?.checked,
+      ...extras
+    }
+    localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+    if(configStatus) configStatus.textContent = `Remote settings saved. ${language} is active, social links are registered, and Aria / Jake texting mode is ${state.socialLinks.pushAria ? "on" : "off"}.`
+    syncProfile()
+    openMiniWindow("Remote Settings", "Settings saved from the touch remote. Your social routes and account details are updated.")
+  }
+  function renderThemeCards(){
+    if(!themeCardRail) return
+    const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
+    themeCardRail.innerHTML = views.slice(0,6).map(view => `
+      <button class="float-theme-card" type="button" data-float-theme="${view.key}">
+        <strong>${view.label}</strong>
+        <span>${view.perk}</span>
+      </button>
+    `).join("")
+  }
+  function setDiaryGpsMode(active){
+    if(diaryPanels) diaryPanels.hidden = !!active
+    if(diaryGpsStage) diaryGpsStage.hidden = !active
+    if(diaryExitGpsBtn) diaryExitGpsBtn.hidden = !active
+    if(settingsStatus){
+      settingsStatus.textContent = active
+        ? "GPS Mode is active. Diary is focused on direction, storefront movement, and the next route."
+        : "Diary Mode is back in writing / handsfree / GPS preview mode."
+    }
+  }
+  function saveDiaryEntry(){
+    const text = (qs("#floatDiaryInput")?.value || "").trim()
+    const transcript = (handsfreeTranscript?.value || "").trim()
+    const payload = {
+      text,
+      transcript,
+      savedAt: new Date().toISOString()
+    }
+    localStorage.setItem("supportrdDiaryEntry", JSON.stringify(payload))
+    if(settingsStatus) settingsStatus.textContent = text || transcript
+      ? "Diary saved. Your latest thought and handsfree notes are preserved in Remote."
+      : "Diary saved as an empty reset so you can start clean."
+    openMiniWindow("Diary Saved", text || transcript ? "Diary entry saved in SupportRD Remote." : "Diary reset saved for a fresh start.")
+  }
+  function exportDiaryPdf(){
+    const text = (qs("#floatDiaryInput")?.value || "").trim()
+    const transcript = (handsfreeTranscript?.value || "").trim()
+    const html = `
+      <html><head><title>SupportRD Diary Export</title><style>
+      body{font-family:Georgia,serif;padding:28px;color:#10233f;}
+      h1{margin-bottom:6px;} h2{margin:18px 0 8px;}
+      pre{white-space:pre-wrap;line-height:1.55;background:#f3f7fb;padding:16px;border-radius:12px;}
+      </style></head><body>
+      <h1>SupportRD Diary Export</h1>
+      <div>${new Date().toLocaleString()}</div>
+      <h2>What's On Your Mind</h2><pre>${(text || "No diary text yet.").replace(/</g,"&lt;")}</pre>
+      <h2>Handsfree Transcript</h2><pre>${(transcript || "No handsfree transcript yet.").replace(/</g,"&lt;")}</pre>
+      </body></html>
+    `
+    const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=700")
+    if(!win){
+      openMiniWindow("Export PDF", "Popup was blocked, but the diary export is ready. Try again and save as PDF from print.")
+      return
+    }
+    win.document.open()
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(()=>win.print(), 200)
+    openMiniWindow("Export PDF", "Diary export opened. Use Save as PDF in the print window for your PDF copy.")
+  }
+  function toggleHandsfreeMode(){
+    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition
+    if(remoteState.handsfreeActive && remoteState.handsfreeRecognition){
+      remoteState.handsfreeRecognition.stop()
+      remoteState.handsfreeActive = false
+      if(settingsStatus) settingsStatus.textContent = "Handsfree mode paused."
+      return
+    }
+    if(!Speech){
+      openMiniWindow("Handsfree Mode", "Speech recognition is not available on this device right now.")
+      return
+    }
+    const recognition = new Speech()
+    recognition.lang = "en-US"
+    recognition.interimResults = true
+    recognition.continuous = true
+    recognition.onresult = (event)=>{
+      let finalText = ""
+      for(let i = 0; i < event.results.length; i += 1){
+        finalText += `${event.results[i][0].transcript} `
+      }
+      if(handsfreeTranscript) handsfreeTranscript.value = finalText.trim()
+    }
+    recognition.onend = ()=>{
+      remoteState.handsfreeActive = false
+    }
+    recognition.start()
+    remoteState.handsfreeRecognition = recognition
+    remoteState.handsfreeActive = true
+    if(settingsStatus) settingsStatus.textContent = "Handsfree mode is live. SupportRD is transcribing the conversation below."
+    openMiniWindow("Handsfree Mode", "Handsfree transcription is live. Talk naturally and we will keep the details below.")
+  }
+  function setActiveTouchPanel(targetId, message){
+    const finalTarget = targetId || defaultFloatPanel
+    shell.classList.remove("touch-home")
+    remoteState.currentPanel = finalTarget
+    localStorage.setItem(floatPanelKey, finalTarget)
+    launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === finalTarget))
+    const boxes = qsa(".float-box")
+    const shouldCollapse = isTouchLayout()
+    boxes.forEach(box =>{
+      if(shouldCollapse){
+        box.hidden = box.id !== finalTarget
+      }else{
+        box.hidden = false
+      }
+      box.classList.remove("float-box-focus")
+    })
+    const target = qs(`#${finalTarget}`)
+    if(target){
+      target.hidden = false
+      target.classList.add("float-box-focus")
+      target.scrollIntoView({behavior:"smooth", block:"start", inline:"nearest"})
+      setTimeout(()=>target.classList.remove("float-box-focus"), 1800)
+    }
+    shell.classList.toggle("touch-optimized", shouldCollapse)
+    if(message) openMiniWindow("Float Remote", message)
   }
   function focusFloatSection(targetId, message){
-    const target = qs(`#${targetId}`)
-    if(!target) return
-    qsa(".float-box").forEach(box => box.classList.remove("float-box-focus"))
-    target.classList.add("float-box-focus")
-    target.scrollIntoView({behavior:"smooth", block:"center", inline:"nearest"})
-    if(message) openMiniWindow("Float Remote", message)
-    setTimeout(()=>target.classList.remove("float-box-focus"), 1800)
+    setActiveTouchPanel(targetId, message)
   }
-  function openFloat(){
+  function openFloat(options = {}){
     shell.hidden = false
     shell.setAttribute("aria-hidden","false")
     document.body.classList.add("float-mode-active")
+    document.body.classList.add("remote-home-active")
+    document.body.classList.remove("launch-active")
     syncProfile()
-    openMiniWindow("Float Mode", "SupportRD Personal Remote is open. Six big boxes now control the route.")
-    history.replaceState(null, "", `${window.location.pathname}?float=1`)
+    syncFloatSettings()
+    renderThemeCards()
+    setFloatHome(options.preserveHome ? "" : "Remote Home is ready. Diary is highlighted, and every major route is one tap away.")
+    setDiaryGpsMode(false)
+    try{ window.playSupportRDTheme?.() }catch{}
+    if(!options.preserveHome) openMiniWindow("Float Mode", "SupportRD Personal Remote is open. Diary Mode is highlighted, and the whole app stays connected from here.")
+    history.replaceState(null, "", `${window.location.pathname}?remote=1`)
   }
   function closeFloat(){
     shell.hidden = true
     shell.setAttribute("aria-hidden","true")
     document.body.classList.remove("float-mode-active")
+    document.body.classList.remove("remote-home-active")
     history.replaceState(null, "", window.location.pathname)
   }
   openBtn?.addEventListener("click", openFloat)
@@ -5673,9 +6040,53 @@ function setupFloatMode(){
   })
   launchButtons.forEach(btn => btn.addEventListener("click", ()=>{
     const targetId = btn.dataset.floatTarget
-    const label = btn.textContent?.trim() || "Remote"
+    const label = btn.querySelector("strong")?.textContent?.trim() || btn.textContent?.trim() || "Remote"
     focusFloatSection(targetId, `${label} is ready in Remote.`)
   }))
+  touchQuery?.addEventListener?.("change", ()=>setActiveTouchPanel(qsa(".float-launch-btn.active")[0]?.dataset.floatTarget || defaultFloatPanel))
+  navHomeBtn?.addEventListener("click", ()=>setFloatHome("Remote home is ready. Diary is highlighted, and every major route is one tap away."))
+  navDiaryBtn?.addEventListener("click", ()=>setActiveTouchPanel(defaultFloatPanel, "Diary Mode is open and ready to help with your hair journey."))
+  navProfileBtn?.addEventListener("click", ()=>setActiveTouchPanel("floatAssistantBox", "Profile is open with your hair scan and social identity."))
+  navBoothBtn?.addEventListener("click", ()=>{
+    localStorage.setItem("supportrdStudioReturnView", "remote")
+    if(typeof window.openStudioMode === "function"){
+      closeFloat()
+      window.openStudioMode()
+    }else{
+      setActiveTouchPanel("floatBoardsBox", "Studio Quick Panel is ready.")
+    }
+  })
+  navGpsBtn?.addEventListener("click", ()=>{
+    setActiveTouchPanel(defaultFloatPanel)
+    setDiaryGpsMode(true)
+  })
+  navSettingsBtn?.addEventListener("click", ()=>setActiveTouchPanel("floatProfileBox", "Settings are open."))
+  navCloseBtn?.addEventListener("click", closeFloat)
+  footerSettingsBtn?.addEventListener("click", ()=>setActiveTouchPanel("floatProfileBox", "General Settings is open for account updates and social links."))
+  footerPaymentsBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
+  footerSubscribeBtn?.addEventListener("click", ()=>{
+    setActiveTouchPanel("floatProfileBox", "Subscribe and push notification settings are ready.")
+    qs("#floatConfigPush")?.focus()
+  })
+  footerBlogBtn?.addEventListener("click", ()=>{
+    openModal("blogModal")
+    openMiniWindow("Blog", "SupportRD blog is open from Remote.")
+  })
+  footerOfficialBtn?.addEventListener("click", ()=>{
+    openMiniWindow("Official Websites", "SupportRD official routes are ready from the Remote footer.")
+    openLinkModal("https://supportrd.com", "SupportRD Official Website")
+  })
+  themeCardRail?.addEventListener("click", (event)=>{
+    const card = event.target.closest("[data-float-theme]")
+    if(!card) return
+    const key = card.getAttribute("data-float-theme")
+    if(typeof window.setWorldTheme === "function"){
+      window.setWorldTheme(key)
+      if(deviceStatus) deviceStatus.textContent = "Touch theme load started. Your remote is rotating into the new map style now."
+    }else if(typeof window.openWorldMapPanel === "function"){
+      window.openWorldMapPanel()
+    }
+  })
   qs("#floatAriaBtn")?.addEventListener("click", ()=>{
     state.activeAssistant = "aria"
     applyAssistantUI(true)
@@ -5735,6 +6146,7 @@ function setupFloatMode(){
     }
   })
   paymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
+  faqPaymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
   cameraBtn?.addEventListener("click", ()=>qs("#liveArenaCameraAccessBtn")?.click())
   uploadBtn?.addEventListener("click", ()=>uploadInput?.click())
   uploadInput?.addEventListener("change", ()=>{
@@ -5774,6 +6186,10 @@ function setupFloatMode(){
   })
   recordVoiceBtn?.addEventListener("click", ()=>startVoiceRecord("voice"))
   instrumentRecordBtn?.addEventListener("click", ()=>startVoiceRecord("instrument"))
+  trimStart?.addEventListener("input", ()=>syncTrimInputs("range"))
+  trimEnd?.addEventListener("input", ()=>syncTrimInputs("range"))
+  trimStartNumber?.addEventListener("input", ()=>syncTrimInputs("number"))
+  trimEndNumber?.addEventListener("input", ()=>syncTrimInputs("number"))
   highlightBtn?.addEventListener("click", highlightBoard)
   deleteSectionBtn?.addEventListener("click", deleteHighlighted)
   undoBtn?.addEventListener("click", ()=>{
@@ -5812,6 +6228,7 @@ function setupFloatMode(){
   })
   qs("#floatJakeBtn")?.addEventListener("dblclick", ()=>{
     if(typeof window.openStudioMode === "function"){
+      localStorage.setItem("supportrdStudioReturnView", "remote")
       closeFloat()
       window.openStudioMode()
     }
@@ -5826,6 +6243,15 @@ function setupFloatMode(){
     if(post) post.value = text
     qs("#liveArenaComposeInput") && (qs("#liveArenaComposeInput").value = text)
     openMiniWindow("Profile Post", "Profile update sent into the main social post lane.")
+  })
+  qs("#floatProfileUpgradeBtn")?.addEventListener("click", ()=>{
+    openMiniWindow("Upgrade Aria / Jake", "Profile upgrade lane is ready. This is where you sell the stronger Aria / Jake support for the account.")
+  })
+  qs("#floatProfileAchievementsBtn")?.addEventListener("click", ()=>{
+    openMiniWindow("Achievements", "Profile achievements track hair scans, posts, premium upgrades, studio edits, and trusted session movement.")
+  })
+  qs("#floatProfileLinksBtn")?.addEventListener("click", ()=>{
+    focusFloatSection("floatProfileBox", "Social and WWW connections are managed in General Settings.")
   })
   qs("#floatAriaBtn")?.addEventListener("click", ()=>{
     openMiniWindow("Aria Remote", "Aria is holding the live post side in Float Mode. Tap again or double tap to talk.")
@@ -5844,6 +6270,7 @@ function setupFloatMode(){
     const scanSummary = qs("#floatProfileScanSummary")
     if(scanSummary) scanSummary.textContent = summary
     if(assistantStatus) assistantStatus.textContent = "Profile scan refreshed with current hair state, product suggestions, tutorial direction, and Aria memory."
+    if(profileHistory) profileHistory.textContent = `Last 2 Aria / Jake lines: ${lastLines.length ? lastLines.join(" / ") : "No recent conversation yet."}`
   })
   qs("#floatTutorialBotsBtn")?.addEventListener("click", ()=>{
     openMiniWindow("Tutorial Bots", "Aria and Jake tutorial routes are available on every page. Aria helps the general route, Jake helps the studio route.")
@@ -5864,12 +6291,42 @@ function setupFloatMode(){
     focusFloatSection("floatProfileBox", "General Settings is open for your social links, account info, and route controls.")
     qs("#openSettingsBtn")?.click()
   })
+  settingsSaveBtn?.addEventListener("click", saveFloatSettings)
+  pushToggleBtn?.addEventListener("click", ()=>{
+    const pushBox = qs("#floatConfigPush")
+    if(pushBox) pushBox.checked = !pushBox.checked
+    if(configStatus) configStatus.textContent = pushBox?.checked
+      ? "Aria / Jake texting mode is on. Expect sporadic and funky check-ins."
+      : "Aria / Jake texting mode is off for now."
+    openMiniWindow("Texting Mode", pushBox?.checked ? "Aria and Jake are now ready to text in fun little bursts." : "Texting mode is paused.")
+  })
+  settingsEmailBtn?.addEventListener("click", ()=>{
+    focusFloatSection("floatProfileBox", "Change Email is ready.")
+    qs("#floatConfigEmail")?.focus()
+  })
+  settingsPasswordBtn?.addEventListener("click", ()=>{
+    focusFloatSection("floatProfileBox", "Change Password is ready.")
+    qs("#floatConfigPassword")?.focus()
+  })
+  settingsLinksBtn?.addEventListener("click", ()=>{
+    focusFloatSection("floatProfileBox", "Social Media URL Links are ready.")
+    qs("#floatLinkFacebook")?.focus()
+  })
+  settingsPushBtn?.addEventListener("click", ()=>{
+    focusFloatSection("floatProfileBox", "Push Notification is ready.")
+    pushToggleBtn?.click()
+  })
+  settingsLanguageBtn?.addEventListener("click", ()=>{
+    focusFloatSection("floatProfileBox", "Languages are ready.")
+    qs("#floatConfigLanguage")?.focus()
+  })
   qs("#floatMainMenuBtn")?.addEventListener("click", ()=>{
     closeFloat()
     window.scrollTo({top:0, behavior:"smooth"})
   })
   qs("#floatStudioJumpBtn")?.addEventListener("click", ()=>{
     if(typeof window.openStudioMode === "function"){
+      localStorage.setItem("supportrdStudioReturnView", "remote")
       closeFloat()
       window.openStudioMode()
     }
@@ -5887,17 +6344,78 @@ function setupFloatMode(){
     if(settingsStatus) settingsStatus.textContent = diary ? "Translation lane is ready. Remote can pass this message into other language support next." : "Write a message first so we can translate it."
     openMiniWindow("Translate", diary ? "Translation lane staged. We can hand this message into language support next." : "Write a message first so we know what to translate.")
   })
+  diaryPostBtn?.addEventListener("click", ()=>{
+    const diary = (qs("#floatDiaryInput")?.value || "").trim()
+    if(!diary){
+      openMiniWindow("Diary Post", "Write your thought first so we can post it.")
+      return
+    }
+    const mainPost = qs("#liveArenaComposeInput")
+    if(mainPost) mainPost.value = diary
+    if(settingsStatus) settingsStatus.textContent = "Diary post staged in the main social lane."
+    openMiniWindow("Diary Post", "Your diary message is now staged to send into the main social post lane.")
+  })
+  diarySaveBtn?.addEventListener("click", saveDiaryEntry)
+  diaryClearBtn?.addEventListener("click", ()=>{
+    const diary = qs("#floatDiaryInput")
+    if(diary) diary.value = ""
+    if(handsfreeTranscript) handsfreeTranscript.value = ""
+    if(settingsStatus) settingsStatus.textContent = "Diary cleared. Remote is ready for the next thought."
+  })
+  diaryExportPdfBtn?.addEventListener("click", exportDiaryPdf)
+  handsfreeBtn?.addEventListener("click", toggleHandsfreeMode)
+  diaryStudioBtn?.addEventListener("click", ()=>{
+    if(typeof window.openStudioMode === "function"){
+      localStorage.setItem("supportrdStudioReturnView", "remote")
+      closeFloat()
+      window.openStudioMode()
+    }else{
+      openMiniWindow("Booth Export", "Studio is not ready yet, but the diary handoff is staged.")
+    }
+  })
   qs("#floatFaqBtn")?.addEventListener("click", ()=>{
     focusFloatSection("floatLiveBox", "FAQ Button is ready. Use this lane for live help, quick answers, and route support.")
   })
+  diaryFaqBtn?.addEventListener("click", ()=>{
+    focusFloatSection("floatLiveBox", "FAQ Button is ready from Diary Mode.")
+  })
+  diaryGpsBtn?.addEventListener("click", ()=>{
+    setDiaryGpsMode(true)
+    if(diaryGpsCopy) diaryGpsCopy.textContent = "GPS Mode is taking over the whole diary panel. This is your direct route view for storefront movement, page direction, and the next SupportRD move."
+  })
+  diaryGpsExplainBtn?.addEventListener("click", ()=>{
+    openMiniWindow("GPS Mode", "GPS Mode is your route takeover. It turns Diary into a direction-first panel so you can guide people to storefronts, map changes, and the next session move without leaving Remote.")
+  })
+  diaryGpsExitBtn?.addEventListener("click", ()=>setDiaryGpsMode(false))
+  diaryExitGpsBtn?.addEventListener("click", ()=>setDiaryGpsMode(false))
+  diaryGpsStoreBtn?.addEventListener("click", ()=>qs("#rerouteLiveStorefrontBtn")?.click())
+  diaryGpsMainBtn?.addEventListener("click", ()=>{
+    closeFloat()
+    qs("#gpsTab")?.click?.()
+    qs("#liveTabGPS")?.click?.()
+    qs("#gpsTabPanel")?.scrollIntoView?.({behavior:"smooth", block:"start"})
+  })
+  diaryGpsMapBtn?.addEventListener("click", ()=>mapBtn?.click())
+  mapBtnDiary?.addEventListener("click", ()=>mapBtn?.click())
+  diaryGpsStudioBtn?.addEventListener("click", ()=>diaryStudioBtn?.click())
   faqReelBtn?.addEventListener("click", ()=>{
     focusFloatSection("floatLiveBox", "TV Reel is ready from the FAQ lane.")
-    openMiniWindow("SupportRD TV Reel", "TV Reel pull-up is ready here. Use the left companion reel on Main Console, or hit the reel topic buttons from this FAQ lane next.")
-    qs("#toggleLiveConsoleReel")?.click()
+    if(faqReelHost){
+      faqReelHost.hidden = !faqReelHost.hidden
+    }
+    openMiniWindow("SupportRD TV Reel", faqReelHost?.hidden ? "TV Reel tucked away again." : "TV Reel pulled up inside the FAQ lane.")
+  })
+  qs("#floatLiveBox")?.addEventListener("click", (event)=>{
+    const item = event.target.closest(".float-faq-item")
+    if(!item) return
+    const question = item.querySelector("strong")?.textContent || "SupportRD FAQ"
+    const answer = item.querySelector("span")?.textContent || "SupportRD answer ready."
+    openMiniWindow(question, answer)
   })
   window.addEventListener("message", (event)=>{
     if(event?.data?.type === "open-float-mode") openFloat()
   })
+  window.openFloatMode = openFloat
   document.addEventListener("keydown", (event)=>{
     if(!document.body.classList.contains("float-mode-active")) return
     if(event.key === "Backspace"){
@@ -5909,12 +6427,17 @@ function setupFloatMode(){
     }
   })
   resetBoards("Fresh 3 motherboards ready. Upload a new .mp3 or .mp4 to begin quick remote editing.")
+  renderThemeCards()
+  syncFloatSettings()
+  syncProfile()
   const params = new URLSearchParams(window.location.search || "")
   if(params.get("float") === "1" || params.get("remote") === "1"){
     setTimeout(()=>{
       openFloat()
       if(params.get("remote") === "1") setTimeout(()=>window.openRemoteFastPay?.(), 260)
     }, 180)
+  }else if(params.get("viewer") !== "1"){
+    setTimeout(()=>openFloat({ preserveHome: true }), 220)
   }
 }
 
@@ -7125,6 +7648,8 @@ const WORLD_VIEWS = [
       if(contentStatus) contentStatus.textContent = `${view.label} route active. ${view.helper}`
       const floatStatus = qs("#floatSettingsStatus")
       if(floatStatus) floatStatus.textContent = `${view.label} loaded. ${view.helper}`
+      const floatDevice = qs("#floatDeviceStatus")
+      if(floatDevice) floatDevice.textContent = `${view.label} loaded. ${view.helper}`
       renderLiveMapActions(view)
     }
   function setButtonsBusy(label){
@@ -7206,6 +7731,13 @@ const WORLD_VIEWS = [
       openMiniWindow(view.label, action.detail)
     })
     window.openWorldMapPanel = openWorldMap
+    window.setWorldTheme = queueViewLoad
+    window.getWorldViews = ()=>WORLD_VIEWS.map(view => ({
+      key: view.key,
+      label: view.label,
+      perk: view.perk,
+      helper: view.helper
+    }))
   }
 
 function setupDashboardSweep(){
@@ -7291,6 +7823,7 @@ safe(setupReel)
   safe(setupLaunchMenu)
   safe(setupSatelliteQuick)
   safe(setupLiveRadio)
+  safe(setupTrackViewer)
   safe(setupDashboardSweep)
   safe(setupJakeQuickSwitch)
   safe(setupShopifyConnectorBadge)
