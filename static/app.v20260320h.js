@@ -4992,7 +4992,13 @@ function setupTrackViewer(){
       }
     }
     async function playTheme(){
-      try{ window.__mainRadio?.pause?.() }catch{}
+      if(window.__mainRadio?.play){
+        try{
+          await window.__mainRadio.play()
+          render()
+          return
+        }catch{}
+      }
       try{
         audio.volume = 0.52
         window.__supportRDThemeAudio = audio
@@ -5011,7 +5017,11 @@ function setupTrackViewer(){
     }
   })
   restart?.addEventListener("click", async ()=>{
-    audio.currentTime = 0
+    if(window.__mainRadio?.stop){
+      window.__mainRadio.stop()
+    }else{
+      audio.currentTime = 0
+    }
     await playTheme()
   })
   audio.addEventListener("play", render)
@@ -6251,7 +6261,6 @@ function setupFloatMode(){
     setDiaryGpsMode(false)
     try{ window.playSupportRDTheme?.() }catch{}
     if(!options.preserveHome) openMiniWindow("Float Mode", "SupportRD Personal Remote is open. Diary Mode is highlighted, and the whole app stays connected from here.")
-    history.replaceState(null, "", `${window.location.pathname}?remote=1`)
   }
   function closeFloat(){
     stopRemoteGuide()
@@ -6259,18 +6268,14 @@ function setupFloatMode(){
     shell.setAttribute("aria-hidden","true")
     document.body.classList.remove("float-mode-active")
     document.body.classList.remove("remote-home-active")
-    history.replaceState(null, "", window.location.pathname)
   }
   openBtn?.addEventListener("click", openFloat)
   studioBtn?.addEventListener("click", openFloat)
   closeBtn?.addEventListener("click", closeFloat)
-  returnMainBtn?.addEventListener("click", closeFloat)
+  returnMainBtn?.addEventListener("click", ()=>setFloatHome("Remote home is open and ready."))
   remoteSheetBack?.addEventListener("click", ()=>closeRemoteSheet())
   remoteSheetClose?.addEventListener("click", ()=>closeRemoteSheet())
-  openStudioBtn?.addEventListener("click", ()=>{
-    closeFloat()
-    if(typeof window.openStudioMode === "function") window.openStudioMode()
-  })
+  openStudioBtn?.addEventListener("click", ()=>showAllFloatPanels("All Remote panels are open together now."))
   launchButtons.forEach(btn => btn.addEventListener("click", ()=>{
     const targetId = btn.dataset.floatTarget
     const label = btn.querySelector("strong")?.textContent?.trim() || btn.textContent?.trim() || "Remote"
@@ -7923,6 +7928,7 @@ const WORLD_VIEWS = [
       document.body.classList.remove(...classes)
       document.body.classList.add(`world-view-${key}`)
       localStorage.setItem("worldView", key)
+      localStorage.setItem("worldViewExplicit", "true")
       const view = WORLD_VIEWS.find(v=>v.key === key) || WORLD_VIEWS[0]
     if(subtitle) subtitle.textContent = view.label
     const stage = qs("#ariaAssistantSub")
@@ -7994,7 +8000,13 @@ const WORLD_VIEWS = [
     loader?.setAttribute("hidden","hidden")
   }
   const saved = localStorage.getItem("worldView")
-  applyView((saved && WORLD_VIEWS.some(v=>v.key === saved)) ? saved : WORLD_VIEWS[0].key)
+  const explicit = localStorage.getItem("worldViewExplicit") === "true"
+  if(saved && explicit && WORLD_VIEWS.some(v=>v.key === saved)){
+    applyView(saved)
+  }else{
+    document.body.classList.remove(...classes)
+    renderLiveMapActions(WORLD_VIEWS[0])
+  }
   btn?.addEventListener("click", openWorldMap)
   liveBtn?.addEventListener("click", openWorldMap)
   closeBtn?.addEventListener("click", ()=>panel?.setAttribute("hidden","hidden"))
