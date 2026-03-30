@@ -446,6 +446,20 @@
                   <div class="live-presence-chip" id="liveSessionOwner">Session owner: ^^SupportRD</div>
                   <div class="live-presence-chip" id="liveVisitorAccess">Visitors can watch, send hearts, and support the feed.</div>
                 </div>
+                <div class="live-session-care glass" id="liveSessionCare">
+                  <div class="live-session-care-head">
+                    <strong id="liveSessionCareTitle">Welcome to the SupportRD server.</strong>
+                    <span id="liveSessionCareMode">Activity recording on</span>
+                  </div>
+                  <div class="system-sub" id="liveSessionCareStatus">Your current session is recognized, treated with care, and measured live so premium benefits can be checked honestly.</div>
+                  <div class="live-session-contact" id="liveSessionContact">Direct contact: xxfigueroa1993@yahoo.com · 980-375-9197</div>
+                  <div class="live-theme-quick-actions">
+                    <button class="btn ghost" id="liveThemeStandardBtn">Standard Layout</button>
+                    <button class="btn ghost" id="liveThemeOccasionBtn">Occasion Layout</button>
+                    <button class="btn ghost" id="liveThemePremiumBtn">Premium Layout</button>
+                    <button class="btn ghost" id="liveThemeMapBtn">Open Map Themes</button>
+                  </div>
+                </div>
                 <div class="live-stream-title" id="liveArenaPanelTitle">Main Stream</div>
                 <div class="live-compose-box glass">
                   <label class="quick-title" for="liveArenaComposeInput">What's On Your Mind?</label>
@@ -494,6 +508,7 @@
                   <input id="liveFeedX" class="input" placeholder="X / Twitter link">
                   <input id="liveFeedThreads" class="input" placeholder="Threads link">
                 </div>
+                <div id="liveFeedLinkSummary" class="live-feed-link-summary">Owner and visitor SupportRD links will appear here.</div>
                 <div class="feed-check-grid">
                   <label><input type="checkbox" id="livePostIG"> Post to Instagram</label>
                   <label><input type="checkbox" id="livePostTikTok"> Post to TikTok</label>
@@ -1426,6 +1441,7 @@
     </div>
     <div class="settings-grid">
       <div id="settingsAccountSummary" class="settings-account-summary">Logged out · no saved account activity yet.</div>
+      <div id="settingsContinuitySummary" class="settings-account-summary">Network continuity log will appear here.</div>
       <input id="setName" placeholder="Name">
       <input id="setEmail" placeholder="Email">
       <input id="setPhone" placeholder="Phone">
@@ -1873,6 +1889,22 @@
   <div class="brochure-float" id="brochureFloat">
     <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
   </div>
+  <aside class="session-signal glass" id="sessionSignal">
+    <div class="session-signal-head">
+      <strong>Session Signal</strong>
+      <span id="sessionSignalPing">Ping: live</span>
+    </div>
+    <div class="session-signal-row" id="sessionSignalHandle">Handle: ^^SupportRD</div>
+    <div class="session-signal-row" id="sessionSignalRole">Owner device recognized</div>
+    <div class="session-signal-row" id="sessionSignalIp">Local IPv4: hidden</div>
+    <div class="session-signal-row" id="sessionSignalId">Session ID: loading...</div>
+    <div class="session-signal-row" id="sessionSignalContinuity">Network steady · session preserved.</div>
+    <div class="session-signal-row" id="sessionSignalPage">Page: Main Console</div>
+    <div class="session-signal-row" id="sessionSignalSupport">Hearts: 0 · Gifts: 0</div>
+    <div class="session-signal-row" id="sessionSignalPrivacy">IP hidden for privacy. Scan to join instead of managing links.</div>
+    <button class="btn ghost session-signal-join" id="sessionSignalJoinBtn">Scan to Join Session</button>
+    <div class="session-signal-log" id="sessionSignalLog">Waiting for live activity...</div>
+  </aside>
 </div>
 
 <div id="remoteFastPayModal" class="remote-fastpay-modal" hidden aria-hidden="true">

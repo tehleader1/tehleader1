@@ -356,6 +356,52 @@ body.natural-pro .btn.primary{font-weight:800;}
   background:linear-gradient(135deg,#5f1010,#b91c1c);
   border:1px solid rgba(255,120,120,.75);
 }
+.session-signal{
+  position:fixed;
+  right:14px;
+  bottom:18px;
+  z-index:520;
+  width:min(300px, calc(100vw - 28px));
+  padding:14px;
+  border-radius:20px;
+  display:grid;
+  gap:8px;
+  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg, rgba(7,14,24,.78), rgba(12,22,36,.72));
+  box-shadow:0 18px 40px rgba(4,10,18,.22);
+}
+.session-signal-head{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  font-size:12px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:#eef6ff;
+}
+.session-signal-row{
+  font-size:12px;
+  line-height:1.45;
+  color:#dce9fb;
+}
+.session-signal-log{
+  min-height:56px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  color:#eef6ff;
+  line-height:1.5;
+  font-size:12px;
+}
+.session-signal-join{
+  margin-top:4px;
+  min-height:48px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
 @media (max-width:1100px){
   .brochure-float{
     right:12px;
@@ -369,6 +415,12 @@ body.natural-pro .btn.primary{font-weight:800;}
     text-orientation:initial;
     letter-spacing:0.12em;
     padding:10px 14px;
+  }
+  .session-signal{
+    left:10px;
+    right:10px;
+    bottom:12px;
+    width:auto;
   }
 }
 @keyframes laughPop{
@@ -1338,6 +1390,16 @@ body.launch-active #app{display:none;}
   background:rgba(255,255,255,.04);
   border:1px solid rgba(255,255,255,.08);
 }
+.live-feed-link-summary{
+  margin-top:12px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(8,16,26,.46);
+  color:#eef4ff;
+  line-height:1.55;
+  font-size:.95rem;
+}
 .live-feed-actions{
   display:flex;
   justify-content:flex-end;
@@ -1394,6 +1456,32 @@ body.launch-active #app{display:none;}
   flex-wrap:wrap;
   gap:8px;
   margin-bottom:12px;
+}
+.live-session-care{
+  margin-bottom:12px;
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.1);
+  background:linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,226,122,.05));
+  display:grid;
+  gap:10px;
+}
+.live-session-care-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.live-session-contact{
+  font-size:13px;
+  color:#eef6ff;
+  letter-spacing:.02em;
+}
+.live-theme-quick-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
 }
 .live-presence-chip{
   padding:8px 12px;
@@ -3086,6 +3174,7 @@ body.competition-world .bg-layers::before{
   .float-mode-grid{grid-template-columns:1fr;padding:0 10px 10px;}
   .float-box{min-height:auto;}
   .float-mini-actions,.float-big-buttons,.float-assistant-stage{grid-template-columns:1fr 1fr;}
+  .live-theme-quick-actions{display:grid;grid-template-columns:1fr 1fr;}
   .float-upload-strip,.float-transport-strip,.float-trim-row{grid-template-columns:1fr;}
   .remote-product-actions{grid-template-columns:1fr;}
   .remote-fastpay-head{flex-direction:column;}

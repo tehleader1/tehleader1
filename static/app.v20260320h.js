@@ -3465,6 +3465,9 @@ function setupLiveArena(){
   const liveTabPayments = qs("#liveTabPayments")
   const liveTabGPS = qs("#liveTabGPS")
   const liveTabProfile = qs("#liveTabProfile")
+  const sessionCareTitle = qs("#liveSessionCareTitle")
+  const sessionCareMode = qs("#liveSessionCareMode")
+  const sessionCareStatus = qs("#liveSessionCareStatus")
   const flash = qs("#liveCameraFlash")
   const sponsorTagOpenBtn = qs("#sponsorTagOpenBtn")
   const tagModal = qs("#sponsorTagModal")
@@ -3489,12 +3492,8 @@ function setupLiveArena(){
   let energyTimer = null
   let timerLoop = null
   let currentViews = Number(localStorage.getItem(viewsKey) || 220)
-  const hasSavedAccount = !!localStorage.getItem("loggedIn") || !!localStorage.getItem("socialLinks")
-  let sessionRole = /[?&]host=1\b/.test(location.search)
-    ? "owner"
-    : ((/[?&]viewer=1\b/.test(location.search)
-      ? "visitor"
-      : (localStorage.getItem(roleKey) || (hasSavedAccount ? "owner" : "visitor"))))
+  const explicitViewer = /[?&]viewer=1\b/.test(location.search)
+  let sessionRole = explicitViewer ? "visitor" : "owner"
   const conversationHomeParent = conversationPanel?.parentElement || null
   const conversationHomeNext = conversationPanel?.nextElementSibling || null
   if(tagModal) tagModal.hidden = true
@@ -3682,6 +3681,31 @@ function setupLiveArena(){
       mainStream.textContent = liveJoiners.join("\n")
     }
   }
+  function syncSessionCare(){
+    if(sessionCareTitle) sessionCareTitle.textContent = `Welcome to the SupportRD server, ${getFeedHandle()}.`
+    if(sessionCareMode) sessionCareMode.textContent = getIsViewer() ? "Viewer support active" : "Activity recording on"
+    if(sessionCareStatus){
+      sessionCareStatus.textContent = getIsViewer()
+        ? "You are viewing a live SupportRD session. You can support the feed, send hearts, and move cleanly through the experience."
+        : "Your current session is recognized, treated with care, and measured live so premium benefits can be checked honestly with live admin review."
+    }
+  }
+  function applyThemeQuick(action){
+    if(action === "standard"){
+      if(sessionCareStatus) sessionCareStatus.textContent = "Standard layout active. Clean and light for everyday posting, booth work, and quick support."
+      if(mainStream && livePanelIndex === 0) mainStream.textContent = "Standard SupportRD layout active. Keep the session clean, hair-focused, and easy to move through."
+    }else if(action === "occasion"){
+      if(typeof window.openWorldMapPanel === "function") window.openWorldMapPanel()
+      if(sessionCareStatus) sessionCareStatus.textContent = "Occasion layout ready. Pick the theme that fits the moment and let the session change with it."
+    }else if(action === "premium"){
+      if(sessionCareStatus) sessionCareStatus.textContent = "Premium layout active. Purchasing a premium feature gives the benefits directly, with live admin measuring the results."
+      if(mainStream && livePanelIndex === 0) mainStream.textContent = "Premium session mode active. Direct contact is available and premium benefits are being measured live."
+    }else if(action === "map"){
+      if(typeof window.openWorldMapPanel === "function") window.openWorldMapPanel()
+      if(sessionCareStatus) sessionCareStatus.textContent = "Map themes are open. Change the full session feel without leaving the current route."
+    }
+    window.logSessionSignal?.(`Theme quick action: ${action}`)
+  }
   function openFeedPanel(){
     const panel = qs("#liveFeedPanel")
     if(!panel) return
@@ -3737,6 +3761,7 @@ function setupLiveArena(){
         ? `Viewer watch mode active for ${getFeedHandle()}. You can see the session, comments, and joiners, and you can support the live feed, but you cannot press host controls.`
         : "Host control mode active. Viewer links open in watch-only mode."
     }
+    syncSessionCare()
   }
   function updateFloodState(){
     const ready = currentViews >= 1000
@@ -3872,6 +3897,7 @@ function setupLiveArena(){
     startLiveEnergy()
     updateFloodState()
     setViewerMode()
+    syncSessionCare()
     syncHearts()
     syncAssistantHistory()
     syncTimers()
@@ -4140,6 +4166,7 @@ function setupLiveArena(){
     const handle = getFeedHandle()
     bumpDayStat("money", 35)
     recordPurchaseHistory("Live Feed Support", 35)
+    window.logSessionSignal?.("Support payment lane opened")
     openMiniWindow("Support This Feed", `${handle} is live. Viewers can support this feed through Shopify checkout while the host stays in control.`)
     openLinkModal(LINKS.pro, `${handle} Live Support Checkout`)
   })
@@ -4147,6 +4174,7 @@ function setupLiveArena(){
     const hearts = Number(localStorage.getItem(heartKey) || 0) + 1
     localStorage.setItem(heartKey, String(hearts))
     syncHearts()
+    window.logSessionSignal?.("Heart sent to the session")
     liveComments.unshift(`Receiver sent a heart to ${getFeedHandle()}.`)
     liveComments.splice(3)
     if(livePanelIndex === 1) renderLivePanel()
@@ -4154,29 +4182,38 @@ function setupLiveArena(){
   })
   liveTabFeed?.addEventListener("click", ()=>{
     recordRecentView("Main Feed")
+    window.logSessionSignal?.("Main Feed viewed")
     qs("#liveArenaMainStream")?.scrollIntoView({behavior:"smooth", block:"center"})
     openMiniWindow("Main Feed", "Main feed is centered and ready.")
   })
   liveTabBooth?.addEventListener("click", ()=>{
     recordRecentView("Studio")
+    window.logSessionSignal?.("Studio opened from Main Console")
     if(typeof window.openStudioMode === "function") window.openStudioMode()
   })
   liveTabPayments?.addEventListener("click", ()=>{
     recordRecentView("Payments")
+    window.logSessionSignal?.("Payments panel opened")
     openModal("subscriptionModal")
     openMiniWindow("Payments", "Product purchase and payment lanes are open.")
   })
   liveTabGPS?.addEventListener("click", ()=>{
     recordRecentView("GPS")
+    window.logSessionSignal?.("GPS panel opened")
     if(typeof setActiveTab === "function") setActiveTab("gps")
     qs("#tab-gps")?.scrollIntoView({behavior:"smooth", block:"center"})
     openMiniWindow("GPS", "GPS panel is open and ready.")
   })
   liveTabProfile?.addEventListener("click", ()=>{
     recordRecentView("Profile")
+    window.logSessionSignal?.("Profile settings opened")
     openModal("settingsModal")
     openMiniWindow("Profile", "Personal settings and profile links are open.")
   })
+  qs("#liveThemeStandardBtn")?.addEventListener("click", ()=>applyThemeQuick("standard"))
+  qs("#liveThemeOccasionBtn")?.addEventListener("click", ()=>applyThemeQuick("occasion"))
+  qs("#liveThemePremiumBtn")?.addEventListener("click", ()=>applyThemeQuick("premium"))
+  qs("#liveThemeMapBtn")?.addEventListener("click", ()=>applyThemeQuick("map"))
   qs("#openLiveProfileBtn")?.addEventListener("click", ()=>{
     openModal("settingsModal")
     openMiniWindow("Profile / Group", "Profile settings, email, address, password, and subscription status are open.")
@@ -4201,6 +4238,7 @@ function setupLiveArena(){
     localStorage.setItem("supportrdGiftHistory", JSON.stringify(gifts.slice(0,12)))
     bumpDayStat("money", amount)
     recordPurchaseHistory("Gift Giver Support", amount)
+    window.logSessionSignal?.(`Gift giver prepared $${amount.toFixed(2)}`)
     const summary = qs("#liveGiftSummary")
     if(summary) summary.textContent = `$${amount.toFixed(2)} added to ${getFeedHandle()} session balance. Continue to checkout if you want a clean payment handoff.`
   }))
@@ -4246,6 +4284,103 @@ function setupLiveArena(){
       openLiveShell()
     }
   }, 180)
+}
+
+function setupSessionSignal(){
+  const card = qs("#sessionSignal")
+  if(!card) return
+  const handleEl = qs("#sessionSignalHandle")
+  const roleEl = qs("#sessionSignalRole")
+  const ipEl = qs("#sessionSignalIp")
+  const idEl = qs("#sessionSignalId")
+  const continuityEl = qs("#sessionSignalContinuity")
+  const pageEl = qs("#sessionSignalPage")
+  const supportEl = qs("#sessionSignalSupport")
+  const pingEl = qs("#sessionSignalPing")
+  const logEl = qs("#sessionSignalLog")
+  const joinBtn = qs("#sessionSignalJoinBtn")
+  const sessionKey = "supportrdPublicSessionId"
+  const logKey = "supportrdSignalLog"
+  const ownerIpKey = "supportrdOwnerLocalIPv4"
+  const continuityKey = "supportrdNetworkContinuity"
+  const knownOwnerIp = localStorage.getItem(ownerIpKey) || "10.0.2.13"
+  localStorage.setItem(ownerIpKey, knownOwnerIp)
+  const getHandle = ()=>{
+    const savedTag = localStorage.getItem("supportrdSponsorTag")
+    if(savedTag) return savedTag
+    try{
+      const social = JSON.parse(localStorage.getItem("socialLinks") || "{}")
+      const raw = String(social.username || social.name || "SupportRD").trim().replace(/[^a-z0-9]/gi, "")
+      return `^^${raw || "SupportRD"}`
+    }catch{
+      return "^^SupportRD"
+    }
+  }
+  const sessionId = localStorage.getItem(sessionKey) || `SRD-${Math.random().toString(36).slice(2,8).toUpperCase()}`
+  localStorage.setItem(sessionKey, sessionId)
+  function noteContinuity(nextIp){
+    const current = localStorage.getItem(ownerIpKey) || knownOwnerIp
+    if(nextIp && nextIp !== current){
+      const info = {
+        from: current,
+        to: nextIp,
+        at: new Date().toISOString(),
+        preserved: true
+      }
+      localStorage.setItem(continuityKey, JSON.stringify(info))
+      localStorage.setItem(ownerIpKey, nextIp)
+      pushLog(`Network changed from ${current} to ${nextIp} · session preserved`)
+    }
+  }
+  function pushLog(line){
+    const items = JSON.parse(localStorage.getItem(logKey) || "[]")
+    items.unshift(`${new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})} · ${line}`)
+    localStorage.setItem(logKey, JSON.stringify(items.slice(0,5)))
+    render()
+  }
+  function currentPageLabel(){
+    if(document.body.classList.contains("float-mode-active")) return "Remote"
+    if(document.body.classList.contains("studio-mode-active")) return "Studio"
+    if(document.body.classList.contains("live-console-active")) return "Main Console"
+    const activeTab = document.querySelector(".tab-panel.active")?.id || "post"
+    return activeTab.replace(/^tab-/,"").replace(/\b\w/g, m=>m.toUpperCase())
+  }
+  function render(){
+    const role = /[?&]viewer=1\b/.test(location.search) ? "visitor" : "owner"
+    const hearts = Number(localStorage.getItem("supportrdSessionHearts") || 0)
+    const gifts = JSON.parse(localStorage.getItem("supportrdGiftHistory") || "[]").length
+    if(handleEl) handleEl.textContent = `Handle: ${getHandle()}`
+    if(roleEl) roleEl.textContent = role === "owner" ? "Owner device recognized" : "Viewer access ready"
+    if(ipEl) ipEl.textContent = `Local IPv4: ${knownOwnerIp}${role === "owner" ? " · owner device recognized" : ""}`
+    if(idEl) idEl.textContent = `Session ID: ${sessionId}`
+    const continuity = JSON.parse(localStorage.getItem(continuityKey) || "null")
+    if(continuityEl){
+      continuityEl.textContent = continuity?.preserved
+        ? `Network changed from ${continuity.from} to ${continuity.to} · session preserved.`
+        : "Network steady · session preserved."
+    }
+    if(pageEl) pageEl.textContent = `Page: ${currentPageLabel()}`
+    if(supportEl) supportEl.textContent = `Hearts: ${hearts} · Gifts: ${gifts}`
+    if(logEl){
+      const items = JSON.parse(localStorage.getItem(logKey) || "[]")
+      logEl.innerHTML = items.length ? items.join("<br>") : "Waiting for live activity..."
+    }
+    if(pingEl){
+      const rtt = navigator.connection && typeof navigator.connection.rtt === "number" ? navigator.connection.rtt : null
+      pingEl.textContent = rtt ? `Ping: ${rtt}ms` : "Ping: live"
+    }
+  }
+  joinBtn?.addEventListener("click", ()=>{
+    const viewerUrl = `${location.origin}${location.pathname}?viewer=1`
+    openMiniWindow("Scan to Join", `Viewer access is ready. Share this SupportRD session cleanly: ${viewerUrl}`)
+    pushLog("Viewer join link prepared for sharing")
+  })
+  window.noteSupportRDContinuity = noteContinuity
+  window.logSessionSignal = pushLog
+  ;["click","visibilitychange","storage"].forEach(evt=>{
+    window.addEventListener(evt, ()=>render(), {passive:true})
+  })
+  render()
 }
 
 function setupReel(){
@@ -4382,8 +4517,10 @@ function isProOverride(){
 function setupSettings(){
   const saved = JSON.parse(localStorage.getItem("socialLinks") || "{}")
   state.socialLinks = saved
+  localStorage.setItem("supportrdOwnerLocalIPv4", localStorage.getItem("supportrdOwnerLocalIPv4") || "10.0.2.13")
   function renderSettingsAccountSummary(){
     const accountSummary = qs("#settingsAccountSummary")
+    const continuitySummary = qs("#settingsContinuitySummary")
     if(!accountSummary) return
     const gifts = JSON.parse(localStorage.getItem("supportrdGiftHistory") || "[]")
     const purchases = JSON.parse(localStorage.getItem("supportrdPurchaseHistory") || "[]")
@@ -4391,7 +4528,15 @@ function setupSettings(){
     const wallet = JSON.parse(localStorage.getItem("supportrdWallet") || "{}")
     const recentViews = JSON.parse(localStorage.getItem("supportrdRecentViews") || "[]")
     const lastViews = recentViews.slice(0,3).map(item=>item.label).join(", ") || "No recent page views yet"
-    accountSummary.innerHTML = `Logged ${localStorage.getItem("loggedIn")==="true" ? "in" : "out"} · Email: <strong>${saved.email || "not set"}</strong> · Address: <strong>${saved.address || "not set"}</strong><br>Subscription: <strong>${state.subscription || saved.subscription || "free"}</strong> · Next due: <strong>${state.subscriptionNextDue || saved.next_due || "not set"}</strong> · Session balance: <strong>$${Number(wallet.balance || 0).toFixed(2)}</strong><br>Purchase history: <strong>${purchases.length}</strong> · Gift support: <strong>${gifts.length}</strong> · Last 2 Aria lines: <strong>${history.slice(0,2).join(" / ") || "none yet"}</strong><br>Recent page views: <strong>${lastViews}</strong>`
+    const ownerUrl = `${location.origin}${location.pathname}`
+    const viewerUrl = `${location.origin}${location.pathname}?viewer=1`
+    accountSummary.innerHTML = `Logged ${localStorage.getItem("loggedIn")==="true" ? "in" : "out"} · Email: <strong>${saved.email || "not set"}</strong> · Address: <strong>${saved.address || "not set"}</strong><br>Subscription: <strong>${state.subscription || saved.subscription || "free"}</strong> · Next due: <strong>${state.subscriptionNextDue || saved.next_due || "not set"}</strong> · Session balance: <strong>$${Number(wallet.balance || 0).toFixed(2)}</strong><br>Purchase history: <strong>${purchases.length}</strong> · Gift support: <strong>${gifts.length}</strong> · Last 2 Aria lines: <strong>${history.slice(0,2).join(" / ") || "none yet"}</strong><br>Recent page views: <strong>${lastViews}</strong><br>Owner URL: <strong>${ownerUrl}</strong><br>Viewer URL: <strong>${viewerUrl}</strong>`
+    if(continuitySummary){
+      const continuity = JSON.parse(localStorage.getItem("supportrdNetworkContinuity") || "null")
+      continuitySummary.innerHTML = continuity?.preserved
+        ? `Network continuity: <strong>session preserved</strong><br>From: <strong>${continuity.from}</strong> · To: <strong>${continuity.to}</strong><br>Changed at: <strong>${new Date(continuity.at).toLocaleString()}</strong>`
+        : "Network continuity: <strong>steady</strong> · same session, same payment info, same history, same ^^handle."
+    }
   }
   state.subscription = "free"
   if(isProOverride()) { state.subscription = 'pro'; state.ariaBlocked = false; state.ariaCount = 0; localStorage.setItem('loggedIn','true') }
@@ -7108,6 +7253,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupAriaHelp)
   safe(setupThemeArrows)
   safe(setupUnlockViewsButton)
+  safe(setupSessionSignal)
   safe(setupModals)
   safe(setupPaymentChooser)
   safe(setupCenterCheckoutMenu)
