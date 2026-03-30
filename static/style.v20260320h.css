@@ -2911,11 +2911,104 @@ body.competition-world .bg-layers::before{
   padding:12px;
   border-radius:24px;
   display:grid;
-  grid-template-columns:repeat(5, minmax(0, 1fr));
+  grid-template-columns:repeat(6, minmax(0, 1fr));
   gap:10px;
 }
 .float-mode-footer .btn{
   min-height:48px;
+}
+.float-remote-sheet{
+  margin:0 18px 14px;
+  padding:18px;
+  border-radius:28px;
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 24px 40px rgba(11,32,64,.18);
+}
+.float-remote-sheet-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:16px;
+}
+.float-remote-sheet-head h3{
+  margin:0;
+  font-size:30px;
+  color:#173a6a;
+}
+.float-remote-sheet-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.float-remote-sheet-body{
+  display:grid;
+  gap:14px;
+}
+.float-sheet-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+.float-sheet-grid.three{
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+}
+.float-sheet-copy{
+  padding:14px 16px;
+  border-radius:18px;
+  background:rgba(255,255,255,.54);
+  color:#27466d;
+  line-height:1.55;
+  border:1px solid rgba(167,196,232,.28);
+}
+.float-guide-shell{
+  padding:16px;
+  border-radius:20px;
+  background:linear-gradient(145deg, rgba(255,255,255,.7), rgba(224,241,255,.48));
+  border:1px solid rgba(160,194,231,.34);
+  display:grid;
+  gap:12px;
+}
+.float-guide-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.float-guide-status{
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(17,56,97,.08);
+  color:#26456d;
+}
+.float-guide-steps{
+  display:grid;
+  gap:10px;
+}
+.float-guide-step{
+  width:100%;
+  text-align:left;
+  border:none;
+  border-radius:18px;
+  background:rgba(255,255,255,.74);
+  color:#1e3554;
+  padding:14px 16px;
+  cursor:pointer;
+  display:grid;
+  gap:4px;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.float-guide-step:hover,
+.float-guide-step.active{
+  transform:translateY(-1px);
+  background:rgba(210,236,255,.92);
+  box-shadow:0 14px 28px rgba(23,87,205,.14);
+}
+.float-mode-shell.sheet-open .float-mode-grid{
+  display:none;
+}
+.float-mode-shell.sheet-open .float-mode-nav{
+  display:none;
 }
 .float-mode-grid #reelPanel{grid-column:1;}
 #floatLiveBox{grid-column:2;}
@@ -3572,6 +3665,16 @@ body.competition-world .bg-layers::before{
   }
   .float-mode-shell.touch-optimized .float-box{
     min-height:auto;
+  }
+  .float-remote-sheet{
+    margin:0 10px 10px;
+    padding:14px;
+  }
+  .float-remote-sheet-head,
+  .float-sheet-grid,
+  .float-sheet-grid.three{
+    grid-template-columns:1fr;
+    display:grid;
   }
 }
 

@@ -4455,11 +4455,14 @@ function setupSessionSignal(){
       pingEl.textContent = rtt ? `Ping: ${rtt}ms` : "Ping: live"
     }
   }
-  joinBtn?.addEventListener("click", ()=>{
-    const viewerUrl = `${location.origin}${location.pathname}?viewer=1`
-    openMiniWindow("Scan to Join", `Viewer access is ready. Share this SupportRD session cleanly: ${viewerUrl}`)
-    pushLog("Viewer join link prepared for sharing")
-  })
+    joinBtn?.addEventListener("click", ()=>{
+      const viewerUrl = `${location.origin}${location.pathname}?viewer=1`
+      openMiniWindow("Scan to Join", `Viewer access is ready. Share this SupportRD session cleanly: ${viewerUrl}`)
+      pushLog("Viewer join link prepared for sharing")
+      joinBtn.textContent = "Viewer Link Ready"
+      joinBtn.disabled = true
+      setTimeout(()=>{ joinBtn.hidden = true }, 220)
+    })
   window.noteSupportRDContinuity = noteContinuity
   window.logSessionSignal = pushLog
   ;["click","visibilitychange","storage"].forEach(evt=>{
@@ -4981,21 +4984,23 @@ function setupTrackViewer(){
   const restart = qs("#trackViewerRestart")
   const stateLabel = qs("#trackViewerState")
   if(!audio || !toggle) return
-  function render(){
-    const paused = audio.paused
-    toggle.textContent = paused ? "Play" : "Pause"
-    if(stateLabel){
-      stateLabel.textContent = paused ? "Tap play if audio is paused" : "Now playing on SupportRD"
+    function render(){
+      const paused = audio.paused
+      toggle.textContent = paused ? "Play" : "Pause"
+      if(stateLabel){
+        stateLabel.textContent = paused ? "Tap play if audio is paused" : "Now playing on SupportRD"
+      }
     }
-  }
-  async function playTheme(){
-    try{
-      audio.volume = 0.52
-      await audio.play()
-      render()
-    }catch{
-      render()
-    }
+    async function playTheme(){
+      try{ window.__mainRadio?.pause?.() }catch{}
+      try{
+        audio.volume = 0.52
+        window.__supportRDThemeAudio = audio
+        await audio.play()
+        render()
+      }catch{
+        render()
+      }
   }
   toggle.addEventListener("click", async ()=>{
     if(audio.paused){
@@ -5139,19 +5144,20 @@ function setupLiveRadio(){
   const audio = new Audio()
   audio.preload = "auto"
 
-  function loadTrack(i){
-    idx = (i + playlist.length) % playlist.length
-    const track = playlist[idx]
-    audio.src = track.src
-    label.textContent = track.title
-    status.textContent = `Ready: ${track.title}`
-  }
-  async function playCurrent(){
-    try{
-      if(!audio.src) loadTrack(idx)
-      await audio.play()
-      playBtn.textContent = "Pause"
-      status.textContent = `Now playing: ${playlist[idx].title}`
+    function loadTrack(i){
+      idx = (i + playlist.length) % playlist.length
+      const track = playlist[idx]
+      audio.src = track.src
+      label.textContent = track.title
+      status.textContent = `Ready: ${track.title}`
+    }
+    async function playCurrent(){
+      try{ window.__supportRDThemeAudio?.pause?.() }catch{}
+      try{
+        if(!audio.src) loadTrack(idx)
+        await audio.play()
+        playBtn.textContent = "Pause"
+        status.textContent = `Now playing: ${playlist[idx].title}`
     }catch{
       status.textContent = "Tap Play to allow audio."
     }
@@ -5176,14 +5182,13 @@ function setupLiveRadio(){
     loadTrack(idx - 1)
     await playCurrent()
   })
-  nextBtn.addEventListener("click", async ()=>{
-    loadTrack(idx + 1)
-    await playCurrent()
-  })
-  audio.addEventListener("ended", async ()=>{ await playCurrent() })
-  loadTrack(0)
-  setTimeout(()=>{ playCurrent() }, 220)
-  window.__mainRadio = {
+    nextBtn.addEventListener("click", async ()=>{
+      loadTrack(idx + 1)
+      await playCurrent()
+    })
+    audio.addEventListener("ended", async ()=>{ await playCurrent() })
+    loadTrack(0)
+    window.__mainRadio = {
     play: playCurrent,
     stop: ()=>{
       audio.pause()
@@ -5652,11 +5657,17 @@ function setupFloatMode(){
   const navGpsBtn = qs("#floatNavGPS")
   const navSettingsBtn = qs("#floatNavSettings")
   const navCloseBtn = qs("#floatNavClose")
+  const footerGuideBtn = qs("#floatFooterGuide")
   const footerSettingsBtn = qs("#floatFooterSettings")
   const footerPaymentsBtn = qs("#floatFooterPayments")
   const footerSubscribeBtn = qs("#floatFooterSubscribe")
   const footerBlogBtn = qs("#floatFooterBlog")
   const footerOfficialBtn = qs("#floatFooterOfficial")
+  const remoteSheet = qs("#floatRemoteSheet")
+  const remoteSheetTitle = qs("#floatRemoteSheetTitle")
+  const remoteSheetBody = qs("#floatRemoteSheetBody")
+  const remoteSheetBack = qs("#floatRemoteSheetBack")
+  const remoteSheetClose = qs("#floatRemoteSheetClose")
   if(!shell) return
   const remoteState = {
     activeBoard: 0,
@@ -5667,7 +5678,10 @@ function setupFloatMode(){
     recordChunks: [],
     handsfreeRecognition: null,
     handsfreeActive: false,
-    currentPanel: "floatSettingsBox"
+    currentPanel: "floatSettingsBox",
+    guideTimer: null,
+    guideIndex: 0,
+    guideKey: ""
   }
   const floatPanelKey = "supportrdFloatPanel"
   const defaultFloatPanel = "floatSettingsBox"
@@ -5676,13 +5690,147 @@ function setupFloatMode(){
   function isTouchLayout(){
     return touchQuery ? touchQuery.matches : (window.innerWidth <= 900)
   }
-  function setFloatHome(message){
-    shell.classList.add("touch-home")
-    remoteState.currentPanel = defaultFloatPanel
-    localStorage.setItem(floatPanelKey, defaultFloatPanel)
-    launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
-    qsa(".float-box").forEach(box => box.hidden = true)
+  function stopRemoteGuide(notice){
+    if(remoteState.guideTimer){
+      clearInterval(remoteState.guideTimer)
+      remoteState.guideTimer = null
+    }
+    remoteState.guideIndex = 0
+    remoteState.guideKey = ""
+    if(footerGuideBtn) footerGuideBtn.textContent = "Live Guidance"
+    if(notice && remoteSheetBody){
+      const status = remoteSheetBody.querySelector("[data-guide-status]")
+      if(status) status.textContent = notice
+    }
+  }
+  function renderGuideMarkup(key, steps){
+    return `
+      <div class="float-guide-shell" data-guide-shell="${key}">
+        <div class="float-guide-head">
+          <div>
+            <div class="float-mode-kicker">SupportRD Live Guidance</div>
+            <strong>${key}</strong>
+          </div>
+          <button class="btn ghost float-guide-toggle" type="button" data-guide-toggle="${key}">Start Guide</button>
+        </div>
+        <div class="float-guide-status" data-guide-status>Tap start and the guide will walk the page lightly. Tap again to interrupt.</div>
+        <div class="float-guide-steps">
+          ${steps.map((step, idx)=>`<button class="float-guide-step" type="button" data-guide-step="${idx}" ${step.target ? `data-guide-target="${step.target}"` : ""}><strong>${step.title}</strong><span>${step.body}</span></button>`).join("")}
+        </div>
+      </div>
+    `
+  }
+  function showAllFloatPanels(message){
+    closeRemoteSheet(false)
+    shell.classList.remove("touch-home")
+    shell.classList.remove("panel-open")
+    shell.classList.add("touch-optimized")
+    qsa(".float-box").forEach(box=>{
+      box.hidden = false
+      box.classList.remove("float-box-focus")
+    })
+    launchButtons.forEach(btn=>btn.classList.remove("active"))
     if(message) openMiniWindow("Float Remote", message)
+  }
+  function startRemoteGuide(key, steps){
+    if(!remoteSheetBody || !steps?.length) return
+    if(remoteState.guideTimer && remoteState.guideKey === key){
+      stopRemoteGuide("Guidance paused. You are back in full control.")
+      const toggle = remoteSheetBody.querySelector(`[data-guide-toggle="${key}"]`)
+      if(toggle) toggle.textContent = "Start Guide"
+      return
+    }
+    stopRemoteGuide()
+    remoteState.guideKey = key
+    remoteState.guideIndex = 0
+    const toggle = remoteSheetBody.querySelector(`[data-guide-toggle="${key}"]`)
+    const status = remoteSheetBody.querySelector("[data-guide-status]")
+    const stepNodes = ()=>Array.from(remoteSheetBody.querySelectorAll(".float-guide-step"))
+    if(footerGuideBtn) footerGuideBtn.textContent = "Stop Guidance"
+    const runStep = ()=>{
+      const step = steps[remoteState.guideIndex] || steps[0]
+      if(status) status.textContent = `${step.title}: ${step.body}`
+      stepNodes().forEach((node, idx)=>node.classList.toggle("active", idx === remoteState.guideIndex))
+      if(key === "Remote Guidance"){
+        if(step.target === "all"){
+          showAllFloatPanels(`${step.title} is open. All Remote panels are visible together now.`)
+        }else if(step.target){
+          closeRemoteSheet(false)
+          setActiveTouchPanel(step.target, `${step.title} is open. ${step.body}`)
+        }
+      }
+      remoteState.guideIndex = (remoteState.guideIndex + 1) % steps.length
+    }
+    if(toggle) toggle.textContent = "Stop Guide"
+    runStep()
+    remoteState.guideTimer = setInterval(runStep, 2400)
+  }
+  function wireRemoteGuide(key, steps){
+    if(!remoteSheetBody) return
+    remoteSheetBody.querySelector(`[data-guide-toggle="${key}"]`)?.addEventListener("click", ()=>startRemoteGuide(key, steps))
+    Array.from(remoteSheetBody.querySelectorAll(".float-guide-step")).forEach((node, idx)=>{
+      node.addEventListener("click", ()=>{
+        stopRemoteGuide()
+        remoteState.guideKey = key
+        remoteState.guideIndex = idx
+        const status = remoteSheetBody.querySelector("[data-guide-status]")
+        const step = steps[idx]
+        Array.from(remoteSheetBody.querySelectorAll(".float-guide-step")).forEach((item, itemIdx)=>item.classList.toggle("active", itemIdx === idx))
+        if(status && step) status.textContent = `${step.title}: ${step.body}`
+        if(key === "Remote Guidance" && step?.target){
+          if(step.target === "all"){
+            showAllFloatPanels(`${step.title} is open. All Remote panels are visible together now.`)
+          }else{
+            closeRemoteSheet(false)
+            setActiveTouchPanel(step.target, `${step.title} is open. ${step.body}`)
+          }
+        }
+      })
+    })
+  }
+  function openRemoteSheet(title, html, options = {}){
+    if(!remoteSheet || !remoteSheetBody || !remoteSheetTitle) return
+    stopRemoteGuide()
+    remoteSheetTitle.textContent = title
+    remoteSheetBody.innerHTML = html
+    remoteSheet.hidden = false
+    remoteSheet.setAttribute("aria-hidden", "false")
+    shell.classList.add("sheet-open")
+    if(options.message) openMiniWindow(title, options.message)
+    if(options.guideKey && Array.isArray(options.guideSteps)){
+      wireRemoteGuide(options.guideKey, options.guideSteps)
+    }
+    Array.from(remoteSheetBody.querySelectorAll("[data-sheet-close]")).forEach(btn=>btn.addEventListener("click", ()=>closeRemoteSheet()))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-fastpay]")).forEach(btn=>btn.addEventListener("click", ()=>window.openRemoteFastPay?.()))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-settings]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      closeRemoteSheet()
+      setActiveTouchPanel("floatProfileBox", "General Settings is ready inside Remote.")
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-blog]")).forEach(btn=>btn.addEventListener("click", ()=>openModal("blogModal")))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-gps-route]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      closeRemoteSheet()
+      qs("#rerouteLiveStorefrontBtn")?.click()
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-official]")).forEach(btn=>btn.addEventListener("click", ()=>openLinkModal("https://supportrd.com", "SupportRD Official Website")))
+  }
+  function closeRemoteSheet(stopGuide = true){
+    if(stopGuide) stopRemoteGuide()
+    if(!remoteSheet || !remoteSheetBody) return
+    remoteSheet.hidden = true
+    remoteSheet.setAttribute("aria-hidden", "true")
+    remoteSheetBody.innerHTML = ""
+    shell.classList.remove("sheet-open")
+  }
+    function setFloatHome(message){
+      closeRemoteSheet()
+      shell.classList.add("touch-home")
+      shell.classList.remove("panel-open")
+      shell.classList.add("touch-optimized")
+      remoteState.currentPanel = defaultFloatPanel
+      localStorage.setItem(floatPanelKey, defaultFloatPanel)
+      launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
+      qsa(".float-box").forEach(box => box.hidden = true)
+      if(message) openMiniWindow("Float Remote", message)
   }
 
   function revokePreview(){
@@ -6064,32 +6212,29 @@ function setupFloatMode(){
     if(settingsStatus) settingsStatus.textContent = "Handsfree mode is live. SupportRD is transcribing the conversation below."
     openMiniWindow("Handsfree Mode", "Handsfree transcription is live. Talk naturally and we will keep the details below.")
   }
-  function setActiveTouchPanel(targetId, message){
-    const finalTarget = targetId || defaultFloatPanel
-    shell.classList.remove("touch-home")
-    remoteState.currentPanel = finalTarget
-    localStorage.setItem(floatPanelKey, finalTarget)
-    launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === finalTarget))
-    const boxes = qsa(".float-box")
-    const shouldCollapse = isTouchLayout()
-    boxes.forEach(box =>{
-      if(shouldCollapse){
+    function setActiveTouchPanel(targetId, message){
+      closeRemoteSheet()
+      const finalTarget = targetId || defaultFloatPanel
+      shell.classList.remove("touch-home")
+      shell.classList.add("panel-open")
+      remoteState.currentPanel = finalTarget
+      localStorage.setItem(floatPanelKey, finalTarget)
+      launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === finalTarget))
+      const boxes = qsa(".float-box")
+      boxes.forEach(box =>{
         box.hidden = box.id !== finalTarget
-      }else{
-        box.hidden = false
+        box.classList.remove("float-box-focus")
+      })
+      const target = qs(`#${finalTarget}`)
+      if(target){
+        target.hidden = false
+        target.classList.add("float-box-focus")
+        target.scrollIntoView({behavior:"smooth", block:"start", inline:"nearest"})
+        setTimeout(()=>target.classList.remove("float-box-focus"), 1800)
       }
-      box.classList.remove("float-box-focus")
-    })
-    const target = qs(`#${finalTarget}`)
-    if(target){
-      target.hidden = false
-      target.classList.add("float-box-focus")
-      target.scrollIntoView({behavior:"smooth", block:"start", inline:"nearest"})
-      setTimeout(()=>target.classList.remove("float-box-focus"), 1800)
+      shell.classList.add("touch-optimized")
+      if(message) openMiniWindow("Float Remote", message)
     }
-    shell.classList.toggle("touch-optimized", shouldCollapse)
-    if(message) openMiniWindow("Float Remote", message)
-  }
   function focusFloatSection(targetId, message){
     setActiveTouchPanel(targetId, message)
   }
@@ -6109,6 +6254,7 @@ function setupFloatMode(){
     history.replaceState(null, "", `${window.location.pathname}?remote=1`)
   }
   function closeFloat(){
+    stopRemoteGuide()
     shell.hidden = true
     shell.setAttribute("aria-hidden","true")
     document.body.classList.remove("float-mode-active")
@@ -6119,6 +6265,8 @@ function setupFloatMode(){
   studioBtn?.addEventListener("click", openFloat)
   closeBtn?.addEventListener("click", closeFloat)
   returnMainBtn?.addEventListener("click", closeFloat)
+  remoteSheetBack?.addEventListener("click", ()=>closeRemoteSheet())
+  remoteSheetClose?.addEventListener("click", ()=>closeRemoteSheet())
   openStudioBtn?.addEventListener("click", ()=>{
     closeFloat()
     if(typeof window.openStudioMode === "function") window.openStudioMode()
@@ -6147,19 +6295,77 @@ function setupFloatMode(){
   })
   navSettingsBtn?.addEventListener("click", ()=>setActiveTouchPanel("floatProfileBox", "Settings are open."))
   navCloseBtn?.addEventListener("click", closeFloat)
-  footerSettingsBtn?.addEventListener("click", ()=>setActiveTouchPanel("floatProfileBox", "General Settings is open for account updates and social links."))
-  footerPaymentsBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
+  footerGuideBtn?.addEventListener("click", ()=>{
+    if(remoteState.guideTimer && remoteState.guideKey === "Remote Guidance"){
+      stopRemoteGuide("Guidance paused. You are back in control.")
+      setFloatHome("Live Guidance paused. Remote home is back in your hands.")
+      return
+    }
+    const guideSteps = [
+      { title:"Diary Mode", body:"Open Diary when you want the emotional center: notes, post staging, booth route, map route, and payment route.", target: defaultFloatPanel },
+      { title:"Studio Quick Panel", body:"Use the booth side when you want the three motherboards, upload .mp3 or .mp4, trim, FX, and export fast.", target: "floatBoardsBox" },
+      { title:"General Settings", body:"This is where email, password, language, push, and social links stay under control.", target: "floatProfileBox" },
+      { title:"Map Change", body:"Switch the page mood without leaving Remote. Kito House GPS help can be launched from this same shell.", target: "floatDeviceBox" },
+      { title:"FAQ + TV Reel", body:"Treat FAQ like the calm lounge. Quick answers, support, reel clips, and help bots live here.", target: "floatLiveBox" },
+      { title:"Profile", body:"Profile presents the person, their image, achievements, scan summary, and social identity.", target: "floatAssistantBox" },
+      { title:"Open All Panels", body:"Show every major Remote panel together so you can see the whole SupportRD shell at once.", target: "all" }
+    ]
+    openRemoteSheet("Live Guidance", `
+      ${renderGuideMarkup("Remote Guidance", guideSteps)}
+      <div class="float-sheet-grid">
+        <button class="btn ghost" data-open-settings>Jump To Settings</button>
+        <button class="btn ghost" data-open-fastpay>Open Payments</button>
+        <button class="btn ghost" data-sheet-close>Close Page</button>
+      </div>
+      <div class="float-sheet-copy">Tap Start Guide for the lightweight walkthrough. Tap it again anytime to interrupt and take over yourself.</div>
+    `, { message:"Live Guidance is ready for the unified Remote flow.", guideKey:"Remote Guidance", guideSteps })
+  })
+  footerSettingsBtn?.addEventListener("click", ()=>{
+    openRemoteSheet("General Settings", `
+      <div class="float-sheet-grid">
+        <button class="btn" data-open-settings>Open Account Settings</button>
+        <button class="btn ghost" data-sheet-close>Close Page</button>
+      </div>
+      <div class="float-sheet-copy">Change email, password, language, push preferences, and social links without leaving Remote.</div>
+    `, { message:"General Settings is open inside Remote." })
+  })
+  footerPaymentsBtn?.addEventListener("click", ()=>{
+    openRemoteSheet("Payments", `
+      <div class="float-sheet-grid">
+        <button class="btn" data-open-fastpay>Open Fast Pay</button>
+        <button class="btn ghost" data-sheet-close>Close Page</button>
+      </div>
+      <div class="float-sheet-copy">Payment routes stay clean, fast, and ready without leaving the Remote shell.</div>
+    `, { message:"Payments is open inside Remote." })
+  })
   footerSubscribeBtn?.addEventListener("click", ()=>{
-    setActiveTouchPanel("floatProfileBox", "Subscribe and push notification settings are ready.")
-    qs("#floatConfigPush")?.focus()
+    openRemoteSheet("Subscribe In", `
+      <div class="float-sheet-grid">
+        <button class="btn" data-open-settings>Open Subscribe Settings</button>
+        <button class="btn ghost" data-sheet-close>Close Page</button>
+      </div>
+      <div class="float-sheet-copy">Subscribe In keeps newsletter, push, and social posting prep in one calm place.</div>
+    `, { message:"Subscribe In is open inside Remote." })
   })
   footerBlogBtn?.addEventListener("click", ()=>{
-    openModal("blogModal")
-    openMiniWindow("Blog", "SupportRD blog is open from Remote.")
+    openRemoteSheet("Main Blog", `
+      <div class="float-sheet-grid">
+        <button class="btn" data-open-blog>Open Blog</button>
+        <button class="btn ghost" data-sheet-close>Close Page</button>
+      </div>
+      <div class="float-sheet-copy">The blog stays optional, calm, and easy to back out of in one tap.</div>
+    `, { message:"Main Blog is open inside Remote." })
   })
   footerOfficialBtn?.addEventListener("click", ()=>{
-    openMiniWindow("Official Websites", "SupportRD official routes are ready from the Remote footer.")
-    openLinkModal("https://supportrd.com", "SupportRD Official Website")
+    openRemoteSheet("Official Websites", `
+      <div class="float-sheet-grid three">
+        <button class="btn" data-open-official>SupportRD Main Site</button>
+        <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
+        <button class="btn ghost" data-sheet-close>Close Page</button>
+      </div>
+      <div class="float-sheet-copy">Contact us directly: xxfigueroa1993@yahoo.com · 980-375-9197</div>
+      <div class="float-sheet-copy">Privacy, About Us, and official SupportRD routes stay attached to this same Remote shell feel.</div>
+    `, { message:"Official SupportRD routes are open inside Remote." })
   })
   themeCardRail?.addEventListener("click", (event)=>{
     const card = event.target.closest("[data-float-theme]")
@@ -6521,8 +6727,6 @@ function setupFloatMode(){
       openFloat()
       if(params.get("remote") === "1") setTimeout(()=>window.openRemoteFastPay?.(), 260)
     }, 180)
-  }else if(params.get("viewer") !== "1"){
-    setTimeout(()=>openFloat({ preserveHome: true }), 220)
   }
 }
 
