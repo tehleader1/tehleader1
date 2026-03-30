@@ -5716,6 +5716,7 @@ function setupFloatMode(){
   const settingsLinksBtn = qs("#floatSettingsLinksBtn")
   const settingsPushBtn = qs("#floatSettingsPushBtn")
   const settingsLanguageBtn = qs("#floatSettingsLanguageBtn")
+  const studioLiveBtn = qs("#floatStudioLiveBtn")
   const boardPreview = qs("#floatBoardPreview")
   const quickEditStatus = qs("#floatQuickEditStatus")
   const faqReelBtn = qs("#floatFaqReelBtn")
@@ -6805,6 +6806,15 @@ function setupFloatMode(){
       localStorage.setItem("supportrdStudioReturnView", "remote")
       closeFloat()
       window.openStudioMode()
+    }
+  })
+  studioLiveBtn?.addEventListener("click", ()=>{
+    if(typeof window.openStudioMode === "function"){
+      localStorage.setItem("supportrdStudioReturnView", "remote")
+      closeFloat()
+      window.openStudioMode()
+    }else{
+      openMiniWindow("Studio", "Studio is not ready yet, but the deep-edit path is staged.")
     }
   })
   qs("#floatLoginStateBtn")?.addEventListener("click", ()=>{

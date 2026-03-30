@@ -3486,6 +3486,7 @@ body.competition-world .bg-layers::before{
 .float-profile-lines strong{font-size:20px;color:#fff;}
 .float-profile-lines span{color:rgba(238,246,255,.88);}
 .float-box-copy{font-size:13px;line-height:1.55;color:rgba(235,245,255,.9);}
+.float-studio-live-btn{width:100%;min-height:58px;margin:0 0 12px;font-size:17px;font-weight:800;}
 #floatProfilePostInput{
   width:100%;
   min-height:72px;
