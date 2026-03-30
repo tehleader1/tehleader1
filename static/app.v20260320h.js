@@ -4388,6 +4388,7 @@ function setupSessionSignal(){
   const logKey = "supportrdSignalLog"
   const ownerIpKey = "supportrdOwnerLocalIPv4"
   const continuityKey = "supportrdNetworkContinuity"
+  const joinHiddenUntilKey = "supportrdJoinHiddenUntil"
   const knownOwnerIp = localStorage.getItem(ownerIpKey) || "10.0.2.13"
   localStorage.setItem(ownerIpKey, knownOwnerIp)
   const getHandle = ()=>{
@@ -4454,19 +4455,20 @@ function setupSessionSignal(){
       const rtt = navigator.connection && typeof navigator.connection.rtt === "number" ? navigator.connection.rtt : null
       pingEl.textContent = rtt ? `Ping: ${rtt}ms` : "Ping: live"
     }
+    if(joinBtn){
+      const hiddenUntil = Number(localStorage.getItem(joinHiddenUntilKey) || 0)
+      const hidden = hiddenUntil > Date.now()
+      joinBtn.hidden = hidden
+      joinBtn.disabled = hidden
+      joinBtn.textContent = hidden ? "Viewer Link Ready" : "Scan to Join Session"
+    }
   }
     joinBtn?.addEventListener("click", ()=>{
       const viewerUrl = `${location.origin}${location.pathname}?viewer=1`
       openMiniWindow("Scan to Join", `Viewer access is ready. Share this SupportRD session cleanly: ${viewerUrl}`)
       pushLog("Viewer join link prepared for sharing")
-      joinBtn.textContent = "Viewer Link Ready"
-      joinBtn.disabled = true
-      setTimeout(()=>{ joinBtn.hidden = true }, 220)
-      setTimeout(()=>{
-        joinBtn.hidden = false
-        joinBtn.disabled = false
-        joinBtn.textContent = "Scan to Join Session"
-      }, 30 * 60 * 1000)
+      localStorage.setItem(joinHiddenUntilKey, String(Date.now() + (30 * 60 * 1000)))
+      render()
     })
   window.noteSupportRDContinuity = noteContinuity
   window.logSessionSignal = pushLog
@@ -4849,6 +4851,15 @@ function setupLaunchMenu(){
   const enterBtn = qs("#menuEnter")
   const lang = qs("#launchLang")
   if(!launch || !menuBtn) return
+  function openGateWithReason(message){
+    const gate = qs("#loginGate")
+    if(gate){ gate.style.display = "flex" }
+    document.body.classList.add("login-active")
+    if(message) uiToast(message)
+  }
+  function canEnterSupportRD(){
+    return localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
+  }
   document.body.classList.add("launch-active")
   if(!/[?&]viewer=1\b/.test(location.search)){
     document.body.classList.add("launch-preview-active")
@@ -4922,17 +4933,16 @@ function setupLaunchMenu(){
   })
   menuBtn.addEventListener("click", ()=>{
     saveCheckinDetails()
-    enableTrustedOwnerAutoLogin()
+    if(!canEnterSupportRD()){
+      openGateWithReason("Log in with Google, Microsoft, Yahoo, or your SupportRD account before entering.")
+      return
+    }
     finishLaunchEntry()
     try{ beep(980, 90) }catch{}
   })
   const launchStudio = ()=>{
-    const isLogged = localStorage.getItem("loggedIn") === "true"
-    if(!isLogged){
-      const gate = qs("#loginGate")
-      if(gate){ gate.style.display = "flex" }
-      document.body.classList.add("login-active")
-      uiToast("Sign in required before entering In the Booth.")
+    if(!canEnterSupportRD()){
+      openGateWithReason("Sign in required before entering In the Booth.")
       return
     }
     launch.classList.add("hide")
@@ -5010,7 +5020,10 @@ function setupLaunchMenu(){
   }
   enterBtn?.addEventListener("click", ()=>{
     saveCheckinDetails()
-    enableTrustedOwnerAutoLogin()
+    if(!canEnterSupportRD()){
+      openGateWithReason("Log in first so SupportRD can load your real account and session history.")
+      return
+    }
     finishLaunchEntry()
   })
 }
@@ -5806,74 +5819,168 @@ function setupFloatMode(){
     launchButtons.forEach(btn=>btn.classList.remove("active"))
     if(message) openMiniWindow("Float Remote", message)
   }
+  function renderRemoteValueLane(items = []){
+    if(!items.length) return ""
+    return `<div class="float-value-lane">${items.map(item=>`<span class="float-value-pill">${item}</span>`).join("")}</div>`
+  }
+  function buildDiarySheet(){
+    return `
+      <div class="float-sheet-copy">Diary Mode is the emotional center of SupportRD: post what is on your mind, keep the session feeling premium, and route quickly into booth, map, payment, or GPS without ever leaving Remote.</div>
+      ${renderRemoteValueLane(["Value: session storytelling engine", "Energy: medium live guidance load", "Worth: premium post lane + route to booth / map / pay"])}
+      <div class="float-sheet-shell">
+        <section class="float-sheet-panel">
+          <h4>What's On Your Mind?</h4>
+          <textarea class="input float-sheet-textarea" data-diary-input placeholder="Write the update, hair thought, workday plan, or premium post you want to send."></textarea>
+          <div class="float-sheet-grid three">
+            <button class="btn" data-diary-save>Save</button>
+            <button class="btn ghost" data-diary-clear>Erase</button>
+            <button class="btn ghost" data-diary-pdf>Export PDF</button>
+          </div>
+        </section>
+        <section class="float-sheet-panel">
+          <h4>Session Feel</h4>
+          <div class="float-sheet-status" data-diary-status>Diary is ready. Keep the session light, premium, and easy to move through.</div>
+          <div class="float-sheet-grid">
+            <button class="btn ghost" data-open-studio>Route To Booth</button>
+            <button class="btn ghost" data-open-map-sheet>Open Map Change</button>
+            <button class="btn ghost" data-open-fastpay>Payments</button>
+            <button class="btn ghost" data-open-gps-route>GPS Mode</button>
+            <button class="btn ghost" data-diary-handsfree>Handsfree</button>
+            <button class="btn ghost" data-diary-post>Send Post</button>
+          </div>
+        </section>
+      </div>
+    `
+  }
+  function buildSettingsSheet(){
+    return `
+      <div class="float-sheet-copy">General Settings keeps the account side clean: contact info, password, socials, languages, and notifications all stay inside one polished SupportRD lane.</div>
+      ${renderRemoteValueLane(["Value: account control base", "Energy: low system load", "Worth: social posting + language-ready support"])}
+      <div class="float-sheet-grid">
+        <button class="btn" data-settings-focus="email">Change Email</button>
+        <button class="btn" data-settings-focus="password">Change Password</button>
+        <button class="btn ghost" data-settings-focus="social">Social Media URL Links</button>
+        <button class="btn ghost" data-settings-focus="push">Push Notifications</button>
+        <button class="btn ghost" data-settings-focus="language">Languages</button>
+        <button class="btn ghost" data-settings-open-account>Open Full Settings</button>
+      </div>
+      <div class="float-sheet-status" data-settings-status>Choose a settings lane and SupportRD will guide the account update from there.</div>
+    `
+  }
+  function buildMapSheet(){
+    const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
+    return `
+      <div class="float-sheet-copy">Map Change keeps the woman-waking-up default until you choose a new occasion. Tap a bubble, preview the mood, then close straight back into Remote.</div>
+      ${renderRemoteValueLane(["Value: theme-driven selling", "Energy: visual mood engine", "Worth: occasion change + one-tap restore"])}
+      <div class="float-map-bubbles">
+        ${views.map(view=>`<button class="float-map-bubble" type="button" data-world-key="${view.key}"><strong>${view.label}</strong><span>${view.vibe}</span></button>`).join("")}
+      </div>
+      <div class="float-sheet-grid">
+        <button class="btn ghost" data-map-reset>Default SupportRD View</button>
+        <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
+      </div>
+      <div class="float-sheet-status" data-map-status>SupportRD default view is ready. Pick a map to rotate the mood of the page.</div>
+    `
+  }
+  function buildFaqSheet(){
+    return `
+      <div class="float-sheet-copy">FAQ is the premium chill lounge: quick answers, help bots, and the TV reel all stay in one calm SupportRD assistance point.</div>
+      ${renderRemoteValueLane(["Value: premium help lounge", "Energy: low friction support", "Worth: TV reel + immediate payment guidance"])}
+      <div class="float-sheet-grid">
+        <button class="float-faq-item" type="button"><strong>How much is Formula Exclusiva?</strong><span>Current product pricing is shown inside checkout and fast pay.</span></button>
+        <button class="float-faq-item" type="button"><strong>What is the goal of SupportRD?</strong><span>To deliver a modern hair system that feels premium, accessible, and code-friendly.</span></button>
+        <button class="float-faq-item" type="button"><strong>What do I need for premium?</strong><span>A supported payment method, email or username, and the checkout lane guides the rest.</span></button>
+        <button class="float-faq-item" type="button"><strong>How do I get direct help?</strong><span>Use Aria, Jake, or contact Anthony directly from the session.</span></button>
+      </div>
+      <div class="float-sheet-grid">
+        <button class="btn" data-open-faq-reel>Pull Up TV Reel</button>
+        <button class="btn ghost" data-open-fastpay>Open Payments</button>
+        <button class="btn ghost" data-open-blog>Open Blog</button>
+      </div>
+      <div class="float-sheet-status">Aria and Jake stay close here so people can get help without losing their place.</div>
+    `
+  }
+  function buildStudioSheet(){
+    return `
+      <div class="float-sheet-copy">Studio Quick Panel is the on-the-move edit room: fresh 3-board setup, transport controls, quick cuts, FX, and a one-touch jump into full Studio for deep work.</div>
+      ${renderRemoteValueLane(["Value: $10,000+ build feel", "Energy: high creative processing", "Worth: 3 motherboards + deep studio one-touch"])}
+      <div class="float-sheet-shell">
+        <section class="float-sheet-panel">
+          <h4>Motherboards + Transport</h4>
+          <div class="float-sheet-grid three">
+            <button class="btn ghost" data-open-studio-board="1">Motherboard 1</button>
+            <button class="btn ghost" data-open-studio-board="2">Motherboard 2</button>
+            <button class="btn ghost" data-open-studio-board="3">Motherboard 3</button>
+          </div>
+          <div class="float-sheet-grid three">
+            <button class="btn ghost" data-quick-studio-action="back">Back</button>
+            <button class="btn ghost" data-quick-studio-action="play">Play</button>
+            <button class="btn ghost" data-quick-studio-action="next">Next</button>
+          </div>
+        </section>
+        <section class="float-sheet-panel">
+          <h4>FX + Export</h4>
+          <div class="float-sheet-grid">
+            <button class="btn" data-open-studio>Open Full Studio Live</button>
+            <button class="btn ghost" data-quick-studio-action="upload">Upload MP3 / MP4</button>
+            <button class="btn ghost" data-quick-studio-action="fx">FX Change</button>
+            <button class="btn ghost" data-quick-studio-action="export">Export Social File</button>
+          </div>
+        </section>
+      </div>
+    `
+  }
+  function buildProfileSheet(){
+    return `
+      <div class="float-sheet-copy">Profile presents the person well: image, achievements, hair-state scan, social links, and the premium self-image SupportRD is helping them build.</div>
+      ${renderRemoteValueLane(["Value: $50,000 presence feel", "Energy: medium profile intelligence", "Worth: achievements + social proof + hair scan"])}
+      <div class="float-sheet-shell profile-sheet-shell">
+        <section class="float-sheet-panel">
+          <div class="float-profile-sheet-hero">
+            <div class="float-profile-sheet-image">Profile Image</div>
+            <div>
+              <h4>Top Qualities</h4>
+              <p>Hair mission active, polished presentation, strong social identity, and direct premium support.</p>
+            </div>
+          </div>
+        </section>
+        <section class="float-sheet-panel">
+          <h4>Profile Actions</h4>
+          <div class="float-sheet-grid">
+            <button class="btn ghost" data-profile-action="scan">Run Full Hair Scan</button>
+            <button class="btn ghost" data-profile-action="achievements">Achievements</button>
+            <button class="btn ghost" data-profile-action="social">Social Connections</button>
+            <button class="btn ghost" data-profile-action="upgrade">Upgrade Aria / Jake</button>
+          </div>
+        </section>
+      </div>
+    `
+  }
   function openLaunchMenuSheet(targetId, label){
     const menus = {
       floatBoardsBox: {
         title: "Studio Quick Panel",
-        body: `
-          <div class="float-sheet-copy">Quick booth tools stay here: three motherboards, transport controls, FX, and fast export.</div>
-          <div class="float-sheet-grid">
-            <button class="btn" data-open-panel="floatBoardsBox">Open Quick Studio</button>
-            <button class="btn ghost" data-open-studio>Open Full Booth</button>
-            <button class="btn ghost" data-open-fastpay>Fast Pay</button>
-          </div>
-        `
+        body: buildStudioSheet()
       },
       floatProfileBox: {
         title: "General Settings",
-        body: `
-          <div class="float-sheet-copy">Handle email, password, languages, social media URLs, and push behavior without leaving Remote.</div>
-          <div class="float-sheet-grid">
-            <button class="btn" data-open-panel="floatProfileBox">Open Settings</button>
-            <button class="btn ghost" data-open-settings>Account Controls</button>
-            <button class="btn ghost" data-open-subscribe>Subscribe In</button>
-          </div>
-        `
+        body: buildSettingsSheet()
       },
       floatSettingsBox: {
         title: "Diary Mode",
-        body: `
-          <div class="float-sheet-copy">Diary keeps the session feel alive: what's on your mind, live guidance, booth route, map route, and payments.</div>
-          <div class="float-sheet-grid">
-            <button class="btn" data-open-panel="floatSettingsBox">Open Diary</button>
-            <button class="btn ghost" data-open-gps-route>GPS Mode</button>
-            <button class="btn ghost" data-open-fastpay>Payments</button>
-            <button class="btn ghost" data-open-panel="floatBoardsBox">Route To Booth</button>
-          </div>
-        `
+        body: buildDiarySheet()
       },
       floatDeviceBox: {
         title: "Map Change",
-        body: `
-          <div class="float-sheet-copy">Keep the woman-waking-up default until you pick a new map. Open map view, change the mood, then close right back to Remote.</div>
-          <div class="float-sheet-grid">
-            <button class="btn" data-open-world-map>Open Map View</button>
-            <button class="btn ghost" data-open-panel="floatDeviceBox">Theme Controls</button>
-            <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
-          </div>
-        `
+        body: buildMapSheet()
       },
       floatLiveBox: {
         title: "FAQ Lounge",
-        body: `
-          <div class="float-sheet-copy">FAQ is the calm lounge: answers, help bots, and the TV reel live together here.</div>
-          <div class="float-sheet-grid">
-            <button class="btn" data-open-panel="floatLiveBox">Open FAQ</button>
-            <button class="btn ghost" data-open-faq-reel>Pull Up TV Reel</button>
-            <button class="btn ghost" data-open-blog>Open Blog</button>
-          </div>
-        `
+        body: buildFaqSheet()
       },
       floatAssistantBox: {
         title: "Profile",
-        body: `
-          <div class="float-sheet-copy">Profile keeps the polished self-image, hair scan, achievements, and social identity ready to present.</div>
-          <div class="float-sheet-grid">
-            <button class="btn" data-open-panel="floatAssistantBox">Open Profile</button>
-            <button class="btn ghost" data-open-panel="floatProfileBox">Open Settings</button>
-            <button class="btn ghost" data-open-fastpay>Premium + Payments</button>
-          </div>
-        `
+        body: buildProfileSheet()
       }
     }
     const menu = menus[targetId]
@@ -5973,12 +6080,42 @@ function setupFloatMode(){
       closeRemoteSheet()
       setActiveTouchPanel("floatProfileBox", "General Settings is ready inside Remote.")
     }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-settings-focus]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const lane = btn.getAttribute("data-settings-focus") || "general"
+      const labels = {
+        email: "Change Email is ready in settings.",
+        password: "Change Password is ready in settings.",
+        social: "Social Media URL Links are ready in settings.",
+        push: "Push Notifications are ready in settings.",
+        language: "Language control is ready in settings."
+      }
+      closeRemoteSheet(false)
+      setActiveTouchPanel("floatProfileBox", labels[lane] || "General Settings is ready.")
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-settings-open-account]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      closeRemoteSheet(false)
+      setActiveTouchPanel("floatProfileBox", "Full account settings are open inside Remote.")
+    }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-subscribe]")).forEach(btn=>btn.addEventListener("click", ()=>footerSubscribeBtn?.click()))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-blog]")).forEach(btn=>btn.addEventListener("click", ()=>openModal("blogModal")))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-faq-reel]")).forEach(btn=>btn.addEventListener("click", ()=>faqReelBtn?.click()))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-map-sheet]")).forEach(btn=>btn.addEventListener("click", ()=>openLaunchMenuSheet("floatDeviceBox", "Map Change")))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(btn=>btn.addEventListener("click", ()=>{
       closeRemoteSheet()
       window.openWorldMapPanel?.()
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-world-key]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const key = btn.getAttribute("data-world-key")
+      if(typeof window.setWorldTheme === "function" && key){
+        window.setWorldTheme(key)
+      }
+      const status = remoteSheetBody.querySelector("[data-map-status]")
+      if(status) status.textContent = `${btn.querySelector("strong")?.textContent || "Theme"} is loading into SupportRD.`
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-map-reset]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const status = remoteSheetBody.querySelector("[data-map-status]")
+      if(status) status.textContent = "SupportRD default woman-waking-up view is active again."
+      document.body.classList.remove("theme-lumbermill","theme-river","theme-snow","theme-island","theme-vip","theme-tunnels","theme-market","theme-lab","theme-lounge","theme-tower")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-studio]")).forEach(btn=>btn.addEventListener("click", ()=>{
       closeRemoteSheet(false)
@@ -5995,6 +6132,57 @@ function setupFloatMode(){
       qs("#rerouteLiveStorefrontBtn")?.click()
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-official]")).forEach(btn=>btn.addEventListener("click", ()=>openLinkModal("https://supportrd.com", "SupportRD Official Website")))
+    Array.from(remoteSheetBody.querySelectorAll("[data-diary-save]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const input = remoteSheetBody.querySelector("[data-diary-input]")
+      localStorage.setItem("supportrdDiaryDraft", input?.value || "")
+      remoteSheetBody.querySelector("[data-diary-status]")?.replaceChildren(document.createTextNode("Diary saved and kept ready inside Remote."))
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-diary-clear]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const input = remoteSheetBody.querySelector("[data-diary-input]")
+      if(input) input.value = ""
+      localStorage.removeItem("supportrdDiaryDraft")
+      remoteSheetBody.querySelector("[data-diary-status]")?.replaceChildren(document.createTextNode("Diary cleared cleanly."))
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-diary-post]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const input = remoteSheetBody.querySelector("[data-diary-input]")
+      const text = (input?.value || "").trim()
+      remoteSheetBody.querySelector("[data-diary-status]")?.replaceChildren(document.createTextNode(text ? "Diary post staged for social handoff." : "Write something first, then SupportRD can route the post."))
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-diary-handsfree]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      remoteSheetBody.querySelector("[data-diary-status]")?.replaceChildren(document.createTextNode("Handsfree mode is ready. Ask Aria or Jake and SupportRD will transcribe below."))
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-diary-pdf]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const input = remoteSheetBody.querySelector("[data-diary-input]")
+      const value = input?.value || ""
+      const win = window.open("", "_blank", "noopener,noreferrer,width=720,height=860")
+      if(!win) return
+      win.document.write(`<html><head><title>SupportRD Diary Export</title></head><body style="font-family:Georgia,serif;padding:32px;line-height:1.6;"><h1>SupportRD Diary Export</h1><pre style="white-space:pre-wrap;font:inherit;">${escapeHtml(value || "No diary text yet.")}</pre></body></html>`)
+      win.document.close()
+      win.focus()
+      try{ win.print() }catch{}
+    }))
+    const diaryInput = remoteSheetBody.querySelector("[data-diary-input]")
+    if(diaryInput){
+      diaryInput.value = localStorage.getItem("supportrdDiaryDraft") || ""
+    }
+    Array.from(remoteSheetBody.querySelectorAll("[data-quick-studio-action]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const action = btn.getAttribute("data-quick-studio-action") || "edit"
+      openMiniWindow("Studio Quick Panel", `${action.replace(/\b\w/g, m=>m.toUpperCase())} is ready from the quick studio lane.`)
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-studio-board]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const board = btn.getAttribute("data-open-studio-board") || "1"
+      openMiniWindow("Studio Quick Panel", `Motherboard ${board} is armed for the next quick edit.`)
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-profile-action]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const action = btn.getAttribute("data-profile-action") || "scan"
+      const labels = {
+        scan: "Full hair scan is ready from Profile.",
+        achievements: "Achievements view is ready from Profile.",
+        social: "Social connections are ready from Profile.",
+        upgrade: "Aria / Jake upgrade lane is ready from Profile."
+      }
+      openMiniWindow("Profile", labels[action] || "Profile action is ready.")
+    }))
   }
   function closeRemoteSheet(stopGuide = true){
     if(stopGuide) stopRemoteGuide()
@@ -6507,6 +6695,7 @@ function setupFloatMode(){
   })
   footerSettingsBtn?.addEventListener("click", ()=>{
     openRemoteSheet("General Settings", `
+      ${renderRemoteValueLane(["Value: trust + account control", "Energy: low system load", "Worth: keeps the app usable daily"])}
       <div class="float-sheet-grid">
         <button class="btn" data-open-settings>Open Account Settings</button>
         <button class="btn ghost" data-sheet-close>Close Page</button>
@@ -6516,6 +6705,7 @@ function setupFloatMode(){
   })
   footerPaymentsBtn?.addEventListener("click", ()=>{
     openRemoteSheet("Payments", `
+      ${renderRemoteValueLane(["Value: direct revenue lane", "Energy: medium finance routing", "Worth: premium + gifts + session support"])}
       <div class="float-sheet-grid">
         <button class="btn" data-open-fastpay>Open Fast Pay</button>
         <button class="btn ghost" data-sheet-close>Close Page</button>
@@ -6525,6 +6715,7 @@ function setupFloatMode(){
   })
   footerSubscribeBtn?.addEventListener("click", ()=>{
     openRemoteSheet("Subscribe In", `
+      ${renderRemoteValueLane(["Value: long-term retention", "Energy: low automation load", "Worth: keeps people connected after the session"])}
       <div class="float-sheet-grid">
         <button class="btn" data-open-settings>Open Subscribe Settings</button>
         <button class="btn ghost" data-sheet-close>Close Page</button>
@@ -6534,6 +6725,7 @@ function setupFloatMode(){
   })
   footerBlogBtn?.addEventListener("click", ()=>{
     openRemoteSheet("Main Blog", `
+      ${renderRemoteValueLane(["Value: SEO + authority", "Energy: steady content lane", "Worth: workday hair topics that keep SupportRD current"])}
       <div class="float-sheet-grid">
         <button class="btn" data-open-blog>Open Blog</button>
         <button class="btn ghost" data-sheet-close>Close Page</button>
@@ -6543,6 +6735,7 @@ function setupFloatMode(){
   })
   footerOfficialBtn?.addEventListener("click", ()=>{
     openRemoteSheet("Official Websites", `
+      ${renderRemoteValueLane(["Value: brand trust", "Energy: low-friction official routes", "Worth: contact, privacy, about, and storefront guidance"])}
       <div class="float-sheet-grid three">
         <button class="btn" data-open-official>SupportRD Main Site</button>
         <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
