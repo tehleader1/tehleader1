@@ -5213,8 +5213,7 @@ function setupLiveRadio(){
   if(!playBtn || !stopBtn || !prevBtn || !nextBtn || !label || !status) return
 
   const playlist = [
-    { title: "Drill Anthony Mix.mp3", src: "/static/audio/drill-anthony.mp3" },
-    { title: "Clout - AgentAnthony.wav", src: "/static/audio/clout-agentanthony.wav" }
+    { title: "Drill Anthony Mix.mp3", src: "/static/audio/drill-anthony.mp3" }
   ]
   let idx = 0
   const audio = new Audio()
@@ -5750,6 +5749,13 @@ function setupFloatMode(){
   const footerOfficialBtn = qs("#floatFooterOfficial")
   const guardianAriaBtn = qs("#remoteGuardianAria")
   const guardianJakeBtn = qs("#remoteGuardianJake")
+  const primeMenu = qs("#floatPrimeMenu")
+  const primeViewBotBtn = qs("#floatPrimeViewBot")
+  const primeContinueBtn = qs("#floatPrimeContinue")
+  const primeCloseBtn = qs("#floatPrimeClose")
+  const founderLayer = qs("#floatFounderLayer")
+  const founderCloseBtn = qs("#floatFounderClose")
+  const tGuide = qs("#floatTGuide")
   const remoteSheet = qs("#floatRemoteSheet")
   const remoteSheetTitle = qs("#floatRemoteSheetTitle")
   const remoteSheetBody = qs("#floatRemoteSheetBody")
@@ -5771,11 +5777,46 @@ function setupFloatMode(){
     guideKey: ""
   }
   const floatPanelKey = "supportrdFloatPanel"
+  const floatPrimeSeenKey = "supportrdPrimeSeen"
   const defaultFloatPanel = "floatSettingsBox"
   const touchQuery = window.matchMedia ? window.matchMedia("(pointer: coarse), (max-width: 900px)") : null
 
   function isTouchLayout(){
     return touchQuery ? touchQuery.matches : (window.innerWidth <= 900)
+  }
+  function isFounderPriority(){
+    const email = (state.socialLinks?.email || "").toLowerCase()
+    return email === "agentanthony@supportrd.com" || email === "xxfigueroa1993@yahoo.com" || shouldAutoOwnerEntry()
+  }
+  function showPrimeMenu(){
+    if(!primeMenu) return
+    primeMenu.hidden = false
+    primeMenu.setAttribute("aria-hidden", "false")
+  }
+  function hidePrimeMenu(){
+    if(!primeMenu) return
+    primeMenu.hidden = true
+    primeMenu.setAttribute("aria-hidden", "true")
+  }
+  function showFounderLayer(){
+    if(!founderLayer || !isFounderPriority()) return
+    founderLayer.hidden = false
+    founderLayer.setAttribute("aria-hidden", "false")
+  }
+  function hideFounderLayer(){
+    if(!founderLayer) return
+    founderLayer.hidden = true
+    founderLayer.setAttribute("aria-hidden", "true")
+  }
+  function showTGuide(){
+    if(!tGuide) return
+    tGuide.hidden = false
+    tGuide.setAttribute("aria-hidden", "false")
+  }
+  function hideTGuide(){
+    if(!tGuide) return
+    tGuide.hidden = true
+    tGuide.setAttribute("aria-hidden", "true")
   }
   function stopRemoteGuide(notice){
     if(remoteState.guideTimer){
@@ -5992,8 +6033,10 @@ function setupFloatMode(){
   }
   function openGuardianSheet(name){
     const gpsModeOn = !!diaryGpsStage && !diaryGpsStage.hidden
+    const version = name === "Aria" ? "Aria v2026.4 · Hair + live guidance" : "Jake v2026.4 · Studio + support systems"
     openRemoteSheet(`${name} Live Advisor`, `
       <div class="float-sheet-copy">${name} is standing by as a guardian of the page. ${gpsModeOn ? "GPS language is active so the guidance will speak like a route helper." : "Ask a quick question, switch to handsfree, or route straight into the right panel."}</div>
+      ${renderRemoteValueLane([version, "Separate assistant property set", "Premium help lane active"])}
       <div class="float-sheet-grid">
         <button class="btn" data-open-panel="${gpsModeOn ? "floatDeviceBox" : "floatSettingsBox"}">${gpsModeOn ? "Open GPS Settings" : "Open Diary + Ask"}</button>
         <button class="btn ghost" data-open-panel="floatProfileBox">Handsfree Settings</button>
@@ -6625,12 +6668,21 @@ function setupFloatMode(){
     setFloatHome(options.preserveHome ? "" : "Remote Home is ready. Diary is highlighted, and every major route is one tap away.")
     setDiaryGpsMode(false)
     if(!options.previewOnly){
+      if(localStorage.getItem(floatPrimeSeenKey) !== "true") showPrimeMenu()
+      else hidePrimeMenu()
+      if(isFounderPriority()) setTimeout(()=>showFounderLayer(), 280)
+      else hideFounderLayer()
+    }
+    if(!options.previewOnly){
       try{ window.playSupportRDTheme?.() }catch{}
       if(!options.preserveHome) openMiniWindow("Float Mode", "SupportRD Personal Remote is open. Diary Mode is highlighted, and the whole app stays connected from here.")
     }
   }
   function closeFloat(){
     stopRemoteGuide()
+    hidePrimeMenu()
+    hideFounderLayer()
+    hideTGuide()
     shell.hidden = true
     shell.setAttribute("aria-hidden","true")
     shell.classList.remove("preview-mode")
@@ -6747,6 +6799,23 @@ function setupFloatMode(){
     })
     guardianAriaBtn?.addEventListener("click", ()=>openGuardianSheet("Aria"))
     guardianJakeBtn?.addEventListener("click", ()=>openGuardianSheet("Jake"))
+  primeViewBotBtn?.addEventListener("click", ()=>{
+    localStorage.setItem(floatPrimeSeenKey, "true")
+    hidePrimeMenu()
+    showTGuide()
+    footerGuideBtn?.click()
+  })
+  primeContinueBtn?.addEventListener("click", ()=>{
+    localStorage.setItem(floatPrimeSeenKey, "true")
+    hidePrimeMenu()
+    showTGuide()
+    openMiniWindow("SupportRD Prime", "Free for all mode is active. The T-shape guide is staying low key over the Remote.")
+  })
+  primeCloseBtn?.addEventListener("click", ()=>{
+    localStorage.setItem(floatPrimeSeenKey, "true")
+    hidePrimeMenu()
+  })
+  founderCloseBtn?.addEventListener("click", hideFounderLayer)
   themeCardRail?.addEventListener("click", (event)=>{
     const card = event.target.closest("[data-float-theme]")
     if(!card) return

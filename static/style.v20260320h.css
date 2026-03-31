@@ -3254,6 +3254,117 @@ body.competition-world .bg-layers::before{
   color:#ecf7ff;
   box-shadow:0 14px 30px rgba(6,18,38,.24);
 }
+.float-prime-menu,
+.float-founder-layer,
+.float-t-guide{
+  position:fixed;
+  z-index:545;
+}
+.float-prime-menu{
+  top:112px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(860px, calc(100vw - 32px));
+  padding:20px;
+  border-radius:28px;
+  border:1px solid rgba(255,255,255,.2);
+  background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(242,248,255,.86));
+  box-shadow:0 24px 50px rgba(12,35,66,.18);
+}
+.float-prime-copy h3,
+.float-founder-head h3{
+  margin:4px 0 6px;
+  color:#173a6a;
+}
+.float-prime-copy p{
+  margin:0;
+  color:#47617e;
+  line-height:1.6;
+}
+.float-prime-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+.float-founder-layer{
+  right:18px;
+  top:190px;
+  width:min(420px, calc(100vw - 36px));
+  padding:18px;
+  border-radius:28px;
+  border:1px solid rgba(255,255,255,.18);
+  background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(240,247,255,.84));
+  box-shadow:0 24px 48px rgba(12,35,66,.18);
+}
+.float-founder-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.float-founder-grid{
+  display:grid;
+  gap:12px;
+}
+.float-founder-card{
+  padding:14px 16px;
+  border-radius:20px;
+  background:rgba(255,255,255,.58);
+  border:1px solid rgba(167,196,232,.28);
+  display:grid;
+  gap:6px;
+  color:#27466d;
+}
+.float-founder-card strong{
+  color:#173a6a;
+}
+.float-t-guide{
+  inset:0;
+  pointer-events:none;
+  display:grid;
+  place-items:start center;
+}
+.float-t-bar{
+  margin-top:72px;
+  width:min(1240px, calc(100vw - 40px));
+  min-height:72px;
+  border-radius:26px;
+  background:linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.1));
+  border:1px solid rgba(255,255,255,.18);
+  color:#eef7ff;
+  display:grid;
+  place-items:center;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  backdrop-filter:blur(8px);
+  animation:tGuideFade 3.4s ease-in-out infinite;
+}
+.float-t-stem{
+  width:220px;
+  min-height:62vh;
+  margin-top:-1px;
+  background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.04));
+  border-left:1px solid rgba(255,255,255,.16);
+  border-right:1px solid rgba(255,255,255,.16);
+  display:grid;
+  align-items:center;
+}
+.float-t-copy{
+  margin:0 auto;
+  width:min(240px, calc(100vw - 48px));
+  padding:14px 16px;
+  border-radius:20px;
+  background:rgba(17,56,97,.14);
+  color:#eef7ff;
+  text-align:center;
+  line-height:1.55;
+}
+@keyframes tGuideFade{
+  0%,100%{opacity:.45}
+  50%{opacity:.9}
+}
 .float-faq-stack,
 .float-faq-reel-host,
 #floatLiveBox .float-mini-actions{
@@ -3832,6 +3943,27 @@ body.competition-world .bg-layers::before{
       min-width:112px;
       min-height:48px;
     }
+  .float-prime-menu{
+    top:86px;
+    width:min(96vw, 520px);
+    padding:16px;
+  }
+  .float-founder-layer{
+    top:auto;
+    bottom:120px;
+    right:10px;
+    width:min(94vw, 420px);
+  }
+  .float-t-bar{
+    width:min(96vw, 620px);
+    margin-top:84px;
+    font-size:11px;
+    padding:0 14px;
+    text-align:center;
+  }
+  .float-t-stem{
+    width:160px;
+  }
   .float-mode-shell.touch-optimized .float-box{
     min-height:auto;
   }
