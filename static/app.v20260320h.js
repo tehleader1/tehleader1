@@ -6000,6 +6000,7 @@ function setupFloatMode(){
       }
     }
     let activeAssistantTimers = []
+    let assistantHoverTimer = null
     function clearAssistantSequence(){
       activeAssistantTimers.forEach((timer)=>clearTimeout(timer))
       activeAssistantTimers = []
@@ -6008,6 +6009,7 @@ function setupFloatMode(){
         orb.classList.remove("demo-active")
         orb.style.removeProperty("--demo-float-left")
         orb.style.removeProperty("--demo-float-top")
+        orb.classList.remove("hover-wave")
       })
     }
     function moveAssistantOrbToFocus(orb, selector){
@@ -6021,9 +6023,40 @@ function setupFloatMode(){
       orb.style.setProperty("--demo-float-top", `${Math.max(86, Math.min(window.innerHeight - width - 24, y))}px`)
       orb.classList.add("demo-active")
     }
+    function moveAssistantOrbToPoint(orb, x, y){
+      if(!orb) return
+      const width = Math.min(window.innerWidth * 0.24, 170)
+      orb.style.setProperty("--demo-float-left", `${Math.max(16, Math.min(window.innerWidth - width - 16, x - (width / 2)))}px`)
+      orb.style.setProperty("--demo-float-top", `${Math.max(86, Math.min(window.innerHeight - width - 24, y - (width / 2)))}px`)
+      orb.classList.add("demo-active")
+    }
     function getAssistantHelp(route, assistantId){
       const sceneKey = REMOTE_ASSISTANT_HELP[route] ? route : "home"
       return REMOTE_ASSISTANT_HELP[sceneKey][assistantId] || REMOTE_ASSISTANT_HELP.home[assistantId]
+    }
+    function currentAssistantOrb(){
+      return state.activeAssistant === "projake" ? assistantJakeOrb : assistantAriaOrb
+    }
+    function syncAssistantViewportMotion(){
+      const orb = currentAssistantOrb()
+      if(!orb || !shell || shell.hidden) return
+      const scrollable = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)
+      const progress = Math.min(1, Math.max(0, window.scrollY / scrollable))
+      const x = progress > 0.62 ? window.innerWidth - 124 : 112
+      const y = progress > 0.58 ? window.innerHeight - 160 : 138
+      moveAssistantOrbToPoint(orb, x, y)
+    }
+    function handleAssistantHover(node, assistantId){
+      if(!node) return
+      node.addEventListener("mouseenter", ()=>{
+        const name = assistantId === "projake" ? "Jake" : "Aria"
+        const quickLine = assistantId === "projake" ? "Hi, Jake here." : "Hello, Aria here."
+        node.classList.add("hover-wave")
+        if(assistantStatus) assistantStatus.textContent = `${quickLine} Tap to start the smart help flow.`
+        showSpeechPopup(name, quickLine)
+        clearTimeout(assistantHoverTimer)
+        assistantHoverTimer = setTimeout(()=>node.classList.remove("hover-wave"), 900)
+      })
     }
     function triggerAssistantOrb(assistantId){
       const route = remoteState.currentRoute || "home"
@@ -6067,6 +6100,26 @@ function setupFloatMode(){
         clearAssistantSequence()
       }, 12000))
     }
+    handleAssistantHover(assistantAriaOrb, "aria")
+    handleAssistantHover(assistantJakeOrb, "projake")
+    handleAssistantHover(guardianAriaBtn, "aria")
+    handleAssistantHover(guardianJakeBtn, "projake")
+    document.addEventListener("click", (event)=>{
+      const orb = currentAssistantOrb()
+      if(!orb || !shell || shell.hidden) return
+      const target = event.target
+      if(target && (target.closest?.("#floatAriaBtn") || target.closest?.("#floatJakeBtn") || target.closest?.("#remoteGuardianAria") || target.closest?.("#remoteGuardianJake"))){
+        return
+      }
+      moveAssistantOrbToPoint(orb, event.clientX + 26, event.clientY - 26)
+    }, true)
+    document.addEventListener("touchstart", (event)=>{
+      const orb = currentAssistantOrb()
+      const touch = event.touches && event.touches[0]
+      if(!orb || !touch || !shell || shell.hidden) return
+      moveAssistantOrbToPoint(orb, touch.clientX + 26, touch.clientY - 26)
+    }, { passive:true })
+    window.addEventListener("scroll", ()=>syncAssistantViewportMotion(), { passive:true })
     const REMOTE_ROUTE_META = {
     home: { path: "/remote", title: "SupportRD Remote", description: "SupportRD Remote keeps hair help, profile, studio, maps, and support together in one premium shell." },
     diary: { path: "/remote/diary", title: "SupportRD Diary", description: "Diary Mode is the emotional center for posting, guidance, booth routing, map routing, and payment handoff." },

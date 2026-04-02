@@ -4100,7 +4100,12 @@ body.remote-hide-ads .remote-display-strip{
   width:min(170px, 34vw);
   z-index:90;
   box-shadow:0 30px 70px rgba(8,17,34,.34);
-  animation:remoteAssistantDrift var(--demo-bob-duration) ease-in-out infinite, remoteOrbPulse 1.7s ease-in-out infinite;
+  animation:remoteAssistantDrift var(--demo-bob-duration) ease-in-out infinite, remoteOrbPulse 1.7s ease-in-out infinite, remoteOrbCharge 1.9s ease-in-out infinite;
+}
+.float-assistant-orb.hover-wave,
+.remote-guardian-btn.hover-wave{
+  filter:brightness(1.08) saturate(1.1);
+  box-shadow:0 28px 68px rgba(94,180,255,.3);
 }
 .float-assistant-orb.aria{background:radial-gradient(circle at 30% 25%, rgba(102,255,231,.75), rgba(34,81,156,.88));}
 .float-assistant-orb.jake{background:radial-gradient(circle at 30% 25%, rgba(255,203,103,.72), rgba(40,51,112,.92));}
@@ -4151,6 +4156,10 @@ body.remote-hide-ads .remote-display-strip{
 @keyframes remoteOrbPulse{
   0%,100%{transform:scale(.94); box-shadow:0 0 18px rgba(255,255,255,.45);}
   50%{transform:scale(1.06); box-shadow:0 0 34px rgba(255,255,255,.78);}
+}
+@keyframes remoteOrbCharge{
+  0%,100%{filter:saturate(1) brightness(1);}
+  50%{filter:saturate(1.18) brightness(1.08);}
 }
 .float-big-buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .float-pill{
