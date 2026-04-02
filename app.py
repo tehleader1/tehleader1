@@ -59,6 +59,28 @@ def normalize_shopify_store_domain(raw_store):
         value = f"{value}.myshopify.com"
     return value
 
+def resolve_shopify_storefront_domain():
+    store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    if not store:
+        return ""
+    if SHOPIFY_ADMIN_TOKEN:
+        try:
+            r = requests.get(
+                f"https://{store}/admin/api/2024-01/shop.json",
+                headers={"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN},
+                timeout=8
+            )
+            if r.ok:
+                shop = (r.json() or {}).get("shop") or {}
+                primary_domain = (shop.get("primary_domain") or {}).get("host") or ""
+                myshopify_domain = shop.get("myshopify_domain") or ""
+                resolved = normalize_shopify_store_domain(primary_domain or myshopify_domain)
+                if resolved:
+                    return resolved
+        except Exception:
+            pass
+    return store
+
 SEO_ENABLED = os.environ.get("SEO_ENABLED", "false").lower() == "true"
 SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "72"))
 LAST_SEO_POST = 0
@@ -3348,7 +3370,7 @@ def shopify_connector_health():
 
 @app.route("/api/shopify/public-config")
 def shopify_public_config():
-    store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    store = resolve_shopify_storefront_domain()
     storefront_base = f"https://{store}" if store else ""
     return {
         "ok": bool(store),
@@ -3359,28 +3381,28 @@ def shopify_public_config():
 
 @app.route("/products/<path:slug>")
 def shopify_product_redirect(slug):
-    store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    store = resolve_shopify_storefront_domain()
     if not store:
         return {"ok": False, "error": "shopify_store_not_configured"}, 404
     return redirect(f"https://{store}/products/{slug}", code=302)
 
 @app.route("/cart")
 def shopify_cart_redirect():
-    store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    store = resolve_shopify_storefront_domain()
     if not store:
         return {"ok": False, "error": "shopify_store_not_configured"}, 404
     return redirect(f"https://{store}/cart", code=302)
 
 @app.route("/account/orders")
 def shopify_orders_redirect():
-    store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    store = resolve_shopify_storefront_domain()
     if not store:
         return {"ok": False, "error": "shopify_store_not_configured"}, 404
     return redirect(f"https://{store}/account/orders", code=302)
 
 @app.route("/pages/<path:slug>")
 def shopify_page_redirect(slug):
-    store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    store = resolve_shopify_storefront_domain()
     if not store:
         return {"ok": False, "error": "shopify_store_not_configured"}, 404
     return redirect(f"https://{store}/pages/{slug}", code=302)
