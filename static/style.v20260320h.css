@@ -1073,9 +1073,10 @@ body.launch-active.launch-preview-active #app{display:block;}
 .track-viewer-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;font-size:13px;color:#294664;}
 .track-viewer-body{display:flex;gap:10px;margin:10px 0;}
 .track-viewer-title{font-size:12px;color:#59738f;}
-.launch-footer-links{position:fixed;left:50%;transform:translateX(-50%);bottom:4px;z-index:420;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:11px;}
+.launch-footer-links{position:fixed;left:50%;transform:translateX(-50%);bottom:4px;z-index:420;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;font-size:11px;max-width:min(1080px,calc(100vw - 20px));padding:10px 14px;border-radius:18px;background:rgba(7,16,31,.74);backdrop-filter:blur(16px);}
 .launch-footer-links a{color:#dfe8f7;text-decoration:none;opacity:.9;}
 .launch-footer-links a:hover{text-decoration:underline;}
+.launch-footer-contact{color:rgba(232,241,255,.88);font-size:11px;}
 .engine-weekday-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;margin-top:16px;}
 .engine-weekday-card{display:grid;gap:14px;}
 .engine-weekday-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
@@ -3082,7 +3083,7 @@ body.competition-world .bg-layers::before{
 }
 .remote-side-arrow:active{transform:scale(.985);}
 .remote-content-stage{
-    min-height:calc(100vh - 260px);
+    min-height:calc(100vh - 220px);
     padding:18px;
     border-radius:30px;
     border:1px solid rgba(255,255,255,.18);
@@ -3105,6 +3106,27 @@ body.competition-world .bg-layers::before{
     color:#284867;
   }
 .remote-stage-card strong{font-size:18px;color:#173a6a;}
+.remote-command-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+.remote-command-card{
+    padding:16px;
+    border-radius:22px;
+    background:rgba(255,255,255,.58);
+    border:1px solid rgba(173,198,230,.32);
+    display:grid;
+    gap:10px;
+    color:#284867;
+  }
+.remote-command-card strong{font-size:17px;color:#173a6a;}
+.remote-command-card span{font-size:13px;line-height:1.55;color:#355473;}
+.remote-product-grid-inline{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+    gap:14px;
+  }
 .remote-stage-scenarios{
     padding:18px;
     border-radius:26px;
@@ -3255,7 +3277,7 @@ body.competition-world .bg-layers::before{
     box-shadow:0 28px 60px rgba(11,32,64,.28);
     background:linear-gradient(180deg, rgba(252,254,255,.94), rgba(240,247,255,.9));
     backdrop-filter:blur(20px);
-    min-height:84vh;
+    min-height:88vh;
     overflow:auto;
   }
 body.remote-hide-ads .remote-display-strip{
@@ -4371,7 +4393,7 @@ body.remote-hide-ads .remote-display-strip{
   .remote-display-strip{margin:0 10px 10px;grid-template-columns:1fr;}
   .remote-stage-shell{margin:0 10px 120px;grid-template-columns:1fr;}
   .remote-color-tab{display:none;}
-  .remote-content-stage{min-height:auto;padding:14px;}
+  .remote-content-stage{min-height:calc(100vh - 180px);padding:14px;}
   .remote-purchase-editor{right:10px;left:10px;bottom:48px;width:auto;}
   .remote-edits-menu{left:10px;right:10px;top:auto;bottom:224px;width:auto;}
   .remote-edits-menu::before{display:none;}
@@ -4401,7 +4423,8 @@ body.remote-hide-ads .remote-display-strip{
   .float-config-grid,
   .float-profile-hero,
   .float-diary-panels,
-  .float-settings-shortcuts{grid-template-columns:1fr;}
+  .float-settings-shortcuts,
+  .remote-command-grid{grid-template-columns:1fr;}
   .live-console-active .live-arena-overlay,
   .live-console-active #reelPanel{position:static;width:auto !important;max-width:none !important;transform:none;}
   .live-feed-settings-grid,
@@ -4462,7 +4485,7 @@ body.remote-hide-ads .remote-display-strip{
   .float-mode-shell.touch-optimized .float-box{
     min-height:auto;
   }
-  .float-remote-sheet{padding:14px;min-height:72vh;}
+  .float-remote-sheet{padding:14px;min-height:78vh;}
   .remote-blog-stats,
   .solid-state-grid{grid-template-columns:1fr;}
   .float-sheet-shell,

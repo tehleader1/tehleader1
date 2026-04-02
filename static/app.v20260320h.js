@@ -4903,7 +4903,6 @@ function setupLaunchMenu(){
     launch.classList.add("hide")
     document.body.classList.remove("launch-active")
     document.body.classList.remove("launch-preview-active")
-    try{ window.playSupportRDTheme?.() }catch{}
     try{ window.openFloatMode?.({ preserveHome: true }) }catch{}
   }
   function applyLang(code){
@@ -5794,6 +5793,7 @@ function setupFloatMode(){
   const remoteAdsFocusBtn = qs("#remoteAdsFocusBtn")
   const remoteColorPrevBtn = qs("#remoteColorPrev")
   const remoteColorNextBtn = qs("#remoteColorNext")
+  const remotePurchaseProductsBtn = qs("#remotePurchaseProducts")
   const remotePurchasePremiumBtn = qs("#remotePurchasePremium")
   const remotePurchaseStudioBtn = qs("#remotePurchaseStudio")
   const remotePurchaseThemesBtn = qs("#remotePurchaseThemes")
@@ -5801,12 +5801,14 @@ function setupFloatMode(){
   const remotePurchaseCustomBtn = qs("#remotePurchaseCustom")
   const remotePurchaseOrdersBtn = qs("#remotePurchaseOrders")
   const remotePurchaseSolidBtn = qs("#remotePurchaseSolid")
+  const remoteEditsCommandBtn = qs("#remoteEditsCommand")
   const remoteEditsViewBotBtn = qs("#remoteEditsViewBot")
   const remoteEditsFreePlayBtn = qs("#remoteEditsFreePlay")
   const remoteEditsReelBtn = qs("#remoteEditsReel")
   const remoteEditsDiaryBtn = qs("#remoteEditsDiary")
   const remoteEditsStudioBtn = qs("#remoteEditsStudio")
   const remoteEditsSettingsBtn = qs("#remoteEditsSettings")
+  const remoteInfoSigninBtn = qs("#remoteInfoSignin")
   const remoteInfoPrivacyBtn = qs("#remoteInfoPrivacy")
   const remoteInfoAboutBtn = qs("#remoteInfoAbout")
   const remoteInfoContactBtn = qs("#remoteInfoContact")
@@ -6145,7 +6147,7 @@ function setupFloatMode(){
         </div>
       `
     }
-    function buildSolidStateSheet(){
+  function buildSolidStateSheet(){
       return `
         ${renderRemoteValueLane(["Value: official live edition checklist", "Energy: build + hold demand", "Worth: package-ready SupportRD system"])}
         <div class="float-sheet-copy">Solid State is the company-ready checkpoint: what is built, what is protected, and what still needs live verification before we call the full project officially production-ready for demand and scaling.</div>
@@ -6185,6 +6187,101 @@ function setupFloatMode(){
           <button class="btn" data-open-fastpay>Open Purchase Lane</button>
           <button class="btn ghost" data-open-panel="floatLiveBox">Open FAQ Lounge</button>
           <button class="btn ghost" data-open-panel="floatDeviceBox">Open Map Change</button>
+        </div>
+      `
+    }
+    function buildProductPageSheet(){
+      return `
+        ${renderRemoteValueLane(["Value: live product conversion lane", "Energy: quick browse + purchase handoff", "Worth: lets visitors shop without losing the Remote shell"])}
+        <div class="float-sheet-copy">This is the SupportRD product page inside Remote: premium plans, studio upgrades, support lanes, and custom order routing stay easy to reach while the controller remains visible at the top.</div>
+        <div class="remote-product-grid-inline">
+          ${REMOTE_PAY_PRODUCTS.map(product=>`
+            <article class="remote-product-card glass">
+              <div class="remote-product-photo-wrap">
+                <img class="remote-product-photo" src="${product.image}" alt="${product.title}">
+              </div>
+              <div class="remote-product-copy">
+                <div class="remote-product-title-row">
+                  <h4>${product.title}</h4>
+                  <span class="remote-product-price">${product.price}</span>
+                </div>
+                <p class="remote-product-short">${product.short}</p>
+                <div class="remote-product-actions">
+                  <button class="btn" data-link-open="${product.link}">Open Checkout</button>
+                  <button class="btn ghost" data-open-fastpay>Quick Confirm</button>
+                </div>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+      `
+    }
+    function buildEditsCommandSheet(){
+      return `
+        ${renderRemoteValueLane(["Value: developer command center", "Energy: timing + editing intelligence", "Worth: turns SupportRD upkeep into a premium university-ready workflow"])}
+        <div class="float-sheet-copy">The Edits Menu is now the command layer for real work: product decisions, premium budgeting, ad timing, layout adjustments, meetings, remote studies, and testimony promises all stay one organized move away.</div>
+        <div class="remote-command-grid">
+          <article class="remote-command-card">
+            <strong>Product / Premium Purchase</strong>
+            <span>Open the product page, premium lanes, custom orders, and buyer conversion paths from one place.</span>
+            <div class="float-sheet-grid">
+              <button class="btn" data-open-product-page>Open Product Page</button>
+              <button class="btn ghost" data-open-fastpay>Open Purchase Lane</button>
+            </div>
+          </article>
+          <article class="remote-command-card">
+            <strong>Functionality In The Desert</strong>
+            <span>Durability-first checks for trail biking, travel, river routes, and stressful low-signal moments.</span>
+            <div class="float-sheet-grid">
+              <button class="btn ghost" data-open-panel="floatDeviceBox">Open Map Change</button>
+              <button class="btn ghost" data-open-panel="floatSettingsBox">Open Diary</button>
+            </div>
+          </article>
+          <article class="remote-command-card">
+            <strong>Layout / Theme / Ad Reflection</strong>
+            <span>Control theme feel, ad visibility, video/audio reflection choices, and important-information mood.</span>
+            <div class="float-sheet-grid">
+              <button class="btn ghost" data-open-panel="floatDeviceBox">Theme + Maps</button>
+              <button class="btn ghost" data-toggle-ads-focus>Focus On Hair Help</button>
+            </div>
+          </article>
+          <article class="remote-command-card">
+            <strong>Purchases + Budgeting</strong>
+            <span>Keep Premium, Studio Edition, support tips, and project money conversations tied to one budgeting lane.</span>
+            <div class="float-sheet-grid">
+              <button class="btn ghost" data-open-fastpay>Payments</button>
+              <button class="btn ghost" data-open-solid-state>Solid State</button>
+            </div>
+          </article>
+          <article class="remote-command-card">
+            <strong>Meetings + Company Direction</strong>
+            <span>Long-range company direction, customer referral proof, and founder-review thinking stay documented here.</span>
+            <div class="float-sheet-grid">
+              <button class="btn ghost" data-open-blog>Open Blog Studies</button>
+              <button class="btn ghost" data-open-official-sheet="contact">Contact Lane</button>
+            </div>
+          </article>
+          <article class="remote-command-card">
+            <strong>Optional Sign In</strong>
+            <span>SupportRD stays usable for free play, while sign-in only steps in when somebody wants premium tracking, custom orders, or account continuity.</span>
+            <div class="float-sheet-grid">
+              <button class="btn ghost" data-open-signin>Open Sign In</button>
+              <button class="btn ghost" data-sheet-close>Keep Browsing Free</button>
+            </div>
+          </article>
+          <article class="remote-command-card">
+            <strong>Remote Studies + Hair Solution Research</strong>
+            <span>Study how the Remote works, write the blog posts about it, and keep the actual hair-solution logic visible.</span>
+            <div class="float-sheet-grid">
+              <button class="btn ghost" data-open-panel="floatLiveBox">FAQ Lounge</button>
+              <button class="btn ghost" data-open-product-page>Product Study</button>
+            </div>
+          </article>
+          <article class="remote-command-card">
+            <strong>Company Promise + Testimony</strong>
+            <span>SupportRD feedback, testimony, and founder-level promises stay visible and willing, not hidden.</span>
+            <div class="float-sheet-status">Promise: we keep refining the app until each tap feels clean, premium, and useful under pressure.</div>
+          </article>
         </div>
       `
     }
@@ -6430,6 +6527,24 @@ function setupFloatMode(){
       openLaunchMenuSheet(targetId, labels[targetId] || "Remote Panel")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-fastpay]")).forEach(btn=>btn.addEventListener("click", ()=>window.openRemoteFastPay?.()))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-product-page]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      openRemoteSheet("Product Page", buildProductPageSheet(), { message:"Product Page is open inside Remote.", className:"remote-sheet-blog", route:"payments" })
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-solid-state]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      openRemoteSheet("Solid State Project", buildSolidStateSheet(), { message:"Solid State checklist is open.", className:"remote-sheet-blog", route:"solid" })
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-signin]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      qs("#loginBtn")?.click()
+      setRemoteStatus("Optional sign-in is ready. Free play still stays available.")
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-official-sheet]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const mode = btn.getAttribute("data-open-official-sheet") || "official"
+      openImportantInfoSheet(mode)
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-toggle-ads-focus]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      setRemoteAdsHidden(true)
+      setRemoteStatus("Ads are tucked away so the hair-help lane stays focused.")
+    }))
     Array.from(remoteSheetBody.querySelectorAll("[data-aria-scenario-prompt]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const prompt = btn.getAttribute("data-aria-scenario-prompt") || ""
       const targetAssistant = btn.getAttribute("data-assistant-target") || "aria"
@@ -7341,7 +7456,6 @@ function setupFloatMode(){
       else hideFounderLayer()
     }
     if(!options.previewOnly){
-      try{ window.playSupportRDTheme?.() }catch{}
       if(!options.preserveHome) setRemoteStatus("SupportRD Personal Remote is open. Diary Mode is highlighted, and the whole app stays connected from here.")
     }
     const activeRoute = getRemoteRouteFromLocation()
@@ -7462,6 +7576,9 @@ function setupFloatMode(){
       footerOfficialBottomBtn?.addEventListener("click", ()=>footerOfficialBtn?.click())
       remoteAdsToggleBtn?.addEventListener("click", ()=>setRemoteAdsHidden(!document.body.classList.contains("remote-hide-ads")))
       remoteAdsFocusBtn?.addEventListener("click", ()=>setRemoteAdsHidden(true))
+      remotePurchaseProductsBtn?.addEventListener("click", ()=>{
+        openRemoteSheet("Product Page", buildProductPageSheet(), { message:"Product Page is open inside Remote.", className:"remote-sheet-blog", route:"payments" })
+      })
       remotePurchasePremiumBtn?.addEventListener("click", ()=>{
         footerPaymentsBtn?.click()
         setRemoteStatus("Premium and Pro checkout lanes are open.")
@@ -7519,6 +7636,9 @@ function setupFloatMode(){
         remotePurchaseSolidBtn?.addEventListener("click", ()=>{
           openRemoteSheet("Solid State Project", buildSolidStateSheet(), { message:"Solid State checklist is open.", className:"remote-sheet-blog", route:"solid" })
         })
+        remoteEditsCommandBtn?.addEventListener("click", ()=>{
+          openRemoteSheet("Edits Command Center", buildEditsCommandSheet(), { message:"Edits Command Center is open. This is the developer-ready SupportRD control lane.", className:"remote-sheet-blog", route:"settings" })
+        })
         remoteScenarioButtons.forEach(btn => btn.addEventListener("click", ()=>{
           const key = btn.getAttribute("data-aria-scenario")
           if(key) openScenarioSheet(key)
@@ -7537,6 +7657,10 @@ function setupFloatMode(){
         remoteEditsDiaryBtn?.addEventListener("click", ()=>openLaunchMenuSheet("floatSettingsBox", "Diary Mode"))
         remoteEditsStudioBtn?.addEventListener("click", ()=>openLaunchMenuSheet("floatBoardsBox", "Studio Quick Panel"))
         remoteEditsSettingsBtn?.addEventListener("click", ()=>openLaunchMenuSheet("floatProfileBox", "General Settings"))
+        remoteInfoSigninBtn?.addEventListener("click", ()=>{
+          qs("#loginBtn")?.click()
+          setRemoteStatus("Optional sign-in is available whenever someone wants premium tracking or account continuity.")
+        })
         remoteInfoPrivacyBtn?.addEventListener("click", ()=>openImportantInfoSheet("privacy"))
         remoteInfoAboutBtn?.addEventListener("click", ()=>openImportantInfoSheet("about"))
         remoteInfoContactBtn?.addEventListener("click", ()=>openImportantInfoSheet("contact"))
@@ -9382,8 +9506,6 @@ safe(setupReel)
   safe(setupStartupSplash)
   safe(setupLaunchMenu)
   safe(setupSatelliteQuick)
-  safe(setupLiveRadio)
-  safe(setupTrackViewer)
   safe(setupDashboardSweep)
   safe(setupJakeQuickSwitch)
   safe(setupShopifyConnectorBadge)

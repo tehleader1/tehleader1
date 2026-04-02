@@ -87,20 +87,6 @@
     <strong>Sponsors:</strong> Visa · Mastercard · U.S. Bank · Bank of America · Wells Fargo · Woodforest
   </div>
 </div>
-<div class="track-viewer glass" id="trackViewer">
-  <div class="track-viewer-head">
-    <strong>SupportRD Theme</strong>
-    <span id="trackViewerState">Tap play if audio is paused</span>
-  </div>
-  <div class="track-viewer-body">
-    <button class="btn ghost" id="trackViewerToggle">Play</button>
-    <button class="btn ghost" id="trackViewerRestart">Restart</button>
-  </div>
-  <div class="track-viewer-title">drill-anthony.mp3 · bottom-right preview</div>
-  <audio id="trackViewerAudio" preload="auto" loop>
-    <source src="/static/audio/drill-anthony.mp3" type="audio/mpeg">
-  </audio>
-</div>
 <div id="launchSplash" class="launch-splash" aria-hidden="true">
   <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD Launch">
   <div class="launch-splash-copy">
@@ -1507,18 +1493,6 @@
   </div>
 </div>
 
-<div id="liveRadio" class="live-radio glass">
-  <div class="live-radio-title">SupportRD World Radio</div>
-  <div class="live-radio-track" id="radioTrackLabel">Drill Anthony Mix.mp3</div>
-  <div class="live-radio-actions">
-    <button class="btn ghost" id="radioPrev">Prev</button>
-    <button class="btn" id="radioPlay">Play</button>
-    <button class="btn ghost" id="radioStop">Stop</button>
-    <button class="btn ghost" id="radioNext">Next</button>
-  </div>
-  <div class="system-sub" id="radioStatus">Loading live song...</div>
-</div>
-
 <div id="studioModeShell" class="studio-mode-shell" aria-hidden="true">
   <div class="studio-static"></div>
   <div class="studio-mode-topbar glass">
@@ -2162,6 +2136,7 @@
   </div>
   <div class="remote-purchase-editor glass" id="remotePurchaseEditor">
     <div class="float-mode-kicker">SupportRD Shop</div>
+    <button class="btn ghost" id="remotePurchaseProducts">Product Page</button>
     <button class="btn" id="remotePurchasePremium">Purchase Premium / Pro</button>
     <button class="btn ghost" id="remotePurchaseStudio">Purchase Studio Edition</button>
     <button class="btn ghost" id="remotePurchaseThemes">Purchase Themes &amp; AI Upgrades</button>
@@ -2172,6 +2147,7 @@
   </div>
   <div class="remote-edits-menu glass" id="remoteEditsMenu">
     <div class="float-mode-kicker">Sticky Edits Menu</div>
+    <button class="btn" id="remoteEditsCommand">Open Edits Command Center</button>
     <button class="btn" id="remoteEditsViewBot">Run View Bot</button>
     <button class="btn ghost" id="remoteEditsFreePlay">Free Play Remote</button>
     <button class="btn ghost" id="remoteEditsReel">6 Second Help Reel</button>
@@ -2181,6 +2157,7 @@
   </div>
   <div class="remote-important-info glass" id="remoteImportantInfo">
     <div class="float-mode-kicker">Sticky Important Info</div>
+    <button class="btn ghost" id="remoteInfoSignin">Optional Sign In</button>
     <button class="btn ghost" id="remoteInfoPrivacy">Privacy Page</button>
     <button class="btn ghost" id="remoteInfoAbout">About Us</button>
     <button class="btn ghost" id="remoteInfoContact">Contact Us</button>
@@ -2188,8 +2165,9 @@
   </div>
   
   <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260401a"></script>
+<script src="/static/app.v20260320h.js?v=20260402b"></script>
 <footer class="launch-footer-links">
+  <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
   <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>
   <a href="https://supportrd.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy</a>
