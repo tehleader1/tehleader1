@@ -5918,6 +5918,57 @@ function setupFloatMode(){
       note: "Scalp lane with cleanse and reset clips."
     }
   }
+  const DEVELOPER_FEEDBACK_ENTRIES = [
+    {
+      name: "Trail User",
+      title: "Remote stayed clear on the move",
+      comment: "The button routing finally feels direct and easy to trust when I am moving fast.",
+      hearts: 96,
+      thumbs: 41,
+      cash: 24
+    },
+    {
+      name: "Hair Routine Fan",
+      title: "FAQ lounge feels useful",
+      comment: "The hair clips, product path, and quick help make the app feel alive instead of stiff.",
+      hearts: 121,
+      thumbs: 55,
+      cash: 18
+    },
+    {
+      name: "Founder Supporter",
+      title: "Premium shell feels real",
+      comment: "This finally feels like one premium app instead of a stack of disconnected pages.",
+      hearts: 184,
+      thumbs: 73,
+      cash: 52
+    },
+    {
+      name: "Studio Viewer",
+      title: "Studio route makes sense now",
+      comment: "I like being able to jump to the studio page without getting lost in another panel first.",
+      hearts: 88,
+      thumbs: 47,
+      cash: 11
+    }
+  ]
+  const PUBLIC_REVIEW_ENTRIES = [
+    {
+      author: "Verified SupportRD Viewer",
+      title: "Hair help feels direct",
+      body: "I like that the app gets me to the right place fast without making me guess what button to hit."
+    },
+    {
+      author: "Premium Supporter",
+      title: "The page feels polished",
+      body: "The Remote on top and the full page opening below it makes the whole app feel premium and easy to trust."
+    },
+    {
+      author: "Returning Customer",
+      title: "FAQ finally feels alive",
+      body: "The hair clips, reviews, and support energy make the app feel active instead of static."
+    }
+  ]
   function escapeRemoteHtml(value){
     return String(value ?? "").replace(/[&<>"]/g, char => ({
       "&": "&amp;",
@@ -6027,6 +6078,79 @@ function setupFloatMode(){
     })
     playNext()
     startAuto()
+  }
+  function buildDeveloperFeedbackSheet(){
+    return `
+      ${renderRemoteValueLane(["Value: public love + developer proof", "Energy: social leaderboard lane", "Worth: shows what people are loving about SupportRD right now"])}
+      <div class="float-sheet-copy">Developer Feedback is the public love board inside FAQ Lounge. It keeps visible comments, real reactions, and the momentum around SupportRD in one place.</div>
+      <div class="float-sheet-grid three">
+        <button class="btn" data-feedback-sort="hearts">Most Hearts</button>
+        <button class="btn ghost" data-feedback-sort="thumbs">Most Thumbs Up</button>
+        <button class="btn ghost" data-feedback-sort="cash">Most Cash</button>
+      </div>
+      <div class="float-sheet-status" data-feedback-status>Showing the strongest public love by hearts right now.</div>
+      <div class="remote-feedback-board" data-feedback-board></div>
+      <div class="float-sheet-panel">
+        <h4>Public Reviews</h4>
+        <div class="remote-review-wall" data-review-wall></div>
+      </div>
+      <div class="float-sheet-copy">This lane is public-facing. It is meant to show the encouragement, love, and usefulness people are feeling around the app.</div>
+    `
+  }
+  function wireDeveloperFeedbackSheet(root = remoteSheetBody){
+    const board = root?.querySelector("[data-feedback-board]")
+    const reviewWall = root?.querySelector("[data-review-wall]")
+    const status = root?.querySelector("[data-feedback-status]")
+    const sortButtons = Array.from(root?.querySelectorAll("[data-feedback-sort]") || [])
+    if(!board) return
+    const localHearts = Number(localStorage.getItem("supportrdSessionHearts") || 0)
+    const localCash = JSON.parse(localStorage.getItem("supportrdGiftHistory") || "[]").reduce((sum, item)=>sum + Number(item?.amount || 0), 0)
+    const entries = DEVELOPER_FEEDBACK_ENTRIES.concat([
+      {
+        name: "Live Session",
+        title: "Current session support",
+        comment: "This row reflects the current session energy inside your own SupportRD view.",
+        hearts: localHearts,
+        thumbs: Math.max(0, Math.round(localHearts / 2)),
+        cash: localCash
+      }
+    ])
+    const render = (sortKey = "hearts")=>{
+      const labelMap = {
+        hearts: "hearts",
+        thumbs: "thumbs up",
+        cash: "cash"
+      }
+      const sorted = [...entries].sort((a, b)=>(Number(b?.[sortKey] || 0) - Number(a?.[sortKey] || 0)))
+      board.innerHTML = sorted.map((entry, index)=>`
+        <article class="remote-feedback-card glass">
+          <div class="remote-feedback-rank">#${index + 1}</div>
+          <div class="remote-feedback-copy">
+            <strong>${escapeRemoteHtml(entry.title)}</strong>
+            <div class="remote-feedback-author">${escapeRemoteHtml(entry.name)}</div>
+            <p>${escapeRemoteHtml(entry.comment)}</p>
+          </div>
+          <div class="remote-feedback-metrics">
+            <span>Hearts: ${Number(entry.hearts || 0)}</span>
+            <span>Thumbs: ${Number(entry.thumbs || 0)}</span>
+            <span>Cash: $${Number(entry.cash || 0).toFixed(2)}</span>
+          </div>
+        </article>
+      `).join("")
+      if(status) status.textContent = `Showing the strongest public love by ${labelMap[sortKey] || "hearts"} right now.`
+      sortButtons.forEach(btn=>btn.classList.toggle("active", btn.getAttribute("data-feedback-sort") === sortKey))
+    }
+    sortButtons.forEach(btn=>btn.addEventListener("click", ()=>render(btn.getAttribute("data-feedback-sort") || "hearts")))
+    render("hearts")
+    if(reviewWall){
+      reviewWall.innerHTML = PUBLIC_REVIEW_ENTRIES.map(review=>`
+        <article class="remote-review-card">
+          <strong>${escapeRemoteHtml(review.title)}</strong>
+          <div class="remote-review-author">${escapeRemoteHtml(review.author)}</div>
+          <p>${escapeRemoteHtml(review.body)}</p>
+        </article>
+      `).join("")
+    }
   }
   async function fetchShopifyConnectorHealth(){
     try{
@@ -6530,6 +6654,7 @@ function setupFloatMode(){
       </div>
       <div class="float-sheet-grid">
         <button class="btn" data-open-faq-reel>Pull Up TV Reel</button>
+        <button class="btn ghost" data-open-developer-feedback>Developer Feedback</button>
         <button class="btn ghost" data-open-fastpay>Open Payments</button>
         <button class="btn ghost" data-open-blog>Open Blog</button>
       </div>
@@ -6769,6 +6894,10 @@ function setupFloatMode(){
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-help-reel]")).forEach(btn=>btn.addEventListener("click", ()=>{
       openRemoteSheet("6 Second Help Reel", buildQuickReelSheet(), { message:"The quick help reel is open inside Remote." })
+    }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-developer-feedback]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      openRemoteSheet("Developer Feedback", buildDeveloperFeedbackSheet(), { message:"Developer Feedback is open inside FAQ Lounge.", route:"faq" })
+      wireDeveloperFeedbackSheet(remoteSheetBody)
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-start-virtual-journey]")).forEach(btn=>btn.addEventListener("click", ()=>{
       closeRemoteSheet(false)

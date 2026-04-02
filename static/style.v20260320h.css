@@ -3107,10 +3107,10 @@ body.competition-world .bg-layers::before{
   }
 .remote-stage-card strong{font-size:18px;color:#173a6a;}
 .remote-command-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:14px;
-  }
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:14px;
+    }
 .remote-command-card{
     padding:16px;
     border-radius:22px;
@@ -3122,11 +3122,85 @@ body.competition-world .bg-layers::before{
   }
 .remote-command-card strong{font-size:17px;color:#173a6a;}
 .remote-command-card span{font-size:13px;line-height:1.55;color:#355473;}
-.remote-product-grid-inline{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
-    gap:14px;
-  }
+  .remote-product-grid-inline{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+      gap:14px;
+    }
+  .remote-feedback-board,
+  .remote-review-wall{
+      display:grid;
+      gap:12px;
+    }
+  .remote-feedback-card{
+      display:grid;
+      grid-template-columns:64px 1fr auto;
+      gap:14px;
+      align-items:start;
+      padding:16px;
+      border-radius:22px;
+      background:rgba(255,255,255,.62);
+      border:1px solid rgba(167,196,232,.28);
+    }
+  .remote-feedback-rank{
+      width:64px;
+      min-height:64px;
+      border-radius:20px;
+      display:grid;
+      place-items:center;
+      background:linear-gradient(145deg, rgba(32,84,164,.18), rgba(118,190,255,.38));
+      color:#173a6a;
+      font-weight:900;
+      font-size:20px;
+    }
+  .remote-feedback-copy{
+      display:grid;
+      gap:6px;
+    }
+  .remote-feedback-copy strong{
+      color:#173a6a;
+      font-size:18px;
+    }
+  .remote-feedback-author{
+      color:#56749a;
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+  .remote-feedback-copy p,
+  .remote-review-card p{
+      margin:0;
+      color:#2b486d;
+      line-height:1.6;
+    }
+  .remote-feedback-metrics{
+      display:grid;
+      gap:6px;
+      justify-items:end;
+      color:#2a4a73;
+      font-weight:700;
+      font-size:13px;
+    }
+  .remote-review-card{
+      padding:16px;
+      border-radius:20px;
+      background:rgba(255,255,255,.68);
+      border:1px solid rgba(167,196,232,.28);
+      display:grid;
+      gap:8px;
+    }
+  .remote-review-card strong{
+      color:#173a6a;
+      font-size:17px;
+    }
+  .remote-review-author{
+      color:#54739b;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
 .remote-stage-scenarios{
     padding:18px;
     border-radius:26px;
