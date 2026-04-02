@@ -4439,6 +4439,7 @@ function setupSessionSignal(){
     if(roleEl) roleEl.textContent = role === "owner" ? "Owner device recognized" : "Viewer access ready"
     if(ipEl) ipEl.textContent = `Local IPv4: ${knownOwnerIp}${role === "owner" ? " · owner device recognized" : ""}`
     if(idEl) idEl.textContent = `Session ID: ${sessionId}`
+    if(idEl) idEl.hidden = true
     const continuity = JSON.parse(localStorage.getItem(continuityKey) || "null")
     if(continuityEl){
       continuityEl.textContent = continuity?.preserved
@@ -4460,6 +4461,7 @@ function setupSessionSignal(){
       const hidden = hiddenUntil > Date.now()
       joinBtn.hidden = hidden
       joinBtn.disabled = hidden
+      joinBtn.style.display = hidden ? "none" : ""
       joinBtn.textContent = hidden ? "Viewer Link Ready" : "Scan to Join Session"
     }
   }
@@ -5673,6 +5675,9 @@ function setupFloatMode(){
   const profileHistory = qs("#floatProfileHistory")
   const profileQualityTitle = qs("#floatProfileQualityTitle")
   const profileQualityBody = qs("#floatProfileQualityBody")
+  const profileHero = qs("#floatProfileHero")
+  const diaryProfileHero = qs("#floatDiaryProfileHero")
+  const profileUploadInput = qs("#floatProfileUploadInput")
   const mapBtn = qs("#floatMapBtn")
   const themeBtn = qs("#floatThemeBtn")
   const paymentBtn = qs("#floatPaymentBtn")
@@ -5685,11 +5690,17 @@ function setupFloatMode(){
   const uploadInput = qs("#floatUploadInput")
   const freshBoardsBtn = qs("#floatFreshBoardsBtn")
   const playBtn = qs("#floatPlayBtn")
+  const pauseBtn = qs("#floatPauseBtn")
   const stopBtn = qs("#floatStopBtn")
   const prevBtn = qs("#floatPrevBtn")
+  const rewindBtn = qs("#floatRewindBtn")
   const nextBtn = qs("#floatNextBtn")
+  const fastForwardBtn = qs("#floatFastForwardBtn")
   const recordVoiceBtn = qs("#floatRecordVoiceBtn")
   const instrumentRecordBtn = qs("#floatInstrumentRecordBtn")
+  const guitarBtn = qs("#floatGuitarBtn")
+  const speakerBtn = qs("#floatSpeakerBtn")
+  const gigSwitchBtn = qs("#floatGigSwitchBtn")
   const trimStart = qs("#floatTrimStart")
   const trimEnd = qs("#floatTrimEnd")
   const trimStartNumber = qs("#floatTrimStartNumber")
@@ -5730,7 +5741,36 @@ function setupFloatMode(){
   const settingsPushBtn = qs("#floatSettingsPushBtn")
   const settingsLanguageBtn = qs("#floatSettingsLanguageBtn")
   const studioLiveBtn = qs("#floatStudioLiveBtn")
+  function setRemoteStatus(text){
+    if(text && liveStatus) liveStatus.textContent = text
+  }
+  function persistAvatar(dataUrl){
+    state.userAvatar = dataUrl
+    try{ localStorage.setItem("supportrdUserAvatar", dataUrl) }catch{}
+    syncProfile()
+  }
+  function triggerProfileUpload(){
+    profileUploadInput?.click()
+  }
+  function readAvatarFile(file){
+    if(!file) return
+    const reader = new FileReader()
+    reader.onload = ()=>{
+      if(typeof reader.result === "string"){
+        persistAvatar(reader.result)
+        setRemoteStatus("Profile picture updated. Your remote identity card looks more like you now.")
+      }
+    }
+    reader.readAsDataURL(file)
+  }
   const boardPreview = qs("#floatBoardPreview")
+  const boardPreviewCopy = qs("#floatBoardPreviewCopy")
+  const boardPreviewMediaWrap = qs("#floatBoardPreviewMediaWrap")
+  const boardPreviewAudio = qs("#floatBoardPreviewAudio")
+  const boardPreviewVideo = qs("#floatBoardPreviewVideo")
+  const waveCanvas = qs("#floatWaveCanvas")
+  const boardTimer = qs("#floatBoardTimer")
+  const boardMode = qs("#floatBoardMode")
   const quickEditStatus = qs("#floatQuickEditStatus")
   const faqReelBtn = qs("#floatFaqReelBtn")
   const launchButtons = qsa(".float-launch-btn")
@@ -5767,8 +5807,14 @@ function setupFloatMode(){
     boards: [null, null, null],
     history: [],
     previewUrl: "",
+    previewMediaEl: null,
     recorder: null,
     recordChunks: [],
+    recordStream: null,
+    analyser: null,
+    analyserFrame: 0,
+    recordStartedAt: 0,
+    mode: "audio",
     handsfreeRecognition: null,
     handsfreeActive: false,
     currentPanel: "floatSettingsBox",
@@ -5873,6 +5919,11 @@ function setupFloatMode(){
           <h4>What's On Your Mind?</h4>
           <textarea class="input float-sheet-textarea" data-diary-input placeholder="Write the update, hair thought, workday plan, or premium post you want to send."></textarea>
           <div class="float-sheet-grid three">
+            <button class="btn ghost" type="button">Facebook</button>
+            <button class="btn ghost" type="button">Instagram</button>
+            <button class="btn ghost" type="button">TikTok</button>
+          </div>
+          <div class="float-sheet-grid three">
             <button class="btn" data-diary-save>Save</button>
             <button class="btn ghost" data-diary-clear>Erase</button>
             <button class="btn ghost" data-diary-pdf>Export PDF</button>
@@ -5887,8 +5938,9 @@ function setupFloatMode(){
             <button class="btn ghost" data-open-fastpay>Payments</button>
             <button class="btn ghost" data-open-gps-route>GPS Mode</button>
             <button class="btn ghost" data-diary-handsfree>Handsfree</button>
-            <button class="btn ghost" data-diary-post>Send Post</button>
+            <button class="btn ghost" data-diary-post>Send To Social</button>
           </div>
+          <div class="float-sheet-copy">Social backlinks stay attached through General Settings, so Diary can stage one clean message and still send through your saved routes.</div>
         </section>
       </div>
     `
@@ -5905,6 +5957,7 @@ function setupFloatMode(){
         <button class="btn ghost" data-settings-focus="language">Languages</button>
         <button class="btn ghost" data-settings-open-account>Open Full Settings</button>
       </div>
+      <div class="float-sheet-copy">Full settings stay inside Remote now. No jump to the old page, just a clean account-control sheet.</div>
       <div class="float-sheet-status" data-settings-status>Choose a settings lane and SupportRD will guide the account update from there.</div>
     `
   }
@@ -5914,12 +5967,13 @@ function setupFloatMode(){
       <div class="float-sheet-copy">Map Change keeps the woman-waking-up default until you choose a new occasion. Tap a bubble, preview the mood, then close straight back into Remote.</div>
       ${renderRemoteValueLane(["Value: theme-driven selling", "Energy: visual mood engine", "Worth: occasion change + one-tap restore"])}
       <div class="float-map-bubbles">
-        ${views.map(view=>`<button class="float-map-bubble" type="button" data-world-key="${view.key}"><strong>${view.label}</strong><span>${view.vibe}</span></button>`).join("")}
+        ${views.map(view=>`<button class="float-map-bubble" type="button" data-world-key="${view.key}"><strong>${view.label}</strong><span>${view.helper || view.perk || "SupportRD mood route"}</span></button>`).join("")}
       </div>
       <div class="float-sheet-grid">
         <button class="btn ghost" data-map-reset>Default SupportRD View</button>
         <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
       </div>
+      <div class="float-map-loader" data-map-loader hidden><span data-map-loader-bar></span></div>
       <div class="float-sheet-status" data-map-status>SupportRD default view is ready. Pick a map to rotate the mood of the page.</div>
     `
   }
@@ -5937,6 +5991,9 @@ function setupFloatMode(){
         <button class="btn" data-open-faq-reel>Pull Up TV Reel</button>
         <button class="btn ghost" data-open-fastpay>Open Payments</button>
         <button class="btn ghost" data-open-blog>Open Blog</button>
+      </div>
+      <div class="float-faq-reel-host" data-sheet-faq-reel hidden>
+        <iframe class="float-faq-reel-frame" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel in FAQ sheet"></iframe>
       </div>
       <div class="float-sheet-status">Aria and Jake stay close here so people can get help without losing their place.</div>
     `
@@ -5978,21 +6035,25 @@ function setupFloatMode(){
       <div class="float-sheet-shell profile-sheet-shell">
         <section class="float-sheet-panel">
           <div class="float-profile-sheet-hero">
-            <div class="float-profile-sheet-image">Profile Image</div>
+            <div class="float-profile-sheet-image" data-profile-sheet-image>Profile Image</div>
             <div>
               <h4>Top Qualities</h4>
               <p>Hair mission active, polished presentation, strong social identity, and direct premium support.</p>
             </div>
           </div>
+          <div class="float-sheet-grid">
+            <button class="btn" data-profile-upload>Upload Profile Picture</button>
+            <button class="btn ghost" data-profile-action="scan">Run Full Hair Scan</button>
+          </div>
         </section>
         <section class="float-sheet-panel">
           <h4>Profile Actions</h4>
           <div class="float-sheet-grid">
-            <button class="btn ghost" data-profile-action="scan">Run Full Hair Scan</button>
             <button class="btn ghost" data-profile-action="achievements">Achievements</button>
             <button class="btn ghost" data-profile-action="social">Social Connections</button>
             <button class="btn ghost" data-profile-action="upgrade">Upgrade Aria / Jake</button>
           </div>
+          <div class="float-sheet-status" data-profile-status>Upload a polished profile image, keep your achievements visible, and route your social identity through SupportRD.</div>
         </section>
       </div>
     `
@@ -6108,20 +6169,30 @@ function setupFloatMode(){
     remoteSheet.hidden = false
     remoteSheet.setAttribute("aria-hidden", "false")
     shell.classList.add("sheet-open")
-    if(options.message) openMiniWindow(title, options.message)
+    if(options.message) setRemoteStatus(options.message)
     if(options.guideKey && Array.isArray(options.guideSteps)){
       wireRemoteGuide(options.guideKey, options.guideSteps)
     }
     Array.from(remoteSheetBody.querySelectorAll("[data-sheet-close]")).forEach(btn=>btn.addEventListener("click", ()=>closeRemoteSheet()))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-panel]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const targetId = btn.getAttribute("data-open-panel") || defaultFloatPanel
-      closeRemoteSheet(false)
-      setActiveTouchPanel(targetId, "Remote panel is open and ready.")
+      if(targetId === "all"){
+        showAllFloatPanels("All six Remote panels are open together for a quick full-system view.")
+        return
+      }
+      const labels = {
+        floatSettingsBox: "Diary Mode",
+        floatProfileBox: "General Settings",
+        floatDeviceBox: "Map Change",
+        floatLiveBox: "FAQ Lounge",
+        floatBoardsBox: "Studio Quick Panel",
+        floatAssistantBox: "Profile"
+      }
+      openLaunchMenuSheet(targetId, labels[targetId] || "Remote Panel")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-fastpay]")).forEach(btn=>btn.addEventListener("click", ()=>window.openRemoteFastPay?.()))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-settings]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      closeRemoteSheet()
-      setActiveTouchPanel("floatProfileBox", "General Settings is ready inside Remote.")
+      openLaunchMenuSheet("floatProfileBox", "General Settings")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-settings-focus]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const lane = btn.getAttribute("data-settings-focus") || "general"
@@ -6132,42 +6203,63 @@ function setupFloatMode(){
         push: "Push Notifications are ready in settings.",
         language: "Language control is ready in settings."
       }
-      closeRemoteSheet(false)
-      setActiveTouchPanel("floatProfileBox", labels[lane] || "General Settings is ready.")
+      remoteSheetBody.querySelector("[data-settings-status]")?.replaceChildren(document.createTextNode(labels[lane] || "General Settings is ready."))
+      setRemoteStatus(labels[lane] || "General Settings is ready.")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-settings-open-account]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      closeRemoteSheet(false)
-      setActiveTouchPanel("floatProfileBox", "Full account settings are open inside Remote.")
+      remoteSheetBody.querySelector("[data-settings-status]")?.replaceChildren(document.createTextNode("Full account settings stay inside this Remote sheet. Change email, password, socials, language, and notifications here."))
+      setRemoteStatus("Full account settings are open inside Remote.")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-subscribe]")).forEach(btn=>btn.addEventListener("click", ()=>footerSubscribeBtn?.click()))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-blog]")).forEach(btn=>btn.addEventListener("click", ()=>openModal("blogModal")))
-    Array.from(remoteSheetBody.querySelectorAll("[data-open-faq-reel]")).forEach(btn=>btn.addEventListener("click", ()=>faqReelBtn?.click()))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-faq-reel]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const reelHost = remoteSheetBody.querySelector("[data-sheet-faq-reel]")
+      if(!reelHost) return
+      const willShow = reelHost.hidden
+      reelHost.hidden = !willShow
+      btn.textContent = willShow ? "Hide TV Reel" : "Pull Up TV Reel"
+      setRemoteStatus(willShow ? "SupportRD TV Reel is open inside FAQ." : "FAQ lounge is back in focus.")
+    }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-map-sheet]")).forEach(btn=>btn.addEventListener("click", ()=>openLaunchMenuSheet("floatDeviceBox", "Map Change")))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      closeRemoteSheet()
-      window.openWorldMapPanel?.()
+      openLaunchMenuSheet("floatDeviceBox", "Map Change")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-world-key]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const key = btn.getAttribute("data-world-key")
+      const loader = remoteSheetBody.querySelector("[data-map-loader]")
+      const loaderBar = remoteSheetBody.querySelector("[data-map-loader-bar]")
+      if(loader){
+        loader.hidden = false
+        if(loaderBar) loaderBar.style.width = "12%"
+        setTimeout(()=>{ if(loaderBar) loaderBar.style.width = "46%" }, 160)
+        setTimeout(()=>{ if(loaderBar) loaderBar.style.width = "82%" }, 360)
+        setTimeout(()=>{
+          if(loaderBar) loaderBar.style.width = "100%"
+          setTimeout(()=>{ if(loader) loader.hidden = true }, 260)
+        }, 700)
+      }
       if(typeof window.setWorldTheme === "function" && key){
         window.setWorldTheme(key)
       }
+      if(key) shell.dataset.remoteTheme = key
       const status = remoteSheetBody.querySelector("[data-map-status]")
-      if(status) status.textContent = `${btn.querySelector("strong")?.textContent || "Theme"} is loading into SupportRD.`
+      if(status) status.textContent = `${btn.querySelector("strong")?.textContent || "Theme"} is loading into SupportRD. The Remote stays open while the mood changes.`
+      setRemoteStatus(`${btn.querySelector("strong")?.textContent || "Theme"} is loading into SupportRD.`)
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-map-reset]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const status = remoteSheetBody.querySelector("[data-map-status]")
       if(status) status.textContent = "SupportRD default woman-waking-up view is active again."
+      delete shell.dataset.remoteTheme
       document.body.classList.remove("theme-lumbermill","theme-river","theme-snow","theme-island","theme-vip","theme-tunnels","theme-market","theme-lab","theme-lounge","theme-tower")
+      setRemoteStatus("SupportRD default woman-waking-up view is active again.")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-studio]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      closeRemoteSheet(false)
       localStorage.setItem("supportrdStudioReturnView", "remote")
       if(typeof window.openStudioMode === "function"){
         closeFloat()
         window.openStudioMode()
       }else{
-        setActiveTouchPanel("floatBoardsBox", "Studio Quick Panel is ready.")
+        setRemoteStatus("Studio Quick Panel is ready.")
       }
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-gps-route]")).forEach(btn=>btn.addEventListener("click", ()=>{
@@ -6189,7 +6281,9 @@ function setupFloatMode(){
     Array.from(remoteSheetBody.querySelectorAll("[data-diary-post]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const input = remoteSheetBody.querySelector("[data-diary-input]")
       const text = (input?.value || "").trim()
-      remoteSheetBody.querySelector("[data-diary-status]")?.replaceChildren(document.createTextNode(text ? "Diary post staged for social handoff." : "Write something first, then SupportRD can route the post."))
+      if(text && liveArenaComposeInput) liveArenaComposeInput.value = text
+      remoteSheetBody.querySelector("[data-diary-status]")?.replaceChildren(document.createTextNode(text ? "Diary post staged for social handoff with your saved backlinks." : "Write something first, then SupportRD can route the post."))
+      if(text) setRemoteStatus("Diary post staged for social handoff with your saved backlinks.")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-diary-handsfree]")).forEach(btn=>btn.addEventListener("click", ()=>{
       remoteSheetBody.querySelector("[data-diary-status]")?.replaceChildren(document.createTextNode("Handsfree mode is ready. Ask Aria or Jake and SupportRD will transcribe below."))
@@ -6210,22 +6304,36 @@ function setupFloatMode(){
     }
     Array.from(remoteSheetBody.querySelectorAll("[data-quick-studio-action]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const action = btn.getAttribute("data-quick-studio-action") || "edit"
-      openMiniWindow("Studio Quick Panel", `${action.replace(/\b\w/g, m=>m.toUpperCase())} is ready from the quick studio lane.`)
+      setRemoteStatus(`${action.replace(/\b\w/g, m=>m.toUpperCase())} is ready from the quick studio lane.`)
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-studio-board]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const board = btn.getAttribute("data-open-studio-board") || "1"
-      openMiniWindow("Studio Quick Panel", `Motherboard ${board} is armed for the next quick edit.`)
+      setRemoteStatus(`Motherboard ${board} is armed for the next quick edit.`)
     }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-profile-upload]")).forEach(btn=>btn.addEventListener("click", triggerProfileUpload))
     Array.from(remoteSheetBody.querySelectorAll("[data-profile-action]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const action = btn.getAttribute("data-profile-action") || "scan"
+      if(action === "social"){
+        openLaunchMenuSheet("floatProfileBox", "General Settings")
+        setRemoteStatus("Social connections are open in General Settings inside Remote.")
+        return
+      }
       const labels = {
         scan: "Full hair scan is ready from Profile.",
         achievements: "Achievements view is ready from Profile.",
-        social: "Social connections are ready from Profile.",
+        social: "Social connections are ready from Profile. Your saved WWW links and social routes stay attached here.",
         upgrade: "Aria / Jake upgrade lane is ready from Profile."
       }
-      openMiniWindow("Profile", labels[action] || "Profile action is ready.")
+      remoteSheetBody.querySelector("[data-profile-status]")?.replaceChildren(document.createTextNode(labels[action] || "Profile action is ready."))
+      setRemoteStatus(labels[action] || "Profile action is ready.")
     }))
+    const sheetImage = remoteSheetBody.querySelector("[data-profile-sheet-image]")
+    if(sheetImage && state.userAvatar){
+      sheetImage.style.backgroundImage = `linear-gradient(145deg, rgba(10,22,42,.28), rgba(10,22,42,.08)), url("${state.userAvatar}")`
+      sheetImage.style.backgroundSize = "cover"
+      sheetImage.style.backgroundPosition = "center"
+      sheetImage.textContent = ""
+    }
   }
   function closeRemoteSheet(stopGuide = true){
     if(stopGuide) stopRemoteGuide()
@@ -6237,6 +6345,7 @@ function setupFloatMode(){
   }
     function setFloatHome(message){
       closeRemoteSheet()
+      hideTGuide()
       shell.classList.add("touch-home")
       shell.classList.remove("panel-open")
       shell.classList.add("touch-optimized")
@@ -6244,13 +6353,83 @@ function setupFloatMode(){
       localStorage.setItem(floatPanelKey, defaultFloatPanel)
       launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
       qsa(".float-box").forEach(box => box.hidden = true)
-      if(message) openMiniWindow("Float Remote", message)
+      if(message) setRemoteStatus(message)
   }
 
   function revokePreview(){
     if(remoteState.previewUrl){
       try{ URL.revokeObjectURL(remoteState.previewUrl) }catch{}
       remoteState.previewUrl = ""
+    }
+    if(boardPreviewAudio){
+      boardPreviewAudio.pause()
+      boardPreviewAudio.removeAttribute("src")
+      boardPreviewAudio.hidden = true
+    }
+    if(boardPreviewVideo){
+      boardPreviewVideo.pause()
+      boardPreviewVideo.removeAttribute("src")
+      boardPreviewVideo.hidden = true
+    }
+    if(boardPreviewMediaWrap) boardPreviewMediaWrap.hidden = true
+  }
+  function formatClock(totalSeconds = 0){
+    const safe = Math.max(0, Math.floor(totalSeconds))
+    const minutes = String(Math.floor(safe / 60)).padStart(2, "0")
+    const seconds = String(safe % 60).padStart(2, "0")
+    return `${minutes}:${seconds}`
+  }
+  function stopWaveform(){
+    if(remoteState.analyserFrame){
+      cancelAnimationFrame(remoteState.analyserFrame)
+      remoteState.analyserFrame = 0
+    }
+    if(remoteState.recordStream){
+      remoteState.recordStream.getTracks().forEach(track=>track.stop())
+      remoteState.recordStream = null
+    }
+    remoteState.analyser = null
+  }
+  function drawWaveform(active = false){
+    if(!waveCanvas) return
+    const ctx = waveCanvas.getContext("2d")
+    if(!ctx) return
+    const width = waveCanvas.width
+    const height = waveCanvas.height
+    ctx.clearRect(0, 0, width, height)
+    const gradient = ctx.createLinearGradient(0, 0, width, height)
+    gradient.addColorStop(0, "rgba(71,197,255,0.95)")
+    gradient.addColorStop(1, "rgba(255,205,118,0.9)")
+    ctx.fillStyle = "rgba(10,20,34,0.82)"
+    ctx.fillRect(0, 0, width, height)
+    ctx.strokeStyle = gradient
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    const bars = 96
+    if(active && remoteState.analyser){
+      const data = new Uint8Array(remoteState.analyser.frequencyBinCount)
+      remoteState.analyser.getByteTimeDomainData(data)
+      for(let i = 0; i < bars; i += 1){
+        const sourceIndex = Math.floor((i / bars) * data.length)
+        const value = (data[sourceIndex] || 128) / 255
+        const x = (i / (bars - 1)) * width
+        const y = height * value
+        if(i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+    }else{
+      for(let i = 0; i < bars; i += 1){
+        const x = (i / (bars - 1)) * width
+        const wave = Math.sin((i / bars) * Math.PI * 8) * 22
+        const y = (height / 2) + wave
+        if(i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+    }
+    ctx.stroke()
+    if(active && remoteState.recorder?.state === "recording"){
+      if(boardTimer) boardTimer.textContent = formatClock((Date.now() - remoteState.recordStartedAt) / 1000)
+      remoteState.analyserFrame = requestAnimationFrame(()=>drawWaveform(true))
     }
   }
   function snapshotBoards(){
@@ -6292,10 +6471,39 @@ function setupFloatMode(){
     if(trimEndNumber) trimEndNumber.value = String(board.trimEnd ?? 90)
     const prettyKind = board.kind === "empty" ? "Empty" : board.kind.toUpperCase()
     const trimLine = board.highlighted ? `Highlighted ${board.trimStart}% → ${board.trimEnd}%` : "No highlight yet."
-    if(boardPreview){
+    if(boardPreviewCopy){
+      boardPreviewCopy.textContent = board.kind === "empty"
+        ? "Upload material to start a fresh 3-board quick edit."
+        : `${board.name} · Type: ${prettyKind} · File: ${board.fileName || "live take"} · ${trimLine} · Export: ${board.exported || "Not exported yet."}`
+    }else if(boardPreview){
       boardPreview.textContent = board.kind === "empty"
         ? "Upload material to start a fresh 3-board quick edit."
         : `${board.name}\nType: ${prettyKind}\nFile: ${board.fileName || "live take"}\n${trimLine}\nExport: ${board.exported || "Not exported yet."}`
+    }
+    if(boardTimer) boardTimer.textContent = formatClock(board.duration || 0)
+    if(boardMode) boardMode.textContent = board.kind === "empty"
+      ? "Audio waveform ready for the active motherboard."
+      : `${prettyKind} loaded on ${board.name}. ${board.kind === "video" ? "Video glide and sound preview are ready." : "Sound wave preview is ready."}`
+    if(board.kind === "empty"){
+      revokePreview()
+      drawWaveform(false)
+    }else if(board.file){
+      revokePreview()
+      try{
+        remoteState.previewUrl = URL.createObjectURL(board.file)
+        if(board.kind === "video" && boardPreviewVideo){
+          boardPreviewVideo.src = remoteState.previewUrl
+          boardPreviewVideo.hidden = false
+          if(boardPreviewMediaWrap) boardPreviewMediaWrap.hidden = false
+          remoteState.previewMediaEl = boardPreviewVideo
+        }else if(boardPreviewAudio){
+          boardPreviewAudio.src = remoteState.previewUrl
+          boardPreviewAudio.hidden = false
+          if(boardPreviewMediaWrap) boardPreviewMediaWrap.hidden = false
+          remoteState.previewMediaEl = boardPreviewAudio
+        }
+      }catch{}
+      drawWaveform(false)
     }
     const status = qs("#floatBoardStatus")
     if(status) status.textContent = `${board.name} selected. ${board.kind === "empty" ? "Upload fresh material or record directly." : `Working on ${board.fileName || board.kind} now.`}`
@@ -6321,6 +6529,7 @@ function setupFloatMode(){
       trimEnd: 90,
       highlighted: false,
       exported: "",
+      duration: 0,
       file
     }
     remoteState.previewUrl = URL.createObjectURL(file)
@@ -6366,13 +6575,30 @@ function setupFloatMode(){
     if(quickEditStatus) quickEditStatus.textContent = `${board.name} had the highlighted section removed.`
   }
   function exportBoard(destination){
-    const board = getBoard()
-    if(board.kind === "empty"){
+    const filledBoards = remoteState.boards.filter(board => board && board.kind !== "empty")
+    if(!filledBoards.length){
       openMiniWindow("Export", "Upload or record something first so we can export it.")
       return
     }
+    const board = getBoard()
     board.exported = destination
     renderBoard()
+    const primary = filledBoards[0]
+    const ext = destination === "Main Studio"
+      ? (primary.kind === "video" ? "mp4" : "m4a")
+      : destination === "TikTok"
+        ? (primary.kind === "video" ? "mp4" : "mp3")
+        : (primary.kind === "video" ? "mp4" : "m4a")
+    if(primary.file){
+      const url = URL.createObjectURL(primary.file)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `SupportRD-${destination.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.${ext}`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setTimeout(()=>URL.revokeObjectURL(url), 1500)
+    }
     if(destination === "Main Studio"){
       localStorage.setItem("supportrdFloatExport", JSON.stringify({
         board: board.name,
@@ -6397,8 +6623,21 @@ function setupFloatMode(){
       openMiniWindow("Record", "Recording is not available on this device right now.")
       return
     }
+    if(remoteState.recorder && remoteState.recorder.state === "recording"){
+      stopVoiceRecord()
+    }
     navigator.mediaDevices.getUserMedia({audio:true}).then((stream)=>{
       const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : ""
+      const audioContext = window.AudioContext ? new AudioContext() : (window.webkitAudioContext ? new webkitAudioContext() : null)
+      if(audioContext){
+        const source = audioContext.createMediaStreamSource(stream)
+        const analyser = audioContext.createAnalyser()
+        analyser.fftSize = 2048
+        source.connect(analyser)
+        remoteState.analyser = analyser
+      }
+      remoteState.recordStream = stream
+      remoteState.recordStartedAt = Date.now()
       remoteState.recordChunks = []
       remoteState.recorder = new MediaRecorder(stream, mimeType ? {mimeType} : undefined)
       remoteState.recorder.ondataavailable = (event)=>{
@@ -6407,12 +6646,18 @@ function setupFloatMode(){
       remoteState.recorder.onstop = ()=>{
         const blob = new Blob(remoteState.recordChunks, {type: mimeType || "audio/webm"})
         const file = new File([blob], `${kind}-take.webm`, {type: blob.type})
-        stream.getTracks().forEach(track=>track.stop())
+        const duration = (Date.now() - remoteState.recordStartedAt) / 1000
+        stopWaveform()
         loadFileToBoard(file, kind)
+        const active = getBoard()
+        active.duration = duration
+        renderBoard()
       }
       remoteState.recorder.start()
-      if(quickEditStatus) quickEditStatus.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live on ${getBoard().name}. Press Stop to save it into the board.`
-      openMiniWindow("Record", `${kind === "instrument" ? "Instrument" : "Voice"} recording started. Press Stop to save it into the active motherboard.`)
+      drawWaveform(true)
+      if(quickEditStatus) quickEditStatus.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live on ${getBoard().name}. Press Pause to save it into the board.`
+      if(boardMode) boardMode.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live. Sound waves are being drawn into ${getBoard().name}.`
+      setRemoteStatus(`${kind === "instrument" ? "Instrument" : "Voice"} recording started on ${getBoard().name}.`)
     }).catch(()=>{
       openMiniWindow("Record", "Microphone access was blocked. We need mic permission to record.")
     })
@@ -6423,6 +6668,7 @@ function setupFloatMode(){
       remoteState.recorder = null
       return true
     }
+    stopWaveform()
     return false
   }
 
@@ -6444,6 +6690,17 @@ function setupFloatMode(){
     if(profileQualityBody){
       profileQualityBody.textContent = `Top qualities: ${state.socialLinks?.thoughtStyle || "warm, sharp, and ready"} · Email: ${state.socialLinks?.email || "not set"} · WWW links stay ready from this profile card.`
     }
+    ;[profileHero, diaryProfileHero].forEach(node=>{
+      if(!node) return
+      if(state.userAvatar){
+        node.style.backgroundImage = `linear-gradient(145deg, rgba(10,22,42,.26), rgba(10,22,42,.1)), url("${state.userAvatar}")`
+        node.style.backgroundSize = "cover"
+        node.style.backgroundPosition = "center"
+        node.textContent = ""
+      }else{
+        node.style.backgroundImage = ""
+      }
+    })
   }
   function syncFloatSettings(){
     const saved = state.socialLinks || {}
@@ -6658,6 +6915,7 @@ function setupFloatMode(){
     shell.classList.toggle("preview-mode", !!options.previewOnly)
     document.body.classList.add("float-mode-active")
     document.body.classList.add("remote-home-active")
+    hideTGuide()
     if(!options.previewOnly){
       document.body.classList.remove("launch-active")
       document.body.classList.remove("launch-preview-active")
@@ -6675,7 +6933,7 @@ function setupFloatMode(){
     }
     if(!options.previewOnly){
       try{ window.playSupportRDTheme?.() }catch{}
-      if(!options.preserveHome) openMiniWindow("Float Mode", "SupportRD Personal Remote is open. Diary Mode is highlighted, and the whole app stays connected from here.")
+      if(!options.preserveHome) setRemoteStatus("SupportRD Personal Remote is open. Diary Mode is highlighted, and the whole app stays connected from here.")
     }
   }
   function closeFloat(){
@@ -6691,7 +6949,7 @@ function setupFloatMode(){
   }
   openBtn?.addEventListener("click", openFloat)
   studioBtn?.addEventListener("click", openFloat)
-  closeBtn?.addEventListener("click", closeFloat)
+  closeBtn?.addEventListener("click", ()=>setFloatHome("Remote home is ready."))
   returnMainBtn?.addEventListener("click", ()=>setFloatHome("Remote home is open and ready."))
   remoteSheetBack?.addEventListener("click", ()=>closeRemoteSheet())
   remoteSheetClose?.addEventListener("click", ()=>closeRemoteSheet())
@@ -6802,14 +7060,13 @@ function setupFloatMode(){
   primeViewBotBtn?.addEventListener("click", ()=>{
     localStorage.setItem(floatPrimeSeenKey, "true")
     hidePrimeMenu()
-    showTGuide()
     footerGuideBtn?.click()
   })
   primeContinueBtn?.addEventListener("click", ()=>{
     localStorage.setItem(floatPrimeSeenKey, "true")
     hidePrimeMenu()
-    showTGuide()
-    openMiniWindow("SupportRD Prime", "Free for all mode is active. The T-shape guide is staying low key over the Remote.")
+    hideTGuide()
+    setRemoteStatus("Free for all mode is active. Remote home stays open and ready.")
   })
   primeCloseBtn?.addEventListener("click", ()=>{
     localStorage.setItem(floatPrimeSeenKey, "true")
@@ -6839,6 +7096,12 @@ function setupFloatMode(){
     if(assistantStatus) assistantStatus.textContent = `${buildLifeReflection("projake")} Jake is now holding the studio side.`
     syncProfile()
   })
+  profileUploadInput?.addEventListener("change", ()=>{
+    const file = profileUploadInput.files?.[0]
+    if(file) readAvatarFile(file)
+    profileUploadInput.value = ""
+  })
+  qs("#floatUploadProfileBtn")?.addEventListener("click", triggerProfileUpload)
   qs("#floatMicBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "Mic selected. Lightweight remote is ready to record voice fast." })
   qs("#floatInstrumentBtn")?.addEventListener("click", ()=>{
     if(deviceStatus) deviceStatus.textContent = "Instrument lane armed. Plug in and move straight into the motherboard route."
@@ -6850,7 +7113,15 @@ function setupFloatMode(){
   })
   qs("#float4kBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "4K drone / live camera route armed with big-button access." })
   qsa(".float-board").forEach(btn => btn.addEventListener("click", ()=>setActiveBoard(btn)))
-  qs("#floatBoardAddBtn")?.addEventListener("click", ()=>openMiniWindow("Motherboards", "Float Mode keeps three motherboards by default, with room to grow when needed."))
+  qs("#floatBoardAddBtn")?.addEventListener("click", ()=>{
+    localStorage.setItem("supportrdStudioReturnView", "remote")
+    if(typeof window.openStudioMode === "function"){
+      closeFloat()
+      window.openStudioMode()
+    }else{
+      setRemoteStatus("More than three motherboards routes into full Studio for deeper work.")
+    }
+  })
   qs("#floatBoardEditBtn")?.addEventListener("click", ()=>openMiniWindow("Edit Motherboard", "Pick the active motherboard and tighten the piece of work you are building."))
   qs("#floatRecordBtn")?.addEventListener("click", ()=>{
     if(liveStatus) liveStatus.textContent = "Fast view edit active. You are staging a music/video piece here and can go to Studio for deeper cuts."
@@ -6872,18 +7143,12 @@ function setupFloatMode(){
     }
   })
   mapBtn?.addEventListener("click", ()=>{
-    if(typeof window.openWorldMapPanel === "function"){
-      window.openWorldMapPanel()
-      if(settingsStatus) settingsStatus.textContent = "Map change panel opened. Choose the background route you want."
-    }else{
-      qs("#unlockViewsBtnLive")?.click()
-    }
+    openLaunchMenuSheet("floatDeviceBox", "Map Change")
+    if(settingsStatus) settingsStatus.textContent = "Map change panel opened. Choose the background route you want."
   })
   themeBtn?.addEventListener("click", ()=>{
-    if(typeof window.openWorldMapPanel === "function"){
-      window.openWorldMapPanel()
-      if(settingsStatus) settingsStatus.textContent = "Theme / map chooser opened in-page instead of moving Float Mode around."
-    }
+    openLaunchMenuSheet("floatDeviceBox", "Map Change")
+    if(settingsStatus) settingsStatus.textContent = "Theme / map chooser opened in-page instead of moving Float Mode around."
   })
   paymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
   faqPaymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
@@ -6898,34 +7163,56 @@ function setupFloatMode(){
     }
   })
   freshBoardsBtn?.addEventListener("click", ()=>resetBoards("Fresh 3 motherboards reset. Upload a new .mp3 or .mp4 to begin again."))
+  function seekPreview(deltaSeconds){
+    const media = remoteState.previewMediaEl
+    if(!media || !Number.isFinite(media.duration)) return
+    media.currentTime = Math.max(0, Math.min(media.duration || 0, (media.currentTime || 0) + deltaSeconds))
+  }
   playBtn?.addEventListener("click", ()=>{
     const board = getBoard()
     if(board.kind === "empty"){
       openMiniWindow("Play", "Upload or record something first so we can play it.")
       return
     }
+    if(remoteState.previewMediaEl){
+      remoteState.previewMediaEl.play().catch(()=>{})
+    }else if(remoteState.previewUrl){
+      new Audio(remoteState.previewUrl).play().catch(()=>{})
+    }
     if(quickEditStatus) quickEditStatus.textContent = `${board.name} is playing in quick preview mode.`
-    openMiniWindow("Play", `${board.name} is playing in quick preview mode.`)
   })
-  stopBtn?.addEventListener("click", ()=>{
+  pauseBtn?.addEventListener("click", ()=>{
     if(stopVoiceRecord()){
-      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} recording stopped and saved.`
+      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} recording paused and saved.`
       return
     }
-    openMiniWindow("Stop", "Quick preview stopped.")
+    if(remoteState.previewMediaEl){
+      remoteState.previewMediaEl.pause()
+      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} preview paused.`
+      return
+    }
+    openMiniWindow("Pause", "Quick preview paused.")
   })
   prevBtn?.addEventListener("click", ()=>{
     remoteState.activeBoard = (remoteState.activeBoard + 2) % 3
     const btn = qsa(".float-board")[remoteState.activeBoard]
     if(btn) setActiveBoard(btn)
   })
+  rewindBtn?.addEventListener("click", ()=>seekPreview(-3))
   nextBtn?.addEventListener("click", ()=>{
     remoteState.activeBoard = (remoteState.activeBoard + 1) % 3
     const btn = qsa(".float-board")[remoteState.activeBoard]
     if(btn) setActiveBoard(btn)
   })
+  fastForwardBtn?.addEventListener("click", ()=>seekPreview(3))
   recordVoiceBtn?.addEventListener("click", ()=>startVoiceRecord("voice"))
   instrumentRecordBtn?.addEventListener("click", ()=>startVoiceRecord("instrument"))
+  guitarBtn?.addEventListener("click", ()=>setRemoteStatus("Guitar jacked in. Instrument reader is armed on the selected motherboard."))
+  speakerBtn?.addEventListener("click", ()=>setRemoteStatus("Responding on speaker. Live instrument monitoring is ready."))
+  gigSwitchBtn?.addEventListener("click", ()=>{
+    remoteState.mode = remoteState.mode === "video" ? "audio" : "video"
+    setRemoteStatus(remoteState.mode === "video" ? "Gig Studio Connecter is active. Import MP4 / M4A and edit on the same three-board stack." : "Audio quick studio is active again.")
+  })
   trimStart?.addEventListener("input", ()=>syncTrimInputs("range"))
   trimEnd?.addEventListener("input", ()=>syncTrimInputs("range"))
   trimStartNumber?.addEventListener("input", ()=>syncTrimInputs("number"))
@@ -6977,21 +7264,24 @@ function setupFloatMode(){
     const text = (profilePostInput?.value || "").trim()
     const post = qs("#postInput")
     if(!text){
-      openMiniWindow("Profile Post", "Write a quick profile update first so we can send it to socials.")
+      setRemoteStatus("Write a quick profile update first so we can send it to socials.")
       return
     }
     if(post) post.value = text
     qs("#liveArenaComposeInput") && (qs("#liveArenaComposeInput").value = text)
-    openMiniWindow("Profile Post", "Profile update sent into the main social post lane.")
+    setRemoteStatus("Profile update sent into the main social post lane.")
   })
   qs("#floatProfileUpgradeBtn")?.addEventListener("click", ()=>{
-    openMiniWindow("Upgrade Aria / Jake", "Profile upgrade lane is ready. This is where you sell the stronger Aria / Jake support for the account.")
+    openLaunchMenuSheet("floatAssistantBox", "Profile")
+    setRemoteStatus("Profile upgrade lane is ready. This is where you sell the stronger Aria / Jake support for the account.")
   })
   qs("#floatProfileAchievementsBtn")?.addEventListener("click", ()=>{
-    openMiniWindow("Achievements", "Profile achievements track hair scans, posts, premium upgrades, studio edits, and trusted session movement.")
+    openLaunchMenuSheet("floatAssistantBox", "Profile")
+    setRemoteStatus("Profile achievements track hair scans, posts, premium upgrades, studio edits, and trusted session movement.")
   })
   qs("#floatProfileLinksBtn")?.addEventListener("click", ()=>{
-    focusFloatSection("floatProfileBox", "Social and WWW connections are managed in General Settings.")
+    openLaunchMenuSheet("floatAssistantBox", "Profile")
+    setRemoteStatus("Social and WWW connections are managed in General Settings and reflected through this profile.")
   })
   qs("#floatAriaBtn")?.addEventListener("click", ()=>{
     openMiniWindow("Aria Remote", "Aria is holding the live post side in Float Mode. Tap again or double tap to talk.")
@@ -7011,9 +7301,10 @@ function setupFloatMode(){
     if(scanSummary) scanSummary.textContent = summary
     if(assistantStatus) assistantStatus.textContent = "Profile scan refreshed with current hair state, product suggestions, tutorial direction, and Aria memory."
     if(profileHistory) profileHistory.textContent = `Last 2 Aria / Jake lines: ${lastLines.length ? lastLines.join(" / ") : "No recent conversation yet."}`
+    setRemoteStatus("Full hair scan refreshed. Current hair state, support products, tutorial direction, and coder pro tip are ready.")
   })
   qs("#floatTutorialBotsBtn")?.addEventListener("click", ()=>{
-    openMiniWindow("Tutorial Bots", "Aria and Jake tutorial routes are available on every page. Aria helps the general route, Jake helps the studio route.")
+    setRemoteStatus("Aria and Jake tutorial routes are available on every page. Aria helps the general route, Jake helps the studio route.")
   })
   qs("#floatOccasionBtn")?.addEventListener("click", ()=>{
     if(deviceStatus) deviceStatus.textContent = "Occasion route armed. Pick the map/theme that matches the mood and the session."
@@ -7028,8 +7319,8 @@ function setupFloatMode(){
     if(deviceStatus) deviceStatus.textContent = "Theme rotation is active. Pick the next look and keep the session moving."
   })
   qs("#floatSettingsOpenBtn")?.addEventListener("click", ()=>{
-    focusFloatSection("floatProfileBox", "General Settings is open for your social links, account info, and route controls.")
-    qs("#openSettingsBtn")?.click()
+    openLaunchMenuSheet("floatProfileBox", "General Settings")
+    setRemoteStatus("General Settings is open for your social links, account info, and route controls.")
   })
   settingsSaveBtn?.addEventListener("click", saveFloatSettings)
   pushToggleBtn?.addEventListener("click", ()=>{
@@ -7148,11 +7439,11 @@ function setupFloatMode(){
   mapBtnDiary?.addEventListener("click", ()=>mapBtn?.click())
   diaryGpsStudioBtn?.addEventListener("click", ()=>diaryStudioBtn?.click())
   faqReelBtn?.addEventListener("click", ()=>{
-    focusFloatSection("floatLiveBox", "TV Reel is ready from the FAQ lane.")
-    if(faqReelHost){
-      faqReelHost.hidden = !faqReelHost.hidden
-    }
-    openMiniWindow("SupportRD TV Reel", faqReelHost?.hidden ? "TV Reel tucked away again." : "TV Reel pulled up inside the FAQ lane.")
+    openLaunchMenuSheet("floatLiveBox", "FAQ Lounge")
+    setTimeout(()=>{
+      const sheetToggle = remoteSheetBody?.querySelector("[data-open-faq-reel]")
+      if(sheetToggle) sheetToggle.click()
+    }, 40)
   })
   qs("#floatLiveBox")?.addEventListener("click", (event)=>{
     const item = event.target.closest(".float-faq-item")
@@ -7174,6 +7465,14 @@ function setupFloatMode(){
         deleteHighlighted()
       }
     }
+  })
+  boardPreviewVideo?.addEventListener("mousemove", (event)=>{
+    if(boardPreviewVideo.hidden || !boardPreviewVideo.duration) return
+    const rect = boardPreviewVideo.getBoundingClientRect()
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+    boardPreviewVideo.currentTime = boardPreviewVideo.duration * ratio
+    boardPreviewVideo.muted = false
+    boardPreviewVideo.play().catch(()=>{})
   })
   resetBoards("Fresh 3 motherboards ready. Upload a new .mp3 or .mp4 to begin quick remote editing.")
   renderThemeCards()
@@ -8438,7 +8737,11 @@ const WORLD_VIEWS = [
         applyView(targetKey)
         loader?.setAttribute("hidden","hidden")
         resetButtons()
-        openMiniWindow("World View", `${view.label} loaded in after the route setup.`)
+        try{
+          const shell = qs("#floatModeShell")
+          if(shell) shell.dataset.remoteTheme = targetKey
+        }catch{}
+        try{ window.logSessionSignal?.(`${view.label} map loaded`) }catch{}
         return
       }
       if(loaderBar) loaderBar.style.width = `${steps[stepIndex]}%`

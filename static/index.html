@@ -1947,8 +1947,14 @@
           <span class="float-box-badge">Hair Scan</span>
         </div>
       <div class="float-assistant-stage">
-        <button class="float-assistant-orb aria" id="floatAriaBtn">Aria</button>
-        <button class="float-assistant-orb jake" id="floatJakeBtn">Jake</button>
+        <button class="float-assistant-orb aria" id="floatAriaBtn" type="button">
+          <span class="float-assistant-core" aria-hidden="true"></span>
+          <span class="float-assistant-label">Aria</span>
+        </button>
+        <button class="float-assistant-orb jake" id="floatJakeBtn" type="button">
+          <span class="float-assistant-core" aria-hidden="true"></span>
+          <span class="float-assistant-label">Jake</span>
+        </button>
       </div>
       <div class="float-box-copy" id="floatAssistantStatus">Run a full hair-state scan, see recommended products, get tutorial bot directions, and keep the last Aria/Jake help lines in view.</div>
       <div class="float-profile-hero">
@@ -1960,8 +1966,10 @@
       </div>
       <div class="float-board-preview" id="floatProfileScanSummary">Current hair state scan will appear here.</div>
       <div class="float-profile-history" id="floatProfileHistory">Last 2 Aria/Jake lines will appear here.</div>
+      <input id="floatProfileUploadInput" type="file" accept="image/*" hidden>
       <textarea id="floatProfilePostInput" class="input" placeholder="Post an update from your profile card to send into socials."></textarea>
       <div class="float-mini-actions">
+        <button class="btn ghost" id="floatUploadProfileBtn">Upload Profile Picture</button>
         <button class="btn ghost" id="floatRunProfileScanBtn">Run Full Scan</button>
         <button class="btn ghost" id="floatTutorialBotsBtn">Tutorial Bots</button>
         <button class="btn ghost" id="floatProfileSendBtn">Send Social Post</button>
@@ -2019,18 +2027,35 @@
       </div>
       <div class="float-transport-strip">
         <button class="btn ghost" id="floatPrevBtn">Back</button>
+        <button class="btn ghost" id="floatUndoBtn">Undo</button>
+        <button class="btn ghost" id="floatRewindBtn">Rewind</button>
         <button class="btn ghost" id="floatPlayBtn">Play</button>
-        <button class="btn ghost" id="floatStopBtn">Stop</button>
-        <button class="btn ghost" id="floatNextBtn">Next</button>
-        <button class="btn ghost" id="floatRecordVoiceBtn">Record Voice</button>
+        <button class="btn ghost" id="floatPauseBtn">Pause</button>
+        <button class="btn ghost" id="floatRecordVoiceBtn">Record</button>
+        <button class="btn ghost" id="floatNextBtn">Forward</button>
+        <button class="btn ghost" id="floatFastForwardBtn">Fast Forward</button>
+      </div>
+      <div class="float-mini-actions">
         <button class="btn ghost" id="floatInstrumentRecordBtn">Instrument → Record</button>
-        <button class="btn ghost" id="floatMicBtn">Mic</button>
-        <button class="btn ghost" id="floatUsbBtn">USB View</button>
-        <button class="btn ghost" id="float4kBtn">4K Drone</button>
-        <button class="btn ghost" id="floatCameraBtn">Camera</button>
+        <button class="btn ghost" id="floatGuitarBtn">Guitar Jacked In</button>
+        <button class="btn ghost" id="floatSpeakerBtn">Responding On Speaker</button>
+        <button class="btn ghost" id="floatGigSwitchBtn">Gig Studio Connecter</button>
+        <button class="btn ghost" id="floatUploadBtn">Import MP3 / MP4</button>
+        <button class="btn ghost" id="floatFreshBoardsBtn">Fresh 3 Boards</button>
       </div>
       <div class="float-board-editor">
-        <div class="float-board-preview" id="floatBoardPreview">Upload material to start a fresh 3-board quick edit.</div>
+        <div class="float-board-preview" id="floatBoardPreview">
+          <div class="float-board-preview-media" id="floatBoardPreviewMediaWrap" hidden>
+            <audio id="floatBoardPreviewAudio" controls hidden></audio>
+            <video id="floatBoardPreviewVideo" controls playsinline hidden></video>
+          </div>
+          <canvas id="floatWaveCanvas" class="float-wave-canvas" width="1200" height="180" aria-label="Quick studio waveform preview"></canvas>
+          <div class="float-wave-meta">
+            <strong id="floatBoardTimer">00:00</strong>
+            <span id="floatBoardMode">Audio waveform ready for the active motherboard.</span>
+          </div>
+          <div class="float-board-preview-copy" id="floatBoardPreviewCopy">Upload material to start a fresh 3-board quick edit.</div>
+        </div>
         <div class="float-trim-row">
           <label>Start %<input id="floatTrimStart" type="range" min="0" max="95" value="10"></label>
           <label>End %<input id="floatTrimEnd" type="range" min="5" max="100" value="90"></label>
@@ -2042,14 +2067,13 @@
         <div class="float-mini-actions">
           <button class="btn ghost" id="floatHighlightBtn">Highlight Section</button>
           <button class="btn ghost" id="floatDeleteSectionBtn">Delete Highlight</button>
-          <button class="btn ghost" id="floatUndoBtn">Undo</button>
           <button class="btn ghost" id="floatFxBtn">FX Change</button>
           <button class="btn ghost" id="floatClearBoardBtn">Clear Board</button>
         </div>
         <div class="float-mini-actions">
           <button class="btn" id="floatExportStudioBtn">Export Into Main Studio</button>
-          <button class="btn ghost" id="floatExportTikTokBtn">Export As TikTok</button>
-          <button class="btn ghost" id="floatExportSocialBtn">Export Social File</button>
+          <button class="btn ghost" id="floatExportTikTokBtn">Export MP3 / M4A</button>
+          <button class="btn ghost" id="floatExportSocialBtn">Export MP4 / Social</button>
         </div>
         <div class="float-box-copy" id="floatQuickEditStatus">Upload fresh material each time to reset the 3 motherboards, make quick edits, export, and keep it moving.</div>
       </div>
@@ -2143,7 +2167,7 @@
             <textarea id="floatDiaryInput" class="input float-diary-input" placeholder="Drop your thought, note, post, or hair update here."></textarea>
             <div class="float-big-buttons">
               <button class="float-pill" id="floatDiaryRecordBtn">Record Note</button>
-              <button class="float-pill" id="floatDiaryPostBtn">Send Diary Post</button>
+              <button class="float-pill" id="floatDiaryPostBtn">Send To Social</button>
             </div>
             <div class="float-mini-actions">
               <button class="btn ghost" id="floatDiarySaveBtn">Save Diary</button>
