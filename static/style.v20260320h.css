@@ -4165,6 +4165,26 @@ body.remote-hide-ads .remote-display-strip{
   filter:brightness(1.08) saturate(1.1);
   box-shadow:0 28px 68px rgba(94,180,255,.3);
 }
+.float-assistant-orb.is-alert,
+.remote-guardian-btn.is-alert{
+  filter:saturate(1.16) brightness(1.08);
+  box-shadow:0 30px 86px rgba(255,110,110,.34);
+}
+.float-assistant-orb.is-excited,
+.remote-guardian-btn.is-excited{
+  filter:saturate(1.22) brightness(1.12);
+  box-shadow:0 32px 92px rgba(255,211,120,.34);
+}
+.float-assistant-orb.is-social,
+.remote-guardian-btn.is-social{
+  filter:saturate(1.14) brightness(1.06);
+  box-shadow:0 30px 84px rgba(110,196,255,.34);
+}
+.float-assistant-orb.is-focus,
+.remote-guardian-btn.is-focus{
+  filter:saturate(1.08) brightness(1.08);
+  box-shadow:0 30px 88px rgba(132,255,188,.28);
+}
 .float-assistant-orb.aria{background:radial-gradient(circle at 30% 25%, rgba(102,255,231,.75), rgba(34,81,156,.88));}
 .float-assistant-orb.jake{background:radial-gradient(circle at 30% 25%, rgba(255,203,103,.72), rgba(40,51,112,.92));}
 .float-assistant-orb[data-demo-scene="map"],

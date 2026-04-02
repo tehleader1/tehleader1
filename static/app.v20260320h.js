@@ -5545,6 +5545,12 @@ function setupHairAnalysis(){
   if(!start || !overlay) return
   start.addEventListener("click", ()=>{
     overlay.style.display = "flex"
+    if(typeof triggerAssistantMoment === "function"){
+      triggerAssistantMoment("analysis_ready", {
+        point: { x: window.innerWidth / 2, y: Math.max(174, window.innerHeight * 0.34) },
+        duration: 3800
+      })
+    }
     if(status) status.textContent = "Scanning... hold steady and move left to right."
     if(result) result.textContent = "Scan running..."
     setTimeout(()=>{
@@ -5931,7 +5937,10 @@ function setupFloatMode(){
     lastScrollY: Math.max(window.scrollY || 0, 0),
     driftPhase: 0,
     roamTimer: null,
-    pointerBias: "center"
+    pointerBias: "center",
+    recentSideTaps: [],
+    activeMoment: "idle",
+    momentTimer: null
   }
   const REMOTE_ASSISTANT_SCENES = {
     home: {
@@ -6011,7 +6020,7 @@ function setupFloatMode(){
         assistantStatus.textContent = overrideStatus || scene.status
       }
     }
-    const REMOTE_ASSISTANT_HELP = {
+  const REMOTE_ASSISTANT_HELP = {
       home: {
         aria: { focus: "#floatModeShell .float-main-hero", greeting: "Aria is online. Tell me the hair problem and I will guide this page around it.", listening: "Aria is listening now. Speak naturally and I will transcribe everything here." },
         projake: { focus: "#floatModeShell .float-main-hero", greeting: "Jake is online. Tell me what part of the work or hair support needs help.", listening: "Jake is listening now. Speak your studio or hair request." }
@@ -6045,10 +6054,77 @@ function setupFloatMode(){
         projake: { focus: "#remotePurchaseEditor", greeting: "Jake moved into the payment lane. Tell me what studio or premium purchase needs routing.", listening: "Jake is listening now for the payment route." }
       }
     }
+    const ASSISTANT_MOMENTS = {
+      reel_bun: {
+        mood: "excited",
+        placement: "center",
+        status: "Ancient Chinese bun energy spotted in the reel. Aria and Jake are leaning in to celebrate the style and keep the page alive.",
+        line: "Ancient bun spotlight detected. We are here if you want the product route, cultural appreciation, or style timing."
+      },
+      developer_feed: {
+        mood: "social",
+        placement: "center",
+        status: "Developer Feed movement detected. Aria and Jake are moving toward the live feedback lane to keep the page feeling loved and current.",
+        line: "We saw that new Developer Feed movement. SupportRD is watching the love board with you."
+      },
+      purchase_hover: {
+        mood: "excited",
+        placement: "hover",
+        status: "Purchase energy is active. Aria and Jake are hovering near checkout to make the buy feel confident and exciting.",
+        line: "Hi. We are right here if you want to lock in the right product."
+      },
+      purchase_checkout: {
+        mood: "alert",
+        placement: "checkout",
+        status: "Checkout support is active. Aria and Jake are making sure the purchase lane feels obvious and supported.",
+        line: "Checkout support is active. Sign in, confirm the product, and we will stay close to the purchase lane."
+      },
+      left_taps: {
+        mood: "alert",
+        placement: "shift-right",
+        status: "Repeated left-side taps detected. Aria and Jake shifted right so they stop blocking the content and keep up with your movement.",
+        line: "We noticed those left-side taps and moved over so the page stays easy to use."
+      },
+      hair_alert: {
+        mood: "alert",
+        placement: "center",
+        status: "Hair alert mode is active. Aria and Jake are treating this like a serious damage or bad-hair-day moment.",
+        line: "Hair alert mode is on. Tell us if this is frizz, oil, damage, color loss, or low bounce and we will respond seriously."
+      },
+      diary_schedule: {
+        mood: "focus",
+        placement: "center",
+        status: "Diary scheduling is active. Aria and Jake are front and center to help build a real hair routine around your life.",
+        line: "Diary schedule mode is open. Let us help you plan your hair rhythm around the week."
+      },
+      analysis_ready: {
+        mood: "alert",
+        placement: "center",
+        status: "Hair analysis is active. Aria and Jake moved front and center so the scan feels intelligent and focused.",
+        line: "Hair analysis mode is active. Hold steady and let us read the situation carefully."
+      },
+      feed_hover: {
+        mood: "social",
+        placement: "follow",
+        status: "The page is alive with reels, posts, and family feedback. Aria and Jake are casually scrolling with you.",
+        line: "Hi. We are right here with the reel and feedback lane."
+      }
+    }
     let activeAssistantTimers = []
     let assistantHoverTimer = null
     function parseSceneShift(value){
       return Number(String(value || "0").replace("px", "").trim()) || 0
+    }
+    function setAssistantMomentClasses(mood = "idle"){
+      const moodClassMap = ["is-alert", "is-excited", "is-social", "is-focus"]
+      ;[assistantAriaOrb, assistantJakeOrb, guardianAriaBtn, guardianJakeBtn].forEach((node)=>{
+        if(!node) return
+        moodClassMap.forEach(cls=>node.classList.remove(cls))
+        if(mood === "alert") node.classList.add("is-alert")
+        if(mood === "excited") node.classList.add("is-excited")
+        if(mood === "social") node.classList.add("is-social")
+        if(mood === "focus") node.classList.add("is-focus")
+      })
     }
     function clearAssistantSequence(){
       activeAssistantTimers.forEach((timer)=>clearTimeout(timer))
@@ -6057,6 +6133,12 @@ function setupFloatMode(){
         if(!orb) return
         orb.classList.remove("hover-wave")
       })
+      if(assistantMotionState.momentTimer){
+        clearTimeout(assistantMotionState.momentTimer)
+        assistantMotionState.momentTimer = null
+      }
+      assistantMotionState.activeMoment = "idle"
+      setAssistantMomentClasses("idle")
       syncAssistantViewportMotion(true)
     }
     function moveAssistantOrbToFocus(orb, selector){
@@ -6163,6 +6245,60 @@ function setupFloatMode(){
       assistantMotionState.lastInteraction = { x, y, at: Date.now() - 900 }
       moveAssistantPairToInteraction(x, y)
     }
+    function triggerAssistantMoment(kind, options = {}){
+      if(!shell || shell.hidden) return
+      const moment = ASSISTANT_MOMENTS[kind]
+      if(!moment) return
+      const now = Date.now()
+      assistantMotionState.activeMoment = kind
+      const point = options.point || {
+        x: window.innerWidth / 2,
+        y: Math.max(144, window.innerHeight * 0.42)
+      }
+      assistantMotionState.lastInteraction = { x: point.x, y: point.y, at: now - 1200 }
+      setAssistantMomentClasses(moment.mood)
+      if(moment.placement === "center"){
+        nudgeAssistantPresence("center", point)
+      }else if(moment.placement === "shift-right"){
+        assistantMotionState.pointerBias = "right"
+        applyAssistantPairLayout({
+          aria: { x: window.innerWidth - 174, y: Math.max(128, point.y - 58) },
+          jake: { x: window.innerWidth - 154, y: Math.min(window.innerHeight - 156, point.y + 74) }
+        })
+      }else if(moment.placement === "checkout"){
+        assistantMotionState.pointerBias = "right"
+        moveAssistantPairToInteraction(Math.min(window.innerWidth - 150, point.x + 96), Math.max(144, point.y))
+      }else{
+        moveAssistantPairToInteraction(point.x, point.y)
+      }
+      const statusLine = options.status || moment.status
+      const bubbleLine = options.line || moment.line
+      if(assistantStatus) assistantStatus.textContent = statusLine
+      if(options.bubble !== false){
+        showSpeechPopup(options.assistantName || "Aria", bubbleLine)
+      }
+      if(assistantMotionState.momentTimer) clearTimeout(assistantMotionState.momentTimer)
+      assistantMotionState.momentTimer = setTimeout(()=>{
+        assistantMotionState.activeMoment = "idle"
+        setAssistantMomentClasses("idle")
+        syncAssistantViewportMotion(true)
+      }, options.duration || 3200)
+    }
+    function registerTapPattern(x, y){
+      const side = x < (window.innerWidth * 0.42) ? "left" : x > (window.innerWidth * 0.58) ? "right" : "center"
+      const now = Date.now()
+      assistantMotionState.recentSideTaps = assistantMotionState.recentSideTaps
+        .filter(entry => now - entry.at < 1800)
+      assistantMotionState.recentSideTaps.push({ side, at: now, x, y })
+      const leftTapBurst = assistantMotionState.recentSideTaps.filter(entry => entry.side === "left")
+      if(leftTapBurst.length >= 3){
+        triggerAssistantMoment("left_taps", {
+          point: { x: Math.max(window.innerWidth * 0.78, 220), y: Math.max(152, y) },
+          duration: 3600
+        })
+        assistantMotionState.recentSideTaps = []
+      }
+    }
     function getAssistantHelp(route, assistantId){
       const sceneKey = REMOTE_ASSISTANT_HELP[route] ? route : "home"
       return REMOTE_ASSISTANT_HELP[sceneKey][assistantId] || REMOTE_ASSISTANT_HELP.home[assistantId]
@@ -6184,10 +6320,13 @@ function setupFloatMode(){
         assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
       }
       if(scrollDelta > 120 && !force){
-        nudgeAssistantPresence("center", {
-          x: window.innerWidth / 2,
-          y: direction === "down" ? window.innerHeight * 0.62 : window.innerHeight * 0.28
-        })
+        const focusPoint = {
+          x: direction === "down"
+            ? (assistantMotionState.pointerBias === "left" ? window.innerWidth * 0.62 : window.innerWidth * 0.38)
+            : (assistantMotionState.pointerBias === "right" ? window.innerWidth * 0.42 : window.innerWidth * 0.58),
+          y: direction === "down" ? window.innerHeight * 0.68 : window.innerHeight * 0.22
+        }
+        moveAssistantPairToInteraction(focusPoint.x, focusPoint.y)
         return
       }
       const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < 2200)
@@ -6209,7 +6348,13 @@ function setupFloatMode(){
           : assistantMotionState.pointerBias === "right"
             ? "center"
             : "left"
-        syncAssistantViewportMotion(true)
+        const progress = Math.min(1, Math.max(0, (window.scrollY || 0) / Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)))
+        const roamPoint = progress > 0.7
+          ? { x: assistantMotionState.pointerBias === "left" ? 154 : window.innerWidth - 154, y: window.innerHeight - 176 }
+          : progress < 0.22
+            ? { x: assistantMotionState.pointerBias === "left" ? 162 : window.innerWidth - 162, y: 154 }
+            : { x: assistantMotionState.pointerBias === "left" ? 178 : window.innerWidth - 178, y: window.innerHeight * 0.44 }
+        moveAssistantPairToInteraction(roamPoint.x, roamPoint.y)
       }, 9000)
     }
     function handleAssistantHover(node, assistantId){
@@ -6359,8 +6504,38 @@ function setupFloatMode(){
         return
       }
       assistantMotionState.lastInteraction = { x: event.clientX + 26, y: event.clientY - 26, at: Date.now() }
+      registerTapPattern(event.clientX, event.clientY)
       moveAssistantPairToInteraction(event.clientX + 26, event.clientY - 26)
-      if(target?.closest?.("[data-faq-reel-topic], [data-faq-reel-next], [data-feedback-submit], [data-feedback-sort], [data-open-panel], [data-guide-start], [data-pay-product], .product-buy-btn")){
+      if(target?.closest?.("[data-faq-topic], [data-faq-next], [data-open-help-reel]")){
+        triggerAssistantMoment("reel_bun", {
+          point: { x: Math.max(160, event.clientX), y: Math.max(160, event.clientY - 34) },
+          assistantName: "Aria"
+        })
+      }else if(target?.closest?.("[data-feedback-submit], [data-feedback-sort], [data-feedback-heart], [data-feedback-thumb], [data-open-developer-feedback], [data-family-submit]")){
+        triggerAssistantMoment("developer_feed", {
+          point: { x: Math.max(170, event.clientX), y: Math.max(170, event.clientY - 28) },
+          assistantName: "Jake"
+        })
+      }else if(target?.closest?.("[data-open-fastpay], [data-open-product-page], [data-pay-product], .product-buy-btn, [data-fastpay-shopify], [data-fastpay-checkout], [data-product-shopify]")){
+        triggerAssistantMoment("purchase_checkout", {
+          point: { x: Math.min(window.innerWidth - 170, event.clientX + 90), y: Math.max(168, event.clientY) },
+          bubble: false,
+          duration: 4200
+        })
+      }else if(target?.closest?.("[data-profile-action=\"scan\"], #startHairScan, [data-aria-scenario-prompt]")){
+        const prompt = target?.closest?.("[data-aria-scenario-prompt]")?.getAttribute("data-aria-scenario-prompt") || ""
+        const statusLine = /damage|damaged|burn|frizz|oily|color|bounce/i.test(prompt)
+          ? "Hair condition scenario detected. Aria and Jake moved into serious scan timing."
+          : undefined
+        triggerAssistantMoment("analysis_ready", {
+          point: { x: window.innerWidth / 2, y: Math.max(180, event.clientY - 18) },
+          status: statusLine
+        })
+      }else if(target?.closest?.("[data-open-panel=\"floatSettingsBox\"], [data-open-diary], [data-diary-submit], [data-diary-schedule], [data-diary-social]")){
+        triggerAssistantMoment("diary_schedule", {
+          point: { x: window.innerWidth / 2, y: Math.max(178, event.clientY - 24) }
+        })
+      }else if(target?.closest?.("[data-open-panel], [data-guide-start]")){
         nudgeAssistantPresence("center", { x: event.clientX, y: Math.max(158, event.clientY - 32) })
       }
     }, true)
@@ -6368,6 +6543,7 @@ function setupFloatMode(){
       const touch = event.touches && event.touches[0]
       if(!touch || !shell || shell.hidden) return
       assistantMotionState.lastInteraction = { x: touch.clientX + 26, y: touch.clientY - 26, at: Date.now() }
+      registerTapPattern(touch.clientX, touch.clientY)
       moveAssistantPairToInteraction(touch.clientX + 26, touch.clientY - 26)
     }, { passive:true })
     let lastMouseMoveAt = 0
@@ -6385,6 +6561,21 @@ function setupFloatMode(){
         syncAssistantViewportMotion(true)
       }
     }, { passive:true })
+    document.addEventListener("mouseover", (event)=>{
+      if(!shell || shell.hidden) return
+      const hoverTarget = event.target?.closest?.("[data-pay-product], .product-buy-btn, [data-open-fastpay], [data-open-product-page], [data-fastpay-shopify], [data-fastpay-checkout], [data-product-shopify], [data-faq-topic], [data-faq-next], [data-open-developer-feedback], [data-feedback-submit], [data-feedback-heart], [data-feedback-thumb]")
+      if(!hoverTarget) return
+      const rect = hoverTarget.getBoundingClientRect()
+      const purchaseLane = hoverTarget.matches?.("[data-pay-product], .product-buy-btn, [data-open-fastpay], [data-open-product-page], [data-fastpay-shopify], [data-fastpay-checkout], [data-product-shopify]")
+      triggerAssistantMoment(purchaseLane ? "purchase_hover" : "feed_hover", {
+        point: {
+          x: rect.left + (rect.width / 2),
+          y: rect.top + Math.min(rect.height + 26, 120)
+        },
+        bubble: purchaseLane,
+        duration: purchaseLane ? 2600 : 2200
+      })
+    }, true)
     window.addEventListener("scroll", ()=>syncAssistantViewportMotion(), { passive:true })
     window.addEventListener("resize", ()=>syncAssistantViewportMotion(true))
     setTimeout(()=>syncAssistantViewportMotion(true), 220)
@@ -7612,6 +7803,25 @@ function setupFloatMode(){
       revealRemoteStage()
       applyAssistantDemoScene(options.route || remoteState.currentRoute || "home", false)
       if(options.message) setRemoteStatus(options.message)
+    if(options.route === "diary"){
+      setTimeout(()=>triggerAssistantMoment("diary_schedule", {
+        point: { x: window.innerWidth / 2, y: Math.max(168, window.innerHeight * 0.32) },
+        bubble: false,
+        duration: 2600
+      }), 140)
+    }else if(options.route === "faq"){
+      setTimeout(()=>triggerAssistantMoment("feed_hover", {
+        point: { x: window.innerWidth * 0.56, y: Math.max(160, window.innerHeight * 0.34) },
+        bubble: false,
+        duration: 2200
+      }), 140)
+    }else if(options.route === "payments"){
+      setTimeout(()=>triggerAssistantMoment("purchase_hover", {
+        point: { x: Math.min(window.innerWidth - 180, window.innerWidth * 0.78), y: Math.max(166, window.innerHeight * 0.35) },
+        bubble: false,
+        duration: 2600
+      }), 140)
+    }
     if(options.guideKey && Array.isArray(options.guideSteps)){
       wireRemoteGuide(options.guideKey, options.guideSteps)
     }
