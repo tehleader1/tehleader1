@@ -84,6 +84,19 @@ const HERO_FILTERS = [
   "hue-rotate(25deg) saturate(1.25)"
 ]
 
+const SHOPIFY_LINK_PATHS = {
+    myOrders: "/account/orders",
+    cart: "/cart",
+    premium: "/products/hair-advisor-premium",
+  bingo100: "/products/bingo-fantasy-100",
+  studio100: "/products/jake-premium-100",
+  family200: "/products/family-fantasy-200",
+  yoda: "/products/yoda-pass",
+  pro: "/products/professional-hair-advisor",
+  fantasy300: "/products/basic-fantasy-21-plus-300",
+  fantasy600: "/products/advanced-fantasy-21-plus-600",
+    donate: "/products/auto-dissolve-soap-bar"
+  }
 const LINKS = {
     myOrders: "https://supportrd.com/account/orders",
     cart: "https://supportrd.com/cart",
@@ -229,6 +242,37 @@ const REMOTE_PAY_PRODUCTS = [
     link: LINKS.donate
   }
 ]
+function normalizeShopifyStorefrontBase(raw){
+  const value = String(raw || "").trim()
+  if(!value) return ""
+  if(/^https?:\/\//i.test(value)) return value.replace(/\/+$/, "")
+  return `https://${value.replace(/^\/+/, "").replace(/\/+$/, "")}`
+}
+function applyShopifyStorefrontBase(rawBase){
+  const base = normalizeShopifyStorefrontBase(rawBase)
+  if(!base) return false
+  Object.entries(SHOPIFY_LINK_PATHS).forEach(([key, path])=>{
+    LINKS[key] = `${base}${path}`
+  })
+  SHOPIFY_ROLLOUTS.forEach(item=>{
+    if(item?.key && LINKS[item.key]) item.url = LINKS[item.key]
+  })
+  Object.keys(PLAN_MEDIA).forEach(key=>{
+    if(PLAN_MEDIA[key] && LINKS[key]) PLAN_MEDIA[key].link = LINKS[key]
+  })
+  REMOTE_PAY_PRODUCTS.forEach(product=>{
+    if(product?.key && LINKS[product.key]) product.link = LINKS[product.key]
+  })
+  return true
+}
+async function bootstrapShopifyStorefrontBase(){
+  try{
+    const response = await fetch("/api/shopify/public-config")
+    const data = await response.json()
+    if(data?.storefront_base) applyShopifyStorefrontBase(data.storefront_base)
+  }catch{}
+}
+const storefrontConfigReady = bootstrapShopifyStorefrontBase()
 const AI_LINKS = {
   dan_martell: "https://archive.org/search?query=Dan%20Martell%20AI%20business%20mediatype%3Amovies",
   ai_millionaire: "https://archive.org/search?query=AI%20millionaire%20mediatype%3Amovies",
@@ -5841,6 +5885,86 @@ function setupFloatMode(){
   const remotePurchaseEditor = qs("#remotePurchaseEditor")
   const remoteEditsMenu = qs("#remoteEditsMenu")
   if(!shell) return
+  const assistantAriaOrb = qs("#floatAriaBtn")
+  const assistantJakeOrb = qs("#floatJakeBtn")
+  const REMOTE_ASSISTANT_SCENES = {
+    home: {
+      aria: { x: "-8px", y: "2px", tilt: "-5deg", speed: "3.4s" },
+      jake: { x: "8px", y: "-2px", tilt: "5deg", speed: "3.8s" },
+      status: "Aria and Jake are floating in welcome mode, ready to guide the Remote."
+    },
+    diary: {
+      aria: { x: "-12px", y: "-8px", tilt: "-7deg", speed: "3.0s" },
+      jake: { x: "10px", y: "8px", tilt: "4deg", speed: "4.1s" },
+      status: "Diary mode is active. Aria leans in on the emotional post route while Jake stays nearby for support."
+    },
+    studio: {
+      aria: { x: "-4px", y: "10px", tilt: "-3deg", speed: "3.5s" },
+      jake: { x: "16px", y: "-10px", tilt: "7deg", speed: "2.7s" },
+      status: "Studio route is active. Jake is moving sharper for booth timing while Aria holds the support edge."
+    },
+    settings: {
+      aria: { x: "-10px", y: "0px", tilt: "-4deg", speed: "3.6s" },
+      jake: { x: "10px", y: "0px", tilt: "4deg", speed: "3.6s" },
+      status: "Configuration route is active. The assistants settle into a cleaner settings orbit."
+    },
+    map: {
+      aria: { x: "-18px", y: "-10px", tilt: "-8deg", speed: "2.8s" },
+      jake: { x: "18px", y: "10px", tilt: "8deg", speed: "3.0s" },
+      status: "Map change is active. Aria and Jake move like route guides tracking your next turn."
+    },
+    faq: {
+      aria: { x: "-8px", y: "-4px", tilt: "-3deg", speed: "3.3s" },
+      jake: { x: "8px", y: "4px", tilt: "3deg", speed: "3.7s" },
+      status: "FAQ lounge is active. The assistants settle into demo mode for quick help and reels."
+    },
+    profile: {
+      aria: { x: "-14px", y: "4px", tilt: "-6deg", speed: "3.5s" },
+      jake: { x: "12px", y: "-6px", tilt: "5deg", speed: "3.9s" },
+      status: "Profile view is active. The assistants frame the identity card like a polished product demo."
+    },
+    payments: {
+      aria: { x: "-6px", y: "-6px", tilt: "-2deg", speed: "3.1s" },
+      jake: { x: "6px", y: "6px", tilt: "2deg", speed: "3.3s" },
+      status: "Payments are active. Aria and Jake tighten up into checkout support mode."
+    },
+    blog: {
+      aria: { x: "-10px", y: "-2px", tilt: "-4deg", speed: "3.8s" },
+      jake: { x: "10px", y: "2px", tilt: "4deg", speed: "4.2s" },
+      status: "Blog party is open. The assistants soften into story mode for organic growth."
+    },
+    official: {
+      aria: { x: "-6px", y: "0px", tilt: "-2deg", speed: "3.9s" },
+      jake: { x: "6px", y: "0px", tilt: "2deg", speed: "4.1s" },
+      status: "Official information is active. The assistants stay steady and trustworthy."
+    },
+    solid: {
+      aria: { x: "-4px", y: "-8px", tilt: "-3deg", speed: "3.0s" },
+      jake: { x: "4px", y: "8px", tilt: "3deg", speed: "3.0s" },
+      status: "Solid State is active. Aria and Jake are locked into verification mode."
+    }
+  }
+  function applyAssistantDemoScene(route = "home", overrideStatus){
+    const sceneKey = REMOTE_ASSISTANT_SCENES[route] ? route : "home"
+    const scene = REMOTE_ASSISTANT_SCENES[sceneKey]
+    ;[
+      [assistantAriaOrb, scene.aria],
+      [assistantJakeOrb, scene.jake],
+      [guardianAriaBtn, scene.aria],
+      [guardianJakeBtn, scene.jake]
+    ].forEach(([node, motion])=>{
+      if(!node || !motion) return
+      node.dataset.demoScene = sceneKey
+      node.style.setProperty("--demo-shift-x", motion.x)
+      node.style.setProperty("--demo-shift-y", motion.y)
+      node.style.setProperty("--demo-tilt", motion.tilt)
+      node.style.setProperty("--demo-bob-duration", motion.speed)
+    })
+    remoteState.currentRoute = sceneKey
+    if(assistantStatus && overrideStatus !== false){
+      assistantStatus.textContent = overrideStatus || scene.status
+    }
+  }
   const REMOTE_ROUTE_META = {
     home: { path: "/remote", title: "SupportRD Remote", description: "SupportRD Remote keeps hair help, profile, studio, maps, and support together in one premium shell." },
     diary: { path: "/remote/diary", title: "SupportRD Diary", description: "Diary Mode is the emotional center for posting, guidance, booth routing, map routing, and payment handoff." },
@@ -6947,6 +7071,7 @@ function setupFloatMode(){
       if(remoteStageHome) remoteStageHome.hidden = true
       if(options.route && !options.skipRoute) syncRemoteHistory(options.route, !!options.replaceRoute)
       revealRemoteStage()
+      applyAssistantDemoScene(options.route || remoteState.currentRoute || "home", false)
       if(options.message) setRemoteStatus(options.message)
     if(options.guideKey && Array.isArray(options.guideSteps)){
       wireRemoteGuide(options.guideKey, options.guideSteps)
@@ -7169,6 +7294,7 @@ function setupFloatMode(){
       remoteSheetBody.innerHTML = ""
       shell.classList.remove("sheet-open")
       if(remoteStageHome) remoteStageHome.hidden = false
+      applyAssistantDemoScene("home", false)
       if(!keepRoute) syncRemoteHistory("home", true)
     }
     function revealRemoteStage(){
@@ -7254,6 +7380,7 @@ function setupFloatMode(){
     function renderRemoteRoute(route = "home", options = {}){
       const normalized = REMOTE_ROUTE_META[route] ? route : "home"
       updateRemoteDocumentMeta(normalized)
+      applyAssistantDemoScene(normalized, false)
       if(options.openShell && shell.hidden){
         openFloat({ preserveHome:true, preserveRoute:true })
       }
@@ -7329,6 +7456,7 @@ function setupFloatMode(){
         launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
         qsa(".float-box").forEach(box => box.hidden = true)
         if(remoteStageHome) remoteStageHome.hidden = false
+        applyAssistantDemoScene("home", false)
         if(message) setRemoteStatus(message)
     }
 
@@ -8182,13 +8310,13 @@ function setupFloatMode(){
   qs("#floatAriaBtn")?.addEventListener("click", ()=>{
     state.activeAssistant = "aria"
     applyAssistantUI(true)
-    if(assistantStatus) assistantStatus.textContent = `${buildLifeReflection("aria")} Aria is now holding the general post side.`
+    applyAssistantDemoScene(remoteState.currentRoute || "home", `${buildLifeReflection("aria")} Aria is now holding the general post side.`)
     syncProfile()
   })
   qs("#floatJakeBtn")?.addEventListener("click", ()=>{
     state.activeAssistant = "projake"
     applyAssistantUI(true)
-    if(assistantStatus) assistantStatus.textContent = `${buildLifeReflection("projake")} Jake is now holding the studio side.`
+    applyAssistantDemoScene(remoteState.currentRoute || "home", `${buildLifeReflection("projake")} Jake is now holding the studio side.`)
     syncProfile()
   })
   profileUploadInput?.addEventListener("change", ()=>{
@@ -8393,10 +8521,10 @@ function setupFloatMode(){
     speech: "/api/aria/speech"
   }
   qs("#floatAriaBtn")?.addEventListener("click", ()=>{
-    openMiniWindow("Aria Remote", "Aria is holding the live post side in Float Mode. Tap again or double tap to talk.")
+    applyAssistantDemoScene(remoteState.currentRoute || "home", `${buildLifeReflection("aria")} Aria is tracking this page and is ready if you want to talk.`)
   })
   qs("#floatJakeBtn")?.addEventListener("click", ()=>{
-    openMiniWindow("Jake Remote", "Jake is holding the studio side in Float Mode. Tap again or double tap to jump deeper.")
+    applyAssistantDemoScene(remoteState.currentRoute || "home", `${buildLifeReflection("projake")} Jake is tracking this page and is ready for the studio lane.`)
   })
   qs("#floatRunProfileScanBtn")?.addEventListener("click", ()=>{
     const lastLines = (state.ariaHistory || []).slice(-2)
@@ -8698,16 +8826,23 @@ function setupRemoteFastPay(){
     if(status) status.textContent = `${product.title} is loaded. You can open secure Shopify checkout now or use the touch-confirm flow.`
   }
 
-  function launchShopifyCheckout(product, sourceLabel, options = {}){
-    if(!product?.link) return
-    const receipt = buildRemoteReceipt(product)
-    renderReceipt(receipt)
-    hideConfirm()
-    hideProcessing()
-    if(!options.keepOwnerVisible) hideOwner()
-    if(status) status.textContent = `${product.title} Shopify checkout opened${sourceLabel ? ` from ${sourceLabel}` : ""}.`
-    openLinkModal(product.link, `${product.title} Checkout`)
-  }
+    async function launchShopifyCheckout(product, sourceLabel, options = {}){
+      if(storefrontConfigReady){
+        try{
+          await storefrontConfigReady
+        }catch{}
+      }
+      const liveLink = product?.key && LINKS[product.key] ? LINKS[product.key] : product?.link
+      if(!liveLink) return
+      const checkoutProduct = {...product, link: liveLink}
+      const receipt = buildRemoteReceipt(checkoutProduct)
+      renderReceipt(receipt)
+      hideConfirm()
+      hideProcessing()
+      if(!options.keepOwnerVisible) hideOwner()
+      if(status) status.textContent = `${checkoutProduct.title} Shopify checkout opened${sourceLabel ? ` from ${sourceLabel}` : ""}.`
+      openLinkModal(checkoutProduct.link, `${checkoutProduct.title} Checkout`)
+    }
 
   function renderProducts(){
     grid.innerHTML = REMOTE_PAY_PRODUCTS.map((product)=>`

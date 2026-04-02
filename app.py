@@ -3336,6 +3336,17 @@ def shopify_connector_health():
         "products_error": products_error,
     }
 
+@app.route("/api/shopify/public-config")
+def shopify_public_config():
+    store = (SHOPIFY_STORE or "").strip()
+    storefront_base = f"https://{store}" if store else ""
+    return {
+        "ok": bool(store),
+        "storefront_base": storefront_base,
+        "cart_url": f"{storefront_base}/cart" if storefront_base else "",
+        "orders_url": f"{storefront_base}/account/orders" if storefront_base else "",
+    }
+
 @app.route("/api/claim-name", methods=["POST"])
 def claim_name():
     user = session.get("user") or {}

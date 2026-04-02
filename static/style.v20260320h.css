@@ -3132,6 +3132,10 @@ body.competition-world .bg-layers::before{
       display:grid;
       gap:12px;
     }
+  .remote-family-wall{
+      display:grid;
+      gap:14px;
+    }
   .remote-feedback-card{
       display:grid;
       grid-template-columns:64px 1fr auto;
@@ -3200,6 +3204,30 @@ body.competition-world .bg-layers::before{
       font-weight:800;
       letter-spacing:.04em;
       text-transform:uppercase;
+    }
+  .remote-family-card{
+      padding:16px;
+      border-radius:22px;
+      background:rgba(255,255,255,.68);
+      border:1px solid rgba(167,196,232,.28);
+      display:grid;
+      gap:12px;
+    }
+  .remote-family-media{
+      width:100%;
+      max-height:320px;
+      object-fit:cover;
+      border-radius:18px;
+      border:1px solid rgba(167,196,232,.22);
+      background:#0f1620;
+    }
+  .remote-family-copy{
+      display:grid;
+      gap:8px;
+    }
+  .remote-family-copy strong{
+      color:#173a6a;
+      font-size:17px;
     }
 .remote-stage-scenarios{
     padding:18px;
@@ -3767,6 +3795,13 @@ body.remote-hide-ads .remote-display-strip{
     padding:10px 14px;
     backdrop-filter:blur(16px);
     touch-action:manipulation;
+    --demo-shift-x:0px;
+    --demo-shift-y:0px;
+    --demo-tilt:0deg;
+    --demo-bob-duration:3.6s;
+    animation:remoteGuardianDrift var(--demo-bob-duration) ease-in-out infinite;
+    transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt));
+    transition:transform .55s ease, box-shadow .55s ease, border-color .55s ease;
   }
 .remote-guardian-orb{
     width:44px;
@@ -4050,9 +4085,28 @@ body.remote-hide-ads .remote-display-strip{
   position:relative;
   overflow:hidden;
   box-shadow:0 18px 42px rgba(8,17,34,.28);
+  --demo-shift-x:0px;
+  --demo-shift-y:0px;
+  --demo-tilt:0deg;
+  --demo-bob-duration:3.4s;
+  animation:remoteAssistantDrift var(--demo-bob-duration) ease-in-out infinite;
+  transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt));
+  transition:transform .55s ease, box-shadow .55s ease, filter .55s ease;
 }
 .float-assistant-orb.aria{background:radial-gradient(circle at 30% 25%, rgba(102,255,231,.75), rgba(34,81,156,.88));}
 .float-assistant-orb.jake{background:radial-gradient(circle at 30% 25%, rgba(255,203,103,.72), rgba(40,51,112,.92));}
+.float-assistant-orb[data-demo-scene="map"],
+.remote-guardian-btn[data-demo-scene="map"]{
+  box-shadow:0 24px 54px rgba(36,120,255,.32);
+}
+.float-assistant-orb[data-demo-scene="studio"],
+.remote-guardian-btn[data-demo-scene="studio"]{
+  box-shadow:0 24px 56px rgba(255,182,77,.26);
+}
+.float-assistant-orb[data-demo-scene="payments"],
+.remote-guardian-btn[data-demo-scene="payments"]{
+  box-shadow:0 24px 52px rgba(84,255,185,.26);
+}
 .float-assistant-core{
   width:66px;
   height:66px;
@@ -4074,6 +4128,16 @@ body.remote-hide-ads .remote-display-strip{
   border-radius:999px;
   border:1px solid rgba(255,255,255,.18);
   pointer-events:none;
+}
+@keyframes remoteAssistantDrift{
+  0%{transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt)) scale(1);}
+  50%{transform:translate(calc(var(--demo-shift-x) * -0.35), calc(var(--demo-shift-y) * -0.55 - 7px)) rotate(calc(var(--demo-tilt) * -0.4)) scale(1.02);}
+  100%{transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt)) scale(1);}
+}
+@keyframes remoteGuardianDrift{
+  0%{transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt));}
+  50%{transform:translate(calc(var(--demo-shift-x) * -0.2), calc(var(--demo-shift-y) * -0.3 - 4px)) rotate(calc(var(--demo-tilt) * -0.45));}
+  100%{transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt));}
 }
 @keyframes remoteOrbPulse{
   0%,100%{transform:scale(.94); box-shadow:0 0 18px rgba(255,255,255,.45);}
