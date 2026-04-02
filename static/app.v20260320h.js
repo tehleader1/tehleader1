@@ -5415,6 +5415,7 @@ function setupLoginGate(){
       localStorage.setItem("loggedIn","true")
       enableTrustedOwnerAutoLogin()
       syncLoginUi(true)
+      try{ window.dispatchEvent(new CustomEvent("supportrd-login-ready", { detail:{ source:"api-me", user:d.user || null } })) }catch{}
       const badge = qs("#userBadge")
       const name = d.user && (d.user.name || d.user.nickname || d.user.email) ? (d.user.name || d.user.nickname || d.user.email) : "Logged In"
       if(badge){ badge.textContent = name }
@@ -5448,6 +5449,7 @@ function setupLoginGate(){
     localStorage.setItem("loggedIn","true")
     enableTrustedOwnerAutoLogin()
     syncLoginUi(true)
+    try{ window.dispatchEvent(new CustomEvent("supportrd-login-ready", { detail:{ source:"local-complete" } })) }catch{}
   }
 
   // Provider buttons are plain links to avoid popup blockers.
@@ -8866,6 +8868,7 @@ function setupFloatMode(){
 }
 
 function setupRemoteFastPay(){
+  const PURCHASE_GATE_KEY = "supportrd_purchase_gate_intent"
   const modal = qs("#remoteFastPayModal")
   const grid = qs("#remoteFastPayGrid")
   const closeBtn = qs("#closeRemoteFastPay")
@@ -8967,7 +8970,85 @@ function setupRemoteFastPay(){
     if(status) status.textContent = `${product.title} is loaded. You can open secure Shopify checkout now or use the touch-confirm flow.`
   }
 
+  function isPurchaseUserSignedIn(){
+    return localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
+  }
+
+  function persistPurchaseIntent(product, sourceLabel, options = {}){
+    if(!product?.key) return
+    try{
+      localStorage.setItem(PURCHASE_GATE_KEY, JSON.stringify({
+        key: product.key,
+        sourceLabel: sourceLabel || "Fast Pay",
+        options: options || {},
+        at: Date.now()
+      }))
+    }catch{}
+  }
+
+  function readPurchaseIntent(){
+    try{
+      const saved = JSON.parse(localStorage.getItem(PURCHASE_GATE_KEY) || "null")
+      return saved && saved.key ? saved : null
+    }catch{
+      return null
+    }
+  }
+
+  function clearPurchaseIntent(){
+    try{ localStorage.removeItem(PURCHASE_GATE_KEY) }catch{}
+  }
+
+  function openPurchaseAccountGate(product, sourceLabel, options = {}){
+    persistPurchaseIntent(product, sourceLabel, options)
+    const productTitle = product?.title || "this SupportRD purchase"
+    const message = `${productTitle} is ready. Sign in or create an account first so SupportRD can attach premium access, orders, and upgrades to the right person.`
+    if(typeof openRemoteSheet === "function"){
+      openRemoteSheet("Sign In Before Checkout", `
+        ${typeof renderRemoteValueLane === "function" ? renderRemoteValueLane([
+          "Value: premium access stays tied to the right account",
+          "Energy: one obvious sign-in step before checkout",
+          "Worth: orders, themes, upgrades, and premium continuity stay preserved"
+        ]) : ""}
+        <div class="float-sheet-panel">
+          <h4>Account required before purchase</h4>
+          <p>${message}</p>
+          <div class="float-sheet-button-row">
+            <button class="btn" data-trigger-login>Sign In Or Create Account</button>
+            <button class="btn ghost" data-sheet-close>Keep Browsing</button>
+          </div>
+          <p class="fine-print">After sign-in, SupportRD will bring you right back to ${productTitle} and continue into Shopify checkout automatically.</p>
+        </div>
+      `, { message: `${productTitle} is waiting for sign-in before checkout.` })
+    }
+    if(status) status.textContent = `${productTitle} is waiting for sign-in before checkout.`
+    try{ openMiniWindow("SIGN IN BEFORE CHECKOUT", `${productTitle} is ready. Sign in first so SupportRD can preserve your premium and order history.`) }catch{}
+    setTimeout(()=>qs("#loginBtn")?.click(), 160)
+  }
+
+  async function resumePendingPurchaseIntent(){
+    if(!isPurchaseUserSignedIn()) return
+    const intent = readPurchaseIntent()
+    if(!intent?.key) return
+    const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === intent.key)
+    clearPurchaseIntent()
+    if(!product) return
+    modal.hidden = false
+    modal.setAttribute("aria-hidden","false")
+    document.body.classList.add("remote-fastpay-active")
+    renderProducts()
+    hideConfirm()
+    hideOwner()
+    if(status) status.textContent = `${product.title} is resuming from sign-in and opening Shopify checkout now.`
+    try{ openMiniWindow("WELCOME BACK", `${product.title} is ready. SupportRD saved your place and is opening Shopify checkout now.`) }catch{}
+    await launchShopifyCheckout(product, intent.sourceLabel || "Saved Purchase", intent.options || {})
+  }
+
     async function launchShopifyCheckout(product, sourceLabel, options = {}){
+      if(!isPurchaseUserSignedIn()){
+        openPurchaseAccountGate(product, sourceLabel, options)
+        return
+      }
       if(storefrontConfigReady){
         try{
           await storefrontConfigReady
@@ -9107,6 +9188,9 @@ function setupRemoteFastPay(){
   modal.addEventListener("click", (event)=>{
     if(event.target === modal || event.target.classList?.contains("remote-fastpay-backdrop")) closeRemoteFastPay()
   })
+  window.addEventListener("supportrd-login-ready", ()=>{ resumePendingPurchaseIntent() })
+  window.addEventListener("focus", ()=>{ setTimeout(()=>resumePendingPurchaseIntent(), 140) })
+  setTimeout(()=>resumePendingPurchaseIntent(), 500)
   window.openRemoteFastPay = openRemoteFastPay
   window.closeRemoteFastPay = closeRemoteFastPay
 }
