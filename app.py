@@ -59,18 +59,17 @@ def normalize_shopify_store_domain(raw_store):
         value = f"{value}.myshopify.com"
     return value
 
+def resolve_shopify_api_domain():
+    store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    if store and store.endswith("supportrd.com"):
+        return "supportdr-com.myshopify.com"
+    return store
+
 def resolve_shopify_storefront_domain():
     # Always prefer the explicit Shopify store host from env for storefront
     # redirects so checkout/product routes don't loop back into the app's own
     # custom domain.
-    store = normalize_shopify_store_domain(SHOPIFY_STORE)
-    if store and store.endswith("supportrd.com"):
-        # SupportRD's live checkout needs the Shopify storefront host, not the
-        # app/custom domain that serves this Flask site.
-        return "supportdr-com.myshopify.com"
-    if store:
-        return store
-    return ""
+    return resolve_shopify_api_domain()
 
 SEO_ENABLED = os.environ.get("SEO_ENABLED", "false").lower() == "true"
 SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "72"))
@@ -1488,13 +1487,14 @@ def send_smtp_html(to_email, subject, html):
         return False, str(e)[:200]
 
 def get_shopify_finance_snapshot():
-    if not SHOPIFY_STORE or not SHOPIFY_ADMIN_TOKEN:
+    api_store = resolve_shopify_api_domain()
+    if not api_store or not SHOPIFY_ADMIN_TOKEN:
         return {"ok": False, "error": "shopify_admin_not_configured"}
     try:
         now = datetime.utcnow()
         created_min = (now - timedelta(days=8)).isoformat() + "Z"
         r = requests.get(
-            f"https://{SHOPIFY_STORE}/admin/api/2024-01/orders.json",
+            f"https://{api_store}/admin/api/2024-01/orders.json",
             headers={"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN},
             params={
                 "status": "any",
@@ -3636,7 +3636,8 @@ def get_products():
     if PRODUCT_CACHE and now - PRODUCT_CACHE_TIME < CACHE_TTL:
         return PRODUCT_CACHE
 
-    if not SHOPIFY_STORE:
+    api_store = resolve_shopify_api_domain()
+    if not api_store:
         return []
 
     query = """
@@ -3660,7 +3661,7 @@ def get_products():
     try:
 
         r = requests.post(
-            f"https://{SHOPIFY_STORE}/api/2024-01/graphql.json",
+            f"https://{api_store}/api/2024-01/graphql.json",
             json={"query": query},
             headers={
                 "X-Shopify-Storefront-Access-Token": SHOPIFY_TOKEN
@@ -3695,11 +3696,12 @@ def get_products():
 def get_shopify_blog_id():
     if SHOPIFY_BLOG_ID:
         return SHOPIFY_BLOG_ID
-    if not SHOPIFY_STORE or not SHOPIFY_ADMIN_TOKEN:
+    api_store = resolve_shopify_api_domain()
+    if not api_store or not SHOPIFY_ADMIN_TOKEN:
         return None
     try:
         r = requests.get(
-            f"https://{SHOPIFY_STORE}/admin/api/2024-01/blogs.json",
+            f"https://{api_store}/admin/api/2024-01/blogs.json",
             headers={"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN},
             timeout=8
         )
@@ -3754,7 +3756,8 @@ def generate_seo_post(products):
     return title, body, excerpt
 
 def publish_shopify_blog():
-    if not SHOPIFY_STORE or not SHOPIFY_ADMIN_TOKEN:
+    api_store = resolve_shopify_api_domain()
+    if not api_store or not SHOPIFY_ADMIN_TOKEN:
         return False, "Shopify admin not configured"
     blog_id = get_shopify_blog_id()
     if not blog_id:
@@ -3772,7 +3775,7 @@ def publish_shopify_blog():
     }
     try:
         r = requests.post(
-            f"https://{SHOPIFY_STORE}/admin/api/2024-01/blogs/{blog_id}/articles.json",
+            f"https://{api_store}/admin/api/2024-01/blogs/{blog_id}/articles.json",
             headers={
                 "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN,
                 "Content-Type": "application/json"
