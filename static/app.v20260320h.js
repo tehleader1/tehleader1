@@ -5926,7 +5926,8 @@ function setupFloatMode(){
     lastScrollBucket: -1,
     lastScrollY: Math.max(window.scrollY || 0, 0),
     driftPhase: 0,
-    roamTimer: null
+    roamTimer: null,
+    pointerBias: "center"
   }
   const REMOTE_ASSISTANT_SCENES = {
     home: {
@@ -6098,6 +6099,26 @@ function setupFloatMode(){
       if(direction === "up"){
         layout = layouts[(Math.floor(progress * layouts.length) + phase + 1) % layouts.length]
       }
+      if(progress > 0.72){
+        layout = phase % 2 === 0
+          ? { aria: { x: 138, y: height - 194 }, jake: { x: width - 148, y: height - 222 } }
+          : { aria: { x: width - 156, y: height - 214 }, jake: { x: 146, y: height - 188 } }
+      }else if(progress < 0.18){
+        layout = phase % 2 === 0
+          ? { aria: { x: 126, y: 138 }, jake: { x: width - 144, y: 166 } }
+          : { aria: { x: width - 162, y: 146 }, jake: { x: 138, y: 194 } }
+      }
+      if(assistantMotionState.pointerBias === "left"){
+        layout = {
+          aria: { x: Math.min(layout.aria.x, 138), y: layout.aria.y },
+          jake: { x: Math.min(layout.jake.x, width * 0.42), y: layout.jake.y }
+        }
+      }else if(assistantMotionState.pointerBias === "right"){
+        layout = {
+          aria: { x: Math.max(layout.aria.x, width * 0.58), y: layout.aria.y },
+          jake: { x: Math.max(layout.jake.x, width - 152), y: layout.jake.y }
+        }
+      }
       return layout
     }
     function applyAssistantPairLayout(layout){
@@ -6115,6 +6136,7 @@ function setupFloatMode(){
       const clampedY = Math.max(132, Math.min(window.innerHeight - 108, y))
       const rightBias = clampedX > (window.innerWidth / 2)
       const lowerBias = clampedY > (window.innerHeight / 2)
+      assistantMotionState.pointerBias = rightBias ? "right" : "left"
       applyAssistantPairLayout({
         aria: { x: clampedX + (rightBias ? -94 : 94), y: clampedY + (lowerBias ? -84 : -36) },
         jake: { x: clampedX + (rightBias ? -26 : 138), y: clampedY + (lowerBias ? 52 : 116) }
@@ -6152,8 +6174,13 @@ function setupFloatMode(){
         const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < 2600)
         if(recentInteraction) return
         assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
+        assistantMotionState.pointerBias = assistantMotionState.pointerBias === "left"
+          ? "right"
+          : assistantMotionState.pointerBias === "right"
+            ? "center"
+            : "left"
         syncAssistantViewportMotion(true)
-      }, 12000)
+      }, 9000)
     }
     function handleAssistantHover(node, assistantId){
       if(!node) return
@@ -6236,6 +6263,21 @@ function setupFloatMode(){
       if(!touch || !shell || shell.hidden) return
       assistantMotionState.lastInteraction = { x: touch.clientX + 26, y: touch.clientY - 26, at: Date.now() }
       moveAssistantPairToInteraction(touch.clientX + 26, touch.clientY - 26)
+    }, { passive:true })
+    let lastMouseMoveAt = 0
+    document.addEventListener("mousemove", (event)=>{
+      if(!shell || shell.hidden) return
+      if(Date.now() - lastMouseMoveAt < 900) return
+      lastMouseMoveAt = Date.now()
+      assistantMotionState.pointerBias = event.clientX < (window.innerWidth / 3)
+        ? "left"
+        : event.clientX > (window.innerWidth * 0.66)
+          ? "right"
+          : "center"
+      if(Math.abs(event.clientY - (window.innerHeight / 2)) > 110){
+        assistantMotionState.lastInteraction = { x: event.clientX, y: event.clientY, at: Date.now() - 1300 }
+        syncAssistantViewportMotion(true)
+      }
     }, { passive:true })
     window.addEventListener("scroll", ()=>syncAssistantViewportMotion(), { passive:true })
     window.addEventListener("resize", ()=>syncAssistantViewportMotion(true))
