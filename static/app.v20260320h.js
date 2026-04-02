@@ -5921,6 +5921,12 @@ function setupFloatMode(){
   if(!shell) return
   const assistantAriaOrb = qs("#floatAriaBtn")
   const assistantJakeOrb = qs("#floatJakeBtn")
+  const assistantMotionState = {
+    lastInteraction: null,
+    lastScrollBucket: -1,
+    lastScrollY: Math.max(window.scrollY || 0, 0),
+    driftPhase: 0
+  }
   const REMOTE_ASSISTANT_SCENES = {
     home: {
       aria: { x: "-8px", y: "2px", tilt: "-5deg", speed: "3.4s" },
@@ -6035,16 +6041,17 @@ function setupFloatMode(){
     }
     let activeAssistantTimers = []
     let assistantHoverTimer = null
+    function parseSceneShift(value){
+      return Number(String(value || "0").replace("px", "").trim()) || 0
+    }
     function clearAssistantSequence(){
       activeAssistantTimers.forEach((timer)=>clearTimeout(timer))
       activeAssistantTimers = []
       ;[assistantAriaOrb, assistantJakeOrb].forEach((orb)=>{
         if(!orb) return
-        orb.classList.remove("demo-active")
-        orb.style.removeProperty("--demo-float-left")
-        orb.style.removeProperty("--demo-float-top")
         orb.classList.remove("hover-wave")
       })
+      syncAssistantViewportMotion(true)
     }
     function moveAssistantOrbToFocus(orb, selector){
       if(!orb) return
@@ -6064,6 +6071,54 @@ function setupFloatMode(){
       orb.style.setProperty("--demo-float-top", `${Math.max(86, Math.min(window.innerHeight - width - 24, y - (width / 2)))}px`)
       orb.classList.add("demo-active")
     }
+    function buildAssistantScrollLayout(progress, direction){
+      const width = window.innerWidth
+      const height = window.innerHeight
+      const phase = assistantMotionState.driftPhase % 4
+      const layouts = [
+        {
+          aria: { x: 128, y: 144 },
+          jake: { x: width - 138, y: 186 }
+        },
+        {
+          aria: { x: width - 158, y: Math.max(148, height * 0.32) },
+          jake: { x: 140, y: Math.max(168, height * 0.46) }
+        },
+        {
+          aria: { x: width - 150, y: height - 184 },
+          jake: { x: 146, y: height - 212 }
+        },
+        {
+          aria: { x: width * 0.46, y: height - 176 },
+          jake: { x: width - 146, y: Math.max(158, height * 0.42) }
+        }
+      ]
+      let layout = layouts[Math.min(layouts.length - 1, Math.floor(progress * layouts.length))]
+      if(direction === "up"){
+        layout = layouts[(Math.floor(progress * layouts.length) + phase + 1) % layouts.length]
+      }
+      return layout
+    }
+    function applyAssistantPairLayout(layout){
+      if(!layout) return
+      const scene = REMOTE_ASSISTANT_SCENES[remoteState.currentRoute || "home"] || REMOTE_ASSISTANT_SCENES.home
+      const ariaOffsetX = parseSceneShift(scene.aria?.x)
+      const ariaOffsetY = parseSceneShift(scene.aria?.y)
+      const jakeOffsetX = parseSceneShift(scene.jake?.x)
+      const jakeOffsetY = parseSceneShift(scene.jake?.y)
+      moveAssistantOrbToPoint(assistantAriaOrb, layout.aria.x + ariaOffsetX, layout.aria.y + ariaOffsetY)
+      moveAssistantOrbToPoint(assistantJakeOrb, layout.jake.x + jakeOffsetX, layout.jake.y + jakeOffsetY)
+    }
+    function moveAssistantPairToInteraction(x, y){
+      const clampedX = Math.max(82, Math.min(window.innerWidth - 82, x))
+      const clampedY = Math.max(132, Math.min(window.innerHeight - 108, y))
+      const rightBias = clampedX > (window.innerWidth / 2)
+      const lowerBias = clampedY > (window.innerHeight / 2)
+      applyAssistantPairLayout({
+        aria: { x: clampedX + (rightBias ? -94 : 94), y: clampedY + (lowerBias ? -84 : -36) },
+        jake: { x: clampedX + (rightBias ? -26 : 138), y: clampedY + (lowerBias ? 52 : 116) }
+      })
+    }
     function getAssistantHelp(route, assistantId){
       const sceneKey = REMOTE_ASSISTANT_HELP[route] ? route : "home"
       return REMOTE_ASSISTANT_HELP[sceneKey][assistantId] || REMOTE_ASSISTANT_HELP.home[assistantId]
@@ -6071,14 +6126,23 @@ function setupFloatMode(){
     function currentAssistantOrb(){
       return state.activeAssistant === "projake" ? assistantJakeOrb : assistantAriaOrb
     }
-    function syncAssistantViewportMotion(){
-      const orb = currentAssistantOrb()
-      if(!orb || !shell || shell.hidden) return
+    function syncAssistantViewportMotion(force = false){
+      if(!shell || shell.hidden) return
       const scrollable = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)
       const progress = Math.min(1, Math.max(0, window.scrollY / scrollable))
-      const x = progress > 0.62 ? window.innerWidth - 124 : 112
-      const y = progress > 0.58 ? window.innerHeight - 160 : 138
-      moveAssistantOrbToPoint(orb, x, y)
+      const direction = window.scrollY >= assistantMotionState.lastScrollY ? "down" : "up"
+      assistantMotionState.lastScrollY = Math.max(window.scrollY || 0, 0)
+      const bucket = Math.floor(progress * 5)
+      if(bucket !== assistantMotionState.lastScrollBucket || force){
+        assistantMotionState.lastScrollBucket = bucket
+        assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
+      }
+      const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < 2200)
+      if(recentInteraction){
+        moveAssistantPairToInteraction(assistantMotionState.lastInteraction.x, assistantMotionState.lastInteraction.y)
+        return
+      }
+      applyAssistantPairLayout(buildAssistantScrollLayout(progress, direction))
     }
     function handleAssistantHover(node, assistantId){
       if(!node) return
@@ -6086,11 +6150,14 @@ function setupFloatMode(){
         const name = assistantId === "projake" ? "Jake" : "Aria"
         const quickLine = assistantId === "projake" ? "Hi, Jake here." : "Hello, Aria here."
         node.classList.add("hover-wave")
+        const rect = node.getBoundingClientRect()
+        moveAssistantPairToInteraction(rect.left + (rect.width / 2), rect.top + (rect.height / 2))
         if(assistantStatus) assistantStatus.textContent = `${quickLine} Tap to start the smart help flow.`
         showSpeechPopup(name, quickLine)
         clearTimeout(assistantHoverTimer)
         assistantHoverTimer = setTimeout(()=>node.classList.remove("hover-wave"), 900)
       })
+      node.addEventListener("mouseleave", ()=>node.classList.remove("hover-wave"))
     }
     function triggerAssistantOrb(assistantId){
       const route = remoteState.currentRoute || "home"
@@ -6105,6 +6172,12 @@ function setupFloatMode(){
       interruptPageAudio()
       applyAssistantDemoScene(route, help.greeting)
       moveAssistantOrbToFocus(orb, help.focus)
+      const partnerOrb = assistantId === "projake" ? assistantAriaOrb : assistantJakeOrb
+      const target = help.focus ? qs(help.focus) : null
+      const rect = target?.getBoundingClientRect?.()
+      if(rect && partnerOrb){
+        moveAssistantOrbToPoint(partnerOrb, rect.left + rect.width - 42, rect.top + Math.min(rect.height, 140))
+      }
       playAssistantCue("intro")
       if(transcriptEl) transcriptEl.textContent = help.greeting
       showSpeechPopup(assistantName, help.greeting)
@@ -6139,21 +6212,23 @@ function setupFloatMode(){
     handleAssistantHover(guardianAriaBtn, "aria")
     handleAssistantHover(guardianJakeBtn, "projake")
     document.addEventListener("click", (event)=>{
-      const orb = currentAssistantOrb()
-      if(!orb || !shell || shell.hidden) return
+      if(!shell || shell.hidden) return
       const target = event.target
       if(target && (target.closest?.("#floatAriaBtn") || target.closest?.("#floatJakeBtn") || target.closest?.("#remoteGuardianAria") || target.closest?.("#remoteGuardianJake"))){
         return
       }
-      moveAssistantOrbToPoint(orb, event.clientX + 26, event.clientY - 26)
+      assistantMotionState.lastInteraction = { x: event.clientX + 26, y: event.clientY - 26, at: Date.now() }
+      moveAssistantPairToInteraction(event.clientX + 26, event.clientY - 26)
     }, true)
     document.addEventListener("touchstart", (event)=>{
-      const orb = currentAssistantOrb()
       const touch = event.touches && event.touches[0]
-      if(!orb || !touch || !shell || shell.hidden) return
-      moveAssistantOrbToPoint(orb, touch.clientX + 26, touch.clientY - 26)
+      if(!touch || !shell || shell.hidden) return
+      assistantMotionState.lastInteraction = { x: touch.clientX + 26, y: touch.clientY - 26, at: Date.now() }
+      moveAssistantPairToInteraction(touch.clientX + 26, touch.clientY - 26)
     }, { passive:true })
     window.addEventListener("scroll", ()=>syncAssistantViewportMotion(), { passive:true })
+    window.addEventListener("resize", ()=>syncAssistantViewportMotion(true))
+    setTimeout(()=>syncAssistantViewportMotion(true), 220)
     const REMOTE_ROUTE_META = {
     home: { path: "/remote", title: "SupportRD Remote", description: "SupportRD Remote keeps hair help, profile, studio, maps, and support together in one premium shell." },
     diary: { path: "/remote/diary", title: "SupportRD Diary", description: "Diary Mode is the emotional center for posting, guidance, booth routing, map routing, and payment handoff." },

@@ -4150,6 +4150,8 @@ body.remote-hide-ads .remote-display-strip{
   z-index:90;
   box-shadow:0 30px 70px rgba(8,17,34,.34);
   animation:remoteAssistantDrift var(--demo-bob-duration) ease-in-out infinite, remoteOrbPulse 1.7s ease-in-out infinite, remoteOrbCharge 1.9s ease-in-out infinite;
+  transition:left .55s cubic-bezier(.22,.61,.36,1), top .55s cubic-bezier(.22,.61,.36,1), transform .55s ease, box-shadow .55s ease, filter .55s ease;
+  will-change:left, top, transform;
 }
 .float-assistant-orb.hover-wave,
 .remote-guardian-btn.hover-wave{
@@ -4193,9 +4195,11 @@ body.remote-hide-ads .remote-display-strip{
   pointer-events:none;
 }
 @keyframes remoteAssistantDrift{
-  0%{transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt)) scale(1);}
-  50%{transform:translate(calc(var(--demo-shift-x) * -0.35), calc(var(--demo-shift-y) * -0.55 - 7px)) rotate(calc(var(--demo-tilt) * -0.4)) scale(1.02);}
-  100%{transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt)) scale(1);}
+  0%{transform:translate3d(var(--demo-shift-x), var(--demo-shift-y), 0) rotate(var(--demo-tilt)) scale(1);}
+  28%{transform:translate3d(calc(var(--demo-shift-x) * -0.28), calc(var(--demo-shift-y) * -0.5 - 10px), 0) rotate(calc(var(--demo-tilt) * -0.32)) scale(1.03);}
+  54%{transform:translate3d(calc(var(--demo-shift-x) * 0.14), calc(var(--demo-shift-y) * 0.22 - 18px), 0) rotate(calc(var(--demo-tilt) * 0.15)) scale(1.08);}
+  76%{transform:translate3d(calc(var(--demo-shift-x) * -0.18), calc(var(--demo-shift-y) * -0.18 + 6px), 0) rotate(calc(var(--demo-tilt) * -0.18)) scale(1.02);}
+  100%{transform:translate3d(var(--demo-shift-x), var(--demo-shift-y), 0) rotate(var(--demo-tilt)) scale(1);}
 }
 @keyframes remoteGuardianDrift{
   0%{transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt));}
