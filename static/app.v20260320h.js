@@ -5787,6 +5787,30 @@ function setupFloatMode(){
   const footerSubscribeBtn = qs("#floatFooterSubscribe")
   const footerBlogBtn = qs("#floatFooterBlog")
   const footerOfficialBtn = qs("#floatFooterOfficial")
+  const footerOfficialBottomBtn = qs("#floatFooterOfficialBottom")
+  const remoteStageHome = qs("#remoteStageHome")
+  const remoteContentStage = qs("#remoteContentStage")
+  const remoteAdsToggleBtn = qs("#remoteAdsToggleBtn")
+  const remoteAdsFocusBtn = qs("#remoteAdsFocusBtn")
+  const remoteColorPrevBtn = qs("#remoteColorPrev")
+  const remoteColorNextBtn = qs("#remoteColorNext")
+  const remotePurchasePremiumBtn = qs("#remotePurchasePremium")
+  const remotePurchaseStudioBtn = qs("#remotePurchaseStudio")
+  const remotePurchaseThemesBtn = qs("#remotePurchaseThemes")
+  const remotePurchaseSupportBtn = qs("#remotePurchaseSupport")
+  const remotePurchaseCustomBtn = qs("#remotePurchaseCustom")
+  const remotePurchaseOrdersBtn = qs("#remotePurchaseOrders")
+  const remotePurchaseSolidBtn = qs("#remotePurchaseSolid")
+  const remoteEditsViewBotBtn = qs("#remoteEditsViewBot")
+  const remoteEditsFreePlayBtn = qs("#remoteEditsFreePlay")
+  const remoteEditsReelBtn = qs("#remoteEditsReel")
+  const remoteEditsDiaryBtn = qs("#remoteEditsDiary")
+  const remoteEditsStudioBtn = qs("#remoteEditsStudio")
+  const remoteEditsSettingsBtn = qs("#remoteEditsSettings")
+  const remoteInfoPrivacyBtn = qs("#remoteInfoPrivacy")
+  const remoteInfoAboutBtn = qs("#remoteInfoAbout")
+  const remoteInfoContactBtn = qs("#remoteInfoContact")
+  const remoteInfoOfficialBtn = qs("#remoteInfoOfficial")
   const guardianAriaBtn = qs("#remoteGuardianAria")
   const guardianJakeBtn = qs("#remoteGuardianJake")
   const primeMenu = qs("#floatPrimeMenu")
@@ -5802,6 +5826,19 @@ function setupFloatMode(){
   const remoteSheetBack = qs("#floatRemoteSheetBack")
   const remoteSheetClose = qs("#floatRemoteSheetClose")
   if(!shell) return
+  const REMOTE_ROUTE_META = {
+    home: { path: "/remote", title: "SupportRD Remote", description: "SupportRD Remote keeps hair help, profile, studio, maps, and support together in one premium shell." },
+    diary: { path: "/remote/diary", title: "SupportRD Diary", description: "Diary Mode is the emotional center for posting, guidance, booth routing, map routing, and payment handoff." },
+    studio: { path: "/remote/studio", title: "SupportRD Studio Quick", description: "Studio Quick Panel gives three fast motherboards for recording, importing, trimming, and exporting audio or video." },
+    settings: { path: "/remote/settings", title: "SupportRD Settings", description: "General Settings keeps account, language, push, and social media control inside the SupportRD Remote." },
+    map: { path: "/remote/map", title: "SupportRD Map Change", description: "Map Change rotates the Remote into themed views and guided GPS support without leaving the app shell." },
+    faq: { path: "/remote/faq", title: "SupportRD FAQ Lounge", description: "FAQ Lounge gives premium help, reel clips, and lightweight assistance in the SupportRD Remote." },
+    profile: { path: "/remote/profile", title: "SupportRD Profile", description: "Profile presents the person, image, scan summary, achievements, and social identity inside SupportRD." },
+    payments: { path: "/remote/payments", title: "SupportRD Payments", description: "Payments keeps premium checkout, support, and session revenue lanes ready inside the SupportRD Remote." },
+    blog: { path: "/remote/blog", title: "SupportRD Blog Party", description: "Blog Party is the fullscreen SEO and authority lane for SupportRD topics, updates, and Google-friendly content." },
+    official: { path: "/remote/official", title: "SupportRD Official Info", description: "Official SupportRD info keeps privacy, about, contact, and storefront direction inside the Remote shell." },
+    solid: { path: "/remote/solid-state", title: "SupportRD Solid State", description: "Solid State Project shows what is built, what is verified, and what is still awaiting live payment or demand verification." }
+  }
   const remoteState = {
     activeBoard: 0,
     boards: [null, null, null],
@@ -5918,16 +5955,21 @@ function setupFloatMode(){
         <section class="float-sheet-panel">
           <h4>What's On Your Mind?</h4>
           <textarea class="input float-sheet-textarea" data-diary-input placeholder="Write the update, hair thought, workday plan, or premium post you want to send."></textarea>
-          <div class="float-sheet-grid three">
-            <button class="btn ghost" type="button">Facebook</button>
-            <button class="btn ghost" type="button">Instagram</button>
-            <button class="btn ghost" type="button">TikTok</button>
-          </div>
-          <div class="float-sheet-grid three">
-            <button class="btn" data-diary-save>Save</button>
-            <button class="btn ghost" data-diary-clear>Erase</button>
-            <button class="btn ghost" data-diary-pdf>Export PDF</button>
-          </div>
+            <div class="float-sheet-grid three">
+              <button class="btn ghost" type="button">Facebook</button>
+              <button class="btn ghost" type="button">Instagram</button>
+              <button class="btn ghost" type="button">TikTok</button>
+            </div>
+            <div class="float-sheet-grid three">
+              <button class="btn ghost" type="button">YouTube</button>
+              <button class="btn ghost" type="button">X</button>
+              <button class="btn ghost" type="button">WhatsApp</button>
+            </div>
+            <div class="float-sheet-grid three">
+              <button class="btn" data-diary-save>Send To Social</button>
+              <button class="btn ghost" data-diary-clear>Erase</button>
+              <button class="btn ghost" data-diary-pdf>Export PDF</button>
+            </div>
         </section>
         <section class="float-sheet-panel">
           <h4>Session Feel</h4>
@@ -5946,7 +5988,7 @@ function setupFloatMode(){
     `
   }
   function buildSettingsSheet(){
-    return `
+      return `
       <div class="float-sheet-copy">General Settings keeps the account side clean: contact info, password, socials, languages, and notifications all stay inside one polished SupportRD lane.</div>
       ${renderRemoteValueLane(["Value: account control base", "Energy: low system load", "Worth: social posting + language-ready support"])}
       <div class="float-sheet-grid">
@@ -5959,9 +6001,73 @@ function setupFloatMode(){
       </div>
       <div class="float-sheet-copy">Full settings stay inside Remote now. No jump to the old page, just a clean account-control sheet.</div>
       <div class="float-sheet-status" data-settings-status>Choose a settings lane and SupportRD will guide the account update from there.</div>
-    `
-  }
-  function buildMapSheet(){
+      `
+    }
+    function buildBlogPartySheet(){
+      const posts = Array.isArray(BLOG_POSTS) ? BLOG_POSTS.slice(0, 5) : []
+      return `
+        <div class="remote-blog-party">
+          ${renderRemoteValueLane(["Value: SEO + authority engine", "Energy: steady publishing lane", "Worth: visible rankings, product trust, and workday relevance"])}
+          <section class="remote-blog-hero">
+            <div class="float-mode-kicker">SupportRD Blog Party</div>
+            <h4>Fullscreen content energy for Google, authority, and real product traffic.</h4>
+            <p>This lane is where SupportRD shows the market it is active: hair fixes, workplace-friendly topics, premium upgrades, and how the controller fits mall trips, road trips, hiking, river days, and daily hair help.</p>
+          </section>
+          <div class="remote-blog-stats">
+            <div class="remote-blog-stat"><strong>SEO Posts Ready</strong><span>${posts.length || 0}</span></div>
+            <div class="remote-blog-stat"><strong>Payment Routes</strong><span>Shopify</span></div>
+            <div class="remote-blog-stat"><strong>Publishing Cadence</strong><span>Workweek</span></div>
+            <div class="remote-blog-stat"><strong>Authority Feel</strong><span>Premium</span></div>
+          </div>
+          <div class="float-sheet-grid">
+            <button class="btn" data-open-blog>Open Main Blog Modal</button>
+            <button class="btn ghost" data-open-fastpay>Open Purchase Lane</button>
+            <button class="btn ghost" data-open-panel="floatSettingsBox">Open Diary Mode</button>
+          </div>
+          <div class="remote-blog-list">
+            ${posts.map(post=>`<article class="remote-blog-post"><h5>${post.title}</h5><p>${post.body}</p></article>`).join("")}
+          </div>
+        </div>
+      `
+    }
+    function buildSolidStateSheet(){
+      return `
+        ${renderRemoteValueLane(["Value: official live edition checklist", "Energy: build + hold demand", "Worth: package-ready SupportRD system"])}
+        <div class="float-sheet-copy">Solid State is the company-ready checkpoint: what is built, what is protected, and what still needs live verification before we call the full project officially production-ready for demand and scaling.</div>
+        <div class="solid-state-grid">
+          <article class="solid-state-check ready">
+            <strong>Remote Shell + Controller</strong>
+            <span>Remote-first navigation, lower content stage, sticky purchase editor, and in-Remote sheets are built into the current app shell.</span>
+          </article>
+          <article class="solid-state-check ready">
+            <strong>Shopify Admin Linkage</strong>
+            <span>Shopify admin/store routing is present in the current project, so product paths and checkout links can already move through SupportRD.</span>
+          </article>
+          <article class="solid-state-check pending">
+            <strong>Payment Balance Link Verification</strong>
+            <span>Still needs final live API-key verification and webhook/storefront confirmation before we can honestly call the balance + entitlement layer fully automatic.</span>
+          </article>
+          <article class="solid-state-check ready">
+            <strong>Premium Feel + Occasion Routing</strong>
+            <span>The buttons now change the feel of the page without relying on ugly back-and-forth browser movement, which is part of the premium package story.</span>
+          </article>
+          <article class="solid-state-check pending">
+            <strong>Demand Holding + Calculation</strong>
+            <span>We can present products and route orders now, but full demand calculation still needs live order verification, inventory logic, and a clean fulfillment rhythm.</span>
+          </article>
+          <article class="solid-state-check ready">
+            <strong>Aria + Jake Use Cases</strong>
+            <span>Road trip, river, mall, skiing, hiking, monuments, national parks, and quick hair help prompts all fit the controller package story and can be surfaced in the live edition.</span>
+          </article>
+        </div>
+        <div class="float-sheet-grid">
+          <button class="btn" data-open-fastpay>Open Purchase Lane</button>
+          <button class="btn ghost" data-open-panel="floatLiveBox">Open FAQ Lounge</button>
+          <button class="btn ghost" data-open-panel="floatDeviceBox">Open Map Change</button>
+        </div>
+      `
+    }
+    function buildMapSheet(){
     const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
     return `
       <div class="float-sheet-copy">Map Change keeps the woman-waking-up default until you choose a new occasion. Tap a bubble, preview the mood, then close straight back into Remote.</div>
@@ -6058,31 +6164,37 @@ function setupFloatMode(){
       </div>
     `
   }
-  function openLaunchMenuSheet(targetId, label){
+  function openLaunchMenuSheet(targetId, label, options = {}){
     const menus = {
       floatBoardsBox: {
         title: "Studio Quick Panel",
-        body: buildStudioSheet()
+        body: buildStudioSheet(),
+        route: "studio"
       },
       floatProfileBox: {
         title: "General Settings",
-        body: buildSettingsSheet()
+        body: buildSettingsSheet(),
+        route: "settings"
       },
       floatSettingsBox: {
         title: "Diary Mode",
-        body: buildDiarySheet()
+        body: buildDiarySheet(),
+        route: "diary"
       },
       floatDeviceBox: {
         title: "Map Change",
-        body: buildMapSheet()
+        body: buildMapSheet(),
+        route: "map"
       },
       floatLiveBox: {
         title: "FAQ Lounge",
-        body: buildFaqSheet()
+        body: buildFaqSheet(),
+        route: "faq"
       },
       floatAssistantBox: {
         title: "Profile",
-        body: buildProfileSheet()
+        body: buildProfileSheet(),
+        route: "profile"
       }
     }
     const menu = menus[targetId]
@@ -6090,21 +6202,22 @@ function setupFloatMode(){
       setActiveTouchPanel(targetId, `${label} is ready in Remote.`)
       return
     }
-    openRemoteSheet(menu.title, menu.body, { message: `${menu.title} menu is open inside Remote.` })
+    openRemoteSheet(menu.title, menu.body, { message: `${menu.title} menu is open inside Remote.`, route: menu.route, replaceRoute: !!options.replaceRoute, skipRoute: !!options.skipRoute })
   }
-  function openGuardianSheet(name){
-    const gpsModeOn = !!diaryGpsStage && !diaryGpsStage.hidden
-    const version = name === "Aria" ? "Aria v2026.4 · Hair + live guidance" : "Jake v2026.4 · Studio + support systems"
-    openRemoteSheet(`${name} Live Advisor`, `
-      <div class="float-sheet-copy">${name} is standing by as a guardian of the page. ${gpsModeOn ? "GPS language is active so the guidance will speak like a route helper." : "Ask a quick question, switch to handsfree, or route straight into the right panel."}</div>
-      ${renderRemoteValueLane([version, "Separate assistant property set", "Premium help lane active"])}
-      <div class="float-sheet-grid">
-        <button class="btn" data-open-panel="${gpsModeOn ? "floatDeviceBox" : "floatSettingsBox"}">${gpsModeOn ? "Open GPS Settings" : "Open Diary + Ask"}</button>
-        <button class="btn ghost" data-open-panel="floatProfileBox">Handsfree Settings</button>
-        <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
-      </div>
-    `, { message:`${name} is live and ready to help.` })
-  }
+    function openGuardianSheet(name){
+      const gpsModeOn = !!diaryGpsStage && !diaryGpsStage.hidden
+      const version = name === "Aria" ? "Aria v2026.4 · Women's voice · Hair + live guidance" : "Jake v2026.4 · Men's voice · Studio specialist"
+      openRemoteSheet(`${name} Live Advisor`, `
+        <div class="float-sheet-copy">${name} is standing by as a guardian of the page. ${gpsModeOn ? "GPS language is active so the guidance will speak like a route helper." : "Ask a quick question, switch to handsfree, or route straight into the right panel."}</div>
+        ${renderRemoteValueLane([version, name === "Aria" ? "Road trip, frizz, hydration, and everyday hair help" : "Studio, booth, exports, and build-room support", "Premium help lane active"])}
+        <div class="float-sheet-grid">
+          <button class="btn" data-open-panel="${gpsModeOn ? "floatDeviceBox" : "floatSettingsBox"}">${gpsModeOn ? "Open GPS Settings" : "Open Diary + Ask"}</button>
+          <button class="btn ghost" data-open-panel="floatProfileBox">Handsfree Settings</button>
+          <button class="btn ghost" data-diary-handsfree>${name === "Aria" ? "Handsfree With Aria" : "Handsfree With Jake"}</button>
+          <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
+        </div>
+      `, { message:`${name} is live and ready to help.` })
+    }
   function startRemoteGuide(key, steps){
     if(!remoteSheetBody || !steps?.length) return
     if(remoteState.guideTimer && remoteState.guideKey === key){
@@ -6161,15 +6274,20 @@ function setupFloatMode(){
       })
     })
   }
-  function openRemoteSheet(title, html, options = {}){
-    if(!remoteSheet || !remoteSheetBody || !remoteSheetTitle) return
-    stopRemoteGuide()
-    remoteSheetTitle.textContent = title
-    remoteSheetBody.innerHTML = html
-    remoteSheet.hidden = false
-    remoteSheet.setAttribute("aria-hidden", "false")
-    shell.classList.add("sheet-open")
-    if(options.message) setRemoteStatus(options.message)
+    function openRemoteSheet(title, html, options = {}){
+        if(!remoteSheet || !remoteSheetBody || !remoteSheetTitle) return
+        stopRemoteGuide()
+        remoteSheet.className = "float-remote-sheet glass"
+        if(options.className) remoteSheet.classList.add(options.className)
+        remoteSheetTitle.textContent = title
+        remoteSheetBody.innerHTML = html
+      remoteSheet.hidden = false
+      remoteSheet.setAttribute("aria-hidden", "false")
+      shell.classList.add("sheet-open")
+      if(remoteStageHome) remoteStageHome.hidden = true
+      if(options.route && !options.skipRoute) syncRemoteHistory(options.route, !!options.replaceRoute)
+      revealRemoteStage()
+      if(options.message) setRemoteStatus(options.message)
     if(options.guideKey && Array.isArray(options.guideSteps)){
       wireRemoteGuide(options.guideKey, options.guideSteps)
     }
@@ -6266,8 +6384,12 @@ function setupFloatMode(){
       closeRemoteSheet()
       qs("#rerouteLiveStorefrontBtn")?.click()
     }))
-    Array.from(remoteSheetBody.querySelectorAll("[data-open-official]")).forEach(btn=>btn.addEventListener("click", ()=>openLinkModal("https://supportrd.com", "SupportRD Official Website")))
-    Array.from(remoteSheetBody.querySelectorAll("[data-diary-save]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      Array.from(remoteSheetBody.querySelectorAll("[data-open-official]")).forEach(btn=>btn.addEventListener("click", ()=>openLinkModal("https://supportrd.com", "SupportRD Official Website")))
+      Array.from(remoteSheetBody.querySelectorAll("[data-link-open]")).forEach(btn=>btn.addEventListener("click", ()=>{
+        const link = btn.getAttribute("data-link-open")
+        if(link) openLinkModal(link, "SupportRD Link")
+      }))
+      Array.from(remoteSheetBody.querySelectorAll("[data-diary-save]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const input = remoteSheetBody.querySelector("[data-diary-input]")
       localStorage.setItem("supportrdDiaryDraft", input?.value || "")
       remoteSheetBody.querySelector("[data-diary-status]")?.replaceChildren(document.createTextNode("Diary saved and kept ready inside Remote."))
@@ -6335,26 +6457,176 @@ function setupFloatMode(){
       sheetImage.textContent = ""
     }
   }
-  function closeRemoteSheet(stopGuide = true){
-    if(stopGuide) stopRemoteGuide()
-    if(!remoteSheet || !remoteSheetBody) return
-    remoteSheet.hidden = true
-    remoteSheet.setAttribute("aria-hidden", "true")
-    remoteSheetBody.innerHTML = ""
-    shell.classList.remove("sheet-open")
-  }
+  function closeRemoteSheet(stopGuide = true, keepRoute = false){
+      if(stopGuide) stopRemoteGuide()
+      if(!remoteSheet || !remoteSheetBody) return
+      remoteSheet.hidden = true
+      remoteSheet.setAttribute("aria-hidden", "true")
+      remoteSheetBody.innerHTML = ""
+      shell.classList.remove("sheet-open")
+      if(remoteStageHome) remoteStageHome.hidden = false
+      if(!keepRoute) syncRemoteHistory("home", true)
+    }
+    function revealRemoteStage(){
+      try{ remoteContentStage?.scrollIntoView({ behavior:"smooth", block:"start" }) }catch{}
+    }
+  function applyRemoteThemeByIndex(offset = 1){
+      if(typeof WORLD_VIEWS === "undefined" || !Array.isArray(WORLD_VIEWS) || !WORLD_VIEWS.length) return
+      const currentKey = shell?.dataset?.remoteTheme || "default"
+      let currentIndex = WORLD_VIEWS.findIndex(view => view.key === currentKey)
+      if(currentIndex < 0) currentIndex = 0
+      const nextIndex = (currentIndex + offset + WORLD_VIEWS.length) % WORLD_VIEWS.length
+      const nextView = WORLD_VIEWS[nextIndex]
+      if(!nextView) return
+      if(typeof window.setWorldTheme === "function") window.setWorldTheme(nextView.key)
+      if(shell) shell.dataset.remoteTheme = nextView.key
+      setRemoteStatus(`${nextView.label} is active in SupportRD.`)
+      const stageTitle = remoteStageHome?.querySelector("h3")
+      const stageCopy = remoteStageHome?.querySelector("p")
+      if(stageTitle) stageTitle.textContent = `${nextView.label} is now shaping the Remote.`
+      if(stageCopy) stageCopy.textContent = `${nextView.helper || "The page mood has shifted."} Use Map Change any time for deeper theme control while the Remote stays at the top.`
+    }
+    function setRemoteAdsHidden(hidden){
+      document.body.classList.toggle("remote-hide-ads", !!hidden)
+      if(remoteAdsToggleBtn) remoteAdsToggleBtn.textContent = hidden ? "Show Ads" : "Hide Ads"
+      if(remoteAdsFocusBtn) remoteAdsFocusBtn.textContent = hidden ? "Bring Ads Back" : "Focus On Hair Help"
+      localStorage.setItem("supportrdRemoteAdsHidden", hidden ? "true" : "false")
+      setRemoteStatus(hidden ? "Ads are tucked away so you can focus on your hair help." : "Ads are back and ready to sell the next step.")
+    }
+  function buildQuickReelSheet(){
+      return `
+        ${renderRemoteValueLane(["Value: 6-second guided reel", "Energy: lightweight visual help", "Worth: shows the app fast without leaving Remote"])}
+        <div class="float-sheet-panel">
+          <h4>SupportRD Help Reel</h4>
+          <p>This is the slick six-second lane: Diary for the emotional center, Studio Quick Panel for fast edits, Map Change for mood, FAQ for support, and Profile for the person behind the session.</p>
+          <iframe class="float-faq-reel-frame" src="/static/reel.html?v=20260322b" title="SupportRD Help Reel"></iframe>
+        </div>
+        <div class="float-sheet-grid three">
+          <button class="btn" data-open-panel="floatSettingsBox">Open Diary</button>
+          <button class="btn ghost" data-open-panel="floatBoardsBox">Open Studio Quick</button>
+          <button class="btn ghost" data-open-panel="floatAssistantBox">Open Profile</button>
+        </div>
+      `
+    }
+    function getRemoteRouteForTarget(targetId){
+      return {
+        floatSettingsBox: "diary",
+        floatBoardsBox: "studio",
+        floatProfileBox: "settings",
+        floatDeviceBox: "map",
+        floatLiveBox: "faq",
+        floatAssistantBox: "profile"
+      }[targetId] || "home"
+    }
+    function getRemoteRouteFromLocation(){
+      const rawPath = (window.location.pathname || "/").replace(/\/+$/, "") || "/"
+      if(rawPath === "/remote" || rawPath === "/remote/home") return "home"
+      if(rawPath.startsWith("/remote/")){
+        const slug = rawPath.slice("/remote/".length)
+        return REMOTE_ROUTE_META[slug] ? slug : "home"
+      }
+      return null
+    }
+    function updateRemoteDocumentMeta(route){
+      const meta = REMOTE_ROUTE_META[route] || REMOTE_ROUTE_META.home
+      document.title = `${meta.title} | SupportRD`
+      let desc = document.querySelector('meta[name="description"]')
+      if(!desc){
+        desc = document.createElement("meta")
+        desc.name = "description"
+        document.head.appendChild(desc)
+      }
+      desc.setAttribute("content", meta.description)
+    }
+    function syncRemoteHistory(route = "home", replace = false){
+      const meta = REMOTE_ROUTE_META[route] || REMOTE_ROUTE_META.home
+      updateRemoteDocumentMeta(route)
+      if(window.location.pathname === meta.path) return
+      const method = replace ? "replaceState" : "pushState"
+      try{
+        window.history[method]({ supportrdRemoteRoute: route }, "", meta.path)
+      }catch{}
+    }
+    function renderRemoteRoute(route = "home", options = {}){
+      const normalized = REMOTE_ROUTE_META[route] ? route : "home"
+      updateRemoteDocumentMeta(normalized)
+      if(options.openShell && shell.hidden){
+        openFloat({ preserveHome:true, preserveRoute:true })
+      }
+      if(normalized === "home"){
+        setFloatHome("Remote home is ready. Pick any route and the page fills smoothly underneath.")
+      }else if(normalized === "payments"){
+        footerPaymentsBtn?.click()
+      }else if(normalized === "blog"){
+        footerBlogBtn?.click()
+      }else if(normalized === "official"){
+        footerOfficialBtn?.click()
+      }else if(normalized === "solid"){
+        remotePurchaseSolidBtn?.click()
+      }else{
+        const targetId = {
+          diary: "floatSettingsBox",
+          studio: "floatBoardsBox",
+          settings: "floatProfileBox",
+          map: "floatDeviceBox",
+          faq: "floatLiveBox",
+          profile: "floatAssistantBox"
+        }[normalized]
+        if(targetId) openLaunchMenuSheet(targetId, REMOTE_ROUTE_META[normalized]?.title || "Remote", { skipRoute:true })
+      }
+      if(!options.skipHistory) syncRemoteHistory(normalized, !!options.replace)
+    }
+    function openImportantInfoSheet(mode = "privacy"){
+      const configs = {
+        privacy: {
+          title: "Privacy Page",
+          body: "SupportRD keeps your hair-help session premium, clear, and privacy-aware while the Remote stays up top.",
+          cta: "Privacy matters. Sensitive account/payment details stay in the right lanes while the app keeps the flow light."
+        },
+        about: {
+          title: "About Us",
+          body: "SupportRD is being shaped like a 2026 hair solution app: remote-first, premium, mobile-friendly, and useful in everyday life.",
+          cta: "This is the official story lane for the product, the mission, and the everyday success angle."
+        },
+        contact: {
+          title: "Contact Us",
+          body: "Reach SupportRD directly if you need help verifying an order, routing a custom request, or getting hair guidance.",
+          cta: "Direct contact: xxfigueroa1993@yahoo.com · 980-375-9197"
+        },
+        official: {
+          title: "Official SupportRD",
+          body: "Main official routes stay attached to the same Remote shell so you never feel kicked out of the app.",
+          cta: "About Us, Contact, Privacy, and official SupportRD directions all stay one layer away."
+        }
+      }
+      const config = configs[mode] || configs.privacy
+      openRemoteSheet(config.title, `
+        ${renderRemoteValueLane(["Value: trust + official clarity", "Energy: low-friction info lane", "Worth: keeps users safe and informed"])}
+        <div class="float-sheet-panel">
+          <h4>${config.title}</h4>
+          <p>${config.body}</p>
+          <div class="float-sheet-status">${config.cta}</div>
+        </div>
+        <div class="float-sheet-grid three">
+          <button class="btn" data-open-official>SupportRD Main Site</button>
+          <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
+          <button class="btn ghost" data-sheet-close>Close Page</button>
+        </div>
+      `, { message:`${config.title} is open inside the Remote stage.`, route:"official" })
+    }
     function setFloatHome(message){
-      closeRemoteSheet()
-      hideTGuide()
-      shell.classList.add("touch-home")
-      shell.classList.remove("panel-open")
-      shell.classList.add("touch-optimized")
-      remoteState.currentPanel = defaultFloatPanel
-      localStorage.setItem(floatPanelKey, defaultFloatPanel)
-      launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
-      qsa(".float-box").forEach(box => box.hidden = true)
-      if(message) setRemoteStatus(message)
-  }
+        closeRemoteSheet()
+        hideTGuide()
+        shell.classList.add("touch-home")
+        shell.classList.remove("panel-open")
+        shell.classList.add("touch-optimized")
+        remoteState.currentPanel = defaultFloatPanel
+        localStorage.setItem(floatPanelKey, defaultFloatPanel)
+        launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
+        qsa(".float-box").forEach(box => box.hidden = true)
+        if(remoteStageHome) remoteStageHome.hidden = false
+        if(message) setRemoteStatus(message)
+    }
 
   function revokePreview(){
     if(remoteState.previewUrl){
@@ -6918,12 +7190,16 @@ function setupFloatMode(){
     hideTGuide()
     if(!options.previewOnly){
       document.body.classList.remove("launch-active")
-      document.body.classList.remove("launch-preview-active")
+    document.body.classList.remove("launch-preview-active")
     }
     syncProfile()
     syncFloatSettings()
     renderThemeCards()
+    if(!options.preserveRoute){
+      syncRemoteHistory("home", window.location.pathname === "/remote" || window.location.pathname === "/remote/home")
+    }
     setFloatHome(options.preserveHome ? "" : "Remote Home is ready. Diary is highlighted, and every major route is one tap away.")
+    setRemoteAdsHidden(localStorage.getItem("supportrdRemoteAdsHidden") === "true")
     setDiaryGpsMode(false)
     if(!options.previewOnly){
       if(localStorage.getItem(floatPrimeSeenKey) !== "true") showPrimeMenu()
@@ -6934,6 +7210,10 @@ function setupFloatMode(){
     if(!options.previewOnly){
       try{ window.playSupportRDTheme?.() }catch{}
       if(!options.preserveHome) setRemoteStatus("SupportRD Personal Remote is open. Diary Mode is highlighted, and the whole app stays connected from here.")
+    }
+    const activeRoute = getRemoteRouteFromLocation()
+    if(activeRoute && activeRoute !== "home"){
+      setTimeout(()=>renderRemoteRoute(activeRoute, { skipHistory:true }), 0)
     }
   }
   function closeFloat(){
@@ -6949,6 +7229,7 @@ function setupFloatMode(){
   }
   openBtn?.addEventListener("click", openFloat)
   studioBtn?.addEventListener("click", openFloat)
+  qs("#openLiveArenaBtn")?.setAttribute("hidden", "hidden")
   closeBtn?.addEventListener("click", ()=>setFloatHome("Remote home is ready."))
   returnMainBtn?.addEventListener("click", ()=>setFloatHome("Remote home is open and ready."))
   remoteSheetBack?.addEventListener("click", ()=>closeRemoteSheet())
@@ -6961,8 +7242,8 @@ function setupFloatMode(){
   }))
   touchQuery?.addEventListener?.("change", ()=>setActiveTouchPanel(qsa(".float-launch-btn.active")[0]?.dataset.floatTarget || defaultFloatPanel))
   navHomeBtn?.addEventListener("click", ()=>setFloatHome("Remote home is ready. Diary is highlighted, and every major route is one tap away."))
-  navDiaryBtn?.addEventListener("click", ()=>setActiveTouchPanel(defaultFloatPanel, "Diary Mode is open and ready to help with your hair journey."))
-  navProfileBtn?.addEventListener("click", ()=>setActiveTouchPanel("floatAssistantBox", "Profile is open with your hair scan and social identity."))
+  navDiaryBtn?.addEventListener("click", ()=>renderRemoteRoute("diary"))
+  navProfileBtn?.addEventListener("click", ()=>renderRemoteRoute("profile"))
   navBoothBtn?.addEventListener("click", ()=>{
     localStorage.setItem("supportrdStudioReturnView", "remote")
     if(typeof window.openStudioMode === "function"){
@@ -6972,11 +7253,8 @@ function setupFloatMode(){
       setActiveTouchPanel("floatBoardsBox", "Studio Quick Panel is ready.")
     }
   })
-  navGpsBtn?.addEventListener("click", ()=>{
-    setActiveTouchPanel(defaultFloatPanel)
-    setDiaryGpsMode(true)
-  })
-  navSettingsBtn?.addEventListener("click", ()=>setActiveTouchPanel("floatProfileBox", "Settings are open."))
+  navGpsBtn?.addEventListener("click", ()=>renderRemoteRoute("map"))
+  navSettingsBtn?.addEventListener("click", ()=>renderRemoteRoute("settings"))
   navCloseBtn?.addEventListener("click", closeFloat)
   footerGuideBtn?.addEventListener("click", ()=>{
     if(remoteState.guideTimer && remoteState.guideKey === "Remote Guidance"){
@@ -7011,7 +7289,7 @@ function setupFloatMode(){
         <button class="btn ghost" data-sheet-close>Close Page</button>
       </div>
       <div class="float-sheet-copy">Change email, password, language, push preferences, and social links without leaving Remote.</div>
-    `, { message:"General Settings is open inside Remote." })
+    `, { message:"General Settings is open inside Remote.", route:"settings" })
   })
   footerPaymentsBtn?.addEventListener("click", ()=>{
     openRemoteSheet("Payments", `
@@ -7021,7 +7299,7 @@ function setupFloatMode(){
         <button class="btn ghost" data-sheet-close>Close Page</button>
       </div>
       <div class="float-sheet-copy">Payment routes stay clean, fast, and ready without leaving the Remote shell.</div>
-    `, { message:"Payments is open inside Remote." })
+    `, { message:"Payments is open inside Remote.", route:"payments" })
   })
   footerSubscribeBtn?.addEventListener("click", ()=>{
     openRemoteSheet("Subscribe In", `
@@ -7031,32 +7309,105 @@ function setupFloatMode(){
         <button class="btn ghost" data-sheet-close>Close Page</button>
       </div>
       <div class="float-sheet-copy">Subscribe In keeps newsletter, push, and social posting prep in one calm place.</div>
-    `, { message:"Subscribe In is open inside Remote." })
+    `, { message:"Subscribe In is open inside Remote.", route:"settings" })
   })
   footerBlogBtn?.addEventListener("click", ()=>{
-    openRemoteSheet("Main Blog", `
-      ${renderRemoteValueLane(["Value: SEO + authority", "Energy: steady content lane", "Worth: workday hair topics that keep SupportRD current"])}
-      <div class="float-sheet-grid">
-        <button class="btn" data-open-blog>Open Blog</button>
-        <button class="btn ghost" data-sheet-close>Close Page</button>
-      </div>
-      <div class="float-sheet-copy">The blog stays optional, calm, and easy to back out of in one tap.</div>
-    `, { message:"Main Blog is open inside Remote." })
-  })
-  footerOfficialBtn?.addEventListener("click", ()=>{
-    openRemoteSheet("Official Websites", `
-      ${renderRemoteValueLane(["Value: brand trust", "Energy: low-friction official routes", "Worth: contact, privacy, about, and storefront guidance"])}
-      <div class="float-sheet-grid three">
+      openRemoteSheet("Blog Party", buildBlogPartySheet(), { message:"Blog Party is open in a fuller stage for SEO and authority.", className:"remote-sheet-blog", route:"blog" })
+    })
+      footerOfficialBtn?.addEventListener("click", ()=>{
+        openRemoteSheet("Official Websites", `
+        ${renderRemoteValueLane(["Value: brand trust", "Energy: low-friction official routes", "Worth: contact, privacy, about, and storefront guidance"])}
+        <div class="float-sheet-grid three">
         <button class="btn" data-open-official>SupportRD Main Site</button>
         <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
         <button class="btn ghost" data-sheet-close>Close Page</button>
       </div>
       <div class="float-sheet-copy">Contact us directly: xxfigueroa1993@yahoo.com · 980-375-9197</div>
-      <div class="float-sheet-copy">Privacy, About Us, and official SupportRD routes stay attached to this same Remote shell feel.</div>
-      `, { message:"Official SupportRD routes are open inside Remote." })
-    })
-    guardianAriaBtn?.addEventListener("click", ()=>openGuardianSheet("Aria"))
-    guardianJakeBtn?.addEventListener("click", ()=>openGuardianSheet("Jake"))
+        <div class="float-sheet-copy">Privacy, About Us, and official SupportRD routes stay attached to this same Remote shell feel.</div>
+        `, { message:"Official SupportRD routes are open inside Remote.", route:"official" })
+      })
+      footerOfficialBottomBtn?.addEventListener("click", ()=>footerOfficialBtn?.click())
+      remoteAdsToggleBtn?.addEventListener("click", ()=>setRemoteAdsHidden(!document.body.classList.contains("remote-hide-ads")))
+      remoteAdsFocusBtn?.addEventListener("click", ()=>setRemoteAdsHidden(true))
+      remotePurchasePremiumBtn?.addEventListener("click", ()=>{
+        footerPaymentsBtn?.click()
+        setRemoteStatus("Premium and Pro checkout lanes are open.")
+      })
+        remotePurchaseStudioBtn?.addEventListener("click", ()=>{
+          openRemoteSheet("Purchase Studio Edition", `
+          ${renderRemoteValueLane(["Value: flagship creation room", "Energy: highest work lane", "Worth: deep editing, export, and masterpiece finishing"])}
+          <div class="float-sheet-grid">
+            <button class="btn" data-open-fastpay>Open Studio Edition Checkout</button>
+            <button class="btn ghost" data-open-panel="floatBoardsBox">Review Studio Quick Panel</button>
+          </div>
+          <div class="float-sheet-copy">Studio Edition is the fast handoff from the 3 quick motherboards into the deeper SupportRD build room.</div>
+        `, { message:"Studio Edition purchase lane is ready.", route:"payments" })
+      })
+      remotePurchaseThemesBtn?.addEventListener("click", ()=>{
+        openRemoteSheet("Purchase Themes & AI Upgrades", `
+          ${renderRemoteValueLane(["Value: occasion selling engine", "Energy: visual + assistant upgrades", "Worth: premium map themes and stronger Aria/Jake help"])}
+          <div class="float-sheet-grid">
+            <button class="btn" data-open-panel="floatDeviceBox">Open Map Change</button>
+            <button class="btn ghost" data-open-fastpay>Open Upgrade Checkout</button>
+          </div>
+          <div class="float-sheet-copy">Themes and AI upgrades make the Remote feel richer, more professional, and more specific to each session mood.</div>
+        `, { message:"Themes and AI upgrade lanes are open.", route:"payments" })
+      })
+        remotePurchaseSupportBtn?.addEventListener("click", ()=>{
+          openRemoteSheet("Show Support", `
+          ${renderRemoteValueLane(["Value: direct session support", "Energy: fast generosity lane", "Worth: tips, credit, donation, and shoutout support"])}
+          <div class="float-sheet-grid">
+            <button class="btn" data-open-fastpay>Tip / Credit SupportRD</button>
+            <button class="btn ghost" data-open-panel="floatLiveBox">Open FAQ Lounge</button>
+          </div>
+          <div class="float-sheet-copy">SupportRD can receive quick support, tip money, donation energy, and checkout credit without ever leaving the Remote shell.</div>
+          `, { message:"Support, donate, tip, and credit lanes are open.", route:"payments" })
+        })
+        remotePurchaseCustomBtn?.addEventListener("click", ()=>{
+          openRemoteSheet("Custom Order", `
+            ${renderRemoteValueLane(["Value: custom service intake", "Energy: high-touch order review", "Worth: clean email-based order verification"])}
+            <div class="float-sheet-grid">
+              <button class="btn" data-link-open="${LINKS.custom}">Open Custom Order Page</button>
+              <button class="btn ghost" data-sheet-close>Close Page</button>
+            </div>
+            <div class="float-sheet-copy">Use Custom Order when you need a real email-backed order request and want to separate true demand from fake messages.</div>
+          `, { message:"Custom order page is ready.", route:"payments" })
+        })
+        remotePurchaseOrdersBtn?.addEventListener("click", ()=>{
+          openRemoteSheet("My Orders / Cart", `
+            ${renderRemoteValueLane(["Value: checkout continuity", "Energy: low-friction buyer follow-up", "Worth: order review + cart recovery"])}
+            <div class="float-sheet-grid">
+              <button class="btn" data-link-open="${LINKS.myOrders}">Open My Orders</button>
+              <button class="btn ghost" data-link-open="${LINKS.cart}">Open Cart</button>
+            </div>
+            <div class="float-sheet-copy">This lane keeps real buyers moving without losing the premium SupportRD shell.</div>
+          `, { message:"Orders and cart lane is open.", route:"payments" })
+        })
+        remotePurchaseSolidBtn?.addEventListener("click", ()=>{
+          openRemoteSheet("Solid State Project", buildSolidStateSheet(), { message:"Solid State checklist is open.", className:"remote-sheet-blog", route:"solid" })
+        })
+        remoteEditsViewBotBtn?.addEventListener("click", ()=>{
+          hidePrimeMenu()
+          footerGuideBtn?.click()
+        })
+        remoteEditsFreePlayBtn?.addEventListener("click", ()=>{
+          hidePrimeMenu()
+          setFloatHome("Free Play Remote is open. Move through the six panels any time.")
+        })
+        remoteEditsReelBtn?.addEventListener("click", ()=>{
+          openRemoteSheet("6 Second Help Reel", buildQuickReelSheet(), { message:"The quick help reel is open inside Remote." })
+        })
+        remoteEditsDiaryBtn?.addEventListener("click", ()=>openLaunchMenuSheet("floatSettingsBox", "Diary Mode"))
+        remoteEditsStudioBtn?.addEventListener("click", ()=>openLaunchMenuSheet("floatBoardsBox", "Studio Quick Panel"))
+        remoteEditsSettingsBtn?.addEventListener("click", ()=>openLaunchMenuSheet("floatProfileBox", "General Settings"))
+        remoteInfoPrivacyBtn?.addEventListener("click", ()=>openImportantInfoSheet("privacy"))
+        remoteInfoAboutBtn?.addEventListener("click", ()=>openImportantInfoSheet("about"))
+        remoteInfoContactBtn?.addEventListener("click", ()=>openImportantInfoSheet("contact"))
+        remoteInfoOfficialBtn?.addEventListener("click", ()=>openImportantInfoSheet("official"))
+        remoteColorPrevBtn?.addEventListener("click", ()=>applyRemoteThemeByIndex(-1))
+        remoteColorNextBtn?.addEventListener("click", ()=>applyRemoteThemeByIndex(1))
+      guardianAriaBtn?.addEventListener("click", ()=>openGuardianSheet("Aria"))
+      guardianJakeBtn?.addEventListener("click", ()=>openGuardianSheet("Jake"))
   primeViewBotBtn?.addEventListener("click", ()=>{
     localStorage.setItem(floatPrimeSeenKey, "true")
     hidePrimeMenu()
@@ -7283,6 +7634,20 @@ function setupFloatMode(){
     openLaunchMenuSheet("floatAssistantBox", "Profile")
     setRemoteStatus("Social and WWW connections are managed in General Settings and reflected through this profile.")
   })
+  window.addEventListener("popstate", ()=>{
+    const route = getRemoteRouteFromLocation()
+    if(!route) return
+    renderRemoteRoute(route, { skipHistory:true, openShell:true })
+  })
+  const bootRoute = getRemoteRouteFromLocation()
+  if(bootRoute){
+    setTimeout(()=>renderRemoteRoute(bootRoute, { skipHistory:true, openShell:true }), 0)
+  }
+  window.SupportRDAriaLinks = {
+    chat: "/api/aria",
+    transcribe: "/api/aria/transcribe",
+    speech: "/api/aria/speech"
+  }
   qs("#floatAriaBtn")?.addEventListener("click", ()=>{
     openMiniWindow("Aria Remote", "Aria is holding the live post side in Float Mode. Tap again or double tap to talk.")
   })

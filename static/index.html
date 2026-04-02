@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260326b">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260401a">
 <script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
 </head>
 <body class="theme-aurora plus500 system-theme natural-pro resort-brochure competition-world">
@@ -319,7 +319,6 @@
         <div class="post-bottom">
           <button class="btn primary" id="openEmergencyAssist">Hair Emergency Assist</button>
           <button class="btn" id="postSocials">Post to All Socials</button>
-            <button class="btn" id="openLiveArenaBtn">Open Main Console</button>
           <button class="btn ghost" id="askAriaProductsAgain">What products again?</button>
           <select class="payment-dropdown" id="socialSelect">
             <option value="all">All Feeds</option>
@@ -339,237 +338,6 @@
           <select class="payment-dropdown" id="paySelect">
             <option>Custom Order Payment</option>
           </select>
-        </div>
-      </div>
-      <div class="live-arena-overlay" id="liveArenaOverlay" hidden>
-          <div class="live-arena-loader" id="liveArenaLoader" hidden>
-            <div class="live-loader-title">SupportRD Main Console</div>
-          <div class="live-loader-bar"><span id="liveArenaLoaderBar"></span></div>
-          <div class="system-sub" id="liveArenaLoaderText">Preparing stream route...</div>
-        </div>
-        <div class="live-arena-shell" id="liveArenaShell" hidden>
-          <div class="live-mission-quote" id="liveArenaMission">SupportRD is an innocent company out of Dominican Republic and United States. We deliver solutions to the health of your hair. Period. We are on a mission.</div>
-          <div class="live-top-tabs glass">
-            <button class="btn ghost" id="liveTabFeed">Main Feed</button>
-            <button class="btn ghost" id="liveTabBooth">Booth</button>
-            <button class="btn ghost" id="liveTabPayments">Payments</button>
-            <button class="btn ghost" id="liveTabGPS">GPS</button>
-            <button class="btn ghost" id="liveTabProfile">Profile</button>
-          </div>
-          <div class="live-console-layout">
-          <section class="reel-panel glass live-console-reel" id="liveConsoleReel">
-            <div class="panel-head">
-              <h3>SupportRD TV Reel</h3>
-              <button class="btn ghost" id="toggleLiveConsoleReel">Hide</button>
-            </div>
-            <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel Live"></iframe>
-          </section>
-          <div class="system-card glass live-middle-card">
-            <div class="live-panel-top">
-              <div class="live-panel-controls">
-                <div class="live-session-strip">
-                  <div class="live-session-chip" id="liveSessionRole">Visitor View</div>
-                  <div class="live-session-chip" id="liveSessionTimer">Session 00:00:00</div>
-                  <div class="live-session-chip" id="liveDayClock">Day 00:00</div>
-                </div>
-                <div class="live-panel-kicker">Main Console Controls</div>
-                <div class="live-view-mode-form glass">
-                  <div class="live-view-mode-copy">
-                    <strong>First Load Test</strong>
-                    <span>Switch between visitor view and owner profile so we can verify both sides cleanly.</span>
-                  </div>
-                  <div class="live-view-mode-actions">
-                    <button class="btn ghost" id="liveVisitorModeBtn">Load Visitor Screen</button>
-                    <button class="btn ghost" id="liveOwnerModeBtn">Load My Profile</button>
-                  </div>
-                </div>
-                <div class="live-panel-grid">
-                  <select id="liveArenaMode">
-                    <option value="solo">Personal Route · 1 minute load</option>
-                    <option value="street">Street Route · 2 minute load</option>
-                    <option value="crew">Shared Route · 2 minute load</option>
-                    <option value="field">Wide Route · 5 minute load</option>
-                    <option value="world">Open World Route · 5 minute load</option>
-                  </select>
-                  <select id="liveArenaDevice">
-                    <option value="camera">Device: Camera</option>
-                    <option value="usb-camera">Device: Camera + USB</option>
-                    <option value="drone">Device: 4K Drone</option>
-                  </select>
-                  <select id="liveArenaAudio">
-                    <option value="mic">Audio: Mic</option>
-                    <option value="headphones">Audio: Headphones</option>
-                    <option value="speakers">Audio: Speakers</option>
-                    <option value="boombox">Audio: Boombox</option>
-                  </select>
-                  <select id="liveArenaFilter">
-                    <option value="direct">Filter: Direct</option>
-                    <option value="sway">Filter: Live Sway</option>
-                    <option value="slow">Filter: Slow Motion</option>
-                    <option value="panorama">Filter: Panoramic</option>
-                  </select>
-                  <select id="liveArenaLens">
-                    <option value="laptop">Lens: Personal Laptop</option>
-                    <option value="group">Lens: Group Video</option>
-                    <option value="wilderness">Lens: Exploring in Wilderness</option>
-                    <option value="desktop">Lens: Personal Desktop</option>
-                    <option value="sport">Lens: Extreme Sport</option>
-                    <option value="work">Lens: Work Related</option>
-                  </select>
-                  <div class="live-panel-note">Lens is your default popup choice before posting the session. SponsorTag stays optional.</div>
-                </div>
-                <div class="live-panel-inline">
-                  <div class="live-sponsor-hq">
-                    <div class="system-title">SponsorTag HQ</div>
-                    <div class="system-sub" id="sponsorTagStatus">SponsorTag pending. New accounts can create one once: ^^AgentAnthony / ^^SupportRD / ^^anything.</div>
-                  </div>
-                  <button class="btn ghost" id="sponsorTagOpenBtn">Add SponsorTag</button>
-                </div>
-                <div class="live-center-actions live-center-actions-inline">
-                  <button class="btn ghost" id="liveArenaPostBtn">Post</button>
-                  <button class="btn ghost" id="liveArenaBreakBtn">Break</button>
-                  <button class="btn ghost" id="liveArenaFloodBtn">Flood Money Mode</button>
-                  <button class="btn ghost" id="liveArenaCameraAccessBtn">Camera</button>
-                  <button class="btn ghost" id="unlockViewsBtnLive">Theme / Map Change</button>
-                  <button class="btn ghost" id="liveArenaCheckBtn">Select Feeds</button>
-                </div>
-              </div>
-              <div class="live-panel-bots">
-                <div class="live-orb-row">
-                  <button class="live-orb-btn" id="liveArenaAriaBtn" aria-label="Open Aria help">
-                    <span class="live-orb live-orb-aria"></span>
-                    <span class="live-orb-label">Aria</span>
-                  </button>
-                  <button class="live-orb-btn" id="liveArenaJakeBtn" aria-label="Open Jake help">
-                    <span class="live-orb live-orb-jake"></span>
-                    <span class="live-orb-label">Jake</span>
-                  </button>
-                </div>
-                <div class="system-sub" id="liveArenaBotBadge">ARIA Ready</div>
-                <div class="system-sub" id="liveArenaBotStatus">Ref Bot watches for technical trouble, can halt a session cleanly, and keeps the stream mission moving if people naturally link up and try something new.</div>
-                <div class="system-actions">
-                  <button class="btn ghost" id="liveArenaRefBtn">Ref Bot</button>
-                  <button class="btn ghost" id="liveArenaCloseBtn">Close Console</button>
-                </div>
-              </div>
-            </div>
-            <div class="live-panel-center">
-              <div class="live-camera-card glass">
-                <div class="live-camera-flash" id="liveCameraFlash"></div>
-                <div class="live-center-banner">
-                  <button class="live-view-arrow" id="liveArenaViewPrev" aria-label="Previous center view">‹</button>
-                  <div class="live-center-brandstack">
-                    <div class="live-center-logo">LIVE</div>
-                    <div class="live-center-view-meta" id="liveArenaViewMeta">Main Session View</div>
-                  </div>
-                  <button class="live-view-arrow" id="liveArenaViewNext" aria-label="Next center view">›</button>
-                </div>
-                <div class="live-feed-identity" id="liveFeedIdentity">Feed running under ^^SupportRD</div>
-                <div class="live-presence-row">
-                  <div class="live-presence-chip" id="liveSessionOwner">Session owner: ^^SupportRD</div>
-                  <div class="live-presence-chip" id="liveVisitorAccess">Visitors can watch, send hearts, and support the feed.</div>
-                </div>
-                <div class="live-session-care glass" id="liveSessionCare">
-                  <div class="live-session-care-head">
-                    <strong id="liveSessionCareTitle">Welcome to the SupportRD server.</strong>
-                    <span id="liveSessionCareMode">Activity recording on</span>
-                  </div>
-                  <div class="system-sub" id="liveSessionCareStatus">Your current session is recognized, treated with care, and measured live so premium benefits can be checked honestly.</div>
-                  <div class="live-session-contact" id="liveSessionContact">Direct contact: xxfigueroa1993@yahoo.com · 980-375-9197</div>
-                  <div class="live-theme-quick-actions">
-                    <button class="btn ghost" id="liveThemeStandardBtn">Standard Layout</button>
-                    <button class="btn ghost" id="liveThemeOccasionBtn">Occasion Layout</button>
-                    <button class="btn ghost" id="liveThemePremiumBtn">Premium Layout</button>
-                    <button class="btn ghost" id="liveThemeMapBtn">Open Map Themes</button>
-                  </div>
-                </div>
-                <div class="live-stream-title" id="liveArenaPanelTitle">Main Stream</div>
-                <div class="live-compose-box glass">
-                  <label class="quick-title" for="liveArenaComposeInput">What's On Your Mind?</label>
-                  <textarea id="liveArenaComposeInput" placeholder="Post a clean update to social media from this session."></textarea>
-                  <div class="live-compose-actions">
-                    <button class="btn ghost" id="liveArenaComposeSendBtn">Send Original Post</button>
-                  </div>
-                </div>
-                <div class="live-stream-body" id="liveArenaMainStream">
-                  Stream intro, sponsor sweep, and purposeful content load here.
-                </div>
-                <div class="live-assistant-prompt glass" id="liveAssistantPrompt">
-                  <div class="live-assistant-title">How may I serve you?</div>
-                  <div class="system-sub" id="liveAssistantPromptText">Aria and Jake can walk you into the booth, point out payments, and keep the whole page feeling light while you respond.</div>
-                </div>
-                <div class="live-memory-billboard" id="liveMemoryBillboard">Transmit from far lane: family, religion, hobbies, education, interests, and life moments can pass by here like billboards while you stream.</div>
-                <div class="live-reward-card" id="liveRewardCard" hidden>
-                  <div class="live-reward-copy">
-                    <div class="live-reward-kicker">20+ Hosted Sessions</div>
-                    <div class="live-reward-title">Reward scene unlocked</div>
-                    <div class="live-reward-sub" id="liveRewardText">A normal car rides by with a clean bun look, international trip pending, and SupportRD keeps life moving.</div>
-                  </div>
-                </div>
-                <div class="system-sub" id="liveArenaFloodStatus">Flood mode unlocks at 1000 views and prepares you for a viral hit without dropping the session.</div>
-                <div class="system-sub" id="liveArenaViewerStatus">Host control mode active. Viewer links open in watch-only mode.</div>
-                <div class="live-center-actions live-viewer-pay">
-                  <button class="btn" id="liveArenaViewerPayBtn">Support This Live Feed</button>
-                  <button class="btn ghost" id="liveArenaSendHeartBtn">Send Heart</button>
-                  <div class="live-heart-count" id="liveHeartCount">0 hearts sent</div>
-                </div>
-                <div class="live-map-actions" id="liveMapActions"></div>
-              </div>
-              <div class="live-content-wizard glass" id="liveFeedPanel" hidden>
-                <div class="live-feed-panel-head">
-                  <div>
-                    <div class="live-stream-title">Select Feeds</div>
-                    <div class="system-sub" id="liveArenaContentStatus">Save your social media links, choose where this session posts, and keep tags ready for clean posting.</div>
-                  </div>
-                  <button class="btn ghost" id="closeLiveFeedPanel">X</button>
-                </div>
-                <div class="live-feed-settings-grid">
-                  <input id="liveFeedInstagram" class="input" placeholder="Instagram link">
-                  <input id="liveFeedTikTok" class="input" placeholder="TikTok link">
-                  <input id="liveFeedFacebook" class="input" placeholder="Facebook link">
-                  <input id="liveFeedYouTube" class="input" placeholder="YouTube link">
-                  <input id="liveFeedX" class="input" placeholder="X / Twitter link">
-                  <input id="liveFeedThreads" class="input" placeholder="Threads link">
-                </div>
-                <div id="liveFeedLinkSummary" class="live-feed-link-summary">Owner and visitor SupportRD links will appear here.</div>
-                <div class="feed-check-grid">
-                  <label><input type="checkbox" id="livePostIG"> Post to Instagram</label>
-                  <label><input type="checkbox" id="livePostTikTok"> Post to TikTok</label>
-                  <label><input type="checkbox" id="livePostFacebook"> Post to Facebook</label>
-                  <label><input type="checkbox" id="livePostYouTube"> Post to YouTube</label>
-                  <label><input type="checkbox" id="livePostX"> Post to X</label>
-                  <label><input type="checkbox" id="livePostThreads"> Post to Threads</label>
-                </div>
-                <div class="live-feed-actions">
-                  <button class="btn" id="saveLiveFeedPanel">Save Social Media Links</button>
-                </div>
-              </div>
-            </div>
-            <div class="live-panel-bottom">
-              <div class="live-panel-quick">
-                <div class="quick-block">
-                  <div class="quick-title">Profile / Group</div>
-                  <div class="system-sub" id="liveArenaProfileStatus">Profile of the streamer or group appears here.</div>
-                  <button class="btn ghost quick-open-btn" id="openLiveProfileBtn">Open Profile</button>
-                </div>
-                <div class="quick-block">
-                  <div class="quick-title">Sponsors / Audience / Quick Tips</div>
-                  <div class="system-sub" id="liveArenaSponsorStatus">Current sponsors, general audience, and quick stream tips appear here.</div>
-                  <button class="btn ghost quick-open-btn" id="openGiftGiverBtn">Gift Giver</button>
-                </div>
-                <div class="quick-block">
-                  <div class="quick-title">Glitch To Codex</div>
-                  <div class="system-sub" id="liveArenaGlitchStatus">If stream money or match issues appear, this lane gathers a clean developer handoff for Codex.</div>
-                  <button class="btn ghost quick-open-btn" id="openGlitchHelpBtn">Get Help</button>
-                </div>
-              </div>
-              <div class="live-aria-history glass">
-                <div class="quick-title">Last 3 Aria / Jake Lines</div>
-                <div class="system-sub" id="liveAriaHistory">No assistant lines yet. Aria and Jake will keep a light trail here as they help.</div>
-              </div>
-            </div>
-          </div>
-          </div>
         </div>
       </div>
       <div class="live-tag-modal" id="sponsorTagModal" hidden>
@@ -1788,11 +1556,17 @@
         <button class="btn ghost" id="floatModeOpenStudio">Open All Panels</button>
         <button class="btn" id="floatModeClose">Close Remote</button>
       </div>
-    </div>
-    <div class="remote-guardian-rail">
-      <button class="remote-guardian-btn" id="remoteGuardianAria">Aria · Live Advisor</button>
-      <button class="remote-guardian-btn" id="remoteGuardianJake">Jake · SupportRD Special</button>
-    </div>
+      </div>
+      <div class="remote-guardian-rail">
+        <button class="remote-guardian-btn" id="remoteGuardianAria">
+          <span class="remote-guardian-orb orb-aria" aria-hidden="true"></span>
+          <span class="remote-guardian-copy"><strong>Aria</strong><small>Women's voice · live hair advisor</small></span>
+        </button>
+        <button class="remote-guardian-btn" id="remoteGuardianJake">
+          <span class="remote-guardian-orb orb-jake" aria-hidden="true"></span>
+          <span class="remote-guardian-copy"><strong>Jake</strong><small>Men's voice · studio specialist</small></span>
+        </button>
+      </div>
     <div id="floatPrimeMenu" class="float-prime-menu glass" hidden aria-hidden="true">
       <div class="float-prime-copy">
         <div class="float-mode-kicker">SupportRD Prime</div>
@@ -1834,14 +1608,15 @@
         <div class="float-t-copy">SupportRD keeps Diary, Studio, Profile, FAQ, and Map Change connected in one Remote. Follow the arrows, ask Aria/Jake anything, and close this fast to resume.</div>
       </div>
     </div>
-    <div class="float-mode-footer glass">
-      <button class="btn ghost" id="floatFooterGuide">Live Guidance</button>
-      <button class="btn ghost" id="floatFooterSettings">General Settings</button>
-      <button class="btn ghost" id="floatFooterPayments">Payments</button>
-      <button class="btn ghost" id="floatFooterSubscribe">Subscribe In</button>
-      <button class="btn ghost" id="floatFooterBlog">Blog</button>
-    </div>
-    <div class="float-mode-launch glass">
+      <div class="float-mode-footer glass">
+        <button class="btn ghost" id="floatFooterGuide">Live Guidance</button>
+        <button class="btn ghost" id="floatFooterSettings">General Settings</button>
+        <button class="btn ghost" id="floatFooterPayments">Payments</button>
+        <button class="btn ghost" id="floatFooterSubscribe">Subscribe In</button>
+        <button class="btn ghost" id="floatFooterBlog">Blog</button>
+        <button class="btn ghost" id="floatFooterOfficial">Official Websites</button>
+      </div>
+      <div class="float-mode-launch glass">
       <button class="float-launch-btn" id="floatLaunchStudioQuick" data-float-target="floatBoardsBox">
         <span class="float-launch-letter">B</span>
         <span class="float-launch-copy"><strong>Studio Quick Panel</strong><small>Booth controls</small></span>
@@ -1862,34 +1637,91 @@
         <span class="float-launch-letter">F</span>
         <span class="float-launch-copy"><strong>FAQ Button</strong><small>Answers + reel</small></span>
       </button>
-      <button class="float-launch-btn" id="floatLaunchProfile" data-float-target="floatAssistantBox">
-        <span class="float-launch-letter">P</span>
-        <span class="float-launch-copy"><strong>Profile</strong><small>Scan + social card</small></span>
-      </button>
-    </div>
-    <div class="float-mode-nav glass">
-      <button class="btn ghost" id="floatNavHome">Remote Home</button>
-      <button class="btn ghost" id="floatNavDiary">Diary</button>
-      <button class="btn ghost" id="floatNavProfile">Profile</button>
-      <button class="btn ghost" id="floatNavBooth">Booth</button>
-      <button class="btn ghost" id="floatNavGPS">GPS</button>
-      <button class="btn ghost" id="floatNavSettings">Settings</button>
-      <button class="btn ghost" id="floatNavClose">Exit</button>
-    </div>
-      <div id="floatRemoteSheet" class="float-remote-sheet glass" hidden aria-hidden="true">
-        <div class="float-remote-sheet-head">
-          <div>
-            <div class="float-mode-kicker">SupportRD Remote Page</div>
-            <h3 id="floatRemoteSheetTitle">Remote Panel</h3>
-          </div>
-          <div class="float-remote-sheet-actions">
-            <button class="btn ghost" id="floatRemoteSheetBack">Back To Remote</button>
-            <button class="btn" id="floatRemoteSheetClose">Close</button>
-          </div>
-        </div>
-        <div id="floatRemoteSheetBody" class="float-remote-sheet-body"></div>
+        <button class="float-launch-btn" id="floatLaunchProfile" data-float-target="floatAssistantBox">
+          <span class="float-launch-letter">P</span>
+          <span class="float-launch-copy"><strong>Profile</strong><small>Scan + social card</small></span>
+        </button>
       </div>
-      <div class="float-mode-grid">
+      <div class="remote-display-strip">
+        <div class="remote-display-toolbar">
+          <button class="btn ghost" id="remoteAdsToggleBtn">Hide Ads</button>
+          <button class="btn ghost" id="remoteAdsFocusBtn">Focus On Hair Help</button>
+        </div>
+        <article class="remote-display-ad glass remote-display-ad-primary">
+          <div class="float-mode-kicker">SupportRD Premium Lane</div>
+          <h3>Purchase Premium, Studio, Themes, and AI upgrades without leaving the Remote.</h3>
+          <p>Fast money lanes stay in your face, while the Remote stays right up top guiding every move.</p>
+          <div class="remote-display-chips">
+            <span>Premium / Pro</span>
+            <span>Studio Edition</span>
+            <span>Themes + AI</span>
+            <span>Tip + Credit</span>
+          </div>
+        </article>
+        <article class="remote-display-ad glass remote-display-ad-secondary">
+          <div class="float-mode-kicker">SupportRD Workday Motion</div>
+          <h3>Keep the page current, polished, and moving with tips, contracts, and daily hair-ready content.</h3>
+          <p>The lower stage opens wide for every tab, so visitors can fall into the app without losing the Remote.</p>
+          <div class="remote-display-chips">
+            <span>Blog</span>
+            <span>Subscribe In</span>
+            <span>Payments</span>
+            <span>Official Pages</span>
+          </div>
+        </article>
+      </div>
+      <div class="remote-stage-shell">
+        <aside class="remote-color-tab remote-color-tab-left">
+          <button class="remote-side-arrow" id="remoteColorPrev" type="button" aria-label="Previous color theme">&#10094;</button>
+        </aside>
+        <section class="remote-content-stage glass" id="remoteContentStage">
+          <div class="remote-content-stage-home" id="remoteStageHome">
+            <div class="float-mode-kicker">SupportRD Remote Stage</div>
+            <h3>The Remote stays near the top. Everything you open fills the page from here down.</h3>
+            <p>Pick a button above and let the section expand through this lower stage while Privacy, About Us, and Contact Us stay ready in the sticky footer.</p>
+            <div class="remote-stage-grid">
+              <div class="remote-stage-card">
+                <strong>Premium Purchase Editor</strong>
+                <span>Sticky at all times with Premium, Studio Edition, Themes + AI, and Tip/Credit support.</span>
+              </div>
+              <div class="remote-stage-card">
+                <strong>Color + Theme Arrows</strong>
+                <span>Two side tabs rotate the Remote mood fast, while Map Change opens the deeper theme panel.</span>
+              </div>
+              <div class="remote-stage-card">
+                <strong>One Unified App</strong>
+                <span>Every section opens inside Remote so the page feels like one premium SupportRD operating system.</span>
+              </div>
+            </div>
+          </div>
+          <div id="floatRemoteSheet" class="float-remote-sheet glass" hidden aria-hidden="true">
+            <div class="float-remote-sheet-head">
+              <div>
+                <div class="float-mode-kicker">SupportRD Remote Page</div>
+                <h3 id="floatRemoteSheetTitle">Remote Panel</h3>
+              </div>
+              <div class="float-remote-sheet-actions">
+                <button class="btn ghost" id="floatRemoteSheetBack">Back To Remote</button>
+                <button class="btn" id="floatRemoteSheetClose">Close</button>
+              </div>
+            </div>
+            <div id="floatRemoteSheetBody" class="float-remote-sheet-body"></div>
+          </div>
+        </section>
+        <aside class="remote-color-tab remote-color-tab-right">
+          <button class="remote-side-arrow" id="remoteColorNext" type="button" aria-label="Next color theme">&#10095;</button>
+        </aside>
+      </div>
+      <div class="float-mode-nav glass">
+        <button class="btn ghost" id="floatNavHome">Remote Home</button>
+        <button class="btn ghost" id="floatNavDiary">Diary</button>
+        <button class="btn ghost" id="floatNavProfile">Profile</button>
+        <button class="btn ghost" id="floatNavBooth">Booth</button>
+        <button class="btn ghost" id="floatNavGPS">GPS</button>
+        <button class="btn ghost" id="floatNavSettings">Settings</button>
+        <button class="btn ghost" id="floatNavClose">Exit</button>
+      </div>
+        <div class="float-mode-grid">
     <section class="reel-panel glass float-reel-panel" id="reelPanel">
       <div class="panel-head">
         <h3>SupportRD TV Reel</h3>
@@ -1937,10 +1769,10 @@
           </div>
           <div class="float-box-copy" id="floatLiveStatus">Use this as the fast FAQ and live help lane. Record a quick piece, jump deeper into Studio, or get instant guidance without leaving Remote.</div>
         </div>
-      </section>
-      <div class="float-mode-sticky-bottom glass">
-        <button class="btn ghost" id="floatFooterOfficial">Official Websites</button>
-      </div>
+        </section>
+        <div class="float-mode-sticky-bottom glass">
+          <button class="btn ghost" id="floatFooterOfficialBottom">Official Websites</button>
+        </div>
       <section class="float-box glass" id="floatAssistantBox">
         <div class="float-box-head">
           <span>Profile</span>
@@ -2235,7 +2067,7 @@
     <div class="session-signal-row" id="sessionSignalIp">Local IPv4: hidden</div>
     <div class="session-signal-row" id="sessionSignalId">Session ID: loading...</div>
     <div class="session-signal-row" id="sessionSignalContinuity">Network steady · session preserved.</div>
-    <div class="session-signal-row" id="sessionSignalPage">Page: Main Console</div>
+    <div class="session-signal-row" id="sessionSignalPage">Page: Remote Home</div>
     <div class="session-signal-row" id="sessionSignalSupport">Hearts: 0 · Gifts: 0</div>
     <div class="session-signal-row" id="sessionSignalPrivacy">IP hidden for privacy. Scan to join instead of managing links.</div>
     <button class="btn ghost session-signal-join" id="sessionSignalJoinBtn">Scan to Join Session</button>
@@ -2300,10 +2132,36 @@
       <div class="remote-fastpay-meta" id="remoteProcessingStatus">Waiting for your tap to move into the 5-second secure handoff.</div>
     </div>
   </div>
-</div>
-
-<script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260326b"></script>
+  </div>
+  <div class="remote-purchase-editor glass" id="remotePurchaseEditor">
+    <div class="float-mode-kicker">SupportRD Shop</div>
+    <button class="btn" id="remotePurchasePremium">Purchase Premium / Pro</button>
+    <button class="btn ghost" id="remotePurchaseStudio">Purchase Studio Edition</button>
+    <button class="btn ghost" id="remotePurchaseThemes">Purchase Themes &amp; AI Upgrades</button>
+    <button class="btn ghost" id="remotePurchaseSupport">Show Support, Donate to the Poor, Tip and Credit</button>
+    <button class="btn ghost" id="remotePurchaseCustom">Custom Order</button>
+    <button class="btn ghost" id="remotePurchaseOrders">My Orders / Cart</button>
+    <button class="btn ghost" id="remotePurchaseSolid">Solid State Project</button>
+  </div>
+  <div class="remote-edits-menu glass" id="remoteEditsMenu">
+    <div class="float-mode-kicker">Sticky Edits Menu</div>
+    <button class="btn" id="remoteEditsViewBot">Run View Bot</button>
+    <button class="btn ghost" id="remoteEditsFreePlay">Free Play Remote</button>
+    <button class="btn ghost" id="remoteEditsReel">6 Second Help Reel</button>
+    <button class="btn ghost" id="remoteEditsDiary">Open Diary</button>
+    <button class="btn ghost" id="remoteEditsStudio">Open Studio Quick</button>
+    <button class="btn ghost" id="remoteEditsSettings">Open Settings</button>
+  </div>
+  <div class="remote-important-info glass" id="remoteImportantInfo">
+    <div class="float-mode-kicker">Sticky Important Info</div>
+    <button class="btn ghost" id="remoteInfoPrivacy">Privacy Page</button>
+    <button class="btn ghost" id="remoteInfoAbout">About Us</button>
+    <button class="btn ghost" id="remoteInfoContact">Contact Us</button>
+    <button class="btn ghost" id="remoteInfoOfficial">Official SupportRD</button>
+  </div>
+  
+  <script src="/static/auth.js"></script>
+<script src="/static/app.v20260320h.js?v=20260401a"></script>
 <footer class="launch-footer-links">
   <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
   <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>

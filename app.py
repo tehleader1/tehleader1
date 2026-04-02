@@ -4079,6 +4079,11 @@ except:
 def home():
     return send_from_directory("static", "index.html")
 
+@app.route("/remote")
+@app.route("/remote/<path:section>")
+def remote_shell(section=None):
+    return send_from_directory("static", "index.html")
+
 @app.route("/studio")
 def studio_home():
     return send_from_directory("static/studio", "index.html")
