@@ -3869,7 +3869,7 @@ body.remote-hide-ads .remote-display-strip{
   }
 .remote-guardian-orb.orb-aria{background:radial-gradient(circle at 35% 30%, rgba(161,255,238,.95), rgba(60,116,238,.7));}
 .remote-guardian-orb.orb-jake{background:radial-gradient(circle at 35% 30%, rgba(255,220,150,.95), rgba(71,94,189,.7));}
-.remote-guardian-copy{display:grid;gap:2px;text-align:left;}
+.remote-guardian-copy{display:grid;gap:2px;text-align:left;opacity:1;visibility:visible;transition:none;}
 .remote-guardian-copy strong{font-size:18px;line-height:1;}
 .remote-guardian-copy small{font-size:11px;letter-spacing:.04em;color:#d9ebff;text-transform:uppercase;}
 .remote-guardian-copy-solo{
@@ -3879,6 +3879,8 @@ body.remote-hide-ads .remote-display-strip{
   font-size:15px;
   letter-spacing:.03em;
   line-height:1.1;
+  opacity:1;
+  visibility:visible;
 }
 .float-remote-sheet.remote-sheet-blog{
     min-height:72vh;
@@ -4222,6 +4224,9 @@ body.remote-hide-ads .remote-display-strip{
   text-align:center;
   max-width:120px;
   text-shadow:0 4px 16px rgba(0,0,0,.28);
+  opacity:1;
+  visibility:visible;
+  transition:none;
 }
 .float-assistant-orb::after{
   content:"";
