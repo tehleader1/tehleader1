@@ -1448,7 +1448,7 @@ function openLinkModal(url, title){
     const notice = qs("#linkNotice")
     const external = qs("#linkExternal")
     if(!modal || !frame || !header) return
-    const isShopifyCommerceUrl = /^https:\/\/supportrd\.com\/(products\/|cart\b|account\/orders\b)/i.test(url || "")
+    const isShopifyCommerceUrl = /^https:\/\/(?:supportrd\.com|[a-z0-9-]+\.myshopify\.com)\/(products\/|cart\b|account\/orders\b|pages\/)/i.test(url || "")
     if(isShopifyCommerceUrl){
       window.location.href = url
       return
@@ -6319,12 +6319,12 @@ function setupFloatMode(){
         assistantMotionState.lastScrollBucket = bucket
         assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
       }
-      if(scrollDelta > 120 && !force){
+      if(scrollDelta > 18 && !force){
         const focusPoint = {
           x: direction === "down"
             ? (assistantMotionState.pointerBias === "left" ? window.innerWidth * 0.62 : window.innerWidth * 0.38)
             : (assistantMotionState.pointerBias === "right" ? window.innerWidth * 0.42 : window.innerWidth * 0.58),
-          y: direction === "down" ? window.innerHeight * 0.68 : window.innerHeight * 0.22
+          y: direction === "down" ? window.innerHeight * 0.72 : window.innerHeight * 0.2
         }
         moveAssistantPairToInteraction(focusPoint.x, focusPoint.y)
         return
@@ -6355,7 +6355,7 @@ function setupFloatMode(){
             ? { x: assistantMotionState.pointerBias === "left" ? 162 : window.innerWidth - 162, y: 154 }
             : { x: assistantMotionState.pointerBias === "left" ? 178 : window.innerWidth - 178, y: window.innerHeight * 0.44 }
         moveAssistantPairToInteraction(roamPoint.x, roamPoint.y)
-      }, 9000)
+      }, 4200)
     }
     function handleAssistantHover(node, assistantId){
       if(!node) return
@@ -7390,8 +7390,7 @@ function setupFloatMode(){
     }
     function buildProductPageSheet(){
       return `
-        ${renderRemoteValueLane(["Value: live product conversion lane", "Energy: quick browse + purchase handoff", "Worth: lets visitors shop without losing the Remote shell"])}
-        <div class="float-sheet-copy">This is the SupportRD product page inside Remote: premium plans, studio upgrades, support lanes, and custom order routing stay easy to reach while the controller remains visible at the top.</div>
+        ${renderRemoteValueLane(["Value: live product lane", "Energy: quick browse", "Worth: fast Shopify handoff"])}
         <div class="remote-product-grid-inline">
           ${REMOTE_PAY_PRODUCTS.map(product=>`
             <article class="remote-product-card glass">
@@ -7405,7 +7404,7 @@ function setupFloatMode(){
                 </div>
                 <p class="remote-product-short">${product.short}</p>
                 <div class="remote-product-actions">
-                  <button class="btn" data-link-open="${product.link}">Open Checkout</button>
+                  <button class="btn" data-product-shopify="${product.key}">Shopify Checkout</button>
                   <button class="btn ghost" data-open-fastpay>Quick Confirm</button>
                 </div>
               </div>
@@ -7965,6 +7964,11 @@ function setupFloatMode(){
       Array.from(remoteSheetBody.querySelectorAll("[data-link-open]")).forEach(btn=>btn.addEventListener("click", ()=>{
         const link = btn.getAttribute("data-link-open")
         if(link) openLinkModal(link, "SupportRD Link")
+      }))
+      Array.from(remoteSheetBody.querySelectorAll("[data-product-shopify]")).forEach(btn=>btn.addEventListener("click", ()=>{
+        const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.getAttribute("data-product-shopify"))
+        if(!product) return
+        launchShopifyCheckout(product, "Product Page")
       }))
       Array.from(remoteSheetBody.querySelectorAll("[data-diary-save]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const input = remoteSheetBody.querySelector("[data-diary-input]")
