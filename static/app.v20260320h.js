@@ -5365,6 +5365,8 @@ function setupLoginGate(){
   const logoutBtn = qs("#logoutBtn")
   const signupTop = qs("#signupTop")
   const closeGate = qs("#closeLoginGate")
+  const collapseGateBtn = qs("#collapseLoginGate")
+  const loginRoute = qs("#loginGateRoute")
   const loggedIn = localStorage.getItem("loggedIn") === "true"
   const first = Number(localStorage.getItem("firstSeen") || Date.now())
   if(!localStorage.getItem("firstSeen")) localStorage.setItem("firstSeen", String(first))
@@ -5398,7 +5400,11 @@ function setupLoginGate(){
     })
   }
   function syncLoginUi(isLogged){
-    if(gate){ gate.style.display = "none" }
+    if(gate){
+      gate.style.display = "none"
+      gate.classList.remove("collapsed")
+    }
+    if(loginRoute) loginRoute.hidden = true
     document.body.classList.toggle("login-active", false)
     if(loginBtn) loginBtn.style.display = isLogged ? "none" : "inline-flex"
     if(signupTop) signupTop.style.display = isLogged ? "none" : "inline-flex"
@@ -5432,18 +5438,44 @@ function setupLoginGate(){
       setAdminVisibility(!!d.admin)
     }
   }).catch(()=>{})
-  function openLoginGate(){
-    if(gate){ gate.style.display = "flex" }
+  function openLoginGateSticky(options = {}){
+    if(gate){
+      gate.style.display = "flex"
+      gate.classList.remove("collapsed")
+    }
+    if(loginRoute) loginRoute.hidden = false
+    document.body.classList.add("login-active")
+    const title = qs("#loginGate h2")
+    const body = gate?.querySelector("p")
+    if(title && options.title) title.textContent = options.title
+    if(body && options.message) body.textContent = options.message
+  }
+  function openLoginGate(){ openLoginGateSticky() }
+  function collapseLoginGate(){
+    if(gate){ gate.style.display = "flex"; gate.classList.add("collapsed") }
+    if(loginRoute) loginRoute.hidden = false
     document.body.classList.add("login-active")
   }
   function closeLoginGate(){
     if(gate){ gate.style.display = "none" }
+    if(loginRoute) loginRoute.hidden = true
     document.body.classList.remove("login-active")
   }
   if(loginBtn){ loginBtn.addEventListener("click", openLoginGate) }
   if(signupTop){ signupTop.addEventListener("click", ()=>{ window.location = "/login?mode=signup" }) }
   if(closeGate){ closeGate.addEventListener("click", closeLoginGate) }
+  if(collapseGateBtn){ collapseGateBtn.addEventListener("click", collapseLoginGate) }
+  if(loginRoute){ loginRoute.addEventListener("click", ()=>openLoginGateSticky()) }
   if(logoutBtn){ logoutBtn.addEventListener("click", ()=>{ window.location = "/logout" }) }
+  window.openLoginGateSticky = openLoginGateSticky
+  window.collapseLoginGate = collapseLoginGate
+  window.requireSupportRDLoginForAction = function(config = {}){
+    const title = config.title || "Sign In To Continue"
+    const message = config.message || "Sign in or create an account to continue."
+    if(localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()) return true
+    openLoginGateSticky({ title, message })
+    return false
+  }
 
   function completeLogin(){
     localStorage.setItem("loggedIn","true")
@@ -6379,6 +6411,20 @@ function setupFloatMode(){
     return `
       ${renderRemoteValueLane(["Value: public love + developer proof", "Energy: social leaderboard lane", "Worth: shows what people are loving about SupportRD right now"])}
       <div class="float-sheet-copy">Developer Feedback is the public love board inside FAQ Lounge. It keeps visible comments, real reactions, and the momentum around SupportRD in one place.</div>
+      <div class="float-sheet-panel">
+        <h4>Join The Feed</h4>
+        <p>Sign in is only required if you want to leave a public review, send a heart, or add a thumbs up here.</p>
+        <div class="float-sheet-grid three">
+          <button class="btn ghost" data-feedback-heart>Heart This Feed</button>
+          <button class="btn ghost" data-feedback-thumb>Thumbs Up</button>
+          <button class="btn ghost" data-feedback-login>Sign In To Comment</button>
+        </div>
+        <textarea class="input float-sheet-textarea" data-feedback-comment placeholder="Leave a real public review for the Developer Feedback wall."></textarea>
+        <div class="float-sheet-grid">
+          <button class="btn" data-feedback-submit>Post Public Review</button>
+          <button class="btn ghost" data-feedback-clear>Clear</button>
+        </div>
+      </div>
       <div class="float-sheet-grid three">
         <button class="btn" data-feedback-sort="hearts">Most Hearts</button>
         <button class="btn ghost" data-feedback-sort="thumbs">Most Thumbs Up</button>
@@ -6409,9 +6455,17 @@ function setupFloatMode(){
     `
   }
   function wireDeveloperFeedbackSheet(root = remoteSheetBody){
+    const feedbackReactionKey = "supportrdDeveloperFeedReactions"
+    const publicReviewKey = "supportrdDeveloperPublicReviews"
     const board = root?.querySelector("[data-feedback-board]")
     const reviewWall = root?.querySelector("[data-review-wall]")
     const familyWall = root?.querySelector("[data-family-wall]")
+    const feedbackComment = root?.querySelector("[data-feedback-comment]")
+    const feedbackSubmit = root?.querySelector("[data-feedback-submit]")
+    const feedbackClear = root?.querySelector("[data-feedback-clear]")
+    const feedbackHeart = root?.querySelector("[data-feedback-heart]")
+    const feedbackThumb = root?.querySelector("[data-feedback-thumb]")
+    const feedbackLogin = root?.querySelector("[data-feedback-login]")
     const familyName = root?.querySelector("[data-family-name]")
     const familyMedia = root?.querySelector("[data-family-media]")
     const familyMessage = root?.querySelector("[data-family-message]")
@@ -6421,15 +6475,55 @@ function setupFloatMode(){
     const status = root?.querySelector("[data-feedback-status]")
     const sortButtons = Array.from(root?.querySelectorAll("[data-feedback-sort]") || [])
     if(!board) return
+    const communitySignedIn = ()=>localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
+    const openCommunityLogin = (reason)=>{
+      const message = reason || "Sign in to react or leave a public review on Developer Feedback."
+      if(typeof window.openLoginGateSticky === "function"){
+        window.openLoginGateSticky({
+          title: "Sign In To Join Developer Feed",
+          message
+        })
+      }else{
+        qs("#loginBtn")?.click()
+      }
+      if(status) status.textContent = message
+    }
+    const loadFeedbackReactions = ()=>{
+      try{
+        const saved = JSON.parse(localStorage.getItem(feedbackReactionKey) || "{}")
+        return {
+          hearts: Number(saved.hearts || 0),
+          thumbs: Number(saved.thumbs || 0),
+          cash: Number(saved.cash || 0)
+        }
+      }catch{
+        return { hearts:0, thumbs:0, cash:0 }
+      }
+    }
+    const saveFeedbackReactions = (payload)=>{
+      try{ localStorage.setItem(feedbackReactionKey, JSON.stringify(payload)) }catch{}
+    }
+    const loadPublicReviews = ()=>{
+      try{
+        const saved = JSON.parse(localStorage.getItem(publicReviewKey) || "[]")
+        return Array.isArray(saved) ? saved : []
+      }catch{
+        return []
+      }
+    }
+    const savePublicReviews = (reviews)=>{
+      try{ localStorage.setItem(publicReviewKey, JSON.stringify(reviews)) }catch{}
+    }
     const localHearts = Number(localStorage.getItem("supportrdSessionHearts") || 0)
     const localCash = JSON.parse(localStorage.getItem("supportrdGiftHistory") || "[]").reduce((sum, item)=>sum + Number(item?.amount || 0), 0)
+    const feedbackReactions = loadFeedbackReactions()
     const entries = DEVELOPER_FEEDBACK_ENTRIES.concat([
       {
         name: "Live Session",
         title: "Current session support",
         comment: "This row reflects the current session energy inside your own SupportRD view.",
-        hearts: localHearts,
-        thumbs: Math.max(0, Math.round(localHearts / 2)),
+        hearts: localHearts + feedbackReactions.hearts,
+        thumbs: Math.max(0, Math.round(localHearts / 2)) + feedbackReactions.thumbs,
         cash: localCash
       }
     ])
@@ -6460,8 +6554,10 @@ function setupFloatMode(){
     }
     sortButtons.forEach(btn=>btn.addEventListener("click", ()=>render(btn.getAttribute("data-feedback-sort") || "hearts")))
     render("hearts")
-    if(reviewWall){
-      reviewWall.innerHTML = PUBLIC_REVIEW_ENTRIES.map(review=>`
+    const renderPublicReviews = ()=>{
+      if(!reviewWall) return
+      const mergedReviews = loadPublicReviews().concat(PUBLIC_REVIEW_ENTRIES)
+      reviewWall.innerHTML = mergedReviews.map(review=>`
         <article class="remote-review-card">
           <strong>${escapeRemoteHtml(review.title)}</strong>
           <div class="remote-review-author">${escapeRemoteHtml(review.author)}</div>
@@ -6469,6 +6565,56 @@ function setupFloatMode(){
         </article>
       `).join("")
     }
+    renderPublicReviews()
+    feedbackLogin?.addEventListener("click", ()=>openCommunityLogin("Sign in to leave a public review, heart the feed, or add a thumbs up."))
+    feedbackHeart?.addEventListener("click", ()=>{
+      if(!communitySignedIn()){
+        openCommunityLogin("Sign in first to leave a heart on Developer Feedback.")
+        return
+      }
+      const next = loadFeedbackReactions()
+      next.hearts += 1
+      saveFeedbackReactions(next)
+      render("hearts")
+      if(status) status.textContent = "Heart sent. Developer Feedback now reflects your signed-in support."
+    })
+    feedbackThumb?.addEventListener("click", ()=>{
+      if(!communitySignedIn()){
+        openCommunityLogin("Sign in first to leave a thumbs up on Developer Feedback.")
+        return
+      }
+      const next = loadFeedbackReactions()
+      next.thumbs += 1
+      saveFeedbackReactions(next)
+      render("thumbs")
+      if(status) status.textContent = "Thumbs up sent. Developer Feedback now reflects your signed-in support."
+    })
+    feedbackSubmit?.addEventListener("click", ()=>{
+      if(!communitySignedIn()){
+        openCommunityLogin("Sign in first to leave a public review on Developer Feedback.")
+        return
+      }
+      const text = (feedbackComment?.value || "").trim()
+      if(!text){
+        if(status) status.textContent = "Write the public review first, then post it."
+        return
+      }
+      const social = JSON.parse(localStorage.getItem("socialLinks") || "{}")
+      const reviews = loadPublicReviews()
+      reviews.unshift({
+        author: social.email || social.name || "Signed In SupportRD Viewer",
+        title: "New public review",
+        body: text
+      })
+      savePublicReviews(reviews.slice(0, 20))
+      if(feedbackComment) feedbackComment.value = ""
+      renderPublicReviews()
+      if(status) status.textContent = "Public review posted. The Developer Feedback wall now shows your signed-in comment."
+    })
+    feedbackClear?.addEventListener("click", ()=>{
+      if(feedbackComment) feedbackComment.value = ""
+      if(status) status.textContent = "Developer Feedback comment box cleared."
+    })
     const renderFamilyWall = ()=>{
       if(!familyWall) return
       const entries = loadFamilySpotlightEntries()
@@ -9023,7 +9169,16 @@ function setupRemoteFastPay(){
     }
     if(status) status.textContent = `${productTitle} is waiting for sign-in before checkout.`
     try{ openMiniWindow("SIGN IN BEFORE CHECKOUT", `${productTitle} is ready. Sign in first so SupportRD can preserve your premium and order history.`) }catch{}
-    setTimeout(()=>qs("#loginBtn")?.click(), 160)
+    setTimeout(()=>{
+      if(typeof window.openLoginGateSticky === "function"){
+        window.openLoginGateSticky({
+          title: "Sign In To Purchase",
+          message: `Sign in or create an account to finish buying ${productTitle}. SupportRD will bring you straight back to checkout.`
+        })
+      }else{
+        qs("#loginBtn")?.click()
+      }
+    }, 160)
   }
 
   async function resumePendingPurchaseIntent(){
@@ -9836,7 +9991,14 @@ function renderApp(name){
     qsa(".product-buy-btn").forEach(btn=>{
       btn.addEventListener("click", ()=>{
         const product = digitalProducts.find(p=>p.id === (btn.dataset.product || ""))
-        if(product){ openLinkModal(product.link, product.title) }
+        if(product){
+          const allowed = window.requireSupportRDLoginForAction?.({
+            title: "Sign In To Purchase",
+            message: `Sign in or create an account to purchase ${product.title}. SupportRD keeps premium access, orders, and upgrades tied to the right account.`
+          })
+          if(allowed === false) return
+          openLinkModal(product.link, product.title)
+        }
       })
     })
     const closePreview = qs("#closeProductPreview")
@@ -9849,7 +10011,14 @@ function renderApp(name){
     const previewBuy = qs("#previewBuyNow")
     if(previewBuy){
       previewBuy.addEventListener("click", ()=>{
-        if(activeProduct){ openLinkModal(activeProduct.link, activeProduct.title) }
+        if(activeProduct){
+          const allowed = window.requireSupportRDLoginForAction?.({
+            title: "Sign In To Purchase",
+            message: `Sign in or create an account to purchase ${activeProduct.title}. SupportRD keeps premium access, orders, and upgrades tied to the right account.`
+          })
+          if(allowed === false) return
+          openLinkModal(activeProduct.link, activeProduct.title)
+        }
       })
     }
     qs("#openCustomShop").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
