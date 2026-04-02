@@ -5945,8 +5945,8 @@ function setupFloatMode(){
     }
   }
   function applyAssistantDemoScene(route = "home", overrideStatus){
-    const sceneKey = REMOTE_ASSISTANT_SCENES[route] ? route : "home"
-    const scene = REMOTE_ASSISTANT_SCENES[sceneKey]
+      const sceneKey = REMOTE_ASSISTANT_SCENES[route] ? route : "home"
+      const scene = REMOTE_ASSISTANT_SCENES[sceneKey]
     ;[
       [assistantAriaOrb, scene.aria],
       [assistantJakeOrb, scene.jake],
@@ -5961,11 +5961,113 @@ function setupFloatMode(){
       node.style.setProperty("--demo-bob-duration", motion.speed)
     })
     remoteState.currentRoute = sceneKey
-    if(assistantStatus && overrideStatus !== false){
-      assistantStatus.textContent = overrideStatus || scene.status
+      if(assistantStatus && overrideStatus !== false){
+        assistantStatus.textContent = overrideStatus || scene.status
+      }
     }
-  }
-  const REMOTE_ROUTE_META = {
+    const REMOTE_ASSISTANT_HELP = {
+      home: {
+        aria: { focus: "#floatModeShell .float-main-hero", greeting: "Aria is online. Tell me the hair problem and I will guide this page around it.", listening: "Aria is listening now. Speak naturally and I will transcribe everything here." },
+        projake: { focus: "#floatModeShell .float-main-hero", greeting: "Jake is online. Tell me what part of the work or hair support needs help.", listening: "Jake is listening now. Speak your studio or hair request." }
+      },
+      diary: {
+        aria: { focus: "#floatDiaryPanels", greeting: "Aria moved into Diary Mode. Tell me what is on your mind and what your hair is dealing with.", listening: "Diary listening is live now. Say the note and the hair details together." },
+        projake: { focus: "#floatDiaryPanels", greeting: "Jake is covering Diary Mode with you. Tell me the note and if work or studio stress is part of it.", listening: "Jake is listening now. Say the diary note and I will keep the workflow calm." }
+      },
+      studio: {
+        aria: { focus: "#floatQuickEditStatus", greeting: "Aria stepped into Studio Quick Panel. Tell me the hair focus while you record or edit.", listening: "Studio listening is live. Say the hair problem or recording issue now." },
+        projake: { focus: "#floatQuickEditStatus", greeting: "Jake jumped into the studio lane. Tell me what board, cut, or recording move you need.", listening: "Jake is listening now. Speak the studio command and I will help route it." }
+      },
+      settings: {
+        aria: { focus: "#floatSettingsBox", greeting: "Aria moved into Configuration. Tell me which setting you want help changing.", listening: "Configuration listening is live. Say the setting and the change you want." },
+        projake: { focus: "#floatSettingsBox", greeting: "Jake is in Configuration now. Tell me the system change you want to make.", listening: "Jake is listening for the settings move now." }
+      },
+      map: {
+        aria: { focus: "#floatThemeCardRail", greeting: "Aria moved to Map Change. Tell me the mood, route, or theme you want right now.", listening: "Map listening is live. Say the feeling or destination and I will guide the change." },
+        projake: { focus: "#floatThemeCardRail", greeting: "Jake moved to the map lane. Tell me the theme or movement route you want on this page.", listening: "Jake is listening now for the map and theme change." }
+      },
+      faq: {
+        aria: { focus: "#floatFaqReelHost", greeting: "Aria moved into FAQ Lounge. Tell me the help topic or hair question you want answered.", listening: "FAQ listening is live. Ask the hair question naturally." },
+        projake: { focus: "#floatFaqReelHost", greeting: "Jake is covering FAQ Lounge. Tell me what answer, reel, or studio topic you want.", listening: "Jake is listening now. Ask the question and I will route the answer." }
+      },
+      profile: {
+        aria: { focus: "#floatProfileBox", greeting: "Aria moved into Profile. Tell me what image, quality, or achievement you want to strengthen.", listening: "Profile listening is live. Say what you want the page to present about you." },
+        projake: { focus: "#floatProfileBox", greeting: "Jake moved into Profile. Tell me what identity or studio quality should show here.", listening: "Jake is listening now for your profile adjustments." }
+      },
+      payments: {
+        aria: { focus: "#remotePurchaseEditor", greeting: "Aria moved into the payment lane. Tell me what product or premium route you want help with.", listening: "Payment listening is live now. Say the product name or purchase question." },
+        projake: { focus: "#remotePurchaseEditor", greeting: "Jake moved into the payment lane. Tell me what studio or premium purchase needs routing.", listening: "Jake is listening now for the payment route." }
+      }
+    }
+    let activeAssistantTimers = []
+    function clearAssistantSequence(){
+      activeAssistantTimers.forEach((timer)=>clearTimeout(timer))
+      activeAssistantTimers = []
+      ;[assistantAriaOrb, assistantJakeOrb].forEach((orb)=>{
+        if(!orb) return
+        orb.classList.remove("demo-active")
+        orb.style.removeProperty("--demo-float-left")
+        orb.style.removeProperty("--demo-float-top")
+      })
+    }
+    function moveAssistantOrbToFocus(orb, selector){
+      if(!orb) return
+      const target = selector ? qs(selector) : null
+      const rect = target?.getBoundingClientRect?.()
+      const width = Math.min(window.innerWidth * 0.24, 170)
+      const x = rect ? rect.left + (rect.width / 2) - (width / 2) : (window.innerWidth / 2) - (width / 2)
+      const y = rect ? Math.max(92, rect.top + Math.min(rect.height * 0.18, 120)) : Math.max(110, window.innerHeight * 0.24)
+      orb.style.setProperty("--demo-float-left", `${Math.max(16, Math.min(window.innerWidth - width - 16, x))}px`)
+      orb.style.setProperty("--demo-float-top", `${Math.max(86, Math.min(window.innerHeight - width - 24, y))}px`)
+      orb.classList.add("demo-active")
+    }
+    function getAssistantHelp(route, assistantId){
+      const sceneKey = REMOTE_ASSISTANT_HELP[route] ? route : "home"
+      return REMOTE_ASSISTANT_HELP[sceneKey][assistantId] || REMOTE_ASSISTANT_HELP.home[assistantId]
+    }
+    function triggerAssistantOrb(assistantId){
+      const route = remoteState.currentRoute || "home"
+      const orb = assistantId === "projake" ? assistantJakeOrb : assistantAriaOrb
+      const help = getAssistantHelp(route, assistantId)
+      const assistantName = assistantId === "projake" ? "Jake" : "Aria"
+      const transcriptEl = qs("#ariaTranscript")
+      clearAssistantSequence()
+      state.activeAssistant = assistantId
+      applyAssistantUI(true)
+      syncProfile()
+      interruptPageAudio()
+      applyAssistantDemoScene(route, help.greeting)
+      moveAssistantOrbToFocus(orb, help.focus)
+      playAssistantCue("intro")
+      if(transcriptEl) transcriptEl.textContent = help.greeting
+      showSpeechPopup(assistantName, help.greeting)
+      activeAssistantTimers.push(setTimeout(()=>{
+        if(transcriptEl) transcriptEl.textContent = help.listening
+        showSpeechPopup(assistantName, help.listening)
+      }, 900))
+      activeAssistantTimers.push(setTimeout(()=>{
+        if(typeof window.startAriaListening === "function"){
+          window.startAriaListening()
+        }else if(typeof startOpenAIListening === "function"){
+          startOpenAIListening()
+        }else{
+          playAssistantCue("response")
+          const fallback = `${assistantName} is ready, but this device needs mic support enabled before live listening can begin.`
+          if(transcriptEl) transcriptEl.textContent = fallback
+          showSpeechPopup(assistantName, fallback)
+          activeAssistantTimers.push(setTimeout(()=>{
+            playAssistantCue("close")
+            releasePageAudio()
+            clearAssistantSequence()
+          }, 1600))
+        }
+      }, 3000))
+      activeAssistantTimers.push(setTimeout(()=>{
+        releasePageAudio()
+        clearAssistantSequence()
+      }, 12000))
+    }
+    const REMOTE_ROUTE_META = {
     home: { path: "/remote", title: "SupportRD Remote", description: "SupportRD Remote keeps hair help, profile, studio, maps, and support together in one premium shell." },
     diary: { path: "/remote/diary", title: "SupportRD Diary", description: "Diary Mode is the emotional center for posting, guidance, booth routing, map routing, and payment handoff." },
     studio: { path: "/remote/studio", title: "SupportRD Studio Quick", description: "Studio Quick Panel gives three fast motherboards for recording, importing, trimming, and exporting audio or video." },
@@ -8307,18 +8409,10 @@ function setupFloatMode(){
       window.openWorldMapPanel()
     }
   })
-  qs("#floatAriaBtn")?.addEventListener("click", ()=>{
-    state.activeAssistant = "aria"
-    applyAssistantUI(true)
-    applyAssistantDemoScene(remoteState.currentRoute || "home", `${buildLifeReflection("aria")} Aria is now holding the general post side.`)
-    syncProfile()
-  })
-  qs("#floatJakeBtn")?.addEventListener("click", ()=>{
-    state.activeAssistant = "projake"
-    applyAssistantUI(true)
-    applyAssistantDemoScene(remoteState.currentRoute || "home", `${buildLifeReflection("projake")} Jake is now holding the studio side.`)
-    syncProfile()
-  })
+    if(assistantAriaOrb) assistantAriaOrb.onclick = ()=>triggerAssistantOrb("aria")
+    if(assistantJakeOrb) assistantJakeOrb.onclick = ()=>triggerAssistantOrb("projake")
+    if(guardianAriaBtn) guardianAriaBtn.onclick = ()=>triggerAssistantOrb("aria")
+    if(guardianJakeBtn) guardianJakeBtn.onclick = ()=>triggerAssistantOrb("projake")
   profileUploadInput?.addEventListener("change", ()=>{
     const file = profileUploadInput.files?.[0]
     if(file) readAvatarFile(file)
@@ -8520,12 +8614,6 @@ function setupFloatMode(){
     transcribe: "/api/aria/transcribe",
     speech: "/api/aria/speech"
   }
-  qs("#floatAriaBtn")?.addEventListener("click", ()=>{
-    applyAssistantDemoScene(remoteState.currentRoute || "home", `${buildLifeReflection("aria")} Aria is tracking this page and is ready if you want to talk.`)
-  })
-  qs("#floatJakeBtn")?.addEventListener("click", ()=>{
-    applyAssistantDemoScene(remoteState.currentRoute || "home", `${buildLifeReflection("projake")} Jake is tracking this page and is ready for the studio lane.`)
-  })
   qs("#floatRunProfileScanBtn")?.addEventListener("click", ()=>{
     const lastLines = (state.ariaHistory || []).slice(-2)
     const summary = [

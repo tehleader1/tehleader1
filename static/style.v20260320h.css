@@ -4093,6 +4093,15 @@ body.remote-hide-ads .remote-display-strip{
   transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt));
   transition:transform .55s ease, box-shadow .55s ease, filter .55s ease;
 }
+.float-assistant-orb.demo-active{
+  position:fixed;
+  left:var(--demo-float-left, calc(50vw - 84px));
+  top:var(--demo-float-top, 22vh);
+  width:min(170px, 34vw);
+  z-index:90;
+  box-shadow:0 30px 70px rgba(8,17,34,.34);
+  animation:remoteAssistantDrift var(--demo-bob-duration) ease-in-out infinite, remoteOrbPulse 1.7s ease-in-out infinite;
+}
 .float-assistant-orb.aria{background:radial-gradient(circle at 30% 25%, rgba(102,255,231,.75), rgba(34,81,156,.88));}
 .float-assistant-orb.jake{background:radial-gradient(circle at 30% 25%, rgba(255,203,103,.72), rgba(40,51,112,.92));}
 .float-assistant-orb[data-demo-scene="map"],
