@@ -64,6 +64,10 @@ def resolve_shopify_storefront_domain():
     # redirects so checkout/product routes don't loop back into the app's own
     # custom domain.
     store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    if store and store.endswith("supportrd.com"):
+        # SupportRD's live checkout needs the Shopify storefront host, not the
+        # app/custom domain that serves this Flask site.
+        return "supportdr-com.myshopify.com"
     if store:
         return store
     return ""
