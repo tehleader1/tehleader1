@@ -5925,7 +5925,8 @@ function setupFloatMode(){
     lastInteraction: null,
     lastScrollBucket: -1,
     lastScrollY: Math.max(window.scrollY || 0, 0),
-    driftPhase: 0
+    driftPhase: 0,
+    roamTimer: null
   }
   const REMOTE_ASSISTANT_SCENES = {
     home: {
@@ -6144,6 +6145,16 @@ function setupFloatMode(){
       }
       applyAssistantPairLayout(buildAssistantScrollLayout(progress, direction))
     }
+    function startAssistantRoam(){
+      if(assistantMotionState.roamTimer) clearInterval(assistantMotionState.roamTimer)
+      assistantMotionState.roamTimer = setInterval(()=>{
+        if(!shell || shell.hidden) return
+        const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < 2600)
+        if(recentInteraction) return
+        assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
+        syncAssistantViewportMotion(true)
+      }, 12000)
+    }
     function handleAssistantHover(node, assistantId){
       if(!node) return
       node.addEventListener("mouseenter", ()=>{
@@ -6229,6 +6240,7 @@ function setupFloatMode(){
     window.addEventListener("scroll", ()=>syncAssistantViewportMotion(), { passive:true })
     window.addEventListener("resize", ()=>syncAssistantViewportMotion(true))
     setTimeout(()=>syncAssistantViewportMotion(true), 220)
+    startAssistantRoam()
     const REMOTE_ROUTE_META = {
     home: { path: "/remote", title: "SupportRD Remote", description: "SupportRD Remote keeps hair help, profile, studio, maps, and support together in one premium shell." },
     diary: { path: "/remote/diary", title: "SupportRD Diary", description: "Diary Mode is the emotional center for posting, guidance, booth routing, map routing, and payment handoff." },

@@ -63,6 +63,7 @@ def resolve_shopify_storefront_domain():
     store = normalize_shopify_store_domain(SHOPIFY_STORE)
     if not store:
         return ""
+    app_host = normalize_shopify_store_domain(AUTH0_LOGOUT_URL)
     if SHOPIFY_ADMIN_TOKEN:
         try:
             r = requests.get(
@@ -74,7 +75,13 @@ def resolve_shopify_storefront_domain():
                 shop = (r.json() or {}).get("shop") or {}
                 primary_domain = (shop.get("primary_domain") or {}).get("host") or ""
                 myshopify_domain = shop.get("myshopify_domain") or ""
-                resolved = normalize_shopify_store_domain(primary_domain or myshopify_domain)
+                resolved_primary = normalize_shopify_store_domain(primary_domain)
+                resolved_myshopify = normalize_shopify_store_domain(myshopify_domain)
+                if resolved_primary and app_host and resolved_primary == app_host and resolved_myshopify:
+                    return resolved_myshopify
+                if resolved_primary and resolved_primary.endswith("supportrd.com") and resolved_myshopify:
+                    return resolved_myshopify
+                resolved = resolved_primary or resolved_myshopify
                 if resolved:
                     return resolved
         except Exception:
