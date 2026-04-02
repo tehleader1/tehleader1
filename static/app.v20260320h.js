@@ -6360,7 +6360,7 @@ function setupFloatMode(){
     function handleAssistantHover(node, assistantId){
       if(!node) return
       node.addEventListener("mouseenter", ()=>{
-        const name = assistantId === "projake" ? "Jake" : "Aria"
+        const name = assistantId === "projake" ? "Jake Studio Specialist" : "Aria Hair Advisor"
         const quickLine = assistantId === "projake" ? "Hi, Jake here." : "Hello, Aria here."
         node.classList.add("hover-wave")
         const rect = node.getBoundingClientRect()
@@ -6471,7 +6471,7 @@ function setupFloatMode(){
       const route = remoteState.currentRoute || "home"
       const orb = assistantId === "projake" ? assistantJakeOrb : assistantAriaOrb
       const help = getAssistantHelp(route, assistantId)
-      const assistantName = assistantId === "projake" ? "Jake" : "Aria"
+      const assistantName = assistantId === "projake" ? "Jake Studio Specialist" : "Aria Hair Advisor"
       const transcriptEl = qs("#ariaTranscript")
       clearAssistantSequence()
       state.activeAssistant = assistantId
