@@ -5896,6 +5896,28 @@ function setupFloatMode(){
       prompt: "I want a smooth sleek look. Tell me how Laciador Crece should be used, what moisture support it needs, and how to protect the hair."
     }
   }
+  const FAQ_REEL_TOPICS = {
+    growth: {
+      label: "Hair Growth",
+      clips: ["/static/videos/reel-1.mp4", "/static/videos/reel-2.mp4", "/static/videos/sample-10s.mp4"],
+      note: "Growth lane with quick 10-second hair clips."
+    },
+    care: {
+      label: "Hair Care",
+      clips: ["/static/videos/reel-3.mp4", "/static/videos/reel-2.mp4", "/static/videos/sample-10s.mp4"],
+      note: "Care lane with shine, moisture, and routine clips."
+    },
+    curly: {
+      label: "Curly Hair",
+      clips: ["/static/videos/reel-4.mp4", "/static/videos/reel-1.mp4", "/static/videos/sample-10s.mp4"],
+      note: "Curly lane with bounce and curl-shape clips."
+    },
+    scalp: {
+      label: "Scalp Care",
+      clips: ["/static/videos/reel-6.mp4", "/static/videos/reel-3.mp4", "/static/videos/sample-10s.mp4"],
+      note: "Scalp lane with cleanse and reset clips."
+    }
+  }
   function escapeRemoteHtml(value){
     return String(value ?? "").replace(/[&<>"]/g, char => ({
       "&": "&amp;",
@@ -5948,6 +5970,63 @@ function setupFloatMode(){
         render()
       }
     }
+  }
+  function wireFaqHairReel(root = remoteSheetBody){
+    const player = root?.querySelector("[data-faq-reel-player]")
+    const status = root?.querySelector("[data-faq-reel-status]")
+    const note = root?.querySelector("[data-faq-reel-note]")
+    const topicButtons = Array.from(root?.querySelectorAll("[data-faq-topic]") || [])
+    const nextBtn = root?.querySelector("[data-faq-next]")
+    if(!player || !topicButtons.length) return
+    let topic = "growth"
+    let cursor = -1
+    let timer = null
+    const setStatus = (msg)=>{ if(status) status.textContent = msg }
+    const renderTopic = ()=>{
+      topicButtons.forEach(btn=>btn.classList.toggle("active", btn.getAttribute("data-faq-topic") === topic))
+      const config = FAQ_REEL_TOPICS[topic] || FAQ_REEL_TOPICS.growth
+      if(note) note.textContent = config.note
+    }
+    const playNext = ()=>{
+      const config = FAQ_REEL_TOPICS[topic] || FAQ_REEL_TOPICS.growth
+      const clips = config.clips || []
+      if(!clips.length) return
+      cursor = (cursor + 1) % clips.length
+      const clip = clips[cursor]
+      player.src = clip
+      player.load()
+      player.play().catch(()=>setStatus("Tap play to start the hair reel."))
+      renderTopic()
+      setStatus(`${config.label} clip ${cursor + 1} is playing now.`)
+    }
+    const startAuto = ()=>{
+      clearInterval(timer)
+      timer = setInterval(playNext, 10000)
+    }
+    topicButtons.forEach(btn=>btn.addEventListener("click", ()=>{
+      topic = btn.getAttribute("data-faq-topic") || "growth"
+      cursor = -1
+      playNext()
+      startAuto()
+    }))
+    nextBtn?.addEventListener("click", ()=>{
+      playNext()
+      startAuto()
+    })
+    player.addEventListener("loadedmetadata", ()=>{
+      try{
+        if(player.duration && player.duration > 10){
+          const maxStart = Math.max(0, Math.floor(player.duration - 10))
+          player.currentTime = Math.floor(Math.random() * maxStart)
+        }
+      }catch{}
+    })
+    player.addEventListener("error", ()=>{
+      setStatus("Clip issue detected. Loading the next hair clip.")
+      setTimeout(playNext, 250)
+    })
+    playNext()
+    startAuto()
   }
   async function fetchShopifyConnectorHealth(){
     try{
@@ -6455,7 +6534,19 @@ function setupFloatMode(){
         <button class="btn ghost" data-open-blog>Open Blog</button>
       </div>
       <div class="float-faq-reel-host" data-sheet-faq-reel hidden>
-        <iframe class="float-faq-reel-frame" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel in FAQ sheet"></iframe>
+        <div class="float-sheet-grid">
+          <button class="btn ghost active" data-faq-topic="growth">Hair Growth</button>
+          <button class="btn ghost" data-faq-topic="care">Hair Care</button>
+          <button class="btn ghost" data-faq-topic="curly">Curly Hair</button>
+          <button class="btn ghost" data-faq-topic="scalp">Scalp Care</button>
+        </div>
+        <video class="float-faq-reel-frame" data-faq-reel-player autoplay muted playsinline controls></video>
+        <div class="float-sheet-status" data-faq-reel-status>Loading 10-second hair clips...</div>
+        <div class="float-sheet-copy" data-faq-reel-note>Growth lane with quick 10-second hair clips.</div>
+        <div class="float-sheet-grid">
+          <button class="btn ghost" data-faq-next>Next Clip</button>
+          <button class="btn ghost" data-link-open="https://www.tiktok.com/tag/hair">Open TikTok Hair Topic</button>
+        </div>
       </div>
       <div class="float-sheet-status">Aria and Jake stay close here so people can get help without losing their place.</div>
     `
@@ -6729,6 +6820,7 @@ function setupFloatMode(){
       if(!reelHost) return
       const willShow = reelHost.hidden
       reelHost.hidden = !willShow
+      if(willShow) wireFaqHairReel(remoteSheetBody)
       btn.textContent = willShow ? "Hide TV Reel" : "Pull Up TV Reel"
       setRemoteStatus(willShow ? "SupportRD TV Reel is open inside FAQ." : "FAQ lounge is back in focus.")
     }))
