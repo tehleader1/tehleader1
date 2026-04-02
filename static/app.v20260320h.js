@@ -5801,6 +5801,11 @@ function setupFloatMode(){
   const remotePurchaseCustomBtn = qs("#remotePurchaseCustom")
   const remotePurchaseOrdersBtn = qs("#remotePurchaseOrders")
   const remotePurchaseSolidBtn = qs("#remotePurchaseSolid")
+  const remotePurchaseToggleBtn = qs("#remotePurchaseToggle")
+  const remotePurchasePrevBtn = qs("#remotePurchasePrev")
+  const remotePurchaseNextBtn = qs("#remotePurchaseNext")
+  const remotePurchaseCount = qs("#remotePurchaseCount")
+  const remotePurchaseItems = qsa(".remote-purchase-item")
   const remoteEditsProductBtn = qs("#remoteEditsProduct")
   const remoteEditsVirtualBtn = qs("#remoteEditsVirtual")
   const remoteEditsActualBtn = qs("#remoteEditsActual")
@@ -5808,6 +5813,11 @@ function setupFloatMode(){
   const remoteEditsMeetingsBtn = qs("#remoteEditsMeetings")
   const remoteEditsTimingBtn = qs("#remoteEditsTiming")
   const remoteEditsStudyBtn = qs("#remoteEditsStudy")
+  const remoteEditsToggleBtn = qs("#remoteEditsToggle")
+  const remoteEditsPrevBtn = qs("#remoteEditsPrev")
+  const remoteEditsNextBtn = qs("#remoteEditsNext")
+  const remoteEditsCount = qs("#remoteEditsCount")
+  const remoteEditsItems = qsa(".remote-edits-item")
   const remoteInfoSigninBtn = qs("#remoteInfoSignin")
   const remoteInfoPrivacyBtn = qs("#remoteInfoPrivacy")
   const remoteInfoAboutBtn = qs("#remoteInfoAbout")
@@ -5828,6 +5838,8 @@ function setupFloatMode(){
   const remoteSheetBody = qs("#floatRemoteSheetBody")
   const remoteSheetBack = qs("#floatRemoteSheetBack")
   const remoteSheetClose = qs("#floatRemoteSheetClose")
+  const remotePurchaseEditor = qs("#remotePurchaseEditor")
+  const remoteEditsMenu = qs("#remoteEditsMenu")
   if(!shell) return
   const REMOTE_ROUTE_META = {
     home: { path: "/remote", title: "SupportRD Remote", description: "SupportRD Remote keeps hair help, profile, studio, maps, and support together in one premium shell." },
@@ -5895,6 +5907,47 @@ function setupFloatMode(){
   function getScenarioAssistantLabel(id){
     if(id === "projake") return "Jake"
     return "Aria"
+  }
+  function createStickyPager(container, items, countNode, toggleBtn){
+    let collapsed = false
+    let pairIndex = 0
+    const pairSize = 2
+    const totalPairs = Math.max(1, Math.ceil(items.length / pairSize))
+    const render = ()=>{
+      if(container) container.classList.toggle("is-collapsed", collapsed)
+      if(collapsed){
+        items.forEach(item=>item.classList.add("is-hidden"))
+        if(countNode) countNode.textContent = "Hidden"
+        if(toggleBtn) toggleBtn.textContent = "Show"
+        return
+      }
+      const start = pairIndex * pairSize
+      const end = Math.min(start + pairSize, items.length)
+      items.forEach((item, idx)=>item.classList.toggle("is-hidden", idx < start || idx >= end))
+      if(countNode) countNode.textContent = `Showing ${start + 1}-${end}`
+      if(toggleBtn) toggleBtn.textContent = "Hide"
+    }
+    render()
+    return {
+      next(){
+        collapsed = false
+        pairIndex = (pairIndex + 1) % totalPairs
+        render()
+      },
+      prev(){
+        collapsed = false
+        pairIndex = (pairIndex - 1 + totalPairs) % totalPairs
+        render()
+      },
+      toggle(){
+        collapsed = !collapsed
+        render()
+      },
+      expand(){
+        collapsed = false
+        render()
+      }
+    }
   }
   async function fetchShopifyConnectorHealth(){
     try{
@@ -7748,6 +7801,44 @@ function setupFloatMode(){
         remoteInfoAboutBtn?.addEventListener("click", ()=>openImportantInfoSheet("about"))
         remoteInfoContactBtn?.addEventListener("click", ()=>openImportantInfoSheet("contact"))
         remoteInfoOfficialBtn?.addEventListener("click", ()=>openImportantInfoSheet("official"))
+        const purchasePager = createStickyPager(remotePurchaseEditor, remotePurchaseItems, remotePurchaseCount, remotePurchaseToggleBtn)
+        remotePurchasePrevBtn?.addEventListener("click", e=>{
+          e.stopPropagation()
+          purchasePager.prev()
+        })
+        remotePurchaseNextBtn?.addEventListener("click", e=>{
+          e.stopPropagation()
+          purchasePager.next()
+        })
+        remotePurchaseToggleBtn?.addEventListener("click", e=>{
+          e.stopPropagation()
+          purchasePager.toggle()
+        })
+        remotePurchaseEditor?.addEventListener("click", e=>{
+          if(remotePurchaseEditor.classList.contains("is-collapsed")){
+            e.preventDefault()
+            purchasePager.expand()
+          }
+        })
+        const editsPager = createStickyPager(remoteEditsMenu, remoteEditsItems, remoteEditsCount, remoteEditsToggleBtn)
+        remoteEditsPrevBtn?.addEventListener("click", e=>{
+          e.stopPropagation()
+          editsPager.prev()
+        })
+        remoteEditsNextBtn?.addEventListener("click", e=>{
+          e.stopPropagation()
+          editsPager.next()
+        })
+        remoteEditsToggleBtn?.addEventListener("click", e=>{
+          e.stopPropagation()
+          editsPager.toggle()
+        })
+        remoteEditsMenu?.addEventListener("click", e=>{
+          if(remoteEditsMenu.classList.contains("is-collapsed")){
+            e.preventDefault()
+            editsPager.expand()
+          }
+        })
         remoteColorPrevBtn?.addEventListener("click", ()=>applyRemoteThemeByIndex(-1))
         remoteColorNextBtn?.addEventListener("click", ()=>applyRemoteThemeByIndex(1))
       guardianAriaBtn?.addEventListener("click", ()=>openGuardianSheet("Aria"))
