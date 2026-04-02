@@ -6227,13 +6227,66 @@ function setupFloatMode(){
       })
       node.addEventListener("mouseleave", ()=>node.classList.remove("hover-wave"))
     }
+    function ensureAssistantBootOverlay(){
+      let overlay = qs("#assistantBootOverlay")
+      if(overlay) return overlay
+      overlay = document.createElement("div")
+      overlay.id = "assistantBootOverlay"
+      overlay.className = "assistant-boot-overlay"
+      overlay.innerHTML = `
+        <div class="assistant-boot-card">
+          <div class="assistant-boot-ring"></div>
+          <div class="assistant-boot-ring ring-two"></div>
+          <div class="assistant-boot-label">Fresh Brain Loading</div>
+          <div class="assistant-boot-number">5</div>
+          <div class="assistant-boot-status">SupportRD assistant activation starting.</div>
+        </div>
+      `
+      document.body.appendChild(overlay)
+      return overlay
+    }
+    function showAssistantBootOverlay(assistantName, count){
+      const overlay = ensureAssistantBootOverlay()
+      overlay.hidden = false
+      overlay.classList.add("show")
+      overlay.dataset.assistant = assistantName.toLowerCase()
+      const label = overlay.querySelector(".assistant-boot-label")
+      const number = overlay.querySelector(".assistant-boot-number")
+      const status = overlay.querySelector(".assistant-boot-status")
+      if(label) label.textContent = `${assistantName} Fresh Brain`
+      if(number) number.textContent = String(count)
+      if(status) status.textContent = `${assistantName} is syncing to the Remote and loading specialized help.`
+    }
+    function finishAssistantBootOverlay(assistantName){
+      const overlay = ensureAssistantBootOverlay()
+      overlay.hidden = false
+      overlay.classList.add("show", "ready")
+      overlay.dataset.assistant = assistantName.toLowerCase()
+      const label = overlay.querySelector(".assistant-boot-label")
+      const number = overlay.querySelector(".assistant-boot-number")
+      const status = overlay.querySelector(".assistant-boot-status")
+      if(label) label.textContent = `${assistantName} Brain Ready`
+      if(number) number.textContent = "GO"
+      if(status) status.textContent = `${assistantName} is now active for live SupportRD help.`
+    }
+    function hideAssistantBootOverlay(){
+      const overlay = qs("#assistantBootOverlay")
+      if(!overlay) return
+      overlay.classList.remove("show", "ready")
+      overlay.hidden = true
+    }
     function startAssistantBrainCountdown(assistantName, help, transcriptEl){
       const countdown = [5, 4, 3, 2, 1]
+      nudgeAssistantPresence("center", {
+        x: window.innerWidth / 2,
+        y: Math.max(164, window.innerHeight * 0.38)
+      })
       countdown.forEach((count, index)=>{
         activeAssistantTimers.push(setTimeout(()=>{
           const line = count === 1
             ? `${assistantName} fresh brain online. Activating now.`
             : `${assistantName} fresh brain activation in ${count}...`
+          showAssistantBootOverlay(assistantName, count)
           if(assistantStatus) assistantStatus.textContent = line
           if(transcriptEl) transcriptEl.textContent = line
           showSpeechPopup(assistantName, line)
@@ -6241,10 +6294,12 @@ function setupFloatMode(){
         }, index * 650))
       })
       activeAssistantTimers.push(setTimeout(()=>{
+        finishAssistantBootOverlay(assistantName)
         if(assistantStatus) assistantStatus.textContent = help.greeting
         if(transcriptEl) transcriptEl.textContent = help.greeting
         showSpeechPopup(assistantName, help.greeting)
       }, countdown.length * 650))
+      activeAssistantTimers.push(setTimeout(()=>hideAssistantBootOverlay(), countdown.length * 650 + 850))
       activeAssistantTimers.push(setTimeout(()=>{
         if(transcriptEl) transcriptEl.textContent = help.listening
         showSpeechPopup(assistantName, help.listening)
@@ -6288,6 +6343,7 @@ function setupFloatMode(){
       }
       startAssistantBrainCountdown(assistantName, help, transcriptEl)
       activeAssistantTimers.push(setTimeout(()=>{
+        hideAssistantBootOverlay()
         releasePageAudio()
         clearAssistantSequence()
       }, 15000))

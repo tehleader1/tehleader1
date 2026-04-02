@@ -4201,6 +4201,83 @@ body.remote-hide-ads .remote-display-strip{
   border:1px solid rgba(255,255,255,.18);
   pointer-events:none;
 }
+.assistant-boot-overlay{
+  position:fixed;
+  inset:0;
+  display:grid;
+  place-items:center;
+  z-index:140;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .28s ease;
+}
+.assistant-boot-overlay.show{
+  opacity:1;
+}
+.assistant-boot-card{
+  position:relative;
+  min-width:min(76vw, 420px);
+  padding:28px 22px 24px;
+  border-radius:28px;
+  background:radial-gradient(circle at 50% 20%, rgba(255,255,255,.32), rgba(8,17,34,.88));
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 28px 90px rgba(8,17,34,.44);
+  text-align:center;
+  overflow:hidden;
+}
+.assistant-boot-overlay[data-assistant="aria"] .assistant-boot-card{
+  background:radial-gradient(circle at 50% 20%, rgba(97,255,224,.26), rgba(8,17,34,.9));
+}
+.assistant-boot-overlay[data-assistant="jake"] .assistant-boot-card{
+  background:radial-gradient(circle at 50% 20%, rgba(255,196,84,.24), rgba(8,17,34,.9));
+}
+.assistant-boot-ring{
+  position:absolute;
+  inset:20px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  animation:assistantBootRing 1.1s ease-out infinite;
+}
+.assistant-boot-ring.ring-two{
+  inset:38px;
+  animation-delay:.28s;
+}
+.assistant-boot-label{
+  position:relative;
+  z-index:1;
+  font-size:15px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:rgba(232,244,255,.88);
+}
+.assistant-boot-number{
+  position:relative;
+  z-index:1;
+  font-size:clamp(72px, 16vw, 140px);
+  line-height:1;
+  font-weight:800;
+  color:#fff;
+  text-shadow:0 0 30px rgba(255,255,255,.3);
+  animation:assistantBootPulse .65s ease-in-out infinite;
+}
+.assistant-boot-status{
+  position:relative;
+  z-index:1;
+  font-size:15px;
+  line-height:1.45;
+  color:rgba(230,240,255,.9);
+}
+.assistant-boot-overlay.ready .assistant-boot-number{
+  color:#87ffe7;
+}
+@keyframes assistantBootPulse{
+  0%,100%{transform:scale(.94);}
+  50%{transform:scale(1.08);}
+}
+@keyframes assistantBootRing{
+  0%{transform:scale(.92); opacity:.84;}
+  100%{transform:scale(1.18); opacity:0;}
+}
 @keyframes remoteAssistantDrift{
   0%{transform:translate3d(var(--demo-shift-x), var(--demo-shift-y), 0) rotate(var(--demo-tilt)) scale(1);}
   22%{transform:translate3d(calc(var(--demo-shift-x) * -0.34), calc(var(--demo-shift-y) * -0.56 - 14px), 0) rotate(calc(var(--demo-tilt) * -0.42)) scale(1.05);}
