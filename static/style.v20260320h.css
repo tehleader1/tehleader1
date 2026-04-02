@@ -3105,6 +3105,70 @@ body.competition-world .bg-layers::before{
     color:#284867;
   }
 .remote-stage-card strong{font-size:18px;color:#173a6a;}
+.remote-stage-scenarios{
+    padding:18px;
+    border-radius:26px;
+    background:linear-gradient(145deg, rgba(255,255,255,.7), rgba(237,245,255,.62));
+    border:1px solid rgba(173,198,230,.42);
+    display:grid;
+    gap:12px;
+  }
+.remote-stage-scenarios h4{
+    margin:0;
+    font-size:22px;
+    color:#173a6a;
+  }
+.remote-scenario-buttons{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:12px;
+  }
+.remote-scenario-btn{
+    appearance:none;
+    border:1px solid rgba(79,126,186,.22);
+    background:linear-gradient(160deg, rgba(255,255,255,.96), rgba(227,240,255,.9));
+    border-radius:22px;
+    padding:16px 15px;
+    display:grid;
+    gap:8px;
+    text-align:left;
+    color:#1f3f62;
+    box-shadow:0 14px 26px rgba(16,38,70,.12);
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+.remote-scenario-btn strong{font-size:16px;color:#15365d;}
+.remote-scenario-btn span{font-size:13px;line-height:1.45;color:#355473;}
+.remote-scenario-btn:hover,
+.remote-scenario-btn:focus-visible{
+    transform:translateY(-2px);
+    box-shadow:0 18px 32px rgba(16,38,70,.18);
+    border-color:rgba(79,126,186,.45);
+    outline:none;
+  }
+.remote-sheet-pills{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin:8px 0 2px;
+  }
+.float-chip{
+    display:inline-flex;
+    align-items:center;
+    padding:8px 12px;
+    border-radius:999px;
+    background:rgba(18,58,103,.08);
+    border:1px solid rgba(18,58,103,.12);
+    color:#183c63;
+    font-weight:700;
+    font-size:13px;
+  }
+.solid-state-list{
+    margin:10px 0 0;
+    padding-left:18px;
+    color:#355473;
+    font-size:13px;
+    line-height:1.5;
+  }
 .remote-purchase-editor{
     position:fixed;
     right:18px;

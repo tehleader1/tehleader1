@@ -5811,6 +5811,7 @@ function setupFloatMode(){
   const remoteInfoAboutBtn = qs("#remoteInfoAbout")
   const remoteInfoContactBtn = qs("#remoteInfoContact")
   const remoteInfoOfficialBtn = qs("#remoteInfoOfficial")
+  const remoteScenarioButtons = qsa("#remoteScenarioButtons .remote-scenario-btn")
   const guardianAriaBtn = qs("#remoteGuardianAria")
   const guardianJakeBtn = qs("#remoteGuardianJake")
   const primeMenu = qs("#floatPrimeMenu")
@@ -5838,6 +5839,120 @@ function setupFloatMode(){
     blog: { path: "/remote/blog", title: "SupportRD Blog Party", description: "Blog Party is the fullscreen SEO and authority lane for SupportRD topics, updates, and Google-friendly content." },
     official: { path: "/remote/official", title: "SupportRD Official Info", description: "Official SupportRD info keeps privacy, about, contact, and storefront direction inside the Remote shell." },
     solid: { path: "/remote/solid-state", title: "SupportRD Solid State", description: "Solid State Project shows what is built, what is verified, and what is still awaiting live payment or demand verification." }
+  }
+  const ARIA_SCENARIOS = {
+    roadtrip: {
+      assistant: "aria",
+      title: "Road Trip Frizz",
+      summary: "Long miles, air changes, and dry cabin air can leave hair frizzy and low on bounce.",
+      firstMove: "Formula Exclusiva is the first SupportRD move when the hair feels thirsty, puffy, and hard to calm down after a road trip.",
+      products: ["Formula Exclusiva", "Gotitas Brillantes", "Mascarilla Capilar"],
+      prompt: "I have road trip frizz, low bounce, and dry ends. Walk me through whether I should use Formula Exclusiva, Mascarilla, or Gotitas first and explain why."
+    },
+    tangles: {
+      assistant: "projake",
+      title: "Trail Tangles",
+      summary: "Trail dust, wind, helmets, and motion can twist the hair into a rough detangle situation.",
+      firstMove: "Mascarilla Capilar comes first to soften the hair, then Gotitas Brillantes can finish and protect the detangle.",
+      products: ["Mascarilla Capilar", "Gotitas Brillantes"],
+      prompt: "My hair is tangled and rough after being outdoors. Help me with a Mascarilla-first detangling routine and tell me if I should finish with Gotitas."
+    },
+    oily: {
+      assistant: "aria",
+      title: "Oily + Stressed Ends",
+      summary: "When the scalp is active but the ends still feel tired, the app should help balance instead of overloading.",
+      firstMove: "Shampoo Aloe Vera is the clean first move, with lighter Gotero Rapido only where the hair still needs support.",
+      products: ["Shampoo Aloe Vera", "Gotero Rapido"],
+      prompt: "My scalp feels oily but the ends still feel stressed. Tell me how to use Shampoo Aloe Vera and whether Gotero Rapido should be light or focused."
+    },
+    damage: {
+      assistant: "aria",
+      title: "Damage Recovery",
+      summary: "Weak ends, stress, and visible damage need an emergency-ready recovery lane that still feels calm.",
+      firstMove: "Gotero Rapido plus Mascarilla Capilar is the stronger recovery pair when the hair feels weak, damaged, and breakage-prone.",
+      products: ["Gotero Rapido", "Mascarilla Capilar"],
+      prompt: "My hair feels damaged, weak, and breakage-prone. Give me an emergency-ready recovery lane using Gotero Rapido and Mascarilla."
+    },
+    sleek: {
+      assistant: "projake",
+      title: "Sleek / Laciador",
+      summary: "Smooth styling needs a cleaner, more disciplined path so the result looks polished instead of overworked.",
+      firstMove: "Laciador Crece is the sleek route, but only with moisture balance and heat protection in the rhythm.",
+      products: ["Laciador Crece", "Formula Exclusiva"],
+      prompt: "I want a smooth sleek look. Tell me how Laciador Crece should be used, what moisture support it needs, and how to protect the hair."
+    }
+  }
+  function escapeRemoteHtml(value){
+    return String(value ?? "").replace(/[&<>"]/g, char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;"
+    }[char] || char))
+  }
+  function getScenarioAssistantLabel(id){
+    if(id === "projake") return "Jake"
+    return "Aria"
+  }
+  async function fetchShopifyConnectorHealth(){
+    try{
+      const response = await fetch("/api/shopify/connector-health")
+      const data = await response.json()
+      if(!(data && data.ok)) throw new Error("health unavailable")
+      return data
+    }catch{
+      return null
+    }
+  }
+  function openScenarioSheet(key){
+    const scenario = ARIA_SCENARIOS[key]
+    if(!scenario) return
+    const assistantLabel = getScenarioAssistantLabel(scenario.assistant)
+    openRemoteSheet(`${scenario.title} · ${assistantLabel}`, `
+      ${renderRemoteValueLane(["Value: 2026 hair-routing intelligence", "Energy: quick diagnosis-style support lane", "Worth: quality product guidance with celebration built in"])}
+      <div class="float-sheet-panel">
+        <h4>${escapeRemoteHtml(scenario.title)}</h4>
+        <p>${escapeRemoteHtml(scenario.summary)}</p>
+        <div class="float-sheet-status">${escapeRemoteHtml(scenario.firstMove)}</div>
+      </div>
+      <div class="float-sheet-panel">
+        <h4>SupportRD Product Route</h4>
+        <div class="remote-sheet-pills">
+          ${scenario.products.map(product=>`<span class="float-chip">${escapeRemoteHtml(product)}</span>`).join("")}
+        </div>
+        <p>${assistantLabel} keeps this lane grounded in real product movement, not generic AI filler.</p>
+      </div>
+      <div class="float-sheet-grid">
+        <button class="btn" data-aria-scenario-prompt="${escapeRemoteHtml(scenario.prompt)}" data-assistant-target="${escapeRemoteHtml(scenario.assistant)}">Ask ${assistantLabel} Now</button>
+        <button class="btn ghost" data-open-fastpay>Open Purchase Lane</button>
+        <button class="btn ghost" data-sheet-close>Back To Remote</button>
+      </div>
+      <div class="float-sheet-copy">This scenario chapter preserves the personal beginning of SupportRD: specific hair moments, real product routing, and a cleaner premium feel for the customer.</div>
+    `, { message:`${scenario.title} is open. ${assistantLabel} is ready with the product route.`, route:"diary" })
+  }
+  async function refreshSolidStateLive(root = remoteSheetBody){
+    const summary = root?.querySelector("[data-solid-health-summary]")
+    const detail = root?.querySelector("[data-solid-health-detail]")
+    const list = root?.querySelector("[data-solid-health-missing]")
+    if(!summary || !detail || !list) return
+    summary.textContent = "Checking Shopify storefront + webhook readiness..."
+    detail.textContent = "SupportRD is reading the live connector health now."
+    list.innerHTML = ""
+    const health = await fetchShopifyConnectorHealth()
+    if(!health){
+      summary.textContent = "Live Shopify health check could not be reached."
+      detail.textContent = "The page is still live, but this Solid State card needs a successful connector-health response to confirm storefront and webhook status."
+      list.innerHTML = `<li>Network or endpoint issue while checking live connector health</li>`
+      return
+    }
+    const statusLabel = String(health.status || "unknown").toUpperCase()
+    summary.textContent = `Shopify connector: ${statusLabel} (${Number(health.score || 0)}%)`
+    detail.textContent = `Storefront configured: ${health.storefront_configured ? "yes" : "no"} · Admin configured: ${health.admin_configured ? "yes" : "no"} · Webhook configured: ${health.webhook_configured ? "yes" : "no"} · Live products: ${Number(health.product_count || 0)}`
+    if(Array.isArray(health.missing) && health.missing.length){
+      list.innerHTML = health.missing.map(item=>`<li>${escapeRemoteHtml(item)}</li>`).join("")
+    }else{
+      list.innerHTML = "<li>No missing Shopify connector keys reported from the live health check.</li>"
+    }
   }
   const remoteState = {
     activeBoard: 0,
@@ -6046,6 +6161,12 @@ function setupFloatMode(){
           <article class="solid-state-check pending">
             <strong>Payment Balance Link Verification</strong>
             <span>Still needs final live API-key verification and webhook/storefront confirmation before we can honestly call the balance + entitlement layer fully automatic.</span>
+          </article>
+          <article class="solid-state-check watch">
+            <strong>Live Shopify Connector Health</strong>
+            <span data-solid-health-summary>Checking Shopify storefront + webhook readiness...</span>
+            <small data-solid-health-detail>SupportRD is reading the live connector health now.</small>
+            <ul class="solid-state-list" data-solid-health-missing></ul>
           </article>
           <article class="solid-state-check ready">
             <strong>Premium Feel + Occasion Routing</strong>
@@ -6309,6 +6430,17 @@ function setupFloatMode(){
       openLaunchMenuSheet(targetId, labels[targetId] || "Remote Panel")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-fastpay]")).forEach(btn=>btn.addEventListener("click", ()=>window.openRemoteFastPay?.()))
+    Array.from(remoteSheetBody.querySelectorAll("[data-aria-scenario-prompt]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const prompt = btn.getAttribute("data-aria-scenario-prompt") || ""
+      const targetAssistant = btn.getAttribute("data-assistant-target") || "aria"
+      state.activeAssistant = targetAssistant
+      applyAssistantUI(true)
+      const input = qs("#ariaInput")
+      const send = qs("#sendAria")
+      if(input) input.value = prompt
+      if(send) send.click()
+      setRemoteStatus(`${getScenarioAssistantLabel(targetAssistant)} is now working the SupportRD product route for you.`)
+    }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-settings]")).forEach(btn=>btn.addEventListener("click", ()=>{
       openLaunchMenuSheet("floatProfileBox", "General Settings")
     }))
@@ -6456,6 +6588,7 @@ function setupFloatMode(){
       sheetImage.style.backgroundPosition = "center"
       sheetImage.textContent = ""
     }
+    refreshSolidStateLive(remoteSheetBody)
   }
   function closeRemoteSheet(stopGuide = true, keepRoute = false){
       if(stopGuide) stopRemoteGuide()
@@ -7386,6 +7519,10 @@ function setupFloatMode(){
         remotePurchaseSolidBtn?.addEventListener("click", ()=>{
           openRemoteSheet("Solid State Project", buildSolidStateSheet(), { message:"Solid State checklist is open.", className:"remote-sheet-blog", route:"solid" })
         })
+        remoteScenarioButtons.forEach(btn => btn.addEventListener("click", ()=>{
+          const key = btn.getAttribute("data-aria-scenario")
+          if(key) openScenarioSheet(key)
+        }))
         remoteEditsViewBotBtn?.addEventListener("click", ()=>{
           hidePrimeMenu()
           footerGuideBtn?.click()
