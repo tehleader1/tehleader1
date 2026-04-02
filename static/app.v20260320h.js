@@ -8102,6 +8102,11 @@ function setupFloatMode(){
       }[targetId] || "home"
     }
     function getRemoteRouteFromLocation(){
+      const params = new URLSearchParams(window.location.search || "")
+      const queryRoute = (params.get("remote") || "").trim()
+      if(queryRoute && REMOTE_ROUTE_META[queryRoute]){
+        return queryRoute
+      }
       const rawPath = (window.location.pathname || "/").replace(/\/+$/, "") || "/"
       if(rawPath === "/remote" || rawPath === "/remote/home") return "home"
       if(rawPath.startsWith("/remote/")){
@@ -8124,6 +8129,16 @@ function setupFloatMode(){
     function syncRemoteHistory(route = "home", replace = false){
       const meta = REMOTE_ROUTE_META[route] || REMOTE_ROUTE_META.home
       updateRemoteDocumentMeta(route)
+      const params = new URLSearchParams(window.location.search || "")
+      if(params.has("remote")){
+        params.delete("remote")
+        const query = params.toString()
+        const cleanUrl = `${meta.path}${query ? `?${query}` : ""}`
+        try{
+          window.history.replaceState({ supportrdRemoteRoute: route }, "", cleanUrl)
+        }catch{}
+        return
+      }
       if(window.location.pathname === meta.path) return
       const method = replace ? "replaceState" : "pushState"
       try{

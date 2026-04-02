@@ -4144,7 +4144,8 @@ def home():
 @app.route("/remote")
 @app.route("/remote/<path:section>")
 def remote_shell(section=None):
-    return send_from_directory("static", "index.html")
+    target = f"/?remote={section}" if section else "/?remote=home"
+    return redirect(target, code=302)
 
 @app.route("/studio")
 def studio_home():
