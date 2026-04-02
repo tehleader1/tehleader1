@@ -1,10 +1,7 @@
-const CACHE_NAME = "supportrd-pwa-v9"
+const CACHE_NAME = "supportrd-pwa-v10-20260402g"
 const APP_ASSETS = [
   "/",
   "/manifest.json",
-  "/static/style.v20260320h.css?v=20260324a",
-  "/static/app.v20260320h.js?v=20260324a",
-  "/static/auth.js",
   "/static/icons/app-192.png",
   "/static/icons/app-512.png"
 ]
@@ -27,6 +24,12 @@ self.addEventListener("activate", (event) => {
   self.clients.claim()
 })
 
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting()
+  }
+})
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return
   const url = new URL(event.request.url)
@@ -42,9 +45,13 @@ self.addEventListener("fetch", (event) => {
     )
     return
   }
-  // Always fetch latest Studio assets to avoid stale "In the Booth" UI.
+  // Keep the app shell network-first so PWA installs don't get stuck on stale
+  // support code after a deploy.
   if (
     url.pathname.startsWith("/static/studio/") ||
+    url.pathname.endsWith("/sw.js") ||
+    url.pathname.endsWith("/manifest.json") ||
+    url.pathname.endsWith("/static/auth.js") ||
     url.pathname.endsWith("/static/app.v20260320h.js") ||
     url.pathname.endsWith("/static/style.v20260320h.css")
   ) {
