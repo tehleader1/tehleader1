@@ -5969,6 +5969,21 @@ function setupFloatMode(){
       body: "The hair clips, reviews, and support energy make the app feel active instead of static."
     }
   ]
+  function loadFamilySpotlightEntries(){
+    try{
+      const raw = JSON.parse(localStorage.getItem("supportrdFamilySpotlight") || "[]")
+      if(Array.isArray(raw)) return raw
+    }catch{}
+    return []
+  }
+  function saveFamilySpotlightEntries(entries){
+    try{
+      localStorage.setItem("supportrdFamilySpotlight", JSON.stringify(entries.slice(0, 18)))
+    }catch{}
+  }
+  function isVideoMedia(url = ""){
+    return /\.(mp4|webm|mov)(\?|#|$)/i.test(String(url))
+  }
   function escapeRemoteHtml(value){
     return String(value ?? "").replace(/[&<>"]/g, char => ({
       "&": "&amp;",
@@ -6094,12 +6109,34 @@ function setupFloatMode(){
         <h4>Public Reviews</h4>
         <div class="remote-review-wall" data-review-wall></div>
       </div>
+      <div class="float-sheet-panel">
+        <h4>Family Spotlight</h4>
+        <p>Use this lane for real family content, real appreciation posts, pictures, and video links that show the human side of SupportRD.</p>
+        <div class="float-sheet-grid">
+          <input class="input" data-family-name placeholder="Name or family tag">
+          <input class="input" data-family-media placeholder="Picture or video URL">
+        </div>
+        <textarea class="input float-sheet-textarea" data-family-message placeholder="Write the thank-you, family post, or real feedback you want everyone to see."></textarea>
+        <div class="float-sheet-grid">
+          <button class="btn" data-family-submit>Post Family Content</button>
+          <button class="btn ghost" data-family-clear>Clear</button>
+        </div>
+        <div class="float-sheet-status" data-family-status>Family Spotlight is ready for real pictures, videos, and posts.</div>
+        <div class="remote-family-wall" data-family-wall></div>
+      </div>
       <div class="float-sheet-copy">This lane is public-facing. It is meant to show the encouragement, love, and usefulness people are feeling around the app.</div>
     `
   }
   function wireDeveloperFeedbackSheet(root = remoteSheetBody){
     const board = root?.querySelector("[data-feedback-board]")
     const reviewWall = root?.querySelector("[data-review-wall]")
+    const familyWall = root?.querySelector("[data-family-wall]")
+    const familyName = root?.querySelector("[data-family-name]")
+    const familyMedia = root?.querySelector("[data-family-media]")
+    const familyMessage = root?.querySelector("[data-family-message]")
+    const familyStatus = root?.querySelector("[data-family-status]")
+    const familySubmit = root?.querySelector("[data-family-submit]")
+    const familyClear = root?.querySelector("[data-family-clear]")
     const status = root?.querySelector("[data-feedback-status]")
     const sortButtons = Array.from(root?.querySelectorAll("[data-feedback-sort]") || [])
     if(!board) return
@@ -6151,6 +6188,57 @@ function setupFloatMode(){
         </article>
       `).join("")
     }
+    const renderFamilyWall = ()=>{
+      if(!familyWall) return
+      const entries = loadFamilySpotlightEntries()
+      familyWall.innerHTML = entries.length ? entries.map(entry=>{
+        const media = String(entry.media || "").trim()
+        const mediaHtml = media
+          ? (isVideoMedia(media)
+            ? `<video class="remote-family-media" src="${escapeRemoteHtml(media)}" controls playsinline preload="metadata"></video>`
+            : `<img class="remote-family-media" src="${escapeRemoteHtml(media)}" alt="${escapeRemoteHtml(entry.name || "Family media")}">`)
+          : ""
+        return `
+          <article class="remote-family-card">
+            ${mediaHtml}
+            <div class="remote-family-copy">
+              <strong>${escapeRemoteHtml(entry.name || "SupportRD Family")}</strong>
+              <div class="remote-review-author">${escapeRemoteHtml(entry.when || "Just now")}</div>
+              <p>${escapeRemoteHtml(entry.message || "")}</p>
+            </div>
+          </article>
+        `
+      }).join("") : `<div class="float-sheet-copy">No family content has been posted yet. Use the form above to add the first real post.</div>`
+    }
+    familySubmit?.addEventListener("click", ()=>{
+      const name = (familyName?.value || "").trim() || "SupportRD Family"
+      const media = (familyMedia?.value || "").trim()
+      const message = (familyMessage?.value || "").trim()
+      if(!message && !media){
+        if(familyStatus) familyStatus.textContent = "Add a real family post, picture URL, or video URL first."
+        return
+      }
+      const entries = loadFamilySpotlightEntries()
+      entries.unshift({
+        name,
+        media,
+        message,
+        when: new Date().toLocaleString()
+      })
+      saveFamilySpotlightEntries(entries)
+      if(familyStatus) familyStatus.textContent = "Family Spotlight updated with a real post."
+      if(familyName) familyName.value = ""
+      if(familyMedia) familyMedia.value = ""
+      if(familyMessage) familyMessage.value = ""
+      renderFamilyWall()
+    })
+    familyClear?.addEventListener("click", ()=>{
+      if(familyName) familyName.value = ""
+      if(familyMedia) familyMedia.value = ""
+      if(familyMessage) familyMessage.value = ""
+      if(familyStatus) familyStatus.textContent = "Family Spotlight form cleared."
+    })
+    renderFamilyWall()
   }
   async function fetchShopifyConnectorHealth(){
     try{
@@ -8518,6 +8606,7 @@ function setupRemoteFastPay(){
   const confirmBody = qs("#remoteConfirmBody")
   const confirmMeta = qs("#remoteConfirmMeta")
   const confirmCancel = qs("#remoteConfirmCancel")
+  const confirmShopify = qs("#remoteConfirmShopify")
   const confirmTouch = qs("#remoteConfirmTouch")
   const receiptSummary = qs("#remoteReceiptSummary")
   const processingPanel = qs("#remoteProcessingPanel")
@@ -8604,9 +8693,20 @@ function setupRemoteFastPay(){
     hideProcessing()
     if(confirmWrap) confirmWrap.hidden = false
     if(confirmTitle) confirmTitle.textContent = `Touch To Confirm ${product.title}`
-    if(confirmBody) confirmBody.textContent = `Choose your option, touch now, confirm details, and launch secure Shopify checkout for ${product.title}.`
-    if(confirmMeta) confirmMeta.textContent = "SupportRD saves the purchase lane, confirmation number, and buyer access summary after checkout is launched."
-    if(status) status.textContent = `${product.title} is loaded. Touch now to continue into secure Shopify checkout.`
+    if(confirmBody) confirmBody.textContent = `Choose your option, touch now for the fast scan flow, or open Shopify checkout right away for ${product.title}.`
+    if(confirmMeta) confirmMeta.textContent = "SupportRD saves the purchase lane, confirmation number, and buyer access summary after checkout is launched. Direct Shopify checkout is ready now."
+    if(status) status.textContent = `${product.title} is loaded. You can open secure Shopify checkout now or use the touch-confirm flow.`
+  }
+
+  function launchShopifyCheckout(product, sourceLabel, options = {}){
+    if(!product?.link) return
+    const receipt = buildRemoteReceipt(product)
+    renderReceipt(receipt)
+    hideConfirm()
+    hideProcessing()
+    if(!options.keepOwnerVisible) hideOwner()
+    if(status) status.textContent = `${product.title} Shopify checkout opened${sourceLabel ? ` from ${sourceLabel}` : ""}.`
+    openLinkModal(product.link, `${product.title} Checkout`)
   }
 
   function renderProducts(){
@@ -8628,6 +8728,7 @@ function setupRemoteFastPay(){
         </div>
         <div class="remote-product-actions">
           <button class="btn ghost remote-preview-btn" data-remote-open="${product.key}">View Details</button>
+          <button class="btn ghost remote-checkout-btn" data-remote-checkout="${product.key}">Shopify Checkout</button>
           <button class="btn remote-buy-btn" data-remote-buy="${product.key}">Pay Now</button>
         </div>
       </article>
@@ -8645,6 +8746,13 @@ function setupRemoteFastPay(){
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.dataset.remoteBuy)
         if(!product) return
         showConfirm(product)
+      })
+    })
+    qsa(".remote-checkout-btn").forEach((btn)=>{
+      btn.addEventListener("click", ()=>{
+        const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.dataset.remoteCheckout)
+        if(!product) return
+        launchShopifyCheckout(product, "Fast Pay")
       })
     })
   }
@@ -8677,6 +8785,10 @@ function setupRemoteFastPay(){
 
   closeBtn?.addEventListener("click", closeRemoteFastPay)
   confirmCancel?.addEventListener("click", hideConfirm)
+  confirmShopify?.addEventListener("click", ()=>{
+    if(!selectedProduct) return
+    launchShopifyCheckout(selectedProduct, "Confirm Panel")
+  })
   confirmTouch?.addEventListener("click", ()=>{
     if(!selectedProduct) return
     const product = selectedProduct
@@ -8695,8 +8807,6 @@ function setupRemoteFastPay(){
       }
       if(progress >= 100){
         hideProcessing()
-        const receipt = buildRemoteReceipt(product)
-        renderReceipt(receipt)
         const amount = extractMoneyAmount(product.price)
         playAcceptTone()
         if(status) status.textContent = `Successfully received ${amount} for ${product.title}. The buyer now feels like the new owner of this SupportRD lane.`
@@ -8704,7 +8814,7 @@ function setupRemoteFastPay(){
         if(ownerTitle) ownerTitle.textContent = `You now own ${product.title}`
         if(ownerBody) ownerBody.textContent = `Successfully received ${amount} for ${product.title}. Feel refreshed in your hair. Your access follows your Shopify email / username and SupportRD is ready to serve you.`
         openMiniWindow("THANK YOU", `Successful search and capture complete. Successfully received ${amount} for ${product.title}. We here at SupportRD love you.`)
-        openLinkModal(product.link, `${product.title} Checkout`)
+        launchShopifyCheckout(product, "Touch Confirm", { keepOwnerVisible: true })
       }
     }, 1000)
   })
@@ -8751,7 +8861,52 @@ function setupAria(){
   let liveTranscript = ""
   let transcribeBusy = false
   let transcribeFailures = 0
+  function interruptPageAudio(){
+    try{
+      if(window.speechSynthesis) window.speechSynthesis.cancel()
+    }catch{}
+    qsa("audio, video").forEach((media)=>{
+      try{
+        media.pause()
+        media.muted = true
+      }catch{}
+    })
+  }
+  function releasePageAudio(){
+    qsa("audio, video").forEach((media)=>{
+      try{ media.muted = false }catch{}
+    })
+  }
+  function playAssistantCue(type){
+    try{
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if(!AudioCtx) return
+      const ctx = new AudioCtx()
+      const now = ctx.currentTime
+      const gain = ctx.createGain()
+      gain.connect(ctx.destination)
+      gain.gain.setValueAtTime(0.0001, now)
+      const tones = type === "close"
+        ? [[680, 0.0, 0.09], [520, 0.1, 0.1]]
+        : type === "response"
+          ? [[440, 0.0, 0.08], [660, 0.1, 0.08], [880, 0.2, 0.1]]
+          : [[520, 0.0, 0.08], [760, 0.09, 0.1]]
+      tones.forEach(([freq, offset, dur])=>{
+        const osc = ctx.createOscillator()
+        osc.type = type === "intro" ? "triangle" : "sine"
+        osc.frequency.setValueAtTime(freq, now + offset)
+        osc.connect(gain)
+        osc.start(now + offset)
+        osc.stop(now + offset + dur)
+      })
+      gain.gain.exponentialRampToValueAtTime(0.07, now + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42)
+      setTimeout(()=>{ try{ ctx.close() }catch{} }, 650)
+    }catch{}
+  }
   function ariaMasterGreeting(){
+    interruptPageAudio()
+    playAssistantCue("intro")
     const assistantName = getActiveAssistantName()
     const proUnlocked = state.subscription === "pro" || isProOverride()
     const line = assistantName === "Pro Jake"
@@ -8929,7 +9084,7 @@ function uiError(msg){
         if(!chunkCount){  setAriaFlow('idle'); stopListenLoop(); return }
         const blob = new Blob(audioChunks, {type: "audio/webm"})
         if(recStream){ recStream.getTracks().forEach(t=>t.stop()) }
-        try{
+      try{
           setAriaFlow("processing")
           const form = new FormData()
           form.append("audio", blob, "speech.webm")
@@ -8948,18 +9103,25 @@ function uiError(msg){
           if(transcript){
             stopListenLoop()
             setTimeout(async ()=>{
+              playAssistantCue("response")
               await askAria(transcript)
+              setTimeout(()=>playAssistantCue("close"), 180)
+              setTimeout(()=>releasePageAudio(), 420)
               if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening() }, 900) }
             }, 2000)
           } else {
             setAriaFlow("idle")
             stopListenLoop()
+            playAssistantCue("close")
+            setTimeout(()=>releasePageAudio(), 260)
             if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening() }, 900) }
           }
         }catch(err){
           uiError("Voice error: " + (err && err.message ? err.message : "could not transcribe"))
           setAriaFlow("idle")
           stopListenLoop()
+          playAssistantCue("close")
+          setTimeout(()=>releasePageAudio(), 260)
         }
       }
       try{ mediaRecorder.start(600) }catch{ mediaRecorder.start() }
@@ -8970,6 +9132,8 @@ function uiError(msg){
       
       setAriaFlow("idle")
       stopListenLoop()
+      playAssistantCue("close")
+      setTimeout(()=>releasePageAudio(), 260)
     }
   }
 
