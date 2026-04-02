@@ -6227,6 +6227,46 @@ function setupFloatMode(){
       })
       node.addEventListener("mouseleave", ()=>node.classList.remove("hover-wave"))
     }
+    function startAssistantBrainCountdown(assistantName, help, transcriptEl){
+      const countdown = [5, 4, 3, 2, 1]
+      countdown.forEach((count, index)=>{
+        activeAssistantTimers.push(setTimeout(()=>{
+          const line = count === 1
+            ? `${assistantName} fresh brain online. Activating now.`
+            : `${assistantName} fresh brain activation in ${count}...`
+          if(assistantStatus) assistantStatus.textContent = line
+          if(transcriptEl) transcriptEl.textContent = line
+          showSpeechPopup(assistantName, line)
+          if(index === 0) playAssistantCue("intro")
+        }, index * 650))
+      })
+      activeAssistantTimers.push(setTimeout(()=>{
+        if(assistantStatus) assistantStatus.textContent = help.greeting
+        if(transcriptEl) transcriptEl.textContent = help.greeting
+        showSpeechPopup(assistantName, help.greeting)
+      }, countdown.length * 650))
+      activeAssistantTimers.push(setTimeout(()=>{
+        if(transcriptEl) transcriptEl.textContent = help.listening
+        showSpeechPopup(assistantName, help.listening)
+      }, countdown.length * 650 + 900))
+      activeAssistantTimers.push(setTimeout(()=>{
+        if(typeof window.startAriaListening === "function"){
+          window.startAriaListening()
+        }else if(typeof startOpenAIListening === "function"){
+          startOpenAIListening()
+        }else{
+          playAssistantCue("response")
+          const fallback = `${assistantName} is ready, but this device needs mic support enabled before live listening can begin.`
+          if(transcriptEl) transcriptEl.textContent = fallback
+          showSpeechPopup(assistantName, fallback)
+          activeAssistantTimers.push(setTimeout(()=>{
+            playAssistantCue("close")
+            releasePageAudio()
+            clearAssistantSequence()
+          }, 1600))
+        }
+      }, countdown.length * 650 + 3000))
+    }
     function triggerAssistantOrb(assistantId){
       const route = remoteState.currentRoute || "home"
       const orb = assistantId === "projake" ? assistantJakeOrb : assistantAriaOrb
@@ -6246,34 +6286,11 @@ function setupFloatMode(){
       if(rect && partnerOrb){
         moveAssistantOrbToPoint(partnerOrb, rect.left + rect.width - 42, rect.top + Math.min(rect.height, 140))
       }
-      playAssistantCue("intro")
-      if(transcriptEl) transcriptEl.textContent = help.greeting
-      showSpeechPopup(assistantName, help.greeting)
-      activeAssistantTimers.push(setTimeout(()=>{
-        if(transcriptEl) transcriptEl.textContent = help.listening
-        showSpeechPopup(assistantName, help.listening)
-      }, 900))
-      activeAssistantTimers.push(setTimeout(()=>{
-        if(typeof window.startAriaListening === "function"){
-          window.startAriaListening()
-        }else if(typeof startOpenAIListening === "function"){
-          startOpenAIListening()
-        }else{
-          playAssistantCue("response")
-          const fallback = `${assistantName} is ready, but this device needs mic support enabled before live listening can begin.`
-          if(transcriptEl) transcriptEl.textContent = fallback
-          showSpeechPopup(assistantName, fallback)
-          activeAssistantTimers.push(setTimeout(()=>{
-            playAssistantCue("close")
-            releasePageAudio()
-            clearAssistantSequence()
-          }, 1600))
-        }
-      }, 3000))
+      startAssistantBrainCountdown(assistantName, help, transcriptEl)
       activeAssistantTimers.push(setTimeout(()=>{
         releasePageAudio()
         clearAssistantSequence()
-      }, 12000))
+      }, 15000))
     }
     handleAssistantHover(assistantAriaOrb, "aria")
     handleAssistantHover(assistantJakeOrb, "projake")
