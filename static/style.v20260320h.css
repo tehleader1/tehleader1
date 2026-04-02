@@ -3589,6 +3589,10 @@ body.remote-hide-ads .remote-display-strip{
   gap:8px;
   flex-wrap:wrap;
 }
+.float-value-lane.compact{
+  gap:6px;
+  margin-bottom:6px;
+}
 .float-value-pill{
   padding:8px 12px;
   border-radius:999px;
@@ -3654,12 +3658,15 @@ body.remote-hide-ads .remote-display-strip{
   grid-template-columns:repeat(3, minmax(0, 1fr));
 }
 .float-sheet-copy{
-  padding:14px 16px;
-  border-radius:18px;
+  padding:10px 12px;
+  border-radius:16px;
   background:rgba(255,255,255,.54);
   color:#27466d;
-  line-height:1.55;
+  line-height:1.4;
   border:1px solid rgba(167,196,232,.28);
+  font-size:14px;
+  max-height:72px;
+  overflow:hidden;
 }
 .float-guide-shell{
   padding:16px;

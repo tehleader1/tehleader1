@@ -6142,6 +6142,23 @@ function setupFloatMode(){
         jake: { x: clampedX + (rightBias ? -26 : 138), y: clampedY + (lowerBias ? 52 : 116) }
       })
     }
+    function nudgeAssistantPresence(mode = "follow", point = null){
+      const centerX = window.innerWidth / 2
+      const centerY = window.innerHeight / 2
+      if(mode === "center"){
+        assistantMotionState.pointerBias = "center"
+        assistantMotionState.lastInteraction = { x: centerX, y: centerY, at: Date.now() - 900 }
+        applyAssistantPairLayout({
+          aria: { x: centerX - 116, y: Math.max(152, centerY - 88) },
+          jake: { x: centerX + 42, y: Math.min(window.innerHeight - 160, centerY + 34) }
+        })
+        return
+      }
+      const x = point?.x ?? centerX
+      const y = point?.y ?? centerY
+      assistantMotionState.lastInteraction = { x, y, at: Date.now() - 900 }
+      moveAssistantPairToInteraction(x, y)
+    }
     function getAssistantHelp(route, assistantId){
       const sceneKey = REMOTE_ASSISTANT_HELP[route] ? route : "home"
       return REMOTE_ASSISTANT_HELP[sceneKey][assistantId] || REMOTE_ASSISTANT_HELP.home[assistantId]
@@ -6153,12 +6170,21 @@ function setupFloatMode(){
       if(!shell || shell.hidden) return
       const scrollable = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)
       const progress = Math.min(1, Math.max(0, window.scrollY / scrollable))
-      const direction = window.scrollY >= assistantMotionState.lastScrollY ? "down" : "up"
+      const previousScrollY = assistantMotionState.lastScrollY
+      const direction = window.scrollY >= previousScrollY ? "down" : "up"
       assistantMotionState.lastScrollY = Math.max(window.scrollY || 0, 0)
+      const scrollDelta = Math.abs((window.scrollY || 0) - previousScrollY)
       const bucket = Math.floor(progress * 5)
       if(bucket !== assistantMotionState.lastScrollBucket || force){
         assistantMotionState.lastScrollBucket = bucket
         assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
+      }
+      if(scrollDelta > 120 && !force){
+        nudgeAssistantPresence("center", {
+          x: window.innerWidth / 2,
+          y: direction === "down" ? window.innerHeight * 0.62 : window.innerHeight * 0.28
+        })
+        return
       }
       const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < 2200)
       if(recentInteraction){
@@ -6257,6 +6283,9 @@ function setupFloatMode(){
       }
       assistantMotionState.lastInteraction = { x: event.clientX + 26, y: event.clientY - 26, at: Date.now() }
       moveAssistantPairToInteraction(event.clientX + 26, event.clientY - 26)
+      if(target?.closest?.("[data-faq-reel-topic], [data-faq-reel-next], [data-feedback-submit], [data-feedback-sort], [data-open-panel], [data-guide-start], [data-pay-product], .product-buy-btn")){
+        nudgeAssistantPresence("center", { x: event.clientX, y: Math.max(158, event.clientY - 32) })
+      }
     }, true)
     document.addEventListener("touchstart", (event)=>{
       const touch = event.touches && event.touches[0]
@@ -6962,7 +6991,8 @@ function setupFloatMode(){
   }
   function renderRemoteValueLane(items = []){
     if(!items.length) return ""
-    return `<div class="float-value-lane">${items.map(item=>`<span class="float-value-pill">${item}</span>`).join("")}</div>`
+    const primary = String(items[0] || "").replace(/^Value:\s*/i, "").trim()
+    return `<div class="float-value-lane compact"><span class="float-value-pill">${primary || items[0]}</span></div>`
   }
   function buildDiarySheet(){
     return `
