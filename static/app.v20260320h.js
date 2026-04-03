@@ -95,7 +95,7 @@ const SHOPIFY_LINK_PATHS = {
   pro: "/products/professional-hair-advisor-1",
   fantasy300: "/products/basic-fantasy-21-plus-300",
   fantasy600: "/products/advanced-fantasy-21-plus-600",
-    donate: "/products/auto-dissolve-soap-bar"
+    donate: "/products/supportrd-product-tip-donate"
   }
 const LINKS = {
     myOrders: "https://supportrd.com/account/orders",
@@ -108,7 +108,7 @@ const LINKS = {
   pro: "https://supportrd.com/products/professional-hair-advisor-1",
   fantasy300: "https://supportrd.com/products/basic-fantasy-21-plus-300",
   fantasy600: "https://supportrd.com/products/advanced-fantasy-21-plus-600",
-    donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
+    donate: "https://supportrd.com/products/supportrd-product-tip-donate",
     custom: "https://supportrd.com/pages/custom-order"
   }
   const SHOPIFY_ROLLOUTS = [
