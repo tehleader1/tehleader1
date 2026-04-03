@@ -319,7 +319,9 @@ const state = {
     adult21: false,
     isAdmin: false,
     activeAssistant: localStorage.getItem("activeAssistant") || "aria",
-    assistantTopic: localStorage.getItem("assistantTopic") || "hair_core"
+    assistantTopic: localStorage.getItem("assistantTopic") || "hair_core",
+    shopifyProducts: [],
+    shopifyProductsLoaded: false
 }
 
 const ASSISTANTS = [
@@ -5405,11 +5407,11 @@ function setupLoginGate(){
   }
   function syncLoginUi(isLogged){
     if(gate){
-      gate.style.display = "none"
-      gate.classList.remove("collapsed")
+      gate.style.display = isLogged ? "none" : "flex"
+      gate.classList.toggle("collapsed", !isLogged)
     }
-    if(loginRoute) loginRoute.hidden = true
-    document.body.classList.toggle("login-active", false)
+    if(loginRoute) loginRoute.hidden = !!isLogged
+    document.body.classList.toggle("login-active", !isLogged)
     if(loginBtn) loginBtn.style.display = isLogged ? "none" : "inline-flex"
     if(signupTop) signupTop.style.display = isLogged ? "none" : "inline-flex"
     if(logoutBtn) logoutBtn.style.display = isLogged ? "inline-flex" : "none"
@@ -5461,9 +5463,13 @@ function setupLoginGate(){
     document.body.classList.add("login-active")
   }
   function closeLoginGate(){
-    if(gate){ gate.style.display = "none" }
-    if(loginRoute) loginRoute.hidden = true
-    document.body.classList.remove("login-active")
+    if(localStorage.getItem("loggedIn") === "true"){
+      if(gate){ gate.style.display = "none" }
+      if(loginRoute) loginRoute.hidden = true
+      document.body.classList.remove("login-active")
+      return
+    }
+    collapseLoginGate()
   }
   if(loginBtn){ loginBtn.addEventListener("click", openLoginGate) }
   if(signupTop){ signupTop.addEventListener("click", ()=>{ window.location = "/login?mode=signup" }) }
@@ -5528,8 +5534,13 @@ async function loadProducts(){
   try{
     const r = await fetch("/api/products")
     const items = await r.json()
-    return Array.isArray(items) ? items : []
+    const list = Array.isArray(items) ? items : []
+    state.shopifyProducts = list
+    state.shopifyProductsLoaded = true
+    return list
   }catch{
+    state.shopifyProducts = []
+    state.shopifyProductsLoaded = true
     return []
   }
 }
@@ -5940,7 +5951,9 @@ function setupFloatMode(){
     pointerBias: "center",
     recentSideTaps: [],
     activeMoment: "idle",
-    momentTimer: null
+    momentTimer: null,
+    scrollTicking: false,
+    recentVelocity: 0
   }
   const REMOTE_ASSISTANT_SCENES = {
     home: {
@@ -6228,6 +6241,18 @@ function setupFloatMode(){
         jake: { x: clampedX + (rightBias ? -26 : 138), y: clampedY + (lowerBias ? 52 : 116) }
       })
     }
+    function getRouteFocusPoint(){
+      const route = remoteState.currentRoute || "home"
+      const help = REMOTE_ASSISTANT_HELP[route]
+      const selector = help?.[state.activeAssistant || "aria"]?.focus || help?.aria?.focus
+      const target = selector ? qs(selector) : null
+      const rect = target?.getBoundingClientRect?.()
+      if(!rect) return null
+      return {
+        x: rect.left + (rect.width / 2),
+        y: Math.max(142, Math.min(window.innerHeight - 120, rect.top + Math.min(rect.height * 0.35, 160)))
+      }
+    }
     function nudgeAssistantPresence(mode = "follow", point = null){
       const centerX = window.innerWidth / 2
       const centerY = window.innerHeight / 2
@@ -6314,17 +6339,27 @@ function setupFloatMode(){
       const direction = window.scrollY >= previousScrollY ? "down" : "up"
       assistantMotionState.lastScrollY = Math.max(window.scrollY || 0, 0)
       const scrollDelta = Math.abs((window.scrollY || 0) - previousScrollY)
+      assistantMotionState.recentVelocity = scrollDelta
       const bucket = Math.floor(progress * 5)
       if(bucket !== assistantMotionState.lastScrollBucket || force){
         assistantMotionState.lastScrollBucket = bucket
         assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
       }
-      if(scrollDelta > 18 && !force){
+      const routeFocus = getRouteFocusPoint()
+      if(routeFocus && (force || scrollDelta > 6)){
+        const sideShift = direction === "down" ? 88 : -88
+        applyAssistantPairLayout({
+          aria: { x: routeFocus.x - 112 + sideShift, y: routeFocus.y - 74 },
+          jake: { x: routeFocus.x + 82 + sideShift, y: routeFocus.y + 38 }
+        })
+        return
+      }
+      if(scrollDelta > 6 && !force){
         const focusPoint = {
           x: direction === "down"
             ? (assistantMotionState.pointerBias === "left" ? window.innerWidth * 0.62 : window.innerWidth * 0.38)
             : (assistantMotionState.pointerBias === "right" ? window.innerWidth * 0.42 : window.innerWidth * 0.58),
-          y: direction === "down" ? window.innerHeight * 0.72 : window.innerHeight * 0.2
+          y: direction === "down" ? window.innerHeight * 0.78 : window.innerHeight * 0.16
         }
         moveAssistantPairToInteraction(focusPoint.x, focusPoint.y)
         return
@@ -6340,8 +6375,18 @@ function setupFloatMode(){
       if(assistantMotionState.roamTimer) clearInterval(assistantMotionState.roamTimer)
       assistantMotionState.roamTimer = setInterval(()=>{
         if(!shell || shell.hidden) return
-        const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < 2600)
+        const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < 1600)
         if(recentInteraction) return
+        const routeFocus = getRouteFocusPoint()
+        if(routeFocus){
+          const verticalOffset = assistantMotionState.driftPhase % 2 === 0 ? -54 : 58
+          applyAssistantPairLayout({
+            aria: { x: routeFocus.x - 124, y: routeFocus.y + verticalOffset },
+            jake: { x: routeFocus.x + 118, y: routeFocus.y - verticalOffset }
+          })
+          assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
+          return
+        }
         assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
         assistantMotionState.pointerBias = assistantMotionState.pointerBias === "left"
           ? "right"
@@ -6355,7 +6400,7 @@ function setupFloatMode(){
             ? { x: assistantMotionState.pointerBias === "left" ? 162 : window.innerWidth - 162, y: 154 }
             : { x: assistantMotionState.pointerBias === "left" ? 178 : window.innerWidth - 178, y: window.innerHeight * 0.44 }
         moveAssistantPairToInteraction(roamPoint.x, roamPoint.y)
-      }, 4200)
+      }, 2100)
     }
     function handleAssistantHover(node, assistantId){
       if(!node) return
@@ -6576,7 +6621,14 @@ function setupFloatMode(){
         duration: purchaseLane ? 2600 : 2200
       })
     }, true)
-    window.addEventListener("scroll", ()=>syncAssistantViewportMotion(), { passive:true })
+    window.addEventListener("scroll", ()=>{
+      if(assistantMotionState.scrollTicking) return
+      assistantMotionState.scrollTicking = true
+      requestAnimationFrame(()=>{
+        assistantMotionState.scrollTicking = false
+        syncAssistantViewportMotion()
+      })
+    }, { passive:true })
     window.addEventListener("resize", ()=>syncAssistantViewportMotion(true))
     setTimeout(()=>syncAssistantViewportMotion(true), 220)
     startAssistantRoam()
@@ -9610,6 +9662,58 @@ function setupRemoteFastPay(){
     try{ localStorage.removeItem(PURCHASE_GATE_KEY) }catch{}
   }
 
+  function normalizeShopifyHandle(value){
+    return String(value || "").trim().toLowerCase()
+  }
+
+  function findLiveShopifyProduct(product){
+    if(!product) return null
+    const products = Array.isArray(state.shopifyProducts) ? state.shopifyProducts : []
+    if(!products.length) return null
+    const expectedHandle = normalizeShopifyHandle((SHOPIFY_LINK_PATHS[product.key] || "").split("/").pop())
+    const productTitle = normalizeShopifyHandle(product.title)
+    return products.find((item)=>{
+      const handle = normalizeShopifyHandle(item.handle)
+      const title = normalizeShopifyHandle(item.title)
+      return (!!expectedHandle && handle === expectedHandle) || (!!productTitle && title === productTitle)
+    }) || null
+  }
+
+  function buildShopifyCheckoutUrl(product, liveProduct){
+    const variantId = String(liveProduct?.variant || "").trim()
+    if(variantId && /^\d+$/.test(variantId)){
+      return `${LINKS.cart.replace(/\/+$/, "")}/${variantId}:1`
+    }
+    if(liveProduct?.handle){
+      return `${normalizeShopifyStorefrontBase(LINKS.cart).replace(/\/cart$/i, "")}/products/${liveProduct.handle}`
+    }
+    return product?.link || ""
+  }
+
+  async function ensureShopifyProductsLoaded(){
+    if(state.shopifyProductsLoaded) return state.shopifyProducts
+    return loadProducts()
+  }
+
+  function openShopifyPublishNotice(productTitle){
+    const title = productTitle || "this SupportRD product"
+    const detail = `${title} still needs a live Shopify storefront product route. Publish the product to Online Store or keep using the direct cart/variant checkout lane once the live product feed is populated.`
+    if(typeof openRemoteSheet === "function"){
+      openRemoteSheet("Publish Product To Storefront", `
+        <div class="float-sheet-panel">
+          <h4>Shopify storefront product still missing</h4>
+          <p>${detail}</p>
+          <div class="float-sheet-button-row">
+            <button class="btn" data-open-fastpay>Open Fast Pay</button>
+            <button class="btn ghost" data-sheet-close>Keep Browsing</button>
+          </div>
+        </div>
+      `, { message: detail })
+    }
+    if(status) status.textContent = detail
+    try{ openMiniWindow("PUBLISH PRODUCT", detail) }catch{}
+  }
+
   function openPurchaseAccountGate(product, sourceLabel, options = {}){
     persistPurchaseIntent(product, sourceLabel, options)
     const productTitle = product?.title || "this SupportRD purchase"
@@ -9674,7 +9778,13 @@ function setupRemoteFastPay(){
           await storefrontConfigReady
         }catch{}
       }
-      const liveLink = product?.key && LINKS[product.key] ? LINKS[product.key] : product?.link
+      const liveProducts = await ensureShopifyProductsLoaded()
+      const liveProduct = findLiveShopifyProduct(product)
+      const liveLink = buildShopifyCheckoutUrl(product, liveProduct) || (product?.key && LINKS[product.key] ? LINKS[product.key] : product?.link)
+      if(!liveProduct && !liveProducts.length){
+        openShopifyPublishNotice(product?.title)
+        return
+      }
       if(!liveLink) return
       const checkoutProduct = {...product, link: liveLink}
       const receipt = buildRemoteReceipt(checkoutProduct)

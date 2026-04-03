@@ -3646,6 +3646,7 @@ def get_products():
         edges{
           node{
             title
+            handle
             images(first:1){
               edges{node{url}}
             }
@@ -3659,7 +3660,6 @@ def get_products():
     """
 
     try:
-
         r = requests.post(
             f"https://{api_store}/api/2024-01/graphql.json",
             json={"query": query},
@@ -3673,23 +3673,62 @@ def get_products():
 
         products = []
 
-        for p in data["data"]["products"]["edges"]:
-
-            node = p["node"]
-            v = node["variants"]["edges"][0]["node"]
-
+        for p in data.get("data", {}).get("products", {}).get("edges", []):
+            node = p.get("node", {})
+            variant_edges = node.get("variants", {}).get("edges", [])
+            image_edges = node.get("images", {}).get("edges", [])
+            if not variant_edges:
+                continue
+            v = variant_edges[0].get("node", {})
+            image_url = ""
+            if image_edges:
+                image_url = image_edges[0].get("node", {}).get("url", "")
             products.append({
-                "title": node["title"],
-                "price": v["price"]["amount"],
-                "variant": v["id"],
-                "image": node["images"]["edges"][0]["node"]["url"]
+                "title": node.get("title", ""),
+                "handle": node.get("handle", ""),
+                "price": v.get("price", {}).get("amount", ""),
+                "variant": v.get("id", ""),
+                "image": image_url,
+                "source": "storefront"
             })
 
+        if products:
+            PRODUCT_CACHE = products
+            PRODUCT_CACHE_TIME = now
+            return products
+    except:
+        pass
+
+    if not SHOPIFY_ADMIN_TOKEN:
+        return []
+
+    try:
+        r = requests.get(
+            f"https://{api_store}/admin/api/2024-01/products.json?limit=20&fields=id,title,handle,image,variants,status,published_at",
+            headers={"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN},
+            timeout=8
+        )
+        data = r.json()
+        products = []
+        for item in data.get("products", []):
+            variants = item.get("variants") or []
+            if not variants:
+                continue
+            first_variant = variants[0]
+            image_obj = item.get("image") or {}
+            products.append({
+                "title": item.get("title", ""),
+                "handle": item.get("handle", ""),
+                "price": first_variant.get("price", ""),
+                "variant": str(first_variant.get("id", "")).strip(),
+                "image": image_obj.get("src", ""),
+                "source": "admin",
+                "status": item.get("status", ""),
+                "published_at": item.get("published_at")
+            })
         PRODUCT_CACHE = products
         PRODUCT_CACHE_TIME = now
-
         return products
-
     except:
         return []
 
