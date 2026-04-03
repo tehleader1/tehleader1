@@ -907,6 +907,21 @@ body:hover .theme-side{opacity:0.8;box-shadow:0 0 40px rgba(124,243,209,0.35);}
 .login-gate.collapsed .login-card{display:none;}
 .login-gate.collapsed .login-route-pill{display:inline-flex;align-items:center;justify-content:center;}
 body.login-active .login-gate{display:flex;}
+.floating-handsfree-toggle{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:260;
+  border:none;
+  border-radius:999px;
+  padding:12px 18px;
+  background:linear-gradient(120deg,#17324f,#355f96);
+  color:#fff;
+  font-weight:800;
+  letter-spacing:.04em;
+  box-shadow:0 18px 42px rgba(8,18,34,.28);
+  cursor:pointer;
+}
 @media (max-width:720px){
   .login-gate{
     top:auto;
@@ -4144,6 +4159,7 @@ body.remote-hide-ads .remote-display-strip{
   font-size:18px;
   font-weight:700;
   cursor:pointer;
+  pointer-events:auto;
   display:grid;
   place-items:center;
   gap:10px;
@@ -4164,7 +4180,7 @@ body.remote-hide-ads .remote-display-strip{
   left:var(--demo-float-left, calc(50vw - 84px));
   top:var(--demo-float-top, 22vh);
   width:min(170px, 34vw);
-  z-index:90;
+  z-index:240;
   box-shadow:0 30px 70px rgba(8,17,34,.34);
   animation:remoteAssistantDrift var(--demo-bob-duration) ease-in-out infinite, remoteOrbPulse 1.7s ease-in-out infinite, remoteOrbCharge 1.9s ease-in-out infinite;
   transition:left .18s cubic-bezier(.22,.61,.36,1), top .18s cubic-bezier(.22,.61,.36,1), transform .22s ease, box-shadow .22s ease, filter .22s ease;

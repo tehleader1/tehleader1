@@ -5556,6 +5556,13 @@ function setupHairAnalysis(){
   if(!start || !overlay) return
   start.addEventListener("click", ()=>{
     overlay.style.display = "flex"
+    holdAssistantTeleport({
+      aria: { x: window.innerWidth / 2 - 104, y: window.innerHeight - 170 },
+      jake: { x: window.innerWidth / 2 + 76, y: window.innerHeight - 142 }
+    }, 14000, {
+      mood: "alert",
+      status: "Hair scan active. Aria and Jake teleported to the scan lane and will stay here until the scan settles."
+    })
     if(typeof triggerAssistantMoment === "function"){
       triggerAssistantMoment("analysis_ready", {
         point: { x: window.innerWidth / 2, y: Math.max(174, window.innerHeight * 0.34) },
@@ -5570,6 +5577,7 @@ function setupHairAnalysis(){
       if(result) result.textContent = summary
       showSpeechPopup("ARIA", summary)
       speakReply(summary)
+      releaseAssistantTeleport()
       setTimeout(()=>{ overlay.style.display = "none" }, 2400)
     }, 1800)
   })
@@ -5953,7 +5961,9 @@ function setupFloatMode(){
     activeMoment: "idle",
     momentTimer: null,
     scrollTicking: false,
-    recentVelocity: 0
+    recentVelocity: 0,
+    teleportTimer: null,
+    teleportUntil: 0
   }
   const REMOTE_ASSISTANT_SCENES = {
     home: {
@@ -6142,6 +6152,11 @@ function setupFloatMode(){
     function clearAssistantSequence(){
       activeAssistantTimers.forEach((timer)=>clearTimeout(timer))
       activeAssistantTimers = []
+      if(assistantMotionState.teleportTimer){
+        clearTimeout(assistantMotionState.teleportTimer)
+        assistantMotionState.teleportTimer = null
+      }
+      assistantMotionState.teleportUntil = 0
       ;[assistantAriaOrb, assistantJakeOrb].forEach((orb)=>{
         if(!orb) return
         orb.classList.remove("hover-wave")
@@ -6253,6 +6268,59 @@ function setupFloatMode(){
         y: Math.max(142, Math.min(window.innerHeight - 120, rect.top + Math.min(rect.height * 0.35, 160)))
       }
     }
+    function releaseAssistantTeleport(){
+      assistantMotionState.teleportUntil = 0
+      if(assistantMotionState.teleportTimer){
+        clearTimeout(assistantMotionState.teleportTimer)
+        assistantMotionState.teleportTimer = null
+      }
+      setAssistantMomentClasses("idle")
+      syncAssistantViewportMotion(true)
+    }
+    function holdAssistantTeleport(layout, duration = 0, options = {}){
+      if(!layout) return
+      if(assistantMotionState.teleportTimer){
+        clearTimeout(assistantMotionState.teleportTimer)
+        assistantMotionState.teleportTimer = null
+      }
+      assistantMotionState.teleportUntil = duration > 0 ? Date.now() + duration : 0
+      if(options.mood) setAssistantMomentClasses(options.mood)
+      if(options.status && assistantStatus) assistantStatus.textContent = options.status
+      applyAssistantPairLayout(layout)
+      if(duration > 0){
+        assistantMotionState.teleportTimer = setTimeout(()=>releaseAssistantTeleport(), duration)
+      }
+    }
+    function holdSingleAssistantTeleport(assistantId, point, duration = 0, options = {}){
+      const primary = assistantId === "projake" ? assistantJakeOrb : assistantAriaOrb
+      const partner = assistantId === "projake" ? assistantAriaOrb : assistantJakeOrb
+      if(!primary || !point) return
+      if(assistantMotionState.teleportTimer){
+        clearTimeout(assistantMotionState.teleportTimer)
+        assistantMotionState.teleportTimer = null
+      }
+      assistantMotionState.teleportUntil = duration > 0 ? Date.now() + duration : 0
+      if(options.mood) setAssistantMomentClasses(options.mood)
+      if(options.status && assistantStatus) assistantStatus.textContent = options.status
+      moveAssistantOrbToPoint(primary, point.x, point.y)
+      const routeFocus = getRouteFocusPoint() || { x: window.innerWidth - 150, y: 150 }
+      if(partner) moveAssistantOrbToPoint(partner, routeFocus.x, routeFocus.y)
+      if(duration > 0){
+        assistantMotionState.teleportTimer = setTimeout(()=>releaseAssistantTeleport(), duration)
+      }
+    }
+    function getRouteFocusPoint(){
+      const route = remoteState.currentRoute || "home"
+      const help = REMOTE_ASSISTANT_HELP[route]
+      const selector = help?.[state.activeAssistant || "aria"]?.focus || help?.aria?.focus
+      const target = selector ? qs(selector) : null
+      const rect = target?.getBoundingClientRect?.()
+      if(!rect) return null
+      return {
+        x: rect.left + (rect.width / 2),
+        y: Math.max(142, Math.min(window.innerHeight - 120, rect.top + Math.min(rect.height * 0.35, 160)))
+      }
+    }
     function nudgeAssistantPresence(mode = "follow", point = null){
       const centerX = window.innerWidth / 2
       const centerY = window.innerHeight / 2
@@ -6333,6 +6401,7 @@ function setupFloatMode(){
     }
     function syncAssistantViewportMotion(force = false){
       if(!shell || shell.hidden) return
+      if(assistantMotionState.teleportUntil && Date.now() < assistantMotionState.teleportUntil && !force) return
       const scrollable = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)
       const progress = Math.min(1, Math.max(0, window.scrollY / scrollable))
       const previousScrollY = assistantMotionState.lastScrollY
@@ -6417,6 +6486,17 @@ function setupFloatMode(){
       })
       node.addEventListener("mouseleave", ()=>node.classList.remove("hover-wave"))
     }
+    function bindAssistantTrigger(node, assistantId){
+      if(!node) return
+      const fire = (event)=>{
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        triggerAssistantOrb(assistantId)
+      }
+      node.addEventListener("click", fire)
+      node.addEventListener("pointerup", fire)
+      node.addEventListener("touchend", fire, { passive:false })
+    }
     function ensureAssistantBootOverlay(){
       let overlay = qs("#assistantBootOverlay")
       if(overlay) return overlay
@@ -6465,6 +6545,20 @@ function setupFloatMode(){
       overlay.classList.remove("show", "ready")
       overlay.hidden = true
     }
+    async function primeAssistantMic(assistantName){
+      if(!navigator.mediaDevices?.getUserMedia) return true
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true })
+        try{ stream.getTracks().forEach(track=>track.stop()) }catch{}
+        return true
+      }catch{
+        const msg = `${assistantName} needs mic access before the live speech sequence can start.`
+        if(assistantStatus) assistantStatus.textContent = msg
+        showSpeechPopup(assistantName, msg)
+        try{ openMiniWindow("OPEN YOUR MIC", msg) }catch{}
+        return false
+      }
+    }
     function startAssistantBrainCountdown(assistantName, help, transcriptEl){
       const countdown = [5, 4, 3, 2, 1]
       nudgeAssistantPresence("center", {
@@ -6512,7 +6606,7 @@ function setupFloatMode(){
         }
       }, countdown.length * 650 + 3000))
     }
-    function triggerAssistantOrb(assistantId){
+    async function triggerAssistantOrb(assistantId){
       const route = remoteState.currentRoute || "home"
       const orb = assistantId === "projake" ? assistantJakeOrb : assistantAriaOrb
       const help = getAssistantHelp(route, assistantId)
@@ -6523,6 +6617,8 @@ function setupFloatMode(){
       applyAssistantUI(true)
       syncProfile()
       interruptPageAudio()
+      const micReady = await primeAssistantMic(assistantName)
+      if(!micReady) return
       applyAssistantDemoScene(route, help.greeting)
       moveAssistantOrbToFocus(orb, help.focus)
       const partnerOrb = assistantId === "projake" ? assistantAriaOrb : assistantJakeOrb
@@ -7854,6 +7950,15 @@ function setupFloatMode(){
       revealRemoteStage()
       applyAssistantDemoScene(options.route || remoteState.currentRoute || "home", false)
       if(options.message) setRemoteStatus(options.message)
+    if(options.route && ["diary","studio","settings","map","faq","profile","payments"].includes(options.route)){
+      holdAssistantTeleport({
+        aria: { x: window.innerWidth - 194, y: window.innerHeight - 214 },
+        jake: { x: window.innerWidth - 108, y: window.innerHeight - 128 }
+      }, 2600, {
+        mood: options.route === "payments" ? "excited" : "social",
+        status: `${title} is open. Aria and Jake teleported down the page to stay with the content.`
+      })
+    }
     if(options.route === "diary"){
       setTimeout(()=>triggerAssistantMoment("diary_schedule", {
         point: { x: window.innerWidth / 2, y: Math.max(168, window.innerHeight * 0.32) },
@@ -8578,6 +8683,13 @@ function setupFloatMode(){
         renderBoard()
       }
       remoteState.recorder.start()
+      holdSingleAssistantTeleport("projake", {
+        x: window.innerWidth * 0.28,
+        y: window.innerHeight * 0.66
+      }, 6000, {
+        mood: "focus",
+        status: "Jake teleported into the lower-left studio lane while the motherboard started receiving new material."
+      })
       drawWaveform(true)
       if(quickEditStatus) quickEditStatus.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live on ${getBoard().name}. Press Pause to save it into the board.`
       if(boardMode) boardMode.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live. Sound waves are being drawn into ${getBoard().name}.`
@@ -9127,13 +9239,23 @@ function setupFloatMode(){
       window.openWorldMapPanel()
     }
   })
-    if(assistantAriaOrb) assistantAriaOrb.onclick = ()=>triggerAssistantOrb("aria")
-    if(assistantJakeOrb) assistantJakeOrb.onclick = ()=>triggerAssistantOrb("projake")
-    if(guardianAriaBtn) guardianAriaBtn.onclick = ()=>triggerAssistantOrb("aria")
-    if(guardianJakeBtn) guardianJakeBtn.onclick = ()=>triggerAssistantOrb("projake")
+    bindAssistantTrigger(assistantAriaOrb, "aria")
+    bindAssistantTrigger(assistantJakeOrb, "projake")
+    bindAssistantTrigger(guardianAriaBtn, "aria")
+    bindAssistantTrigger(guardianJakeBtn, "projake")
   profileUploadInput?.addEventListener("change", ()=>{
     const file = profileUploadInput.files?.[0]
-    if(file) readAvatarFile(file)
+    if(file){
+      readAvatarFile(file)
+      const focus = getRouteFocusPoint() || { x: window.innerWidth / 2, y: Math.max(170, window.innerHeight * 0.45) }
+      holdAssistantTeleport({
+        aria: { x: focus.x - 104, y: focus.y - 36 },
+        jake: { x: focus.x + 84, y: focus.y + 12 }
+      }, 7000, {
+        mood: "focus",
+        status: "Profile upload active. Aria and Jake teleported to the profile image lane for the next few seconds."
+      })
+    }
     profileUploadInput.value = ""
   })
   qs("#floatUploadProfileBtn")?.addEventListener("click", triggerProfileUpload)
@@ -9194,6 +9316,13 @@ function setupFloatMode(){
     if(file){
       resetBoards("Fresh 3 motherboards ready for a new upload.")
       loadFileToBoard(file)
+      holdSingleAssistantTeleport("projake", {
+        x: window.innerWidth * 0.28,
+        y: window.innerHeight * 0.68
+      }, 6000, {
+        mood: "focus",
+        status: "Jake teleported into the booth lane to watch the motherboard material appear."
+      })
       uploadInput.value = ""
     }
   })
@@ -9717,6 +9846,13 @@ function setupRemoteFastPay(){
   function openPurchaseAccountGate(product, sourceLabel, options = {}){
     persistPurchaseIntent(product, sourceLabel, options)
     const productTitle = product?.title || "this SupportRD purchase"
+    holdAssistantTeleport({
+      aria: { x: window.innerWidth - 186, y: window.innerHeight - 214 },
+      jake: { x: window.innerWidth - 106, y: window.innerHeight - 142 }
+    }, 14000, {
+      mood: "excited",
+      status: `${productTitle} is waiting at the payment lane. Aria and Jake moved above the purchase button to help.`
+    })
     const message = `${productTitle} is ready. Sign in or create an account first so SupportRD can attach premium access, orders, and upgrades to the right person.`
     if(typeof openRemoteSheet === "function"){
       openRemoteSheet("Sign In Before Checkout", `
@@ -9773,6 +9909,13 @@ function setupRemoteFastPay(){
         openPurchaseAccountGate(product, sourceLabel, options)
         return
       }
+      holdAssistantTeleport({
+        aria: { x: window.innerWidth - 186, y: window.innerHeight - 214 },
+        jake: { x: window.innerWidth - 106, y: window.innerHeight - 142 }
+      }, 14000, {
+        mood: "excited",
+        status: `${product?.title || "SupportRD purchase"} is moving through the payment lane. Aria and Jake are staying close to checkout.`
+      })
       if(storefrontConfigReady){
         try{
           await storefrontConfigReady
@@ -9941,6 +10084,7 @@ function setupAria(){
   const btn = qs("#voiceToggle")
   const sphere = qs("#ariaSphere")
   const handsBtn = qs("#handsfreeToggle")
+  let floatingHandsfree = qs("#floatingHandsfreeToggle")
   let ariaActive = false
   let mediaRecorder = null
   let audioChunks = []
@@ -10011,15 +10155,33 @@ function setupAria(){
     if(!handsBtn) return
     handsBtn.textContent = handsFreeMode ? "Hands-Free: ON" : "Hands-Free: OFF"
     handsBtn.classList.toggle("active", handsFreeMode)
+    if(!floatingHandsfree){
+      floatingHandsfree = document.createElement("button")
+      floatingHandsfree.id = "floatingHandsfreeToggle"
+      floatingHandsfree.className = "floating-handsfree-toggle"
+      floatingHandsfree.type = "button"
+      floatingHandsfree.hidden = true
+      document.body.appendChild(floatingHandsfree)
+      floatingHandsfree.addEventListener("click", ()=>{
+        handsFreeMode = !handsFreeMode
+        if(!handsFreeMode){
+          stopOpenAIListening()
+        }else{
+          startOpenAIListening()
+        }
+        syncHandsFree()
+      })
+    }
+    floatingHandsfree.hidden = !handsFreeMode
+    floatingHandsfree.textContent = handsFreeMode ? "Handsfree Live · Tap To Stop" : "Handsfree Off"
   }
   if(handsBtn){
     syncHandsFree()
     handsBtn.addEventListener("click", ()=>{
       handsFreeMode = !handsFreeMode
       syncHandsFree()
-      if(handsFreeMode && !ariaActive){
-        startOpenAIListening()
-      }
+      if(handsFreeMode) startOpenAIListening()
+      else stopOpenAIListening()
     })
   }
 
