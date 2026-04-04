@@ -4367,6 +4367,15 @@ body.remote-hide-ads .remote-display-strip{
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:10px;
 }
+.float-transport-btn{
+  min-height:60px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  line-height:1;
+  font-weight:800;
+}
 .float-board-editor{
   display:grid;
   gap:12px;
@@ -4496,6 +4505,12 @@ body.remote-hide-ads .remote-display-strip{
   grid-template-columns:repeat(2, minmax(0, 1fr));
   gap:10px;
 }
+.float-studio-fx-grid,
+.float-gig-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
 .float-settings-shortcuts{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -4516,6 +4531,20 @@ body.remote-hide-ads .remote-display-strip{
   border-color:rgba(157,233,255,.62);
   box-shadow:0 12px 24px rgba(23,87,205,.16);
 }
+.float-settings-guide{
+  display:grid;
+  gap:8px;
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid rgba(125,215,255,.2);
+  background:linear-gradient(180deg, rgba(8,16,28,.78), rgba(14,29,44,.68));
+  color:#eef7ff;
+  line-height:1.55;
+}
+.float-settings-guide strong{
+  font-size:15px;
+  color:#f4fbff;
+}
 .float-switch-row{
   display:flex;
   align-items:center;
@@ -4526,6 +4555,46 @@ body.remote-hide-ads .remote-display-strip{
 .float-diary-input{
   min-height:180px;
   font-size:16px;
+}
+.float-diary-link-hub{
+  display:grid;
+  gap:10px;
+}
+.float-diary-link-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.float-diary-link-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:0 14px;
+  border-radius:999px;
+  border:1px solid rgba(125,215,255,.28);
+  background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+  color:#eef7ff;
+  text-decoration:none;
+  font-size:13px;
+  font-weight:700;
+}
+.float-diary-link-empty{
+  color:#dce9fb;
+  font-size:13px;
+  line-height:1.5;
+}
+.float-diary-link-editor{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  padding:12px 14px;
+}
+.float-diary-link-editor summary{
+  cursor:pointer;
+  font-weight:700;
+  color:#eef7ff;
+  margin-bottom:10px;
 }
 .float-diary-shell{
   display:grid;
@@ -4642,6 +4711,12 @@ body.remote-hide-ads .remote-display-strip{
 .float-profile-lines strong{font-size:20px;color:#fff;}
 .float-profile-lines span{color:rgba(238,246,255,.88);}
 .float-box-copy{font-size:13px;line-height:1.55;color:rgba(235,245,255,.9);}
+.btn.active,
+.btn.ghost.active{
+  border-color:rgba(157,233,255,.68);
+  box-shadow:0 0 0 1px rgba(157,233,255,.3), 0 14px 28px rgba(18,84,196,.18);
+  background:linear-gradient(180deg, rgba(157,233,255,.16), rgba(255,255,255,.07));
+}
 .float-studio-live-btn{width:100%;min-height:58px;margin:0 0 12px;font-size:17px;font-weight:800;}
 #floatProfilePostInput{
   width:100%;
@@ -4942,6 +5017,11 @@ body.remote-hide-ads .remote-display-strip{
     grid-template-columns:1fr;
   }
   .float-profile-sheet-hero{
+    grid-template-columns:1fr;
+  }
+  .float-config-grid,
+  .float-studio-fx-grid,
+  .float-gig-grid{
     grid-template-columns:1fr;
   }
   .float-remote-sheet-head,

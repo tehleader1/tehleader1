@@ -5846,6 +5846,18 @@ function setupFloatMode(){
   const settingsLinksBtn = qs("#floatSettingsLinksBtn")
   const settingsPushBtn = qs("#floatSettingsPushBtn")
   const settingsLanguageBtn = qs("#floatSettingsLanguageBtn")
+  const configGuide = qs("#floatConfigGuide")
+  const configPhone = qs("#floatConfigPhone")
+  const diarySocialLinkRow = qs("#floatDiarySocialLinkRow")
+  const diarySocialEditor = qs("#floatDiarySocialEditor")
+  const instrumentTypeInput = qs("#floatInstrumentType")
+  const fxPresetInput = qs("#floatFxPreset")
+  const gigSettings = qs("#floatGigSettings")
+  const gigFilterInput = qs("#floatGigFilter")
+  const gigPanInput = qs("#floatGigPan")
+  const gigFrameRateInput = qs("#floatGigFrameRate")
+  const gigZoomInput = qs("#floatGigZoom")
+  const gigSlowMotionInput = qs("#floatGigSlowMotion")
   const studioLiveBtn = qs("#floatStudioLiveBtn")
   function setRemoteStatus(text){
     if(text && liveStatus) liveStatus.textContent = text
@@ -7410,24 +7422,78 @@ function setupFloatMode(){
     const primary = String(items[0] || "").replace(/^Value:\s*/i, "").trim()
     return `<div class="float-value-lane compact"><span class="float-value-pill">${primary || items[0]}</span></div>`
   }
+  function renderDiarySocialLinkRow(){
+    if(!diarySocialLinkRow) return
+    const links = state.socialLinks || {}
+    const items = [
+      { label: "Facebook", href: links.fb },
+      { label: "Instagram", href: links.ig },
+      { label: "TikTok", href: links.tiktok },
+      { label: "YouTube", href: links.yt },
+      { label: "X", href: links.x },
+      { label: "WhatsApp", href: links.whatsapp || links.evelyn },
+      { label: "Google", href: links.google },
+      { label: "Bing", href: links.bing }
+    ].filter(item => item.href)
+    if(!items.length){
+      diarySocialLinkRow.innerHTML = `<span class="float-diary-link-empty">Add your social URLs below so your live routes sit right under the message window.</span>`
+      return
+    }
+    diarySocialLinkRow.innerHTML = items.map(item => `<a class="float-diary-link-pill" href="${escapeHtml(item.href)}" target="_blank" rel="noopener noreferrer">${item.label}</a>`).join("")
+  }
+  function buildSettingsGuide(lane = "overview"){
+    const guides = {
+      overview: {
+        title: "Full settings lane",
+        body: "Use this lane to verify a new email, reset a password with email confirmation, save a phone for text-style alerts, and keep the whole account route clean inside Remote."
+      },
+      email: {
+        title: "Change email",
+        body: "1. Enter the new email. 2. Send a verification note to the current email owner. 3. Send an opt-in verify email to the new inbox. 4. After both confirms, save the new address into SupportRD."
+      },
+      password: {
+        title: "Change password",
+        body: "1. Confirm the account email. 2. Send a reset email link. 3. Open the verified reset step. 4. Set the new password and save it back into Remote."
+      },
+      social: {
+        title: "Diary social routes",
+        body: "Social links now live right under What's on your mind. Edit them there so Diary can send posts, reels, and feedback through your saved routes."
+      },
+      push: {
+        title: "Text alert opt-in",
+        body: "1. Enter the phone number for SupportRD alerts. 2. Turn on text-style opt-in. 3. Let the phone/browser allow alerts when asked. 4. Save the preference so Aria and Jake can keep the route active."
+      },
+      language: {
+        title: "Languages",
+        body: "Choose the session language you want saved as the default. SupportRD keeps that language active across Diary, comments, and support guidance."
+      }
+    }
+    const picked = guides[lane] || guides.overview
+    return `<strong>${picked.title}</strong><span>${picked.body}</span>`
+  }
+  function showSettingsGuide(lane = "overview"){
+    if(configGuide) configGuide.innerHTML = buildSettingsGuide(lane)
+    const labels = {
+      overview: "Full settings lane is open inside Remote.",
+      email: "Email change steps are ready in settings.",
+      password: "Password reset steps are ready in settings.",
+      social: "Diary social routes are ready right under the message window.",
+      push: "Text-style phone alert steps are ready in settings.",
+      language: "Language control steps are ready in settings."
+    }
+    const message = labels[lane] || labels.overview
+    if(configStatus) configStatus.textContent = message
+    setRemoteStatus(message)
+  }
   function buildDiarySheet(){
     return `
-      <div class="float-sheet-copy">Diary Mode is the emotional center of SupportRD: post what is on your mind, keep the session feeling premium, and route quickly into booth, map, payment, or GPS without ever leaving Remote.</div>
+      <div class="float-sheet-copy">Diary Mode is the emotional center of SupportRD: post what is on your mind, keep the session premium, and send through your saved social routes without leaving Remote.</div>
       ${renderRemoteValueLane(["Value: session storytelling engine", "Energy: medium live guidance load", "Worth: premium post lane + route to booth / map / pay"])}
       <div class="float-sheet-shell">
         <section class="float-sheet-panel">
           <h4>What's On Your Mind?</h4>
           <textarea class="input float-sheet-textarea" data-diary-input placeholder="Write the update, hair thought, workday plan, or premium post you want to send."></textarea>
-            <div class="float-sheet-grid three">
-              <button class="btn ghost" type="button">Facebook</button>
-              <button class="btn ghost" type="button">Instagram</button>
-              <button class="btn ghost" type="button">TikTok</button>
-            </div>
-            <div class="float-sheet-grid three">
-              <button class="btn ghost" type="button">YouTube</button>
-              <button class="btn ghost" type="button">X</button>
-              <button class="btn ghost" type="button">WhatsApp</button>
-            </div>
+            <div class="float-sheet-copy">Saved social routes stay directly under the main Diary window on the page, so this sheet can stay focused on the message itself.</div>
             <div class="float-sheet-grid three">
               <button class="btn" data-diary-save>Send To Social</button>
               <button class="btn ghost" data-diary-clear>Erase</button>
@@ -7450,20 +7516,21 @@ function setupFloatMode(){
       </div>
     `
   }
-  function buildSettingsSheet(){
+    function buildSettingsSheet(){
         return `
-        <div class="float-sheet-copy">Configuration keeps the account side clean: contact info, password, socials, languages, and notifications all stay inside one polished SupportRD lane.</div>
+        <div class="float-sheet-copy">Configuration keeps the account side clean: contact info, password, language, and text-style alerts all stay inside one polished SupportRD lane.</div>
       ${renderRemoteValueLane(["Value: account control base", "Energy: low system load", "Worth: social posting + language-ready support"])}
       <div class="float-sheet-grid">
         <button class="btn" data-settings-focus="email">Change Email</button>
         <button class="btn" data-settings-focus="password">Change Password</button>
-        <button class="btn ghost" data-settings-focus="social">Social Media URL Links</button>
+        <button class="btn ghost" data-settings-focus="social">Diary Social Routes</button>
         <button class="btn ghost" data-settings-focus="push">Push Notifications</button>
         <button class="btn ghost" data-settings-focus="language">Languages</button>
         <button class="btn ghost" data-settings-open-account>Open Full Settings</button>
       </div>
-      <div class="float-sheet-copy">Full settings stay inside Remote now. No jump to the old page, just a clean account-control sheet.</div>
+      <div class="float-sheet-copy">Full settings stay inside Remote now. No jump to the old page, just a clean account-control sheet with the real steps.</div>
       <div class="float-sheet-status" data-settings-status>Choose a settings lane and SupportRD will guide the account update from there.</div>
+      <div class="float-settings-guide glass" data-settings-detail>${buildSettingsGuide("overview")}</div>
       `
     }
     function buildBlogPartySheet(){
@@ -8049,15 +8116,27 @@ function setupFloatMode(){
       const labels = {
         email: "Change Email is ready in settings.",
         password: "Change Password is ready in settings.",
-        social: "Social Media URL Links are ready in settings.",
-        push: "Push Notifications are ready in settings.",
+        social: "Diary social routes are ready right under the message window.",
+        push: "Text-style phone notifications are ready in settings.",
         language: "Language control is ready in settings."
       }
       remoteSheetBody.querySelector("[data-settings-status]")?.replaceChildren(document.createTextNode(labels[lane] || "General Settings is ready."))
+      const detail = remoteSheetBody.querySelector("[data-settings-detail]")
+      if(detail) detail.innerHTML = buildSettingsGuide(lane)
+      if(lane === "social"){
+        closeRemoteSheet(false, true)
+        openLaunchMenuSheet("floatSettingsBox", "Diary Mode")
+        diarySocialEditor?.setAttribute("open", "open")
+        qs("#floatLinkFacebook")?.focus()
+      }
       setRemoteStatus(labels[lane] || "General Settings is ready.")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-settings-open-account]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      remoteSheetBody.querySelector("[data-settings-status]")?.replaceChildren(document.createTextNode("Full account settings stay inside this Remote sheet. Change email, password, socials, language, and notifications here."))
+      remoteSheetBody.querySelector("[data-settings-status]")?.replaceChildren(document.createTextNode("Full account settings are open with verification, reset, and text-alert steps."))
+      const detail = remoteSheetBody.querySelector("[data-settings-detail]")
+      if(detail) detail.innerHTML = buildSettingsGuide("overview")
+      openLaunchMenuSheet("floatProfileBox", "General Settings")
+      showSettingsGuide("overview")
       setRemoteStatus("Full account settings are open inside Remote.")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-subscribe]")).forEach(btn=>btn.addEventListener("click", ()=>footerSubscribeBtn?.click()))
@@ -8174,14 +8253,15 @@ function setupFloatMode(){
     Array.from(remoteSheetBody.querySelectorAll("[data-profile-action]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const action = btn.getAttribute("data-profile-action") || "scan"
       if(action === "social"){
-        openLaunchMenuSheet("floatProfileBox", "General Settings")
-        setRemoteStatus("Social connections are open in General Settings inside Remote.")
+        openLaunchMenuSheet("floatSettingsBox", "Diary Mode")
+        diarySocialEditor?.setAttribute("open", "open")
+        setRemoteStatus("Social connections are open right under the Diary message window.")
         return
       }
       const labels = {
         scan: "Full hair scan is ready from Profile.",
         achievements: "Achievements view is ready from Profile.",
-        social: "Social connections are ready from Profile. Your saved WWW links and social routes stay attached here.",
+        social: "Social connections are ready from Profile. Your saved WWW links and social routes now live in Diary under the message window.",
         upgrade: "Aria / Jake upgrade lane is ready from Profile."
       }
       remoteSheetBody.querySelector("[data-profile-status]")?.replaceChildren(document.createTextNode(labels[action] || "Profile action is ready."))
@@ -8498,6 +8578,13 @@ function setupFloatMode(){
     if(trimEnd) trimEnd.value = String(board.trimEnd ?? 90)
     if(trimStartNumber) trimStartNumber.value = String(board.trimStart ?? 10)
     if(trimEndNumber) trimEndNumber.value = String(board.trimEnd ?? 90)
+    if(instrumentTypeInput) instrumentTypeInput.value = board.instrument || "voice"
+    if(fxPresetInput) fxPresetInput.value = board.fxPreset || "clean"
+    if(gigFilterInput) gigFilterInput.value = board.gigFilter || "natural"
+    if(gigPanInput) gigPanInput.value = board.gigPan || "standard"
+    if(gigFrameRateInput) gigFrameRateInput.value = board.gigFrameRate || "24"
+    if(gigZoomInput) gigZoomInput.value = board.gigZoom || "1x"
+    if(gigSlowMotionInput) gigSlowMotionInput.value = board.gigSlowMotion || "off"
     const prettyKind = board.kind === "empty" ? "Empty" : board.kind.toUpperCase()
     const trimLine = board.highlighted ? `Highlighted ${board.trimStart}% → ${board.trimEnd}%` : "No highlight yet."
     if(boardPreviewCopy){
@@ -8513,6 +8600,9 @@ function setupFloatMode(){
     if(boardMode) boardMode.textContent = board.kind === "empty"
       ? "Audio waveform ready for the active motherboard."
       : `${prettyKind} loaded on ${board.name}. ${board.kind === "video" ? "Video glide and sound preview are ready." : "Sound wave preview is ready."}`
+    highlightBtn?.classList.toggle("active", !!board.highlighted)
+    if(highlightBtn) highlightBtn.textContent = board.highlighted ? "Highlight Locked" : "Highlight Section"
+    if(gigSettings) gigSettings.hidden = remoteState.mode !== "video"
     if(board.kind === "empty"){
       revokePreview()
       drawWaveform(false)
@@ -8602,6 +8692,23 @@ function setupFloatMode(){
     board.trimEnd = 90
     renderBoard()
     if(quickEditStatus) quickEditStatus.textContent = `${board.name} had the highlighted section removed.`
+  }
+  function updateBoardFxState(){
+    const board = getBoard()
+    if(!board || board.kind === "empty") return
+    board.instrument = instrumentTypeInput?.value || board.instrument || "voice"
+    board.fxPreset = fxPresetInput?.value || board.fxPreset || "clean"
+    board.gigFilter = gigFilterInput?.value || board.gigFilter || "natural"
+    board.gigPan = gigPanInput?.value || board.gigPan || "standard"
+    board.gigFrameRate = gigFrameRateInput?.value || board.gigFrameRate || "24"
+    board.gigZoom = gigZoomInput?.value || board.gigZoom || "1x"
+    board.gigSlowMotion = gigSlowMotionInput?.value || board.gigSlowMotion || "off"
+    renderBoard()
+    if(quickEditStatus){
+      quickEditStatus.textContent = remoteState.mode === "video"
+        ? `${board.name} video lane tuned: ${board.gigFilter} filter · ${board.gigFrameRate} FPS · ${board.gigZoom} zoom.`
+        : `${board.name} sound lane tuned: ${board.instrument} · ${board.fxPreset} FX preset.`
+    }
   }
   function exportBoard(destination){
     const filledBoards = remoteState.boards.filter(board => board && board.kind !== "empty")
@@ -8744,6 +8851,7 @@ function setupFloatMode(){
       floatConfigEmail: saved.email || "",
       floatConfigAddress: saved.address || "",
       floatConfigPassword: "",
+      floatConfigPhone: saved.phone || "",
       floatConfigLanguage: saved.language || "English",
       floatLinkFacebook: saved.fb || "",
       floatLinkGoogle: saved.google || "",
@@ -8768,12 +8876,14 @@ function setupFloatMode(){
     })
     const push = qs("#floatConfigPush")
     if(push) push.checked = !!saved.pushAria
+    renderDiarySocialLinkRow()
   }
   function saveFloatSettings(){
     state.socialLinks = state.socialLinks || {}
     const email = qs("#floatConfigEmail")?.value.trim() || ""
     const password = qs("#floatConfigPassword")?.value || ""
     const address = qs("#floatConfigAddress")?.value.trim() || ""
+    const phone = qs("#floatConfigPhone")?.value.trim() || ""
     const language = qs("#floatConfigLanguage")?.value.trim() || "English"
     const extras = {
       google: qs("#floatLinkGoogle")?.value.trim() || "",
@@ -8811,6 +8921,7 @@ function setupFloatMode(){
       ...(state.socialLinks || {}),
       email,
       address,
+      phone,
       passwordPreview: password ? "updated" : (state.socialLinks?.passwordPreview || ""),
       ig: feedFields.setIG,
       tiktok: feedFields.setTikTok,
@@ -8822,9 +8933,11 @@ function setupFloatMode(){
       ...extras
     }
     localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
-    if(configStatus) configStatus.textContent = `Remote settings saved. ${language} is active, social links are registered, and Aria / Jake texting mode is ${state.socialLinks.pushAria ? "on" : "off"}.`
+    renderDiarySocialLinkRow()
+    if(configStatus) configStatus.textContent = `Remote settings saved. ${language} is active, social links sit under Diary, and text alerts are ${state.socialLinks.pushAria ? "armed" : "off"}.`
+    showSettingsGuide("overview")
     syncProfile()
-    openMiniWindow("Remote Settings", "Settings saved from the touch remote. Your social routes and account details are updated.")
+    openMiniWindow("Remote Settings", "Settings saved from the touch remote. Your diary social routes, account details, and phone alert preference are updated.")
   }
   function renderThemeCards(){
     if(!themeCardRail) return
@@ -9371,10 +9484,19 @@ function setupFloatMode(){
   fastForwardBtn?.addEventListener("click", ()=>seekPreview(3))
   recordVoiceBtn?.addEventListener("click", ()=>startVoiceRecord("voice"))
   instrumentRecordBtn?.addEventListener("click", ()=>startVoiceRecord("instrument"))
-  guitarBtn?.addEventListener("click", ()=>setRemoteStatus("Guitar jacked in. Instrument reader is armed on the selected motherboard."))
-  speakerBtn?.addEventListener("click", ()=>setRemoteStatus("Responding on speaker. Live instrument monitoring is ready."))
+  guitarBtn?.addEventListener("click", ()=>{
+    if(instrumentTypeInput) instrumentTypeInput.value = "guitar"
+    updateBoardFxState()
+    setRemoteStatus("Guitar jacked in. Instrument reader is armed on the selected motherboard.")
+  })
+  speakerBtn?.addEventListener("click", ()=>{
+    updateBoardFxState()
+    setRemoteStatus("Responding on speaker. Live instrument monitoring is ready.")
+  })
   gigSwitchBtn?.addEventListener("click", ()=>{
     remoteState.mode = remoteState.mode === "video" ? "audio" : "video"
+    if(gigSettings) gigSettings.hidden = remoteState.mode !== "video"
+    updateBoardFxState()
     setRemoteStatus(remoteState.mode === "video" ? "Gig Studio Connecter is active. Import MP4 / M4A and edit on the same three-board stack." : "Audio quick studio is active again.")
   })
   trimStart?.addEventListener("input", ()=>syncTrimInputs("range"))
@@ -9400,9 +9522,14 @@ function setupFloatMode(){
       return
     }
     snapshotBoards()
-    board.exported = "FX changed"
+    updateBoardFxState()
+    board.exported = remoteState.mode === "video"
+      ? `FX ${board.gigFilter || "natural"} · ${board.gigFrameRate || "24"} FPS`
+      : `FX ${board.fxPreset || "clean"} · ${board.instrument || "voice"}`
     renderBoard()
-    if(quickEditStatus) quickEditStatus.textContent = `${board.name} FX changed for the whole quick audio file.`
+    if(quickEditStatus) quickEditStatus.textContent = remoteState.mode === "video"
+      ? `${board.name} video FX changed for the highlighted motherboard sample.`
+      : `${board.name} sound FX changed for the highlighted motherboard sample.`
   })
   clearBoardBtn?.addEventListener("click", ()=>{
     snapshotBoards()
@@ -9414,6 +9541,13 @@ function setupFloatMode(){
   exportStudioBtn?.addEventListener("click", ()=>exportBoard("Main Studio"))
   exportTikTokBtn?.addEventListener("click", ()=>exportBoard("TikTok"))
   exportSocialBtn?.addEventListener("click", ()=>exportBoard("Social Export"))
+  instrumentTypeInput?.addEventListener("change", updateBoardFxState)
+  fxPresetInput?.addEventListener("change", updateBoardFxState)
+  gigFilterInput?.addEventListener("change", updateBoardFxState)
+  gigPanInput?.addEventListener("change", updateBoardFxState)
+  gigFrameRateInput?.addEventListener("change", updateBoardFxState)
+  gigZoomInput?.addEventListener("change", updateBoardFxState)
+  gigSlowMotionInput?.addEventListener("change", updateBoardFxState)
   qs("#floatAriaBtn")?.addEventListener("dblclick", ()=>{
     if(typeof window.startAriaListening === "function") window.startAriaListening()
   })
@@ -9492,35 +9626,44 @@ function setupFloatMode(){
   })
   qs("#floatSettingsOpenBtn")?.addEventListener("click", ()=>{
     openLaunchMenuSheet("floatProfileBox", "General Settings")
-    setRemoteStatus("General Settings is open for your social links, account info, and route controls.")
+    showSettingsGuide("overview")
+    setRemoteStatus("General Settings is open for account verification, password reset, phone alerts, and route controls.")
   })
   settingsSaveBtn?.addEventListener("click", saveFloatSettings)
   pushToggleBtn?.addEventListener("click", ()=>{
     const pushBox = qs("#floatConfigPush")
     if(pushBox) pushBox.checked = !pushBox.checked
+    showSettingsGuide("push")
     if(configStatus) configStatus.textContent = pushBox?.checked
-      ? "Aria / Jake texting mode is on. Expect sporadic and funky check-ins."
-      : "Aria / Jake texting mode is off for now."
-    openMiniWindow("Texting Mode", pushBox?.checked ? "Aria and Jake are now ready to text in fun little bursts." : "Texting mode is paused.")
+      ? "Text-style SupportRD alerts are armed for this phone once permission is granted."
+      : "Text-style SupportRD alerts are off for now."
+    openMiniWindow("Texting Mode", pushBox?.checked ? "SupportRD is ready to ask this phone for text-style alert permission and save the opt-in." : "Text-style phone alerts are paused.")
   })
   settingsEmailBtn?.addEventListener("click", ()=>{
     focusFloatSection("floatProfileBox", "Change Email is ready.")
+    showSettingsGuide("email")
     qs("#floatConfigEmail")?.focus()
   })
   settingsPasswordBtn?.addEventListener("click", ()=>{
     focusFloatSection("floatProfileBox", "Change Password is ready.")
+    showSettingsGuide("password")
     qs("#floatConfigPassword")?.focus()
   })
   settingsLinksBtn?.addEventListener("click", ()=>{
-    focusFloatSection("floatProfileBox", "Social Media URL Links are ready.")
+    focusFloatSection("floatSettingsBox", "Diary social routes are ready under What's on your mind.")
+    openLaunchMenuSheet("floatSettingsBox", "Diary Mode")
+    diarySocialEditor?.setAttribute("open", "open")
+    showSettingsGuide("social")
     qs("#floatLinkFacebook")?.focus()
   })
   settingsPushBtn?.addEventListener("click", ()=>{
-    focusFloatSection("floatProfileBox", "Push Notification is ready.")
-    pushToggleBtn?.click()
+    focusFloatSection("floatProfileBox", "Text alert opt-in is ready.")
+    showSettingsGuide("push")
+    configPhone?.focus()
   })
   settingsLanguageBtn?.addEventListener("click", ()=>{
     focusFloatSection("floatProfileBox", "Languages are ready.")
+    showSettingsGuide("language")
     qs("#floatConfigLanguage")?.focus()
   })
   qs("#floatMainMenuBtn")?.addEventListener("click", ()=>{

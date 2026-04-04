@@ -1837,14 +1837,14 @@
         <button class="float-board" data-float-board="3">Motherboard 3</button>
       </div>
       <div class="float-transport-strip">
-        <button class="btn ghost" id="floatPrevBtn">Back</button>
-        <button class="btn ghost" id="floatUndoBtn">Undo</button>
-        <button class="btn ghost" id="floatRewindBtn">Rewind</button>
-        <button class="btn ghost" id="floatPlayBtn">Play</button>
-        <button class="btn ghost" id="floatPauseBtn">Pause</button>
-        <button class="btn ghost" id="floatRecordVoiceBtn">Record</button>
-        <button class="btn ghost" id="floatNextBtn">Forward</button>
-        <button class="btn ghost" id="floatFastForwardBtn">Fast Forward</button>
+        <button class="btn ghost float-transport-btn" id="floatPrevBtn" title="Back Board" aria-label="Back Board">⏮</button>
+        <button class="btn ghost float-transport-btn" id="floatUndoBtn" title="Undo" aria-label="Undo">↶</button>
+        <button class="btn ghost float-transport-btn" id="floatRewindBtn" title="Rewind" aria-label="Rewind">⏪</button>
+        <button class="btn ghost float-transport-btn" id="floatPlayBtn" title="Play" aria-label="Play">▶</button>
+        <button class="btn ghost float-transport-btn" id="floatPauseBtn" title="Pause" aria-label="Pause">⏸</button>
+        <button class="btn ghost float-transport-btn" id="floatRecordVoiceBtn" title="Record" aria-label="Record">⏺</button>
+        <button class="btn ghost float-transport-btn" id="floatNextBtn" title="Next Board" aria-label="Next Board">⏭</button>
+        <button class="btn ghost float-transport-btn" id="floatFastForwardBtn" title="Fast Forward" aria-label="Fast Forward">⏩</button>
       </div>
       <div class="float-mini-actions">
         <button class="btn ghost" id="floatInstrumentRecordBtn">Instrument → Record</button>
@@ -1874,6 +1874,53 @@
         <div class="float-trim-row">
           <label>Precision Start %<input id="floatTrimStartNumber" class="input" type="number" min="0" max="95" value="10"></label>
           <label>Precision End %<input id="floatTrimEndNumber" class="input" type="number" min="5" max="100" value="90"></label>
+        </div>
+        <div class="float-config-grid float-studio-fx-grid">
+          <select id="floatInstrumentType" class="input">
+            <option value="voice">Voice / Mic</option>
+            <option value="guitar">Guitar</option>
+            <option value="drums">Drums</option>
+            <option value="keys">Keys / Piano</option>
+            <option value="bass">Bass</option>
+          </select>
+          <select id="floatFxPreset" class="input">
+            <option value="clean">FX Clean</option>
+            <option value="warm">FX Warm</option>
+            <option value="arena">FX Arena</option>
+            <option value="vinyl">FX Vinyl</option>
+            <option value="bright">FX Bright</option>
+          </select>
+        </div>
+        <div class="float-config-grid float-gig-grid" id="floatGigSettings" hidden>
+          <select id="floatGigFilter" class="input">
+            <option value="natural">Filter · Natural</option>
+            <option value="cinema">Filter · Cinema</option>
+            <option value="vivid">Filter · Vivid</option>
+            <option value="mono">Filter · Mono</option>
+          </select>
+          <select id="floatGigPan" class="input">
+            <option value="standard">Panoramic · Standard</option>
+            <option value="wide">Panoramic · Wide</option>
+            <option value="ultra">Panoramic · Ultra Wide</option>
+          </select>
+          <select id="floatGigFrameRate" class="input">
+            <option value="24">24 FPS</option>
+            <option value="30">30 FPS</option>
+            <option value="60">60 FPS</option>
+            <option value="120">120 FPS</option>
+          </select>
+          <select id="floatGigZoom" class="input">
+            <option value="1x">Zoom · 1x</option>
+            <option value="1.5x">Zoom · 1.5x</option>
+            <option value="2x">Zoom · 2x</option>
+            <option value="3x">Zoom · 3x</option>
+          </select>
+          <select id="floatGigSlowMotion" class="input">
+            <option value="off">Slow Motion · Off</option>
+            <option value="2x">Slow Motion · 2x</option>
+            <option value="4x">Slow Motion · 4x</option>
+            <option value="8x">Slow Motion · 8x</option>
+          </select>
         </div>
         <div class="float-mini-actions">
           <button class="btn ghost" id="floatHighlightBtn">Highlight Section</button>
@@ -1909,14 +1956,15 @@
       <div class="float-settings-shortcuts">
         <button class="float-settings-chip" id="floatSettingsEmailBtn">Change Email</button>
         <button class="float-settings-chip" id="floatSettingsPasswordBtn">Change Password</button>
-        <button class="float-settings-chip" id="floatSettingsLinksBtn">Social Media URL Links</button>
-        <button class="float-settings-chip" id="floatSettingsPushBtn">Push Notification</button>
+        <button class="float-settings-chip" id="floatSettingsLinksBtn">Diary Social Routes</button>
+        <button class="float-settings-chip" id="floatSettingsPushBtn">Text Alert Opt-In</button>
         <button class="float-settings-chip" id="floatSettingsLanguageBtn">Languages</button>
       </div>
       <div class="float-config-grid">
         <input id="floatConfigEmail" class="input" placeholder="Change Email">
         <input id="floatConfigPassword" class="input" type="password" placeholder="Change Password">
         <input id="floatConfigAddress" class="input" placeholder="Address">
+        <input id="floatConfigPhone" class="input" placeholder="Phone for text alerts">
         <select id="floatConfigLanguage" class="input">
           <option value="English">English</option>
           <option value="Spanish">Spanish</option>
@@ -1926,29 +1974,14 @@
           <option value="Hindi">Hindi</option>
           <option value="Mandarin">Mandarin</option>
         </select>
-        <input id="floatLinkFacebook" class="input" placeholder="Facebook URL">
-        <input id="floatLinkGoogle" class="input" placeholder="Google URL">
-        <input id="floatLinkBing" class="input" placeholder="Bing URL">
-        <input id="floatLinkTikTok" class="input" placeholder="TikTok URL">
-        <input id="floatLinkInstagram" class="input" placeholder="Instagram URL">
-        <input id="floatLinkDiscord" class="input" placeholder="Discord URL">
-        <input id="floatLinkMessenger" class="input" placeholder="Messenger URL">
-        <input id="floatLinkWhatsApp" class="input" placeholder="WhatsApp URL">
-        <input id="floatLinkTelegram" class="input" placeholder="Telegram URL">
-        <input id="floatLinkSlack" class="input" placeholder="Slack URL">
-        <input id="floatLinkTrello" class="input" placeholder="Trello URL">
-        <input id="floatLinkYouTube" class="input" placeholder="YouTube URL">
-        <input id="floatLinkX" class="input" placeholder="X URL">
-        <input id="floatLinkPlayStore" class="input" placeholder="Play Store URL">
-        <input id="floatLinkUber" class="input" placeholder="Uber URL">
-        <input id="floatLinkDuolingo" class="input" placeholder="Duolingo URL">
       </div>
-      <label class="float-switch-row"><input type="checkbox" id="floatConfigPush"> Turn on push notifications so you can text Aria / Jake</label>
+      <label class="float-switch-row"><input type="checkbox" id="floatConfigPush"> Ask this phone to opt in for text-style SupportRD alerts</label>
       <div class="float-box-copy" id="floatConfigStatus">Edit social links, login/logout, email/password, language, and jump straight to Main Menu or Studio from here.</div>
+      <div class="float-settings-guide glass" id="floatConfigGuide">Choose a settings chip and SupportRD will lay out the exact steps to verify email, change password, save phone text alerts, and keep the account lane clean.</div>
       <div class="float-mini-actions">
         <button class="btn" id="floatSettingsSaveBtn">Save Remote Settings</button>
         <button class="btn ghost" id="floatPushToggleBtn">Texting Mode</button>
-        <button class="btn ghost" id="floatSettingsOpenBtn">Open Settings</button>
+        <button class="btn ghost" id="floatSettingsOpenBtn">Open Full Settings</button>
         <button class="btn ghost" id="floatMainMenuBtn">Main Menu</button>
         <button class="btn ghost" id="floatStudioJumpBtn">Open Studio</button>
         <button class="btn ghost" id="floatLoginStateBtn">Login / Logout</button>
@@ -1976,6 +2009,30 @@
             <div class="float-diary-panel-head">What's on your mind?</div>
             <label class="float-diary-laser" for="floatDiaryInput">What's on your mind?</label>
             <textarea id="floatDiaryInput" class="input float-diary-input" placeholder="Drop your thought, note, post, or hair update here."></textarea>
+            <div class="float-diary-link-hub">
+              <div class="float-diary-link-row" id="floatDiarySocialLinkRow"></div>
+              <details class="float-diary-link-editor" id="floatDiarySocialEditor">
+                <summary>Edit Social Routes</summary>
+                <div class="float-config-grid">
+                  <input id="floatLinkFacebook" class="input" placeholder="Facebook URL">
+                  <input id="floatLinkInstagram" class="input" placeholder="Instagram URL">
+                  <input id="floatLinkTikTok" class="input" placeholder="TikTok URL">
+                  <input id="floatLinkYouTube" class="input" placeholder="YouTube URL">
+                  <input id="floatLinkX" class="input" placeholder="X URL">
+                  <input id="floatLinkWhatsApp" class="input" placeholder="WhatsApp URL">
+                  <input id="floatLinkGoogle" class="input" placeholder="Google URL">
+                  <input id="floatLinkBing" class="input" placeholder="Bing URL">
+                  <input id="floatLinkDiscord" class="input" placeholder="Discord URL">
+                  <input id="floatLinkMessenger" class="input" placeholder="Messenger URL">
+                  <input id="floatLinkTelegram" class="input" placeholder="Telegram URL">
+                  <input id="floatLinkSlack" class="input" placeholder="Slack URL">
+                  <input id="floatLinkTrello" class="input" placeholder="Trello URL">
+                  <input id="floatLinkPlayStore" class="input" placeholder="Play Store URL">
+                  <input id="floatLinkUber" class="input" placeholder="Uber URL">
+                  <input id="floatLinkDuolingo" class="input" placeholder="Duolingo URL">
+                </div>
+              </details>
+            </div>
             <div class="float-big-buttons">
               <button class="float-pill" id="floatDiaryRecordBtn">Record Note</button>
               <button class="float-pill" id="floatDiaryPostBtn">Send To Social</button>
