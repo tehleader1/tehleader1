@@ -2072,7 +2072,18 @@ function setupGPS(){
     map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-74.1%2C40.6%2C-73.7%2C40.9&layer=mapnik"
   }
   renderStorefrontState()
-  if(keitoBtn){ keitoBtn.addEventListener("click", ()=>openModal("keitoRouteModal")) }
+  if(keitoBtn){
+    keitoBtn.addEventListener("click", async ()=>{
+      activateGpsTab()
+      if(typeof window.openWorldMapPanel === "function"){
+        try{ window.openWorldMapPanel() }catch{}
+      }
+      setGpsStatus("Guide to Kito's House is active. Opening GPS mode toward Villa Gonzalez now.")
+      if(mapOverlay) mapOverlay.textContent = "Kito route active. Opening the live GPS lane toward Villa Gonzalez."
+      await routeToDestinationText("Villa Gonzalez, Santiago, Dominican Republic")
+      try{ openMiniWindow("GPS MODE ACTIVE", "Guide to Kito's House is now opening the live GPS route instead of the old info modal.") }catch{}
+    })
+  }
   if(rolloutBtn){ rolloutBtn.addEventListener("click", ()=>openModal("rolloutRouteModal")) }
   async function routeToDestination(){
     if(!map || !destInput) return
@@ -6199,23 +6210,23 @@ function setupFloatMode(){
       setAssistantMomentClasses("idle")
       syncAssistantViewportMotion(true)
     }
-    function moveAssistantOrbToFocus(orb, selector){
-      if(!orb) return
+    function moveAssistantNodeToFocus(node, selector){
+      if(!node) return
       const target = selector ? qs(selector) : null
       const rect = target?.getBoundingClientRect?.()
-      const width = Math.min(window.innerWidth * 0.24, 170)
+      const width = node.classList.contains("remote-guardian-btn") ? 238 : Math.min(window.innerWidth * 0.24, 170)
       const x = rect ? rect.left + (rect.width / 2) - (width / 2) : (window.innerWidth / 2) - (width / 2)
       const y = rect ? Math.max(92, rect.top + Math.min(rect.height * 0.18, 120)) : Math.max(110, window.innerHeight * 0.24)
-      orb.style.setProperty("--demo-float-left", `${Math.max(16, Math.min(window.innerWidth - width - 16, x))}px`)
-      orb.style.setProperty("--demo-float-top", `${Math.max(86, Math.min(window.innerHeight - width - 24, y))}px`)
-      orb.classList.add("demo-active")
+      node.style.setProperty("--demo-float-left", `${Math.max(16, Math.min(window.innerWidth - width - 16, x))}px`)
+      node.style.setProperty("--demo-float-top", `${Math.max(86, Math.min(window.innerHeight - width - 24, y))}px`)
+      node.classList.add("demo-active")
     }
-    function moveAssistantOrbToPoint(orb, x, y){
-      if(!orb) return
-      const width = Math.min(window.innerWidth * 0.24, 170)
-      orb.style.setProperty("--demo-float-left", `${Math.max(16, Math.min(window.innerWidth - width - 16, x - (width / 2)))}px`)
-      orb.style.setProperty("--demo-float-top", `${Math.max(86, Math.min(window.innerHeight - width - 24, y - (width / 2)))}px`)
-      orb.classList.add("demo-active")
+    function moveAssistantNodeToPoint(node, x, y){
+      if(!node) return
+      const width = node.classList.contains("remote-guardian-btn") ? 238 : Math.min(window.innerWidth * 0.24, 170)
+      node.style.setProperty("--demo-float-left", `${Math.max(16, Math.min(window.innerWidth - width - 16, x - (width / 2)))}px`)
+      node.style.setProperty("--demo-float-top", `${Math.max(86, Math.min(window.innerHeight - width - 24, y - (width / 2)))}px`)
+      node.classList.add("demo-active")
     }
     function buildAssistantScrollLayout(progress, direction){
       const width = window.innerWidth
@@ -6272,8 +6283,12 @@ function setupFloatMode(){
       const ariaOffsetY = parseSceneShift(scene.aria?.y)
       const jakeOffsetX = parseSceneShift(scene.jake?.x)
       const jakeOffsetY = parseSceneShift(scene.jake?.y)
-      moveAssistantOrbToPoint(assistantAriaOrb, layout.aria.x + ariaOffsetX, layout.aria.y + ariaOffsetY)
-      moveAssistantOrbToPoint(assistantJakeOrb, layout.jake.x + jakeOffsetX, layout.jake.y + jakeOffsetY)
+      ;[
+        [assistantAriaOrb, layout.aria.x + ariaOffsetX, layout.aria.y + ariaOffsetY],
+        [assistantJakeOrb, layout.jake.x + jakeOffsetX, layout.jake.y + jakeOffsetY],
+        [guardianAriaBtn, layout.aria.x + ariaOffsetX, layout.aria.y + ariaOffsetY],
+        [guardianJakeBtn, layout.jake.x + jakeOffsetX, layout.jake.y + jakeOffsetY]
+      ].forEach(([node, x, y])=>moveAssistantNodeToPoint(node, x, y))
     }
     function moveAssistantPairToInteraction(x, y){
       const clampedX = Math.max(82, Math.min(window.innerWidth - 82, x))
@@ -6332,9 +6347,9 @@ function setupFloatMode(){
       assistantMotionState.teleportUntil = duration > 0 ? Date.now() + duration : 0
       if(options.mood) setAssistantMomentClasses(options.mood)
       if(options.status && assistantStatus) assistantStatus.textContent = options.status
-      moveAssistantOrbToPoint(primary, point.x, point.y)
+      moveAssistantNodeToPoint(primary, point.x, point.y)
       const routeFocus = getRouteFocusPoint() || { x: window.innerWidth - 150, y: 150 }
-      if(partner) moveAssistantOrbToPoint(partner, routeFocus.x, routeFocus.y)
+      if(partner) moveAssistantNodeToPoint(partner, routeFocus.x, routeFocus.y)
       if(duration > 0){
         assistantMotionState.teleportTimer = setTimeout(()=>releaseAssistantTeleport(), duration)
       }
@@ -6650,12 +6665,15 @@ function setupFloatMode(){
       const micReady = await primeAssistantMic(assistantName)
       if(!micReady) return
       applyAssistantDemoScene(route, help.greeting)
-      moveAssistantOrbToFocus(orb, help.focus)
+      moveAssistantNodeToFocus(orb, help.focus)
+      moveAssistantNodeToFocus(assistantId === "projake" ? guardianJakeBtn : guardianAriaBtn, help.focus)
       const partnerOrb = assistantId === "projake" ? assistantAriaOrb : assistantJakeOrb
+      const partnerGuard = assistantId === "projake" ? guardianAriaBtn : guardianJakeBtn
       const target = help.focus ? qs(help.focus) : null
       const rect = target?.getBoundingClientRect?.()
       if(rect && partnerOrb){
-        moveAssistantOrbToPoint(partnerOrb, rect.left + rect.width - 42, rect.top + Math.min(rect.height, 140))
+        moveAssistantNodeToPoint(partnerOrb, rect.left + rect.width - 42, rect.top + Math.min(rect.height, 140))
+        moveAssistantNodeToPoint(partnerGuard, rect.left + rect.width - 42, rect.top + Math.min(rect.height, 140))
       }
       startAssistantBrainCountdown(assistantName, help, transcriptEl)
       activeAssistantTimers.push(setTimeout(()=>{
@@ -9970,6 +9988,7 @@ function setupRemoteFastPay(){
   }
 
   let shopifyBuyUiPromise = null
+  let shopifyBuyClientPromise = null
 
   function getShopifyNumericId(value){
     const raw = String(value || "").trim()
@@ -10028,9 +10047,9 @@ function setupRemoteFastPay(){
     return window.__shopifyBuySdkPromise
   }
 
-  async function getShopifyBuyUi(){
-    if(shopifyBuyUiPromise) return shopifyBuyUiPromise
-    shopifyBuyUiPromise = (async ()=>{
+  async function getShopifyBuyClient(){
+    if(shopifyBuyClientPromise) return shopifyBuyClientPromise
+    shopifyBuyClientPromise = (async ()=>{
       if(storefrontConfigReady){
         try{ await storefrontConfigReady }catch{}
       }
@@ -10038,14 +10057,42 @@ function setupRemoteFastPay(){
       const token = state.shopifyStorefrontToken || ""
       if(!host || !token) throw new Error("shopify_buy_not_configured")
       const ShopifyBuy = await loadShopifyBuySdk()
-      if(!ShopifyBuy?.UI) throw new Error("shopify_buy_ui_missing")
-      const client = ShopifyBuy.buildClient({
+      if(!ShopifyBuy?.buildClient) throw new Error("shopify_buy_client_missing")
+      return ShopifyBuy.buildClient({
         domain: host,
         storefrontAccessToken: token
       })
+    })()
+    return shopifyBuyClientPromise
+  }
+
+  async function getShopifyBuyUi(){
+    if(shopifyBuyUiPromise) return shopifyBuyUiPromise
+    shopifyBuyUiPromise = (async ()=>{
+      const ShopifyBuy = await loadShopifyBuySdk()
+      if(!ShopifyBuy?.UI) throw new Error("shopify_buy_ui_missing")
+      const client = await getShopifyBuyClient()
       return ShopifyBuy.UI.onReady(client)
     })()
     return shopifyBuyUiPromise
+  }
+
+  async function fetchShopifyProductByHandle(product){
+    const handle = normalizeShopifyHandle((SHOPIFY_LINK_PATHS[product?.key] || "").split("/").pop())
+    if(!handle) return null
+    try{
+      const client = await getShopifyBuyClient()
+      const item = await client.product.fetchByHandle(handle)
+      if(!item) return null
+      return {
+        id: item.id || "",
+        handle: item.handle || handle,
+        title: item.title || product?.title || "",
+        variant: Array.isArray(item.variants) && item.variants[0] ? getShopifyNumericId(item.variants[0].id || "") : ""
+      }
+    }catch{
+      return null
+    }
   }
 
   async function openEmbeddedShopifyCheckout(product, liveProduct){
@@ -10219,7 +10266,10 @@ function setupRemoteFastPay(){
         }catch{}
       }
       const liveProducts = await ensureShopifyProductsLoaded()
-      const liveProduct = findLiveShopifyProduct(product)
+      let liveProduct = findLiveShopifyProduct(product)
+      if(!liveProduct){
+        liveProduct = await fetchShopifyProductByHandle(product)
+      }
       const liveLink = buildShopifyCheckoutUrl(product, liveProduct) || (product?.key && LINKS[product.key] ? LINKS[product.key] : product?.link)
       if(!liveProduct && !liveProducts.length){
         openShopifyPublishNotice(product?.title)
