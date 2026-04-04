@@ -251,6 +251,12 @@ function normalizeShopifyStorefrontBase(raw){
 function applyShopifyStorefrontBase(rawBase){
   const base = normalizeShopifyStorefrontBase(rawBase)
   if(!base) return false
+  state.shopifyStorefrontBase = base
+  try{
+    state.shopifyStorefrontHost = new URL(base).host
+  }catch{
+    state.shopifyStorefrontHost = base.replace(/^https?:\/\//i, "").replace(/\/.*$/, "")
+  }
   Object.entries(SHOPIFY_LINK_PATHS).forEach(([key, path])=>{
     LINKS[key] = `${base}${path}`
   })
@@ -270,6 +276,8 @@ async function bootstrapShopifyStorefrontBase(){
     const response = await fetch("/api/shopify/public-config")
     const data = await response.json()
     if(data?.storefront_base) applyShopifyStorefrontBase(data.storefront_base)
+    state.shopifyStorefrontHost = data?.storefront_host || state.shopifyStorefrontHost || ""
+    state.shopifyStorefrontToken = data?.storefront_token_public || state.shopifyStorefrontToken || ""
   }catch{}
 }
 const storefrontConfigReady = bootstrapShopifyStorefrontBase()
@@ -321,7 +329,10 @@ const state = {
     activeAssistant: localStorage.getItem("activeAssistant") || "aria",
     assistantTopic: localStorage.getItem("assistantTopic") || "hair_core",
     shopifyProducts: [],
-    shopifyProductsLoaded: false
+    shopifyProductsLoaded: false,
+    shopifyStorefrontBase: "",
+    shopifyStorefrontHost: "",
+    shopifyStorefrontToken: ""
 }
 
 const ASSISTANTS = [
@@ -1470,16 +1481,23 @@ function openLinkModal(url, title){
   }
 
   function setupCenterCheckoutMenu(){
-    const map = {
-      checkoutPremiumBtn: [LINKS.premium, "Premium Subscription"],
-      checkoutProBtn: [LINKS.pro, "Professional Subscription"],
-      checkoutFamilyBtn: [LINKS.family200, "Family Fantasy Checkout"],
-      checkoutBingoBtn: [LINKS.bingo100, "Bingo Fantasy Checkout"],
-      checkoutDonateBtn: [LINKS.donate, "SupportRD Product Tip / Donate"],
+    const productMap = {
+      checkoutPremiumBtn: "premium",
+      checkoutProBtn: "pro",
+      checkoutFamilyBtn: "family200",
+      checkoutBingoBtn: "bingo100",
+      checkoutDonateBtn: "donate"
+    }
+    Object.entries(productMap).forEach(([id, key])=>{
+      const btn = qs("#" + id)
+      const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === key)
+      if(btn && product){ btn.addEventListener("click", ()=>launchShopifyCheckout(product, "Center Checkout Menu")) }
+    })
+    const routeMap = {
       checkoutCartBtn: [LINKS.cart, "Shopify Cart"],
       checkoutOrdersBtn: [LINKS.myOrders, "My Orders"]
     }
-    Object.entries(map).forEach(([id, [url, title]])=>{
+    Object.entries(routeMap).forEach(([id, [url, title]])=>{
       const btn = qs("#" + id)
       if(btn){ btn.addEventListener("click", ()=>openLinkModal(url, title)) }
     })
@@ -9951,6 +9969,142 @@ function setupRemoteFastPay(){
     }) || null
   }
 
+  let shopifyBuyUiPromise = null
+
+  function getShopifyNumericId(value){
+    const raw = String(value || "").trim()
+    if(!raw) return ""
+    const match = raw.match(/(\d+)(?!.*\d)/)
+    return match ? match[1] : ""
+  }
+
+  function ensureEmbeddedCheckoutShell(){
+    let overlay = qs("#shopifyEmbeddedCheckout")
+    if(overlay) return overlay
+    overlay = document.createElement("section")
+    overlay.id = "shopifyEmbeddedCheckout"
+    overlay.className = "shopify-embedded-checkout hidden"
+    overlay.innerHTML = `
+      <div class="shopify-embedded-backdrop" data-shopify-embedded-close></div>
+      <div class="shopify-embedded-panel glass">
+        <button class="shopify-embedded-close" type="button" aria-label="Close embedded checkout" data-shopify-embedded-close>×</button>
+        <div class="shopify-embedded-head">
+          <div class="shopify-embedded-kicker">Secure Shopify Checkout</div>
+          <h3 id="shopifyEmbeddedTitle">SupportRD Purchase</h3>
+          <p id="shopifyEmbeddedMeta">Loading your product inside the page now.</p>
+        </div>
+        <div id="shopifyEmbeddedMount" class="shopify-embedded-mount"></div>
+      </div>
+    `
+    document.body.appendChild(overlay)
+    overlay.addEventListener("click", (event)=>{
+      if(event.target?.closest?.("[data-shopify-embedded-close]")){
+        overlay.classList.add("hidden")
+        const mount = qs("#shopifyEmbeddedMount")
+        if(mount) mount.innerHTML = ""
+      }
+    })
+    return overlay
+  }
+
+  function loadShopifyBuySdk(){
+    if(window.ShopifyBuy && window.ShopifyBuy.UI) return Promise.resolve(window.ShopifyBuy)
+    if(window.__shopifyBuySdkPromise) return window.__shopifyBuySdkPromise
+    window.__shopifyBuySdkPromise = new Promise((resolve, reject)=>{
+      const existing = document.querySelector('script[data-shopify-buy-sdk="true"]')
+      if(existing){
+        existing.addEventListener("load", ()=>resolve(window.ShopifyBuy))
+        existing.addEventListener("error", reject)
+        return
+      }
+      const script = document.createElement("script")
+      script.src = "https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js"
+      script.async = true
+      script.dataset.shopifyBuySdk = "true"
+      script.onload = ()=>resolve(window.ShopifyBuy)
+      script.onerror = reject
+      document.head.appendChild(script)
+    })
+    return window.__shopifyBuySdkPromise
+  }
+
+  async function getShopifyBuyUi(){
+    if(shopifyBuyUiPromise) return shopifyBuyUiPromise
+    shopifyBuyUiPromise = (async ()=>{
+      if(storefrontConfigReady){
+        try{ await storefrontConfigReady }catch{}
+      }
+      const host = state.shopifyStorefrontHost || ""
+      const token = state.shopifyStorefrontToken || ""
+      if(!host || !token) throw new Error("shopify_buy_not_configured")
+      const ShopifyBuy = await loadShopifyBuySdk()
+      if(!ShopifyBuy?.UI) throw new Error("shopify_buy_ui_missing")
+      const client = ShopifyBuy.buildClient({
+        domain: host,
+        storefrontAccessToken: token
+      })
+      return ShopifyBuy.UI.onReady(client)
+    })()
+    return shopifyBuyUiPromise
+  }
+
+  async function openEmbeddedShopifyCheckout(product, liveProduct){
+    const productId = getShopifyNumericId(liveProduct?.id)
+    if(!productId) return false
+    const overlay = ensureEmbeddedCheckoutShell()
+    const mount = qs("#shopifyEmbeddedMount")
+    const title = qs("#shopifyEmbeddedTitle")
+    const meta = qs("#shopifyEmbeddedMeta")
+    if(mount) mount.innerHTML = ""
+    if(title) title.textContent = product?.title || liveProduct?.title || "SupportRD Purchase"
+    if(meta) meta.textContent = "SupportRD is loading the secure Shopify buy flow directly inside the page."
+    overlay.classList.remove("hidden")
+    overlay.setAttribute("aria-hidden", "false")
+    const ui = await getShopifyBuyUi()
+    await ui.createComponent("product", {
+      id: productId,
+      node: mount,
+      moneyFormat: "${{amount}}",
+      options: {
+        product: {
+          iframe: false,
+          buttonDestination: "checkout",
+          layout: "vertical",
+          contents: {
+            img: true,
+            title: true,
+            price: true,
+            options: true,
+            quantity: true,
+            description: false,
+            button: true,
+            buttonWithQuantity: false
+          },
+          text: {
+            button: "Continue To Secure Checkout"
+          }
+        },
+        cart: {
+          startOpen: false,
+          popup: false,
+          iframe: false,
+          text: {
+            total: "Total",
+            button: "Checkout"
+          }
+        },
+        toggle: {
+          styles: {
+            toggle: {
+              display: "none"
+            }
+          }
+        }
+      }
+    })
+    return true
+  }
+
   function buildShopifyCheckoutUrl(product, liveProduct){
     const variantId = String(liveProduct?.variant || "").trim()
     if(variantId && /^\d+$/.test(variantId)){
@@ -10078,8 +10232,16 @@ function setupRemoteFastPay(){
       hideConfirm()
       hideProcessing()
       if(!options.keepOwnerVisible) hideOwner()
-      if(status) status.textContent = `${checkoutProduct.title} Shopify checkout opened${sourceLabel ? ` from ${sourceLabel}` : ""}.`
-      openLinkModal(checkoutProduct.link, `${checkoutProduct.title} Checkout`)
+      let embeddedOpened = false
+      try{
+        embeddedOpened = await openEmbeddedShopifyCheckout(checkoutProduct, liveProduct)
+      }catch{}
+      if(status) status.textContent = embeddedOpened
+        ? `${checkoutProduct.title} secure Shopify checkout loaded inside SupportRD${sourceLabel ? ` from ${sourceLabel}` : ""}.`
+        : `${checkoutProduct.title} Shopify checkout opened${sourceLabel ? ` from ${sourceLabel}` : ""}.`
+      if(!embeddedOpened){
+        openLinkModal(checkoutProduct.link, `${checkoutProduct.title} Checkout`)
+      }
     }
 
   function renderProducts(){

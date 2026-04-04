@@ -5230,3 +5230,66 @@ body.competition-world.world-view-tower::before{
   }
 }
 
+.shopify-embedded-checkout{
+  position:fixed;
+  inset:0;
+  z-index:12000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.shopify-embedded-checkout.hidden{
+  display:none;
+}
+.shopify-embedded-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(9,18,34,0.58);
+  backdrop-filter:blur(10px);
+}
+.shopify-embedded-panel{
+  position:relative;
+  width:min(980px, calc(100vw - 28px));
+  max-height:min(90vh, 920px);
+  padding:18px 18px 22px;
+  border-radius:30px;
+  overflow:auto;
+  background:rgba(241,247,255,0.96);
+  box-shadow:0 28px 80px rgba(0,0,0,0.28);
+}
+.shopify-embedded-close{
+  position:absolute;
+  top:14px;
+  right:14px;
+  border:0;
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:rgba(17,34,58,0.92);
+  color:#fff;
+  font-size:24px;
+  cursor:pointer;
+}
+.shopify-embedded-head{
+  padding-right:56px;
+  margin-bottom:12px;
+}
+.shopify-embedded-kicker{
+  font-size:11px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:#4f6e99;
+  margin-bottom:6px;
+}
+.shopify-embedded-head h3{
+  margin:0 0 6px;
+  font-size:32px;
+}
+.shopify-embedded-head p{
+  margin:0;
+  color:#43607f;
+}
+.shopify-embedded-mount{
+  min-height:420px;
+}
+

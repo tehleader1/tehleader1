@@ -3366,6 +3366,8 @@ def shopify_public_config():
     return {
         "ok": bool(store),
         "storefront_base": storefront_base,
+        "storefront_host": store,
+        "storefront_token_public": SHOPIFY_TOKEN if store and SHOPIFY_TOKEN else "",
         "cart_url": f"{storefront_base}/cart" if storefront_base else "",
         "orders_url": f"{storefront_base}/account/orders" if storefront_base else "",
     }
@@ -3645,6 +3647,7 @@ def get_products():
       products(first:10){
         edges{
           node{
+            id
             title
             handle
             images(first:1){
@@ -3684,6 +3687,7 @@ def get_products():
             if image_edges:
                 image_url = image_edges[0].get("node", {}).get("url", "")
             products.append({
+                "id": node.get("id", ""),
                 "title": node.get("title", ""),
                 "handle": node.get("handle", ""),
                 "price": v.get("price", {}).get("amount", ""),
@@ -3717,6 +3721,7 @@ def get_products():
             first_variant = variants[0]
             image_obj = item.get("image") or {}
             products.append({
+                "id": str(item.get("id", "")).strip(),
                 "title": item.get("title", ""),
                 "handle": item.get("handle", ""),
                 "price": first_variant.get("price", ""),
