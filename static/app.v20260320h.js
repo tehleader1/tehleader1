@@ -7597,6 +7597,48 @@ function setupFloatMode(){
         </div>
       `
     }
+    function buildAcquisitionDashboard(){
+      const stats = [
+        { label:"Latest Guest Post", value:"Hair-trend signal waiting for feature reply", detail:"When the SEO engine spots a strong feature/guest angle, this lane should surface the topic and route it to blog + email." },
+        { label:"Fresh Reel Signal", value:"10-second front end / deep backend analysis", detail:"Short hair reels should hook attention first while SupportRD quietly sorts the visitor into the best lane." },
+        { label:"Top Visitor Lane", value:"Hair Analyzer -> exploring", detail:"Default visitor view assumes the current strongest interest is hair analysis, social proof, and issue-specific help." },
+        { label:"Secondary Lane", value:"Everyday Hair Help -> watching", detail:"These visitors are usually checking frizz, oil, damage, no-bounce, and color-loss help before considering payment." },
+        { label:"Conversion Timing", value:"Soft premium after trust", detail:"Premium should appear after the visitor has seen the right lane first, not on every single interaction." },
+        { label:"Developer Feed Role", value:"Public proof + live love board", detail:"FAQ Lounge and Developer Feedback act like the social trust engine for reactions, reviews, mail, and video replies." }
+      ]
+      const laneStages = [
+        ["Deal With Issues Hair","arrived -> watching -> asking Aria"],
+        ["Buy Products For Hair Solutions","viewing product -> comparing -> checkout-ready"],
+        ["All In One Hair Solutions App","reading Remote flow -> trying tools -> trust build"],
+        ["AI Features For Hair Problems","scan interest -> smart help -> premium-curious"],
+        ["Family + Care For Hair Health","routine planning -> diary/profile -> repeat visitor"],
+        ["Directions + Tourism","map curiosity -> local route -> lifestyle trust"]
+      ]
+      return `
+        <section class="remote-acquisition-board">
+          <div class="float-mode-kicker">Acquisition Engine</div>
+          <h5>Visitor-readable stats for the reel + SEO funnel.</h5>
+          <p>This default board explains what SupportRD is doing in the background while the visitor enjoys a short reel, studies the app, and gets routed into the right hair-help lane.</p>
+          <div class="remote-acquisition-grid">
+            ${stats.map(stat=>`
+              <article class="remote-acquisition-card">
+                <strong>${stat.label}</strong>
+                <span>${stat.value}</span>
+                <small>${stat.detail}</small>
+              </article>
+            `).join("")}
+          </div>
+          <div class="remote-acquisition-lanes">
+            ${laneStages.map(([lane,stage])=>`
+              <div class="remote-acquisition-lane">
+                <strong>${lane}</strong>
+                <span>${stage}</span>
+              </div>
+            `).join("")}
+          </div>
+        </section>
+      `
+    }
   function buildSolidStateSheet(){
       return `
         ${renderRemoteValueLane(["Value: official live edition checklist", "Energy: build + hold demand", "Worth: package-ready SupportRD system"])}
@@ -7669,6 +7711,7 @@ function setupFloatMode(){
       return `
         ${renderRemoteValueLane(["Value: developer command center", "Energy: timing + editing intelligence", "Worth: turns SupportRD upkeep into a premium university-ready workflow"])}
         <div class="float-sheet-copy">The Edits Menu is now the command layer for real work: product decisions, premium budgeting, ad timing, layout adjustments, meetings, remote studies, and testimony promises all stay one organized move away.</div>
+        ${buildAcquisitionDashboard()}
         <div class="remote-command-grid">
           <article class="remote-command-card">
             <strong>Product / Premium Purchase</strong>
