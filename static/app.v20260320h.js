@@ -1328,6 +1328,7 @@ function setupModals(){
   bindOpen("openSeo", "seoModal")
   bindClose("closeSeo", "seoModal")
   bindClose("closeBlog", "blogModal")
+  bindClose("closeBlogX", "blogModal")
   bindClose("closeApp", "appModal")
   bindClose("closeLink", "linkModal")
   bindClose("closePuzzle", "puzzleModal")
@@ -8176,7 +8177,12 @@ function setupFloatMode(){
       setRemoteStatus("Full account settings are open inside Remote.")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-subscribe]")).forEach(btn=>btn.addEventListener("click", ()=>footerSubscribeBtn?.click()))
-    Array.from(remoteSheetBody.querySelectorAll("[data-open-blog]")).forEach(btn=>btn.addEventListener("click", ()=>openModal("blogModal")))
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-blog]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      state.blogIndex = 0
+      renderBlog()
+      openModal("blogModal")
+      setRemoteStatus("Main Blog Modal is open in fullscreen view.")
+    }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-faq-reel]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const reelHost = remoteSheetBody.querySelector("[data-sheet-faq-reel]")
       if(!reelHost) return
