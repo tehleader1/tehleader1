@@ -3113,7 +3113,10 @@ function setupCampaign(){
   if(openRequest){ openRequest.addEventListener("click", ()=>openModal("requestCallModal")) }
   if(closeRequest){ closeRequest.addEventListener("click", ()=>closeModal("requestCallModal")) }
   buyerCallBtns.forEach(btn=>btn.addEventListener("click", ()=>openModal("requestCallModal")))
-  acquisitionBtns.forEach(btn=>btn.addEventListener("click", ()=>openModal("acquisitionModal")))
+  acquisitionBtns.forEach(btn=>btn.addEventListener("click", ()=>{
+    renderAcquisitionWindow()
+    openModal("acquisitionModal")
+  }))
   if(closeAcquisition){ closeAcquisition.addEventListener("click", ()=>closeModal("acquisitionModal")) }
   if(founderEmail){
     founderEmail.addEventListener("click", ()=>{
@@ -3122,6 +3125,14 @@ function setupCampaign(){
       window.location.href = `mailto:agentanthony@supportrd.com?subject=${subject}&body=${body}`
     })
   }
+  qs("#acquisitionWindowRefresh")?.addEventListener("click", ()=>{
+    const visitor = renderAcquisitionWindow()
+    trackAcquisitionSignal("acquisition_window_refresh", {
+      lane: visitor.primary.lane,
+      stage: visitor.primary.stage,
+      socialFeedback: `${visitor.primary.title} was refreshed inside the Acquisition Window.`
+    })
+  })
 }
 
 function setupWorkdaySeoEngine(){
@@ -7274,6 +7285,7 @@ function setupFloatMode(){
     }
   ]
   const ACQUISITION_STORAGE_KEY = "supportrdAcquisitionEngine"
+  const ACQUISITION_VISITOR_KEY = "supportrdAcquisitionVisitor"
   const ACQUISITION_LANES = {
     issues: "Deal With Issues Hair",
     products: "Buy Products For Hair Solutions",
@@ -7283,6 +7295,28 @@ function setupFloatMode(){
     tourism: "Directions + Tourism"
   }
   const ACQUISITION_STAGES = ["arrived", "watching", "exploring", "feedback-ready", "premium-curious", "purchase-ready"]
+  const ACQUISITION_WINDOW_OPPORTUNITIES = [
+    { key:"retired_math_teacher", lane:ACQUISITION_LANES.issues, stage:"arrived", title:"Tangly Hair Search", trigger:["google","tangle","math","teacher"], source:"Google hair question", copy:"SupportRD thinks you may be looking for a calmer detangle routine with less guesswork.", cta:"Open Trail Tangles", action:"scenario:tangles", adTitle:"Start The Tangly Hair Journey", adCopy:"A calm route for tangles, detangling, and a gentler wash day." },
+    { key:"styling_reel_gotero", lane:ACQUISITION_LANES.products, stage:"watching", title:"Styling Reel Interest", trigger:["reel","style","gotero","laciador"], source:"TV Reel styling signal", copy:"This styling lane pairs well with Gotero Rapido or Laciador Crece.", cta:"Open Product Page", action:"products", adTitle:"See The Styling Match", adCopy:"Watch 10 seconds, then move into the right styling product lane." },
+    { key:"tiktok_ai_buddy", lane:ACQUISITION_LANES.ai, stage:"watching", title:"AI Hair Buddy Curiosity", trigger:["tiktok","social","ai","buddy"], source:"TikTok / social curiosity", copy:"A quick Aria conversation is usually the best first move for this kind of visitor.", cta:"Ask Aria Now", action:"assistant:aria", adTitle:"Meet Aria Fast", adCopy:"One question can open the whole SupportRD hair lane." },
+    { key:"major_brand_backlink", lane:ACQUISITION_LANES.products, stage:"exploring", title:"Brand Crossover Visitor", trigger:["backlink","brand","major"], source:"Backlink crossover", copy:"SupportRD wants to remind them there is a Caribbean all-natural other choice too.", cta:"Open FAQ Lounge", action:"faq", adTitle:"Caribbean Other Choice", adCopy:"Try the natural comparison lane before locking into the old routine." },
+    { key:"frizz_search", lane:ACQUISITION_LANES.issues, stage:"arrived", title:"Frizz Search", trigger:["frizz","humidity","puff"], source:"Google/Bing frizz terms", copy:"SupportRD can begin with a frizz-first routine and a cleaner product fit.", cta:"Open Road Trip Frizz", action:"scenario:roadtrip", adTitle:"Fight The Frizz", adCopy:"Bring frizz visitors into the issue lane before premium." },
+    { key:"oily_scalp_search", lane:ACQUISITION_LANES.issues, stage:"arrived", title:"Oily Scalp Search", trigger:["oily","greasy","scalp"], source:"Hair issue search", copy:"A scalp-balance lane is usually a stronger first step than a hard product pitch.", cta:"Open Oily Scenario", action:"scenario:oily", adTitle:"Balance The Scalp", adCopy:"Catch oily-root visitors with a lighter, smarter start." },
+    { key:"damage_alert", lane:ACQUISITION_LANES.ai, stage:"exploring", title:"Damage Alert", trigger:["damage","burn","breakage","chemical"], source:"Hair damage urgency", copy:"This looks like a serious recovery lane, not a casual browse.", cta:"Open Hair Scan", action:"profile", adTitle:"Start Serious Hair Help", adCopy:"Bring urgent damage visitors into scan-first guidance." },
+    { key:"low_bounce", lane:ACQUISITION_LANES.issues, stage:"exploring", title:"Low Bounce Search", trigger:["bounce","flat","volume"], source:"Bounce/body topic", copy:"SupportRD can guide a no-bounce visitor toward movement, body, and healthier shape.", cta:"Ask Aria About Bounce", action:"assistant:aria", adTitle:"Bring Back The Bounce", adCopy:"Movement-first help for hair that feels flat or tired." },
+    { key:"color_loss", lane:ACQUISITION_LANES.products, stage:"exploring", title:"Color Loss Search", trigger:["color","shine","fade","fading"], source:"Color maintenance topic", copy:"This visitor is usually ready for a color-preserving support lane.", cta:"Open Product Page", action:"products", adTitle:"Color + Shine Support", adCopy:"Keep color visitors moving toward shine and care instead of drift." },
+    { key:"family_hair", lane:ACQUISITION_LANES.family, stage:"exploring", title:"Family Hair Care", trigger:["family","kids","routine","schedule"], source:"Family routine signal", copy:"SupportRD can help the whole household stay on one calmer routine.", cta:"Open Diary Mode", action:"diary", adTitle:"Family Hair Health", adCopy:"A family-focused lane for routine, care, and health of the hair." },
+    { key:"creator_studio", lane:ACQUISITION_LANES.app, stage:"watching", title:"Creator / Studio Visitor", trigger:["studio","record","beat","voice","audio"], source:"Studio curiosity", copy:"This person should see the studio first while hair support stays nearby.", cta:"Open Studio Quick Panel", action:"studio", adTitle:"Create In SupportRD", adCopy:"Pull creators into Studio Quick without losing the hair lane." },
+    { key:"profile_scan", lane:ACQUISITION_LANES.ai, stage:"watching", title:"Profile Hair Scan Visitor", trigger:["profile","scan","image","photo"], source:"Profile / image behavior", copy:"SupportRD sees a scan-ready visitor who may want to upload before they buy.", cta:"Open Profile", action:"profile", adTitle:"See Your Hair First", adCopy:"Profile and scan can do the first real work here." },
+    { key:"social_proof", lane:ACQUISITION_LANES.app, stage:"feedback-ready", title:"Social Proof Visitor", trigger:["review","feedback","faq","proof"], source:"Trust-seeking behavior", copy:"This visitor wants to see proof, community, and real reactions before moving on.", cta:"Open Developer Feedback", action:"developer", adTitle:"See What People Love", adCopy:"Bring trust-seekers into FAQ Lounge and Developer Feedback first." },
+    { key:"premium_curious", lane:ACQUISITION_LANES.products, stage:"premium-curious", title:"Premium Curious Visitor", trigger:["premium","upgrade","pro","subscription"], source:"Premium timing signal", copy:"SupportRD should show the premium lane gently, not constantly.", cta:"Open Payments", action:"payments", adTitle:"Premium When It Fits", adCopy:"Let premium appear at the right time, not every time." },
+    { key:"tourism_route", lane:ACQUISITION_LANES.tourism, stage:"watching", title:"Tourism / Route Visitor", trigger:["tourism","route","gps","travel","kito","villa gonzalez","santiago"], source:"Map / directions behavior", copy:"This visitor should see route guidance plus hair help nearby.", cta:"Guide To Kito's House", action:"kito", adTitle:"Directions + Hair Help", adCopy:"Show the route and keep SupportRD hair help close by." },
+    { key:"chinese_style_bun", lane:ACQUISITION_LANES.issues, stage:"watching", title:"Style Trend Visitor", trigger:["chinese","bun","style","ancient"], source:"Style-trend signal", copy:"SupportRD is seeing a style-first visitor who may still need care guidance.", cta:"Open TV Reel", action:"faqreel", adTitle:"Style + Care Match", adCopy:"Let style reels lead into the right care lane." },
+    { key:"natural_visitor", lane:ACQUISITION_LANES.products, stage:"exploring", title:"Natural Product Visitor", trigger:["natural","caribbean","botanical","all natural"], source:"Natural-ingredients search", copy:"A Caribbean natural route may fit them better than a major-brand repeat.", cta:"Open Product Page", action:"products", adTitle:"Natural Other Choice", adCopy:"Catch natural visitors with a cleaner product story." },
+    { key:"returning_no_buy", lane:ACQUISITION_LANES.products, stage:"premium-curious", title:"Returning Visitor", trigger:["returning","repeat","came back"], source:"Repeat-visit pattern", copy:"SupportRD can bring them back into the exact lane they almost finished.", cta:"Continue Product Lane", action:"products", adTitle:"Welcome Back To Your Lane", adCopy:"A soft return ad for someone who looked but did not finish." },
+    { key:"developer_tech", lane:ACQUISITION_LANES.app, stage:"watching", title:"Developer / Tech Visitor", trigger:["developer","tech","ai app","codex"], source:"Tech curiosity", copy:"This person may want to see how the whole Remote works as a product.", cta:"Open Live Guidance", action:"guide", adTitle:"See The Remote Work", adCopy:"Tech visitors should see the system, not just the sales pitch." },
+    { key:"emergency_help", lane:ACQUISITION_LANES.ai, stage:"exploring", title:"Emergency Hair Help", trigger:["emergency","urgent","help now","severe"], source:"High-urgency support signal", copy:"This is a serious support moment. SupportRD should take them straight into the hair-help lane.", cta:"Start Hair Help", action:"assistant:aria", adTitle:"Emergency Hair Support", adCopy:"Urgent hair help should cut straight into Aria and scan guidance." }
+  ]
   function getDefaultAcquisitionStats(){
     return {
       totalSignals: 0,
@@ -7370,6 +7404,19 @@ function setupFloatMode(){
   }
   function buildLatestSupportAds(){
     const stats = loadAcquisitionStats()
+    const visitor = readAcquisitionVisitor()
+    if(visitor?.primary && visitor?.secondary){
+      return [
+        {
+          title: visitor.primary.adTitle || visitor.primary.title,
+          copy: visitor.primary.adCopy || visitor.primary.copy
+        },
+        {
+          title: visitor.secondary.adTitle || visitor.secondary.title,
+          copy: visitor.secondary.adCopy || visitor.secondary.copy
+        }
+      ]
+    }
     const topLanes = rankAcquisitionEntries(stats.lanes, 2)
     return [
       {
@@ -7381,6 +7428,138 @@ function setupFloatMode(){
         copy: stats.latestSocialFeedback || "Catch frizz, oil, damage, and color-loss visitors with the right lane before premium."
       }
     ]
+  }
+  function buildAcquisitionSignalText(){
+    const params = new URLSearchParams(window.location.search || "")
+    const ref = (document.referrer || "").toLowerCase()
+    const path = String(location.pathname || "").toLowerCase()
+    const adTags = [params.get("utm_source"), params.get("utm_campaign"), params.get("utm_medium"), params.get("utm_term")]
+      .filter(Boolean)
+      .join(" ")
+    const latestSignals = (loadAcquisitionStats().signals || []).slice(0, 8).map(entry=>`${entry.signal} ${entry.lane} ${entry.stage}`).join(" ")
+    return [
+      ref,
+      path,
+      adTags,
+      latestSignals,
+      localStorage.getItem("supportrdDiaryDraft") || "",
+      localStorage.getItem("supportrd_remote_receipt") || "",
+      document.body.className || ""
+    ].join(" ").toLowerCase()
+  }
+  function scoreAcquisitionOpportunity(opportunity, signalText){
+    const triggerHits = (opportunity.trigger || []).reduce((count, key)=>count + (signalText.includes(String(key).toLowerCase()) ? 1 : 0), 0)
+    return triggerHits
+  }
+  function evaluateAcquisitionVisitor(){
+    const signalText = buildAcquisitionSignalText()
+    const scored = ACQUISITION_WINDOW_OPPORTUNITIES
+      .map(item=>({ ...item, score: scoreAcquisitionOpportunity(item, signalText) }))
+      .sort((a,b)=>b.score - a.score)
+    const primary = scored[0]?.score > 0 ? scored[0] : ACQUISITION_WINDOW_OPPORTUNITIES[0]
+    const secondary = scored[1]?.score > 0 ? scored[1] : ACQUISITION_WINDOW_OPPORTUNITIES[2]
+    const visitor = {
+      signalText,
+      primary,
+      secondary,
+      at: Date.now(),
+      sourceSummary: primary?.source || "SupportRD live route",
+      why: primary?.copy || "SupportRD is routing this visitor toward the clearest hair-help lane."
+    }
+    try{ localStorage.setItem(ACQUISITION_VISITOR_KEY, JSON.stringify(visitor)) }catch{}
+    return visitor
+  }
+  function readAcquisitionVisitor(){
+    try{
+      const parsed = JSON.parse(localStorage.getItem(ACQUISITION_VISITOR_KEY) || "null")
+      if(parsed && typeof parsed === "object") return parsed
+    }catch{}
+    return evaluateAcquisitionVisitor()
+  }
+  function runAcquisitionAction(action){
+    if(!action) return
+    if(action === "products"){
+      qs("#remotePurchaseProducts")?.click()
+      return
+    }
+    if(action === "payments"){
+      qs("#floatFooterPayments")?.click()
+      return
+    }
+    if(action === "guide"){
+      qs("#floatFooterGuide")?.click()
+      return
+    }
+    if(action === "faq"){
+      if(typeof renderRemoteRoute === "function") renderRemoteRoute("faq", { openShell:true })
+      return
+    }
+    if(action === "developer"){
+      if(typeof openRemoteSheet === "function"){
+        openRemoteSheet("Developer Feedback", buildDeveloperFeedbackSheet(), { message:"Developer Feedback is open from the Acquisition Window.", route:"faq" })
+      }
+      return
+    }
+    if(action === "faqreel"){
+      if(typeof renderRemoteRoute === "function") renderRemoteRoute("faq", { openShell:true })
+      setTimeout(()=>qs("[data-open-faq-reel]")?.click(), 160)
+      return
+    }
+    if(action === "profile"){
+      if(typeof renderRemoteRoute === "function") renderRemoteRoute("profile", { openShell:true })
+      return
+    }
+    if(action === "diary"){
+      if(typeof renderRemoteRoute === "function") renderRemoteRoute("diary", { openShell:true })
+      return
+    }
+    if(action === "studio"){
+      if(typeof renderRemoteRoute === "function") renderRemoteRoute("studio", { openShell:true })
+      return
+    }
+    if(action === "kito"){
+      if(typeof openKitoGpsLane === "function") openKitoGpsLane()
+      return
+    }
+    if(action?.startsWith("assistant:")){
+      const assistantId = action.split(":")[1] === "jake" ? "projake" : "aria"
+      state.activeAssistant = assistantId
+      const trigger = assistantId === "projake" ? qs("#floatJakeBtn") : qs("#floatAriaBtn")
+      trigger?.click()
+      return
+    }
+    if(action?.startsWith("scenario:")){
+      const key = action.split(":")[1]
+      if(typeof renderRemoteRoute === "function") renderRemoteRoute("home", { openShell:true })
+      setTimeout(()=>qs(`[data-aria-scenario="${key}"]`)?.click(), 180)
+    }
+  }
+  function renderAcquisitionWindow(){
+    const visitor = evaluateAcquisitionVisitor()
+    const title = qs("#acquisitionWindowTitle")
+    const why = qs("#acquisitionWindowWhy")
+    const source = qs("#acquisitionWindowSource")
+    const lane = qs("#acquisitionWindowLane")
+    const adTitle = qs("#acquisitionWindowAdTitle")
+    const adCopy = qs("#acquisitionWindowAdCopy")
+    const nextBtn = qs("#acquisitionWindowPrimary")
+    const secondBtn = qs("#acquisitionWindowSecondary")
+    if(title) title.textContent = visitor.primary.title
+    if(why) why.textContent = visitor.why
+    if(source) source.textContent = visitor.sourceSummary
+    if(lane) lane.textContent = visitor.primary.lane
+    if(adTitle) adTitle.textContent = visitor.primary.adTitle
+    if(adCopy) adCopy.textContent = visitor.primary.adCopy
+    if(nextBtn){
+      nextBtn.textContent = visitor.primary.cta
+      nextBtn.onclick = ()=>runAcquisitionAction(visitor.primary.action)
+    }
+    if(secondBtn){
+      secondBtn.textContent = visitor.secondary?.cta || "Keep Exploring"
+      secondBtn.onclick = ()=>runAcquisitionAction(visitor.secondary?.action)
+    }
+    renderLatestSupportAds()
+    return visitor
   }
   function renderLatestSupportAds(){
     const ads = buildLatestSupportAds()
