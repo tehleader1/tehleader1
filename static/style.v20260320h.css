@@ -3121,6 +3121,22 @@ body.competition-world .bg-layers::before{
   gap:10px;
   justify-content:flex-end;
 }
+.remote-go-toggle{
+  position:sticky;
+  top:8px;
+  z-index:18;
+  margin:0 18px 10px;
+  padding:12px 14px;
+  border-radius:22px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.remote-go-toggle .btn{
+  min-height:46px;
+  border-radius:16px;
+}
 .float-mode-grid{
     display:grid;
     grid-template-columns:repeat(3, minmax(0, 1fr));
@@ -3259,6 +3275,43 @@ body.competition-world .bg-layers::before{
 .remote-stage-quickbar .btn{
   min-height:48px;
   border-radius:18px;
+}
+.float-mode-shell.remote-go-mode .float-mode-launch{
+  box-shadow:0 0 0 2px rgba(120,199,255,.4), 0 28px 46px rgba(11,32,64,.24);
+}
+.float-mode-shell.remote-go-mode .float-launch-btn{
+  min-height:176px;
+  transform:translateY(-2px) scale(1.03);
+  box-shadow:0 20px 40px rgba(14,49,95,.22);
+}
+.float-mode-shell.remote-go-mode .float-launch-btn.active{
+  box-shadow:0 0 0 3px rgba(132,210,255,.45), 0 28px 48px rgba(9,36,73,.28);
+}
+.float-mode-shell.remote-go-mode .float-mode-footer,
+.float-mode-shell.remote-go-mode .float-mode-nav,
+.float-mode-shell.remote-go-mode .remote-color-tab,
+.float-mode-shell.remote-go-mode .remote-guardian-rail,
+.float-mode-shell.remote-go-mode .float-mode-grid,
+.float-mode-shell.remote-go-mode .remote-purchase-editor,
+.float-mode-shell.remote-go-mode .remote-edits-menu,
+.float-mode-shell.remote-go-mode .remote-important-info{
+  opacity:.2;
+  pointer-events:none;
+  filter:grayscale(.08);
+}
+.float-mode-shell.remote-go-mode .remote-stage-shell,
+.float-mode-shell.remote-go-mode .remote-content-stage,
+.float-mode-shell.remote-go-mode .float-mode-launch,
+.float-mode-shell.remote-go-mode .remote-go-toggle{
+  pointer-events:auto;
+  opacity:1;
+  filter:none;
+}
+.float-mode-shell.remote-go-mode .remote-stage-shell{
+  margin-bottom:38px;
+}
+.float-mode-shell.remote-go-mode .remote-content-stage{
+  box-shadow:0 0 0 2px rgba(130,208,255,.3), 0 32px 60px rgba(11,32,64,.24);
 }
 .remote-stage-grid{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;}
 .remote-stage-card{
@@ -5190,6 +5243,7 @@ body.assistant-static .remote-guardian-btn.demo-active{
   .float-mode-top{margin:10px;padding:14px;border-radius:22px;display:grid;min-height:auto;}
   .float-mode-nav{margin:0 10px 10px;padding:10px;display:grid;grid-template-columns:1fr 1fr;}
   .float-mode-footer{margin:0 10px 10px;padding:10px;top:6px;}
+  .remote-go-toggle{margin:0 10px 10px;display:grid;justify-content:stretch;}
   .float-mode-launch{margin:0 10px 10px;padding:10px;grid-template-columns:1fr 1fr;}
   .remote-display-strip{margin:0 10px 10px;grid-template-columns:1fr;}
   .remote-stage-shell{margin:0 10px 120px;grid-template-columns:1fr;}
@@ -5211,6 +5265,7 @@ body.assistant-static .remote-guardian-btn.demo-active{
   .float-map-hero{grid-template-columns:1fr;}
   .float-mini-actions,.float-big-buttons,.float-assistant-stage{grid-template-columns:1fr 1fr;}
   .float-map-action-host{grid-template-columns:1fr;}
+  .float-mode-shell.remote-go-mode .float-launch-btn{min-height:148px;transform:none;}
   .live-theme-quick-actions{display:grid;grid-template-columns:1fr 1fr;}
   .float-upload-strip,.float-transport-strip,.float-trim-row{grid-template-columns:1fr;}
   .remote-product-actions{grid-template-columns:1fr;}

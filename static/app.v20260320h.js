@@ -6164,8 +6164,7 @@ function setupFloatMode(){
   const returnMainBtn = qs("#floatModeReturnMain")
   const openStudioBtn = qs("#floatModeOpenStudio")
   const goViewBtn = qs("#floatModeGoView")
-  const panelsViewBtn = qs("#floatModePanelsView")
-  const paymentViewBtn = qs("#floatModePaymentView")
+  const goTogglePanel = qs("#remoteGoTogglePanel")
   const assistantStatus = qs("#floatAssistantStatus")
   const deviceStatus = qs("#floatDeviceStatus")
   const settingsStatus = qs("#floatSettingsStatus")
@@ -6260,6 +6259,20 @@ function setupFloatMode(){
   const studioLiveBtn = qs("#floatStudioLiveBtn")
   function setRemoteStatus(text){
     if(text && liveStatus) liveStatus.textContent = text
+  }
+  function setRemoteGoMode(enabled){
+    if(!shell) return
+    shell.classList.toggle("remote-go-mode", !!enabled)
+    try{ localStorage.setItem("supportrdRemoteGoMode", enabled ? "true" : "false") }catch{}
+    if(goViewBtn) goViewBtn.textContent = enabled ? "Return To Normal View" : "Switch To On-The-Go View"
+    if(goTogglePanel) goTogglePanel.setAttribute("aria-label", enabled ? "On-The-Go View active" : "Normal Remote view active")
+    if(enabled){
+      if(remoteStageHome && !remoteStageHome.hidden){
+        setRemoteStatus("On-The-Go View is active. The whole Remote is enlarged, focused, and ready while the side controls stay out of the way.")
+      }
+    }else{
+      setRemoteStatus("Normal Remote view is back. All features are available again around the Remote.")
+    }
   }
   function persistAvatar(dataUrl){
     state.userAvatar = dataUrl
@@ -9935,6 +9948,7 @@ function setupFloatMode(){
     syncFloatSettings()
     renderThemeCards()
     syncMapHero(shell?.dataset?.remoteTheme || "default")
+    setRemoteGoMode(localStorage.getItem("supportrdRemoteGoMode") === "true")
     if(!options.preserveRoute){
       syncRemoteHistory("home", window.location.pathname === "/remote" || window.location.pathname === "/remote/home")
     }
@@ -9971,9 +9985,11 @@ function setupFloatMode(){
   qs("#openLiveArenaBtn")?.setAttribute("hidden", "hidden")
   closeBtn?.addEventListener("click", ()=>setFloatHome("Remote home is ready."))
   returnMainBtn?.addEventListener("click", ()=>setFloatHome("Remote home is open and ready."))
-  goViewBtn?.addEventListener("click", ()=>setFloatHome("On-the-go Remote view is active. Tap one route and move fast."))
-  panelsViewBtn?.addEventListener("click", ()=>showAllFloatPanels("All Remote panels are open together now."))
-  paymentViewBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
+  goViewBtn?.addEventListener("click", ()=>{
+    const nextState = !shell?.classList.contains("remote-go-mode")
+    setRemoteGoMode(nextState)
+    if(nextState) setFloatHome("On-the-go Remote view is active. Tap a Remote button and keep moving.")
+  })
   remoteSheetBack?.addEventListener("click", ()=>closeRemoteSheet())
   remoteSheetClose?.addEventListener("click", ()=>closeRemoteSheet())
   openStudioBtn?.addEventListener("click", ()=>showAllFloatPanels("All Remote panels are open together now."))
