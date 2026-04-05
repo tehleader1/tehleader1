@@ -1505,10 +1505,6 @@ function openLinkModal(url, title){
     const external = qs("#linkExternal")
     if(!modal || !frame || !header) return
     const isShopifyCommerceUrl = /^https:\/\/(?:supportrd\.com|[a-z0-9-]+\.myshopify\.com)\/(products\/|cart\b|account\/orders\b|pages\/)/i.test(url || "")
-    if(isShopifyCommerceUrl){
-      window.location.href = url
-      return
-    }
     header.textContent = title || "Open Link"
   if(url && url.startsWith("mailto:")){
     notice.style.display = "block"
@@ -1516,8 +1512,12 @@ function openLinkModal(url, title){
     external.onclick = ()=>{ window.location.href = url }
     frame.src = "about:blank"
   } else {
-    notice.style.display = "none"
-    external.style.display = "none"
+    notice.style.display = isShopifyCommerceUrl ? "block" : "none"
+    notice.textContent = isShopifyCommerceUrl
+      ? "SupportRD is keeping this Shopify lane inside the page. If the store blocks the embed, use Open Externally."
+      : ""
+    external.style.display = isShopifyCommerceUrl ? "inline-flex" : "none"
+    external.onclick = isShopifyCommerceUrl ? ()=>{ window.open(url, "_blank", "noopener,noreferrer") } : null
     frame.src = url || "about:blank"
   }
     modal.style.display = "flex"
@@ -1732,8 +1732,34 @@ function renderBlog(){
   const body = qs("#blogBody")
   if(title) title.textContent = post.title
   if(body){
-    const policy = `<div style="padding:10px;border-radius:10px;border:1px solid rgba(124,243,209,0.35);background:rgba(124,243,209,0.08);font-size:12px;margin-bottom:16px;"><strong>Politica del Blog:</strong> Solo noticias y contenido nitido de pelo.</div>`
-    const article = post.body.split("\n\n").map(p=>`<p>${p}</p>`).join("")
+    const rawParagraphs = String(post.body || "")
+      .split("\n\n")
+      .map(line=>line.trim())
+      .filter(Boolean)
+    const lead = rawParagraphs[0] || "SupportRD is studying live hair topics, real routines, and product-fit decisions."
+    const detailParagraphs = rawParagraphs.slice(1)
+    const detailMarkup = detailParagraphs.length
+      ? detailParagraphs.map(p=>`<p>${p}</p>`).join("")
+      : `<p>SupportRD keeps the blog rooted in hair support, healthy routines, and next-step product guidance instead of drifting into unrelated topics.</p>`
+    const takeaway = rawParagraphs[rawParagraphs.length - 1] || lead
+    const policy = `<div class="remote-blog-policy"><strong>Blog Policy:</strong> Hair-first information only. SupportRD keeps this lane on real routines, growth, damage recovery, and product logic.</div>`
+    const article = `
+      <article class="remote-blog-article">
+        <div class="remote-blog-lead">
+          <h3>SupportRD Hair Brief</h3>
+          <p>${lead}</p>
+        </div>
+        <div class="remote-blog-section">
+          <h4>What SupportRD Is Seeing</h4>
+          ${detailMarkup}
+        </div>
+        <div class="remote-blog-section">
+          <h4>What To Do Next</h4>
+          <p>${takeaway}</p>
+          <p>Use ARIA for the issue lane, Product Page for the matching solution lane, and FAQ Lounge / Developer Feedback when you want proof before taking the next step.</p>
+        </div>
+      </article>
+    `
     const archive = BLOG_POSTS.map((entry, index)=>`
       <button class="btn ghost" data-blog-jump="${index}" style="justify-content:flex-start;text-align:left;">
         <strong>${entry.title}</strong>
@@ -1741,9 +1767,7 @@ function renderBlog(){
     `).join("")
     body.innerHTML = `
       ${policy}
-      <article class="remote-blog-article">
-        ${article}
-      </article>
+      ${article}
       <div style="margin-top:22px;">
         <h3 style="margin-bottom:10px;">More SupportRD Blog Posts</h3>
         <div style="display:grid;gap:8px;">${archive}</div>
@@ -2266,8 +2290,8 @@ function setupGPS(){
       const dLat = coordMatch[1]
       const dLng = coordMatch[3]
       map.src = origin
-        ? `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.lat},${origin.lng};${dLat},${dLng}`
-        : `https://www.openstreetmap.org/?mlat=${dLat}&mlon=${dLng}#map=13/${dLat}/${dLng}`
+        ? `https://www.google.com/maps?q=${origin.lat},${origin.lng}+to+${dLat},${dLng}&output=embed`
+        : `https://www.google.com/maps?q=${dLat},${dLng}&z=13&output=embed`
       return
     }
     try{
@@ -2281,8 +2305,8 @@ function setupGPS(){
       const dLat = data[0].lat
       const dLng = data[0].lon
       map.src = origin
-        ? `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.lat},${origin.lng};${dLat},${dLng}`
-        : `https://www.openstreetmap.org/?mlat=${dLat}&mlon=${dLng}#map=13/${dLat}/${dLng}`
+        ? `https://www.google.com/maps?q=${origin.lat},${origin.lng}+to+${dLat},${dLng}&output=embed`
+        : `https://www.google.com/maps?q=${dLat},${dLng}&z=13&output=embed`
     }catch{
       toast("Route failed")
     }
@@ -2294,8 +2318,9 @@ function setupGPS(){
     }
     setGpsStatus("Guide to Kito's House is active. GPS mode is centered on Villa Gonzalez now.")
     if(mapOverlay) mapOverlay.textContent = "Kito GPS active. Villa Gonzalez, Santiago, Dominican Republic is highlighted."
+    if(destInput) destInput.value = "Villa Gonzalez, Santiago, Dominican Republic"
     if(map){
-      map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-70.838%2C19.450%2C-70.375%2C19.735&layer=mapnik&marker=19.572%2C-70.759"
+      map.src = "https://www.google.com/maps?q=Villa+Gonzalez,+Santiago,+Dominican+Republic&z=13&output=embed"
     }
     await routeToDestinationText("Villa Gonzalez, Santiago, Dominican Republic")
     try{ gpsPanel?.scrollIntoView({behavior:'smooth', block:'center'}) }catch{}
@@ -4779,21 +4804,14 @@ function setupSessionSignal(){
       pingEl.textContent = rtt ? `Ping: ${rtt}ms` : "Ping: live"
     }
     if(joinBtn){
-      const hiddenUntil = Number(localStorage.getItem(joinHiddenUntilKey) || 0)
-      const hidden = hiddenUntil > Date.now()
-      joinBtn.hidden = hidden
-      joinBtn.disabled = hidden
-      joinBtn.style.display = hidden ? "none" : ""
-      joinBtn.textContent = hidden ? "Viewer Link Ready" : "Scan to Join Session"
+      joinBtn.hidden = true
+      joinBtn.disabled = true
+      joinBtn.style.display = "none"
     }
   }
-    joinBtn?.addEventListener("click", ()=>{
-      const viewerUrl = `${location.origin}${location.pathname}?viewer=1`
-      openMiniWindow("Scan to Join", `Viewer access is ready. Share this SupportRD session cleanly: ${viewerUrl}`)
-      pushLog("Viewer join link prepared for sharing")
-      localStorage.setItem(joinHiddenUntilKey, String(Date.now() + (30 * 60 * 1000)))
-      render()
-    })
+  if(joinBtn){
+    joinBtn.remove()
+  }
   window.noteSupportRDContinuity = noteContinuity
   window.logSessionSignal = pushLog
   ;["click","visibilitychange","storage"].forEach(evt=>{
@@ -10757,19 +10775,22 @@ function setupRemoteFastPay(){
         }catch{}
       }
       const liveLink = buildShopifyCheckoutUrl(product, liveProduct) || (product?.key && LINKS[product.key] ? LINKS[product.key] : product?.link)
-      if(!liveProduct && !liveProducts.length){
+      if(!liveLink && !liveProduct && !liveProducts.length){
         openShopifyPublishNotice(product?.title)
         return
       }
-      if(!liveLink) return
+      if(!liveLink){
+        openShopifyPublishNotice(product?.title)
+        return
+      }
       const checkoutProduct = {...product, link: liveLink}
       const receipt = buildRemoteReceipt(checkoutProduct)
       renderReceipt(receipt)
       hideConfirm()
       hideProcessing()
       if(!options.keepOwnerVisible) hideOwner()
-      if(status) status.textContent = `${checkoutProduct.title} Shopify checkout is opening now${sourceLabel ? ` from ${sourceLabel}` : ""}.`
-      window.location.assign(checkoutProduct.link)
+      if(status) status.textContent = `${checkoutProduct.title} Shopify checkout is opening inside the page now${sourceLabel ? ` from ${sourceLabel}` : ""}.`
+      openLinkModal(checkoutProduct.link, `${checkoutProduct.title} Checkout`)
     }
 
   function renderProducts(){
