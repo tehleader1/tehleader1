@@ -35,8 +35,49 @@ const timelineDurationSec = 120;
 let timelineZoom = 1;
 let draggedPlacementId = 0;
 let selectedTrackId = "mp3-1";
+let selectedWaveRegion = null;
+let studioTransportAudio = null;
 let activeCameraStream = null;
 let currentGuideTimer = null;
+
+function playUiClickSound(type = "soft") {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = playUiClickSound._ctx || (playUiClickSound._ctx = new AudioCtx());
+    if (ctx.state === "suspended") ctx.resume?.();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type === "accent" ? "triangle" : "sine";
+    osc.frequency.value = type === "accent" ? 660 : 440;
+    gain.gain.value = 0.0001;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+    gain.gain.exponentialRampToValueAtTime(type === "accent" ? 0.04 : 0.025, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+    osc.start(now);
+    osc.stop(now + 0.14);
+  } catch {}
+}
+
+function getSelectedPlacement() {
+  return placements.find((item) => item.id === selectedPlacementId) || null;
+}
+
+function getPlacementAudioSource(placement) {
+  if (!placement) return null;
+  if (placement.audioId) {
+    const match = placementAudioFiles.find((item) => item.id === placement.audioId);
+    if (match?.url) return match;
+  }
+  const fallback = placementAudioFiles.find((item) => item.name === placement.audioName);
+  return fallback?.url ? fallback : null;
+}
+
+function clearWaveRegionSelection() {
+  selectedWaveRegion = null;
+}
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -234,7 +275,10 @@ async function decodeAudioVisual(file) {
 }
 function buildWaveMarkup(waveData = []) {
   const bars = (waveData.length ? waveData : generateWaveData())
-    .map((height) => `<span class="wave-bar" style="height:${height}%"></span>`)
+    .map((height, index) => {
+      const intensity = Math.max(0.18, Math.min(1, Number(height || 0) / 100));
+      return `<span class="wave-bar" style="--wave-height:${height}%;--wave-intensity:${intensity.toFixed(3)}" data-wave-index="${index}"></span>`;
+    })
     .join("");
   return `<div class="timeline-waveform">${bars}</div>`;
 }
@@ -281,20 +325,23 @@ function deleteLastMotherboard() {
   updateSelectedBoardLabels();
   setStatus("#motherboardStatus", `${removed.title} removed.`);
 }
-function removePlacement(id) {
-  const idx = placements.findIndex((p) => p.id === id);
-  if (idx < 0) return;
-  pushUndoSnapshot(`Delete ${summarizePlacement(placements[idx])}`);
-  const removed = placements[idx];
-  placements.splice(idx, 1);
-  if (selectedPlacementId === id) selectedPlacementId = 0;
+  function removePlacement(id) {
+    const idx = placements.findIndex((p) => p.id === id);
+    if (idx < 0) return;
+    pushUndoSnapshot(`Delete ${summarizePlacement(placements[idx])}`);
+    const removed = placements[idx];
+    placements.splice(idx, 1);
+    if (selectedPlacementId === id) {
+      selectedPlacementId = 0;
+      clearWaveRegionSelection();
+    }
   deletedSnapshots.unshift({ action: `Deleted clip`, at: new Date().toLocaleTimeString(), placements: deepClone(placements), trackState: deepClone(trackState), placementAudioFiles: deepClone(placementAudioFiles), selectedTimelineAudioId, selectedPlacementId });
   renderPlacements();
   renderProfileStats();
   setStatus("#placementStatus", `Deleted ${removed.audioName || removed.wave}.`);
 }
 
-function createPlacement(kind = "mp3", options = {}) {
+  function createPlacement(kind = "mp3", options = {}) {
   pushUndoSnapshot(`Create ${kind} placement`);
   const time = Number(options.timeSec ?? qs("#timelinePlacementTime")?.value ?? qs("#placementTime")?.value ?? 0);
   const wave = String(options.wave ?? qs("#fxPreset")?.value ?? "echo");
@@ -312,9 +359,10 @@ function createPlacement(kind = "mp3", options = {}) {
     waveData: options.waveData || generateWaveData(options.audioName || audio?.name || kind, kind === "recorded" ? 56 : 48, kind === "instrument" ? "instrument" : "steady", kind === "recorded" ? 0.92 : 1),
     live: Boolean(options.live)
   };
-  placements.push(placement);
-  selectedPlacementId = id;
-  renderPlacements();
+    placements.push(placement);
+    selectedPlacementId = id;
+    clearWaveRegionSelection();
+    renderPlacements();
   renderProfileStats();
   updateSelectedBoardLabels();
   setStatus("#placementStatus", `${kind.toUpperCase()} placement added on ${placement.trackId}.`);
@@ -348,21 +396,60 @@ function renderPlacementAudioOptions() {
 }
 
 function trimSelectedPlacement(edge = "right") {
-  const placement = placements.find((item) => item.id === selectedPlacementId);
-  if (!placement) {
-    setStatus("#placementStatus", "Highlight a waveform first to trim it.");
-    return;
+    const placement = getSelectedPlacement();
+    if (!placement) {
+      setStatus("#placementStatus", "Highlight a waveform first to trim it.");
+      return;
+    }
+    pushUndoSnapshot(`Trim ${edge} ${placement.audioName || placement.wave}`);
+    if (selectedWaveRegion && selectedWaveRegion.placementId === placement.id) {
+      const bars = Array.isArray(placement.waveData) ? placement.waveData.slice() : [];
+      const total = Math.max(1, bars.length);
+      const startIndex = Math.max(0, Math.min(total - 1, Math.round(selectedWaveRegion.start * total)));
+      const endIndex = Math.max(startIndex + 1, Math.min(total, Math.round(selectedWaveRegion.end * total)));
+      if (edge === "left") {
+        placement.waveData = bars.slice(endIndex);
+      } else {
+        placement.waveData = bars.slice(0, startIndex);
+      }
+      const fractionLeft = Math.max(0.08, (placement.waveData.length || 1) / total);
+      placement.durationSec = Math.max(0.8, Number((placement.durationSec * fractionLeft).toFixed(2)));
+      if (edge === "left") {
+        placement.timeSec = Math.max(0, Number((placement.timeSec + ((endIndex / total) * (placement.durationSec / fractionLeft))).toFixed(2)));
+      }
+      clearWaveRegionSelection();
+    } else {
+      if (edge === "left") {
+        placement.timeSec = Math.max(0, placement.timeSec + 0.5);
+        placement.durationSec = Math.max(0.8, placement.durationSec - 0.5);
+      } else {
+        placement.durationSec = Math.max(0.8, placement.durationSec - 0.5);
+      }
+    }
+    renderPlacements();
+    setStatus("#placementStatus", `Trimmed ${edge} side of ${placement.audioName || 'selected waveform'}.`);
   }
-  pushUndoSnapshot(`Trim ${edge} ${placement.audioName || placement.wave}`);
-  if (edge === "left") {
-    placement.timeSec = Math.max(0, placement.timeSec + 0.5);
-    placement.durationSec = Math.max(0.8, placement.durationSec - 0.5);
-  } else {
-    placement.durationSec = Math.max(0.8, placement.durationSec - 0.5);
+
+  function deleteSelectedWaveRegion() {
+    const placement = getSelectedPlacement();
+    if (!placement || !selectedWaveRegion || selectedWaveRegion.placementId !== placement.id) {
+      if (placement) {
+        removePlacement(placement.id);
+      }
+      return;
+    }
+    const bars = Array.isArray(placement.waveData) ? placement.waveData.slice() : [];
+    const total = Math.max(1, bars.length);
+    const startIndex = Math.max(0, Math.min(total - 1, Math.round(selectedWaveRegion.start * total)));
+    const endIndex = Math.max(startIndex + 1, Math.min(total, Math.round(selectedWaveRegion.end * total)));
+    pushUndoSnapshot(`Delete snippet from ${placement.audioName || placement.wave}`);
+    placement.waveData = [...bars.slice(0, startIndex), ...bars.slice(endIndex)];
+    const removedFraction = Math.max(0.02, (endIndex - startIndex) / total);
+    placement.durationSec = Math.max(0.8, Number((placement.durationSec * (1 - removedFraction)).toFixed(2)));
+    clearWaveRegionSelection();
+    renderPlacements();
+    setStatus("#placementStatus", "Highlighted wave snippet removed.");
   }
-  renderPlacements();
-  setStatus("#placementStatus", `Trimmed ${edge} side of ${placement.audioName || 'selected waveform'}.`);
-}
 
 function setTimelineZoom(delta = 0) {
   timelineZoom = Math.max(1, Math.min(8, Number((timelineZoom + delta).toFixed(2))));
@@ -375,6 +462,12 @@ function renderClipHandles(placement) {
     <button class="clip-handle left" type="button" data-handle="left" data-placement-id="${placement.id}" aria-label="Resize Left"></button>
     <button class="clip-handle right" type="button" data-handle="right" data-placement-id="${placement.id}" aria-label="Resize Right"></button>
   `;
+}
+function renderWaveSelection(placement) {
+  if (!selectedWaveRegion || selectedWaveRegion.placementId !== placement.id) return "";
+  const left = Math.max(0, Math.min(96, selectedWaveRegion.start * 100));
+  const width = Math.max(4, Math.min(100 - left, (selectedWaveRegion.end - selectedWaveRegion.start) * 100));
+  return `<span class="timeline-wave-selection" style="left:${left}%;width:${width}%"></span>`;
 }
 function renderPlacements() {
   const wrap = qs("#timelineTracks");
@@ -391,12 +484,13 @@ function renderPlacements() {
       const width = Math.max(26, Math.min(94, ((placement.durationSec || 6) / timelineDurationSec) * 100));
       const selected = placement.id === selectedPlacementId ? " selected" : "";
       const waveData = Array.isArray(placement.waveData) ? placement.waveData : generateWaveData(placement.audioName || placement.wave);
-      return `<button class="timeline-clip ${placement.kind}${selected}" draggable="true" type="button" data-placement-id="${placement.id}" style="left:${left}%;width:${width}%;">
-        <span class="timeline-clip-live"></span>
-        ${buildWaveMarkup(waveData)}
-        ${renderClipHandles(placement)}
-        <span class="timeline-clip-label"><span class="clip-name">${placement.audioName || placement.wave}</span><span class="clip-meta">${placement.durationSec.toFixed(1)}s</span></span>
-      </button>`;
+        return `<button class="timeline-clip ${placement.kind}${selected}" draggable="true" type="button" data-placement-id="${placement.id}" style="left:${left}%;width:${width}%;">
+          <span class="timeline-clip-live"></span>
+          ${buildWaveMarkup(waveData)}
+          ${renderWaveSelection(placement)}
+          ${renderClipHandles(placement)}
+          <span class="timeline-clip-label"><span class="clip-name">${placement.audioName || placement.wave}</span><span class="clip-meta">${placement.durationSec.toFixed(1)}s</span></span>
+        </button>`;
     }).join("");
     return `<div class="timeline-track${hiddenClass}${selectedTrackClass}" data-track-id="${track.id}">
       <div class="timeline-track-head">
@@ -426,19 +520,72 @@ function renderPlacements() {
     });
   });
 
-  qsa("#timelineTracks [data-placement-id]").forEach((node) => {
-    node.addEventListener("click", () => {
-      selectedPlacementId = Number(node.getAttribute("data-placement-id") || 0);
-      if (select) select.value = String(selectedPlacementId);
-      renderPlacements();
-      const placement = placements.find((item) => item.id === selectedPlacementId);
-      setStatus("#placementStatus", placement ? `Selected: ${summarizePlacement(placement)}.` : "Placement selected.");
+    qsa("#timelineTracks [data-placement-id]").forEach((node) => {
+      node.addEventListener("click", () => {
+        selectedPlacementId = Number(node.getAttribute("data-placement-id") || 0);
+        const placement = placements.find((item) => item.id === selectedPlacementId);
+        if (placement?.audioId) {
+          selectedTimelineAudioId = placement.audioId;
+          renderPlacementAudioOptions();
+          window.__studioRadio?.loadPlacement?.(selectedPlacementId);
+        }
+        clearWaveRegionSelection();
+        if (select) select.value = String(selectedPlacementId);
+        renderPlacements();
+        setStatus("#placementStatus", placement ? `Selected: ${summarizePlacement(placement)}.` : "Placement selected.");
+      });
+      node.addEventListener("dblclick", async () => {
+        const placementId = Number(node.getAttribute("data-placement-id") || 0);
+        if (!placementId) return;
+        selectedPlacementId = placementId;
+        if (select) select.value = String(selectedPlacementId);
+        renderPlacements();
+        await window.__studioRadio?.playPlacement?.(placementId);
+      });
+      node.addEventListener("pointerdown", (event) => {
+        if (event.target.closest("[data-handle]")) return;
+        const placementId = Number(node.getAttribute("data-placement-id") || 0);
+        const placement = placements.find((item) => item.id === placementId);
+        if (!placement) return;
+        const waveform = node.querySelector(".timeline-waveform");
+        const rect = waveform?.getBoundingClientRect() || node.getBoundingClientRect();
+        const getRatio = (clientX) => Math.max(0, Math.min(1, rect.width ? (clientX - rect.left) / rect.width : 0));
+        const startRatio = getRatio(event.clientX);
+        selectedPlacementId = placementId;
+        selectedWaveRegion = { placementId, start: startRatio, end: Math.min(1, startRatio + 0.08) };
+        renderPlacements();
+        const move = (moveEvent) => {
+          const currentRatio = getRatio(moveEvent.clientX);
+          selectedWaveRegion = {
+            placementId,
+            start: Math.min(startRatio, currentRatio),
+            end: Math.max(startRatio, currentRatio)
+          };
+          renderPlacements();
+        };
+        const up = () => {
+          document.removeEventListener("pointermove", move);
+          document.removeEventListener("pointerup", up);
+          const span = Math.max(0.01, selectedWaveRegion.end - selectedWaveRegion.start);
+          if (span < 0.015) {
+            const center = selectedWaveRegion.start;
+            selectedWaveRegion = {
+              placementId,
+              start: Math.max(0, center - 0.04),
+              end: Math.min(1, center + 0.04)
+            };
+          }
+          renderPlacements();
+          setStatus("#placementStatus", "Wave section highlighted. Press Delete/Backspace to remove that snippet.");
+        };
+        document.addEventListener("pointermove", move);
+        document.addEventListener("pointerup", up);
+      });
+      node.addEventListener("dragstart", (event) => {
+        draggedPlacementId = Number(node.getAttribute("data-placement-id") || 0);
+        event.dataTransfer?.setData("text/plain", String(draggedPlacementId));
+      });
     });
-    node.addEventListener("dragstart", (event) => {
-      draggedPlacementId = Number(node.getAttribute("data-placement-id") || 0);
-      event.dataTransfer?.setData("text/plain", String(draggedPlacementId));
-    });
-  });
   qsa("#timelineTracks [data-handle]").forEach((node) => {
     node.addEventListener("pointerdown", (event) => {
       event.preventDefault();
@@ -767,22 +914,66 @@ function setupStudioRadio() {
 
   let index = 0;
   const audio = new Audio();
+  studioTransportAudio = audio;
   audio.preload = "auto";
   audio.loop = false;
 
+  const getSessionPlaylist = () => {
+    const fromBoards = placements
+      .map((placement) => {
+        const source = getPlacementAudioSource(placement);
+        if (!source?.url) return null;
+        return {
+          title: placement.audioName || source.name || "Session Clip",
+          src: source.url,
+          placementId: placement.id
+        };
+      })
+      .filter(Boolean);
+    return fromBoards.length ? fromBoards : playlist;
+  };
+
   const updateTrackUi = (message) => {
-    track.textContent = `Track ${index + 1}/${playlist.length}: ${playlist[index].title}`;
+    const activeList = getSessionPlaylist();
+    const current = activeList[index] || activeList[0];
+    track.textContent = current ? `Track ${Math.min(index + 1, activeList.length)}/${activeList.length}: ${current.title}` : "No active track";
     status.textContent = message;
   };
 
   const load = (nextIndex) => {
-    index = (nextIndex + playlist.length) % playlist.length;
-    const current = playlist[index];
+    const activeList = getSessionPlaylist();
+    if (!activeList.length) {
+      audio.removeAttribute("src");
+      playBtn.textContent = "Play";
+      updateTrackUi("Import or record audio to begin playback.");
+      return;
+    }
+    index = (nextIndex + activeList.length) % activeList.length;
+    const current = activeList[index];
     audio.pause();
     audio.src = current.src;
     audio.currentTime = 0;
     playBtn.textContent = "Play";
     updateTrackUi(`Ready: ${current.title}`);
+    if (current.placementId) {
+      selectedPlacementId = current.placementId;
+      const placement = placements.find((item) => item.id === current.placementId);
+      if (placement?.audioId) {
+        selectedTimelineAudioId = placement.audioId;
+        renderPlacementAudioOptions();
+      }
+      renderPlacements();
+    }
+  };
+
+  const loadPlacement = (placementId) => {
+    const activeList = getSessionPlaylist();
+    const placementIndex = activeList.findIndex((item) => item.placementId === placementId);
+    if (placementIndex >= 0) {
+      load(placementIndex);
+      return true;
+    }
+    return false;
   };
 
   const play = async () => {
@@ -790,7 +981,8 @@ function setupStudioRadio() {
       if (!audio.src) load(index);
       await audio.play();
       playBtn.textContent = "Pause";
-      updateTrackUi(`Now playing: ${playlist[index].title}`);
+      const activeList = getSessionPlaylist();
+      updateTrackUi(`Now playing: ${(activeList[index] || activeList[0])?.title || "Session audio"}`);
     } catch {
       updateTrackUi("Tap Play again to allow audio.");
     }
@@ -800,7 +992,8 @@ function setupStudioRadio() {
     audio.pause();
     audio.currentTime = 0;
     playBtn.textContent = "Play";
-    updateTrackUi(`Stopped: ${playlist[index].title}`);
+    const activeList = getSessionPlaylist();
+    updateTrackUi(`Stopped: ${(activeList[index] || activeList[0])?.title || "Session audio"}`);
   };
 
   const stepTrack = async (delta) => {
@@ -817,7 +1010,8 @@ function setupStudioRadio() {
     } else {
       audio.pause();
       playBtn.textContent = "Play";
-      updateTrackUi(`Paused: ${playlist[index].title}`);
+      const activeList = getSessionPlaylist();
+      updateTrackUi(`Paused: ${(activeList[index] || activeList[0])?.title || "Session audio"}`);
     }
   });
 
@@ -826,7 +1020,7 @@ function setupStudioRadio() {
   nextBtn.addEventListener("click", async () => { await stepTrack(1); });
   audio.addEventListener("ended", async () => {
     await stepTrack(1);
-    if (playlist.length === 1) {
+    if (getSessionPlaylist().length === 1) {
       stop();
     }
   });
@@ -836,7 +1030,20 @@ function setupStudioRadio() {
     play,
     stop,
     prev: async () => { await stepTrack(-1); },
-    next: async () => { await stepTrack(1); }
+    next: async () => { await stepTrack(1); },
+    refresh: () => load(index),
+    loadPlacement,
+    playPlacement: async (placementId) => {
+      if (loadPlacement(placementId)) {
+        await play();
+      }
+    },
+    seekRelative: (seconds = 0) => {
+      try {
+        const duration = Number.isFinite(audio.duration) ? audio.duration : Infinity;
+        audio.currentTime = Math.max(0, Math.min(duration, (audio.currentTime || 0) + seconds));
+      } catch {}
+    }
   };
 }
 
@@ -929,20 +1136,30 @@ function updateLiveWaveFromMic() {
   const placement = placements.find((item) => item.id === currentRecordingPlacementId);
   if (!placement) return;
   if (currentAnalyser && currentWaveProbe) {
-    currentAnalyser.getByteTimeDomainData(currentWaveProbe);
-    const chunkSize = Math.max(1, Math.floor(currentWaveProbe.length / 48));
+    currentAnalyser.getFloatTimeDomainData(currentWaveProbe);
+    const chunkSize = Math.max(1, Math.floor(currentWaveProbe.length / 56));
     const nextWave = [];
-    for (let i = 0; i < 48; i += 1) {
+    for (let i = 0; i < 56; i += 1) {
       const start = i * chunkSize;
-      const slice = currentWaveProbe.slice(start, start + chunkSize);
-      let avg = 0;
-      slice.forEach((value) => { avg += Math.abs(value - 128); });
-      avg = slice.length ? avg / slice.length : 0;
-      nextWave.push(Math.max(12, Math.min(96, Math.round((avg / 128) * 100) + 12)));
+      const end = Math.min(start + chunkSize, currentWaveProbe.length);
+      let peak = 0;
+      let energy = 0;
+      let count = 0;
+      for (let j = start; j < end; j += 1) {
+        const value = Number(currentWaveProbe[j] || 0);
+        const abs = Math.abs(value);
+        if (abs > peak) peak = abs;
+        energy += value * value;
+        count += 1;
+      }
+      const rms = count ? Math.sqrt(energy / count) : 0;
+      const shaped = Math.max(rms * 1.45, peak * 0.95);
+      const cinematic = 12 + Math.round(Math.pow(Math.min(1, shaped * 2.3), 0.78) * 86);
+      nextWave.push(Math.max(12, Math.min(98, cinematic)));
     }
     placement.waveData = nextWave;
   } else {
-    placement.waveData = generateWaveData("Live", 48, "live", 1);
+    placement.waveData = generateWaveData("Live", 56, "live", 1);
   }
   placement.durationSec = Math.min(45, (placement.durationSec || 2) + 0.25);
   renderPlacements();
@@ -960,8 +1177,9 @@ async function startRecording() {
     currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
     const source = currentAudioContext.createMediaStreamSource(currentMicStream);
     currentAnalyser = currentAudioContext.createAnalyser();
-    currentAnalyser.fftSize = 256;
-    currentWaveProbe = new Uint8Array(currentAnalyser.frequencyBinCount);
+    currentAnalyser.fftSize = 2048;
+    currentAnalyser.smoothingTimeConstant = 0.82;
+    currentWaveProbe = new Float32Array(currentAnalyser.fftSize);
     source.connect(currentAnalyser);
 
     recordingChunks = [];
@@ -975,17 +1193,20 @@ async function startRecording() {
       if (placement) {
         const audioId = Date.now() + Math.floor(Math.random() * 1000);
         const url = URL.createObjectURL(blob);
+        const recordedName = `Recorded-${new Date().toISOString().slice(11, 19).replace(/:/g, "-")}.webm`;
         placementAudioFiles.push({
           id: audioId,
-          name: `Recorded-${new Date().toISOString().slice(11, 19).replace(/:/g, "-")}.webm`,
+          name: recordedName,
           url,
           type: blob.type || "audio/webm",
           durationSec: placement.durationSec || 6,
           waveData: placement.waveData || generateWaveData("Recorded", 48, "live", 1)
         });
         placement.audioId = audioId;
-        placement.audioName = "Live Recording";
+        placement.audioName = recordedName;
         placement.live = false;
+        selectedTimelineAudioId = audioId;
+        selectedPlacementId = placement.id;
       }
       currentMicStream?.getTracks().forEach((track) => track.stop());
       currentAudioContext?.close?.();
@@ -995,6 +1216,7 @@ async function startRecording() {
       currentWaveProbe = null;
       renderPlacementAudioOptions();
       renderPlacements();
+      window.__studioRadio?.refresh?.();
       renderProfileStats();
       setStatus("#placementStatus", `Recording saved to ${placement?.trackId || "the selected motherboard"}.`);
     };
@@ -1073,6 +1295,7 @@ function setupTransport() {
     placement.durationSec = audio.durationSec || placement.durationSec || 6;
     placement.waveData = audio.waveData || generateWaveData(audio.name, 48, placement.kind === "instrument" ? "instrument" : "steady", 1);
     renderPlacements();
+    window.__studioRadio?.refresh?.();
     setStatus("#placementStatus", `Placed ${audio.name} on ${placement.trackId}.`);
   });
   qs("#placementAudioUpload")?.addEventListener("change", async () => {
@@ -1110,6 +1333,7 @@ function setupTransport() {
     }
     renderPlacementAudioOptions();
     renderPlacements();
+    window.__studioRadio?.refresh?.();
     setStatus("#placementStatus", `${placementAudioFiles.length} imported audio file(s) are ready for the motherboard.`);
     qs("#placementAudioUpload").value = "";
   });
@@ -1134,7 +1358,8 @@ function setupTransport() {
       }
       if (cmd === "play") { window.__studioRadio?.play?.(); }
       if (cmd === "next") { window.__studioRadio?.next?.(); }
-      if (cmd === "rewind") { window.__studioRadio?.prev?.(); }
+      if (cmd === "rewind") { window.__studioRadio?.seekRelative?.(-5); }
+      if (cmd === "forward") { window.__studioRadio?.seekRelative?.(5); }
       transportStatus.textContent = `Transport: ${cmd.toUpperCase()} ready near the motherboard.`;
     });
   });
@@ -1305,11 +1530,14 @@ function setupStickyWorkbench() {
       }
       if (cmd === 'play') window.__studioRadio?.play?.();
       if (cmd === 'next') window.__studioRadio?.next?.();
-      if (cmd === 'rewind') window.__studioRadio?.prev?.();
+      if (cmd === 'rewind') window.__studioRadio?.seekRelative?.(-5);
+      if (cmd === 'forward') window.__studioRadio?.seekRelative?.(5);
+      playUiClickSound(cmd === 'play' ? 'accent' : 'soft');
       setStatus('#transportStatus', `Transport: ${String(cmd || '').toUpperCase()} ready near the motherboard.`);
     });
   });
   qs('[data-sticky-record]')?.addEventListener('click', async () => {
+    playUiClickSound('accent');
     if (isRecording) await stopRecording();
     else await startRecording();
   });
@@ -1337,10 +1565,14 @@ function setupStickyWorkbench() {
     if (selected) setStatus('#motherboardStatus', `${selected.title} is active. Import, record, or edit on this motherboard.`);
   });
   qs('#stickyUndoBtn')?.addEventListener('click', () => undoLastAction());
-  qs('#stickyDeleteBtn')?.addEventListener('click', () => {
-    const id = Number(qs('#placementSelect')?.value || selectedPlacementId || 0);
-    if (id) removePlacement(id);
-  });
+    qs('#stickyDeleteBtn')?.addEventListener('click', () => {
+      if (selectedWaveRegion && selectedWaveRegion.placementId === selectedPlacementId) {
+        deleteSelectedWaveRegion();
+        return;
+      }
+      const id = Number(qs('#placementSelect')?.value || selectedPlacementId || 0);
+      if (id) removePlacement(id);
+    });
   qs('#stickyFxBtn')?.addEventListener('click', applyFxToSelection);
   qs('#stickyZoomInBtn')?.addEventListener('click', () => setTimelineZoom(0.25));
   qs('#stickyZoomOutBtn')?.addEventListener('click', () => setTimelineZoom(-0.25));
@@ -1365,22 +1597,27 @@ function setupStickyWorkbench() {
     'zoom-out': '#gigZoomOutBtn',
     reactive: '#gigReactiveBtn'
   };
-  qsa('[data-gig-main],[data-gig-live]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const key = btn.getAttribute('data-gig-main') || btn.getAttribute('data-gig-live');
-      const target = qs(gigButtonMap[key]);
-      target?.click();
+    qsa('[data-gig-main],[data-gig-live]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-gig-main') || btn.getAttribute('data-gig-live');
+        const target = qs(gigButtonMap[key]);
+        playUiClickSound(key === 'record' || key === 'play' ? 'accent' : 'soft');
+        target?.click();
+      });
     });
-  });
 
   document.addEventListener('keydown', (event) => {
     const targetTag = event.target?.tagName || '';
     if (['INPUT','TEXTAREA','SELECT'].includes(targetTag)) return;
-    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedPlacementId) {
-      event.preventDefault();
-      removePlacement(selectedPlacementId);
-    }
-  });
+      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedPlacementId) {
+        event.preventDefault();
+        if (selectedWaveRegion && selectedWaveRegion.placementId === selectedPlacementId) {
+          deleteSelectedWaveRegion();
+        } else {
+          removePlacement(selectedPlacementId);
+        }
+      }
+    });
 
   window.addEventListener('scroll', updateStickyState, { passive: true });
   window.addEventListener('resize', updateStickyState);
@@ -1467,6 +1704,9 @@ function setupProfileAndMain() {
   qs("#closeGuideOverlayBtn")?.addEventListener("click", closeGuide);
 }
 function setupUtilityButtons() {
+  qsa("#studioMainBar button, #studioUtilityBar button").forEach((btn) => {
+    btn.addEventListener("click", () => playUiClickSound("soft"));
+  });
   qs("#studioSettingsLocalBtn")?.addEventListener("click", () => qs("#motherboardStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioBlogLocalBtn")?.addEventListener("click", () => qs("#lyricsInput")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioPurchaseLocalBtn")?.addEventListener("click", () => {

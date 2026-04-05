@@ -279,10 +279,39 @@ textarea{min-height:120px;resize:vertical}
 .clip-handle.right{right:8px}
 .clip-handle::before{content:"↕"}
 .timeline-clip.selected .timeline-clip-label{padding:0 22px}
-.timeline-waveform{position:absolute;inset:10px 10px 24px 10px;display:flex;align-items:flex-end;gap:2px;pointer-events:none}
-.wave-bar{flex:1 1 auto;min-width:2px;border-radius:999px 999px 4px 4px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(205,227,255,.34))}
-.timeline-clip.recorded .wave-bar{background:linear-gradient(180deg,rgba(255,233,238,.96),rgba(255,122,146,.34))}
-.timeline-clip.instrument .wave-bar{background:linear-gradient(180deg,rgba(242,235,255,.96),rgba(195,150,255,.34))}
+.timeline-waveform{position:absolute;inset:10px 10px 24px 10px;display:flex;align-items:center;gap:2px;pointer-events:none}
+.wave-bar{
+  --wave-height:42%;
+  --wave-intensity:.45;
+  position:relative;
+  flex:1 1 auto;
+  min-width:2px;
+  height:calc(var(--wave-height) * .5);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(205,227,255,.4));
+  opacity:calc(.55 + (var(--wave-intensity) * .45));
+  box-shadow:0 0 12px rgba(160,214,255,.14);
+}
+.wave-bar::before,
+.wave-bar::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  height:100%;
+  border-radius:999px;
+  background:inherit;
+}
+.wave-bar::before{bottom:100%;margin-bottom:1px}
+.wave-bar::after{top:100%;margin-top:1px}
+.timeline-clip.recorded .wave-bar{
+  background:linear-gradient(180deg,rgba(255,233,238,.98),rgba(255,122,146,.42));
+  box-shadow:0 0 14px rgba(255,122,146,.18);
+}
+.timeline-clip.instrument .wave-bar{
+  background:linear-gradient(180deg,rgba(242,235,255,.98),rgba(195,150,255,.42));
+  box-shadow:0 0 14px rgba(195,150,255,.18);
+}
 .timeline-clip-label{position:relative;z-index:1;width:100%;display:flex;justify-content:space-between;gap:10px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-shadow:0 2px 10px rgba(0,0,0,.55)}
 .timeline-clip-label .clip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%}
 .timeline-clip-label .clip-meta{opacity:.92;font-weight:700}
