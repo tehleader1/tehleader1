@@ -3115,7 +3115,12 @@ body.competition-world .bg-layers::before{
   letter-spacing:.12em;
   text-transform:uppercase;
 }
-.float-mode-actions{display:none;}
+.float-mode-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:flex-end;
+}
 .float-mode-grid{
     display:grid;
     grid-template-columns:repeat(3, minmax(0, 1fr));
@@ -3246,6 +3251,15 @@ body.competition-world .bg-layers::before{
 .remote-content-stage-home{display:grid;gap:10px;min-height:170px;}
 .remote-content-stage-home h3{margin:0;font-size:24px;color:#173a6a;}
 .remote-content-stage-home p{margin:0;color:#355473;font-size:13px;line-height:1.35;max-width:50ch;}
+.remote-stage-quickbar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.remote-stage-quickbar .btn{
+  min-height:48px;
+  border-radius:18px;
+}
 .remote-stage-grid{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;}
 .remote-stage-card{
     padding:12px 14px;
@@ -3866,6 +3880,94 @@ body.remote-hide-ads .remote-display-strip{
   gap:14px;
 }
 .float-box[hidden]{display:none !important;}
+.float-map-hero{
+  display:grid;
+  grid-template-columns:minmax(160px, 220px) minmax(0, 1fr);
+  gap:14px;
+  align-items:stretch;
+  padding:14px;
+  border-radius:24px;
+  background:linear-gradient(135deg, rgba(255,255,255,.8), rgba(229,240,255,.6));
+  box-shadow:0 18px 36px rgba(24,76,140,.12);
+}
+.float-map-hero-image{
+  min-height:180px;
+  border-radius:20px;
+  position:relative;
+  overflow:hidden;
+  background:
+    linear-gradient(180deg, rgba(24,47,88,.08), rgba(8,20,38,.2)),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+}
+.float-map-hero-image::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,.4), transparent 30%),
+    linear-gradient(150deg, rgba(255,255,255,.14), transparent 62%);
+}
+.float-map-hero-copy{
+  display:grid;
+  gap:8px;
+  align-content:center;
+}
+.float-map-hero-copy strong{
+  font-size:22px;
+  color:#18386d;
+}
+.float-map-hero-copy span{
+  color:#395578;
+  line-height:1.45;
+}
+.float-map-hero[data-map-view="river"] .float-map-hero-image{
+  background:
+    linear-gradient(180deg, rgba(18,69,92,.18), rgba(5,24,39,.28)),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+  filter:hue-rotate(160deg) saturate(1.15);
+}
+.float-map-hero[data-map-view="vip"] .float-map-hero-image{
+  background:
+    linear-gradient(180deg, rgba(73,44,8,.14), rgba(20,11,6,.28)),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+  filter:hue-rotate(-20deg) saturate(1.18) contrast(1.04);
+}
+.float-map-hero[data-map-view="market"] .float-map-hero-image{
+  background:
+    linear-gradient(180deg, rgba(97,45,9,.12), rgba(42,18,5,.22)),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+  filter:hue-rotate(-35deg) saturate(1.2);
+}
+.float-map-hero[data-map-view="lab"] .float-map-hero-image{
+  background:
+    linear-gradient(180deg, rgba(16,76,106,.15), rgba(9,22,39,.24)),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+  filter:hue-rotate(185deg) saturate(1.1) brightness(1.02);
+}
+.float-map-hero[data-map-view="island"] .float-map-hero-image{
+  background:
+    linear-gradient(180deg, rgba(10,94,84,.16), rgba(7,29,34,.24)),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
+  filter:hue-rotate(110deg) saturate(1.22) brightness(1.02);
+}
+.float-map-action-host{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+.float-map-action{
+  display:grid;
+  gap:6px;
+  padding:12px 14px;
+  border-radius:18px;
+  border:1px solid rgba(117,162,223,.22);
+  background:rgba(255,255,255,.72);
+  color:#173a6a;
+  text-align:left;
+  cursor:pointer;
+}
+.float-map-action strong{font-size:15px;}
+.float-map-action span{font-size:12px;color:#47627f;line-height:1.35;}
 .float-box-focus{
   box-shadow:0 0 0 2px rgba(133,206,255,.42), 0 28px 48px rgba(11,32,64,.28);
   transform:translateY(-2px);
@@ -5093,6 +5195,7 @@ body.assistant-static .remote-guardian-btn.demo-active{
   .remote-stage-shell{margin:0 10px 120px;grid-template-columns:1fr;}
   .remote-color-tab{display:none;}
   .remote-content-stage{min-height:calc(100vh - 180px);padding:14px;}
+  .remote-stage-quickbar{display:grid;grid-template-columns:1fr;}
   .remote-purchase-editor{right:10px;left:10px;bottom:10px;width:auto;}
   .remote-edits-menu{left:10px;right:10px;top:auto;bottom:194px;width:auto;grid-template-columns:1fr;}
   .remote-edits-menu::before{display:none;}
@@ -5105,7 +5208,9 @@ body.assistant-static .remote-guardian-btn.demo-active{
   .remote-display-toolbar .btn{flex:1 1 180px;}
   .float-mode-grid{grid-template-columns:1fr;padding:0 10px 10px;}
   .float-box{min-height:auto;}
+  .float-map-hero{grid-template-columns:1fr;}
   .float-mini-actions,.float-big-buttons,.float-assistant-stage{grid-template-columns:1fr 1fr;}
+  .float-map-action-host{grid-template-columns:1fr;}
   .live-theme-quick-actions{display:grid;grid-template-columns:1fr 1fr;}
   .float-upload-strip,.float-transport-strip,.float-trim-row{grid-template-columns:1fr;}
   .remote-product-actions{grid-template-columns:1fr;}

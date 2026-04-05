@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260404h">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260404i">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -1526,6 +1526,9 @@ gtag("config", "G-8NTL8D64M1", { send_page_view: true });
         <div class="float-mode-resort-note">Aloha from Hawaii · brochure-light pages · international friendly.</div>
       </div>
       <div class="float-mode-actions">
+        <button class="btn ghost" id="floatModeGoView">On-The-Go View</button>
+        <button class="btn ghost" id="floatModePanelsView">All Panels</button>
+        <button class="btn ghost" id="floatModePaymentView">Payments</button>
         <button class="btn ghost" id="floatModeReturnMain">Remote Home</button>
         <button class="btn ghost" id="floatModeOpenStudio">Open All Panels</button>
         <button class="btn" id="floatModeClose">Close Remote</button>
@@ -1653,6 +1656,11 @@ gtag("config", "G-8NTL8D64M1", { send_page_view: true });
             <div class="float-mode-kicker">SupportRD Remote Stage</div>
             <h3>Remote on top. Open a section below.</h3>
             <p>Tap a button and go straight to the page.</p>
+            <div class="remote-stage-quickbar">
+              <button class="btn" id="remoteStageGpsBtn">GPS On The Go</button>
+              <button class="btn ghost" id="remoteStageStudioBtn">Video / Audio Edit</button>
+              <button class="btn ghost" id="remoteStagePaymentBtn">Payment Lane</button>
+            </div>
           <div class="remote-stage-grid">
               <div class="remote-stage-card">
                 <strong>Premium Purchase Editor</strong>
@@ -1817,6 +1825,14 @@ gtag("config", "G-8NTL8D64M1", { send_page_view: true });
           <span>Map Change</span>
           <span class="float-box-badge">Theme Switch</span>
         </div>
+      <div class="float-map-hero" id="floatMapHero" data-map-view="default">
+        <div class="float-map-hero-image" id="floatMapHeroImage"></div>
+        <div class="float-map-hero-copy">
+          <div class="float-mode-kicker">SupportRD Map Takeover</div>
+          <strong id="floatMapHeroTitle">SupportRD Default</strong>
+          <span id="floatMapHeroBody">The default woman-waking-up takeover stays in place until you choose a different map mood.</span>
+        </div>
+      </div>
       <div class="float-theme-rail" id="floatThemeCardRail"></div>
       <div class="float-big-buttons">
         <button class="float-pill" id="floatMapBtn">Map</button>
@@ -1824,6 +1840,7 @@ gtag("config", "G-8NTL8D64M1", { send_page_view: true });
         <button class="float-pill" id="floatOccasionBtn">Occasion</button>
         <button class="float-pill" id="floatThemeRotateBtn">Rotate View</button>
       </div>
+      <div class="float-map-action-host" id="floatMapActionHost"></div>
       <div class="float-box-copy" id="floatDeviceStatus">Change the whole feel of the app for different occasions and keep the route sale-ready.</div>
     </section>
       <section class="float-box glass" id="floatBoardsBox">
@@ -2243,7 +2260,7 @@ gtag("config", "G-8NTL8D64M1", { send_page_view: true });
   </div>
   
   <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260404h"></script>
+<script src="/static/app.v20260320h.js?v=20260404i"></script>
 <footer class="launch-footer-links">
   <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>

@@ -6163,6 +6163,9 @@ function setupFloatMode(){
   const closeBtn = qs("#floatModeClose")
   const returnMainBtn = qs("#floatModeReturnMain")
   const openStudioBtn = qs("#floatModeOpenStudio")
+  const goViewBtn = qs("#floatModeGoView")
+  const panelsViewBtn = qs("#floatModePanelsView")
+  const paymentViewBtn = qs("#floatModePaymentView")
   const assistantStatus = qs("#floatAssistantStatus")
   const deviceStatus = qs("#floatDeviceStatus")
   const settingsStatus = qs("#floatSettingsStatus")
@@ -6184,6 +6187,10 @@ function setupFloatMode(){
   const profilePostInput = qs("#floatProfilePostInput")
   const faqReelHost = qs("#floatFaqReelHost")
   const themeCardRail = qs("#floatThemeCardRail")
+  const mapHero = qs("#floatMapHero")
+  const mapHeroTitle = qs("#floatMapHeroTitle")
+  const mapHeroBody = qs("#floatMapHeroBody")
+  const mapActionHost = qs("#floatMapActionHost")
   const uploadBtn = qs("#floatUploadBtn")
   const uploadInput = qs("#floatUploadInput")
   const freshBoardsBtn = qs("#floatFreshBoardsBtn")
@@ -6302,6 +6309,9 @@ function setupFloatMode(){
   const remoteContentStage = qs("#remoteContentStage")
   const remoteAdsToggleBtn = qs("#remoteAdsToggleBtn")
   const remoteAdsFocusBtn = qs("#remoteAdsFocusBtn")
+  const remoteStageGpsBtn = qs("#remoteStageGpsBtn")
+  const remoteStageStudioBtn = qs("#remoteStageStudioBtn")
+  const remoteStagePaymentBtn = qs("#remoteStagePaymentBtn")
   const remoteColorPrevBtn = qs("#remoteColorPrev")
   const remoteColorNextBtn = qs("#remoteColorNext")
   const remotePurchaseProductsBtn = qs("#remotePurchaseProducts")
@@ -8562,11 +8572,23 @@ function setupFloatMode(){
     }
     function buildMapSheet(){
     const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
+    const activeView = views.find(view => view.key === (shell?.dataset?.remoteTheme || "default")) || views[0]
     return `
       <div class="float-sheet-copy">Map Change keeps the woman-waking-up default until you choose a new occasion. Tap a bubble, preview the mood, then close straight back into Remote.</div>
       ${renderRemoteValueLane(["Value: theme-driven selling", "Energy: visual mood engine", "Worth: occasion change + one-tap restore"])}
+      <div class="float-map-hero" data-map-view="${escapeRemoteHtml(activeView?.key || "default")}">
+        <div class="float-map-hero-image"></div>
+        <div class="float-map-hero-copy">
+          <div class="float-mode-kicker">Serious Map Change</div>
+          <strong>${escapeRemoteHtml(activeView?.label || "SupportRD Default")}</strong>
+          <span>${escapeRemoteHtml(activeView?.helper || "Pick the travel, mood, or product-forward route that matches the moment.")}</span>
+        </div>
+      </div>
       <div class="float-map-bubbles">
         ${views.map(view=>`<button class="float-map-bubble" type="button" data-world-key="${view.key}"><strong>${view.label}</strong><span>${view.helper || view.perk || "SupportRD mood route"}</span></button>`).join("")}
+      </div>
+      <div class="float-map-action-host">
+        ${(activeView?.actions || []).map((action, index)=>`<button class="float-map-action" type="button" data-sheet-map-action="${index}" data-sheet-map-key="${activeView.key}"><strong>${escapeRemoteHtml(action.label)}</strong><span>${escapeRemoteHtml(action.detail)}</span></button>`).join("")}
       </div>
       <div class="float-sheet-grid">
         <button class="btn ghost" data-map-reset>Default SupportRD View</button>
@@ -8975,6 +8997,16 @@ function setupFloatMode(){
       if(status) status.textContent = `${btn.querySelector("strong")?.textContent || "Theme"} is loading into SupportRD. The Remote stays open while the mood changes.`
       setRemoteStatus(`${btn.querySelector("strong")?.textContent || "Theme"} is loading into SupportRD.`)
     }))
+    Array.from(remoteSheetBody.querySelectorAll("[data-sheet-map-action]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
+      const view = views.find(item => item.key === btn.getAttribute("data-sheet-map-key")) || views[0]
+      const action = view?.actions?.[Number(btn.getAttribute("data-sheet-map-action"))]
+      if(!action) return
+      const status = remoteSheetBody.querySelector("[data-map-status]")
+      if(status) status.textContent = `${view.label}: ${action.label}. ${action.detail}`
+      setRemoteStatus(`${view.label}: ${action.label}. ${action.detail}`)
+      openMiniWindow(view.label, action.detail)
+    }))
     Array.from(remoteSheetBody.querySelectorAll("[data-map-reset]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const status = remoteSheetBody.querySelector("[data-map-status]")
       if(status) status.textContent = "SupportRD default woman-waking-up view is active again."
@@ -9260,6 +9292,7 @@ function setupFloatMode(){
         launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
         qsa(".float-box").forEach(box => box.hidden = true)
         if(remoteStageHome) remoteStageHome.hidden = false
+        syncMapHero(shell?.dataset?.remoteTheme || "default")
         applyAssistantDemoScene("home", false)
         if(message) setRemoteStatus(message)
     }
@@ -9738,6 +9771,35 @@ function setupFloatMode(){
     syncProfile()
     openMiniWindow("Remote Settings", "Settings saved from the touch remote. Your diary social routes, account details, and phone alert preference are updated.")
   }
+  function renderMapFeatureActions(view){
+    if(!mapActionHost) return
+    const actions = Array.isArray(view?.actions) ? view.actions : []
+    if(!actions.length){
+      mapActionHost.innerHTML = ""
+      mapActionHost.hidden = true
+      return
+    }
+    mapActionHost.hidden = false
+    mapActionHost.innerHTML = actions.map((action, index)=>`
+      <button class="float-map-action" type="button" data-float-map-action="${index}" data-float-map-key="${view.key}">
+        <strong>${action.label}</strong>
+        <span>${action.detail}</span>
+      </button>
+    `).join("")
+  }
+  function syncMapHero(viewKey = "default"){
+    const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
+    const activeView = views.find(view=>view.key === viewKey) || views[0] || {
+      key:"default",
+      label:"SupportRD Default",
+      helper:"The default woman-waking-up takeover stays active for the light SupportRD route.",
+      perk:"Remote ready"
+    }
+    if(mapHero) mapHero.dataset.mapView = activeView.key || "default"
+    if(mapHeroTitle) mapHeroTitle.textContent = activeView.label || "SupportRD Default"
+    if(mapHeroBody) mapHeroBody.textContent = `${activeView.helper || "SupportRD keeps the route clear and travel-ready."} ${activeView.perk ? `Extra feature: ${activeView.perk}.` : ""}`.trim()
+    renderMapFeatureActions(activeView)
+  }
   function renderThemeCards(){
     if(!themeCardRail) return
     const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
@@ -9747,6 +9809,7 @@ function setupFloatMode(){
         <span>${view.perk}</span>
       </button>
     `).join("")
+    syncMapHero(shell?.dataset?.remoteTheme || "default")
   }
   function setDiaryGpsMode(active){
     if(diaryPanels) diaryPanels.hidden = !!active
@@ -9871,10 +9934,11 @@ function setupFloatMode(){
     syncProfile()
     syncFloatSettings()
     renderThemeCards()
+    syncMapHero(shell?.dataset?.remoteTheme || "default")
     if(!options.preserveRoute){
       syncRemoteHistory("home", window.location.pathname === "/remote" || window.location.pathname === "/remote/home")
     }
-    setFloatHome(options.preserveHome ? "" : "Remote Home is ready. Diary is highlighted, and every major route is one tap away.")
+    setFloatHome(options.preserveHome ? "" : "Remote Home is ready for people on the go. GPS, quick studio, payment, profile, and FAQ are each one tap away.")
     setRemoteAdsHidden(localStorage.getItem("supportrdRemoteAdsHidden") === "true")
     setDiaryGpsMode(false)
     if(!options.previewOnly){
@@ -9884,7 +9948,7 @@ function setupFloatMode(){
       else hideFounderLayer()
     }
     if(!options.previewOnly){
-      if(!options.preserveHome) setRemoteStatus("SupportRD Personal Remote is open. Diary Mode is highlighted, and the whole app stays connected from here.")
+      if(!options.preserveHome) setRemoteStatus("SupportRD Personal Remote is open in on-the-go mode. Use one tap for GPS, studio, payment, diary, profile, and FAQ while the rest of the site stays out of the way.")
     }
     const activeRoute = getRemoteRouteFromLocation()
     if(activeRoute && activeRoute !== "home"){
@@ -9907,16 +9971,22 @@ function setupFloatMode(){
   qs("#openLiveArenaBtn")?.setAttribute("hidden", "hidden")
   closeBtn?.addEventListener("click", ()=>setFloatHome("Remote home is ready."))
   returnMainBtn?.addEventListener("click", ()=>setFloatHome("Remote home is open and ready."))
+  goViewBtn?.addEventListener("click", ()=>setFloatHome("On-the-go Remote view is active. Tap one route and move fast."))
+  panelsViewBtn?.addEventListener("click", ()=>showAllFloatPanels("All Remote panels are open together now."))
+  paymentViewBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
   remoteSheetBack?.addEventListener("click", ()=>closeRemoteSheet())
   remoteSheetClose?.addEventListener("click", ()=>closeRemoteSheet())
   openStudioBtn?.addEventListener("click", ()=>showAllFloatPanels("All Remote panels are open together now."))
+  remoteStageGpsBtn?.addEventListener("click", ()=>renderRemoteRoute("map"))
+  remoteStageStudioBtn?.addEventListener("click", ()=>renderRemoteRoute("studio"))
+  remoteStagePaymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
   launchButtons.forEach(btn => btn.addEventListener("click", ()=>{
     const targetId = btn.dataset.floatTarget
     const route = getRemoteRouteForTarget(targetId)
     renderRemoteRoute(route, { openShell:true })
   }))
   touchQuery?.addEventListener?.("change", ()=>setActiveTouchPanel(qsa(".float-launch-btn.active")[0]?.dataset.floatTarget || defaultFloatPanel))
-  navHomeBtn?.addEventListener("click", ()=>setFloatHome("Remote home is ready. Diary is highlighted, and every major route is one tap away."))
+  navHomeBtn?.addEventListener("click", ()=>setFloatHome("Remote home is ready for travel mode. GPS, studio, profile, FAQ, and payment are one tap away."))
   navDiaryBtn?.addEventListener("click", ()=>renderRemoteRoute("diary"))
   navProfileBtn?.addEventListener("click", ()=>renderRemoteRoute("profile"))
   navBoothBtn?.addEventListener("click", ()=>{
@@ -10094,6 +10164,18 @@ function setupFloatMode(){
     }else if(typeof window.openWorldMapPanel === "function"){
       window.openWorldMapPanel()
     }
+    syncMapHero(key || "default")
+  })
+  mapActionHost?.addEventListener("click", (event)=>{
+    const button = event.target.closest("[data-float-map-action]")
+    if(!button) return
+    const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
+    const view = views.find(item=>item.key === button.getAttribute("data-float-map-key")) || views[0]
+    const action = view?.actions?.[Number(button.getAttribute("data-float-map-action"))]
+    if(!action) return
+    if(deviceStatus) deviceStatus.textContent = `${view.label}: ${action.label}. ${action.detail}`
+    setRemoteStatus(`${view.label}: ${action.label}. ${action.detail}`)
+    openMiniWindow(view.label, action.detail)
   })
     bindAssistantTrigger(assistantAriaOrb, "aria")
     bindAssistantTrigger(assistantJakeOrb, "projake")
@@ -12126,6 +12208,8 @@ const WORLD_VIEWS = [
       localStorage.setItem("worldView", key)
       localStorage.setItem("worldViewExplicit", "true")
       const view = WORLD_VIEWS.find(v=>v.key === key) || WORLD_VIEWS[0]
+    const floatShell = qs("#floatModeShell")
+    if(floatShell) floatShell.dataset.remoteTheme = view.key
     if(subtitle) subtitle.textContent = view.label
     const stage = qs("#ariaAssistantSub")
     if(stage) stage.textContent = `ARIA · Free Roam / ${view.label}`
@@ -12142,6 +12226,7 @@ const WORLD_VIEWS = [
       const floatDevice = qs("#floatDeviceStatus")
       if(floatDevice) floatDevice.textContent = `${view.label} loaded. ${view.helper}`
       renderLiveMapActions(view)
+      if(typeof syncMapHero === "function") syncMapHero(view.key)
     }
   function setButtonsBusy(label){
     if(btn){
@@ -12237,7 +12322,8 @@ const WORLD_VIEWS = [
       key: view.key,
       label: view.label,
       perk: view.perk,
-      helper: view.helper
+      helper: view.helper,
+      actions: Array.isArray(view.actions) ? view.actions.map(action => ({ ...action })) : []
     }))
   }
 
