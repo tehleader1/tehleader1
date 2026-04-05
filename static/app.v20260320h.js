@@ -339,6 +339,48 @@ const ASSISTANTS = [
   { id: "aria", name: "ARIA", title: "ARIA Professional Hair Specialist", sub: "ARIA · Problems / Solutions" },
   { id: "projake", name: "Pro Jake", title: "Pro Jake Studio Specialist", sub: "Pro Jake · Studio / Coaching" }
 ]
+const JAKE_CAPACITY_MAP = {
+  home: [
+    "friendly studio greeting",
+    "moral support while you browse",
+    "light studio direction"
+  ],
+  diary: [
+    "steady support while you write",
+    "routine reminders",
+    "hair schedule encouragement"
+  ],
+  studio: [
+    "motherboard editing checks",
+    "voice and instrument tracking",
+    "FX, undo, save, export coaching"
+  ],
+  settings: [
+    "system calm while you tune settings",
+    "account and route reassurance",
+    "remote stability support"
+  ],
+  map: [
+    "route calm",
+    "theme switching support",
+    "location-aware studio/hair check-ins"
+  ],
+  faq: [
+    "reel lounge support",
+    "developer feed encouragement",
+    "quick answer backup"
+  ],
+  profile: [
+    "scan readiness",
+    "profile image feedback",
+    "hair analysis standby"
+  ],
+  payments: [
+    "purchase encouragement",
+    "pricing reminders",
+    "premium/studio lane confidence"
+  ]
+}
 const LIFE_MOMENT_DEFAULTS = [
   "Good moment billboard: a family update rolls by and SupportRD keeps the route warm.",
   "Rough moment billboard: Aria slows the pace down and gives your personal life room to breathe.",
@@ -1480,6 +1522,184 @@ function openLinkModal(url, title){
   }
     modal.style.display = "flex"
   }
+
+function buildGeneralInfoUrl(key){
+  const map = {
+    guide: "https://supportrd.com/#general-info-guide",
+    settings: "https://supportrd.com/#general-info-settings",
+    payments: "https://supportrd.com/#general-info-payments",
+    subscribe: "https://supportrd.com/#general-info-subscribe",
+    blog: "https://supportrd.com/#general-info-blog",
+    official: "https://supportrd.com/#general-info-official"
+  }
+  return map[key] || "https://supportrd.com/#general-info"
+}
+
+function ensureGeneralInfoShell(){
+  let shell = qs("#generalInfoShell")
+  if(shell) return shell
+  shell = document.createElement("section")
+  shell.id = "generalInfoShell"
+  shell.className = "general-info-shell hidden"
+  shell.innerHTML = `
+    <div class="general-info-backdrop" data-general-close></div>
+    <div class="general-info-panel glass">
+      <div class="general-info-head">
+        <div>
+          <div class="float-mode-kicker">SupportRD General Info</div>
+          <h3 id="generalInfoTitle">General Info</h3>
+          <p id="generalInfoSummary">SupportRD separates info routes from the live Remote tools.</p>
+        </div>
+        <button class="btn ghost" type="button" data-general-close>X</button>
+      </div>
+      <div id="generalInfoUrl" class="general-info-url">https://supportrd.com/#general-info</div>
+      <div id="generalInfoBody" class="general-info-body"></div>
+      <div class="general-info-actions">
+        <button class="btn ghost" type="button" data-general-close>Close</button>
+      </div>
+    </div>
+  `
+  document.body.appendChild(shell)
+  shell.addEventListener("click", (event)=>{
+    const closeBtn = event.target?.closest?.("[data-general-close]")
+    if(closeBtn){
+      shell.classList.add("hidden")
+      shell.setAttribute("aria-hidden", "true")
+      return
+    }
+    const actionBtn = event.target?.closest?.("[data-general-action]")
+    if(!actionBtn) return
+    const action = actionBtn.getAttribute("data-general-action")
+    if(action === "open-settings") qs("#floatLaunchSettings")?.click()
+    if(action === "open-fastpay") qs("#remotePurchaseProducts")?.click()
+    if(action === "open-blog"){
+      state.blogIndex = 0
+      renderBlog()
+      openModal("blogModal")
+    }
+    if(action === "open-kito-gps") openKitoGpsLane()
+    if(action === "open-official-site") window.location.assign("https://supportrd.com")
+  })
+  return shell
+}
+
+function openGeneralInfoPage(key){
+  const shell = ensureGeneralInfoShell()
+  const pages = {
+    guide: {
+      title: "Live Guidance",
+      summary: "Live Guidance is a sticky general-info route. The Remote keeps running underneath while this page explains where each tool lives.",
+      body: `
+        <div class="general-info-grid">
+          <article class="general-info-card">
+            <strong>Remote Layer</strong>
+            <p>Diary, Studio Quick Panel, Profile, Map Change, FAQ Lounge, and the 2 funnel ads stay in the live Remote system.</p>
+          </article>
+          <article class="general-info-card">
+            <strong>Info Layer</strong>
+            <p>Live Guidance, General Settings, Payments, Subscribe In, Blog, and Official Webpages stay as calm sticky info pages.</p>
+          </article>
+        </div>
+        <div class="general-info-actions-row">
+          <button class="btn" data-general-action="open-settings">Open Account Settings</button>
+          <button class="btn ghost" data-general-action="open-blog">Open Main Blog</button>
+        </div>
+      `
+    },
+    settings: {
+      title: "General Settings",
+      summary: "General Settings stays separate from the Remote controls and covers account verification, route links, password/email changes, and opt-ins.",
+      body: `
+        <div class="general-info-list">
+          <div>Email change: verify the old address, confirm the new one, then save.</div>
+          <div>Password change: request reset, approve by email, then lock in the new password.</div>
+          <div>Push/text prompts: phone alerts stay opt-in only.</div>
+        </div>
+        <div class="general-info-actions-row">
+          <button class="btn" data-general-action="open-settings">Open Configuration</button>
+        </div>
+      `
+    },
+    payments: {
+      title: "Payments",
+      summary: "Payments is the SupportRD product and premium lane. This info page keeps the explanation separate from the live Remote tools.",
+      body: `
+        <div class="general-info-grid">
+          <article class="general-info-card">
+            <strong>Hair Advisor Premium</strong>
+            <p>Premium, Pro, Studio, and support-tip routes all run through the Shopify product stack.</p>
+          </article>
+          <article class="general-info-card">
+            <strong>Account Gate</strong>
+            <p>Sign-in stays lightweight until purchase, then SupportRD saves the premium lane to the buyer account.</p>
+          </article>
+        </div>
+        <div class="general-info-actions-row">
+          <button class="btn" data-general-action="open-fastpay">Open Fast Pay</button>
+        </div>
+      `
+    },
+    subscribe: {
+      title: "Subscribe In",
+      summary: "Subscribe In is the retention lane for newsletter, phone alerts, and social posting prep.",
+      body: `
+        <div class="general-info-list">
+          <div>Subscriber letter opt-in</div>
+          <div>Phone/text alert preference</div>
+          <div>Social follow-up prep</div>
+        </div>
+        <div class="general-info-actions-row">
+          <button class="btn" data-general-action="open-settings">Open Subscription Controls</button>
+        </div>
+      `
+    },
+    blog: {
+      title: "Blog",
+      summary: "Blog lives as a general-info page and then expands into the full main blog modal when you want the article itself.",
+      body: `
+        <div class="general-info-grid">
+          <article class="general-info-card">
+            <strong>Guest Post Angle</strong>
+            <p>The SEO engine keeps shaping hair-only guest-post ideas, reel-backed studies, and SupportRD authority content.</p>
+          </article>
+          <article class="general-info-card">
+            <strong>What Opens Next</strong>
+            <p>Use the button below to open the full blog reading modal with the visible X close button.</p>
+          </article>
+        </div>
+        <div class="general-info-actions-row">
+          <button class="btn" data-general-action="open-blog">Open Main Blog</button>
+        </div>
+      `
+    },
+    official: {
+      title: "Official Webpages",
+      summary: "Official Webpages keeps the main site, directions, and owner contact routes in one calm info page.",
+      body: `
+        <div class="general-info-list">
+          <div>Main website: SupportRD home and storefront presence</div>
+          <div>GPS route: Kito House in Villa Gonzalez, Santiago, Dominican Republic</div>
+          <div>Direct support: xxfigueroa1993@yahoo.com · 980-375-9197</div>
+        </div>
+        <div class="general-info-actions-row">
+          <button class="btn" data-general-action="open-official-site">Open Main Site</button>
+          <button class="btn ghost" data-general-action="open-kito-gps">Guide Me To Kito House</button>
+        </div>
+      `
+    }
+  }
+  const page = pages[key] || pages.guide
+  shell.querySelector("#generalInfoTitle").textContent = page.title
+  shell.querySelector("#generalInfoSummary").textContent = page.summary
+  shell.querySelector("#generalInfoUrl").textContent = buildGeneralInfoUrl(key)
+  shell.querySelector("#generalInfoBody").innerHTML = page.body
+  shell.classList.remove("hidden")
+  shell.setAttribute("aria-hidden", "false")
+  try{
+    history.replaceState({}, "", buildGeneralInfoUrl(key))
+  }catch{}
+  setRemoteStatus?.(`${page.title} is open as a sticky general-info page while the Remote keeps running behind it.`)
+}
 
   function setupCenterCheckoutMenu(){
     const productMap = {
@@ -4892,7 +5112,7 @@ function setupPwa(){
     })
   }
   if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("/sw.js?v=20260404d").then((registration)=>{
+    navigator.serviceWorker.register("/sw.js?v=20260404e").then((registration)=>{
       if(registration?.waiting){
         registration.waiting.postMessage({ type:"SKIP_WAITING" })
       }
@@ -6268,7 +6488,13 @@ function setupFloatMode(){
     }
     function moveAssistantNodeToPoint(node, x, y){
       if(!node) return
-      node.classList.remove("demo-active")
+      const width = node.classList.contains("remote-guardian-btn") ? 238 : Math.min(window.innerWidth * 0.24, 170)
+      const height = node.classList.contains("remote-guardian-btn") ? 84 : width
+      const clampedX = Math.max(16, Math.min(window.innerWidth - width - 16, x - (width / 2)))
+      const clampedY = Math.max(86, Math.min(window.innerHeight - height - 24, y - (height / 2)))
+      node.style.setProperty("--demo-float-left", `${clampedX}px`)
+      node.style.setProperty("--demo-float-top", `${clampedY}px`)
+      node.classList.add("demo-active")
     }
     function buildAssistantScrollLayout(progress, direction){
       const width = window.innerWidth
@@ -6333,7 +6559,20 @@ function setupFloatMode(){
       ].forEach(([node, x, y])=>moveAssistantNodeToPoint(node, x, y))
     }
     function moveAssistantPairToInteraction(x, y){
-      return
+      const clampedY = Math.max(148, Math.min(window.innerHeight - 146, y))
+      const bias = x < (window.innerWidth * 0.42) ? "left" : x > (window.innerWidth * 0.58) ? "right" : "center"
+      assistantMotionState.pointerBias = bias
+      const ariaLead = bias === "left"
+        ? { x: Math.min(window.innerWidth - 210, x + 150), y: clampedY - 54 }
+        : bias === "right"
+          ? { x: Math.max(174, x - 150), y: clampedY - 54 }
+          : { x: x - 96, y: clampedY - 66 }
+      const jakeLead = bias === "left"
+        ? { x: Math.min(window.innerWidth - 152, x + 92), y: clampedY + 42 }
+        : bias === "right"
+          ? { x: Math.max(144, x - 92), y: clampedY + 42 }
+          : { x: x + 92, y: clampedY + 28 }
+      applyAssistantPairLayout({ aria: ariaLead, jake: jakeLead })
     }
     function getRouteFocusPoint(){
       const route = remoteState.currentRoute || "home"
@@ -6365,6 +6604,7 @@ function setupFloatMode(){
       assistantMotionState.teleportUntil = duration > 0 ? Date.now() + duration : 0
       if(options.mood) setAssistantMomentClasses(options.mood)
       if(options.status && assistantStatus) assistantStatus.textContent = options.status
+      applyAssistantPairLayout(layout)
       if(duration > 0){
         assistantMotionState.teleportTimer = setTimeout(()=>releaseAssistantTeleport(), duration)
       }
@@ -6472,7 +6712,13 @@ function setupFloatMode(){
     }
     function getAssistantHelp(route, assistantId){
       const sceneKey = REMOTE_ASSISTANT_HELP[route] ? route : "home"
-      return REMOTE_ASSISTANT_HELP[sceneKey][assistantId] || REMOTE_ASSISTANT_HELP.home[assistantId]
+      const base = REMOTE_ASSISTANT_HELP[sceneKey][assistantId] || REMOTE_ASSISTANT_HELP.home[assistantId]
+      if(assistantId !== "projake" || !base) return base
+      return {
+        ...base,
+        greeting: `${base.greeting} ${getJakeCapacityLine(sceneKey)}`,
+        listening: `${base.listening} ${getJakeCapacityLine(sceneKey)}`
+      }
     }
     function currentAssistantOrb(){
       return state.activeAssistant === "projake" ? assistantJakeOrb : assistantAriaOrb
@@ -6558,8 +6804,23 @@ function setupFloatMode(){
       })
       node.addEventListener("mouseleave", ()=>node.classList.remove("hover-wave"))
     }
+    function getJakeCapacityLine(route){
+      const key = JAKE_CAPACITY_MAP[route] ? route : "home"
+      const items = JAKE_CAPACITY_MAP[key] || JAKE_CAPACITY_MAP.home
+      return `Jake capacity: ${items.join(", ")}.`
+    }
     function bindAssistantTrigger(node, assistantId){
-      return
+      if(!node) return
+      let recentTouch = 0
+      const handler = async (event)=>{
+        if(event?.type === "click" && Date.now() - recentTouch < 420) return
+        if(event?.type === "touchend") recentTouch = Date.now()
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        await triggerAssistantOrb(assistantId)
+      }
+      node.addEventListener("click", handler)
+      node.addEventListener("touchend", handler, { passive:false })
     }
     function ensureAssistantBootOverlay(){
       let overlay = qs("#assistantBootOverlay")
@@ -6705,7 +6966,6 @@ function setupFloatMode(){
     handleAssistantHover(assistantJakeOrb, "projake")
     handleAssistantHover(guardianAriaBtn, "aria")
     handleAssistantHover(guardianJakeBtn, "projake")
-    document.body.classList.add("assistant-static")
     let assistantScrollGlowTimer = null
     const pulseAssistantPresence = ()=>{
       ;[assistantAriaOrb, assistantJakeOrb, guardianAriaBtn, guardianJakeBtn].forEach(node=>node?.classList.add("hover-wave"))
@@ -9412,76 +9672,12 @@ function setupFloatMode(){
   navGpsBtn?.addEventListener("click", ()=>renderRemoteRoute("map"))
   navSettingsBtn?.addEventListener("click", ()=>renderRemoteRoute("settings"))
   navCloseBtn?.addEventListener("click", closeFloat)
-  footerGuideBtn?.addEventListener("click", ()=>{
-    if(remoteState.guideTimer && remoteState.guideKey === "Remote Guidance"){
-      stopRemoteGuide("Guidance paused. You are back in control.")
-      setFloatHome("Live Guidance paused. Remote home is back in your hands.")
-      return
-    }
-    const guideSteps = [
-      { title:"Diary Mode", body:"Open Diary when you want the emotional center: notes, post staging, booth route, map route, and payment route.", target: defaultFloatPanel },
-      { title:"Studio Quick Panel", body:"Use the booth side when you want the three motherboards, upload .mp3 or .mp4, trim, FX, and export fast.", target: "floatBoardsBox" },
-      { title:"General Settings", body:"This is where email, password, language, push, and social links stay under control.", target: "floatProfileBox" },
-      { title:"Map Change", body:"Switch the page mood without leaving Remote. Kito House GPS help can be launched from this same shell.", target: "floatDeviceBox" },
-      { title:"FAQ + TV Reel", body:"Treat FAQ like the calm lounge. Quick answers, support, reel clips, and help bots live here.", target: "floatLiveBox" },
-      { title:"Profile", body:"Profile presents the person, their image, achievements, scan summary, and social identity.", target: "floatAssistantBox" },
-      { title:"Open All Panels", body:"Show every major Remote panel together so you can see the whole SupportRD shell at once.", target: "all" }
-    ]
-    openRemoteSheet("Live Guidance", `
-      ${renderGuideMarkup("Remote Guidance", guideSteps)}
-      <div class="float-sheet-grid">
-        <button class="btn ghost" data-open-settings>Jump To Settings</button>
-        <button class="btn ghost" data-open-fastpay>Open Payments</button>
-        <button class="btn ghost" data-sheet-close>Close Page</button>
-      </div>
-      <div class="float-sheet-copy">Tap Start Guide for the lightweight walkthrough. Tap it again anytime to interrupt and take over yourself.</div>
-    `, { message:"Live Guidance is ready for the unified Remote flow.", guideKey:"Remote Guidance", guideSteps })
-  })
-  footerSettingsBtn?.addEventListener("click", ()=>{
-    openRemoteSheet("General Settings", `
-      ${renderRemoteValueLane(["Value: trust + account control", "Energy: low system load", "Worth: keeps the app usable daily"])}
-      <div class="float-sheet-grid">
-        <button class="btn" data-open-settings>Open Account Settings</button>
-        <button class="btn ghost" data-sheet-close>Close Page</button>
-      </div>
-      <div class="float-sheet-copy">Change email, password, language, push preferences, and social links without leaving Remote.</div>
-    `, { message:"General Settings is open inside Remote.", route:"settings" })
-  })
-  footerPaymentsBtn?.addEventListener("click", ()=>{
-    openRemoteSheet("Payments", `
-      ${renderRemoteValueLane(["Value: direct revenue lane", "Energy: medium finance routing", "Worth: premium + gifts + session support"])}
-      <div class="float-sheet-grid">
-        <button class="btn" data-open-fastpay>Open Fast Pay</button>
-        <button class="btn ghost" data-sheet-close>Close Page</button>
-      </div>
-      <div class="float-sheet-copy">Payment routes stay clean, fast, and ready without leaving the Remote shell.</div>
-    `, { message:"Payments is open inside Remote.", route:"payments" })
-  })
-  footerSubscribeBtn?.addEventListener("click", ()=>{
-    openRemoteSheet("Subscribe In", `
-      ${renderRemoteValueLane(["Value: long-term retention", "Energy: low automation load", "Worth: keeps people connected after the session"])}
-      <div class="float-sheet-grid">
-        <button class="btn" data-open-settings>Open Subscribe Settings</button>
-        <button class="btn ghost" data-sheet-close>Close Page</button>
-      </div>
-      <div class="float-sheet-copy">Subscribe In keeps newsletter, push, and social posting prep in one calm place.</div>
-    `, { message:"Subscribe In is open inside Remote.", route:"settings" })
-  })
-  footerBlogBtn?.addEventListener("click", ()=>{
-      openRemoteSheet("Blog Party", buildBlogPartySheet(), { message:"Blog Party is open in a fuller stage for SEO and authority.", className:"remote-sheet-blog", route:"blog" })
-    })
-      footerOfficialBtn?.addEventListener("click", ()=>{
-        openRemoteSheet("Official Websites", `
-        ${renderRemoteValueLane(["Value: brand trust", "Energy: low-friction official routes", "Worth: contact, privacy, about, and storefront guidance"])}
-        <div class="float-sheet-grid three">
-        <button class="btn" data-open-official>SupportRD Main Site</button>
-        <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
-        <button class="btn ghost" data-sheet-close>Close Page</button>
-      </div>
-      <div class="float-sheet-copy">Contact us directly: xxfigueroa1993@yahoo.com · 980-375-9197</div>
-        <div class="float-sheet-copy">Privacy, About Us, and official SupportRD routes stay attached to this same Remote shell feel.</div>
-        `, { message:"Official SupportRD routes are open inside Remote.", route:"official" })
-      })
+  footerGuideBtn?.addEventListener("click", ()=>openGeneralInfoPage("guide"))
+  footerSettingsBtn?.addEventListener("click", ()=>openGeneralInfoPage("settings"))
+  footerPaymentsBtn?.addEventListener("click", ()=>openGeneralInfoPage("payments"))
+  footerSubscribeBtn?.addEventListener("click", ()=>openGeneralInfoPage("subscribe"))
+  footerBlogBtn?.addEventListener("click", ()=>openGeneralInfoPage("blog"))
+  footerOfficialBtn?.addEventListener("click", ()=>openGeneralInfoPage("official"))
       footerOfficialBottomBtn?.addEventListener("click", ()=>footerOfficialBtn?.click())
       remoteAdsToggleBtn?.addEventListener("click", ()=>setRemoteAdsHidden(!document.body.classList.contains("remote-hide-ads")))
       remoteAdsFocusBtn?.addEventListener("click", ()=>setRemoteAdsHidden(true))
@@ -9605,8 +9801,14 @@ function setupFloatMode(){
         })
         remoteColorPrevBtn?.addEventListener("click", ()=>applyRemoteThemeByIndex(-1))
         remoteColorNextBtn?.addEventListener("click", ()=>applyRemoteThemeByIndex(1))
-      guardianAriaBtn?.addEventListener("click", ()=>openGuardianSheet("Aria"))
-      guardianJakeBtn?.addEventListener("click", ()=>openGuardianSheet("Jake"))
+      guardianAriaBtn?.addEventListener("contextmenu", (event)=>{
+        event.preventDefault()
+        openGuardianSheet("Aria")
+      })
+      guardianJakeBtn?.addEventListener("contextmenu", (event)=>{
+        event.preventDefault()
+        openGuardianSheet("Jake")
+      })
   primeViewBotBtn?.addEventListener("click", ()=>{
     localStorage.setItem(floatPrimeSeenKey, "true")
     hidePrimeMenu()
@@ -10539,6 +10741,20 @@ function setupRemoteFastPay(){
       let liveProduct = findLiveShopifyProduct(product)
       if(!liveProduct){
         liveProduct = await fetchShopifyProductByHandle(product)
+      }
+      if(liveProduct){
+        try{
+          const embeddedReady = await openEmbeddedShopifyCheckout(product, liveProduct)
+          if(embeddedReady){
+            const receipt = buildRemoteReceipt(product)
+            renderReceipt(receipt)
+            hideConfirm()
+            hideProcessing()
+            if(!options.keepOwnerVisible) hideOwner()
+            if(status) status.textContent = `${product.title} Shopify checkout is loaded inside the page${sourceLabel ? ` from ${sourceLabel}` : ""}.`
+            return
+          }
+        }catch{}
       }
       const liveLink = buildShopifyCheckoutUrl(product, liveProduct) || (product?.key && LINKS[product.key] ? LINKS[product.key] : product?.link)
       if(!liveProduct && !liveProducts.length){

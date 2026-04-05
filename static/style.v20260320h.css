@@ -3894,7 +3894,15 @@ body.remote-hide-ads .remote-display-strip{
     animation:remoteGuardianDrift var(--demo-bob-duration) ease-in-out infinite;
     transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt));
     transition:transform .55s ease, box-shadow .55s ease, border-color .55s ease;
-    cursor:default;
+    cursor:pointer;
+  }
+.remote-guardian-btn.demo-active{
+    position:fixed;
+    left:var(--demo-float-left, calc(50vw - 110px));
+    top:var(--demo-float-top, 18vh);
+    z-index:240;
+    transition:left .18s cubic-bezier(.22,.61,.36,1), top .18s cubic-bezier(.22,.61,.36,1), transform .22s ease, box-shadow .22s ease, filter .22s ease;
+    will-change:left, top, transform;
   }
 .remote-guardian-orb{
     width:44px;
@@ -5397,5 +5405,78 @@ body.competition-world.world-view-tower::before{
 }
 .shopify-embedded-mount{
   min-height:420px;
+}
+.general-info-shell{
+  position:fixed;
+  inset:0;
+  z-index:330;
+  display:grid;
+  place-items:center;
+}
+.general-info-shell.hidden{
+  display:none;
+}
+.general-info-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(6,12,20,.55);
+  backdrop-filter:blur(10px);
+}
+.general-info-panel{
+  position:relative;
+  width:min(780px, calc(100vw - 32px));
+  max-height:min(86vh, 920px);
+  overflow:auto;
+  padding:22px;
+  border-radius:28px;
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 30px 80px rgba(5,11,20,.34);
+}
+.general-info-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+.general-info-url{
+  margin-top:12px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(132,183,255,.26);
+  background:rgba(255,255,255,.06);
+  color:#123b6a;
+  font-weight:700;
+  letter-spacing:.03em;
+}
+.general-info-body{
+  margin-top:16px;
+  display:grid;
+  gap:14px;
+}
+.general-info-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+}
+.general-info-card,
+.general-info-list > div{
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid rgba(132,183,255,.18);
+  background:rgba(255,255,255,.08);
+  color:#28486d;
+  line-height:1.55;
+}
+.general-info-card strong{
+  display:block;
+  margin-bottom:6px;
+  color:#10335e;
+}
+.general-info-actions-row,
+.general-info-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:8px;
 }
 
