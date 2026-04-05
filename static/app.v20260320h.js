@@ -469,6 +469,47 @@ function getActiveAssistantName(){
   return getActiveAssistant().name
 }
 
+function getAssistantDisplayName(assistantId = state.activeAssistant){
+  return assistantId === "projake" ? "Jake Studio Specialist" : "Aria Hair Advisor"
+}
+
+function inferVisitorLaneFromMessage(msg){
+  const text = String(msg || "").toLowerCase()
+  if(/buy|price|premium|checkout|upgrade|subscription|pay|donate|tip|product/.test(text)) return "products"
+  if(/studio|record|beat|fx|motherboard|export|mp3|mp4|m4a|instrument|voice/.test(text)) return "app"
+  if(/scan|damage|burn|frizz|oily|color|bounce|hair|scalp|routine/.test(text)) return "ai"
+  if(/family|kids|daughter|son|husband|wife|schedule|diary|profile/.test(text)) return "family"
+  if(/map|route|gps|tourism|travel|villa gonzalez|santiago|kito/.test(text)) return "tourism"
+  return "issues"
+}
+
+function buildAssistantProductIntelligence(){
+  return REMOTE_PAY_PRODUCTS.map((product)=>(
+    `${product.title} (${product.price}) :: apply ${product.apply} :: does ${product.does}`
+  )).join(" || ")
+}
+
+function buildAssistantFunnelSnapshot(){
+  try{
+    const stats = typeof loadAcquisitionStats === "function" ? loadAcquisitionStats() : null
+    if(!stats) return "No funnel snapshot yet."
+    const laneEntries = Object.entries(stats.lanes || {})
+      .sort((a,b)=>Number(b[1] || 0) - Number(a[1] || 0))
+      .slice(0, 2)
+      .map(([lane, count])=>`${lane}: ${count}`)
+      .join(" | ")
+    const stageEntries = Object.entries(stats.stages || {})
+      .sort((a,b)=>Number(b[1] || 0) - Number(a[1] || 0))
+      .slice(0, 3)
+      .map(([stage, count])=>`${stage}: ${count}`)
+      .join(" | ")
+    const latestGuest = stats.latestGuestPost || "SupportRD hair feature opportunity forming."
+    return `Top lanes -> ${laneEntries || "none yet"}. Stages -> ${stageEntries || "none yet"}. Latest guest-post signal -> ${latestGuest}`
+  }catch{
+    return "Funnel snapshot unavailable."
+  }
+}
+
 const PROHIBITED_TERMS = ["drug","drugs","cocaine","meth","weed","marijuana","heroin","fentanyl","gang","gangs","cartel","crip","bloods","ms-13"]
 
 function detectDeviceTier(){
@@ -1003,9 +1044,31 @@ function bumpHairScore(delta){
     }
     const assistant = getActiveAssistant()
     const topicContext = (state.assistantTopic || "hair_core").replace(/_/g, " ")
-    const personaPrompt = `Assistant persona: ${assistant.name}. Topic focus: ${topicContext}.`
+    const routeContext = remoteState?.currentRoute || "home"
+    const laneKey = inferVisitorLaneFromMessage(msg)
+    const laneLabel = typeof ACQUISITION_LANES !== "undefined" ? ACQUISITION_LANES[laneKey] || ACQUISITION_LANES.issues : laneKey
+    const personaPrompt = [
+      `Assistant persona: ${assistant.name}.`,
+      `Display role: ${getAssistantDisplayName(assistant.id)}.`,
+      `Topic focus: ${topicContext}.`,
+      `Current route: ${routeContext}.`,
+      `Predicted visitor lane: ${laneLabel}.`,
+      assistant.id === "projake"
+        ? `Jake capacity on this route: ${(JAKE_CAPACITY_MAP[routeContext] || JAKE_CAPACITY_MAP.home).join(", ")}. Jake stays cooler, more moral-support/studio-help than Aria.`
+        : "Aria leads hair support, diagnosis-style pattern recognition, routines, products, and next-step guidance.",
+      "Keep the answer tightly hair-related unless the user explicitly asks for travel/location support, in which case connect them to hair shops, salons, or route-aware beauty help.",
+      `SupportRD product intelligence: ${buildAssistantProductIntelligence()}`,
+      `SupportRD funnel snapshot: ${buildAssistantFunnelSnapshot()}`
+    ].join(" ")
     appendAria(`You: ${msg}`)
     appendConversation("user", msg)
+    if(typeof trackAcquisitionSignal === "function"){
+      trackAcquisitionSignal(`assistant_prompt_${laneKey}`, {
+        lane: laneLabel,
+        stage: "exploring",
+        socialFeedback: `${getAssistantDisplayName(assistant.id)} is handling a live ${laneLabel.toLowerCase()} question.`
+      })
+    }
     if(state.livePopupActive){
       state.livePopupActive = false
     } else {
@@ -1042,6 +1105,13 @@ function bumpHairScore(delta){
       appendAria(`${assistant.name}: ${reply}`)
       appendConversation("aria", reply)
       showSpeechPopup(assistant.name, reply)
+      if(typeof trackAcquisitionSignal === "function"){
+        trackAcquisitionSignal(`assistant_reply_${laneKey}`, {
+          lane: laneLabel,
+          stage: /price|checkout|buy|premium|upgrade/i.test(reply) ? "premium-curious" : "exploring",
+          socialFeedback: `${getAssistantDisplayName(assistant.id)} delivered a live reply in the ${laneLabel.toLowerCase()} lane.`
+        })
+      }
       bumpHairScore(1)
       speakReply(reply)
       state.ariaCount += 1
@@ -6903,39 +6973,31 @@ function setupFloatMode(){
       }
     }
     function startAssistantBrainCountdown(assistantName, help, transcriptEl){
-      const countdown = [5, 4, 3, 2, 1]
+      const introLine = `${assistantName} is opening the mic now.`
       nudgeAssistantPresence("center", {
         x: window.innerWidth / 2,
         y: Math.max(164, window.innerHeight * 0.38)
       })
-      countdown.forEach((count, index)=>{
-        activeAssistantTimers.push(setTimeout(()=>{
-          const line = count === 1
-            ? `${assistantName} fresh brain online. Activating now.`
-            : `${assistantName} fresh brain activation in ${count}...`
-          showAssistantBootOverlay(assistantName, count)
-          if(assistantStatus) assistantStatus.textContent = line
-          if(transcriptEl) transcriptEl.textContent = line
-          showSpeechPopup(assistantName, line)
-          if(index === 0) playAssistantCue("intro")
-        }, index * 650))
-      })
+      playAssistantCue("intro")
+      if(assistantStatus) assistantStatus.textContent = introLine
+      if(transcriptEl) transcriptEl.textContent = introLine
+      showSpeechPopup(assistantName, introLine)
       activeAssistantTimers.push(setTimeout(()=>{
-        finishAssistantBootOverlay(assistantName)
         if(assistantStatus) assistantStatus.textContent = help.greeting
         if(transcriptEl) transcriptEl.textContent = help.greeting
         showSpeechPopup(assistantName, help.greeting)
-      }, countdown.length * 650))
-      activeAssistantTimers.push(setTimeout(()=>hideAssistantBootOverlay(), countdown.length * 650 + 850))
+      }, 260))
       activeAssistantTimers.push(setTimeout(()=>{
-        if(transcriptEl) transcriptEl.textContent = help.listening
-        showSpeechPopup(assistantName, help.listening)
-      }, countdown.length * 650 + 900))
+        const listeningLine = `${help.listening} The mic is hot now.`
+        if(assistantStatus) assistantStatus.textContent = listeningLine
+        if(transcriptEl) transcriptEl.textContent = listeningLine
+        showSpeechPopup(assistantName, listeningLine)
+      }, 720))
       activeAssistantTimers.push(setTimeout(()=>{
         if(typeof window.startAriaListening === "function"){
-          window.startAriaListening()
+          window.startAriaListening({ assistantName, thinkDelay: 2700 })
         }else if(typeof startOpenAIListening === "function"){
-          startOpenAIListening()
+          startOpenAIListening({ assistantName, thinkDelay: 2700 })
         }else{
           playAssistantCue("response")
           const fallback = `${assistantName} is ready, but this device needs mic support enabled before live listening can begin.`
@@ -6947,7 +7009,7 @@ function setupFloatMode(){
             clearAssistantSequence()
           }, 1600))
         }
-      }, countdown.length * 650 + 3000))
+      }, 980))
     }
     async function triggerAssistantOrb(assistantId){
       const route = remoteState.currentRoute || "home"
@@ -11047,7 +11109,7 @@ function setupAria(){
       })
     }
     floatingHandsfree.hidden = !handsFreeMode
-    floatingHandsfree.textContent = handsFreeMode ? "Handsfree Live · Tap To Stop" : "Handsfree Off"
+    floatingHandsfree.textContent = handsFreeMode ? `${getAssistantDisplayName()} Handsfree Live · Tap To Stop` : "Handsfree Off"
   }
   if(handsBtn){
     syncHandsFree()
@@ -11158,10 +11220,9 @@ function uiError(msg){
     }
   }
 
-  async function startOpenAIListening(){
+  async function startOpenAIListening(options = {}){
     if(ariaActive){
       await stopOpenAIListening()
-      return
     }
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
       
@@ -11229,18 +11290,20 @@ function uiError(msg){
           if(transcript){
             stopListenLoop()
             setTimeout(async ()=>{
+              const transcriptEl = qs("#ariaTranscript")
+              if(transcriptEl) transcriptEl.textContent = `${options.assistantName || getAssistantDisplayName()} is thinking...`
               playAssistantCue("response")
               await askAria(transcript)
               setTimeout(()=>playAssistantCue("close"), 180)
               setTimeout(()=>releasePageAudio(), 420)
-              if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening() }, 900) }
-            }, 2000)
+              if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
+            }, Number(options.thinkDelay || 2700))
           } else {
             setAriaFlow("idle")
             stopListenLoop()
             playAssistantCue("close")
             setTimeout(()=>releasePageAudio(), 260)
-            if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening() }, 900) }
+            if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
           }
         }catch(err){
           uiError("Voice error: " + (err && err.message ? err.message : "could not transcribe"))
