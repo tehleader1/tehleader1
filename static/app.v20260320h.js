@@ -6248,6 +6248,16 @@ function setupFloatMode(){
   const configPhone = qs("#floatConfigPhone")
   const diarySocialLinkRow = qs("#floatDiarySocialLinkRow")
   const diarySocialEditor = qs("#floatDiarySocialEditor")
+  const diarySelfieBtn = qs("#floatDiarySelfieBtn")
+  const diarySelfieSnapBtn = qs("#floatDiarySelfieSnapBtn")
+  const diaryPanoramaBtn = qs("#floatDiaryPanoramaBtn")
+  const diarySelfiePreview = qs("#floatDiarySelfiePreview")
+  const diarySelfieVideo = qs("#floatDiarySelfieVideo")
+  const diarySelfieCanvas = qs("#floatDiarySelfieCanvas")
+  const diarySelfieStatus = qs("#floatDiarySelfieStatus")
+  const diarySelfieMode = qs("#floatDiarySelfieMode")
+  const diarySelfieOverlay = qs("#floatDiarySelfieOverlay")
+  const diaryFilterChips = qsa("[data-diary-filter]")
   const instrumentTypeInput = qs("#floatInstrumentType")
   const fxPresetInput = qs("#floatFxPreset")
   const gigSettings = qs("#floatGigSettings")
@@ -6292,6 +6302,99 @@ function setupFloatMode(){
       }
     }
     reader.readAsDataURL(file)
+  }
+  const diarySelfieFilters = {
+    clean: { label:"Clean Glow", css:"saturate(1.02) contrast(1.04) brightness(1.02)" },
+    warm: { label:"Warm Pop", css:"sepia(.18) saturate(1.12) hue-rotate(-8deg) brightness(1.03)" },
+    cool: { label:"Cool Studio", css:"saturate(1.12) contrast(1.08) hue-rotate(10deg)" },
+    mono: { label:"Mono Focus", css:"grayscale(1) contrast(1.08) brightness(1.04)" }
+  }
+  function updateDiarySelfieMode(){
+    const active = diarySelfieFilters[remoteState.selfieFilter] || diarySelfieFilters.clean
+    if(diarySelfieMode) diarySelfieMode.textContent = `Filter: ${active.label}`
+    if(diarySelfieVideo) diarySelfieVideo.style.filter = active.css
+    if(diarySelfieCanvas) diarySelfieCanvas.style.filter = active.css
+    diaryFilterChips.forEach((chip)=>chip.classList.toggle("active", chip.dataset.diaryFilter === remoteState.selfieFilter))
+  }
+  function stopDiarySelfieCamera(){
+    try{
+      remoteState.selfieStream?.getTracks?.().forEach(track=>track.stop())
+    }catch{}
+    remoteState.selfieStream = null
+    if(diarySelfieVideo){
+      diarySelfieVideo.pause?.()
+      diarySelfieVideo.srcObject = null
+      diarySelfieVideo.hidden = true
+    }
+    if(diarySelfieOverlay) diarySelfieOverlay.hidden = false
+    if(diarySelfieBtn) diarySelfieBtn.textContent = "Self Camera"
+  }
+  async function startDiarySelfieCamera(){
+    if(!navigator.mediaDevices?.getUserMedia){
+      const msg = "Self camera is not available on this device right now, but Diary Mode is still ready for notes and filters."
+      if(diarySelfieStatus) diarySelfieStatus.textContent = msg
+      openMiniWindow("Selfie Moment", msg)
+      return
+    }
+    if(remoteState.selfieStream){
+      stopDiarySelfieCamera()
+      if(diarySelfieStatus) diarySelfieStatus.textContent = "Self camera paused. Tap again when you want the Diary selfie view back."
+      return
+    }
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video:{
+          facingMode:"user",
+          width:{ ideal: 1440 },
+          height:{ ideal: 1080 }
+        },
+        audio:false
+      })
+      remoteState.selfieStream = stream
+      if(diarySelfieVideo){
+        diarySelfieVideo.srcObject = stream
+        diarySelfieVideo.hidden = false
+        diarySelfieCanvas && (diarySelfieCanvas.hidden = true)
+        diarySelfieVideo.play?.().catch(()=>{})
+      }
+      if(diarySelfieOverlay) diarySelfieOverlay.hidden = true
+      if(diarySelfieBtn) diarySelfieBtn.textContent = "Pause Camera"
+      const mode = remoteState.selfiePanorama ? "Panoramic mode is on." : "Portrait mode is on."
+      if(diarySelfieStatus) diarySelfieStatus.textContent = `Self camera is live in Diary Mode. ${mode} Filters stay ready while you move.`
+      updateDiarySelfieMode()
+    }catch{
+      const msg = "SupportRD could not open the front camera. Check camera permission and try the selfie moment again."
+      if(diarySelfieStatus) diarySelfieStatus.textContent = msg
+      openMiniWindow("Selfie Moment", msg)
+    }
+  }
+  function captureDiarySelfie(){
+    if(!diarySelfieVideo || !diarySelfieCanvas) return
+    const sourceWidth = diarySelfieVideo.videoWidth || 960
+    const sourceHeight = diarySelfieVideo.videoHeight || 720
+    diarySelfieCanvas.width = sourceWidth
+    diarySelfieCanvas.height = sourceHeight
+    const ctx = diarySelfieCanvas.getContext("2d")
+    if(!ctx) return
+    ctx.filter = (diarySelfieFilters[remoteState.selfieFilter] || diarySelfieFilters.clean).css
+    ctx.drawImage(diarySelfieVideo, 0, 0, sourceWidth, sourceHeight)
+    diarySelfieCanvas.hidden = false
+    const dataUrl = diarySelfieCanvas.toDataURL("image/png")
+    persistAvatar(dataUrl)
+    if(diaryProfileHero){
+      diaryProfileHero.textContent = ""
+      diaryProfileHero.style.backgroundImage = `url(${dataUrl})`
+      diaryProfileHero.style.backgroundSize = "cover"
+      diaryProfileHero.style.backgroundPosition = "center"
+    }
+    if(diarySelfieStatus) diarySelfieStatus.textContent = "Selfie captured. Your Diary identity card now reflects the latest hair moment."
+  }
+  function toggleDiaryPanorama(){
+    remoteState.selfiePanorama = !remoteState.selfiePanorama
+    diarySelfiePreview?.classList.toggle("is-pano", remoteState.selfiePanorama)
+    if(diaryPanoramaBtn) diaryPanoramaBtn.textContent = remoteState.selfiePanorama ? "Panoramic On" : "Panoramic Mode"
+    const shape = remoteState.selfiePanorama ? "Panoramic mode is active for a wider paintball-ready capture." : "Panoramic mode is off. Portrait mode is back."
+    if(diarySelfieStatus) diarySelfieStatus.textContent = shape
   }
   const boardPreview = qs("#floatBoardPreview")
   const boardPreviewCopy = qs("#floatBoardPreviewCopy")
@@ -8089,7 +8192,10 @@ function setupFloatMode(){
     currentPanel: "floatSettingsBox",
     guideTimer: null,
     guideIndex: 0,
-    guideKey: ""
+    guideKey: "",
+    selfieStream: null,
+    selfieFilter: "clean",
+    selfiePanorama: false
   }
   const floatPanelKey = "supportrdFloatPanel"
   const floatPrimeSeenKey = "supportrdPrimeSeen"
@@ -9949,6 +10055,8 @@ function setupFloatMode(){
     renderThemeCards()
     syncMapHero(shell?.dataset?.remoteTheme || "default")
     setRemoteGoMode(localStorage.getItem("supportrdRemoteGoMode") === "true")
+    updateDiarySelfieMode()
+    diarySelfiePreview?.classList.toggle("is-pano", !!remoteState.selfiePanorama)
     if(!options.preserveRoute){
       syncRemoteHistory("home", window.location.pathname === "/remote" || window.location.pathname === "/remote/home")
     }
@@ -9971,6 +10079,7 @@ function setupFloatMode(){
   }
   function closeFloat(){
     stopRemoteGuide()
+    stopDiarySelfieCamera()
     hidePrimeMenu()
     hideFounderLayer()
     hideTGuide()
@@ -9996,6 +10105,17 @@ function setupFloatMode(){
   remoteStageGpsBtn?.addEventListener("click", ()=>renderRemoteRoute("map"))
   remoteStageStudioBtn?.addEventListener("click", ()=>renderRemoteRoute("studio"))
   remoteStagePaymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
+  diarySelfieBtn?.addEventListener("click", ()=>startDiarySelfieCamera())
+  diarySelfieSnapBtn?.addEventListener("click", ()=>captureDiarySelfie())
+  diaryPanoramaBtn?.addEventListener("click", ()=>toggleDiaryPanorama())
+  diaryFilterChips.forEach((chip)=>chip.addEventListener("click", ()=>{
+    remoteState.selfieFilter = chip.dataset.diaryFilter || "clean"
+    updateDiarySelfieMode()
+    if(diarySelfieStatus){
+      const active = diarySelfieFilters[remoteState.selfieFilter] || diarySelfieFilters.clean
+      diarySelfieStatus.textContent = `${active.label} is active for the Diary selfie lane. Capture the look when the hair sits right.`
+    }
+  }))
   launchButtons.forEach(btn => btn.addEventListener("click", ()=>{
     const targetId = btn.dataset.floatTarget
     const route = getRemoteRouteForTarget(targetId)

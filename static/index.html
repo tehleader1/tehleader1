@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260404i">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260404j">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -2072,6 +2072,29 @@ gtag("config", "G-8NTL8D64M1", { send_page_view: true });
                 </div>
               </details>
             </div>
+            <div class="float-diary-selfie glass" id="floatDiarySelfie">
+              <div class="float-diary-selfie-head">
+                <strong>Selfie Moment</strong>
+                <span id="floatDiarySelfieMode">Filter: Clean Glow</span>
+              </div>
+              <div class="float-diary-selfie-preview" id="floatDiarySelfiePreview">
+                <video id="floatDiarySelfieVideo" class="float-diary-selfie-video" playsinline autoplay muted hidden></video>
+                <canvas id="floatDiarySelfieCanvas" class="float-diary-selfie-canvas" hidden></canvas>
+                <div class="float-diary-selfie-overlay" id="floatDiarySelfieOverlay">Front camera ready for a fast selfie post, filter pass, or panoramic check.</div>
+              </div>
+              <div class="float-diary-selfie-controls">
+                <button class="float-pill" id="floatDiarySelfieBtn">Self Camera</button>
+                <button class="float-pill" id="floatDiarySelfieSnapBtn">Take Selfie</button>
+                <button class="float-pill" id="floatDiaryPanoramaBtn">Panoramic Mode</button>
+              </div>
+              <div class="float-diary-filter-row">
+                <button class="float-diary-filter-chip active" id="floatDiaryFilterClean" data-diary-filter="clean">Clean Glow</button>
+                <button class="float-diary-filter-chip" id="floatDiaryFilterWarm" data-diary-filter="warm">Warm Pop</button>
+                <button class="float-diary-filter-chip" id="floatDiaryFilterCool" data-diary-filter="cool">Cool Studio</button>
+                <button class="float-diary-filter-chip" id="floatDiaryFilterMono" data-diary-filter="mono">Mono Focus</button>
+              </div>
+              <div class="float-box-copy" id="floatDiarySelfieStatus">Selfie mode is standing by. Open the camera, set the look, and capture a hair-ready moment on the go.</div>
+            </div>
             <div class="float-big-buttons">
               <button class="float-pill" id="floatDiaryRecordBtn">Record Note</button>
               <button class="float-pill" id="floatDiaryPostBtn">Send To Social</button>
@@ -2261,7 +2284,7 @@ gtag("config", "G-8NTL8D64M1", { send_page_view: true });
   </div>
   
   <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260404i"></script>
+<script src="/static/app.v20260320h.js?v=20260404j"></script>
 <footer class="launch-footer-links">
   <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>
