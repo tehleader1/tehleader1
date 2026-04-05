@@ -1512,8 +1512,27 @@ function renderBlog(){
   const body = qs("#blogBody")
   if(title) title.textContent = post.title
   if(body){
-    const policy = `<div style="padding:10px;border-radius:10px;border:1px solid rgba(124,243,209,0.35);background:rgba(124,243,209,0.08);font-size:12px;margin-bottom:10px;"><strong>Politica del Blog:</strong> Solo noticias y contenido nitido de pelo.</div>`
-    body.innerHTML = policy + post.body.split("\n\n").map(p=>`<p>${p}</p>`).join("")
+    const policy = `<div style="padding:10px;border-radius:10px;border:1px solid rgba(124,243,209,0.35);background:rgba(124,243,209,0.08);font-size:12px;margin-bottom:16px;"><strong>Politica del Blog:</strong> Solo noticias y contenido nitido de pelo.</div>`
+    const article = post.body.split("\n\n").map(p=>`<p>${p}</p>`).join("")
+    const archive = BLOG_POSTS.map((entry, index)=>`
+      <button class="btn ghost" data-blog-jump="${index}" style="justify-content:flex-start;text-align:left;">
+        <strong>${entry.title}</strong>
+      </button>
+    `).join("")
+    body.innerHTML = `
+      ${policy}
+      <article class="remote-blog-article">
+        ${article}
+      </article>
+      <div style="margin-top:22px;">
+        <h3 style="margin-bottom:10px;">More SupportRD Blog Posts</h3>
+        <div style="display:grid;gap:8px;">${archive}</div>
+      </div>
+    `
+    Array.from(body.querySelectorAll("[data-blog-jump]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      state.blogIndex = Number(btn.getAttribute("data-blog-jump") || state.blogIndex) || 0
+      renderBlog()
+    }))
   }
 }
 
@@ -2048,6 +2067,19 @@ function setupGPS(){
       toast("Route failed")
     }
   }
+  async function openKitoGpsLane(){
+    activateGpsTab()
+    if(typeof window.openWorldMapPanel === "function"){
+      try{ window.openWorldMapPanel() }catch{}
+    }
+    setGpsStatus("Guide to Kito's House is active. GPS mode is centered on Villa Gonzalez now.")
+    if(mapOverlay) mapOverlay.textContent = "Kito GPS active. Villa Gonzalez, Santiago, Dominican Republic is highlighted."
+    if(map){
+      map.src = "https://www.openstreetmap.org/export/embed.html?bbox=-70.838%2C19.450%2C-70.375%2C19.735&layer=mapnik&marker=19.572%2C-70.759"
+    }
+    await routeToDestinationText("Villa Gonzalez, Santiago, Dominican Republic")
+    try{ gpsPanel?.scrollIntoView({behavior:'smooth', block:'center'}) }catch{}
+  }
   function runStorefrontRouteBot(){
     activateGpsTab()
     const current = getStorefrontState()
@@ -2075,13 +2107,7 @@ function setupGPS(){
   renderStorefrontState()
   if(keitoBtn){
     keitoBtn.addEventListener("click", async ()=>{
-      activateGpsTab()
-      if(typeof window.openWorldMapPanel === "function"){
-        try{ window.openWorldMapPanel() }catch{}
-      }
-      setGpsStatus("Guide to Kito's House is active. Opening GPS mode toward Villa Gonzalez now.")
-      if(mapOverlay) mapOverlay.textContent = "Kito route active. Opening the live GPS lane toward Villa Gonzalez."
-      await routeToDestinationText("Villa Gonzalez, Santiago, Dominican Republic")
+      await openKitoGpsLane()
       try{ openMiniWindow("GPS MODE ACTIVE", "Guide to Kito's House is now opening the live GPS route instead of the old info modal.") }catch{}
     })
   }
@@ -4866,7 +4892,7 @@ function setupPwa(){
     })
   }
   if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("/sw.js?v=20260402g").then((registration)=>{
+    navigator.serviceWorker.register("/sw.js?v=20260404d").then((registration)=>{
       if(registration?.waiting){
         registration.waiting.postMessage({ type:"SKIP_WAITING" })
       }
@@ -4893,9 +4919,6 @@ function setupAppDeepLinks(){
   }
   if(app === "tvreel"){
     openModal("reelModal")
-  } else if(app === "hairscore"){
-    renderApp("Live Hair Score")
-    openModal("appModal")
   }
 }
 
@@ -4917,6 +4940,7 @@ function setupLaunchMenu(){
   const menuBtn = qs("#launchMenuBtn")
   const quickBooth = qs("#quickBoothStart")
   const panel = qs("#launchPanel")
+  const panelToggle = qs("#launchPanelToggle")
   const payBtn = qs("#launchPaymentBtn")
   const menuPaymentBtn = qs("#menuPayment")
   const menuBrochureBtn = qs("#menuBrochure")
@@ -5008,6 +5032,14 @@ function setupLaunchMenu(){
     return
   }
   setInterval(()=>{ menuBtn.classList.toggle("blink") }, 1500)
+  function syncLaunchPanelState(expanded){
+    if(!panel || !panelToggle) return
+    panel.classList.toggle("collapsed", !expanded)
+    panelToggle.textContent = expanded ? "Hide" : "Open"
+    panelToggle.setAttribute("aria-expanded", expanded ? "true" : "false")
+  }
+  syncLaunchPanelState(false)
+  panelToggle?.addEventListener("click", ()=>syncLaunchPanelState(panel.classList.contains("collapsed")))
   qsa("#launchMenu button").forEach((btn)=>{
     btn.addEventListener("mouseenter", ()=>{ try{ beep(620, 30) }catch{} })
     btn.addEventListener("click", ()=>{ try{ beep(760, 50) }catch{} })
@@ -5106,6 +5138,17 @@ function setupLaunchMenu(){
       return
     }
     finishLaunchEntry()
+  })
+}
+
+function setupButtonPulseHalo(){
+  document.addEventListener("click", (event)=>{
+    const btn = event.target?.closest?.("button,.btn,.launch-main-btn,.remote-menu-btn")
+    if(!btn) return
+    btn.classList.remove("pulse-select")
+    void btn.offsetWidth
+    btn.classList.add("pulse-select")
+    setTimeout(()=>btn.classList.remove("pulse-select"), 950)
   })
 }
 
@@ -5972,6 +6015,7 @@ function setupFloatMode(){
   const remoteInfoAboutBtn = qs("#remoteInfoAbout")
   const remoteInfoContactBtn = qs("#remoteInfoContact")
   const remoteInfoOfficialBtn = qs("#remoteInfoOfficial")
+  const remoteInfoFooterBtn = qs("#remoteInfoFooter")
   const remoteScenarioButtons = qsa("#remoteScenarioButtons .remote-scenario-btn")
   const guardianAriaBtn = qs("#remoteGuardianAria")
   const guardianJakeBtn = qs("#remoteGuardianJake")
@@ -6224,10 +6268,7 @@ function setupFloatMode(){
     }
     function moveAssistantNodeToPoint(node, x, y){
       if(!node) return
-      const width = node.classList.contains("remote-guardian-btn") ? 238 : Math.min(window.innerWidth * 0.24, 170)
-      node.style.setProperty("--demo-float-left", `${Math.max(16, Math.min(window.innerWidth - width - 16, x - (width / 2)))}px`)
-      node.style.setProperty("--demo-float-top", `${Math.max(86, Math.min(window.innerHeight - width - 24, y - (width / 2)))}px`)
-      node.classList.add("demo-active")
+      node.classList.remove("demo-active")
     }
     function buildAssistantScrollLayout(progress, direction){
       const width = window.innerWidth
@@ -6292,15 +6333,7 @@ function setupFloatMode(){
       ].forEach(([node, x, y])=>moveAssistantNodeToPoint(node, x, y))
     }
     function moveAssistantPairToInteraction(x, y){
-      const clampedX = Math.max(82, Math.min(window.innerWidth - 82, x))
-      const clampedY = Math.max(132, Math.min(window.innerHeight - 108, y))
-      const rightBias = clampedX > (window.innerWidth / 2)
-      const lowerBias = clampedY > (window.innerHeight / 2)
-      assistantMotionState.pointerBias = rightBias ? "right" : "left"
-      applyAssistantPairLayout({
-        aria: { x: clampedX + (rightBias ? -94 : 94), y: clampedY + (lowerBias ? -84 : -36) },
-        jake: { x: clampedX + (rightBias ? -26 : 138), y: clampedY + (lowerBias ? 52 : 116) }
-      })
+      return
     }
     function getRouteFocusPoint(){
       const route = remoteState.currentRoute || "home"
@@ -6332,7 +6365,6 @@ function setupFloatMode(){
       assistantMotionState.teleportUntil = duration > 0 ? Date.now() + duration : 0
       if(options.mood) setAssistantMomentClasses(options.mood)
       if(options.status && assistantStatus) assistantStatus.textContent = options.status
-      applyAssistantPairLayout(layout)
       if(duration > 0){
         assistantMotionState.teleportTimer = setTimeout(()=>releaseAssistantTeleport(), duration)
       }
@@ -6520,28 +6552,14 @@ function setupFloatMode(){
     function handleAssistantHover(node, assistantId){
       if(!node) return
       node.addEventListener("mouseenter", ()=>{
-        const name = assistantId === "projake" ? "Jake Studio Specialist" : "Aria Hair Advisor"
-        const quickLine = assistantId === "projake" ? "Hi, Jake here." : "Hello, Aria here."
         node.classList.add("hover-wave")
-        const rect = node.getBoundingClientRect()
-        moveAssistantPairToInteraction(rect.left + (rect.width / 2), rect.top + (rect.height / 2))
-        if(assistantStatus) assistantStatus.textContent = `${quickLine} Tap to start the smart help flow.`
-        showSpeechPopup(name, quickLine)
         clearTimeout(assistantHoverTimer)
         assistantHoverTimer = setTimeout(()=>node.classList.remove("hover-wave"), 900)
       })
       node.addEventListener("mouseleave", ()=>node.classList.remove("hover-wave"))
     }
     function bindAssistantTrigger(node, assistantId){
-      if(!node) return
-      const fire = (event)=>{
-        event?.preventDefault?.()
-        event?.stopPropagation?.()
-        triggerAssistantOrb(assistantId)
-      }
-      node.addEventListener("click", fire)
-      node.addEventListener("pointerup", fire)
-      node.addEventListener("touchend", fire, { passive:false })
+      return
     }
     function ensureAssistantBootOverlay(){
       let overlay = qs("#assistantBootOverlay")
@@ -6687,6 +6705,16 @@ function setupFloatMode(){
     handleAssistantHover(assistantJakeOrb, "projake")
     handleAssistantHover(guardianAriaBtn, "aria")
     handleAssistantHover(guardianJakeBtn, "projake")
+    document.body.classList.add("assistant-static")
+    let assistantScrollGlowTimer = null
+    const pulseAssistantPresence = ()=>{
+      ;[assistantAriaOrb, assistantJakeOrb, guardianAriaBtn, guardianJakeBtn].forEach(node=>node?.classList.add("hover-wave"))
+      clearTimeout(assistantScrollGlowTimer)
+      assistantScrollGlowTimer = setTimeout(()=>{
+        ;[assistantAriaOrb, assistantJakeOrb, guardianAriaBtn, guardianJakeBtn].forEach(node=>node?.classList.remove("hover-wave"))
+      }, 420)
+    }
+    window.addEventListener("scroll", pulseAssistantPresence, { passive:true })
     document.addEventListener("click", (event)=>{
       if(!shell || shell.hidden) return
       const target = event.target
@@ -6905,6 +6933,124 @@ function setupFloatMode(){
       body: "The hair clips, reviews, and support energy make the app feel active instead of static."
     }
   ]
+  const ACQUISITION_STORAGE_KEY = "supportrdAcquisitionEngine"
+  const ACQUISITION_LANES = {
+    issues: "Deal With Issues Hair",
+    products: "Buy Products For Hair Solutions",
+    app: "All In One Hair Solutions App",
+    ai: "AI Features For Hair Problems",
+    family: "Family + Care For Hair Health",
+    tourism: "Directions + Tourism"
+  }
+  const ACQUISITION_STAGES = ["arrived", "watching", "exploring", "feedback-ready", "premium-curious", "purchase-ready"]
+  function getDefaultAcquisitionStats(){
+    return {
+      totalSignals: 0,
+      latestGuestPost: "Hair-trend signal waiting for feature reply",
+      latestGuestSource: "SEO engine watch",
+      latestReelTopic: "10-second hair reel rotation active",
+      latestReelSource: "TV Reel",
+      latestSocialFeedback: "Developer Feed is waiting for fresh live reactions.",
+      latestLane: "AI Features For Hair Problems",
+      latestStage: "arrived",
+      lanes: Object.fromEntries(Object.values(ACQUISITION_LANES).map(label=>[label, 0])),
+      stages: Object.fromEntries(ACQUISITION_STAGES.map(label=>[label, 0])),
+      signals: []
+    }
+  }
+  function loadAcquisitionStats(){
+    try{
+      const parsed = JSON.parse(localStorage.getItem(ACQUISITION_STORAGE_KEY) || "null")
+      if(parsed && typeof parsed === "object"){
+        const base = getDefaultAcquisitionStats()
+        return {
+          ...base,
+          ...parsed,
+          lanes: { ...base.lanes, ...(parsed.lanes || {}) },
+          stages: { ...base.stages, ...(parsed.stages || {}) },
+          signals: Array.isArray(parsed.signals) ? parsed.signals : []
+        }
+      }
+    }catch{}
+    return getDefaultAcquisitionStats()
+  }
+  function saveAcquisitionStats(stats){
+    try{
+      localStorage.setItem(ACQUISITION_STORAGE_KEY, JSON.stringify({
+        ...stats,
+        signals: Array.isArray(stats.signals) ? stats.signals.slice(0, 24) : []
+      }))
+    }catch{}
+  }
+  function rankAcquisitionEntries(entries = {}, count = 3){
+    return Object.entries(entries).sort((a,b)=>Number(b[1] || 0) - Number(a[1] || 0)).slice(0, count)
+  }
+  function mapSignalToLane(signalKey = ""){
+    const key = String(signalKey || "").toLowerCase()
+    if(/scan|damage|frizz|oily|color|bounce|hair/.test(key)) return ACQUISITION_LANES.ai
+    if(/product|buy|checkout|payment|premium/.test(key)) return ACQUISITION_LANES.products
+    if(/reel|faq|feedback|blog|developer/.test(key)) return ACQUISITION_LANES.app
+    if(/diary|profile|family|routine/.test(key)) return ACQUISITION_LANES.family
+    if(/map|route|gps|tourism|kito/.test(key)) return ACQUISITION_LANES.tourism
+    return ACQUISITION_LANES.issues
+  }
+  function mapSignalToStage(signalKey = ""){
+    const key = String(signalKey || "").toLowerCase()
+    if(/checkout|purchase|pay/.test(key)) return "purchase-ready"
+    if(/premium|product|compare|details/.test(key)) return "premium-curious"
+    if(/feedback|review|heart|thumb/.test(key)) return "feedback-ready"
+    if(/reel|watch|blog|faq|route|open/.test(key)) return "watching"
+    if(/scan|studio|profile|diary|settings/.test(key)) return "exploring"
+    return "arrived"
+  }
+  function trackAcquisitionSignal(signalKey, meta = {}){
+    const stats = loadAcquisitionStats()
+    const lane = meta.lane || mapSignalToLane(signalKey)
+    const stage = meta.stage || mapSignalToStage(signalKey)
+    stats.totalSignals += 1
+    stats.latestLane = lane
+    stats.latestStage = stage
+    stats.lanes[lane] = Number(stats.lanes[lane] || 0) + 1
+    stats.stages[stage] = Number(stats.stages[stage] || 0) + 1
+    if(meta.guestPost) stats.latestGuestPost = meta.guestPost
+    if(meta.guestSource) stats.latestGuestSource = meta.guestSource
+    if(meta.reelTopic) stats.latestReelTopic = meta.reelTopic
+    if(meta.reelSource) stats.latestReelSource = meta.reelSource
+    if(meta.socialFeedback) stats.latestSocialFeedback = meta.socialFeedback
+    stats.signals.unshift({
+      signal: signalKey,
+      lane,
+      stage,
+      at: Date.now(),
+      note: meta.note || ""
+    })
+    saveAcquisitionStats(stats)
+    renderLatestSupportAds()
+    return stats
+  }
+  function buildLatestSupportAds(){
+    const stats = loadAcquisitionStats()
+    const topLanes = rankAcquisitionEntries(stats.lanes, 2)
+    return [
+      {
+        title: topLanes[0] ? `${topLanes[0][0]} Ad` : "Hair Analyzer Lane",
+        copy: stats.latestReelTopic || "Short reel in front. Deep analysis and route sorting in the background."
+      },
+      {
+        title: topLanes[1] ? `${topLanes[1][0]} Ad` : "Everyday Hair Help",
+        copy: stats.latestSocialFeedback || "Catch frizz, oil, damage, and color-loss visitors with the right lane before premium."
+      }
+    ]
+  }
+  function renderLatestSupportAds(){
+    const ads = buildLatestSupportAds()
+    ads.forEach((ad, index)=>{
+      const title = qs(`[data-latest-ad-title="${index}"]`)
+      const copy = qs(`[data-latest-ad-copy="${index}"]`)
+      if(title) title.textContent = ad.title
+      if(copy) copy.textContent = ad.copy
+    })
+  }
   function loadFamilySpotlightEntries(){
     try{
       const raw = JSON.parse(localStorage.getItem("supportrdFamilySpotlight") || "[]")
@@ -6999,6 +7145,15 @@ function setupFloatMode(){
       player.load()
       player.play().catch(()=>setStatus("Tap play to start the hair reel."))
       renderTopic()
+      trackAcquisitionSignal("faq_reel_play", {
+        lane: ACQUISITION_LANES.app,
+        stage: "watching",
+        reelTopic: `${config.label} · clip ${cursor + 1}`,
+        reelSource: "FAQ Lounge TV Reel",
+        guestPost: `${config.label} guest blog angle from live reel demand`,
+        guestSource: "Hair reels + social trend watch",
+        socialFeedback: `${config.label} reel is attracting attention inside FAQ Lounge.`
+      })
       setStatus(`${config.label} clip ${cursor + 1} is playing now.`)
     }
     const startAuto = ()=>{
@@ -7054,6 +7209,10 @@ function setupFloatMode(){
         <button class="btn ghost" data-feedback-sort="cash">Most Cash</button>
       </div>
       <div class="float-sheet-status" data-feedback-status>Showing the strongest public love by hearts right now.</div>
+      <div class="float-sheet-panel">
+        <h4>Live Engine Encouragement</h4>
+        <div class="remote-engine-encouragement" data-engine-feedback></div>
+      </div>
       <div class="remote-feedback-board" data-feedback-board></div>
       <div class="float-sheet-panel">
         <h4>Public Reviews</h4>
@@ -7096,6 +7255,7 @@ function setupFloatMode(){
     const familySubmit = root?.querySelector("[data-family-submit]")
     const familyClear = root?.querySelector("[data-family-clear]")
     const status = root?.querySelector("[data-feedback-status]")
+    const engineFeedback = root?.querySelector("[data-engine-feedback]")
     const sortButtons = Array.from(root?.querySelectorAll("[data-feedback-sort]") || [])
     if(!board) return
     const communitySignedIn = ()=>localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
@@ -7175,8 +7335,21 @@ function setupFloatMode(){
       if(status) status.textContent = `Showing the strongest public love by ${labelMap[sortKey] || "hearts"} right now.`
       sortButtons.forEach(btn=>btn.classList.toggle("active", btn.getAttribute("data-feedback-sort") === sortKey))
     }
+    const renderEngineFeedback = ()=>{
+      if(!engineFeedback) return
+      const stats = loadAcquisitionStats()
+      const topLane = rankAcquisitionEntries(stats.lanes, 1)[0]
+      engineFeedback.innerHTML = `
+        <article class="remote-engine-card">
+          <strong>Engine Pulse</strong>
+          <span>${escapeRemoteHtml(stats.latestSocialFeedback)}</span>
+          <small>Top lane right now: ${escapeRemoteHtml(topLane ? `${topLane[0]} · ${topLane[1]}` : "Waiting for traffic")}</small>
+        </article>
+      `
+    }
     sortButtons.forEach(btn=>btn.addEventListener("click", ()=>render(btn.getAttribute("data-feedback-sort") || "hearts")))
     render("hearts")
+    renderEngineFeedback()
     const renderPublicReviews = ()=>{
       if(!reviewWall) return
       const mergedReviews = loadPublicReviews().concat(PUBLIC_REVIEW_ENTRIES)
@@ -7198,7 +7371,9 @@ function setupFloatMode(){
       const next = loadFeedbackReactions()
       next.hearts += 1
       saveFeedbackReactions(next)
+      trackAcquisitionSignal("developer_feedback_heart", { lane: ACQUISITION_LANES.app, stage: "feedback-ready", socialFeedback: "The Developer Feed just picked up another heart from a live visitor." })
       render("hearts")
+      renderEngineFeedback()
       if(status) status.textContent = "Heart sent. Developer Feedback now reflects your signed-in support."
     })
     feedbackThumb?.addEventListener("click", ()=>{
@@ -7209,7 +7384,9 @@ function setupFloatMode(){
       const next = loadFeedbackReactions()
       next.thumbs += 1
       saveFeedbackReactions(next)
+      trackAcquisitionSignal("developer_feedback_thumb", { lane: ACQUISITION_LANES.app, stage: "feedback-ready", socialFeedback: "A thumbs-up just came through on Developer Feedback." })
       render("thumbs")
+      renderEngineFeedback()
       if(status) status.textContent = "Thumbs up sent. Developer Feedback now reflects your signed-in support."
     })
     feedbackSubmit?.addEventListener("click", ()=>{
@@ -7231,7 +7408,9 @@ function setupFloatMode(){
       })
       savePublicReviews(reviews.slice(0, 20))
       if(feedbackComment) feedbackComment.value = ""
+      trackAcquisitionSignal("developer_feedback_review", { lane: ACQUISITION_LANES.app, stage: "feedback-ready", socialFeedback: "A new public review just landed on the Developer Feed." })
       renderPublicReviews()
+      renderEngineFeedback()
       if(status) status.textContent = "Public review posted. The Developer Feedback wall now shows your signed-in comment."
     })
     feedbackClear?.addEventListener("click", ()=>{
@@ -7598,22 +7777,21 @@ function setupFloatMode(){
       `
     }
     function buildAcquisitionDashboard(){
+      const engine = loadAcquisitionStats()
+      const topLanes = rankAcquisitionEntries(engine.lanes, 3)
+      const topStages = rankAcquisitionEntries(engine.stages, 3)
       const stats = [
-        { label:"Latest Guest Post", value:"Hair-trend signal waiting for feature reply", detail:"When the SEO engine spots a strong feature/guest angle, this lane should surface the topic and route it to blog + email." },
-        { label:"Fresh Reel Signal", value:"10-second front end / deep backend analysis", detail:"Short hair reels should hook attention first while SupportRD quietly sorts the visitor into the best lane." },
-        { label:"Top Visitor Lane", value:"Hair Analyzer -> exploring", detail:"Default visitor view assumes the current strongest interest is hair analysis, social proof, and issue-specific help." },
-        { label:"Secondary Lane", value:"Everyday Hair Help -> watching", detail:"These visitors are usually checking frizz, oil, damage, no-bounce, and color-loss help before considering payment." },
+        { label:"Latest Guest Post", value:engine.latestGuestPost, detail:`Source: ${engine.latestGuestSource}` },
+        { label:"Fresh Reel Signal", value:engine.latestReelTopic, detail:`Source: ${engine.latestReelSource}` },
+        { label:"Top Visitor Lane", value:topLanes[0] ? `${topLanes[0][0]} · ${topLanes[0][1]}` : "Waiting for traffic", detail:"This updates as visitors click around reels, scans, products, and social proof." },
+        { label:"Top Stage", value:topStages[0] ? `${topStages[0][0]} · ${topStages[0][1]}` : "Waiting for traffic", detail:"SupportRD tracks how far a person is moving through the lane, not just where they landed." },
         { label:"Conversion Timing", value:"Soft premium after trust", detail:"Premium should appear after the visitor has seen the right lane first, not on every single interaction." },
-        { label:"Developer Feed Role", value:"Public proof + live love board", detail:"FAQ Lounge and Developer Feedback act like the social trust engine for reactions, reviews, mail, and video replies." }
+        { label:"Developer Feed Role", value:engine.latestSocialFeedback, detail:"FAQ Lounge and Developer Feedback act like the social trust engine for reactions, reviews, mail, and video replies." }
       ]
-      const laneStages = [
-        ["Deal With Issues Hair","arrived -> watching -> asking Aria"],
-        ["Buy Products For Hair Solutions","viewing product -> comparing -> checkout-ready"],
-        ["All In One Hair Solutions App","reading Remote flow -> trying tools -> trust build"],
-        ["AI Features For Hair Problems","scan interest -> smart help -> premium-curious"],
-        ["Family + Care For Hair Health","routine planning -> diary/profile -> repeat visitor"],
-        ["Directions + Tourism","map curiosity -> local route -> lifestyle trust"]
-      ]
+      const laneStages = Object.keys(engine.lanes).map(label=>[
+        label,
+        `${Number(engine.lanes[label] || 0)} signals · strongest stage: ${topStages[0]?.[0] || "arrived"}`
+      ])
       return `
         <section class="remote-acquisition-board">
           <div class="float-mode-kicker">Acquisition Engine</div>
@@ -7628,6 +7806,7 @@ function setupFloatMode(){
               </article>
             `).join("")}
           </div>
+          <div class="float-sheet-status">Signals tracked so far: ${engine.totalSignals}</div>
           <div class="remote-acquisition-lanes">
             ${laneStages.map(([lane,stage])=>`
               <div class="remote-acquisition-lane">
@@ -7890,7 +8069,7 @@ function setupFloatMode(){
       </div>
       <div class="float-sheet-grid">
         <button class="btn" data-open-faq-reel>Pull Up TV Reel</button>
-        <button class="btn ghost" data-open-developer-feedback>Developer Feedback</button>
+        <button class="btn ghost" data-open-developer-feedback>See Developer Feed</button>
         <button class="btn ghost" data-open-fastpay>Open Payments</button>
         <button class="btn ghost" data-open-blog>Open Blog</button>
       </div>
@@ -8096,6 +8275,10 @@ function setupFloatMode(){
       if(options.route && !options.skipRoute) syncRemoteHistory(options.route, !!options.replaceRoute)
       revealRemoteStage()
       applyAssistantDemoScene(options.route || remoteState.currentRoute || "home", false)
+      trackAcquisitionSignal(`open_${options.route || remoteState.currentRoute || "home"}`, {
+        guestPost: title === "Blog Party" ? "Fresh guest-post angle opened from Blog Party" : undefined,
+        guestSource: title === "Blog Party" ? "Remote content route" : undefined
+      })
       if(options.message) setRemoteStatus(options.message)
     if(options.route && ["diary","studio","settings","map","faq","profile","payments"].includes(options.route)){
       holdAssistantTeleport({
@@ -8161,6 +8344,11 @@ function setupFloatMode(){
       openRemoteSheet("6 Second Help Reel", buildQuickReelSheet(), { message:"The quick help reel is open inside Remote." })
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-developer-feedback]")).forEach(btn=>btn.addEventListener("click", ()=>{
+      trackAcquisitionSignal("open_developer_feedback", {
+        lane: ACQUISITION_LANES.app,
+        stage: "feedback-ready",
+        socialFeedback: "A visitor opened the Developer Feed to check live proof and reactions."
+      })
       openRemoteSheet("Developer Feedback", buildDeveloperFeedbackSheet(), { message:"Developer Feedback is open inside FAQ Lounge.", route:"faq" })
       wireDeveloperFeedbackSheet(remoteSheetBody)
     }))
@@ -8223,6 +8411,13 @@ function setupFloatMode(){
     Array.from(remoteSheetBody.querySelectorAll("[data-open-blog]")).forEach(btn=>btn.addEventListener("click", ()=>{
       state.blogIndex = 0
       renderBlog()
+      trackAcquisitionSignal("open_blog_modal", {
+        lane: ACQUISITION_LANES.app,
+        stage: "watching",
+        guestPost: BLOG_POSTS?.[0]?.title || "SupportRD guest-post angle",
+        guestSource: "SEO engine + blog party",
+        socialFeedback: "A visitor opened the blog lane to study SupportRD content."
+      })
       openModal("blogModal")
       setRemoteStatus("Main Blog Modal is open in fullscreen view.")
     }))
@@ -8277,9 +8472,9 @@ function setupFloatMode(){
         setRemoteStatus("Studio Quick Panel is ready.")
       }
     }))
-    Array.from(remoteSheetBody.querySelectorAll("[data-open-gps-route]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      closeRemoteSheet()
-      qs("#rerouteLiveStorefrontBtn")?.click()
+    Array.from(remoteSheetBody.querySelectorAll("[data-open-gps-route]")).forEach(btn=>btn.addEventListener("click", async ()=>{
+      closeRemoteSheet(false, true)
+      await openKitoGpsLane()
     }))
       Array.from(remoteSheetBody.querySelectorAll("[data-open-official]")).forEach(btn=>btn.addEventListener("click", ()=>openLinkModal("https://supportrd.com", "SupportRD Official Website")))
       Array.from(remoteSheetBody.querySelectorAll("[data-link-open]")).forEach(btn=>btn.addEventListener("click", ()=>{
@@ -9368,6 +9563,8 @@ function setupFloatMode(){
         remoteInfoAboutBtn?.addEventListener("click", ()=>openImportantInfoSheet("about"))
         remoteInfoContactBtn?.addEventListener("click", ()=>openImportantInfoSheet("contact"))
         remoteInfoOfficialBtn?.addEventListener("click", ()=>openImportantInfoSheet("official"))
+        remoteInfoFooterBtn?.addEventListener("click", ()=>openImportantInfoSheet("privacy"))
+        renderLatestSupportAds()
         const purchasePager = createStickyPager(remotePurchaseEditor, remotePurchaseItems, remotePurchaseCount, remotePurchaseToggleBtn)
         remotePurchasePrevBtn?.addEventListener("click", e=>{
           e.stopPropagation()
@@ -9692,6 +9889,11 @@ function setupFloatMode(){
     if(scanSummary) scanSummary.textContent = summary
     if(assistantStatus) assistantStatus.textContent = "Profile scan refreshed with current hair state, product suggestions, tutorial direction, and Aria memory."
     if(profileHistory) profileHistory.textContent = `Last 2 Aria / Jake lines: ${lastLines.length ? lastLines.join(" / ") : "No recent conversation yet."}`
+    trackAcquisitionSignal("hair_scan_refresh", {
+      lane: ACQUISITION_LANES.ai,
+      stage: "exploring",
+      socialFeedback: "A visitor is using the hair analysis lane and looking for direct help."
+    })
     setRemoteStatus("Full hair scan refreshed. Current hair state, support products, tutorial direction, and coder pro tip are ready.")
   })
   qs("#floatTutorialBotsBtn")?.addEventListener("click", ()=>{
@@ -10202,12 +10404,21 @@ function setupRemoteFastPay(){
   }
 
   function buildShopifyCheckoutUrl(product, liveProduct){
+    const storefrontBase = normalizeShopifyStorefrontBase(LINKS.cart).replace(/\/cart$/i, "")
+    if(product?.link){
+      try{
+        const parsed = new URL(product.link, storefrontBase)
+        if(parsed.pathname){
+          return `${storefrontBase}${parsed.pathname}${parsed.search || ""}`
+        }
+      }catch{}
+    }
     const variantId = String(liveProduct?.variant || "").trim()
     if(variantId && /^\d+$/.test(variantId)){
       return `${LINKS.cart.replace(/\/+$/, "")}/${variantId}:1`
     }
     if(liveProduct?.handle){
-      return `${normalizeShopifyStorefrontBase(LINKS.cart).replace(/\/cart$/i, "")}/products/${liveProduct.handle}`
+      return `${storefrontBase}/products/${liveProduct.handle}`
     }
     return product?.link || ""
   }
@@ -10299,9 +10510,19 @@ function setupRemoteFastPay(){
 
     async function launchShopifyCheckout(product, sourceLabel, options = {}){
       if(!isPurchaseUserSignedIn()){
+        trackAcquisitionSignal("purchase_gate_login", {
+          lane: ACQUISITION_LANES.products,
+          stage: "premium-curious",
+          socialFeedback: `${product?.title || "SupportRD purchase"} needs account continuity before checkout.`
+        })
         openPurchaseAccountGate(product, sourceLabel, options)
         return
       }
+      trackAcquisitionSignal("launch_shopify_checkout", {
+        lane: ACQUISITION_LANES.products,
+        stage: "purchase-ready",
+        socialFeedback: `${product?.title || "SupportRD purchase"} is actively moving through checkout.`
+      })
       holdAssistantTeleport({
         aria: { x: window.innerWidth - 186, y: window.innerHeight - 214 },
         jake: { x: window.innerWidth - 106, y: window.innerHeight - 142 }
@@ -10331,16 +10552,8 @@ function setupRemoteFastPay(){
       hideConfirm()
       hideProcessing()
       if(!options.keepOwnerVisible) hideOwner()
-      let embeddedOpened = false
-      try{
-        embeddedOpened = await openEmbeddedShopifyCheckout(checkoutProduct, liveProduct)
-      }catch{}
-      if(status) status.textContent = embeddedOpened
-        ? `${checkoutProduct.title} secure Shopify checkout loaded inside SupportRD${sourceLabel ? ` from ${sourceLabel}` : ""}.`
-        : `${checkoutProduct.title} Shopify checkout opened${sourceLabel ? ` from ${sourceLabel}` : ""}.`
-      if(!embeddedOpened){
-        openLinkModal(checkoutProduct.link, `${checkoutProduct.title} Checkout`)
-      }
+      if(status) status.textContent = `${checkoutProduct.title} Shopify checkout is opening now${sourceLabel ? ` from ${sourceLabel}` : ""}.`
+      window.location.assign(checkoutProduct.link)
     }
 
   function renderProducts(){
@@ -10372,6 +10585,11 @@ function setupRemoteFastPay(){
       btn.addEventListener("click", ()=>{
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.dataset.remoteOpen)
         if(!product) return
+        trackAcquisitionSignal("product_preview", {
+          lane: ACQUISITION_LANES.products,
+          stage: "premium-curious",
+          socialFeedback: `${product.title} is pulling comparison traffic into the product lane.`
+        })
         showConfirm(product)
       })
     })
@@ -10379,6 +10597,11 @@ function setupRemoteFastPay(){
       btn.addEventListener("click", ()=>{
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.dataset.remoteBuy)
         if(!product) return
+        trackAcquisitionSignal("product_pay_now", {
+          lane: ACQUISITION_LANES.products,
+          stage: "premium-curious",
+          socialFeedback: `${product.title} just triggered a pay-now interest moment.`
+        })
         showConfirm(product)
       })
     })
@@ -10386,6 +10609,11 @@ function setupRemoteFastPay(){
       btn.addEventListener("click", ()=>{
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.dataset.remoteCheckout)
         if(!product) return
+        trackAcquisitionSignal("product_checkout_click", {
+          lane: ACQUISITION_LANES.products,
+          stage: "purchase-ready",
+          socialFeedback: `${product.title} pushed a visitor into checkout-ready mode.`
+        })
         launchShopifyCheckout(product, "Fast Pay")
       })
     })
@@ -10405,6 +10633,11 @@ function setupRemoteFastPay(){
     hideConfirm()
     hideOwner()
     if(status) status.textContent = "SupportRD Remote is ready for the next in-person sale. Shopify checkout is the default route."
+    trackAcquisitionSignal("open_fastpay", {
+      lane: ACQUISITION_LANES.products,
+      stage: "premium-curious",
+      socialFeedback: "A visitor opened the payment lane to compare SupportRD products."
+    })
     openMiniWindow("Remote Fast Pay", "Card scanner is open. Pick the product and move straight into checkout.")
   }
 
@@ -10866,134 +11099,12 @@ function renderApp(name){
     return
   }
   if(name === "Live Hair Score"){
-    const score = Math.round(state.hairScore || 0)
-    const circumference = 2 * Math.PI * 70
-    const dash = Math.round(circumference * (score / 100))
     body.innerHTML = `
-      <div class="score-card">
-        <div class="score-ring" id="scoreRing">
-          <svg viewBox="0 0 160 160">
-            <defs>
-              <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#00e2ff"/>
-                <stop offset="0.5" stop-color="#7c7cff"/>
-                <stop offset="1" stop-color="#ffb657"/>
-              </linearGradient>
-            </defs>
-            <circle cx="80" cy="80" r="70" stroke="rgba(255,255,255,0.15)" stroke-width="12" fill="none"/>
-            <circle id="scoreProgressCircle" cx="80" cy="80" r="70" stroke="url(#scoreGrad)" stroke-width="12" fill="none" stroke-linecap="round"
-              stroke-dasharray="0 ${Math.round(circumference)}"/>
-          </svg>
-          <div class="score-value"><div id="scoreValueNum">0%</div><span>Live Hair Score</span></div>
-        </div>
-        <div class="score-legend">
-          <div class="tag">SupportRD Live · Plus500‑style momentum</div>
-          <div style="color:var(--muted);margin-bottom:10px;">Tap the score to reveal your ARIA level and unlocks.</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-            <input id="scoreFastCode" maxlength="7" placeholder="Fast code" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.22);background:rgba(0,0,0,0.35);color:#fff;min-width:120px;">
-            <button class="btn" id="scoreFastLoad">Fast Load Visual</button>
-          </div>
-          <div class="score-bars">
-            <div>Consistency</div>
-            <div class="score-bar"><span style="width:${Math.min(100, score + 10)}%"></span></div>
-            <div>Care Routine</div>
-            <div class="score-bar"><span style="width:${Math.max(20, score - 8)}%"></span></div>
-            <div>Progress</div>
-            <div class="score-bar"><span style="width:${Math.min(100, score + 4)}%"></span></div>
-          </div>
-        </div>
-      </div>
-      <div id="scoreLevels" style="display:none;margin-top:14px;">
-        <div style="font-weight:700;margin-bottom:8px;">ARIA Levels</div>
-        <div class="levels-grid" style="display:grid;gap:8px;">
-          <div class="level-card" data-level="intro">Introduction</div>
-          <div class="level-card" data-level="breakdown">Breaking Down Topics</div>
-          <div class="level-card" data-level="inner">Inner Circle</div>
-          <div class="level-card" data-level="pro">Professional · Making Money</div>
-        </div>
-        <div id="proDetails" style="margin-top:10px;color:var(--muted);display:none;">
-          Professional access unlocked. Direct contact: AgentAnthony@supportdr.com · 7043452867.
-          Sally Ruberry has reached professional level due to her outstanding hair managing skills and wants to discuss business.
-        </div>
+      <div class="float-sheet-panel">
+        <h4>SupportRD Progress</h4>
+        <p>SupportRD is keeping hair progress quietly in the background so the Remote can stay focused on hair help, products, and live support.</p>
       </div>
     `
-    const ring = qs("#scoreRing")
-    const levels = qs("#scoreLevels")
-    const side = qs("#levelSide")
-    const fastCode = qs("#scoreFastCode")
-    const fastLoad = qs("#scoreFastLoad")
-    if(ring){
-      ring.addEventListener("click", ()=>{
-        levels.style.display = levels.style.display === "none" ? "block" : "none"
-        if(side){ side.classList.toggle('show') }
-      })
-    }
-    const level = score >= 90 ? "pro" : score >= 75 ? "inner" : score >= 45 ? "breakdown" : "intro"
-    const sub = state.subscription
-    qsa(".level-card").forEach(card=>{
-      const isLocked = (sub === "free" && card.dataset.level !== "intro") ||
-        (sub === "premium" && (card.dataset.level === "inner" || card.dataset.level === "pro"))
-      if(card.dataset.level === level){
-        card.style.background = "linear-gradient(135deg, rgba(0,226,255,0.25), rgba(124,124,255,0.25))"
-        card.style.border = "1px solid rgba(0,226,255,0.6)"
-        card.style.color = "#fff"
-      } else {
-        card.style.background = "rgba(255,255,255,0.06)"
-        card.style.border = "1px solid rgba(255,255,255,0.12)"
-      }
-      card.classList.toggle("locked", isLocked)
-      card.textContent = card.textContent.replace(" 🔒","")
-      if(isLocked){ card.textContent += " 🔒" }
-    })
-    const pro = qs("#proDetails")
-    if(pro && level === "pro" && sub === "pro"){ pro.style.display = "block" }
-    const progressCircle = qs("#scoreProgressCircle")
-    const valueNum = qs("#scoreValueNum")
-    const totalLen = Math.round(circumference)
-    const targetLen = dash
-    if(progressCircle || valueNum){
-      const startTs = performance.now()
-      const duration = 900
-      function anim(ts){
-        const t = Math.min(1, (ts - startTs) / duration)
-        const eased = 1 - Math.pow(1 - t, 3)
-        const currentScore = Math.round(score * eased)
-        const currentLen = Math.round(targetLen * eased)
-        if(valueNum) valueNum.textContent = `${currentScore}%`
-        if(progressCircle) progressCircle.setAttribute("stroke-dasharray", `${currentLen} ${Math.max(0, totalLen - currentLen)}`)
-        if(t < 1) requestAnimationFrame(anim)
-      }
-      requestAnimationFrame(anim)
-    }
-    if(fastLoad){
-      const runFastLoad = ()=>{
-        const code = String((fastCode && fastCode.value) || "").trim()
-        if(code !== "1234567"){
-          toast("Use fast code 1234567")
-          return
-        }
-        state.hairScore = 97
-        renderApp("Live Hair Score")
-        const ringEl = qs("#scoreRing")
-        if(ringEl){
-          ringEl.animate(
-            [
-              {transform:"scale(0.93)", filter:"brightness(1)"},
-              {transform:"scale(1.05)", filter:"brightness(1.25)"},
-              {transform:"scale(1)", filter:"brightness(1)"}
-            ],
-            {duration:450, easing:"ease-out"}
-          )
-        }
-        toast("Hair score fast-loaded")
-      }
-      fastLoad.addEventListener("click", runFastLoad)
-      if(fastCode){
-        fastCode.addEventListener("keydown", (e)=>{
-          if(e.key === "Enter"){ runFastLoad() }
-        })
-      }
-    }
     return
   }
   if(name === "TV Reel"){
@@ -11250,8 +11361,7 @@ function setupAppsDock(){
     "Shopify Products",
     "SEO Engine Viewer",
     "Occasion Editor",
-    "Subscription Banner",
-    "Live Hair Score"
+    "Subscription Banner"
   ]
 
   select.innerHTML = '<option value="">Replace Selected App…</option>' + allApps.map(a=>`<option value="${a}">${a}</option>`).join("")
@@ -11683,8 +11793,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
 
   const safe = (fn)=>{ try{ fn() }catch(e){ console.error(e) } }
   initHairScore()
-  renderApp("Live Hair Score")
-  openModal("appModal")
   safe(setupTabs)
   safe(setupAccessibilityMode)
   safe(setupSimpleUi)
@@ -11733,6 +11841,7 @@ safe(setupReel)
   safe(setupAppsDock)
   safe(setupAppDeepLinks)
   safe(setupStartupSplash)
+  safe(setupButtonPulseHalo)
   safe(setupLaunchMenu)
   safe(setupSatelliteQuick)
   safe(setupDashboardSweep)
