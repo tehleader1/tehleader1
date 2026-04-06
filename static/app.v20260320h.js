@@ -1121,11 +1121,34 @@ function bumpHairScore(delta){
       openModal("puzzleModal")
     }
     }catch{
-      appendAria(`${assistant.name}: AI unavailable`)
-      appendConversation("aria", "AI unavailable")
-      showSpeechPopup(assistant.name, "AI unavailable")
+      const fallbackReply = buildLocalAssistantFallback(msg, assistant)
+      appendAria(`${assistant.name}: ${fallbackReply}`)
+      appendConversation("aria", fallbackReply)
+      showSpeechPopup(assistant.name, fallbackReply)
+      speakReply(fallbackReply)
       setAriaFlow("idle")
     }
+  }
+
+  function buildLocalAssistantFallback(msg, assistant){
+    const text = String(msg || "").toLowerCase()
+    const isJake = assistant?.id === "projake"
+    if(isJake){
+      if(/studio|record|beat|mix|song|motherboard|export/.test(text)){
+        return "Hello, I'm Jake. Start with your voice on the first board, line the beat up on the second board, and use the third board for adlibs or harmony so the song feels complete before export."
+      }
+      return "Hello, I'm Jake. I am here to keep the studio calm, the boards lined up, and the export feeling finished."
+    }
+    if(/dry|dryness|moisture|frizz|thirsty/.test(text)){
+      return "Hello, I'm Aria. For dryness, I would start with Laciador Crece because it supports moisture and smoother styling. That lane is about $40, and if you want the full checkout next, visit the custom order page or the product page and I will keep you moving."
+    }
+    if(/damage|burn|breakage/.test(text)){
+      return "Hello, I'm Aria. This sounds like a recovery lane first. I would slow down heat, move into repair support, and then choose the product lane that protects the hair before styling."
+    }
+    if(/oily|greasy|scalp/.test(text)){
+      return "Hello, I'm Aria. For oily roots or scalp stress, I would keep the routine lighter and balance-first instead of jumping into a heavy styling product."
+    }
+    return "Hello, I'm Aria. Tell me the issue first, like dryness, frizz, damage, low bounce, or color loss, and I will route you to the right SupportRD product and next step."
   }
 
   let cachedAriaVoice = null
@@ -7437,7 +7460,7 @@ function setupFloatMode(){
       return `
         <button class="float-studio-board-card${isActive ? " active" : ""}" type="button" data-open-studio-board="${index + 1}">
           <div class="float-studio-board-head">
-            <strong>Motherboard ${index + 1}</strong>
+            <strong>${escapeRemoteHtml(current.name || `Motherboard ${index + 1}`)}</strong>
             <span>${escapeRemoteHtml(kindLabel)}</span>
           </div>
           <div class="float-studio-wave-row">${renderQuickStudioWaveBars(current, index)}</div>
@@ -9395,7 +9418,10 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       Array.from(remoteSheetBody.querySelectorAll("[data-product-shopify]")).forEach(btn=>btn.addEventListener("click", ()=>{
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.getAttribute("data-product-shopify"))
         if(!product) return
-        launchShopifyCheckout(product, "Product Page")
+        window.openRemoteFastPay?.()
+        setTimeout(()=>{
+          if(typeof showConfirm === "function") showConfirm(product)
+        }, 60)
       }))
       Array.from(remoteSheetBody.querySelectorAll("[data-product-menu]")).forEach(btn=>btn.addEventListener("click", ()=>{
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.getAttribute("data-product-menu"))
@@ -9772,9 +9798,10 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     remoteState.history = remoteState.history.slice(0, 12)
   }
   function emptyBoard(idx){
+    const laneNames = ["Voice Board", "Beat Board", "Adlib Board"]
     return {
       id: `board-${idx + 1}-${Date.now()}`,
-      name: `Motherboard ${idx + 1}`,
+      name: laneNames[idx] || `Motherboard ${idx + 1}`,
       kind: "empty",
       fileName: "",
       fileType: "",
@@ -9790,7 +9817,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     remoteState.activeBoard = 0
     qsa(".float-board").forEach((btn, idx)=>{
       btn.classList.toggle("active", idx === 0)
-      btn.textContent = `Motherboard ${idx + 1}`
+      btn.textContent = remoteState.boards[idx]?.name || `Motherboard ${idx + 1}`
     })
     renderBoard()
     if(quickEditStatus) quickEditStatus.textContent = message || "Fresh 3 motherboards ready. Upload material to begin a quick edit."
@@ -9867,7 +9894,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     const idx = remoteState.activeBoard
     remoteState.boards[idx] = {
       ...emptyBoard(idx),
-      name: `Motherboard ${idx + 1}`,
+      name: remoteState.boards[idx]?.name || emptyBoard(idx).name,
       kind: kindOverride || (String(file.type || "").startsWith("video/") ? "video" : "audio"),
       fileName: file.name,
       fileType: file.type || "",
@@ -11562,8 +11589,12 @@ function setupRemoteFastPay(){
       hideConfirm()
       hideProcessing()
       if(!options.keepOwnerVisible) hideOwner()
-      if(status) status.textContent = `${checkoutProduct.title} Shopify checkout is opening inside the page now${sourceLabel ? ` from ${sourceLabel}` : ""}.`
-      openLinkModal(checkoutProduct.link, `${checkoutProduct.title} Checkout`)
+      if(status) status.textContent = `${checkoutProduct.title} Shopify checkout is opening now${sourceLabel ? ` from ${sourceLabel}` : ""}.`
+      try{
+        window.location.assign(checkoutProduct.link)
+      }catch{
+        openLinkModal(checkoutProduct.link, `${checkoutProduct.title} Checkout`)
+      }
     }
 
   function renderProducts(){
@@ -11935,12 +11966,75 @@ function uiError(msg){
     if(ariaActive){
       await stopOpenAIListening()
     }
+    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition
+    if(Speech){
+      try{
+        startListenLoop()
+        setAriaFlow("listening")
+        const transcriptEl = qs("#ariaTranscript")
+        const recognition = new Speech()
+        let finalTranscript = ""
+        recognition.lang = getAriaLang()
+        recognition.interimResults = true
+        recognition.continuous = false
+        recognition.maxAlternatives = 1
+        recognition.onresult = (event)=>{
+          let interim = ""
+          for(let i = event.resultIndex; i < event.results.length; i += 1){
+            const piece = event.results[i][0]?.transcript || ""
+            if(event.results[i].isFinal) finalTranscript += `${piece} `
+            else interim += piece
+          }
+          if(transcriptEl){
+            transcriptEl.textContent = (finalTranscript + interim).trim() || `${options.assistantName || getAssistantDisplayName()} is listening...`
+          }
+        }
+        recognition.onerror = ()=>{
+          setAriaFlow("idle")
+          stopListenLoop()
+        }
+        recognition.onend = ()=>{
+          const transcript = finalTranscript.trim()
+          if(!transcript){
+            setAriaFlow("idle")
+            stopListenLoop()
+            playAssistantCue("close")
+            setTimeout(()=>releasePageAudio(), 260)
+            return
+          }
+          if(transcriptEl) transcriptEl.textContent = transcript
+          finalizeLiveSpeechPopup()
+          stopListenLoop()
+          setAriaFlow("processing")
+          setTimeout(async ()=>{
+            if(transcriptEl) transcriptEl.textContent = `${options.assistantName || getAssistantDisplayName()} is thinking...`
+            playAssistantCue("response")
+            await askAria(transcript)
+            setTimeout(()=>playAssistantCue("close"), 180)
+            setTimeout(()=>releasePageAudio(), 420)
+            if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
+          }, Number(options.thinkDelay || 2000))
+        }
+        recognition.start()
+        ariaActive = true
+        maxRecordTimer = setTimeout(()=>{
+          try{ recognition.stop() }catch{}
+        }, 10000)
+        return
+      }catch{}
+    }
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      
+      const fallback = `${options.assistantName || getAssistantDisplayName()} needs microphone access on this device before the speech flow can start.`
+      const transcriptEl = qs("#ariaTranscript")
+      if(transcriptEl) transcriptEl.textContent = fallback
+      showSpeechPopup(options.assistantName || getAssistantDisplayName(), fallback)
       return
     }
     if(!window.MediaRecorder){
-      
+      const fallback = `${options.assistantName || getAssistantDisplayName()} needs a browser with live recording support before the speech flow can start.`
+      const transcriptEl = qs("#ariaTranscript")
+      if(transcriptEl) transcriptEl.textContent = fallback
+      showSpeechPopup(options.assistantName || getAssistantDisplayName(), fallback)
       return
     }
     try{
