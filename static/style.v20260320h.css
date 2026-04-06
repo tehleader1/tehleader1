@@ -4184,10 +4184,10 @@ body.remote-hide-ads .remote-display-strip{
     --demo-shift-x:0px;
     --demo-shift-y:0px;
     --demo-tilt:0deg;
-    --demo-bob-duration:6.4s;
+    --demo-bob-duration:7.8s;
     animation:remoteGuardianDrift var(--demo-bob-duration) ease-in-out infinite;
     transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt));
-    transition:transform 1.2s ease, box-shadow .9s ease, border-color .9s ease;
+  transition:transform 1.45s ease, box-shadow 1.1s ease, border-color 1.1s ease;
     cursor:pointer;
   }
 .remote-guardian-btn.demo-active{
@@ -4537,10 +4537,10 @@ body.remote-hide-ads .remote-display-strip{
   --demo-shift-x:0px;
   --demo-shift-y:0px;
   --demo-tilt:0deg;
-  --demo-bob-duration:6s;
+  --demo-bob-duration:7.4s;
   animation:remoteAssistantDrift var(--demo-bob-duration) ease-in-out infinite;
   transform:translate(var(--demo-shift-x), var(--demo-shift-y)) rotate(var(--demo-tilt));
-  transition:transform 1.2s ease, box-shadow .9s ease, filter .9s ease;
+  transition:transform 1.45s ease, box-shadow 1.1s ease, filter 1.1s ease;
 }
 .float-assistant-orb.demo-active{
   position:fixed;
@@ -4550,7 +4550,7 @@ body.remote-hide-ads .remote-display-strip{
   z-index:240;
   box-shadow:0 30px 70px rgba(8,17,34,.34);
   animation:remoteAssistantDrift var(--demo-bob-duration) ease-in-out infinite, remoteOrbPulse 1.7s ease-in-out infinite, remoteOrbCharge 1.9s ease-in-out infinite;
-  transition:left .75s cubic-bezier(.22,.61,.36,1), top .75s cubic-bezier(.22,.61,.36,1), transform .8s ease, box-shadow .6s ease, filter .6s ease;
+  transition:left 1s cubic-bezier(.22,.61,.36,1), top 1s cubic-bezier(.22,.61,.36,1), transform 1s ease, box-shadow .75s ease, filter .75s ease;
   will-change:left, top, transform;
 }
 body.assistant-static .float-assistant-orb,
@@ -5363,15 +5363,16 @@ body.assistant-static .remote-guardian-btn.demo-active{
   justify-content:space-between;
   gap:12px;
 }
-.remote-product-title-row h4{margin:0;font-size:1.08rem;}
+.remote-product-title-row h4{margin:0;font-size:1.08rem;color:#f7fbff;text-shadow:0 1px 2px rgba(4,10,18,.45);}
 .remote-product-price{
   font-size:1.25rem;
   font-weight:800;
-  color:#fff2b3;
+  color:#ffe082;
   white-space:nowrap;
+  text-shadow:0 1px 2px rgba(3,8,16,.55);
 }
-.remote-product-short{margin:0;color:rgba(239,244,255,.88);}
-.remote-product-detail{font-size:.92rem;line-height:1.48;color:rgba(239,244,255,.78);}
+.remote-product-short{margin:0;color:#eef6ff;}
+.remote-product-detail{font-size:.92rem;line-height:1.48;color:rgba(241,247,255,.92);}
 .remote-product-actions{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -5848,8 +5849,17 @@ body.competition-world.world-view-tower::before{
 }
 .float-studio-board-deck{
   display:grid;
-  grid-template-columns:repeat(3, minmax(0, 1fr));
+  grid-template-columns:1fr;
   gap:12px;
+}
+.float-sheet-grid.compact{
+  gap:10px;
+}
+.float-sheet-grid.two{
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+}
+.float-sheet-grid.three{
+  grid-template-columns:repeat(3, minmax(0, 1fr));
 }
 .float-studio-board-card{
   border:1px solid rgba(169,192,219,.44);
@@ -5909,6 +5919,38 @@ body.competition-world.world-view-tower::before{
   font-size:14px;
   letter-spacing:.04em;
   text-transform:uppercase;
+}
+.float-studio-fx-card{
+  margin:0 0 12px;
+  padding:16px;
+  border-radius:20px;
+  border:1px solid rgba(171,202,232,.42);
+  background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(235,244,255,.82));
+  color:#173456;
+  display:grid;
+  gap:10px;
+}
+.float-studio-fx-card strong{
+  font-size:14px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:#14365d;
+}
+.float-studio-fx-card > span{
+  color:#35506f;
+  font-size:.93rem;
+}
+.float-select-card{
+  display:grid;
+  gap:6px;
+  font-size:.78rem;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:#27476a;
+}
+.float-select-card .input{
+  min-height:44px;
 }
 .general-info-head{
   display:flex;

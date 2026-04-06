@@ -7446,6 +7446,92 @@ function setupFloatMode(){
       `
     }).join("")
   }
+  function renderQuickStudioFxControls(){
+    const board = getBoard()
+    const instrument = escapeRemoteHtml(board.instrument || "voice")
+    const fxPreset = escapeRemoteHtml(board.fxPreset || "clean")
+    const gigFilter = escapeRemoteHtml(board.gigFilter || "natural")
+    const gigPan = escapeRemoteHtml(board.gigPan || "standard")
+    const gigFrameRate = escapeRemoteHtml(board.gigFrameRate || "24")
+    const gigZoom = escapeRemoteHtml(board.gigZoom || "1x")
+    const gigSlowMotion = escapeRemoteHtml(board.gigSlowMotion || "off")
+    const disabled = board.kind === "empty" ? " disabled" : ""
+    return `
+      <div class="float-studio-fx-card">
+        <strong>FX Menu Settings</strong>
+        <span>${board.kind === "empty" ? "Load or record material first, then tune the active motherboard." : `${escapeRemoteHtml(board.name)} is ready for instrument, FX, and gig settings.`}</span>
+        <div class="float-sheet-grid two compact">
+          <label class="float-select-card">
+            <span>Instrument</span>
+            <select class="input" data-quick-studio-setting="instrument"${disabled}>
+              <option value="voice"${board.instrument === "voice" || !board.instrument ? " selected" : ""}>Voice / Mic</option>
+              <option value="guitar"${board.instrument === "guitar" ? " selected" : ""}>Guitar</option>
+              <option value="drums"${board.instrument === "drums" ? " selected" : ""}>Drums</option>
+              <option value="keys"${board.instrument === "keys" ? " selected" : ""}>Keys / Piano</option>
+              <option value="bass"${board.instrument === "bass" ? " selected" : ""}>Bass</option>
+            </select>
+          </label>
+          <label class="float-select-card">
+            <span>FX Preset</span>
+            <select class="input" data-quick-studio-setting="fx"${disabled}>
+              <option value="clean"${board.fxPreset === "clean" || !board.fxPreset ? " selected" : ""}>FX Clean</option>
+              <option value="warm"${board.fxPreset === "warm" ? " selected" : ""}>FX Warm</option>
+              <option value="arena"${board.fxPreset === "arena" ? " selected" : ""}>FX Arena</option>
+              <option value="vinyl"${board.fxPreset === "vinyl" ? " selected" : ""}>FX Vinyl</option>
+              <option value="bright"${board.fxPreset === "bright" ? " selected" : ""}>FX Bright</option>
+            </select>
+          </label>
+        </div>
+        <div class="float-sheet-grid three compact">
+          <label class="float-select-card">
+            <span>Filter</span>
+            <select class="input" data-quick-studio-setting="gigFilter"${disabled}>
+              <option value="natural"${board.gigFilter === "natural" || !board.gigFilter ? " selected" : ""}>Natural</option>
+              <option value="cinema"${board.gigFilter === "cinema" ? " selected" : ""}>Cinema</option>
+              <option value="vivid"${board.gigFilter === "vivid" ? " selected" : ""}>Vivid</option>
+              <option value="mono"${board.gigFilter === "mono" ? " selected" : ""}>Mono</option>
+            </select>
+          </label>
+          <label class="float-select-card">
+            <span>Panoramic</span>
+            <select class="input" data-quick-studio-setting="gigPan"${disabled}>
+              <option value="standard"${board.gigPan === "standard" || !board.gigPan ? " selected" : ""}>Standard</option>
+              <option value="wide"${board.gigPan === "wide" ? " selected" : ""}>Wide</option>
+              <option value="ultra"${board.gigPan === "ultra" ? " selected" : ""}>Ultra Wide</option>
+            </select>
+          </label>
+          <label class="float-select-card">
+            <span>Frame Rate</span>
+            <select class="input" data-quick-studio-setting="gigFrameRate"${disabled}>
+              <option value="24"${board.gigFrameRate === "24" || !board.gigFrameRate ? " selected" : ""}>24 FPS</option>
+              <option value="30"${board.gigFrameRate === "30" ? " selected" : ""}>30 FPS</option>
+              <option value="60"${board.gigFrameRate === "60" ? " selected" : ""}>60 FPS</option>
+              <option value="120"${board.gigFrameRate === "120" ? " selected" : ""}>120 FPS</option>
+            </select>
+          </label>
+          <label class="float-select-card">
+            <span>Zoom</span>
+            <select class="input" data-quick-studio-setting="gigZoom"${disabled}>
+              <option value="1x"${board.gigZoom === "1x" || !board.gigZoom ? " selected" : ""}>1x</option>
+              <option value="1.5x"${board.gigZoom === "1.5x" ? " selected" : ""}>1.5x</option>
+              <option value="2x"${board.gigZoom === "2x" ? " selected" : ""}>2x</option>
+              <option value="3x"${board.gigZoom === "3x" ? " selected" : ""}>3x</option>
+            </select>
+          </label>
+          <label class="float-select-card">
+            <span>Slow Motion</span>
+            <select class="input" data-quick-studio-setting="gigSlowMotion"${disabled}>
+              <option value="off"${board.gigSlowMotion === "off" || !board.gigSlowMotion ? " selected" : ""}>Off</option>
+              <option value="2x"${board.gigSlowMotion === "2x" ? " selected" : ""}>2x</option>
+              <option value="4x"${board.gigSlowMotion === "4x" ? " selected" : ""}>4x</option>
+              <option value="8x"${board.gigSlowMotion === "8x" ? " selected" : ""}>8x</option>
+            </select>
+          </label>
+        </div>
+        <div class="float-sheet-status">Active settings: ${instrument} · ${fxPreset} · ${gigFilter} filter · ${gigPan} panoramic · ${gigFrameRate} FPS · ${gigZoom} zoom · ${gigSlowMotion} slow motion.</div>
+      </div>
+    `
+  }
   function renderQuickStudioVideoStatus(){
     const board = getBoard()
     const label = board.kind === "video"
@@ -7464,6 +7550,8 @@ function setupFloatMode(){
     if(deck) deck.innerHTML = renderQuickStudioBoardDeck()
     const videoCard = remoteSheetBody.querySelector("[data-quick-studio-video]")
     if(videoCard) videoCard.innerHTML = renderQuickStudioVideoStatus()
+    const fxCard = remoteSheetBody.querySelector("[data-quick-studio-fx]")
+    if(fxCard) fxCard.innerHTML = renderQuickStudioFxControls()
     const status = remoteSheetBody.querySelector("[data-quick-studio-status]")
     const board = getBoard()
     if(status){
@@ -7473,18 +7561,25 @@ function setupFloatMode(){
     }
   }
   function triggerQuickStudioAction(action){
+    focusFloatSection("floatBoardsBox", "Studio Quick Panel is ready for your current music/video piece.")
     const actionMap = {
       back: ()=>prevBtn?.click(),
       rewind: ()=>rewindBtn?.click(),
       pause: ()=>pauseBtn?.click(),
       play: ()=>playBtn?.click(),
-      record: ()=>recordVoiceBtn?.click(),
+      record: ()=>startVoiceRecord("voice"),
       forward: ()=>nextBtn?.click(),
       fastforward: ()=>fastForwardBtn?.click(),
       upload: ()=>uploadInput?.click(),
-      fx: ()=>fxBtn?.click(),
+      fx: ()=>{
+        if(getBoard().kind === "empty"){
+          openMiniWindow("FX Change", "Load or record something first so the FX menu has real material to shape.")
+          return
+        }
+        fxBtn?.click()
+      },
       export: ()=>exportSocialBtn?.click(),
-      instrument: ()=>instrumentRecordBtn?.click(),
+      instrument: ()=>startVoiceRecord("instrument"),
       fresh: ()=>freshBoardsBtn?.click()
     }
     actionMap[action]?.()
@@ -8658,7 +8753,7 @@ function setupFloatMode(){
                 <p class="remote-product-short">${product.short}</p>
                 <div class="remote-product-actions">
                   <button class="btn" data-product-shopify="${product.key}">Shopify Checkout</button>
-                  <button class="btn ghost" data-open-fastpay>Quick Confirm</button>
+                  <button class="btn ghost" data-product-menu="${product.key}">Open Purchase Menu</button>
                 </div>
               </div>
             </article>
@@ -8905,6 +9000,7 @@ function setupFloatMode(){
         <section class="float-sheet-panel">
           <h4>FX + Import / Export</h4>
           <div data-quick-studio-video>${renderQuickStudioVideoStatus()}</div>
+          <div data-quick-studio-fx>${renderQuickStudioFxControls()}</div>
           <div class="float-sheet-grid">
             <button class="btn" data-open-studio>Open Full Studio Live</button>
             <button class="btn ghost" data-quick-studio-action="upload">Upload MP3 / MP4</button>
@@ -9300,6 +9396,33 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.getAttribute("data-product-shopify"))
         if(!product) return
         launchShopifyCheckout(product, "Product Page")
+      }))
+      Array.from(remoteSheetBody.querySelectorAll("[data-product-menu]")).forEach(btn=>btn.addEventListener("click", ()=>{
+        const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.getAttribute("data-product-menu"))
+        if(!product) return
+        window.openRemoteFastPay?.()
+        setTimeout(()=>{
+          if(typeof showConfirm === "function") showConfirm(product)
+        }, 40)
+      }))
+      Array.from(remoteSheetBody.querySelectorAll("[data-quick-studio-setting]")).forEach(input=>input.addEventListener("change", ()=>{
+        const board = getBoard()
+        if(board.kind === "empty"){
+          setRemoteStatus("Record or import something first, then SupportRD will lock these FX settings onto the active motherboard.")
+          syncQuickStudioSheet()
+          return
+        }
+        const mode = input.getAttribute("data-quick-studio-setting")
+        const value = input.value
+        if(mode === "instrument" && instrumentTypeInput) instrumentTypeInput.value = value
+        if(mode === "fx" && fxPresetInput) fxPresetInput.value = value
+        if(mode === "gigFilter" && gigFilterInput) gigFilterInput.value = value
+        if(mode === "gigPan" && gigPanInput) gigPanInput.value = value
+        if(mode === "gigFrameRate" && gigFrameRateInput) gigFrameRateInput.value = value
+        if(mode === "gigZoom" && gigZoomInput) gigZoomInput.value = value
+        if(mode === "gigSlowMotion" && gigSlowMotionInput) gigSlowMotionInput.value = value
+        updateBoardFxState()
+        setRemoteStatus(`${board.name} ${mode === "fx" ? "FX" : mode} changed from Studio Quick.`)
       }))
       Array.from(remoteSheetBody.querySelectorAll("[data-diary-save]")).forEach(btn=>btn.addEventListener("click", ()=>{
       const input = remoteSheetBody.querySelector("[data-diary-input]")
