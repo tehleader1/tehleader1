@@ -1851,6 +1851,11 @@ function renderBlog(){
 }
 
 function appendAria(text){
+  if(!(localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry())){
+    const ariaEl = qs("#ariaHistory")
+    if(ariaEl) ariaEl.innerHTML = "Sign in to keep Aria / Jake history saved to your account."
+    return
+  }
   state.ariaHistory.unshift(text)
   if(state.ariaHistory.length > 6) state.ariaHistory.pop()
   localStorage.setItem("ariaHistory", JSON.stringify(state.ariaHistory))
@@ -4125,6 +4130,10 @@ function setupLiveArena(){
   function pushAssistantLine(line){
     const text = String(line || "").trim()
     if(!text) return
+    if(!(localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry())){
+      if(ariaHistoryEl) ariaHistoryEl.innerHTML = "Sign in to keep Aria / Jake history saved to your account."
+      return
+    }
     const history = Array.isArray(state.ariaHistory) ? [...state.ariaHistory] : []
     history.unshift(text)
     state.ariaHistory = history.slice(0,3)
@@ -4132,6 +4141,10 @@ function setupLiveArena(){
     if(ariaHistoryEl) ariaHistoryEl.innerHTML = state.ariaHistory.map(item=>`<div>${item}</div>`).join("")
   }
   function syncAssistantHistory(){
+    if(!(localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry())){
+      if(ariaHistoryEl) ariaHistoryEl.innerHTML = "Sign in to keep Aria / Jake history saved to your account."
+      return
+    }
     let history = state.ariaHistory
     if(!Array.isArray(history) || !history.length){
       try{ history = JSON.parse(localStorage.getItem("supportrdAriaHistory") || "[]") }catch{ history = [] }
@@ -5244,14 +5257,8 @@ function setupAppDeepLinks(){
 function setupStartupSplash(){
   const splash = qs("#launchSplash")
   if(!splash) return
-  renderLifeMemorySurface()
-  startLifeBillboardCycle()
-  const params = new URLSearchParams(window.location.search || "")
-  const fromPwa = params.get("source") === "pwa"
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true
-  if(!(fromPwa || isStandalone)) return
-  splash.classList.add("show")
-  setTimeout(()=>{ splash.classList.remove("show") }, 1700)
+  splash.classList.remove("show")
+  splash.setAttribute("hidden", "hidden")
 }
 
 function setupLaunchMenu(){
@@ -5283,15 +5290,23 @@ function setupLaunchMenu(){
     if(message) uiToast(message)
   }
   function canEnterSupportRD(){
-    return localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
+    return true
   }
-  document.body.classList.add("launch-active")
-  if(!/[?&]viewer=1\b/.test(location.search)){
-    document.body.classList.add("launch-preview-active")
-    setTimeout(()=>{
-      try{ window.openFloatMode?.({ preserveHome: true, previewOnly: true }) }catch{}
-    }, 80)
+  launch?.classList.add("hide")
+  if(launch){
+    launch.hidden = true
+    launch.style.display = "none"
   }
+  panel?.classList.remove("show")
+  if(panel){
+    panel.hidden = true
+    panel.style.display = "none"
+  }
+  document.body.classList.remove("launch-active")
+  document.body.classList.remove("launch-preview-active")
+  setTimeout(()=>{
+    try{ window.openFloatMode?.({ preserveHome: true }) }catch{}
+  }, 80)
   const labels = {
     en: {title:"SupportRD Check-In", menu:"Professional Check-In", menuBtn:"Enter SupportRD", payment:"Payment Options"},
     es: {title:"Entrada SupportRD", menu:"Entrada Profesional", menuBtn:"Entrar a SupportRD", payment:"Opciones de Pago"},
@@ -5365,18 +5380,10 @@ function setupLaunchMenu(){
   })
   menuBtn.addEventListener("click", ()=>{
     saveCheckinDetails()
-    if(!canEnterSupportRD()){
-      openGateWithReason("Log in with Google, Microsoft, Yahoo, or your SupportRD account before entering.")
-      return
-    }
     finishLaunchEntry()
     try{ beep(980, 90) }catch{}
   })
   const launchStudio = ()=>{
-    if(!canEnterSupportRD()){
-      openGateWithReason("Sign in required before entering In the Booth.")
-      return
-    }
     launch.classList.add("hide")
     document.body.classList.remove("launch-active")
     if(typeof window.openStudioMode === "function"){
@@ -5462,7 +5469,7 @@ function setupLaunchMenu(){
 
 function setupButtonPulseHalo(){
   document.addEventListener("click", (event)=>{
-    const btn = event.target?.closest?.("button,.btn,.launch-main-btn,.remote-menu-btn")
+    const btn = event.target?.closest?.(".float-launch-btn,.remote-side-arrow,.remote-go-toggle .btn,.remote-stage-quickbar .btn")
     if(!btn) return
     btn.classList.remove("pulse-select")
     void btn.offsetWidth
@@ -7359,6 +7366,131 @@ function setupFloatMode(){
       note: "Scalp lane with cleanse and reset clips."
     }
   }
+  const SUPPORT_FAQ_ENTRIES = [
+    {
+      question: "My hair gets tangled fast. What should I do first?",
+      answer: "Start with moisture and slip before force. Lightly dampen the hair, apply a detangling leave-in or conditioner, then comb from the ends upward in sections. SupportRD uses this as a Trail Tangles style recovery lane."
+    },
+    {
+      question: "What should I do for everyday frizz?",
+      answer: "SupportRD usually starts with a leave-in, a light sealing product, and less rough handling once the hair is set. The goal is to hold moisture in without making the hair heavy."
+    },
+    {
+      question: "How can I tell if my scalp is oily or just full of buildup?",
+      answer: "If the scalp feels slick fast and the roots get weighed down quickly, it is often oil plus buildup together. A weekly clarify, lighter root products, and better balance through the ends usually helps."
+    },
+    {
+      question: "What should I do if my hair feels heat damaged?",
+      answer: "Treat it like a recovery lane. Pause heavy heat, protect every styling session, trim weak ends when needed, and use a repair-focused routine instead of forcing styling through damaged strands."
+    },
+    {
+      question: "My curls lost bounce. Can SupportRD help?",
+      answer: "Yes. Lost bounce usually means your routine needs a better balance of moisture, protein, and lighter styling weight. SupportRD can route you toward bounce recovery instead of flattening the pattern further."
+    },
+    {
+      question: "How do I keep color-treated hair from fading so fast?",
+      answer: "Use color-safe cleansing, cooler rinses, less stripping heat, and shine-support products. SupportRD treats color fade like both a care problem and a product-matching problem."
+    },
+    {
+      question: "Do I need to log in before buying premium?",
+      answer: "Yes for premium and paid product lanes. SupportRD keeps browsing easy, but purchase-based features need sign-in so access, upgrades, and continuity stay attached to the right account."
+    },
+    {
+      question: "What is the difference between Aria and Jake?",
+      answer: "Aria is the main hair advisor and issue-solving voice. Jake is the studio specialist and supportive second brain. Both know SupportRD, but Aria leans more hair-first while Jake leans more studio-first."
+    },
+    {
+      question: "How do I use the hair analyzer in Profile?",
+      answer: "Open Profile, upload or capture your image, and run the scan. SupportRD uses that to surface likely issues like dryness, frizz, damage, low bounce, or color fatigue so you can choose the right next lane."
+    },
+    {
+      question: "What is FAQ Lounge for?",
+      answer: "FAQ Lounge is the calm fast-help lane. It gives visitors real hair answers, TV Reel access, product direction, and public feedback in one place without kicking them out of the Remote flow."
+    }
+  ]
+  function renderSupportFaqCards(){
+    return SUPPORT_FAQ_ENTRIES.map((entry)=>`
+      <button class="float-faq-item" type="button">
+        <strong>${escapeRemoteHtml(entry.question)}</strong>
+        <span>${escapeRemoteHtml(entry.answer)}</span>
+      </button>
+    `).join("")
+  }
+  function renderQuickStudioWaveBars(board, index){
+    const seed = `${board.fileName || board.name || "board"}-${board.kind || "empty"}-${index}`
+    return Array.from({ length: 24 }, (_, waveIndex)=>{
+      const code = seed.charCodeAt(waveIndex % seed.length || 0) || 68
+      const height = board.kind === "empty"
+        ? 14 + ((waveIndex * 5 + (index + 1) * 9) % 22)
+        : 24 + ((code + waveIndex * 7) % 58)
+      return `<span style="height:${height}px"></span>`
+    }).join("")
+  }
+  function renderQuickStudioBoardDeck(){
+    return remoteState.boards.map((board, index)=>{
+      const current = board || emptyBoard(index)
+      const isActive = index === remoteState.activeBoard
+      const kindLabel = current.kind === "video" ? "MP4 / Video" : current.kind === "audio" ? "MP3 / M4A / Audio" : "Fresh Board"
+      const detail = current.kind === "empty"
+        ? "Ready for a new voice take, beat layer, or imported file."
+        : `${current.fileName || "Live take loaded"} · ${current.highlighted ? `Highlight ${current.trimStart}% → ${current.trimEnd}%` : "No highlight locked yet."}`
+      return `
+        <button class="float-studio-board-card${isActive ? " active" : ""}" type="button" data-open-studio-board="${index + 1}">
+          <div class="float-studio-board-head">
+            <strong>Motherboard ${index + 1}</strong>
+            <span>${escapeRemoteHtml(kindLabel)}</span>
+          </div>
+          <div class="float-studio-wave-row">${renderQuickStudioWaveBars(current, index)}</div>
+          <small>${escapeRemoteHtml(detail)}</small>
+        </button>
+      `
+    }).join("")
+  }
+  function renderQuickStudioVideoStatus(){
+    const board = getBoard()
+    const label = board.kind === "video"
+      ? `${board.fileName || "Video clip"} is loaded with ${board.gigFilter || "natural"} filter, ${board.gigFrameRate || "24"} FPS, ${board.gigZoom || "1x"} zoom, and ${board.gigSlowMotion || "off"} slow motion.`
+      : "MP4 display view is ready. Import an MP4 and SupportRD will preview visuals while you build the motherboard."
+    return `
+      <div class="float-studio-video-card">
+        <strong>MP4 Display View</strong>
+        <span>${escapeRemoteHtml(label)}</span>
+      </div>
+    `
+  }
+  function syncQuickStudioSheet(){
+    if(!remoteSheetBody || remoteState.currentRoute !== "studio") return
+    const deck = remoteSheetBody.querySelector("[data-quick-studio-deck]")
+    if(deck) deck.innerHTML = renderQuickStudioBoardDeck()
+    const videoCard = remoteSheetBody.querySelector("[data-quick-studio-video]")
+    if(videoCard) videoCard.innerHTML = renderQuickStudioVideoStatus()
+    const status = remoteSheetBody.querySelector("[data-quick-studio-status]")
+    const board = getBoard()
+    if(status){
+      status.textContent = board.kind === "empty"
+        ? "Quick Studio is ready for a fresh recording, MP3 / MP4 import, or live beat layer."
+        : `${board.name} is live with ${board.fileName || board.kind}. Press play, rewind, FX, or export to keep building.`
+    }
+  }
+  function triggerQuickStudioAction(action){
+    const actionMap = {
+      back: ()=>prevBtn?.click(),
+      rewind: ()=>rewindBtn?.click(),
+      pause: ()=>pauseBtn?.click(),
+      play: ()=>playBtn?.click(),
+      record: ()=>recordVoiceBtn?.click(),
+      forward: ()=>nextBtn?.click(),
+      fastforward: ()=>fastForwardBtn?.click(),
+      upload: ()=>uploadInput?.click(),
+      fx: ()=>fxBtn?.click(),
+      export: ()=>exportSocialBtn?.click(),
+      instrument: ()=>instrumentRecordBtn?.click(),
+      fresh: ()=>freshBoardsBtn?.click()
+    }
+    actionMap[action]?.()
+    setRemoteStatus(`${action.replace(/\b\w/g, m=>m.toUpperCase())} is live from the quick studio lane.`)
+    setTimeout(syncQuickStudioSheet, 80)
+  }
   const DEVELOPER_FEEDBACK_ENTRIES = [
     {
       name: "Trail User",
@@ -8717,16 +8849,13 @@ function setupFloatMode(){
       <div class="float-sheet-status" data-map-status>SupportRD default view is ready. Pick a map to rotate the mood of the page.</div>
     `
   }
-  function buildFaqSheet(){
-    return `
-      <div class="float-sheet-copy">FAQ is the premium chill lounge: quick answers, help bots, and the TV reel all stay in one calm SupportRD assistance point.</div>
-      ${renderRemoteValueLane(["Value: premium help lounge", "Energy: low friction support", "Worth: TV reel + immediate payment guidance"])}
-      <div class="float-sheet-grid">
-        <button class="float-faq-item" type="button"><strong>How much is Formula Exclusiva?</strong><span>Current product pricing is shown inside checkout and fast pay.</span></button>
-        <button class="float-faq-item" type="button"><strong>What is the goal of SupportRD?</strong><span>To deliver a modern hair system that feels premium, accessible, and code-friendly.</span></button>
-        <button class="float-faq-item" type="button"><strong>What do I need for premium?</strong><span>A supported payment method, email or username, and the checkout lane guides the rest.</span></button>
-        <button class="float-faq-item" type="button"><strong>How do I get direct help?</strong><span>Use Aria, Jake, or contact Anthony directly from the session.</span></button>
-      </div>
+    function buildFaqSheet(){
+      return `
+        <div class="float-sheet-copy">FAQ is the premium chill lounge: quick answers, help bots, and the TV reel all stay in one calm SupportRD assistance point.</div>
+        ${renderRemoteValueLane(["Value: premium help lounge", "Energy: low friction support", "Worth: TV reel + immediate payment guidance"])}
+        <div class="float-sheet-grid">
+          ${renderSupportFaqCards()}
+        </div>
       <div class="float-sheet-grid">
         <button class="btn" data-open-faq-reel>Pull Up TV Reel</button>
         <button class="btn ghost" data-open-developer-feedback>See Developer Feed</button>
@@ -8752,31 +8881,38 @@ function setupFloatMode(){
     `
   }
   function buildStudioSheet(){
+    const activeBoard = getBoard()
     return `
       <div class="float-sheet-copy">Studio Quick Panel is the on-the-move edit room: fresh 3-board setup, transport controls, quick cuts, FX, and a one-touch jump into full Studio for deep work.</div>
       ${renderRemoteValueLane(["Value: $10,000+ build feel", "Energy: high creative processing", "Worth: 3 motherboards + deep studio one-touch"])}
       <div class="float-sheet-shell">
         <section class="float-sheet-panel">
           <h4>Motherboards + Transport</h4>
-          <div class="float-sheet-grid three">
-            <button class="btn ghost" data-open-studio-board="1">Motherboard 1</button>
-            <button class="btn ghost" data-open-studio-board="2">Motherboard 2</button>
-            <button class="btn ghost" data-open-studio-board="3">Motherboard 3</button>
+          <div class="float-studio-board-deck" data-quick-studio-deck>
+            ${renderQuickStudioBoardDeck()}
           </div>
-          <div class="float-sheet-grid three">
+          <div class="float-sheet-grid four">
+            <button class="btn ghost" data-quick-studio-action="fresh">Fresh</button>
             <button class="btn ghost" data-quick-studio-action="back">Back</button>
+            <button class="btn ghost" data-quick-studio-action="rewind">Rewind</button>
+            <button class="btn ghost" data-quick-studio-action="pause">Pause</button>
             <button class="btn ghost" data-quick-studio-action="play">Play</button>
-            <button class="btn ghost" data-quick-studio-action="next">Next</button>
+            <button class="btn ghost" data-quick-studio-action="record">Record</button>
+            <button class="btn ghost" data-quick-studio-action="forward">Forward</button>
+            <button class="btn ghost" data-quick-studio-action="fastforward">Fast Forward</button>
           </div>
         </section>
         <section class="float-sheet-panel">
-          <h4>FX + Export</h4>
+          <h4>FX + Import / Export</h4>
+          <div data-quick-studio-video>${renderQuickStudioVideoStatus()}</div>
           <div class="float-sheet-grid">
             <button class="btn" data-open-studio>Open Full Studio Live</button>
             <button class="btn ghost" data-quick-studio-action="upload">Upload MP3 / MP4</button>
-            <button class="btn ghost" data-quick-studio-action="fx">FX Change</button>
+            <button class="btn ghost" data-quick-studio-action="fx">Insert FX</button>
+            <button class="btn ghost" data-quick-studio-action="instrument">Instrument / Voice</button>
             <button class="btn ghost" data-quick-studio-action="export">Export Social File</button>
           </div>
+          <div class="float-sheet-status" data-quick-studio-status>${escapeRemoteHtml(activeBoard.kind === "empty" ? "Quick Studio is ready for a fresh recording, MP3 / MP4 import, or live beat layer." : `${activeBoard.name} is live with ${activeBoard.fileName || activeBoard.kind}. Press play, rewind, FX, or export to keep building.`)}</div>
         </section>
       </div>
     `
@@ -9090,12 +9226,19 @@ function setupFloatMode(){
       btn.textContent = willShow ? "Hide TV Reel" : "Pull Up TV Reel"
       setRemoteStatus(willShow ? "SupportRD TV Reel is open inside FAQ." : "FAQ lounge is back in focus.")
     }))
-    Array.from(remoteSheetBody.querySelectorAll("[data-open-map-sheet]")).forEach(btn=>btn.addEventListener("click", ()=>openLaunchMenuSheet("floatDeviceBox", "Map Change")))
-    Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      openLaunchMenuSheet("floatDeviceBox", "Map Change")
-    }))
-    Array.from(remoteSheetBody.querySelectorAll("[data-world-key]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      const key = btn.getAttribute("data-world-key")
+Array.from(remoteSheetBody.querySelectorAll("[data-open-map-sheet]")).forEach(btn=>btn.addEventListener("click", ()=>openLaunchMenuSheet("floatDeviceBox", "Map Change")))
+Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(btn=>btn.addEventListener("click", ()=>{
+        openLaunchMenuSheet("floatDeviceBox", "Map Change")
+      }))
+      remoteSheetBody?.addEventListener("click", (event)=>{
+        const faqItem = event.target.closest(".float-faq-item")
+        if(!faqItem || !remoteSheetBody.contains(faqItem)) return
+        const question = faqItem.querySelector("strong")?.textContent || "SupportRD FAQ"
+        const answer = faqItem.querySelector("span")?.textContent || "SupportRD answer ready."
+        openMiniWindow(question, answer)
+      })
+      Array.from(remoteSheetBody.querySelectorAll("[data-world-key]")).forEach(btn=>btn.addEventListener("click", ()=>{
+        const key = btn.getAttribute("data-world-key")
       const loader = remoteSheetBody.querySelector("[data-map-loader]")
       const loaderBar = remoteSheetBody.querySelector("[data-map-loader-bar]")
       if(loader){
@@ -9130,7 +9273,9 @@ function setupFloatMode(){
       const status = remoteSheetBody.querySelector("[data-map-status]")
       if(status) status.textContent = "SupportRD default woman-waking-up view is active again."
       delete shell.dataset.remoteTheme
-      document.body.classList.remove("theme-lumbermill","theme-river","theme-snow","theme-island","theme-vip","theme-tunnels","theme-market","theme-lab","theme-lounge","theme-tower")
+      if(typeof window.setWorldTheme === "function"){
+        window.setWorldTheme("default")
+      }
       setRemoteStatus("SupportRD default woman-waking-up view is active again.")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-studio]")).forEach(btn=>btn.addEventListener("click", ()=>{
@@ -9192,11 +9337,18 @@ function setupFloatMode(){
       diaryInput.value = localStorage.getItem("supportrdDiaryDraft") || ""
     }
     Array.from(remoteSheetBody.querySelectorAll("[data-quick-studio-action]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      const action = btn.getAttribute("data-quick-studio-action") || "edit"
-      setRemoteStatus(`${action.replace(/\b\w/g, m=>m.toUpperCase())} is ready from the quick studio lane.`)
+      const action = btn.getAttribute("data-quick-studio-action") || "play"
+      triggerQuickStudioAction(action)
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-studio-board]")).forEach(btn=>btn.addEventListener("click", ()=>{
-      const board = btn.getAttribute("data-open-studio-board") || "1"
+      const board = Math.max(1, Number(btn.getAttribute("data-open-studio-board") || "1"))
+      const boardBtn = qsa(".float-board")[board - 1]
+      if(boardBtn){
+        try{ setActiveBoard(boardBtn) }catch{}
+      }else{
+        remoteState.activeBoard = board - 1
+      }
+      syncQuickStudioSheet()
       setRemoteStatus(`Motherboard ${board} is armed for the next quick edit.`)
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-profile-upload]")).forEach(btn=>btn.addEventListener("click", triggerProfileUpload))
@@ -9577,6 +9729,7 @@ function setupFloatMode(){
     }
     const status = qs("#floatBoardStatus")
     if(status) status.textContent = `${board.name} selected. ${board.kind === "empty" ? "Upload fresh material or record directly." : `Working on ${board.fileName || board.kind} now.`}`
+    syncQuickStudioSheet()
   }
   function setActiveBoard(btn){
     qsa(".float-board").forEach(el => el.classList.remove("active"))
@@ -9773,10 +9926,15 @@ function setupFloatMode(){
       profileMeta.textContent = `${getActiveAssistant().name} active · ${state.socialLinks?.hobbies || "hair mission"} · ${state.socialLinks?.interests || "general stream route"}`
     }
     if(profileHistory){
-      const history = (state.ariaHistory || []).slice(0,2)
-      profileHistory.textContent = history.length
-        ? `Last 2 Aria / Jake lines: ${history.join(" / ")}`
-        : "Last 2 Aria / Jake lines will appear here after you talk with them."
+      const canViewHistory = localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
+      if(!canViewHistory){
+        profileHistory.textContent = "Sign in to keep Aria / Jake history saved to your account."
+      }else{
+        const history = (state.ariaHistory || []).slice(0,2)
+        profileHistory.textContent = history.length
+          ? `Last 2 Aria / Jake lines: ${history.join(" / ")}`
+          : "Last 2 Aria / Jake lines will appear here after you talk with them."
+      }
     }
     if(profileQualityTitle){
       profileQualityTitle.textContent = `^^${String(state.socialLinks?.username || state.socialLinks?.name || "SupportRD").replace(/^\^\^/, "").trim() || "SupportRD"} profile`
@@ -10054,7 +10212,7 @@ function setupFloatMode(){
     syncFloatSettings()
     renderThemeCards()
     syncMapHero(shell?.dataset?.remoteTheme || "default")
-    setRemoteGoMode(localStorage.getItem("supportrdRemoteGoMode") === "true")
+    setRemoteGoMode(false)
     updateDiarySelfieMode()
     diarySelfiePreview?.classList.toggle("is-pano", !!remoteState.selfiePanorama)
     if(!options.preserveRoute){
@@ -10064,8 +10222,8 @@ function setupFloatMode(){
     setRemoteAdsHidden(localStorage.getItem("supportrdRemoteAdsHidden") === "true")
     setDiaryGpsMode(false)
     if(!options.previewOnly){
-      if(localStorage.getItem(floatPrimeSeenKey) !== "true") showPrimeMenu()
-      else hidePrimeMenu()
+      localStorage.setItem(floatPrimeSeenKey, "true")
+      hidePrimeMenu()
       if(isFounderPriority()) setTimeout(()=>showFounderLayer(), 280)
       else hideFounderLayer()
     }
@@ -10143,6 +10301,34 @@ function setupFloatMode(){
   footerSubscribeBtn?.addEventListener("click", ()=>openGeneralInfoPage("subscribe"))
   footerBlogBtn?.addEventListener("click", ()=>openGeneralInfoPage("blog"))
   footerOfficialBtn?.addEventListener("click", ()=>openGeneralInfoPage("official"))
+      document.addEventListener("click", (event)=>{
+        const footerGeneralBtn = event.target?.closest?.("#floatFooterGuide,#floatFooterSettings,#floatFooterPayments,#floatFooterSubscribe,#floatFooterBlog,#floatFooterOfficial,#floatFooterOfficialBottom")
+        if(footerGeneralBtn){
+          event.preventDefault()
+          event.stopPropagation()
+          const routeMap = {
+            floatFooterGuide: "guide",
+            floatFooterSettings: "settings",
+            floatFooterPayments: "payments",
+            floatFooterSubscribe: "subscribe",
+            floatFooterBlog: "blog",
+            floatFooterOfficial: "official",
+            floatFooterOfficialBottom: "official"
+          }
+          openGeneralInfoPage(routeMap[footerGeneralBtn.id] || "guide")
+          return
+        }
+        const purchaseBtn = event.target?.closest?.("#remotePurchasePremium,#remotePurchaseProducts")
+        if(!purchaseBtn) return
+        event.preventDefault()
+        event.stopPropagation()
+        if(purchaseBtn.id === "remotePurchaseProducts"){
+          openRemoteSheet("Product Page", buildProductPageSheet(), { message:"Product Page is open inside Remote.", className:"remote-sheet-blog", route:"payments" })
+          return
+        }
+        window.openRemoteFastPay?.()
+        setRemoteStatus("Premium and Pro checkout lanes are open.")
+      })
       footerOfficialBottomBtn?.addEventListener("click", ()=>footerOfficialBtn?.click())
       remoteAdsToggleBtn?.addEventListener("click", ()=>setRemoteAdsHidden(!document.body.classList.contains("remote-hide-ads")))
       remoteAdsFocusBtn?.addEventListener("click", ()=>setRemoteAdsHidden(true))
@@ -10150,9 +10336,9 @@ function setupFloatMode(){
         openRemoteSheet("Product Page", buildProductPageSheet(), { message:"Product Page is open inside Remote.", className:"remote-sheet-blog", route:"payments" })
       })
       remotePurchasePremiumBtn?.addEventListener("click", ()=>{
-        footerPaymentsBtn?.click()
-        setRemoteStatus("Premium and Pro checkout lanes are open.")
-      })
+          window.openRemoteFastPay?.()
+          setRemoteStatus("Premium and Pro checkout lanes are open.")
+        })
         remotePurchaseStudioBtn?.addEventListener("click", ()=>{
           openRemoteSheet("Purchase Studio Edition", `
           ${renderRemoteValueLane(["Value: flagship creation room", "Energy: highest work lane", "Worth: deep editing, export, and masterpiece finishing"])}
@@ -10557,17 +10743,22 @@ function setupFloatMode(){
     speech: "/api/aria/speech"
   }
   qs("#floatRunProfileScanBtn")?.addEventListener("click", ()=>{
-    const lastLines = (state.ariaHistory || []).slice(-2)
+    const canViewHistory = localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
+    const lastLines = canViewHistory ? (state.ariaHistory || []).slice(-2) : []
     const summary = [
       "Hair state: active scan ready for tangly, oily, damaged, or dry routes.",
       "Products: SupportRD support products are recommended based on the current route.",
-      `Last 2 Aria lines: ${lastLines.length ? lastLines.join(" / ") : "No recent Aria conversation yet."}`,
+      `Last 2 Aria lines: ${canViewHistory ? (lastLines.length ? lastLines.join(" / ") : "No recent Aria conversation yet.") : "Sign in to keep Aria / Jake history saved to your account."}`,
       "Coder pro tip: keep quick edits light in Remote and export bigger changes into Studio."
     ].join("\n")
     const scanSummary = qs("#floatProfileScanSummary")
     if(scanSummary) scanSummary.textContent = summary
     if(assistantStatus) assistantStatus.textContent = "Profile scan refreshed with current hair state, product suggestions, tutorial direction, and Aria memory."
-    if(profileHistory) profileHistory.textContent = `Last 2 Aria / Jake lines: ${lastLines.length ? lastLines.join(" / ") : "No recent conversation yet."}`
+    if(profileHistory){
+      profileHistory.textContent = canViewHistory
+        ? `Last 2 Aria / Jake lines: ${lastLines.length ? lastLines.join(" / ") : "No recent conversation yet."}`
+        : "Sign in to keep Aria / Jake history saved to your account."
+    }
     trackAcquisitionSignal("hair_scan_refresh", {
       lane: ACQUISITION_LANES.ai,
       stage: "exploring",
@@ -12338,11 +12529,13 @@ const WORLD_VIEWS = [
       liveMapActions.innerHTML = actions.map((action, index)=>`<button class="live-map-action" data-map-action="${index}" data-world-key="${view.key}"><strong>${action.label}</strong><span>${action.detail}</span></button>`).join("")
       liveMapActions.removeAttribute("hidden")
     }
-    function applyView(key){
+    function applyView(key, options = {}){
+      const persistExplicit = options.persistExplicit !== false
       document.body.classList.remove(...classes)
+      document.body.classList.add("competition-world")
       document.body.classList.add(`world-view-${key}`)
       localStorage.setItem("worldView", key)
-      localStorage.setItem("worldViewExplicit", "true")
+      localStorage.setItem("worldViewExplicit", persistExplicit ? "true" : "false")
       const view = WORLD_VIEWS.find(v=>v.key === key) || WORLD_VIEWS[0]
     const floatShell = qs("#floatModeShell")
     if(floatShell) floatShell.dataset.remoteTheme = view.key
@@ -12425,8 +12618,7 @@ const WORLD_VIEWS = [
   if(saved && explicit && WORLD_VIEWS.some(v=>v.key === saved)){
     applyView(saved)
   }else{
-    document.body.classList.remove(...classes)
-    renderLiveMapActions(WORLD_VIEWS[0])
+    applyView(WORLD_VIEWS[0].key, { persistExplicit:false })
   }
   btn?.addEventListener("click", openWorldMap)
   liveBtn?.addEventListener("click", openWorldMap)
