@@ -11578,16 +11578,70 @@ function setupRemoteFastPay(){
     return true
   }
 
+  async function createStorefrontCheckoutUrl(product, liveProduct){
+    if(storefrontConfigReady){
+      try{ await storefrontConfigReady }catch{}
+    }
+    const host = String(state.shopifyStorefrontHost || "").trim()
+    const token = String(state.shopifyStorefrontToken || "").trim()
+    const numericVariantId = String(liveProduct?.variant || "").trim()
+    const graphVariantId = String(liveProduct?.variantGraphId || (numericVariantId ? `gid://shopify/ProductVariant/${numericVariantId}` : "")).trim()
+    if(!host || !token || !graphVariantId) return ""
+    try{
+      const response = await fetch(`https://${host}/api/2024-07/graphql.json`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Storefront-Access-Token": token
+        },
+        body: JSON.stringify({
+          query: `
+            mutation supportRDCheckoutCreate($variantId: ID!) {
+              checkoutCreate(input: {
+                lineItems: [
+                  { variantId: $variantId, quantity: 1 }
+                ]
+              }) {
+                checkout {
+                  webUrl
+                }
+                checkoutUserErrors {
+                  field
+                  message
+                }
+              }
+            }
+          `,
+          variables: {
+            variantId: graphVariantId
+          }
+        })
+      })
+      const payload = await response.json()
+      const webUrl = String(payload?.data?.checkoutCreate?.checkout?.webUrl || "").trim()
+      if(webUrl) return webUrl
+    }catch{}
+    return ""
+  }
+
   async function createDirectShopifyCheckoutUrl(product, liveProduct){
     let resolvedProduct = liveProduct || null
     let variantGraphId = String(resolvedProduct?.variantGraphId || "").trim()
+    let variantId = String(resolvedProduct?.variant || "").trim()
     if(!variantGraphId){
       const fetched = await fetchShopifyProductByHandle(product)
       if(fetched){
         resolvedProduct = {...(resolvedProduct || {}), ...fetched}
         variantGraphId = String(fetched.variantGraphId || "").trim()
+        variantId = String(fetched.variant || "").trim()
       }
     }
+    if(!variantGraphId && variantId){
+      variantGraphId = `gid://shopify/ProductVariant/${variantId}`
+      resolvedProduct = {...(resolvedProduct || {}), variantGraphId}
+    }
+    const storefrontCheckoutUrl = await createStorefrontCheckoutUrl(product, resolvedProduct || liveProduct)
+    if(storefrontCheckoutUrl) return storefrontCheckoutUrl
     if(variantGraphId){
       try{
         const client = await getShopifyBuyClient()
@@ -11754,6 +11808,13 @@ function setupRemoteFastPay(){
       if(!options.keepOwnerVisible) hideOwner()
       if(status) status.textContent = `${checkoutProduct.title} Shopify checkout is opening now${sourceLabel ? ` from ${sourceLabel}` : ""}.`
       try{
+        localStorage.setItem("supportrd_checkout_pending", JSON.stringify({
+          title: checkoutProduct.title,
+          price: checkoutProduct.price,
+          at: Date.now()
+        }))
+      }catch{}
+      try{
         window.location.assign(checkoutProduct.link)
       }catch{
         openLinkModal(checkoutProduct.link, `${checkoutProduct.title} Checkout`)
@@ -11862,6 +11923,30 @@ function setupRemoteFastPay(){
   })
   window.addEventListener("supportrd-login-ready", ()=>{ resumePendingPurchaseIntent() })
   window.addEventListener("focus", ()=>{ setTimeout(()=>resumePendingPurchaseIntent(), 140) })
+  window.addEventListener("focus", ()=>{
+    setTimeout(()=>{
+      try{
+        const pending = JSON.parse(localStorage.getItem("supportrd_checkout_pending") || "null")
+        if(!pending?.title) return
+        if(Date.now() - Number(pending.at || 0) < 2500) return
+        localStorage.removeItem("supportrd_checkout_pending")
+        if(typeof openRemoteSheet === "function"){
+          openRemoteSheet("Thank You", `
+            <div class="float-sheet-panel">
+              <h4>Thank you for supporting SupportRD</h4>
+              <p>${pending.title} was your latest checkout lane. If Shopify finished the payment, your purchase is now tied to your buyer account and ready to connect back into the Remote.</p>
+              <div class="float-sheet-button-row">
+                <button class="btn" data-open-fastpay>Open Fast Pay Again</button>
+                <button class="btn ghost" data-sheet-close>Back To Remote</button>
+              </div>
+            </div>
+          `, { message:`${pending.title} returned from the Shopify checkout lane.` })
+        }else{
+          openMiniWindow("Thank You", `${pending.title} returned from the checkout lane. If Shopify finished the payment, SupportRD is ready for the next route.`)
+        }
+      }catch{}
+    }, 180)
+  })
   setTimeout(()=>resumePendingPurchaseIntent(), 500)
   window.openRemoteFastPay = openRemoteFastPay
   window.closeRemoteFastPay = closeRemoteFastPay
