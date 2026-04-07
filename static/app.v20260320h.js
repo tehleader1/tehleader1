@@ -9427,18 +9427,12 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       Array.from(remoteSheetBody.querySelectorAll("[data-product-shopify]")).forEach(btn=>btn.addEventListener("click", ()=>{
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.getAttribute("data-product-shopify"))
         if(!product) return
-        window.openRemoteFastPay?.()
-        setTimeout(()=>{
-          if(typeof showConfirm === "function") showConfirm(product)
-        }, 60)
+        launchShopifyCheckout(product, "Product Page")
       }))
       Array.from(remoteSheetBody.querySelectorAll("[data-product-menu]")).forEach(btn=>btn.addEventListener("click", ()=>{
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.getAttribute("data-product-menu"))
         if(!product) return
-        window.openRemoteFastPay?.()
-        setTimeout(()=>{
-          if(typeof showConfirm === "function") showConfirm(product)
-        }, 40)
+        if(typeof window.openPurchaseDetails === "function") window.openPurchaseDetails(product, "Product Page")
       }))
       Array.from(remoteSheetBody.querySelectorAll("[data-quick-studio-setting]")).forEach(input=>input.addEventListener("change", ()=>{
         const board = getBoard()
@@ -10458,7 +10452,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   navCloseBtn?.addEventListener("click", closeFloat)
   footerGuideBtn?.addEventListener("click", ()=>openGeneralInfoPage("guide"))
   footerSettingsBtn?.addEventListener("click", ()=>openGeneralInfoPage("settings"))
-  footerPaymentsBtn?.addEventListener("click", ()=>openGeneralInfoPage("payments"))
+  footerPaymentsBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
   footerSubscribeBtn?.addEventListener("click", ()=>openGeneralInfoPage("subscribe"))
   footerBlogBtn?.addEventListener("click", ()=>openGeneralInfoPage("blog"))
   footerOfficialBtn?.addEventListener("click", ()=>openGeneralInfoPage("official"))
@@ -10467,10 +10461,13 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         if(footerGeneralBtn){
           event.preventDefault()
           event.stopPropagation()
+          if(footerGeneralBtn.id === "floatFooterPayments"){
+            window.openRemoteFastPay?.()
+            return
+          }
           const routeMap = {
             floatFooterGuide: "guide",
             floatFooterSettings: "settings",
-            floatFooterPayments: "payments",
             floatFooterSubscribe: "subscribe",
             floatFooterBlog: "blog",
             floatFooterOfficial: "official",
@@ -11182,7 +11179,6 @@ function setupRemoteFastPay(){
   const confirmMeta = qs("#remoteConfirmMeta")
   const confirmCancel = qs("#remoteConfirmCancel")
   const confirmShopify = qs("#remoteConfirmShopify")
-  const confirmTouch = qs("#remoteConfirmTouch")
   const receiptSummary = qs("#remoteReceiptSummary")
   const processingPanel = qs("#remoteProcessingPanel")
   const processingFill = qs("#remoteProcessingFill")
@@ -11238,7 +11234,7 @@ function setupRemoteFastPay(){
   function renderReceipt(receipt){
     if(!receiptSummary) return
     if(!receipt){
-      receiptSummary.textContent = "No remote checkout launched yet. The next touch-confirm purchase will save here."
+      receiptSummary.textContent = "No remote checkout launched yet. The next Shopify checkout launch will save here."
       return
     }
     receiptSummary.innerHTML = `
@@ -11267,10 +11263,21 @@ function setupRemoteFastPay(){
     selectedProduct = product
     hideProcessing()
     if(confirmWrap) confirmWrap.hidden = false
-    if(confirmTitle) confirmTitle.textContent = `Touch To Confirm ${product.title}`
-    if(confirmBody) confirmBody.textContent = `Choose your option, touch now for the fast scan flow, or open Shopify checkout right away for ${product.title}.`
-    if(confirmMeta) confirmMeta.textContent = "SupportRD saves the purchase lane, confirmation number, and buyer access summary after checkout is launched. Direct Shopify checkout is ready now."
-    if(status) status.textContent = `${product.title} is loaded. You can open secure Shopify checkout now or use the touch-confirm flow.`
+    if(confirmTitle) confirmTitle.textContent = product.title
+    if(confirmBody) confirmBody.textContent = `${product.short} Ingredients: ${product.ingredients} Apply: ${product.apply} What it does: ${product.does} After purchase: ${product.after}`
+    if(confirmMeta) confirmMeta.textContent = "Open Shopify Checkout to go straight into the secure payment page. Apple Pay and Google Pay show there when Shopify Payments is enabled and the buyer device supports them."
+    if(status) status.textContent = `${product.title} details are open. Choose Shopify Checkout when you are ready to pay.`
+  }
+
+  function openPurchaseDetails(product, sourceLabel = "Fast Pay"){
+    if(!product) return
+    trackAcquisitionSignal("product_details_open", {
+      lane: ACQUISITION_LANES.products,
+      stage: "exploring",
+      socialFeedback: `${product.title} details opened from ${sourceLabel}.`
+    })
+    if(modal.hidden) openRemoteFastPay()
+    showConfirm(product)
   }
 
   function isPurchaseUserSignedIn(){
@@ -11420,7 +11427,8 @@ function setupRemoteFastPay(){
         id: item.id || "",
         handle: item.handle || handle,
         title: item.title || product?.title || "",
-        variant: Array.isArray(item.variants) && item.variants[0] ? getShopifyNumericId(item.variants[0].id || "") : ""
+        variant: Array.isArray(item.variants) && item.variants[0] ? getShopifyNumericId(item.variants[0].id || "") : "",
+        variantGraphId: Array.isArray(item.variants) && item.variants[0] ? String(item.variants[0].id || "").trim() : ""
       }
     }catch{
       return null
@@ -11484,8 +11492,34 @@ function setupRemoteFastPay(){
     return true
   }
 
+  async function createDirectShopifyCheckoutUrl(product, liveProduct){
+    let resolvedProduct = liveProduct || null
+    let variantGraphId = String(resolvedProduct?.variantGraphId || "").trim()
+    if(!variantGraphId){
+      const fetched = await fetchShopifyProductByHandle(product)
+      if(fetched){
+        resolvedProduct = {...(resolvedProduct || {}), ...fetched}
+        variantGraphId = String(fetched.variantGraphId || "").trim()
+      }
+    }
+    if(variantGraphId){
+      try{
+        const client = await getShopifyBuyClient()
+        const checkout = await client.checkout.create()
+        const updatedCheckout = await client.checkout.addLineItems(checkout.id, [{ variantId: variantGraphId, quantity: 1 }])
+        const checkoutUrl = String(updatedCheckout?.webUrl || checkout?.webUrl || "").trim()
+        if(checkoutUrl) return checkoutUrl
+      }catch{}
+    }
+    return buildShopifyCheckoutUrl(product, resolvedProduct || liveProduct)
+  }
+
   function buildShopifyCheckoutUrl(product, liveProduct){
     const storefrontBase = getDirectShopifyBase()
+    const variantId = String(liveProduct?.variant || "").trim()
+    if(variantId && /^\d+$/.test(variantId)){
+      return `${storefrontBase}/cart/${variantId}:1`
+    }
     if(product?.link){
       try{
         const parsed = new URL(product.link, storefrontBase)
@@ -11493,10 +11527,6 @@ function setupRemoteFastPay(){
           return `${storefrontBase}${parsed.pathname}${parsed.search || ""}`
         }
       }catch{}
-    }
-    const variantId = String(liveProduct?.variant || "").trim()
-    if(variantId && /^\d+$/.test(variantId)){
-      return `${LINKS.cart.replace(/\/+$/, "")}/${variantId}:1`
     }
     if(liveProduct?.handle){
       return `${storefrontBase}/products/${liveProduct.handle}`
@@ -11621,7 +11651,7 @@ function setupRemoteFastPay(){
       if(!liveProduct){
         liveProduct = await fetchShopifyProductByHandle(product)
       }
-      const liveLink = buildShopifyCheckoutUrl(product, liveProduct) || (product?.key && LINKS[product.key] ? LINKS[product.key] : product?.link)
+      const liveLink = await createDirectShopifyCheckoutUrl(product, liveProduct) || (product?.key && LINKS[product.key] ? LINKS[product.key] : product?.link)
       if(!liveLink && !liveProduct && !liveProducts.length){
         openShopifyPublishNotice(product?.title)
         return
@@ -11662,9 +11692,8 @@ function setupRemoteFastPay(){
           <div class="remote-product-detail"><strong>After Purchase:</strong> ${product.after}</div>
         </div>
         <div class="remote-product-actions">
-          <button class="btn ghost remote-preview-btn" data-remote-open="${product.key}">View Details</button>
-          <button class="btn ghost remote-checkout-btn" data-remote-checkout="${product.key}">Shopify Checkout</button>
-          <button class="btn remote-buy-btn" data-remote-buy="${product.key}">Pay Now</button>
+          <button class="btn ghost remote-preview-btn" data-remote-open="${product.key}">Open Purchase Menu</button>
+          <button class="btn remote-checkout-btn" data-remote-checkout="${product.key}">Shopify Checkout</button>
         </div>
       </article>
     `).join("")
@@ -11678,19 +11707,7 @@ function setupRemoteFastPay(){
           stage: "premium-curious",
           socialFeedback: `${product.title} is pulling comparison traffic into the product lane.`
         })
-        showConfirm(product)
-      })
-    })
-    qsa(".remote-buy-btn").forEach((btn)=>{
-      btn.addEventListener("click", ()=>{
-        const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.dataset.remoteBuy)
-        if(!product) return
-        trackAcquisitionSignal("product_pay_now", {
-          lane: ACQUISITION_LANES.products,
-          stage: "premium-curious",
-          socialFeedback: `${product.title} just triggered a pay-now interest moment.`
-        })
-        showConfirm(product)
+        openPurchaseDetails(product)
       })
     })
     qsa(".remote-checkout-btn").forEach((btn)=>{
@@ -11720,13 +11737,13 @@ function setupRemoteFastPay(){
     }
     hideConfirm()
     hideOwner()
-    if(status) status.textContent = "SupportRD Remote is ready for the next in-person sale. Shopify checkout is the default route."
+    if(status) status.textContent = "SupportRD Fast Pay is open. Choose a product, read the purchase details, or go straight to secure checkout."
     trackAcquisitionSignal("open_fastpay", {
       lane: ACQUISITION_LANES.products,
       stage: "premium-curious",
       socialFeedback: "A visitor opened the payment lane to compare SupportRD products."
     })
-    openMiniWindow("Remote Fast Pay", "Card scanner is open. Pick the product and move straight into checkout.")
+    openMiniWindow("Remote Fast Pay", "Choose a SupportRD product, open its purchase details, or go straight to secure checkout.")
   }
 
   function closeRemoteFastPay(){
@@ -11743,35 +11760,6 @@ function setupRemoteFastPay(){
   confirmShopify?.addEventListener("click", ()=>{
     if(!selectedProduct) return
     launchShopifyCheckout(selectedProduct, "Confirm Panel")
-  })
-  confirmTouch?.addEventListener("click", ()=>{
-    if(!selectedProduct) return
-    const product = selectedProduct
-    hideConfirm()
-    if(processingPanel) processingPanel.hidden = false
-    if(processingStatus) processingStatus.textContent = `${product.title} tap received. We are running the 5-second search and capture and getting your SupportRD ownership lane ready.`
-    let progress = 0
-    const step = 100 / 5
-    processingTimer = setInterval(()=>{
-      progress += step
-      if(processingFill) processingFill.style.width = `${Math.min(progress, 100)}%`
-      if(processingStatus){
-        if(progress < 40) processingStatus.textContent = `${product.title}: reading the tap and beginning the search and capture handoff.`
-        else if(progress < 80) processingStatus.textContent = `${product.title}: confirming ownership feel, receipt lane, and storefront directions.`
-        else processingStatus.textContent = `${product.title}: SupportRD is finalizing the capture, thank-you moment, and checkout handoff now.`
-      }
-      if(progress >= 100){
-        hideProcessing()
-        const amount = extractMoneyAmount(product.price)
-        playAcceptTone()
-        if(status) status.textContent = `Successfully received ${amount} for ${product.title}. The buyer now feels like the new owner of this SupportRD lane.`
-        if(ownerPanel) ownerPanel.hidden = false
-        if(ownerTitle) ownerTitle.textContent = `You now own ${product.title}`
-        if(ownerBody) ownerBody.textContent = `Successfully received ${amount} for ${product.title}. Feel refreshed in your hair. Your access follows your Shopify email / username and SupportRD is ready to serve you.`
-        openMiniWindow("THANK YOU", `Successful search and capture complete. Successfully received ${amount} for ${product.title}. We here at SupportRD love you.`)
-        launchShopifyCheckout(product, "Touch Confirm", { keepOwnerVisible: true })
-      }
-    }, 1000)
   })
   findStoreBtn?.addEventListener("click", ()=>{
     const gpsTab = qs('.tab[data-tab="gps"]')
@@ -11791,6 +11779,7 @@ function setupRemoteFastPay(){
   setTimeout(()=>resumePendingPurchaseIntent(), 500)
   window.openRemoteFastPay = openRemoteFastPay
   window.closeRemoteFastPay = closeRemoteFastPay
+  window.openPurchaseDetails = openPurchaseDetails
 }
 function setupJakeQuickSwitch(){
   const mini = qs("#miniSwitchJake")

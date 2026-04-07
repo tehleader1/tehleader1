@@ -5260,43 +5260,6 @@ body.assistant-static .remote-guardian-btn.demo-active{
   text-transform:uppercase;
   color:rgba(239,244,255,.72);
 }
-.remote-fastpay-scanner{
-  display:grid;
-  grid-template-columns:minmax(220px,280px) 1fr;
-  gap:18px;
-  padding:18px;
-  border-radius:24px;
-  background:linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.08));
-}
-.remote-fastpay-reader{
-  position:relative;
-  min-height:170px;
-  border-radius:24px;
-  background:linear-gradient(160deg,rgba(39,104,215,.95),rgba(24,177,164,.88));
-  overflow:hidden;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 24px 45px rgba(8,25,48,.28);
-}
-.remote-fastpay-chip{
-  position:absolute;
-  left:24px;
-  top:24px;
-  width:58px;
-  height:42px;
-  border-radius:12px;
-  background:linear-gradient(135deg,#f7e8a7,#c49a2e);
-}
-.remote-fastpay-scan-line{
-  position:absolute;
-  left:12px;
-  right:12px;
-  top:50%;
-  height:4px;
-  border-radius:999px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.96),transparent);
-  box-shadow:0 0 18px rgba(255,255,255,.85);
-  animation:remoteScan 2.2s ease-in-out infinite;
-}
-.remote-fastpay-scanner-copy{display:grid;align-content:center;gap:8px;}
 .remote-fastpay-meta{font-size:.98rem;color:rgba(239,244,255,.82);}
 .remote-fastpay-confirm,
 .remote-fastpay-receipt,
@@ -5379,18 +5342,12 @@ body.assistant-static .remote-guardian-btn.demo-active{
   gap:10px;
   margin-top:auto;
 }
-@keyframes remoteScan{
-  0%{transform:translateY(-54px);opacity:.45;}
-  50%{transform:translateY(54px);opacity:1;}
-  100%{transform:translateY(-54px);opacity:.45;}
-}
 @media (max-width: 980px){
   .float-mode-grid{grid-template-columns:1fr 1fr;}
   .float-mode-launch{grid-template-columns:repeat(3, minmax(0, 1fr));}
   .remote-display-strip,
   .remote-stage-grid{grid-template-columns:1fr;}
   .remote-stage-shell{grid-template-columns:48px minmax(0,1fr) 48px;}
-  .remote-fastpay-scanner{grid-template-columns:1fr;}
   .live-console-active .live-arena-overlay{width:min(96vw, 980px);margin:12px auto 20px;}
   .live-console-active #reelPanel{display:none !important;}
 }

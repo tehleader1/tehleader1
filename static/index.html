@@ -2178,39 +2178,28 @@ gtag("config", "G-8NTL8D64M1", { send_page_view: true });
     <div class="remote-fastpay-head">
       <div>
         <div class="remote-fastpay-kicker">SupportRD Remote Checkout</div>
-        <h3>Fast Pay Scanner</h3>
-        <p>Big-button Shopify checkout for in-person sales. Scan the card, choose the product, and keep the sale moving.</p>
+        <h3>Fast Pay</h3>
+        <p>Choose a product, read the purchase details, or go straight into secure Shopify checkout.</p>
+        <div class="remote-fastpay-meta" id="remoteFastPayStatus">SupportRD Remote is ready for the next sale.</div>
       </div>
       <button class="btn ghost" id="closeRemoteFastPay">Close</button>
     </div>
-    <div class="remote-fastpay-scanner glass">
-      <div class="remote-fastpay-reader" aria-hidden="true">
-        <div class="remote-fastpay-chip"></div>
-        <div class="remote-fastpay-scan-line"></div>
-      </div>
-      <div class="remote-fastpay-scanner-copy">
-        <strong>Card Ready</strong>
-        <span>Remote checkout sends buyers straight to Shopify product checkout lanes.</span>
-        <div class="remote-fastpay-meta" id="remoteFastPayStatus">SupportRD Remote is ready for the next in-person sale.</div>
-      </div>
-    </div>
     <div class="remote-fastpay-confirm glass" id="remoteFastPayConfirm" hidden>
       <div class="remote-fastpay-confirm-copy">
-        <div class="remote-fastpay-kicker">Choose Your Option</div>
-        <h4 id="remoteConfirmTitle">Touch To Confirm</h4>
+        <div class="remote-fastpay-kicker">Purchase Details</div>
+        <h4 id="remoteConfirmTitle">Product Details</h4>
         <p id="remoteConfirmBody">Select a product to load its checkout details here.</p>
-        <div class="remote-fastpay-meta" id="remoteConfirmMeta">Shopify handles the secure payment. SupportRD saves the product choice and receipt lane.</div>
+        <div class="remote-fastpay-meta" id="remoteConfirmMeta">Shopify handles the secure payment page. Apple Pay and Google Pay appear there when enabled and supported on the buyer device.</div>
       </div>
       <div class="remote-fastpay-confirm-actions">
         <button class="btn ghost" id="remoteConfirmCancel">Cancel</button>
         <button class="btn ghost" id="remoteConfirmShopify">Open Shopify Checkout</button>
-        <button class="btn" id="remoteConfirmTouch">Touch Now Confirm</button>
       </div>
     </div>
     <div class="remote-fastpay-grid" id="remoteFastPayGrid"></div>
     <div class="remote-fastpay-receipt glass" id="remoteReceiptPanel">
       <div class="remote-fastpay-kicker">Saved Receipt Lane</div>
-      <div id="remoteReceiptSummary">No remote checkout launched yet. The next touch-confirm purchase will save here.</div>
+      <div id="remoteReceiptSummary">No remote checkout launched yet. The next Shopify checkout launch will save here.</div>
     </div>
     <div class="remote-fastpay-owner glass" id="remoteOwnerPanel" hidden>
       <div class="remote-fastpay-kicker">New Owner</div>
