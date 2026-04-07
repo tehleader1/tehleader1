@@ -271,6 +271,13 @@ function applyShopifyStorefrontBase(rawBase){
   })
   return true
 }
+function getDirectShopifyBase(){
+  const host = String(state.shopifyStorefrontHost || "").trim()
+  if(host) return `https://${host.replace(/^https?:\/\//i, "").replace(/\/+$/, "")}`
+  const base = normalizeShopifyStorefrontBase(state.shopifyStorefrontBase)
+  if(base) return base.replace(/\/+$/, "")
+  return "https://supportdr-com.myshopify.com"
+}
 async function bootstrapShopifyStorefrontBase(){
   try{
     const response = await fetch("/api/shopify/public-config")
@@ -7068,13 +7075,14 @@ function setupFloatMode(){
       if(!node) return
       let recentTouch = 0
       const handler = async (event)=>{
-        if(event?.type === "click" && Date.now() - recentTouch < 420) return
-        if(event?.type === "touchend") recentTouch = Date.now()
+        if((event?.type === "click" || event?.type === "pointerup") && Date.now() - recentTouch < 420) return
+        if(event?.type === "touchend" || event?.type === "pointerup") recentTouch = Date.now()
         event?.preventDefault?.()
         event?.stopPropagation?.()
         await triggerAssistantOrb(assistantId)
       }
       node.addEventListener("click", handler)
+      node.addEventListener("pointerup", handler)
       node.addEventListener("touchend", handler, { passive:false })
     }
     function ensureAssistantBootOverlay(){
@@ -7146,6 +7154,7 @@ function setupFloatMode(){
         y: Math.max(164, window.innerHeight * 0.38)
       })
       playAssistantCue("intro")
+      try{ speakReply(introLine) }catch{}
       if(assistantStatus) assistantStatus.textContent = introLine
       if(transcriptEl) transcriptEl.textContent = introLine
       showSpeechPopup(assistantName, introLine)
@@ -9813,6 +9822,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   }
   function resetBoards(message){
     revokePreview()
+    try{ stopBoardMixPreview(true) }catch{}
     remoteState.boards = [emptyBoard(0), emptyBoard(1), emptyBoard(2)]
     remoteState.activeBoard = 0
     qsa(".float-board").forEach((btn, idx)=>{
@@ -9891,6 +9901,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(!file) return
     snapshotBoards()
     revokePreview()
+    try{ stopBoardMixPreview(true) }catch{}
     const idx = remoteState.activeBoard
     remoteState.boards[idx] = {
       ...emptyBoard(idx),
@@ -10737,27 +10748,77 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
   })
   freshBoardsBtn?.addEventListener("click", ()=>resetBoards("Fresh 3 motherboards reset. Upload a new .mp3 or .mp4 to begin again."))
+  function stopBoardMixPreview(reset = false){
+    const players = Array.isArray(remoteState.mixPlayers) ? remoteState.mixPlayers : []
+    players.forEach((player)=>{
+      try{
+        player.pause()
+        if(reset) player.currentTime = 0
+      }catch{}
+      try{
+        if(player.dataset?.mixUrl) URL.revokeObjectURL(player.dataset.mixUrl)
+      }catch{}
+    })
+    remoteState.mixPlayers = []
+  }
+  function getFilledBoards(){
+    return (remoteState.boards || []).filter((board)=>board && board.kind !== "empty" && (board.file || board.fileName))
+  }
+  async function playBoardMixPreview(){
+    const boards = getFilledBoards()
+    if(!boards.length){
+      openMiniWindow("Play", "Upload or record something first so we can play it.")
+      return false
+    }
+    stopBoardMixPreview(true)
+    const players = boards.map((board)=>{
+      const node = document.createElement(board.kind === "video" ? "video" : "audio")
+      node.preload = "auto"
+      node.muted = false
+      const url = board.file ? URL.createObjectURL(board.file) : remoteState.previewUrl
+      node.src = url
+      node.dataset.mixUrl = url
+      node.currentTime = 0
+      return node
+    })
+    remoteState.mixPlayers = players
+    await Promise.all(players.map((player)=>player.play().catch(()=>null)))
+    return true
+  }
   function seekPreview(deltaSeconds){
+    if(Array.isArray(remoteState.mixPlayers) && remoteState.mixPlayers.length){
+      remoteState.mixPlayers.forEach((player)=>{
+        try{
+          const duration = Number.isFinite(player.duration) ? player.duration : 0
+          const nextTime = Math.max(0, Math.min(duration || 0, (player.currentTime || 0) + deltaSeconds))
+          player.currentTime = nextTime
+        }catch{}
+      })
+      return
+    }
     const media = remoteState.previewMediaEl
     if(!media || !Number.isFinite(media.duration)) return
     media.currentTime = Math.max(0, Math.min(media.duration || 0, (media.currentTime || 0) + deltaSeconds))
   }
-  playBtn?.addEventListener("click", ()=>{
-    const board = getBoard()
-    if(board.kind === "empty"){
+  playBtn?.addEventListener("click", async ()=>{
+    const boards = getFilledBoards()
+    if(!boards.length){
       openMiniWindow("Play", "Upload or record something first so we can play it.")
       return
     }
-    if(remoteState.previewMediaEl){
-      remoteState.previewMediaEl.play().catch(()=>{})
-    }else if(remoteState.previewUrl){
-      new Audio(remoteState.previewUrl).play().catch(()=>{})
+    const mixed = await playBoardMixPreview()
+    if(mixed && quickEditStatus){
+      quickEditStatus.textContent = `${boards.map(board=>board.name).join(", ")} are now playing together from the start as one quick motherboard mix.`
     }
-    if(quickEditStatus) quickEditStatus.textContent = `${board.name} is playing in quick preview mode.`
   })
   pauseBtn?.addEventListener("click", ()=>{
     if(stopVoiceRecord()){
       if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} recording paused and saved.`
+      return
+    }
+    if(Array.isArray(remoteState.mixPlayers) && remoteState.mixPlayers.length){
+      stopBoardMixPreview(false)
+      if(quickEditStatus) quickEditStatus.textContent = "Motherboard mix paused."
       return
     }
     if(remoteState.previewMediaEl){
@@ -11424,7 +11485,7 @@ function setupRemoteFastPay(){
   }
 
   function buildShopifyCheckoutUrl(product, liveProduct){
-    const storefrontBase = normalizeShopifyStorefrontBase(LINKS.cart).replace(/\/cart$/i, "")
+    const storefrontBase = getDirectShopifyBase()
     if(product?.link){
       try{
         const parsed = new URL(product.link, storefrontBase)
@@ -11559,20 +11620,6 @@ function setupRemoteFastPay(){
       let liveProduct = findLiveShopifyProduct(product)
       if(!liveProduct){
         liveProduct = await fetchShopifyProductByHandle(product)
-      }
-      if(liveProduct){
-        try{
-          const embeddedReady = await openEmbeddedShopifyCheckout(product, liveProduct)
-          if(embeddedReady){
-            const receipt = buildRemoteReceipt(product)
-            renderReceipt(receipt)
-            hideConfirm()
-            hideProcessing()
-            if(!options.keepOwnerVisible) hideOwner()
-            if(status) status.textContent = `${product.title} Shopify checkout is loaded inside the page${sourceLabel ? ` from ${sourceLabel}` : ""}.`
-            return
-          }
-        }catch{}
       }
       const liveLink = buildShopifyCheckoutUrl(product, liveProduct) || (product?.key && LINKS[product.key] ? LINKS[product.key] : product?.link)
       if(!liveLink && !liveProduct && !liveProducts.length){

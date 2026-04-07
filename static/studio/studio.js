@@ -914,9 +914,18 @@ function setupStudioRadio() {
 
   let index = 0;
   const audio = new Audio();
+  let mixObjectUrl = "";
   studioTransportAudio = audio;
   audio.preload = "auto";
   audio.loop = false;
+
+  const hasConstructedSession = () => placements.some((item) => item.audioId && Number.isFinite(Number(item.timeSec)));
+
+  const revokeMixObjectUrl = () => {
+    if (!mixObjectUrl) return;
+    try { URL.revokeObjectURL(mixObjectUrl); } catch {}
+    mixObjectUrl = "";
+  };
 
   const getSessionPlaylist = () => {
     const fromBoards = placements
@@ -978,11 +987,28 @@ function setupStudioRadio() {
 
   const play = async () => {
     try {
-      if (!audio.src) load(index);
+      if (hasConstructedSession()) {
+        const built = await buildConstructedMix();
+        if (built?.blob) {
+          revokeMixObjectUrl();
+          mixObjectUrl = URL.createObjectURL(built.blob);
+          audio.pause();
+          audio.src = mixObjectUrl;
+          audio.currentTime = 0;
+          track.textContent = `Full Mix: ${built.fileName}`;
+          status.textContent = "Playing the full motherboard mix from the beginning."
+        }
+      } else if (!audio.src) {
+        load(index);
+      }
       await audio.play();
       playBtn.textContent = "Pause";
-      const activeList = getSessionPlaylist();
-      updateTrackUi(`Now playing: ${(activeList[index] || activeList[0])?.title || "Session audio"}`);
+      if (hasConstructedSession()) {
+        status.textContent = "Now playing the combined motherboard mix."
+      } else {
+        const activeList = getSessionPlaylist();
+        updateTrackUi(`Now playing: ${(activeList[index] || activeList[0])?.title || "Session audio"}`);
+      }
     } catch {
       updateTrackUi("Tap Play again to allow audio.");
     }
@@ -992,11 +1018,21 @@ function setupStudioRadio() {
     audio.pause();
     audio.currentTime = 0;
     playBtn.textContent = "Play";
+    if (hasConstructedSession()) {
+      status.textContent = "Stopped the full motherboard mix."
+      return;
+    }
     const activeList = getSessionPlaylist();
     updateTrackUi(`Stopped: ${(activeList[index] || activeList[0])?.title || "Session audio"}`);
   };
 
   const stepTrack = async (delta) => {
+    if (hasConstructedSession()) {
+      audio.currentTime = 0;
+      if (!audio.paused) await play();
+      else status.textContent = "Full mix reset to the beginning."
+      return;
+    }
     const wasPlaying = !audio.paused;
     load(index + delta);
     if (wasPlaying) {
@@ -1019,6 +1055,10 @@ function setupStudioRadio() {
   prevBtn.addEventListener("click", async () => { await stepTrack(-1); });
   nextBtn.addEventListener("click", async () => { await stepTrack(1); });
   audio.addEventListener("ended", async () => {
+    if (hasConstructedSession()) {
+      stop();
+      return;
+    }
     await stepTrack(1);
     if (getSessionPlaylist().length === 1) {
       stop();
