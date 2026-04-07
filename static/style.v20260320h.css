@@ -4465,7 +4465,7 @@ body.remote-hide-ads .remote-display-strip{
   width:100%;
   text-align:left;
   display:grid;
-  gap:6px;
+  gap:8px;
   padding:14px 16px;
   border-radius:18px;
   border:1px solid rgba(255,255,255,.16);
@@ -4473,9 +4473,27 @@ body.remote-hide-ads .remote-display-strip{
   color:#eef7ff;
   cursor:pointer;
 }
+.float-faq-topline{display:flex;justify-content:flex-start;align-items:center;}
+.float-faq-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:.72rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  background:linear-gradient(90deg, rgba(72,150,255,.22), rgba(114,236,202,.18));
+  color:#f5fbff;
+  border:1px solid rgba(146,214,255,.26);
+}
 .float-faq-item span{
   color:#dce9fb;
   line-height:1.45;
+}
+.float-faq-cta{
+  justify-self:start;
+  margin-top:2px;
 }
 .float-faq-reel-host{
   min-height:230px;

@@ -7400,52 +7400,100 @@ function setupFloatMode(){
   }
   const SUPPORT_FAQ_ENTRIES = [
     {
+      category: "Detangle",
       question: "My hair gets tangled fast. What should I do first?",
-      answer: "Start with moisture and slip before force. Lightly dampen the hair, apply a detangling leave-in or conditioner, then comb from the ends upward in sections. SupportRD uses this as a Trail Tangles style recovery lane."
+      answer: "Start with moisture and slip before force. Lightly dampen the hair, apply a detangling leave-in or conditioner, then comb from the ends upward in sections. SupportRD uses this as a Trail Tangles style recovery lane.",
+      cta: "Open Hair Help",
+      action: "assistant:aria"
     },
     {
+      category: "Frizz",
       question: "What should I do for everyday frizz?",
-      answer: "SupportRD usually starts with a leave-in, a light sealing product, and less rough handling once the hair is set. The goal is to hold moisture in without making the hair heavy."
+      answer: "SupportRD usually starts with a leave-in, a light sealing product, and less rough handling once the hair is set. The goal is to hold moisture in without making the hair heavy.",
+      cta: "Open Product Lane",
+      action: "products"
     },
     {
+      category: "Scalp",
       question: "How can I tell if my scalp is oily or just full of buildup?",
-      answer: "If the scalp feels slick fast and the roots get weighed down quickly, it is often oil plus buildup together. A weekly clarify, lighter root products, and better balance through the ends usually helps."
+      answer: "If the scalp feels slick fast and the roots get weighed down quickly, it is often oil plus buildup together. A weekly clarify, lighter root products, and better balance through the ends usually helps.",
+      cta: "Open FAQ Reel",
+      action: "faqreel"
     },
     {
+      category: "Damage",
       question: "What should I do if my hair feels heat damaged?",
-      answer: "Treat it like a recovery lane. Pause heavy heat, protect every styling session, trim weak ends when needed, and use a repair-focused routine instead of forcing styling through damaged strands."
+      answer: "Treat it like a recovery lane. Pause heavy heat, protect every styling session, trim weak ends when needed, and use a repair-focused routine instead of forcing styling through damaged strands.",
+      cta: "Open Hair Scan",
+      action: "profile"
     },
     {
+      category: "Bounce",
       question: "My curls lost bounce. Can SupportRD help?",
-      answer: "Yes. Lost bounce usually means your routine needs a better balance of moisture, protein, and lighter styling weight. SupportRD can route you toward bounce recovery instead of flattening the pattern further."
+      answer: "Yes. Lost bounce usually means your routine needs a better balance of moisture, protein, and lighter styling weight. SupportRD can route you toward bounce recovery instead of flattening the pattern further.",
+      cta: "Ask Aria",
+      action: "assistant:aria"
     },
     {
+      category: "Color Care",
       question: "How do I keep color-treated hair from fading so fast?",
-      answer: "Use color-safe cleansing, cooler rinses, less stripping heat, and shine-support products. SupportRD treats color fade like both a care problem and a product-matching problem."
+      answer: "Use color-safe cleansing, cooler rinses, less stripping heat, and shine-support products. SupportRD treats color fade like both a care problem and a product-matching problem.",
+      cta: "Open Product Lane",
+      action: "products"
     },
     {
+      category: "Authority",
+      question: "Does SupportRD actually help with real hair problems?",
+      answer: "Yes. SupportRD is built to guide real issue lanes like dryness, frizz, oily scalp, tangles, breakage, color fade, scalp care, and low bounce. The app helps people understand the problem, match the right route, and move into product support or premium guidance without getting lost.",
+      cta: "Open Hair Help",
+      action: "assistant:aria"
+    },
+    {
+      category: "Product Backing",
+      question: "What is product support versus premium app guidance?",
+      answer: "Product support is the physical hair-help side: what to use, why it fits, and what hair problem it addresses. Premium guidance is the digital side: memory, deeper advice, premium Aria/Jake behavior, and route-specific help inside the app.",
+      cta: "Open Payments",
+      action: "payments"
+    },
+    {
+      category: "Premium",
       question: "Do I need to log in before buying premium?",
-      answer: "Yes for premium and paid product lanes. SupportRD keeps browsing easy, but purchase-based features need sign-in so access, upgrades, and continuity stay attached to the right account."
+      answer: "Yes for premium and paid product lanes. SupportRD keeps browsing easy, but purchase-based features need sign-in so access, upgrades, and continuity stay attached to the right account.",
+      cta: "Open Payments",
+      action: "payments"
     },
     {
+      category: "Assistants",
       question: "What is the difference between Aria and Jake?",
-      answer: "Aria is the main hair advisor and issue-solving voice. Jake is the studio specialist and supportive second brain. Both know SupportRD, but Aria leans more hair-first while Jake leans more studio-first."
+      answer: "Aria is the main hair advisor and issue-solving voice. Jake is the studio specialist and supportive second brain. Both know SupportRD, but Aria leans more hair-first while Jake leans more studio-first.",
+      cta: "Open Studio",
+      action: "studio"
     },
     {
+      category: "Hair Scan",
       question: "How do I use the hair analyzer in Profile?",
-      answer: "Open Profile, upload or capture your image, and run the scan. SupportRD uses that to surface likely issues like dryness, frizz, damage, low bounce, or color fatigue so you can choose the right next lane."
+      answer: "Open Profile, upload or capture your image, and run the scan. SupportRD uses that to surface likely issues like dryness, frizz, damage, low bounce, or color fatigue so you can choose the right next lane.",
+      cta: "Open Profile",
+      action: "profile"
     },
     {
+      category: "Support Hub",
       question: "What is FAQ Lounge for?",
-      answer: "FAQ Lounge is the calm fast-help lane. It gives visitors real hair answers, TV Reel access, product direction, and public feedback in one place without kicking them out of the Remote flow."
+      answer: "FAQ Lounge is the calm fast-help lane. It gives visitors real hair answers, TV Reel access, product direction, and public feedback in one place without kicking them out of the Remote flow.",
+      cta: "Open Developer Feed",
+      action: "developer"
     }
   ]
   function renderSupportFaqCards(){
     return SUPPORT_FAQ_ENTRIES.map((entry)=>`
-      <button class="float-faq-item" type="button">
+      <article class="float-faq-item" data-faq-card="${escapeRemoteHtml(entry.category || "SupportRD FAQ")}">
+        <div class="float-faq-topline">
+          <span class="float-faq-badge">${escapeRemoteHtml(entry.category || "SupportRD FAQ")}</span>
+        </div>
         <strong>${escapeRemoteHtml(entry.question)}</strong>
         <span>${escapeRemoteHtml(entry.answer)}</span>
-      </button>
+        ${entry.cta ? `<button class="btn ghost float-faq-cta" type="button" data-faq-action="${escapeRemoteHtml(entry.action || "")}">${escapeRemoteHtml(entry.cta)}</button>` : ""}
+      </article>
     `).join("")
   }
   function renderQuickStudioWaveBars(board, index){
@@ -9359,6 +9407,44 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         openLaunchMenuSheet("floatDeviceBox", "Map Change")
       }))
       remoteSheetBody?.addEventListener("click", (event)=>{
+        const faqActionBtn = event.target.closest("[data-faq-action]")
+        if(faqActionBtn && remoteSheetBody.contains(faqActionBtn)){
+          event.preventDefault()
+          event.stopPropagation()
+          const action = faqActionBtn.getAttribute("data-faq-action") || ""
+          if(action === "payments"){
+            window.openRemoteFastPay?.()
+            return
+          }
+          if(action === "products"){
+            openRemoteSheet("Product Page", buildProductPageSheet(), { message:"Product Page is open inside Remote.", className:"remote-sheet-blog", route:"payments" })
+            return
+          }
+          if(action === "profile"){
+            if(typeof renderRemoteRoute === "function") renderRemoteRoute("profile", { openShell:true })
+            return
+          }
+          if(action === "studio"){
+            if(typeof renderRemoteRoute === "function") renderRemoteRoute("studio", { openShell:true })
+            return
+          }
+          if(action === "developer"){
+            openRemoteSheet("Developer Feedback", buildDeveloperFeedbackSheet(), { message:"Developer Feedback is open inside FAQ Lounge.", route:"faq" })
+            return
+          }
+          if(action === "faqreel"){
+            const reelToggle = remoteSheetBody.querySelector("[data-open-faq-reel]")
+            reelToggle?.click()
+            return
+          }
+          if(action === "assistant:aria"){
+            try{
+              window.forceAssistantFocus?.("aria")
+            }catch{}
+            openMiniWindow("Aria Hair Help", "Aria hair-help lane is the next best move for this issue. Ask the question naturally and SupportRD will keep the route hair-first.")
+            return
+          }
+        }
         const faqItem = event.target.closest(".float-faq-item")
         if(!faqItem || !remoteSheetBody.contains(faqItem)) return
         const question = faqItem.querySelector("strong")?.textContent || "SupportRD FAQ"
