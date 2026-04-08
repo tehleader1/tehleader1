@@ -242,6 +242,72 @@ const REMOTE_PAY_PRODUCTS = [
     link: LINKS.donate
   }
 ]
+const SUPPORTRD_CONTACT_REQUESTS_KEY = "supportrdContactChannelRequests"
+
+function loadSupportContactRequests(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(SUPPORTRD_CONTACT_REQUESTS_KEY) || "[]")
+    return Array.isArray(parsed) ? parsed : []
+  }catch{
+    return []
+  }
+}
+
+function saveSupportContactRequests(entries){
+  try{
+    localStorage.setItem(SUPPORTRD_CONTACT_REQUESTS_KEY, JSON.stringify(Array.isArray(entries) ? entries.slice(0, 25) : []))
+  }catch{}
+}
+
+function pushSupportContactRequest(entry){
+  const requests = loadSupportContactRequests()
+  requests.unshift({
+    ...entry,
+    createdAt: entry?.createdAt || new Date().toISOString()
+  })
+  saveSupportContactRequests(requests)
+}
+
+function buildSupportMailtoUrl(subject, body){
+  return `mailto:xxfigueroa1993@yahoo.com?subject=${encodeURIComponent(subject || "SupportRD Request")}&body=${encodeURIComponent(body || "")}`
+}
+
+function buildCustomOrderMailto(type = "custom", options = {}){
+  const baseName = shouldAutoOwnerEntry() ? "Anthony / Founder" : (state?.socialLinks?.name || "SupportRD Visitor")
+  if(type === "bulk"){
+    return buildSupportMailtoUrl(
+      "SupportRD Bulk Product / Fly-In Session",
+      [
+        `Hello SupportRD,`,
+        ``,
+        `I want to talk about an in-person bulk product session with the inventor.`,
+        `Name: ${options.name || baseName}`,
+        `City / travel base: ${options.city || "Not added yet"}`,
+        `Expected quantity: ${options.quantity || "Not added yet"}`,
+        `Best callback / email: ${options.replyTo || state?.socialLinks?.email || "Use this email thread"}`,
+        `Request details: ${options.notes || "I want details on bulk product ordering and whether Anthony should fly in."}`,
+        ``,
+        `Please send me the next steps.`,
+        `SupportRD`
+      ].join("\n")
+    )
+  }
+  return buildSupportMailtoUrl(
+    "SupportRD Custom Order Request",
+    [
+      `Hello SupportRD,`,
+      ``,
+      `I want to place a custom order.`,
+      `Name: ${options.name || baseName}`,
+      `Product or need: ${options.product || "Please help me choose"}`,
+      `Best callback / email: ${options.replyTo || state?.socialLinks?.email || "Use this email thread"}`,
+      `Notes: ${options.notes || "I want a custom order follow-up from SupportRD."}`,
+      ``,
+      `Please send me the next steps.`,
+      `SupportRD`
+    ].join("\n")
+  )
+}
 function normalizeShopifyStorefrontBase(raw){
   const value = String(raw || "").trim()
   if(!value) return ""
@@ -8209,6 +8275,10 @@ function setupFloatMode(){
         <h4>Live Engine Encouragement</h4>
         <div class="remote-engine-encouragement" data-engine-feedback></div>
       </div>
+      <div class="float-sheet-panel">
+        <h4>Automatic Developer Log</h4>
+        <div class="remote-review-wall" data-developer-log></div>
+      </div>
       <div class="remote-feedback-board" data-feedback-board></div>
       <div class="float-sheet-panel">
         <h4>Public Reviews</h4>
@@ -8237,6 +8307,7 @@ function setupFloatMode(){
     const publicReviewKey = "supportrdDeveloperPublicReviews"
     const board = root?.querySelector("[data-feedback-board]")
     const reviewWall = root?.querySelector("[data-review-wall]")
+    const developerLog = root?.querySelector("[data-developer-log]")
     const familyWall = root?.querySelector("[data-family-wall]")
     const feedbackComment = root?.querySelector("[data-feedback-comment]")
     const feedbackSubmit = root?.querySelector("[data-feedback-submit]")
@@ -8343,9 +8414,41 @@ function setupFloatMode(){
         </article>
       `
     }
+    const renderDeveloperLog = ()=>{
+      if(!developerLog) return
+      const stats = loadAcquisitionStats()
+      const requests = loadSupportContactRequests()
+      const signals = (stats.signals || [])
+        .filter(entry=>{
+          const text = `${entry.signal || ""} ${entry.socialFeedback || ""} ${entry.guestPost || ""}`.toLowerCase()
+          return /developer|supportdr|founder|reddit|good job|codex|aria|jake|bulk|fly|custom order/.test(text)
+        })
+        .slice(0, 8)
+      const requestEntries = requests.slice(0, 6).map(entry=>({
+        title: entry.type === "bulk" ? "Fly-in / bulk product interest" : "Custom order follow-up",
+        author: entry.name || "SupportRD contact",
+        body: entry.notes || entry.summary || "SupportRD logged a new contact request.",
+        stamp: entry.createdAt || ""
+      }))
+      const signalEntries = signals.map(entry=>({
+        title: entry.signal || "Developer signal",
+        author: entry.lane || "SupportRD Engine",
+        body: entry.socialFeedback || entry.guestPost || entry.reelTopic || "SupportRD picked up a new developer-facing signal.",
+        stamp: entry.at || ""
+      }))
+      const merged = signalEntries.concat(requestEntries)
+      developerLog.innerHTML = merged.length ? merged.map(entry=>`
+        <article class="remote-review-card">
+          <strong>${escapeRemoteHtml(entry.title)}</strong>
+          <div class="remote-review-author">${escapeRemoteHtml(entry.author)}</div>
+          <p>${escapeRemoteHtml(entry.body)}</p>
+        </article>
+      `).join("") : `<div class="float-sheet-copy">Developer log is quiet right now. New SupportRD praise, custom-order activity, and fly-in requests will appear here automatically.</div>`
+    }
     sortButtons.forEach(btn=>btn.addEventListener("click", ()=>render(btn.getAttribute("data-feedback-sort") || "hearts")))
     render("hearts")
     renderEngineFeedback()
+    renderDeveloperLog()
     const renderPublicReviews = ()=>{
       if(!reviewWall) return
       const mergedReviews = loadPublicReviews().concat(PUBLIC_REVIEW_ENTRIES)
@@ -8407,6 +8510,7 @@ function setupFloatMode(){
       trackAcquisitionSignal("developer_feedback_review", { lane: ACQUISITION_LANES.app, stage: "feedback-ready", socialFeedback: "A new public review just landed on the Developer Feed." })
       renderPublicReviews()
       renderEngineFeedback()
+      renderDeveloperLog()
       if(status) status.textContent = "Public review posted. The Developer Feedback wall now shows your signed-in comment."
     })
     feedbackClear?.addEventListener("click", ()=>{
@@ -8456,6 +8560,7 @@ function setupFloatMode(){
       if(familyMedia) familyMedia.value = ""
       if(familyMessage) familyMessage.value = ""
       renderFamilyWall()
+      renderDeveloperLog()
     })
     familyClear?.addEventListener("click", ()=>{
       if(familyName) familyName.value = ""
@@ -9997,6 +10102,17 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
           <button class="btn ghost" data-open-gps-route>Guide Me To Kito House</button>
           <button class="btn ghost" data-sheet-close>Close Page</button>
         </div>
+        ${mode === "contact" ? `
+          <div class="float-sheet-panel">
+            <h4>Order + Bulk Contact Lanes</h4>
+            <div class="float-sheet-grid">
+              <button class="btn" data-link-open="${buildCustomOrderMailto("custom")}">Email Custom Order</button>
+              <button class="btn ghost" data-link-open="${LINKS.custom}">Open Custom Order Page</button>
+              <button class="btn" data-link-open="${buildCustomOrderMailto("bulk")}">Email Fly-In / Bulk Request</button>
+            </div>
+            <p class="fine-print">SupportRD uses these contact lanes to separate real custom-order demand, in-person session requests, and bulk product interest with the inventor.</p>
+          </div>
+        ` : ""}
       `, { message:`${config.title} is open inside the Remote stage.`, route:"official" })
     }
     function setFloatHome(message){
@@ -10509,6 +10625,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       perk:"Remote ready"
     }
     if(mapHero) mapHero.dataset.mapView = activeView.key || "default"
+    syncRemoteLaunchVisual(activeView.key || "default")
     if(mapHeroTitle) mapHeroTitle.textContent = activeView.label || "SupportRD Default"
     if(mapHeroBody) mapHeroBody.textContent = `${activeView.helper || "SupportRD keeps the route clear and travel-ready."} ${activeView.perk ? `Extra feature: ${activeView.perk}.` : ""}`.trim()
     renderMapFeatureActions(activeView)
@@ -12082,7 +12199,39 @@ function setupRemoteFastPay(){
     }
 
   function renderProducts(){
-    grid.innerHTML = REMOTE_PAY_PRODUCTS.map((product)=>`
+    const specialCards = `
+      <article class="remote-product-card glass remote-product-card-special" data-remote-special-card="custom">
+        <div class="remote-product-copy">
+          <div class="remote-product-title-row">
+            <h4>Custom Order Email Lane</h4>
+            <div class="remote-product-price">Email-backed</div>
+          </div>
+          <p class="remote-product-short">Use this first when somebody needs a custom order before the normal product checkout path.</p>
+          <div class="remote-product-detail"><strong>What It Does:</strong> Opens the custom-order details lane with direct email routing.</div>
+          <div class="remote-product-detail"><strong>Best For:</strong> Manual orders, product questions, and high-touch SupportRD follow-up.</div>
+        </div>
+        <div class="remote-product-actions">
+          <button class="btn ghost remote-special-btn" data-remote-special="custom">Open Custom Order</button>
+          <button class="btn remote-special-btn" data-remote-special="custom-email">Email Custom Order</button>
+        </div>
+      </article>
+      <article class="remote-product-card glass remote-product-card-special" data-remote-special-card="bulk">
+        <div class="remote-product-copy">
+          <div class="remote-product-title-row">
+            <h4>Bulk Product / Fly-In Session</h4>
+            <div class="remote-product-price">Contact lane</div>
+          </div>
+          <p class="remote-product-short">Capture in-person bulk product interest and travel-session demand with the inventor from the same payment lane.</p>
+          <div class="remote-product-detail"><strong>What It Does:</strong> Opens the fly-in / bulk request lane and logs the demand into SupportRD.</div>
+          <div class="remote-product-detail"><strong>Best For:</strong> Salons, resellers, events, and private ordering sessions.</div>
+        </div>
+        <div class="remote-product-actions">
+          <button class="btn ghost remote-special-btn" data-remote-special="bulk">Open Fly-In Details</button>
+          <button class="btn remote-special-btn" data-remote-special="bulk-email">Email Fly-In Request</button>
+        </div>
+      </article>
+    `
+    grid.innerHTML = specialCards + REMOTE_PAY_PRODUCTS.map((product)=>`
       <article class="remote-product-card glass" data-remote-product="${product.key}">
         <div class="remote-product-photo-wrap">
           <img class="remote-product-photo" src="${product.image}" alt="${product.title}">
@@ -12105,6 +12254,50 @@ function setupRemoteFastPay(){
       </article>
     `).join("")
 
+    qsa(".remote-special-btn").forEach((btn)=>{
+      btn.addEventListener("click", ()=>{
+        const action = btn.dataset.remoteSpecial
+        if(action === "custom"){
+          openCustomOrderSupport("Fast Pay", "custom")
+          return
+        }
+        if(action === "custom-email"){
+          const mailto = buildCustomOrderMailto("custom")
+          pushSupportContactRequest({
+            type: "custom",
+            name: state?.socialLinks?.name || "SupportRD visitor",
+            summary: "Custom order email lane opened from Fast Pay.",
+            notes: "Customer asked for email-backed custom order support from the payment lane."
+          })
+          trackAcquisitionSignal("custom_order_email_opened", {
+            lane: ACQUISITION_LANES.products,
+            stage: "premium-curious",
+            socialFeedback: "A visitor opened the custom-order email lane from Fast Pay."
+          })
+          window.location.href = mailto
+          return
+        }
+        if(action === "bulk"){
+          openCustomOrderSupport("Fast Pay", "bulk")
+          return
+        }
+        if(action === "bulk-email"){
+          const mailto = buildCustomOrderMailto("bulk")
+          pushSupportContactRequest({
+            type: "bulk",
+            name: state?.socialLinks?.name || "SupportRD visitor",
+            summary: "Bulk product / fly-in lane opened from Fast Pay.",
+            notes: "Customer wants to talk about an in-person bulk product session with the inventor."
+          })
+          trackAcquisitionSignal("bulk_flyin_email_opened", {
+            lane: ACQUISITION_LANES.products,
+            stage: "purchase-ready",
+            socialFeedback: "A fly-in / bulk product request just opened from the payment lane."
+          })
+          window.location.href = mailto
+        }
+      })
+    })
     qsa(".remote-preview-btn").forEach((btn)=>{
       btn.addEventListener("click", ()=>{
         const product = REMOTE_PAY_PRODUCTS.find((item)=>item.key === btn.dataset.remoteOpen)
@@ -12144,13 +12337,13 @@ function setupRemoteFastPay(){
     }
     hideConfirm()
     hideOwner()
-    if(status) status.textContent = "SupportRD Fast Pay is open. Choose a product, read the purchase details, or go straight to secure checkout."
+    if(status) status.textContent = "SupportRD Fast Pay is open. Start with Custom Order or Fly-In if the customer needs a manual lane, then use Shopify Checkout for direct card capture."
     trackAcquisitionSignal("open_fastpay", {
       lane: ACQUISITION_LANES.products,
       stage: "premium-curious",
-      socialFeedback: "A visitor opened the payment lane to compare SupportRD products."
+      socialFeedback: "A visitor opened the payment lane to compare SupportRD products, custom orders, or fly-in sessions."
     })
-    openMiniWindow("Remote Fast Pay", "Choose a SupportRD product, open its purchase details, or go straight to secure checkout.")
+    openMiniWindow("Remote Fast Pay", "Start with Custom Order if this is a manual request, or go straight into Shopify Checkout for the real card page.")
   }
 
   function closeRemoteFastPay(){
@@ -12211,6 +12404,41 @@ function setupRemoteFastPay(){
   window.openRemoteFastPay = openRemoteFastPay
   window.closeRemoteFastPay = closeRemoteFastPay
   window.openPurchaseDetails = openPurchaseDetails
+
+  function openCustomOrderSupport(sourceLabel = "Fast Pay", kind = "custom"){
+    const isBulk = kind === "bulk"
+    const title = isBulk ? "Bulk Product / Fly-In Session" : "Custom Order"
+    const note = isBulk
+      ? "Use this when somebody wants you to fly in, wants an in-person session, or wants to order bulk product with the inventor."
+      : "Use this when the customer needs an email-backed custom order before the normal product checkout lane."
+    const mailto = buildCustomOrderMailto(isBulk ? "bulk" : "custom")
+    pushSupportContactRequest({
+      type: isBulk ? "bulk" : "custom",
+      name: state?.socialLinks?.name || "SupportRD visitor",
+      summary: `${title} opened from ${sourceLabel}.`,
+      notes: note
+    })
+    trackAcquisitionSignal(isBulk ? "bulk_flyin_opened" : "custom_order_opened", {
+      lane: ACQUISITION_LANES.products,
+      stage: isBulk ? "purchase-ready" : "premium-curious",
+      socialFeedback: isBulk
+        ? "A visitor wants to talk about a fly-in / bulk product session with the inventor."
+        : "A visitor moved into the custom-order email lane before checkout."
+    })
+    openRemoteSheet(title, `
+      <div class="float-sheet-panel">
+        <h4>${title}</h4>
+        <p>${note}</p>
+        <div class="float-sheet-status">${isBulk ? "This lane helps SupportRD see who wants an in-person session or bulk product order." : "This lane gives SupportRD a real email trail for manual orders and serious customer intent."}</div>
+        <div class="float-sheet-button-row">
+          <button class="btn" data-link-open="${mailto}">${isBulk ? "Email Fly-In / Bulk Request" : "Email Custom Order"}</button>
+          <button class="btn ghost" data-link-open="${LINKS.custom}">Open Custom Order Page</button>
+          <button class="btn ghost" data-open-fastpay>Back To Fast Pay</button>
+        </div>
+      </div>
+    `, { message: `${title} is open from ${sourceLabel}.`, route: "payments" })
+    if(status) status.textContent = `${title} is open. Use the email route if this customer needs a manual follow-up.`
+  }
 }
 function setupJakeQuickSwitch(){
   const mini = qs("#miniSwitchJake")
@@ -13154,7 +13382,32 @@ const WORLD_VIEWS = [
     { key:"lab", label:"The Lab", perk:"Precision tools + extra creative control", helper:"Show advanced studio, reverb, hair analysis, and technical feature highlights.", prompt:"Realistic futuristic lab with cyan glow, glass panels, dark metal surfaces, clean floor lines, premium science room", actions:[{label:"Tool Highlight", detail:"Show the technical side: reverb, scan, and feature precision."},{label:"Precision Drop", detail:"Post the clean details that make the system feel serious."}] },
     { key:"lounge", label:"Officials Lounge", perk:"Reset lane + protected regroup", helper:"Use this base for calm announcements, support updates, and trust-building posts.", prompt:"Realistic premium lounge with dark wood, polished black surfaces, leather seating, calm gold lighting", actions:[{label:"Calm Update", detail:"Give a composed update and keep the room settled."},{label:"Trust Builder", detail:"Remind people SupportRD is clean, helpful, and here to serve."}] },
     { key:"tower", label:"Watch Tower", perk:"Vision boost + field awareness", helper:"Share overview posts, direction, GPS routes, and big-picture session updates.", prompt:"Realistic lookout tower above mixed field terrain, open sky, wood and steel structure, panoramic horizon", actions:[{label:"Overview Post", detail:"Give the big-picture update and where the session is headed."},{label:"GPS Direction", detail:"Use the tower view to guide people to the next move."}] }
-    ]
+  ]
+
+  function getRemoteLaunchVisualByView(key = "default"){
+    const map = {
+      default: "url('/static/images/woman-waking-up12.jpg') center/cover no-repeat",
+      lumbermill: "linear-gradient(180deg, rgba(68,38,18,.28), rgba(14,12,10,.18)), url('/static/images/brochure-contacts.jpg') center/cover no-repeat",
+      river: "linear-gradient(180deg, rgba(18,78,92,.24), rgba(9,18,28,.18)), url('/static/images/brochure-mask.jpg') center/cover no-repeat",
+      snow: "linear-gradient(180deg, rgba(200,226,255,.16), rgba(18,28,42,.18)), url('/static/images/brochure-hero.jpg') center/cover no-repeat",
+      island: "linear-gradient(180deg, rgba(24,128,116,.22), rgba(10,20,28,.18)), url('/static/images/brochure-social.jpg') center/cover no-repeat",
+      vip: "linear-gradient(180deg, rgba(118,88,18,.24), rgba(18,14,10,.2)), url('/static/images/brochure-formula-exclusive.jpg') center/cover no-repeat",
+      tunnels: "linear-gradient(180deg, rgba(58,32,96,.24), rgba(11,12,24,.18)), url('/static/images/brochure-scroll.jpg') center/cover no-repeat",
+      market: "linear-gradient(180deg, rgba(132,66,28,.24), rgba(21,18,14,.18)), url('/static/images/brochure-social.jpg') center/cover no-repeat",
+      lab: "linear-gradient(180deg, rgba(18,92,108,.22), rgba(9,18,28,.18)), url('/static/images/brochure-fast-dropper.jpg') center/cover no-repeat",
+      lounge: "linear-gradient(180deg, rgba(88,62,26,.22), rgba(14,12,10,.18)), url('/static/images/brochure-shampoo.jpg') center/cover no-repeat",
+      tower: "linear-gradient(180deg, rgba(34,74,118,.22), rgba(9,18,28,.18)), url('/static/images/brochure-hero.jpg') center/cover no-repeat"
+    }
+    return map[key] || map.default
+  }
+
+  function syncRemoteLaunchVisual(viewKey = "default"){
+    const shell = qs("#floatModeShell")
+    if(shell) shell.style.setProperty("--remote-launch-bg", getRemoteLaunchVisualByView(viewKey))
+    qsa(".float-launch-btn").forEach(btn=>{
+      btn.dataset.mapView = viewKey
+    })
+  }
 
   function formatSubscriptionSummary(plan, details){
     const safePlan = (plan || "free").toString().trim() || "free"
@@ -13223,6 +13476,7 @@ const WORLD_VIEWS = [
       const view = WORLD_VIEWS.find(v=>v.key === key) || WORLD_VIEWS[0]
     const floatShell = qs("#floatModeShell")
     if(floatShell) floatShell.dataset.remoteTheme = view.key
+    syncRemoteLaunchVisual(view.key)
     if(subtitle) subtitle.textContent = view.label
     const stage = qs("#ariaAssistantSub")
     if(stage) stage.textContent = `ARIA · Free Roam / ${view.label}`
