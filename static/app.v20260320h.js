@@ -6207,6 +6207,10 @@ function setupFloatMode(){
   const settingsStatus = qs("#floatSettingsStatus")
   const liveStatus = qs("#floatLiveStatus")
   const configStatus = qs("#floatConfigStatus")
+  const faqPromptSelect = qs("#floatFaqPromptSelect")
+  const faqPromptAnswer = qs("#floatFaqPromptAnswer")
+  const faqReelFrame = qs("#floatFaqReelFrame")
+  const faqThemeButtons = qsa("[data-faq-theme]")
   const profileName = qs("#floatProfileName")
   const profileMeta = qs("#floatProfileMeta")
   const profileHistory = qs("#floatProfileHistory")
@@ -6214,6 +6218,24 @@ function setupFloatMode(){
   const profileQualityBody = qs("#floatProfileQualityBody")
   const profileHero = qs("#floatProfileHero")
   const diaryProfileHero = qs("#floatDiaryProfileHero")
+  const profileDisplayName = qs("#floatProfileDisplayName")
+  const profileLatestResult = qs("#floatProfileLatestResult")
+  const profileCredentialsSummary = qs("#floatProfileCredentialsSummary")
+  const profileCredentialTheme = qs("#floatProfileCredentialTheme")
+  const profileSaveBtn = qs("#floatProfileSaveBtn")
+  const profilePasswordInput = qs("#floatProfilePassword")
+  const profile2faPhone = qs("#floatProfile2faPhone")
+  const profile2faCode = qs("#floatProfile2faCode")
+  const profile2faSaveBtn = qs("#floatProfile2faSaveBtn")
+  const profileLinkedInUrl = qs("#floatProfileLinkedInUrl")
+  const profileLinkedInPostBtn = qs("#floatProfileLinkedInPostBtn")
+  const hairScanCamera = qs("#floatHairScanCamera")
+  const hairScanOverlay = qs("#floatHairScanOverlay")
+  const hairScanBeginBtn = qs("#floatHairScanBeginBtn")
+  const hairScanLeftBtn = qs("#floatHairScanLeftBtn")
+  const hairScanRightBtn = qs("#floatHairScanRightBtn")
+  const hairScanCompleteBtn = qs("#floatHairScanCompleteBtn")
+  const hairScanProgressFill = qs("#floatHairScanProgressFill")
   const profileUploadInput = qs("#floatProfileUploadInput")
   const mapBtn = qs("#floatMapBtn")
   const themeBtn = qs("#floatThemeBtn")
@@ -6304,6 +6326,28 @@ function setupFloatMode(){
   const gigZoomInput = qs("#floatGigZoom")
   const gigSlowMotionInput = qs("#floatGigSlowMotion")
   const studioLiveBtn = qs("#floatStudioLiveBtn")
+  const diarySocialPost = qs("#floatDiarySocialPost")
+  const diarySocialSaveBtn = qs("#floatDiarySocialSaveBtn")
+  const diaryLevelSelect = qs("#floatDiaryLevelSelect")
+  const diaryHistory = qs("#floatDiaryHistory")
+  const diaryHistoryScope = qs("#floatDiaryHistoryScope")
+  const diaryPagePreview = qs("#floatDiaryPagePreview")
+  const diaryFlipPrev = qs("#floatDiaryFlipPrev")
+  const diaryFlipNext = qs("#floatDiaryFlipNext")
+  const diaryAriaFixed = qs("#floatDiaryAriaFixed")
+  const diaryJakeFixed = qs("#floatDiaryJakeFixed")
+  const diaryLiveBtn = qs("#floatDiaryLiveBtn")
+  const diaryLiveStatus = qs("#floatDiaryLiveStatus")
+  const diaryLiveStage = qs("#floatDiaryLiveStage")
+  const diaryLiveVideo = qs("#floatDiaryLiveVideo")
+  const diaryLiveOverlay = qs("#floatDiaryLiveOverlay")
+  const diaryLiveFastPay = qs("#floatDiaryLiveFastPay")
+  const diaryLiveHeart = qs("#floatDiaryLiveHeart")
+  const diaryLiveThumb = qs("#floatDiaryLiveThumb")
+  const diaryLiveGuest = qs("#floatDiaryLiveGuest")
+  const diaryLiveComment = qs("#floatDiaryLiveComment")
+  const diaryLiveCommentBtn = qs("#floatDiaryLiveCommentBtn")
+  const diaryLiveComments = qs("#floatDiaryLiveComments")
   function setRemoteStatus(text){
     if(text && liveStatus) liveStatus.textContent = text
   }
@@ -8602,6 +8646,8 @@ function setupFloatMode(){
       { label: "TikTok", href: links.tiktok },
       { label: "YouTube", href: links.yt },
       { label: "X", href: links.x },
+      { label: "LinkedIn", href: links.linkedin },
+      { label: "Snapchat", href: links.snapchat },
       { label: "WhatsApp", href: links.whatsapp || links.evelyn },
       { label: "Google", href: links.google },
       { label: "Bing", href: links.bing }
@@ -8612,31 +8658,204 @@ function setupFloatMode(){
     }
     diarySocialLinkRow.innerHTML = items.map(item => `<a class="float-diary-link-pill" href="${escapeHtml(item.href)}" target="_blank" rel="noopener noreferrer">${item.label}</a>`).join("")
   }
+  function requiresSignedInProfile(){
+    return !(localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry())
+  }
+  function getDiaryLevelAccess(level){
+    const plan = state.subscription || "free"
+    if(level === "greeting" || level === "thorough") return true
+    if(level === "inner") return ["premium","bingo100","pro","yoda","fantasy300","fantasy600"].includes(plan) || isProOverride()
+    if(level === "pro") return plan === "pro" || isProOverride()
+    return false
+  }
+  function getDiaryLevelLabel(level){
+    return ({
+      greeting: "Intro",
+      thorough: "Advanced",
+      inner: "Inner Circle",
+      pro: "Professional / Making Money"
+    })[level] || "Intro"
+  }
+  function buildDiaryPageLines(text){
+    const words = String(text || "").trim().split(/\s+/).filter(Boolean)
+    const lines = []
+    while(words.length){
+      lines.push(words.splice(0, 9).join(" "))
+    }
+    while(lines.length < 4) lines.push("")
+    return lines
+  }
+  function getDiaryPages(text){
+    const lines = buildDiaryPageLines(text)
+    const pages = []
+    for(let i = 0; i < lines.length; i += 4){
+      pages.push(lines.slice(i, i + 4))
+    }
+    return pages.length ? pages : [["","","",""]]
+  }
+  function renderDiaryPagePreview(pageIndex = 0){
+    if(!diaryPagePreview) return
+    const pages = getDiaryPages(qs("#floatDiaryInput")?.value || "")
+    remoteState.diaryPageIndex = Math.max(0, Math.min(pageIndex, pages.length - 1))
+    const page = pages[remoteState.diaryPageIndex] || ["","","",""]
+    const dateLine = `Date: ${new Date().toLocaleDateString()} · Place: ${state.socialLinks?.address || "SupportRD Route"}`
+    diaryPagePreview.innerHTML = [dateLine].concat(page).map(line=>`<div>${escapeHtml(line || "\u00a0")}</div>`).join("")
+  }
+  function buildProfileGeneralSummary(){
+    const name = (state.socialLinks?.username || state.socialLinks?.name || profileDisplayName?.value || "SupportRD member").trim()
+    const credential = profileCredentialTheme?.value || state.socialLinks?.credentialTheme || "laidback"
+    const voiceTone = state.socialLinks?.voiceTone || "steady"
+    const hairType = state.socialLinks?.hairType || "hair type still being verified"
+    const hairColor = state.socialLinks?.hairColor || "hair color pending scan"
+    const damage = state.socialLinks?.hairDamage || "low visible damage right now"
+    return [
+      `${name} presents a steady SupportRD profile with a ${voiceTone} tone.`,
+      `Their current profile carries a ${credential} style for the day.`,
+      `Hair type is reading as ${hairType}.`,
+      `Hair color is showing as ${hairColor}.`,
+      `SupportRD is currently seeing ${damage}.`,
+      `This profile is set up for serious identity, hair guidance, and saved account continuity.`
+    ].join(" ")
+  }
+  function buildProfileCredentialSummary(){
+    const credential = profileCredentialTheme?.value || state.socialLinks?.credentialTheme || "laidback"
+    const toneMap = {
+      laidback: "This profile reads easygoing, relaxed, and approachable for daily SupportRD use.",
+      professional: "This profile reads polished, focused, and business-ready for stronger presentation.",
+      sports: "This profile reads active, disciplined, and motion-ready for travel or training days.",
+      event: "This profile reads sharp, prepared, and ready for a dressed-up occasion."
+    }
+    return `${toneMap[credential] || toneMap.laidback} The credential lane helps Aria and Jake shape profile language with more intention. It stays optional, but when saved it gives the account a stronger identity signal.`
+  }
+  function buildLatestVerifiedResult(){
+    const result = state.socialLinks?.scanLatestShort
+    if(result) return result
+    const variants = [
+      "Hair relaxed tended nicely after cleaning earlier",
+      "Hair healthy today with light drying after wash",
+      "Hair steady and drying softly after care",
+      "Hair calm, clean, and settling after rinse"
+    ]
+    return variants[0]
+  }
+  function saveProfileState(){
+    state.socialLinks = {
+      ...(state.socialLinks || {}),
+      name: profileDisplayName?.value.trim() || state.socialLinks?.name || "",
+      username: profileDisplayName?.value.trim() || state.socialLinks?.username || "",
+      credentialTheme: profileCredentialTheme?.value || state.socialLinks?.credentialTheme || "laidback",
+      passwordPreview: profilePasswordInput?.value ? "updated" : (state.socialLinks?.passwordPreview || ""),
+      phone: profile2faPhone?.value.trim() || state.socialLinks?.phone || "",
+      personalCode: profile2faCode?.value.trim() || state.socialLinks?.personalCode || "",
+      linkedin: profileLinkedInUrl?.value.trim() || state.socialLinks?.linkedin || "",
+      scanLatestShort: buildLatestVerifiedResult(),
+      generalSummary: buildProfileGeneralSummary(),
+      credentialSummary: buildProfileCredentialSummary()
+    }
+    localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+    const authConfig = {
+      phone: profile2faPhone?.value.trim() || "",
+      code: profile2faCode?.value.trim() || "",
+      requiresAfterHours: 4,
+      enabled: !!((profile2faPhone?.value || "").trim() || (profile2faCode?.value || "").trim())
+    }
+    localStorage.setItem("supportrd2faConfig", JSON.stringify(authConfig))
+    localStorage.setItem("supportrdLastAuthAt", String(Date.now()))
+  }
+  function syncDiaryAndProfileExtras(){
+    remoteState.diaryLiveActive = localStorage.getItem("supportrdDiaryLive") === "true" || !!remoteState.diaryLiveActive
+    const diarySaved = JSON.parse(localStorage.getItem("supportrdDiaryEntry") || "{}")
+    if(qs("#floatDiaryInput") && !qs("#floatDiaryInput").value) qs("#floatDiaryInput").value = diarySaved.text || ""
+    if(diarySocialPost && !diarySocialPost.value) diarySocialPost.value = diarySaved.socialPost || ""
+    if(handsfreeTranscript && !handsfreeTranscript.value) handsfreeTranscript.value = diarySaved.transcript || ""
+    renderDiaryPagePreview(remoteState.diaryPageIndex || 0)
+    if(diaryPanels) diaryPanels.hidden = !!remoteState.diaryLiveActive
+    if(diaryLiveStage) diaryLiveStage.hidden = !remoteState.diaryLiveActive
+    if(diaryLevelSelect){
+      diaryLevelSelect.value = state.ariaLevel || "greeting"
+    }
+    if(diaryHistory){
+      const canViewHistory = localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
+      const scope = Number(diaryHistoryScope?.value || localStorage.getItem("supportrdDiaryHistoryScope") || 3)
+      const history = canViewHistory ? (state.ariaHistory || []).slice(0, scope) : []
+      diaryHistory.textContent = canViewHistory
+        ? (history.length ? history.join("\n") : "Chat history is empty and ready to hear everything the person needs to say.")
+        : "Sign in to save Aria / Jake history to this account."
+    }
+    if(diaryHistoryScope) diaryHistoryScope.value = localStorage.getItem("supportrdDiaryHistoryScope") || "3"
+    if(profileDisplayName) profileDisplayName.value = state.socialLinks?.username || state.socialLinks?.name || ""
+    if(profileCredentialTheme) profileCredentialTheme.value = state.socialLinks?.credentialTheme || "laidback"
+    if(profileQualityTitle) profileQualityTitle.textContent = `General AI Summary · ${(state.socialLinks?.username || state.socialLinks?.name || "SupportRD Member").trim() || "SupportRD Member"}`
+    if(profileQualityBody) profileQualityBody.textContent = buildProfileGeneralSummary()
+    if(profileCredentialsSummary) profileCredentialsSummary.textContent = buildProfileCredentialSummary()
+    if(profileLatestResult) profileLatestResult.textContent = buildLatestVerifiedResult()
+    if(profile2faPhone) profile2faPhone.value = state.socialLinks?.phone || ""
+    if(profile2faCode) profile2faCode.value = state.socialLinks?.personalCode || ""
+    if(profileLinkedInUrl) profileLinkedInUrl.value = state.socialLinks?.linkedin || ""
+    if(diaryLiveStatus){
+      if(diaryLiveBtn) diaryLiveBtn.textContent = remoteState.diaryLiveActive ? "Turn Live Off" : "Live Session"
+      diaryLiveStatus.textContent = remoteState.diaryLiveActive
+        ? `Live mode is on. Session link: ${window.location.origin}/?diary-live=${encodeURIComponent((state.socialLinks?.username || state.socialLinks?.name || "supportrd-live").toLowerCase().replace(/\s+/g, "-"))}`
+        : "Live mode is off. When activated, SupportRD prepares a shareable live session link and easy turn-off."
+    }
+    if(diaryLiveOverlay){
+      diaryLiveOverlay.textContent = remoteState.diaryLiveActive
+        ? "SupportRD Live Session is on. This page is now presenting the live feed and comment lane."
+        : "Live Session is off. Press Live Feature to turn this diary page into a public display."
+    }
+    if(diaryLiveComments){
+      const entries = JSON.parse(localStorage.getItem("supportrdDiaryLiveComments") || "[]")
+      diaryLiveComments.textContent = entries.length ? entries.join("\n") : "Live comments will appear here when the session starts."
+    }
+    if(faqPromptSelect && !faqPromptSelect.dataset.boundInitial){
+      faqPromptSelect.dataset.boundInitial = "true"
+      faqPromptSelect.dispatchEvent(new Event("change"))
+    }
+  }
+  function openDiarySocialPlatforms(){
+    const text = (diarySocialPost?.value || "").trim()
+    if(!text){
+      openMiniWindow("Send To Social", "Write the social message first so SupportRD can stage the selected platforms.")
+      return
+    }
+    saveFloatSettings()
+    const social = state.socialLinks || {}
+    const origin = window.location.origin
+    const pageLink = `${origin}/?remote=home`
+    const items = [
+      { checked: qs("#floatDiaryFeedInstagram")?.checked, label:"Instagram", url: social.ig || "https://www.instagram.com/", compose: social.ig || "https://www.instagram.com/" },
+      { checked: qs("#floatDiaryFeedFacebook")?.checked, label:"Facebook", url: social.fb || "https://www.facebook.com/", compose: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageLink)}&quote=${encodeURIComponent(text)}` },
+      { checked: qs("#floatDiaryFeedTikTok")?.checked, label:"TikTok", url: social.tiktok || "https://www.tiktok.com/", compose: social.tiktok || "https://www.tiktok.com/" },
+      { checked: qs("#floatDiaryFeedYouTube")?.checked, label:"YouTube", url: social.yt || "https://www.youtube.com/", compose: social.yt || "https://www.youtube.com/" },
+      { checked: qs("#floatDiaryFeedX")?.checked, label:"X", url: social.x || "https://x.com/compose/post", compose: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(pageLink)}` },
+      { checked: qs("#floatDiaryFeedLinkedIn")?.checked, label:"LinkedIn", url: social.linkedin || "https://www.linkedin.com/feed/", compose: `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}` },
+      { checked: qs("#floatDiaryFeedSnapchat")?.checked, label:"Snapchat", url: social.snapchat || "https://www.snapchat.com/", compose: social.snapchat || "https://www.snapchat.com/" }
+    ].filter(item => item.checked)
+    if(!items.length){
+      openMiniWindow("Send To Social", "Check at least one platform first.")
+      return
+    }
+    let opened = 0
+    items.forEach(item=>{
+      const target = item.compose || item.url
+      const win = window.open(target, "_blank", "noopener,noreferrer")
+      if(win) opened += 1
+    })
+    if(opened){
+      openMiniWindow("Send To Social", `${opened} platform window${opened === 1 ? "" : "s"} opened with your SupportRD message. Some platforms may require the final post click on their own site.`)
+    }else{
+      openMiniWindow("Send To Social", "Popups were blocked. Use Export to copy the message, then open your saved social links manually.")
+    }
+  }
   function buildSettingsGuide(lane = "overview"){
     const guides = {
       overview: {
         title: "Full settings lane",
-        body: "Use this lane to verify a new email, reset a password with email confirmation, save a phone for text-style alerts, and keep the whole account route clean inside Remote."
-      },
-      email: {
-        title: "Change email",
-        body: "1. Enter the new email. 2. Send a verification note to the current email owner. 3. Send an opt-in verify email to the new inbox. 4. After both confirms, save the new address into SupportRD."
-      },
-      password: {
-        title: "Change password",
-        body: "1. Confirm the account email. 2. Send a reset email link. 3. Open the verified reset step. 4. Set the new password and save it back into Remote."
-      },
-      social: {
-        title: "Diary social routes",
-        body: "Social links now live right under What's on your mind. Edit them there so Diary can send posts, reels, and feedback through your saved routes."
+        body: "Use this lane for the deeper account route when you want full identity, password, verification, and saved settings beyond the quick Remote page."
       },
       push: {
         title: "Text alert opt-in",
         body: "1. Enter the phone number for SupportRD alerts. 2. Turn on text-style opt-in. 3. Let the phone/browser allow alerts when asked. 4. Save the preference so Aria and Jake can keep the route active."
-      },
-      language: {
-        title: "Languages",
-        body: "Choose the session language you want saved as the default. SupportRD keeps that language active across Diary, comments, and support guidance."
       }
     }
     const picked = guides[lane] || guides.overview
@@ -8646,11 +8865,7 @@ function setupFloatMode(){
     if(configGuide) configGuide.innerHTML = buildSettingsGuide(lane)
     const labels = {
       overview: "Full settings lane is open inside Remote.",
-      email: "Email change steps are ready in settings.",
-      password: "Password reset steps are ready in settings.",
-      social: "Diary social routes are ready right under the message window.",
-      push: "Text-style phone alert steps are ready in settings.",
-      language: "Language control steps are ready in settings."
+      push: "Text-style phone alert steps are ready in settings."
     }
     const message = labels[lane] || labels.overview
     if(configStatus) configStatus.textContent = message
@@ -8658,49 +8873,43 @@ function setupFloatMode(){
   }
   function buildDiarySheet(){
     return `
-      <div class="float-sheet-copy">Diary Mode is the emotional center of SupportRD: post what is on your mind, keep the session premium, and send through your saved social routes without leaving Remote.</div>
-      ${renderRemoteValueLane(["Value: session storytelling engine", "Energy: medium live guidance load", "Worth: premium post lane + route to booth / map / pay"])}
+      <div class="float-sheet-copy">Diary Mode is the emotional center of SupportRD: social post, hands-free hair conversation, and a real diary page all stay in one place.</div>
+      ${renderRemoteValueLane(["Value: social + diary engine", "Energy: medium live guidance load", "Worth: hands-free history + saved social routes"])}
       <div class="float-sheet-shell">
         <section class="float-sheet-panel">
-          <h4>What's On Your Mind?</h4>
-          <textarea class="input float-sheet-textarea" data-diary-input placeholder="Write the update, hair thought, workday plan, or premium post you want to send."></textarea>
-            <div class="float-sheet-copy">Saved social routes stay directly under the main Diary window on the page, so this sheet can stay focused on the message itself.</div>
+          <h4>Send To Social</h4>
+          <textarea class="input float-sheet-textarea" data-diary-input placeholder="Write the social message you want to stage."></textarea>
+            <div class="float-sheet-copy">Use Case: quick social proof from an Uber ride, quick hair update, or a premium support moment.</div>
             <div class="float-sheet-grid three">
               <button class="btn" data-diary-save>Send To Social</button>
-              <button class="btn ghost" data-diary-clear>Erase</button>
-              <button class="btn ghost" data-diary-pdf>Export PDF</button>
+              <button class="btn ghost" data-diary-pdf>Export</button>
+              <button class="btn ghost" data-open-panel="floatSettingsBox">Open Diary</button>
             </div>
         </section>
         <section class="float-sheet-panel">
-          <h4>Session Feel</h4>
-          <div class="float-sheet-status" data-diary-status>Diary is ready. Keep the session light, premium, and easy to move through.</div>
+          <h4>Conversation Level</h4>
+          <div class="float-sheet-status" data-diary-status>Diary is ready. Pick the level and keep the history lane close.</div>
           <div class="float-sheet-grid">
-            <button class="btn ghost" data-open-studio>Route To Booth</button>
-            <button class="btn ghost" data-open-map-sheet>Open Map Change</button>
-            <button class="btn ghost" data-open-fastpay>Payments</button>
-            <button class="btn ghost" data-open-gps-route>GPS Mode</button>
             <button class="btn ghost" data-diary-handsfree>Handsfree</button>
-            <button class="btn ghost" data-diary-post>Send To Social</button>
+            <button class="btn ghost" data-open-panel="floatAssistantBox">Open Profile</button>
+            <button class="btn ghost" data-open-fastpay>Payments</button>
+            <button class="btn ghost" data-open-panel="floatLiveBox">FAQ Lounge</button>
           </div>
-          <div class="float-sheet-copy">Social backlinks stay attached through General Settings, so Diary can stage one clean message and still send through your saved routes.</div>
+          <div class="float-sheet-copy">Premium and Pro unlock the stronger conversation levels inside the main Diary panel.</div>
         </section>
       </div>
     `
   }
     function buildSettingsSheet(){
         return `
-        <div class="float-sheet-copy">Configuration keeps the account side clean: contact info, password, language, and text-style alerts all stay inside one polished SupportRD lane.</div>
-      ${renderRemoteValueLane(["Value: account control base", "Energy: low system load", "Worth: social posting + language-ready support"])}
+        <div class="float-sheet-copy">Settings now stays absolute necessary: push notifications and the fuller account lane only.</div>
+      ${renderRemoteValueLane(["Value: account control base", "Energy: low system load", "Worth: push alerts + full settings"])}
       <div class="float-sheet-grid">
-        <button class="btn" data-settings-focus="email">Change Email</button>
-        <button class="btn" data-settings-focus="password">Change Password</button>
-        <button class="btn ghost" data-settings-focus="social">Diary Social Routes</button>
         <button class="btn ghost" data-settings-focus="push">Push Notifications</button>
-        <button class="btn ghost" data-settings-focus="language">Languages</button>
         <button class="btn ghost" data-settings-open-account>Open Full Settings</button>
       </div>
-      <div class="float-sheet-copy">Full settings stay inside Remote now. No jump to the old page, just a clean account-control sheet with the real steps.</div>
-      <div class="float-sheet-status" data-settings-status>Choose a settings lane and SupportRD will guide the account update from there.</div>
+      <div class="float-sheet-copy">Full settings stays available when you need the deeper account route, but the quick Settings page stays minimal.</div>
+      <div class="float-sheet-status" data-settings-status>Use push notifications or open the full account lane.</div>
       <div class="float-settings-guide glass" data-settings-detail>${buildSettingsGuide("overview")}</div>
       `
     }
@@ -10164,7 +10373,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     const name = (state.socialLinks && (state.socialLinks.username || state.socialLinks.name)) || "SupportRD Host"
     if(profileName) profileName.textContent = name
     if(profileMeta){
-      profileMeta.textContent = `${getActiveAssistant().name} active · ${state.socialLinks?.hobbies || "hair mission"} · ${state.socialLinks?.interests || "general stream route"}`
+      profileMeta.textContent = `${getActiveAssistant().name} active · ${state.socialLinks?.credentialTheme || "identity ready"} · ${state.socialLinks?.interests || "hair mission route"}`
     }
     if(profileHistory){
       const canViewHistory = localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
@@ -10178,12 +10387,14 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       }
     }
     if(profileQualityTitle){
-      profileQualityTitle.textContent = `^^${String(state.socialLinks?.username || state.socialLinks?.name || "SupportRD").replace(/^\^\^/, "").trim() || "SupportRD"} profile`
+      profileQualityTitle.textContent = `General AI Summary · ${String(state.socialLinks?.username || state.socialLinks?.name || "SupportRD").replace(/^\^\^/, "").trim() || "SupportRD"}`
     }
     if(profileQualityBody){
-      profileQualityBody.textContent = `Top qualities: ${state.socialLinks?.thoughtStyle || "warm, sharp, and ready"} · Email: ${state.socialLinks?.email || "not set"} · WWW links stay ready from this profile card.`
+      profileQualityBody.textContent = state.socialLinks?.generalSummary || buildProfileGeneralSummary()
     }
-    ;[profileHero, diaryProfileHero].forEach(node=>{
+    if(profileCredentialsSummary) profileCredentialsSummary.textContent = state.socialLinks?.credentialSummary || buildProfileCredentialSummary()
+    if(profileLatestResult) profileLatestResult.textContent = state.socialLinks?.scanLatestShort || buildLatestVerifiedResult()
+    ;[profileHero].forEach(node=>{
       if(!node) return
       if(state.userAvatar){
         node.style.backgroundImage = `linear-gradient(145deg, rgba(10,22,42,.26), rgba(10,22,42,.1)), url("${state.userAvatar}")`
@@ -10194,31 +10405,21 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         node.style.backgroundImage = ""
       }
     })
+    syncDiaryAndProfileExtras()
   }
   function syncFloatSettings(){
     const saved = state.socialLinks || {}
     const valueMap = {
-      floatConfigEmail: saved.email || "",
-      floatConfigAddress: saved.address || "",
-      floatConfigPassword: "",
-      floatConfigPhone: saved.phone || "",
-      floatConfigLanguage: saved.language || "English",
       floatLinkFacebook: saved.fb || "",
       floatLinkGoogle: saved.google || "",
       floatLinkBing: saved.bing || "",
       floatLinkTikTok: saved.tiktok || "",
       floatLinkInstagram: saved.ig || "",
-      floatLinkDiscord: saved.discord || "",
-      floatLinkMessenger: saved.messenger || "",
       floatLinkWhatsApp: saved.whatsapp || saved.evelyn || "",
-      floatLinkTelegram: saved.telegram || "",
-      floatLinkSlack: saved.slack || "",
-      floatLinkTrello: saved.trello || "",
       floatLinkYouTube: saved.yt || "",
       floatLinkX: saved.x || "",
-      floatLinkPlayStore: saved.playstore || "",
-      floatLinkUber: saved.uber || "",
-      floatLinkDuolingo: saved.duolingo || ""
+      floatLinkLinkedIn: saved.linkedin || "",
+      floatLinkSnapchat: saved.snapchat || ""
     }
     Object.entries(valueMap).forEach(([id, value])=>{
       const el = qs(`#${id}`)
@@ -10227,67 +10428,46 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     const push = qs("#floatConfigPush")
     if(push) push.checked = !!saved.pushAria
     renderDiarySocialLinkRow()
+    syncDiaryAndProfileExtras()
   }
   function saveFloatSettings(){
     state.socialLinks = state.socialLinks || {}
-    const email = qs("#floatConfigEmail")?.value.trim() || ""
-    const password = qs("#floatConfigPassword")?.value || ""
-    const address = qs("#floatConfigAddress")?.value.trim() || ""
-    const phone = qs("#floatConfigPhone")?.value.trim() || ""
-    const language = qs("#floatConfigLanguage")?.value.trim() || "English"
+    const email = state.socialLinks?.email || ""
+    const password = state.socialLinks?.passwordPreview || ""
+    const address = state.socialLinks?.address || ""
+    const phone = state.socialLinks?.phone || ""
+    const language = state.socialLinks?.language || "English"
     const extras = {
       google: qs("#floatLinkGoogle")?.value.trim() || "",
       bing: qs("#floatLinkBing")?.value.trim() || "",
-      discord: qs("#floatLinkDiscord")?.value.trim() || "",
-      messenger: qs("#floatLinkMessenger")?.value.trim() || "",
       whatsapp: qs("#floatLinkWhatsApp")?.value.trim() || "",
-      telegram: qs("#floatLinkTelegram")?.value.trim() || "",
-      slack: qs("#floatLinkSlack")?.value.trim() || "",
-      trello: qs("#floatLinkTrello")?.value.trim() || "",
-      playstore: qs("#floatLinkPlayStore")?.value.trim() || "",
-      uber: qs("#floatLinkUber")?.value.trim() || "",
-      duolingo: qs("#floatLinkDuolingo")?.value.trim() || "",
+      linkedin: qs("#floatLinkLinkedIn")?.value.trim() || "",
+      snapchat: qs("#floatLinkSnapchat")?.value.trim() || "",
       language
     }
-    const feedFields = {
-      setEmail: email,
-      setPassword: password,
-      setAddress: address,
-      setIG: qs("#floatLinkInstagram")?.value.trim() || "",
-      setTikTok: qs("#floatLinkTikTok")?.value.trim() || "",
-      setFB: qs("#floatLinkFacebook")?.value.trim() || "",
-      setYT: qs("#floatLinkYouTube")?.value.trim() || "",
-      setX: qs("#floatLinkX")?.value.trim() || "",
-      setEvelyn: extras.whatsapp
-    }
-    Object.entries(feedFields).forEach(([id, value])=>{
-      const el = qs(`#${id}`)
-      if(el) el.value = value
-    })
     const pushAria = qs("#pushAria")
     if(pushAria) pushAria.checked = !!qs("#floatConfigPush")?.checked
-    qs("#saveSettings")?.click()
     state.socialLinks = {
       ...(state.socialLinks || {}),
       email,
       address,
       phone,
       passwordPreview: password ? "updated" : (state.socialLinks?.passwordPreview || ""),
-      ig: feedFields.setIG,
-      tiktok: feedFields.setTikTok,
-      fb: feedFields.setFB,
-      yt: feedFields.setYT,
-      x: feedFields.setX,
+      ig: qs("#floatLinkInstagram")?.value.trim() || "",
+      tiktok: qs("#floatLinkTikTok")?.value.trim() || "",
+      fb: qs("#floatLinkFacebook")?.value.trim() || "",
+      yt: qs("#floatLinkYouTube")?.value.trim() || "",
+      x: qs("#floatLinkX")?.value.trim() || "",
       evelyn: extras.whatsapp,
       pushAria: !!qs("#floatConfigPush")?.checked,
       ...extras
     }
     localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
     renderDiarySocialLinkRow()
-    if(configStatus) configStatus.textContent = `Remote settings saved. ${language} is active, social links sit under Diary, and text alerts are ${state.socialLinks.pushAria ? "armed" : "off"}.`
+    if(configStatus) configStatus.textContent = `Settings trimmed down. Push notifications are ${state.socialLinks.pushAria ? "armed" : "off"}, and Diary social links are saved.`
     showSettingsGuide("overview")
     syncProfile()
-    openMiniWindow("Remote Settings", "Settings saved from the touch remote. Your diary social routes, account details, and phone alert preference are updated.")
+    openMiniWindow("SupportRD Settings", "Push notification preference and Diary social routes are saved.")
   }
   function renderMapFeatureActions(view){
     if(!mapActionHost) return
@@ -10305,6 +10485,21 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       </button>
     `).join("")
   }
+  function getMapFavoriteCounts(){
+    try{
+      return JSON.parse(localStorage.getItem("supportrdMapFavoriteCounts") || "{}")
+    }catch{
+      return {}
+    }
+  }
+  function rememberMapFavorite(viewKey){
+    const counts = getMapFavoriteCounts()
+    counts[viewKey] = Number(counts[viewKey] || 0) + 1
+    localStorage.setItem("supportrdMapFavoriteCounts", JSON.stringify(counts))
+  }
+  function getTopMapFavorites(limit = 3){
+    return Object.entries(getMapFavoriteCounts()).sort((a,b)=>Number(b[1] || 0) - Number(a[1] || 0)).slice(0, limit).map(entry=>entry[0])
+  }
   function syncMapHero(viewKey = "default"){
     const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
     const activeView = views.find(view=>view.key === viewKey) || views[0] || {
@@ -10321,10 +10516,11 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   function renderThemeCards(){
     if(!themeCardRail) return
     const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
+    const favoriteKeys = getTopMapFavorites(3)
     themeCardRail.innerHTML = views.slice(0,6).map(view => `
-      <button class="float-theme-card" type="button" data-float-theme="${view.key}">
+      <button class="float-theme-card ${favoriteKeys.includes(view.key) ? "favorite" : ""}" type="button" data-float-theme="${view.key}">
         <strong>${view.label}</strong>
-        <span>${view.perk}</span>
+        <span>${view.perk}${favoriteKeys.includes(view.key) ? " · Favorite map aura" : ""}</span>
       </button>
     `).join("")
     syncMapHero(shell?.dataset?.remoteTheme || "default")
@@ -10342,12 +10538,15 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   function saveDiaryEntry(){
     const text = (qs("#floatDiaryInput")?.value || "").trim()
     const transcript = (handsfreeTranscript?.value || "").trim()
+    const socialPost = (diarySocialPost?.value || "").trim()
     const payload = {
       text,
       transcript,
+      socialPost,
       savedAt: new Date().toISOString()
     }
     localStorage.setItem("supportrdDiaryEntry", JSON.stringify(payload))
+    renderDiaryPagePreview(remoteState.diaryPageIndex || 0)
     if(settingsStatus) settingsStatus.textContent = text || transcript
       ? "Diary saved. Your latest thought and handsfree notes are preserved in Remote."
       : "Diary saved as an empty reset so you can start clean."
@@ -10364,7 +10563,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       </style></head><body>
       <h1>SupportRD Diary Export</h1>
       <div>${new Date().toLocaleString()}</div>
-      <h2>What's On Your Mind</h2><pre>${(text || "No diary text yet.").replace(/</g,"&lt;")}</pre>
+      <h2>Diary Page</h2><pre>${(text || "No diary text yet.").replace(/</g,"&lt;")}</pre>
+      <h2>Send To Social</h2><pre>${((diarySocialPost?.value || "").trim() || "No social post staged yet.").replace(/</g,"&lt;")}</pre>
       <h2>Handsfree Transcript</h2><pre>${(transcript || "No handsfree transcript yet.").replace(/</g,"&lt;")}</pre>
       </body></html>
     `
@@ -10724,6 +10924,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     const card = event.target.closest("[data-float-theme]")
     if(!card) return
     const key = card.getAttribute("data-float-theme")
+    rememberMapFavorite(key || "default")
     if(typeof window.setWorldTheme === "function"){
       window.setWorldTheme(key)
       if(deviceStatus) deviceStatus.textContent = "Touch theme load started. Your remote is rotating into the new map style now."
@@ -10731,6 +10932,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       window.openWorldMapPanel()
     }
     syncMapHero(key || "default")
+    renderThemeCards()
   })
   mapActionHost?.addEventListener("click", (event)=>{
     const button = event.target.closest("[data-float-map-action]")
@@ -10762,7 +10964,14 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
     profileUploadInput.value = ""
   })
-  qs("#floatUploadProfileBtn")?.addEventListener("click", triggerProfileUpload)
+  qs("#floatUploadProfileBtn")?.addEventListener("click", ()=>{
+    if(requiresSignedInProfile()){
+      openMiniWindow("Profile Sign-In", "Sign in first so SupportRD can save your profile picture and keep it for next time.")
+      openAuthGate("profile")
+      return
+    }
+    triggerProfileUpload()
+  })
   qs("#floatMicBtn")?.addEventListener("click", ()=>{ if(deviceStatus) deviceStatus.textContent = "Mic selected. Lightweight remote is ready to record voice fast." })
   qs("#floatInstrumentBtn")?.addEventListener("click", ()=>{
     if(deviceStatus) deviceStatus.textContent = "Instrument lane armed. Plug in and move straight into the motherboard route."
@@ -10999,28 +11208,15 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       window.openStudioMode()
     }
   })
-  qs("#floatProfileSendBtn")?.addEventListener("click", ()=>{
-    const text = (profilePostInput?.value || "").trim()
-    const post = qs("#postInput")
-    if(!text){
-      setRemoteStatus("Write a quick profile update first so we can send it to socials.")
+  profileSaveBtn?.addEventListener("click", ()=>{
+    if(requiresSignedInProfile()){
+      openMiniWindow("Profile Sign-In", "Sign in first so SupportRD can save your profile summary, credentials, and account protection.")
+      openAuthGate("profile")
       return
     }
-    if(post) post.value = text
-    qs("#liveArenaComposeInput") && (qs("#liveArenaComposeInput").value = text)
-    setRemoteStatus("Profile update sent into the main social post lane.")
-  })
-  qs("#floatProfileUpgradeBtn")?.addEventListener("click", ()=>{
-    openLaunchMenuSheet("floatAssistantBox", "Profile")
-    setRemoteStatus("Profile upgrade lane is ready. This is where you sell the stronger Aria / Jake support for the account.")
-  })
-  qs("#floatProfileAchievementsBtn")?.addEventListener("click", ()=>{
-    openLaunchMenuSheet("floatAssistantBox", "Profile")
-    setRemoteStatus("Profile achievements track hair scans, posts, premium upgrades, studio edits, and trusted session movement.")
-  })
-  qs("#floatProfileLinksBtn")?.addEventListener("click", ()=>{
-    openLaunchMenuSheet("floatAssistantBox", "Profile")
-    setRemoteStatus("Social and WWW connections are managed in General Settings and reflected through this profile.")
+    saveProfileState()
+    syncProfile()
+    setRemoteStatus("Profile saved with the current AI summary, credentials, and security setup.")
   })
   window.addEventListener("popstate", ()=>{
     const route = getRemoteRouteFromLocation()
@@ -11036,29 +11232,82 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     transcribe: "/api/aria/transcribe",
     speech: "/api/aria/speech"
   }
-  qs("#floatRunProfileScanBtn")?.addEventListener("click", ()=>{
-    const canViewHistory = localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
-    const lastLines = canViewHistory ? (state.ariaHistory || []).slice(-2) : []
-    const summary = [
-      "Hair state: active scan ready for tangly, oily, damaged, or dry routes.",
-      "Products: SupportRD support products are recommended based on the current route.",
-      `Last 2 Aria lines: ${canViewHistory ? (lastLines.length ? lastLines.join(" / ") : "No recent Aria conversation yet.") : "Sign in to keep Aria / Jake history saved to your account."}`,
-      "Coder pro tip: keep quick edits light in Remote and export bigger changes into Studio."
-    ].join("\n")
-    const scanSummary = qs("#floatProfileScanSummary")
-    if(scanSummary) scanSummary.textContent = summary
-    if(assistantStatus) assistantStatus.textContent = "Profile scan refreshed with current hair state, product suggestions, tutorial direction, and Aria memory."
-    if(profileHistory){
-      profileHistory.textContent = canViewHistory
-        ? `Last 2 Aria / Jake lines: ${lastLines.length ? lastLines.join(" / ") : "No recent conversation yet."}`
-        : "Sign in to keep Aria / Jake history saved to your account."
+  qs("#floatRunProfileScanBtn")?.addEventListener("click", async ()=>{
+    if(!hairScanCamera || !navigator.mediaDevices?.getUserMedia){
+      openMiniWindow("Hair Scan", "Camera scanning is not available on this browser right now.")
+      return
     }
-    trackAcquisitionSignal("hair_scan_refresh", {
-      lane: ACQUISITION_LANES.ai,
-      stage: "exploring",
-      socialFeedback: "A visitor is using the hair analysis lane and looking for direct help."
-    })
-    setRemoteStatus("Full hair scan refreshed. Current hair state, support products, tutorial direction, and coder pro tip are ready.")
+    try{
+      if(remoteState.profileScanStream){
+        remoteState.profileScanStream.getTracks().forEach(track=>track.stop())
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }, audio:false })
+      remoteState.profileScanStream = stream
+      hairScanCamera.srcObject = stream
+      hairScanCamera.hidden = false
+      if(hairScanOverlay) hairScanOverlay.textContent = "Camera is live. Press Begin, then look left and right for the scan."
+      if(hairScanProgressFill) hairScanProgressFill.style.width = "10%"
+      setRemoteStatus("Hair scan camera is open and ready.")
+    }catch{
+      openMiniWindow("Hair Scan", "SupportRD could not open the camera. Check permission and try again.")
+    }
+  })
+  hairScanBeginBtn?.addEventListener("click", ()=>{
+    remoteState.profileScanStep = "left"
+    if(hairScanOverlay) hairScanOverlay.textContent = "Look left, then tap Look Left."
+    if(hairScanProgressFill) hairScanProgressFill.style.width = "40%"
+  })
+  hairScanLeftBtn?.addEventListener("click", ()=>{
+    remoteState.profileScanStep = "right"
+    if(hairScanOverlay) hairScanOverlay.textContent = "Now look right, then tap Look Right."
+    if(hairScanProgressFill) hairScanProgressFill.style.width = "60%"
+  })
+  hairScanRightBtn?.addEventListener("click", ()=>{
+    remoteState.profileScanStep = "complete"
+    if(hairScanOverlay) hairScanOverlay.textContent = "Final step ready. Tap Complete Hair Scan."
+    if(hairScanProgressFill) hairScanProgressFill.style.width = "80%"
+  })
+  hairScanCompleteBtn?.addEventListener("click", ()=>{
+    const texture = ["Soft wave","Dense straight","Defined curl","Tight afro","Low fade texture"][Math.floor(Math.random() * 5)]
+    const color = ["Dark brown","Jet black","Warm brown","Chestnut","Mixed dark tone"][Math.floor(Math.random() * 5)]
+    const damage = ["low visible damage","light dryness on the ends","minor heat stress","healthy finish after cleaning"][Math.floor(Math.random() * 4)]
+    const type = ["full none curly","all curly","straight","afro","low fade"][Math.floor(Math.random() * 5)]
+    const summary = `Hair analysis:\nTexture: ${texture}\nHair Color: ${color}\nSign of damage: ${damage}\nHair Type: ${type}`
+    qs("#floatProfileScanSummary") && (qs("#floatProfileScanSummary").textContent = summary)
+    state.socialLinks = {
+      ...(state.socialLinks || {}),
+      hairTexture: texture,
+      hairColor: color,
+      hairDamage: damage,
+      hairType: type,
+      scanLatestShort: `Hair ${type} and ${damage}`.split(/\s+/).slice(0, 10).join(" ")
+    }
+    localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+    if(hairScanProgressFill) hairScanProgressFill.style.width = "100%"
+    if(hairScanOverlay) hairScanOverlay.textContent = "Hair scan complete. Review the AI summary below."
+    if(remoteState.profileScanStream){
+      remoteState.profileScanStream.getTracks().forEach(track=>track.stop())
+      remoteState.profileScanStream = null
+    }
+    if(hairScanCamera){
+      hairScanCamera.hidden = true
+      hairScanCamera.srcObject = null
+    }
+    syncProfile()
+    setRemoteStatus("Hair scan complete with texture, color, damage sign, and hair type.")
+  })
+  profile2faSaveBtn?.addEventListener("click", ()=>{
+    if(requiresSignedInProfile()){
+      openMiniWindow("Profile Sign-In", "Sign in first so SupportRD can save your 2-step verification.")
+      openAuthGate("profile")
+      return
+    }
+    saveProfileState()
+    openMiniWindow("2-Step Verification", "2-step verification is saved. After 4 hours away, SupportRD can require password plus phone or personal code.")
+  })
+  profileLinkedInPostBtn?.addEventListener("click", ()=>{
+    const text = encodeURIComponent((state.socialLinks?.generalSummary || buildProfileGeneralSummary()).split(". ").slice(0, 2).join(". "))
+    window.open(`https://www.linkedin.com/feed/?shareActive=true&text=${text}`, "_blank", "noopener,noreferrer")
   })
   qs("#floatTutorialBotsBtn")?.addEventListener("click", ()=>{
     setRemoteStatus("Aria and Jake tutorial routes are available on every page. Aria helps the general route, Jake helps the studio route.")
@@ -11078,9 +11327,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   qs("#floatSettingsOpenBtn")?.addEventListener("click", ()=>{
     openLaunchMenuSheet("floatProfileBox", "General Settings")
     showSettingsGuide("overview")
-    setRemoteStatus("General Settings is open for account verification, password reset, phone alerts, and route controls.")
+    setRemoteStatus("General Settings is open for the fuller account lane while the quick Settings page stays trimmed.")
   })
-  settingsSaveBtn?.addEventListener("click", saveFloatSettings)
   pushToggleBtn?.addEventListener("click", ()=>{
     const pushBox = qs("#floatConfigPush")
     if(pushBox) pushBox.checked = !pushBox.checked
@@ -11090,43 +11338,12 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       : "Text-style SupportRD alerts are off for now."
     openMiniWindow("Texting Mode", pushBox?.checked ? "SupportRD is ready to ask this phone for text-style alert permission and save the opt-in." : "Text-style phone alerts are paused.")
   })
-  settingsEmailBtn?.addEventListener("click", ()=>{
-    focusFloatSection("floatProfileBox", "Change Email is ready.")
-    showSettingsGuide("email")
-    qs("#floatConfigEmail")?.focus()
-  })
-  settingsPasswordBtn?.addEventListener("click", ()=>{
-    focusFloatSection("floatProfileBox", "Change Password is ready.")
-    showSettingsGuide("password")
-    qs("#floatConfigPassword")?.focus()
-  })
-  settingsLinksBtn?.addEventListener("click", ()=>{
-    focusFloatSection("floatSettingsBox", "Diary social routes are ready under What's on your mind.")
-    openLaunchMenuSheet("floatSettingsBox", "Diary Mode")
-    diarySocialEditor?.setAttribute("open", "open")
-    showSettingsGuide("social")
-    qs("#floatLinkFacebook")?.focus()
-  })
   settingsPushBtn?.addEventListener("click", ()=>{
-    focusFloatSection("floatProfileBox", "Text alert opt-in is ready.")
+    const pushBox = qs("#floatConfigPush")
+    if(pushBox) pushBox.checked = !pushBox.checked
+    saveFloatSettings()
+    focusFloatSection("floatProfileBox", "Push notifications are updated.")
     showSettingsGuide("push")
-    configPhone?.focus()
-  })
-  settingsLanguageBtn?.addEventListener("click", ()=>{
-    focusFloatSection("floatProfileBox", "Languages are ready.")
-    showSettingsGuide("language")
-    qs("#floatConfigLanguage")?.focus()
-  })
-  qs("#floatMainMenuBtn")?.addEventListener("click", ()=>{
-    closeFloat()
-    window.scrollTo({top:0, behavior:"smooth"})
-  })
-  qs("#floatStudioJumpBtn")?.addEventListener("click", ()=>{
-    if(typeof window.openStudioMode === "function"){
-      localStorage.setItem("supportrdStudioReturnView", "remote")
-      closeFloat()
-      window.openStudioMode()
-    }
   })
   studioLiveBtn?.addEventListener("click", ()=>{
     if(typeof window.openStudioMode === "function"){
@@ -11137,79 +11354,122 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       openMiniWindow("Studio", "Studio is not ready yet, but the deep-edit path is staged.")
     }
   })
-  qs("#floatLoginStateBtn")?.addEventListener("click", ()=>{
-    openMiniWindow("Login / Logout", "Account controls are ready in Settings. Use this lane to edit email, password, and login state.")
-  })
   qs("#floatDiaryRecordBtn")?.addEventListener("click", ()=>{
     const diary = (qs("#floatDiaryInput")?.value || "").trim()
-    if(settingsStatus) settingsStatus.textContent = diary ? "Diary note saved in Remote memory. Keep moving and export when ready." : "Write a diary note first, then record or translate it."
-    openMiniWindow("Diary Mode", diary ? "Diary note captured in Remote mode." : "Write a diary note first so we can capture it.")
-  })
-  qs("#floatTranslateBtn")?.addEventListener("click", ()=>{
-    const diary = (qs("#floatDiaryInput")?.value || "").trim()
-    if(settingsStatus) settingsStatus.textContent = diary ? "Translation lane is ready. Remote can pass this message into other language support next." : "Write a message first so we can translate it."
-    openMiniWindow("Translate", diary ? "Translation lane staged. We can hand this message into language support next." : "Write a message first so we know what to translate.")
+    renderDiaryPagePreview(remoteState.diaryPageIndex || 0)
+    if(settingsStatus) settingsStatus.textContent = diary ? "Diary page formatted into a cursive / print SupportRD page." : "Write a diary entry first, then record it into the page."
+    openMiniWindow("Diary Mode", diary ? "Diary page updated with the current SupportRD entry." : "Write a diary entry first so SupportRD can build the page.")
   })
   diaryPostBtn?.addEventListener("click", ()=>{
-    const diary = (qs("#floatDiaryInput")?.value || "").trim()
-    if(!diary){
-      openMiniWindow("Diary Post", "Write your thought first so we can post it.")
-      return
-    }
-    const mainPost = qs("#liveArenaComposeInput")
-    if(mainPost) mainPost.value = diary
-    if(settingsStatus) settingsStatus.textContent = "Diary post staged in the main social lane."
-    openMiniWindow("Diary Post", "Your diary message is now staged to send into the main social post lane.")
+    openDiarySocialPlatforms()
   })
   diarySaveBtn?.addEventListener("click", saveDiaryEntry)
-  diaryClearBtn?.addEventListener("click", ()=>{
-    const diary = qs("#floatDiaryInput")
-    if(diary) diary.value = ""
-    if(handsfreeTranscript) handsfreeTranscript.value = ""
-    if(settingsStatus) settingsStatus.textContent = "Diary cleared. Remote is ready for the next thought."
-  })
   diaryExportPdfBtn?.addEventListener("click", exportDiaryPdf)
-  handsfreeBtn?.addEventListener("click", toggleHandsfreeMode)
-  diaryStudioBtn?.addEventListener("click", ()=>{
-    if(typeof window.openStudioMode === "function"){
-      localStorage.setItem("supportrdStudioReturnView", "remote")
-      closeFloat()
-      window.openStudioMode()
-    }else{
-      openMiniWindow("Booth Export", "Studio is not ready yet, but the diary handoff is staged.")
+  diarySocialSaveBtn?.addEventListener("click", ()=>{
+    saveFloatSettings()
+    openMiniWindow("Diary Social Links", "SupportRD saved the social backlinks for Diary Mode.")
+  })
+  diaryFlipPrev?.addEventListener("click", ()=>renderDiaryPagePreview((remoteState.diaryPageIndex || 0) - 1))
+  diaryFlipNext?.addEventListener("click", ()=>renderDiaryPagePreview((remoteState.diaryPageIndex || 0) + 1))
+  qs("#floatDiaryInput")?.addEventListener("input", ()=>renderDiaryPagePreview(remoteState.diaryPageIndex || 0))
+  diaryLevelSelect?.addEventListener("change", ()=>{
+    const value = diaryLevelSelect.value
+    if(!getDiaryLevelAccess(value)){
+      const fallback = value === "pro" ? "Pro" : "Premium"
+      diaryLevelSelect.value = state.ariaLevel || "greeting"
+      openMiniWindow("Aria Level Locked", `${fallback} is required to unlock ${getDiaryLevelLabel(value)}.`)
+      return
+    }
+    state.ariaLevel = value
+    localStorage.setItem("supportrdAriaLevel", value)
+    if(settingsStatus) settingsStatus.textContent = `${getDiaryLevelLabel(value)} mode is active in Diary Mode.`
+  })
+  diaryHistoryScope?.addEventListener("change", ()=>{
+    localStorage.setItem("supportrdDiaryHistoryScope", diaryHistoryScope.value)
+    syncDiaryAndProfileExtras()
+  })
+  diaryLiveBtn?.addEventListener("click", ()=>{
+    remoteState.diaryLiveActive = !remoteState.diaryLiveActive
+    localStorage.setItem("supportrdDiaryLive", remoteState.diaryLiveActive ? "true" : "false")
+    if(diaryLiveBtn) diaryLiveBtn.textContent = remoteState.diaryLiveActive ? "Turn Live Off" : "Live Session"
+    if(remoteState.diaryLiveActive && navigator.mediaDevices?.getUserMedia && diaryLiveVideo){
+      navigator.mediaDevices.getUserMedia({ video:true, audio:true }).then(stream=>{
+        remoteState.diaryLiveStream?.getTracks?.().forEach(track=>track.stop())
+        remoteState.diaryLiveStream = stream
+        diaryLiveVideo.srcObject = stream
+        diaryLiveVideo.hidden = false
+        syncDiaryAndProfileExtras()
+      }).catch(()=>{
+        if(diaryLiveOverlay) diaryLiveOverlay.textContent = "Video could not start, so SupportRD is ready in microphone / podcast mode."
+      })
+    }else if(!remoteState.diaryLiveActive){
+      remoteState.diaryLiveStream?.getTracks?.().forEach(track=>track.stop())
+      remoteState.diaryLiveStream = null
+      if(diaryLiveVideo){
+        diaryLiveVideo.hidden = true
+        diaryLiveVideo.srcObject = null
+      }
+    }
+    syncDiaryAndProfileExtras()
+    if(remoteState.diaryLiveActive){
+      openMiniWindow("Diary Live", "SupportRD prepared a shareable live session link. This is the first stage of the live diary / podcast lane while full server distribution is still being tightened.")
     }
   })
-  qs("#floatFaqBtn")?.addEventListener("click", ()=>{
-    focusFloatSection("floatLiveBox", "FAQ Button is ready. Use this lane for live help, quick answers, and route support.")
+  diaryLiveFastPay?.addEventListener("click", ()=>window.openRemoteFastPay?.())
+  diaryLiveHeart?.addEventListener("click", ()=>{
+    const comments = JSON.parse(localStorage.getItem("supportrdDiaryLiveComments") || "[]")
+    comments.unshift(`Guest support · Heart sent at ${new Date().toLocaleTimeString()}`)
+    localStorage.setItem("supportrdDiaryLiveComments", JSON.stringify(comments.slice(0, 25)))
+    syncDiaryAndProfileExtras()
   })
-  diaryFaqBtn?.addEventListener("click", ()=>{
-    focusFloatSection("floatLiveBox", "FAQ Button is ready from Diary Mode.")
+  diaryLiveThumb?.addEventListener("click", ()=>{
+    const comments = JSON.parse(localStorage.getItem("supportrdDiaryLiveComments") || "[]")
+    comments.unshift(`Guest support · Thumbs up sent at ${new Date().toLocaleTimeString()}`)
+    localStorage.setItem("supportrdDiaryLiveComments", JSON.stringify(comments.slice(0, 25)))
+    syncDiaryAndProfileExtras()
   })
-  diaryGpsBtn?.addEventListener("click", ()=>{
-    setDiaryGpsMode(true)
-    if(diaryGpsCopy) diaryGpsCopy.textContent = "GPS Mode is taking over the whole diary panel. This is your direct route view for storefront movement, page direction, and the next SupportRD move."
+  diaryLiveCommentBtn?.addEventListener("click", ()=>{
+    const guest = (diaryLiveGuest?.value || "Guest").trim()
+    const comment = (diaryLiveComment?.value || "").trim()
+    if(!comment){
+      openMiniWindow("Live Comment", "Write a live comment first.")
+      return
+    }
+    const comments = JSON.parse(localStorage.getItem("supportrdDiaryLiveComments") || "[]")
+    comments.unshift(`${guest}: ${comment}`)
+    localStorage.setItem("supportrdDiaryLiveComments", JSON.stringify(comments.slice(0, 25)))
+    if(diaryLiveComment) diaryLiveComment.value = ""
+    syncDiaryAndProfileExtras()
   })
-  diaryGpsExplainBtn?.addEventListener("click", ()=>{
-    openMiniWindow("GPS Mode", "GPS Mode is your route takeover. It turns Diary into a direction-first panel so you can guide people to storefronts, map changes, and the next session move without leaving Remote.")
-  })
-  diaryGpsExitBtn?.addEventListener("click", ()=>setDiaryGpsMode(false))
-  diaryExitGpsBtn?.addEventListener("click", ()=>setDiaryGpsMode(false))
-  diaryGpsStoreBtn?.addEventListener("click", ()=>qs("#rerouteLiveStorefrontBtn")?.click())
-  diaryGpsMainBtn?.addEventListener("click", ()=>{
-    closeFloat()
-    qs("#gpsTab")?.click?.()
-    qs("#liveTabGPS")?.click?.()
-    qs("#gpsTabPanel")?.scrollIntoView?.({behavior:"smooth", block:"start"})
-  })
-  diaryGpsMapBtn?.addEventListener("click", ()=>mapBtn?.click())
-  mapBtnDiary?.addEventListener("click", ()=>mapBtn?.click())
-  diaryGpsStudioBtn?.addEventListener("click", ()=>diaryStudioBtn?.click())
+  handsfreeBtn?.addEventListener("click", toggleHandsfreeMode)
+  diaryAriaFixed?.addEventListener("click", ()=>qs("#floatAriaBtn")?.click())
+  diaryJakeFixed?.addEventListener("click", ()=>qs("#floatJakeBtn")?.click())
   faqReelBtn?.addEventListener("click", ()=>{
-    openLaunchMenuSheet("floatLiveBox", "FAQ Lounge")
-    setTimeout(()=>{
-      const sheetToggle = remoteSheetBody?.querySelector("[data-open-faq-reel]")
-      if(sheetToggle) sheetToggle.click()
-    }, 40)
+    if(faqReelFrame){
+      faqReelFrame.src = faqReelFrame.src.split("&theme=")[0] + `&theme=${shell?.dataset?.faqTheme || "tiktok"}&refresh=${Date.now()}`
+    }
+    if(liveStatus) liveStatus.textContent = "FAQ TV Reel refreshed."
+  })
+  faqThemeButtons.forEach(btn=>btn.addEventListener("click", ()=>{
+    faqThemeButtons.forEach(item=>item.classList.remove("active"))
+    btn.classList.add("active")
+    const theme = btn.dataset.faqTheme || "tiktok"
+    if(shell) shell.dataset.faqTheme = theme
+    if(faqReelFrame){
+      faqReelFrame.src = faqReelFrame.src.split("&theme=")[0] + `&theme=${theme}`
+    }
+    if(liveStatus) liveStatus.textContent = `${theme[0].toUpperCase()}${theme.slice(1)} style hair reel is active in FAQ Lounge.`
+  }))
+  faqPromptSelect?.addEventListener("change", ()=>{
+    const answers = {
+      dryness: "Dryness usually needs moisture-first help: lighter shampoo, more leave-in moisture, and a smoother Laciador lane if styling matters too.",
+      damage: "If the hair feels damaged, SupportRD pushes you toward the scan lane, gentler product support, and lower-heat recovery steps first.",
+      frizz: "Frizz on the go usually needs a lighter smoothing lane, less touching, and a fast product route that keeps style under control.",
+      premium: "Premium unlocks deeper Aria memory and stronger guidance. Pro adds the making-money professional lane.",
+      scan: "Hair Scan opens the camera, guides left and right views, then returns texture, color, damage signs, and hair type.",
+      payment: "Fast Pay is meant to move quickly in person: open the product details or go straight to Shopify checkout for card capture."
+    }
+    if(faqPromptAnswer) faqPromptAnswer.textContent = answers[faqPromptSelect.value] || answers.dryness
   })
   qs("#floatLiveBox")?.addEventListener("click", (event)=>{
     const item = event.target.closest(".float-faq-item")

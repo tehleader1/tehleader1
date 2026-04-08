@@ -4901,11 +4901,74 @@ body.assistant-static .remote-guardian-btn.demo-active{
   color:#dce9fb;
   line-height:1.5;
 }
+.float-profile-results{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+.float-profile-result-card,
+.float-profile-scan,
+.float-profile-security,
+.float-faq-dropdown{
+  display:grid;
+  gap:10px;
+  padding:14px 16px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.04));
+}
+.float-profile-result-card strong,
+.float-profile-scan-head strong{
+  color:#fff;
+}
+.float-profile-result-card span{
+  color:#deecff;
+  line-height:1.55;
+}
 .float-profile-history{
   padding:14px;
   border-radius:18px;
   background:rgba(6,18,31,.42);
   border:1px solid rgba(255,255,255,.1);
+}
+.float-profile-scan-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.float-profile-scan-head span,
+.float-profile-security span{
+  color:#d9ebff;
+  line-height:1.5;
+}
+.float-profile-scan-stage{
+  position:relative;
+  min-height:240px;
+  overflow:hidden;
+  border-radius:22px;
+  border:1px solid rgba(149,216,255,.22);
+  background:radial-gradient(circle at 20% 20%, rgba(255,255,255,.18), transparent 28%), linear-gradient(145deg, rgba(11,28,52,.92), rgba(20,49,79,.74));
+}
+.float-profile-scan-video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.float-profile-scan-overlay{
+  position:absolute;
+  left:16px;
+  right:16px;
+  bottom:16px;
+  z-index:2;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(9,18,34,.72);
+  color:#f4f9ff;
+  line-height:1.5;
+  backdrop-filter:blur(10px);
 }
 .float-theme-rail{
   display:grid;
@@ -4926,6 +4989,13 @@ body.assistant-static .remote-guardian-btn.demo-active{
 }
 .float-theme-card strong{font-size:15px;}
 .float-theme-card span{color:#dce9fb;font-size:13px;line-height:1.45;}
+.float-theme-card.favorite{
+  border-color:rgba(255,214,110,.62);
+  box-shadow:0 0 0 1px rgba(255,214,110,.25), 0 18px 32px rgba(67,134,224,.2);
+  background:
+    radial-gradient(circle at top right, rgba(255,214,110,.2), transparent 30%),
+    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+}
 .float-config-grid{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -4933,11 +5003,6 @@ body.assistant-static .remote-guardian-btn.demo-active{
 }
 .float-studio-fx-grid,
 .float-gig-grid{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:10px;
-}
-.float-settings-shortcuts{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
   gap:10px;
@@ -4979,12 +5044,32 @@ body.assistant-static .remote-guardian-btn.demo-active{
   font-size:14px;
 }
 .float-diary-input{
-  min-height:180px;
+  min-height:170px;
   font-size:16px;
+}
+.float-diary-social-input{
+  min-height:140px;
+  font-size:15px;
 }
 .float-diary-link-hub{
   display:grid;
   gap:10px;
+}
+.float-social-check-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+  color:#eef7ff;
+}
+.float-social-check-grid label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:42px;
+  padding:0 12px;
+  border-radius:14px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
 }
 .float-diary-link-row{
   display:flex;
@@ -5043,6 +5128,9 @@ body.assistant-static .remote-guardian-btn.demo-active{
   grid-template-columns:repeat(3, minmax(0, 1fr));
   gap:12px;
 }
+.float-diary-panels.diary-layout{
+  grid-template-columns:1.15fr .95fr 1fr;
+}
 .float-diary-panel,
 .float-diary-gps-stage{
   display:grid;
@@ -5075,9 +5163,51 @@ body.assistant-static .remote-guardian-btn.demo-active{
   display:grid;
   gap:10px;
 }
+.float-diary-assistant-fixed{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.float-diary-history{
+  min-height:180px;
+  max-height:260px;
+  overflow:auto;
+  white-space:pre-wrap;
+}
+.float-diary-page-wrap{
+  padding:12px;
+  border-radius:22px;
+  border:1px solid rgba(200,187,139,.28);
+  background:linear-gradient(180deg, rgba(255,250,238,.96), rgba(241,232,212,.9));
+  box-shadow:inset 0 0 0 1px rgba(122,89,45,.08), 0 18px 30px rgba(20,33,50,.1);
+}
+.float-diary-page-preview{
+  min-height:255px;
+  display:grid;
+  grid-template-rows:repeat(5, minmax(32px, auto));
+  gap:10px;
+  font-size:18px;
+  line-height:1.7;
+  color:#3d2e1c;
+  font-family:"Segoe Print","Bradley Hand ITC","Comic Sans MS",cursive;
+}
+.float-diary-page-preview div{
+  border-bottom:1px solid rgba(90,60,28,.22);
+  padding-bottom:6px;
+}
+.diary-manuscript-input{
+  min-height:150px;
+  font-family:"Georgia","Times New Roman",serif;
+  font-style:italic;
+}
 .float-handsfree-transcript{
   min-height:160px;
   font-size:15px;
+}
+.float-faq-theme-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
 }
 .float-diary-gps-copy{
   min-height:110px;
@@ -5203,7 +5333,10 @@ body.assistant-static .remote-guardian-btn.demo-active{
   align-items:center;
   padding:14px;
   border-radius:20px;
-  background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+  background:
+    radial-gradient(circle at top right, rgba(117,211,255,.2), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+  border:1px solid rgba(125,215,255,.18);
 }
 .float-profile-avatar{
   width:92px;
@@ -5212,7 +5345,7 @@ body.assistant-static .remote-guardian-btn.demo-active{
   background:
     linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
     url('/static/images/woman-waking-up12.jpg') center/cover no-repeat;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.24);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.24), 0 14px 28px rgba(42,101,198,.18);
 }
 .float-profile-lines{display:grid;gap:6px;}
 .float-profile-lines strong{font-size:20px;color:#fff;}
@@ -5444,8 +5577,10 @@ body.assistant-static .remote-guardian-btn.demo-active{
   .float-config-grid,
   .float-profile-hero,
   .float-diary-panels,
-  .float-settings-shortcuts,
   .remote-command-grid{grid-template-columns:1fr;}
+  .float-profile-results,
+  .float-social-check-grid,
+  .float-diary-assistant-fixed{grid-template-columns:1fr;}
   .float-diary-selfie-controls{grid-template-columns:1fr;}
   .live-console-active .live-arena-overlay,
   .live-console-active #reelPanel{position:static;width:auto !important;max-width:none !important;transform:none;}
