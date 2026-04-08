@@ -9689,9 +9689,8 @@ function setupFloatMode(){
       remoteSheetBody.querySelector("[data-settings-status]")?.replaceChildren(document.createTextNode("Full account settings are open with verification, reset, and text-alert steps."))
       const detail = remoteSheetBody.querySelector("[data-settings-detail]")
       if(detail) detail.innerHTML = buildSettingsGuide("overview")
-      openLaunchMenuSheet("floatProfileBox", "General Settings")
+      openRemoteFullSettingsLane({ message:"Full account settings are open inside SupportRD." })
       showSettingsGuide("overview")
-      setRemoteStatus("Full account settings are open inside Remote.")
     }))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-subscribe]")).forEach(btn=>btn.addEventListener("click", ()=>footerSubscribeBtn?.click()))
     Array.from(remoteSheetBody.querySelectorAll("[data-open-blog]")).forEach(btn=>btn.addEventListener("click", ()=>{
@@ -10486,6 +10485,22 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     stopWaveform()
     return false
   }
+  function openRemoteFullSettingsLane(options = {}){
+    try{ syncFloatSettings() }catch{}
+    try{ renderSettingsAccountSummary?.() }catch{}
+    try{ updateSubscriptionSummary?.(state.subscription || state.socialLinks?.subscription || "free", state.socialLinks || null) }catch{}
+    if(qs("#setEmail")) qs("#setEmail").value = state.socialLinks?.email || qs("#setEmail").value || ""
+    if(qs("#setPhone")) qs("#setPhone").value = state.socialLinks?.phone || qs("#setPhone").value || ""
+    if(qs("#setAddress")) qs("#setAddress").value = state.socialLinks?.address || qs("#setAddress").value || ""
+    if(qs("#setPassword")) qs("#setPassword").value = ""
+    if(typeof openModal === "function"){
+      openModal("settingsModal")
+    }else{
+      openGeneralInfoPage?.("settings")
+    }
+    setRemoteStatus(options.message || "Full Settings is open with account links, password, address, push, and payment verification.")
+    if(configStatus) configStatus.textContent = "Full Settings is open. Review account links, password, address, push alerts, and current payments."
+  }
 
   function syncProfile(){
     const name = (state.socialLinks && (state.socialLinks.username || state.socialLinks.name)) || "SupportRD Host"
@@ -10586,6 +10601,25 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     showSettingsGuide("overview")
     syncProfile()
     openMiniWindow("SupportRD Settings", "Push notification preference and Diary social routes are saved.")
+  }
+  function getMapActionRoute(view, action){
+    const haystack = `${view?.key || ""} ${view?.label || ""} ${view?.perk || ""} ${view?.helper || ""} ${action?.label || ""} ${action?.detail || ""}`.toLowerCase()
+    if(/lumber|deep voice|echo|reverb|fx|beat|song|studio|motherboard|audio|video/.test(haystack)) return { route:"studio", panel:"floatBoardsBox", status:"Studio Quick Panel is now focused for this map perk." }
+    if(/diary|live|social|post|comment|heart|gift/.test(haystack)) return { route:"diary", panel:"floatSettingsBox", status:"Diary Mode is now focused for this map perk." }
+    if(/profile|credential|identity|summary|verified/.test(haystack)) return { route:"profile", panel:"floatAssistantBox", status:"Profile is now focused for this map perk." }
+    if(/payment|pay|gift|premium|checkout|support/.test(haystack)) return { route:"payments", panel:"payments", status:"Fast Pay is now focused for this map perk." }
+    if(/faq|reel|event|paintball|guide|help/.test(haystack)) return { route:"faq", panel:"floatLiveBox", status:"FAQ Lounge is now focused for this map perk." }
+    return { route:"map", panel:"floatDeviceBox", status:"Map Change stays focused for this perk." }
+  }
+  function advanceMapPerk(viewKey, currentIndex){
+    if(!viewKey) return null
+    const views = typeof window.getWorldViews === "function" ? window.getWorldViews() : []
+    const view = views.find(item=>item.key === viewKey)
+    const actions = Array.isArray(view?.actions) ? view.actions : []
+    if(actions.length < 2) return null
+    const nextIndex = (Number(currentIndex || 0) + 1) % actions.length
+    const next = actions[nextIndex]
+    return next ? { index: nextIndex, action: next } : null
   }
   function renderMapFeatureActions(view){
     if(!mapActionHost) return
@@ -11060,9 +11094,24 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     const view = views.find(item=>item.key === button.getAttribute("data-float-map-key")) || views[0]
     const action = view?.actions?.[Number(button.getAttribute("data-float-map-action"))]
     if(!action) return
-    if(deviceStatus) deviceStatus.textContent = `${view.label}: ${action.label}. ${action.detail}`
-    setRemoteStatus(`${view.label}: ${action.label}. ${action.detail}`)
-    openMiniWindow(view.label, action.detail)
+    const route = getMapActionRoute(view, action)
+    const next = advanceMapPerk(view?.key, Number(button.getAttribute("data-float-map-action")))
+    if(deviceStatus) deviceStatus.textContent = `${view.label}: ${action.label}. ${action.detail}${next ? ` Next idea: ${next.action.label}.` : ""}`
+    setRemoteStatus(route.status)
+    if(route.panel === "payments") window.openRemoteFastPay?.()
+    else if(route.panel) focusFloatSection(route.panel, route.status)
+    if(route.route === "studio"){
+      holdSingleAssistantTeleport("projake", { x: window.innerWidth * 0.28, y: window.innerHeight * 0.68 }, 5000, {
+        mood: "focus",
+        status: `Jake says: ${view.label} works better when you follow this perk advice in the studio.`
+      })
+    }else if(route.route === "diary"){
+      holdSingleAssistantTeleport("aria", { x: window.innerWidth * 0.72, y: window.innerHeight * 0.54 }, 5000, {
+        mood: "focus",
+        status: `Aria says: ${view.label} can shape this diary and live route right now.`
+      })
+    }
+    openMiniWindow(`${view.label} Perk`, `${action.detail}${next ? ` Next idea ready: ${next.action.label}.` : ""}`)
   })
     bindAssistantTrigger(assistantAriaOrb, "aria")
     bindAssistantTrigger(assistantJakeOrb, "projake")
@@ -11113,8 +11162,14 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   })
   qs("#floatBoardEditBtn")?.addEventListener("click", ()=>openMiniWindow("Edit Motherboard", "Pick the active motherboard and tighten the piece of work you are building."))
   qs("#floatRecordBtn")?.addEventListener("click", ()=>{
-    if(liveStatus) liveStatus.textContent = "Fast view edit active. You are staging a music/video piece here and can go to Studio for deeper cuts."
-    openMiniWindow("Record", "Fast view edit is active. Build the quick music/video piece here, then jump to Studio for deeper edits.")
+    const board = getBoard()
+    if(remoteState.recorder && remoteState.recorder.state === "recording"){
+      stopVoiceRecord()
+      if(liveStatus) liveStatus.textContent = `${board.name} recording stopped and saved into the current motherboard.`
+      return
+    }
+    startVoiceRecord(board.kind === "instrument" ? "instrument" : "voice")
+    if(liveStatus) liveStatus.textContent = `${board.name} is now recording directly inside Studio Quick Panel.`
   })
   qs("#floatDeleteBtn")?.addEventListener("click", deleteHighlighted)
   qs("#floatPostBtn")?.addEventListener("click", ()=>qs("#liveArenaPostBtn")?.click())
@@ -11444,9 +11499,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(deviceStatus) deviceStatus.textContent = "Theme rotation is active. Pick the next look and keep the session moving."
   })
   qs("#floatSettingsOpenBtn")?.addEventListener("click", ()=>{
-    openLaunchMenuSheet("floatProfileBox", "General Settings")
+    openRemoteFullSettingsLane()
     showSettingsGuide("overview")
-    setRemoteStatus("General Settings is open for the fuller account lane while the quick Settings page stays trimmed.")
   })
   pushToggleBtn?.addEventListener("click", ()=>{
     const pushBox = qs("#floatConfigPush")
@@ -11476,8 +11530,13 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   qs("#floatDiaryRecordBtn")?.addEventListener("click", ()=>{
     const diary = (qs("#floatDiaryInput")?.value || "").trim()
     renderDiaryPagePreview(remoteState.diaryPageIndex || 0)
-    if(settingsStatus) settingsStatus.textContent = diary ? "Diary page formatted into a cursive / print SupportRD page." : "Write a diary entry first, then record it into the page."
-    openMiniWindow("Diary Mode", diary ? "Diary page updated with the current SupportRD entry." : "Write a diary entry first so SupportRD can build the page.")
+    if(!remoteState.handsfreeActive) toggleHandsfreeMode()
+    if(settingsStatus) settingsStatus.textContent = diary
+      ? "Diary page is live. Hands-Free Mode is listening so you can keep recording hair thoughts naturally."
+      : "Diary page is open and Hands-Free Mode is listening. Start talking and SupportRD will keep the diary moving."
+    openMiniWindow("Diary Mode", diary
+      ? "Diary page updated and hands-free capture is ready above your history."
+      : "Diary page opened. Start talking and SupportRD will capture the next hair thought into the diary lane.")
   })
   diaryPostBtn?.addEventListener("click", ()=>{
     openDiarySocialPlatforms()
@@ -13389,7 +13448,7 @@ const WORLD_VIEWS = [
   function getRemoteLaunchVisualByView(key = "default"){
     const map = {
       default: "url('/static/images/woman-waking-up12.jpg') center/cover no-repeat",
-      lumbermill: "linear-gradient(180deg, rgba(68,38,18,.28), rgba(14,12,10,.18)), url('/static/images/brochure-contacts.jpg') center/cover no-repeat",
+      lumbermill: "linear-gradient(180deg, rgba(68,38,18,.30), rgba(14,12,10,.22)), url('/static/images/brochure-scroll.jpg') center/cover no-repeat",
       river: "linear-gradient(180deg, rgba(18,78,92,.24), rgba(9,18,28,.18)), url('/static/images/brochure-mask.jpg') center/cover no-repeat",
       snow: "linear-gradient(180deg, rgba(200,226,255,.16), rgba(18,28,42,.18)), url('/static/images/brochure-hero.jpg') center/cover no-repeat",
       island: "linear-gradient(180deg, rgba(24,128,116,.22), rgba(10,20,28,.18)), url('/static/images/brochure-social.jpg') center/cover no-repeat",
@@ -13405,9 +13464,13 @@ const WORLD_VIEWS = [
 
   function syncRemoteLaunchVisual(viewKey = "default"){
     const shell = qs("#floatModeShell")
-    if(shell) shell.style.removeProperty("--remote-launch-bg")
+    const visual = getRemoteLaunchVisualByView(viewKey || "default")
+    if(shell) shell.style.setProperty("--remote-launch-bg", visual)
     qsa(".float-launch-btn").forEach(btn=>{
-      btn.dataset.mapView = "default"
+      btn.dataset.mapView = viewKey || "default"
+      btn.style.background = visual
+      btn.style.backgroundSize = "cover"
+      btn.style.backgroundPosition = "center"
     })
   }
 

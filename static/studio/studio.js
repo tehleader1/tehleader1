@@ -833,7 +833,7 @@ async function buildConstructedMix() {
     setStatus("#mixExportStatus", "No placements with attached audio found.");
     return null;
   }
-  setStatus("#mixExportStatus", "Building full mix from all active motherboards...");
+  setStatus("#mixExportStatus", "20% · Reading all active motherboards...");
   const srcCtx = new (window.AudioContext || window.webkitAudioContext)();
   const decoded = new Map();
   try {
@@ -843,6 +843,7 @@ async function buildConstructedMix() {
       const arr = await fetch(audio.url).then((r) => r.arrayBuffer());
       const buffer = await srcCtx.decodeAudioData(arr.slice(0));
       decoded.set(audio.id, buffer);
+      setStatus("#mixExportStatus", `40% · Loaded ${decoded.size} source file${decoded.size === 1 ? "" : "s"} into the mix.`);
     }
   } finally {
     srcCtx.close();
@@ -861,6 +862,7 @@ async function buildConstructedMix() {
   const offline = new OfflineAudioContext(2, Math.ceil(durationSec * sampleRate), sampleRate);
   const dbValue = Number(qs("#dbQuick")?.value || 0);
   const fxBoost = 1 + (Number(qs("#fxEcho")?.value || 0) / 200);
+  setStatus("#mixExportStatus", "60% · Aligning the waveforms across the motherboards...");
   active.forEach((placement) => {
     const buffer = decoded.get(placement.audioId);
     if (!buffer) return;
@@ -872,12 +874,13 @@ async function buildConstructedMix() {
     gain.connect(offline.destination);
     src.start(Math.max(0, Number(placement.timeSec || 0)));
   });
+  setStatus("#mixExportStatus", "80% · Rendering the full SupportRD studio export...");
   const rendered = await offline.startRendering();
   const blob = audioBufferToWavBlob(rendered);
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   lastRenderedMixBlob = blob;
   lastRenderedMixName = `supportrd-constructed-mix-${stamp}.wav`;
-  setStatus("#mixExportStatus", `Mix ready: ${lastRenderedMixName}`);
+  setStatus("#mixExportStatus", `100% · Mix ready: ${lastRenderedMixName}`);
   return { blob, fileName: lastRenderedMixName };
 }
 
@@ -1565,15 +1568,15 @@ function setupStickyWorkbench() {
       if (cmd === 'stop') {
         await stopRecording();
         window.__studioRadio?.stop?.();
-        setStatus('#transportStatus', 'Stopped current recording and default player.');
+        setStatus('#transportStatus', 'Stopped current recording and the active motherboard playback.');
         return;
       }
-      if (cmd === 'play') window.__studioRadio?.play?.();
-      if (cmd === 'next') window.__studioRadio?.next?.();
+      if (cmd === 'play') await window.__studioRadio?.play?.();
+      if (cmd === 'next') await window.__studioRadio?.next?.();
       if (cmd === 'rewind') window.__studioRadio?.seekRelative?.(-5);
       if (cmd === 'forward') window.__studioRadio?.seekRelative?.(5);
       playUiClickSound(cmd === 'play' ? 'accent' : 'soft');
-      setStatus('#transportStatus', `Transport: ${String(cmd || '').toUpperCase()} ready near the motherboard.`);
+      setStatus('#transportStatus', `Transport: ${String(cmd || '').toUpperCase()} ready on the active motherboard.`);
     });
   });
   qs('[data-sticky-record]')?.addEventListener('click', async () => {
@@ -1727,7 +1730,7 @@ function setupProfileAndMain() {
   qs("#studioMainUndoBtn")?.addEventListener("click", undoLastAction);
   qs("#studioMainSettingsBtn")?.addEventListener("click", () => qs(".board-stage-card")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioMainInstrumentBtn")?.addEventListener("click", () => qs("#stickyInstrumentBtn")?.click());
-  qs("#studioMainFxBtn")?.addEventListener("click", () => qs("#stickyBoardBtn")?.click());
+  qs("#studioMainFxBtn")?.addEventListener("click", () => qs("#fxBoardStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioMainVideoBtn")?.addEventListener("click", () => qs("#gigStatus")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   qs("#studioMainDroneBtn")?.addEventListener("click", () => qs("#gigDroneBtn")?.click());
   qs("#studioMainMenuBtn")?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
