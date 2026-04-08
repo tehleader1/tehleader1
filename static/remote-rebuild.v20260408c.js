@@ -105,6 +105,8 @@
   const boardBlobs = { voice: null, beat: null, adlib: null, instrument: null };
   let currentBoard = "voice";
   let paymentModal = null;
+  let routeHost = null;
+  let routeGrid = null;
 
   function loadState() {
     try {
@@ -175,6 +177,7 @@
         box-shadow:0 18px 38px rgba(0,0,0,.22);
       }
       .support-rebuild-shell{display:grid;gap:14px}
+      .support-rebuild-route-host{display:grid;gap:16px;align-content:start}
       .support-rebuild-overview{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
       .support-rebuild-home-top{display:grid;gap:12px;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr)}
       .support-rebuild-card{background:rgba(9,12,22,.78);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:16px;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.24)}
@@ -252,9 +255,26 @@
     saveState();
     const shell = document.querySelector(".float-mode-shell");
     if (shell) shell.dataset.remoteTheme = state.map === "default" ? "default" : state.map;
-    document.querySelectorAll(".float-box").forEach((box) => {
-      box.classList.toggle("support-rebuild-active", !!routeId && box.id === routeId);
-    });
+    if (routeGrid && routeHost) {
+      document.querySelectorAll(".float-box").forEach((box) => {
+        if (box.parentElement === routeHost) routeGrid.appendChild(box);
+        box.classList.remove("support-rebuild-active");
+      });
+      if (routeId) {
+        const activeBox = document.getElementById(routeId);
+        if (activeBox) {
+          routeHost.innerHTML = "";
+          routeHost.appendChild(activeBox);
+          activeBox.classList.add("support-rebuild-active");
+        }
+      } else {
+        routeHost.innerHTML = "";
+      }
+    } else {
+      document.querySelectorAll(".float-box").forEach((box) => {
+        box.classList.toggle("support-rebuild-active", !!routeId && box.id === routeId);
+      });
+    }
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
       btn.classList.toggle("pulse-ring", !!routeId && btn.dataset.floatTarget === routeId);
     });
@@ -416,6 +436,20 @@
       return;
     }
     finish(prompt(`${name} is ready. Tell ${name} your hair problem.`) || "I need help with my hair.");
+  }
+
+  function ensureRouteHost() {
+    const shell = document.querySelector(".float-mode-shell");
+    routeGrid = document.querySelector(".float-mode-grid");
+    const launch = document.querySelector(".float-mode-launch");
+    if (!shell || !routeGrid || !launch) return;
+    routeHost = document.getElementById("supportRebuildRouteHost");
+    if (!routeHost) {
+      routeHost = document.createElement("div");
+      routeHost.id = "supportRebuildRouteHost";
+      routeHost.className = "support-rebuild-route-host";
+      launch.insertAdjacentElement("afterend", routeHost);
+    }
   }
 
   function renderAssistantDock() {
@@ -978,9 +1012,12 @@
     syncLaunchVisuals();
     activateRoute(state.route);
     fetchProducts();
-    window.SupportRDRemoteRebuildVersion = "20260408c";
+    window.SupportRDRemoteRebuildVersion = "20260408k";
   }
 
   setTimeout(init, 700);
 })();
+
+
+
 
