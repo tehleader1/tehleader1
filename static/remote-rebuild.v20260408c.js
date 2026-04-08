@@ -153,7 +153,7 @@
       }
       .float-mode-shell.support-rebuild-mode .float-mode-grid{
         grid-template-columns:1fr !important;
-        padding:0 !important;
+        padding:12px 0 0 !important;
         margin:0 !important;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-launch{
@@ -165,6 +165,7 @@
         background:rgba(5,10,20,.74);
         border:1px solid rgba(255,255,255,.12);
         border-radius:26px;
+        box-shadow:0 18px 38px rgba(0,0,0,.22);
       }
       .support-rebuild-shell{display:grid;gap:14px}
       .support-rebuild-overview{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
@@ -195,12 +196,24 @@
       .support-rebuild-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-size:.88rem}
       .support-rebuild-tv{min-height:180px;border-radius:18px;padding:18px;background:linear-gradient(135deg,rgba(42,16,88,.95),rgba(255,78,80,.65));display:flex;align-items:flex-end}
       .support-rebuild-livefeed{min-height:220px;border-radius:18px;padding:16px;background:linear-gradient(160deg,rgba(10,18,44,.96),rgba(79,117,255,.44));display:grid;gap:12px}
+      .support-rebuild-profile-quick{display:grid;gap:10px;grid-template-columns:160px 1fr}
+      .support-rebuild-profile-image{min-height:160px;border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.02));display:flex;align-items:flex-end;justify-content:flex-start;padding:14px;background-size:cover;background-position:center;overflow:hidden}
+      .support-rebuild-profile-tag{display:inline-flex;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);font-size:.86rem}
+      .support-rebuild-reel-frame{width:100%;min-height:280px;border:0;border-radius:18px;background:#09101f}
+      .support-rebuild-assistants{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:60}
+      .support-rebuild-assistant-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(7,12,22,.78);color:#fff;box-shadow:0 18px 40px rgba(0,0,0,.26);animation:supportFloatBob 3.4s ease-in-out infinite}
+      .support-rebuild-assistant-btn.jake{animation-delay:1.2s}
+      .support-rebuild-assistant-orb{width:18px;height:18px;border-radius:50%}
+      .support-rebuild-assistant-orb.aria{background:linear-gradient(135deg,#ffd54a,#55d7ff)}
+      .support-rebuild-assistant-orb.jake{background:linear-gradient(135deg,#7cffb2,#4a7dff)}
+      .support-rebuild-assistant-bubble{max-width:260px;padding:12px 14px;border-radius:18px;background:rgba(10,18,32,.88);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:.9rem}
+      @keyframes supportFloatBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
       .support-rebuild-modal{position:fixed;inset:0;background:rgba(2,8,18,.72);display:none;align-items:center;justify-content:center;padding:24px;z-index:9999}
       .support-rebuild-modal.is-open{display:flex}
       .support-rebuild-modal-card{width:min(980px,100%);max-height:88vh;overflow:auto;background:#07101f;color:#fff;border-radius:26px;padding:20px;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.35)}
       .float-mode-shell.support-rebuild-mode .float-box{
         margin:0 !important;
-        min-height:calc(100vh - 190px);
+        min-height:calc(100vh - 235px);
         border-radius:28px;
         padding:22px;
         background:linear-gradient(180deg, rgba(8,14,25,.82), rgba(13,19,35,.72));
@@ -372,7 +385,8 @@
       ];
       saveState();
       renderDiary();
-      setTimeout(() => speakText(reply), 1200);
+      updateAssistantDock(`${name} is responding now.`);
+      setTimeout(() => speakText(reply), 2200);
     };
     if (Recognition) {
       const recog = new Recognition();
@@ -385,9 +399,28 @@
       state.diaryFeed = [`${name}: mic open. Speak now.`, "Listening for your hair problem..."];
       saveState();
       renderDiary();
+      updateAssistantDock(`${name} is listening... take your time.`);
       return;
     }
     finish(prompt(`${name} is ready. Tell ${name} your hair problem.`) || "I need help with my hair.");
+  }
+
+  function renderAssistantDock() {
+    if ($("srAssistantDock")) return;
+    const dock = document.createElement("div");
+    dock.id = "srAssistantDock";
+    dock.className = "support-rebuild-assistants";
+    dock.innerHTML = `
+      <div class="support-rebuild-assistant-bubble" id="srAssistantBubble">Aria and Jake move with the page and jump in when it matters.</div>
+      <button class="support-rebuild-assistant-btn" id="srDockAria"><span class="support-rebuild-assistant-orb aria"></span><span>Aria</span></button>
+      <button class="support-rebuild-assistant-btn jake" id="srDockJake"><span class="support-rebuild-assistant-orb jake"></span><span>Jake</span></button>`;
+    document.body.appendChild(dock);
+    $("srDockAria").onclick = () => startAssistant("Aria");
+    $("srDockJake").onclick = () => startAssistant("Jake");
+  }
+
+  function updateAssistantDock(text) {
+    if ($("srAssistantBubble")) $("srAssistantBubble").textContent = text;
   }
 
   function renderSettings() {
@@ -412,7 +445,9 @@
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Identity + Security</div>
               <input class="support-rebuild-input" id="srSettingsUsername" placeholder="Username" value="${state.profile.name || ""}">
+              <input class="support-rebuild-input" id="srSettingsOldPassword" style="margin-top:10px" type="password" placeholder="Current password">
               <input class="support-rebuild-input" id="srSettingsPassword" style="margin-top:10px" type="password" placeholder="Change password flow">
+              <input class="support-rebuild-input" id="srSettingsPasswordConfirm" style="margin-top:10px" type="password" placeholder="Confirm new password">
               <input class="support-rebuild-input" id="srSettingsAddress" style="margin-top:10px" placeholder="Address information">
             </div>
             <div class="support-rebuild-card" style="padding:12px">
@@ -449,11 +484,19 @@
       $("srSettingsStatus").textContent = "Full Settings opened: username/password, payments, URL links, push notifications, and fantasy routing are active.";
       $("srSettingsFullLane").style.display = "grid";
       $("srSettingsSaveAll").onclick = () => {
+        const newPass = $("srSettingsPassword").value;
+        const confirmPass = $("srSettingsPasswordConfirm").value;
+        if (newPass && newPass !== confirmPass) {
+          $("srSettingsStatus").textContent = "Password change did not save. New password and confirm password must match.";
+          return;
+        }
         state.profile.name = $("srSettingsUsername").value.trim();
         state.profile.contact = $("srSettingsUrl").value.trim();
         state.premium = $("srSettingsPayment").value.trim() || state.premium;
         saveState();
-        $("srSettingsStatus").textContent = "Full settings saved locally. Push stays connected through browser notification permission.";
+        $("srSettingsStatus").textContent = newPass
+          ? "Full settings saved locally. Password flow accepted in the app shell and push stays connected through browser permission."
+          : "Full settings saved locally. Push stays connected through browser notification permission.";
       };
     };
   }
@@ -550,10 +593,26 @@
     const box = $("floatAssistantBox");
     if (!box) return;
     const p = state.profile;
+    const profileImageStyle = p.picture
+      ? `style="background-image:linear-gradient(180deg, rgba(8,12,20,.10), rgba(8,12,20,.62)), url('${p.picture.replace(/'/g, "%27")}')"`
+      : "";
     box.innerHTML = `
       <div class="support-rebuild-shell">
         <div class="support-rebuild-card">
           <h3 class="support-rebuild-title">Profile</h3>
+          <div class="support-rebuild-profile-quick">
+            <div class="support-rebuild-profile-image" ${profileImageStyle}>
+              <span class="support-rebuild-profile-tag">${p.name || "SupportRD Profile"}</span>
+            </div>
+            <div class="support-rebuild-card" style="padding:12px">
+              <div class="support-rebuild-title">Registered Profile</div>
+              <div class="support-rebuild-row">
+                <span class="support-rebuild-pill">${p.aiAssists[0] || "Hair-aware"}</span>
+                <span class="support-rebuild-pill">${p.aiAssists[1] || "Polished routine"}</span>
+              </div>
+              <div class="support-rebuild-note" style="margin-top:10px">Live location URL: ${p.contact || "https://supportrd.com/live"}</div>
+            </div>
+          </div>
           <div class="support-rebuild-grid two">
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Set Profile Picture</div>
@@ -758,12 +817,8 @@
       <div class="support-rebuild-shell">
         <div class="support-rebuild-card">
           <h3 class="support-rebuild-title">FAQ Lounge</h3>
-          <div class="support-rebuild-tv">
-            <div>
-              <div class="support-rebuild-title">TV Reel Open By Default</div>
-              <div class="support-rebuild-note">${view.title} now drives the FAQ reel mood and route ideas.</div>
-            </div>
-          </div>
+          <iframe class="support-rebuild-reel-frame" src="/static/reel.html?v=20260322b&theme=tiktok" title="SupportRD TV Reel"></iframe>
+          <div class="support-rebuild-note" style="margin-top:10px">${view.title} now drives the FAQ reel mood and route ideas.</div>
           <div class="support-rebuild-row">
             <button class="support-rebuild-btn pulse">Tiktok Style Hair</button>
             <button class="support-rebuild-btn ghost">Youtube Style Hair</button>
@@ -897,6 +952,8 @@
     injectStyle();
     activatePresentationMode();
     renderShellChrome();
+    renderAssistantDock();
+    updateAssistantDock("Aria and Jake are moving with the page. Tap them when you need them.");
     bindLaunchButtons();
     bindQuickGlobalButtons();
     renderSettings();
