@@ -129,6 +129,37 @@
     style.textContent = `
       .float-box{display:none !important}
       .float-box.support-rebuild-active{display:block !important}
+      .float-mode-shell.support-rebuild-mode{
+        min-height:100vh;
+        padding:18px;
+        display:grid;
+        gap:14px;
+        align-content:start;
+      }
+      .float-mode-shell.support-rebuild-mode .float-mode-footer,
+      .float-mode-shell.support-rebuild-mode .remote-display-strip,
+      .float-mode-shell.support-rebuild-mode .remote-stage-shell,
+      .float-mode-shell.support-rebuild-mode .float-mode-nav,
+      .float-mode-shell.support-rebuild-mode #reelPanel,
+      .float-mode-shell.support-rebuild-mode .float-mode-sticky-bottom,
+      .float-mode-shell.support-rebuild-mode #floatTGuide{
+        display:none !important;
+      }
+      .float-mode-shell.support-rebuild-mode .float-mode-grid{
+        grid-template-columns:1fr !important;
+        padding:0 !important;
+        margin:0 !important;
+      }
+      .float-mode-shell.support-rebuild-mode .float-mode-launch{
+        position:sticky;
+        top:12px;
+        z-index:20;
+        margin:0 !important;
+        padding:14px !important;
+        background:rgba(5,10,20,.74);
+        border:1px solid rgba(255,255,255,.12);
+        border-radius:26px;
+      }
       .support-rebuild-shell{display:grid;gap:14px}
       .support-rebuild-overview{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
       .support-rebuild-card{background:rgba(9,12,22,.78);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:16px;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.24)}
@@ -160,6 +191,16 @@
       .support-rebuild-modal{position:fixed;inset:0;background:rgba(2,8,18,.72);display:none;align-items:center;justify-content:center;padding:24px;z-index:9999}
       .support-rebuild-modal.is-open{display:flex}
       .support-rebuild-modal-card{width:min(980px,100%);max-height:88vh;overflow:auto;background:#07101f;color:#fff;border-radius:26px;padding:20px;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.35)}
+      .float-mode-shell.support-rebuild-mode .float-box{
+        margin:0 !important;
+        min-height:calc(100vh - 190px);
+        border-radius:28px;
+        padding:22px;
+        background:rgba(7,12,22,.88);
+      }
+      .float-mode-shell.support-rebuild-mode .float-box-head{
+        margin-bottom:18px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -167,6 +208,8 @@
   function activateRoute(routeId) {
     state.route = routeId;
     saveState();
+    const shell = document.querySelector(".float-mode-shell");
+    if (shell) shell.dataset.remoteTheme = state.map === "default" ? "default" : state.map;
     document.querySelectorAll(".float-box").forEach((box) => {
       box.classList.toggle("support-rebuild-active", box.id === routeId);
     });
@@ -716,10 +759,19 @@
   function syncLaunchVisuals() {
     const view = MAPS[state.map] || MAPS.default;
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
-      btn.style.background = view.image;
+      btn.style.background = state.map === "default"
+        ? "linear-gradient(180deg, rgba(4,8,18,.28), rgba(4,8,18,.62)), url('/static/images/woman-waking-up12.jpg') center/cover no-repeat"
+        : view.image;
       btn.style.borderRadius = "22px";
       btn.style.color = "#fff";
     });
+  }
+
+  function activatePresentationMode() {
+    const shell = document.querySelector(".float-mode-shell");
+    if (!shell) return;
+    shell.classList.add("support-rebuild-mode");
+    shell.dataset.remoteTheme = state.map === "default" ? "default" : state.map;
   }
 
   function bindLaunchButtons() {
@@ -768,6 +820,7 @@
 
   function init() {
     injectStyle();
+    activatePresentationMode();
     bindLaunchButtons();
     bindQuickGlobalButtons();
     renderSettings();
