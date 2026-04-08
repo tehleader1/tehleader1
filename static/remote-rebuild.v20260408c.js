@@ -142,7 +142,10 @@
       .float-mode-shell.support-rebuild-mode .float-mode-nav,
       .float-mode-shell.support-rebuild-mode #reelPanel,
       .float-mode-shell.support-rebuild-mode .float-mode-sticky-bottom,
-      .float-mode-shell.support-rebuild-mode #floatTGuide{
+      .float-mode-shell.support-rebuild-mode #floatTGuide,
+      .float-mode-shell.support-rebuild-mode .remote-guardian-rail,
+      .float-mode-shell.support-rebuild-mode #floatPrimeMenu,
+      .float-mode-shell.support-rebuild-mode #floatFounderLayer{
         display:none !important;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-grid{
@@ -162,6 +165,7 @@
       }
       .support-rebuild-shell{display:grid;gap:14px}
       .support-rebuild-overview{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+      .support-rebuild-home-top{display:grid;gap:12px;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr)}
       .support-rebuild-card{background:rgba(9,12,22,.78);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:16px;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.24)}
       .support-rebuild-title{font:700 1.05rem/1.2 Georgia,serif;letter-spacing:.02em;margin:0 0 10px}
       .support-rebuild-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -197,6 +201,15 @@
         border-radius:28px;
         padding:22px;
         background:rgba(7,12,22,.88);
+      }
+      .float-mode-shell.support-rebuild-mode .float-mode-top{
+        margin:0 !important;
+        padding:18px !important;
+        display:block !important;
+      }
+      .float-mode-shell.support-rebuild-mode .float-mode-actions,
+      .float-mode-shell.support-rebuild-mode .remote-go-toggle{
+        display:none !important;
       }
       .float-mode-shell.support-rebuild-mode .float-box-head{
         margin-bottom:18px;
@@ -395,23 +408,50 @@
           <div id="srSettingsFullLane" style="display:none;margin-top:12px" class="support-rebuild-grid two">
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Identity + Security</div>
-              <div class="support-rebuild-note">Username, password, phone verification, 6-digit code, and address controls live here.</div>
+              <input class="support-rebuild-input" id="srSettingsUsername" placeholder="Username" value="${state.profile.name || ""}">
+              <input class="support-rebuild-input" id="srSettingsPassword" style="margin-top:10px" type="password" placeholder="Change password flow">
+              <input class="support-rebuild-input" id="srSettingsAddress" style="margin-top:10px" placeholder="Address information">
             </div>
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Payments + URLs</div>
-              <div class="support-rebuild-note">Current payments verify premium, social URL links save, and fantasy choice routing sits here too.</div>
+              <input class="support-rebuild-input" id="srSettingsPayment" placeholder="Current payment / premium status" value="${state.premium}">
+              <input class="support-rebuild-input" id="srSettingsUrl" style="margin-top:10px" placeholder="Primary URL link" value="${state.profile.contact || ""}">
+              <select class="support-rebuild-select" id="srSettingsFantasy" style="margin-top:10px">
+                <option>Fantasy Off</option>
+                <option>Fantasy Basic</option>
+                <option>Fantasy Advanced</option>
+              </select>
             </div>
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Contacts / Channels</div>
               <div class="support-rebuild-note">Email, payments, in-person location, team accessibility, technical support, and fan feedback stay visible here.</div>
             </div>
+            <div class="support-rebuild-card" style="padding:12px">
+              <div class="support-rebuild-title">Save Changes</div>
+              <div class="support-rebuild-note">Push notifications can request browser permission here so Aria can stay in touch about hair status.</div>
+              <button class="support-rebuild-btn pulse" id="srSettingsSaveAll">Save Full Settings</button>
+            </div>
           </div>
         </div>
       </div>`;
-    $("srPushBtn").onclick = () => { state.push = !state.push; saveState(); renderSettings(); };
+    $("srPushBtn").onclick = async () => {
+      if ("Notification" in window && Notification.permission === "default") {
+        try { await Notification.requestPermission(); } catch {}
+      }
+      state.push = !state.push;
+      saveState();
+      renderSettings();
+    };
     $("srOpenFullSettings").onclick = () => {
       $("srSettingsStatus").textContent = "Full Settings opened: username/password, payments, URL links, push notifications, and fantasy routing are active.";
       $("srSettingsFullLane").style.display = "grid";
+      $("srSettingsSaveAll").onclick = () => {
+        state.profile.name = $("srSettingsUsername").value.trim();
+        state.profile.contact = $("srSettingsUrl").value.trim();
+        state.premium = $("srSettingsPayment").value.trim() || state.premium;
+        saveState();
+        $("srSettingsStatus").textContent = "Full settings saved locally. Push stays connected through browser notification permission.";
+      };
     };
   }
 
@@ -740,6 +780,7 @@
                 <button class="support-rebuild-btn ghost" id="srFaqPayments">Payments</button>
                 <a class="support-rebuild-btn ghost" href="https://www.google.com/maps/search/Charlotte,+NC" target="_blank" rel="noopener">In-Person</a>
               </div>
+              <div class="support-rebuild-note" style="margin-top:10px">Render and GitHub remain the core engine image behind SupportRD operations.</div>
             </div>
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Feedback</div>
@@ -772,6 +813,31 @@
     if (!shell) return;
     shell.classList.add("support-rebuild-mode");
     shell.dataset.remoteTheme = state.map === "default" ? "default" : state.map;
+  }
+
+  function renderShellChrome() {
+    const top = document.querySelector(".float-mode-top");
+    if (!top) return;
+    top.innerHTML = `
+      <div class="support-rebuild-home-top">
+        <div class="support-rebuild-card">
+          <div class="support-rebuild-title">Main Structure</div>
+          <div class="support-rebuild-note">Durable, payment-friendly, responsive, and ready for that on-the-go curve moment where someone first hears about SupportRD.</div>
+          <div class="support-rebuild-overview" style="margin-top:12px">
+            <div class="support-rebuild-card"><div class="support-rebuild-title">Diary Mode</div><div class="support-rebuild-note">Live mode, hands-free Aria, real diary, and hair-problem support.</div></div>
+            <div class="support-rebuild-card"><div class="support-rebuild-title">Studio</div><div class="support-rebuild-note">Vocals, beat, instrument, FX, and export-minded creation on the move.</div></div>
+            <div class="support-rebuild-card"><div class="support-rebuild-title">Profile</div><div class="support-rebuild-note">Hair analysis, serious image, live invite, and professional prep.</div></div>
+            <div class="support-rebuild-card"><div class="support-rebuild-title">Map Change</div><div class="support-rebuild-note">Fun visuals, serious routing, and making-money map help.</div></div>
+          </div>
+        </div>
+        <div class="support-rebuild-card">
+          <div class="support-rebuild-title">General Options</div>
+          <div class="support-rebuild-note">Perks and advantages that make the app feel good to use.</div>
+          <div class="support-rebuild-line">Statistics: SEO build, remote usefulness, and account flow health.</div>
+          <div class="support-rebuild-line">Contacts / Channels: Render, GitHub, support email, payments, in-person routes, technical support, and fan feedback.</div>
+          <div class="support-rebuild-line">FAQ Lounge: relax, breathe, laugh at reels, and get real answers.</div>
+        </div>
+      </div>`;
   }
 
   function bindLaunchButtons() {
@@ -821,6 +887,7 @@
   function init() {
     injectStyle();
     activatePresentationMode();
+    renderShellChrome();
     bindLaunchButtons();
     bindQuickGlobalButtons();
     renderSettings();
