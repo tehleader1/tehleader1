@@ -152,15 +152,22 @@
         display:none !important;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-grid{
+        display:block !important;
         grid-template-columns:1fr !important;
-        padding:12px 0 0 !important;
+        padding:34px 0 0 !important;
         margin:0 !important;
+        clear:both;
+      }
+      .float-mode-shell.support-rebuild-mode .float-mode-top,
+      .float-mode-shell.support-rebuild-mode .float-mode-launch{
+        position:relative;
+        z-index:3;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-launch{
-        position:sticky;
-        top:12px;
-        z-index:20;
-        margin:0 !important;
+        position:relative;
+        top:auto;
+        z-index:3;
+        margin:0 0 22px !important;
         padding:14px !important;
         background:rgba(5,10,20,.74);
         border:1px solid rgba(255,255,255,.12);
@@ -212,11 +219,17 @@
       .support-rebuild-modal.is-open{display:flex}
       .support-rebuild-modal-card{width:min(980px,100%);max-height:88vh;overflow:auto;background:#07101f;color:#fff;border-radius:26px;padding:20px;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.35)}
       .float-mode-shell.support-rebuild-mode .float-box{
-        margin:0 !important;
+        position:relative;
+        z-index:1;
+        margin:26px 0 0 !important;
         min-height:calc(100vh - 235px);
         border-radius:28px;
         padding:22px;
         background:linear-gradient(180deg, rgba(8,14,25,.82), rgba(13,19,35,.72));
+      }
+      .float-mode-shell.support-rebuild-mode .float-box.support-rebuild-active{
+        position:relative;
+        z-index:1;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-top{
         margin:0 !important;
@@ -970,3 +983,4 @@
 
   setTimeout(init, 700);
 })();
+
