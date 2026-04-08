@@ -45,7 +45,8 @@
       payments: "Needs verification",
       developerLog: "Listening for founder praise and field feedback.",
       contacts: "Tracking serious buyers, fly-ins, and bulk orders."
-    }
+    },
+    products: []
   };
 
   const MAPS = {
@@ -101,7 +102,9 @@
   let mediaStream = null;
   let recordChunks = [];
   const boardAudio = { voice: null, beat: null, adlib: null, instrument: null };
+  const boardBlobs = { voice: null, beat: null, adlib: null, instrument: null };
   let currentBoard = "voice";
+  let paymentModal = null;
 
   function loadState() {
     try {
@@ -154,6 +157,9 @@
       .support-rebuild-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-size:.88rem}
       .support-rebuild-tv{min-height:180px;border-radius:18px;padding:18px;background:linear-gradient(135deg,rgba(42,16,88,.95),rgba(255,78,80,.65));display:flex;align-items:flex-end}
       .support-rebuild-livefeed{min-height:220px;border-radius:18px;padding:16px;background:linear-gradient(160deg,rgba(10,18,44,.96),rgba(79,117,255,.44));display:grid;gap:12px}
+      .support-rebuild-modal{position:fixed;inset:0;background:rgba(2,8,18,.72);display:none;align-items:center;justify-content:center;padding:24px;z-index:9999}
+      .support-rebuild-modal.is-open{display:flex}
+      .support-rebuild-modal-card{width:min(980px,100%);max-height:88vh;overflow:auto;background:#07101f;color:#fff;border-radius:26px;padding:20px;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.35)}
     `;
     document.head.appendChild(style);
   }
@@ -192,6 +198,139 @@
     });
   }
 
+  async function fetchProducts() {
+    try {
+      const res = await fetch("/api/products");
+      const data = await res.json();
+      state.products = Array.isArray(data) ? data : [];
+      saveState();
+    } catch {
+      state.products = [];
+    }
+  }
+
+  function getCheckoutUrl(product) {
+    const variantId = String(product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
+    const handle = String(product?.handle || "").trim();
+    if (variantId) return `https://supportrd.com/cart/${variantId}:1?checkout`;
+    if (handle) return `https://supportrd.com/products/${handle}`;
+    return "https://supportrd.com/cart";
+  }
+
+  function ensurePaymentModal() {
+    if (paymentModal) return paymentModal;
+    paymentModal = document.createElement("div");
+    paymentModal.className = "support-rebuild-modal";
+    paymentModal.id = "srPaymentModal";
+    paymentModal.innerHTML = `<div class="support-rebuild-modal-card"><div id="srPaymentModalBody"></div></div>`;
+    paymentModal.addEventListener("click", (event) => {
+      if (event.target === paymentModal) paymentModal.classList.remove("is-open");
+    });
+    document.body.appendChild(paymentModal);
+    return paymentModal;
+  }
+
+  function openPaymentModal() {
+    const modal = ensurePaymentModal();
+    const body = $("srPaymentModalBody");
+    const products = state.products.slice(0, 8);
+    body.innerHTML = `
+      <div class="support-rebuild-row" style="justify-content:space-between">
+        <h3 class="support-rebuild-title">Fast Pay</h3>
+        <button class="support-rebuild-btn ghost" id="srClosePaymentModal">Close</button>
+      </div>
+      <div class="support-rebuild-note">Open Purchase Menu stays descriptive. Shopify Checkout should move straight into the card lane.</div>
+      <div class="support-rebuild-grid two" style="margin-top:14px">
+        <div class="support-rebuild-card" style="padding:12px">
+          <div class="support-rebuild-title">Custom Order</div>
+          <div class="support-rebuild-note">Email the founder before Fast Pay if the order is manual or specialized.</div>
+          <div class="support-rebuild-row" style="margin-top:12px">
+            <a class="support-rebuild-btn ghost" href="mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order" target="_blank" rel="noopener">Email Custom Order</a>
+          </div>
+        </div>
+        <div class="support-rebuild-card" style="padding:12px">
+          <div class="support-rebuild-title">Credit / Debit Capture</div>
+          <div class="support-rebuild-note">Shopify Checkout should show the real card page, and Apple Pay / Google Pay appear there when supported.</div>
+        </div>
+      </div>
+      <div class="support-rebuild-grid two" style="margin-top:14px">
+        ${products.length ? products.map((product) => {
+          const title = product.title || "SupportRD Product";
+          const price = product.price ? `$${product.price}` : "Live price on checkout";
+          const handle = product.handle || "";
+          return `<div class="support-rebuild-card" style="padding:12px">
+            <div class="support-rebuild-title">${title}</div>
+            <div class="support-rebuild-note">${price}</div>
+            <div class="support-rebuild-row" style="margin-top:12px">
+              <button class="support-rebuild-btn ghost" data-details="${handle}">Open Purchase Menu</button>
+              <button class="support-rebuild-btn pulse" data-checkout="${handle}">Shopify Checkout</button>
+            </div>
+          </div>`;
+        }).join("") : `<div class="support-rebuild-card"><div class="support-rebuild-note">Live product feed is empty right now. Using SupportRD storefront fallback.</div><div class="support-rebuild-row" style="margin-top:12px"><a class="support-rebuild-btn pulse" href="https://supportrd.com/cart" target="_blank" rel="noopener">Open Shopify Cart</a></div></div>`}
+      </div>
+      <div class="support-rebuild-note" style="margin-top:12px">Apple Pay and Google Pay appear on the Shopify side when supported by the device and store settings.</div>`;
+    $("srClosePaymentModal").onclick = () => modal.classList.remove("is-open");
+    body.querySelectorAll("[data-checkout]").forEach((btn) => btn.onclick = () => {
+      const product = products.find((item) => item.handle === btn.dataset.checkout);
+      window.location.href = getCheckoutUrl(product);
+    });
+    body.querySelectorAll("[data-details]").forEach((btn) => btn.onclick = () => {
+      const product = products.find((item) => item.handle === btn.dataset.details);
+      const title = product?.title || "SupportRD Product";
+      const desc = product?.body_html || product?.description || "Product details are loading from the SupportRD catalog.";
+      body.innerHTML = `<div class="support-rebuild-row" style="justify-content:space-between"><h3 class="support-rebuild-title">${title}</h3><button class="support-rebuild-btn ghost" id="srBackPaymentModal">Back</button></div><div class="support-rebuild-note">${desc}</div>`;
+      $("srBackPaymentModal").onclick = openPaymentModal;
+    });
+    modal.classList.add("is-open");
+  }
+
+  function buildAssistantReply(name, prompt) {
+    const text = String(prompt || "").toLowerCase();
+    if (/dry|dryness|moist/.test(text)) return `${name === "Jake" ? "Jake" : "Aria"} here. For dryness, I would guide you toward a moisture-building laciador or smoothing support that restores style and softness. The best next move is the purchase menu so we can match the right product and check you out cleanly.`;
+    if (/frizz|puff/.test(text)) return `${name === "Jake" ? "Jake" : "Aria"} here. Frizz usually wants control plus hydration, so I would steer you toward a smoother routine and a product lane that supports shine.`;
+    if (/studio|song|beat/.test(text)) return `${name} here. I would start with the beat board, place the vocal on top, and then add a focused FX pass before export.`;
+    return `${name} here. Tell me the exact hair issue and I will keep it focused, helpful, and ready for the next step.`;
+  }
+
+  function speakText(text) {
+    try {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 0.93;
+      utter.pitch = 1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    } catch {}
+  }
+
+  function startAssistant(name) {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const finish = (heard) => {
+      const reply = buildAssistantReply(name, heard);
+      state.diaryFeed = [
+        `${name}: listening activated.`,
+        `You: ${heard}`,
+        `${name}: ${reply}`
+      ];
+      saveState();
+      renderDiary();
+      setTimeout(() => speakText(reply), 1200);
+    };
+    if (Recognition) {
+      const recog = new Recognition();
+      recog.lang = "en-US";
+      recog.interimResults = false;
+      recog.maxAlternatives = 1;
+      recog.onresult = (event) => finish(event.results?.[0]?.[0]?.transcript || "I need help with my hair.");
+      recog.onerror = () => finish(prompt(`${name} is ready. Tell ${name} your hair problem.`) || "I need help with my hair.");
+      recog.start();
+      state.diaryFeed = [`${name}: mic open. Speak now.`, "Listening for your hair problem..."];
+      saveState();
+      renderDiary();
+      return;
+    }
+    finish(prompt(`${name} is ready. Tell ${name} your hair problem.`) || "I need help with my hair.");
+  }
+
   function renderSettings() {
     const box = $("floatProfileBox");
     if (!box) return;
@@ -218,6 +357,10 @@
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Payments + URLs</div>
               <div class="support-rebuild-note">Current payments verify premium, social URL links save, and fantasy choice routing sits here too.</div>
+            </div>
+            <div class="support-rebuild-card" style="padding:12px">
+              <div class="support-rebuild-title">Contacts / Channels</div>
+              <div class="support-rebuild-note">Email, payments, in-person location, team accessibility, technical support, and fan feedback stay visible here.</div>
             </div>
           </div>
         </div>
@@ -273,6 +416,10 @@
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Aria / Jake</div>
               <div class="support-rebuild-note">Fixed above the history, hands-free ready, and listening for hair problems.</div>
+              <div class="support-rebuild-row" style="margin:10px 0 12px">
+                <button class="support-rebuild-btn pulse" id="srTalkAria">Talk To Aria</button>
+                <button class="support-rebuild-btn ghost" id="srTalkJake">Talk To Jake</button>
+              </div>
               <div class="support-rebuild-history">
                 ${historyLines.map((line)=>`<div class="support-rebuild-line">${line}</div>`).join("")}
               </div>
@@ -301,6 +448,8 @@
       saveState();
       renderDiary();
     };
+    $("srTalkAria").onclick = () => startAssistant("Aria");
+    $("srTalkJake").onclick = () => startAssistant("Jake");
     $("srDiaryLiveBtn").onclick = () => { state.liveMode = !state.liveMode; saveState(); renderDiary(); };
     $("srDiarySaveBtn").onclick = () => {
       state.diaryDescription = $("srDiaryDesc").value;
@@ -540,8 +689,28 @@
             <option>What premium level fits me?</option>
           </select>
           <div class="support-rebuild-note" style="margin-top:12px">Map-specific links and cool event-style references belong here so the FAQ feels alive instead of static.</div>
+          <div class="support-rebuild-grid two" style="margin-top:12px">
+            <div class="support-rebuild-card" style="padding:12px">
+              <div class="support-rebuild-title">Contacts / Channels</div>
+              <div class="support-rebuild-row">
+                <a class="support-rebuild-btn ghost" href="mailto:xxfigueroa1993@yahoo.com" target="_blank" rel="noopener">Email</a>
+                <button class="support-rebuild-btn ghost" id="srFaqPayments">Payments</button>
+                <a class="support-rebuild-btn ghost" href="https://www.google.com/maps/search/Charlotte,+NC" target="_blank" rel="noopener">In-Person</a>
+              </div>
+            </div>
+            <div class="support-rebuild-card" style="padding:12px">
+              <div class="support-rebuild-title">Feedback</div>
+              <div class="support-rebuild-row">
+                <button class="support-rebuild-btn ghost" id="srFaqTech">Technical Support</button>
+                <button class="support-rebuild-btn ghost" id="srFaqFan">Fan Feedback</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>`;
+    $("srFaqPayments")?.addEventListener("click", openPaymentModal);
+    $("srFaqTech")?.addEventListener("click", ()=>window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Technical%20Support","_blank","noopener"));
+    $("srFaqFan")?.addEventListener("click", ()=>window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Fan%20Feedback","_blank","noopener"));
   }
 
   function syncLaunchVisuals() {
@@ -564,9 +733,43 @@
     });
   }
 
+  function bindQuickGlobalButtons() {
+    [
+      "floatFooterPayments",
+      "remotePurchasePremium",
+      "remotePurchaseStudio",
+      "remotePurchaseThemes",
+      "checkoutPremiumBtn",
+      "checkoutProBtn"
+    ].forEach((id) => {
+      $(id)?.addEventListener("click", (event) => {
+        event.preventDefault();
+        openPaymentModal();
+      });
+    });
+    $("voiceToggle")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      startAssistant("Aria");
+    });
+    $("ariaSphere")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      startAssistant("Aria");
+    });
+    $("openProJakeStudio")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      startAssistant("Jake");
+    });
+    $("gpsHandsFree")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      activateRoute("floatSettingsBox");
+      startAssistant("Aria");
+    });
+  }
+
   function init() {
     injectStyle();
     bindLaunchButtons();
+    bindQuickGlobalButtons();
     renderSettings();
     renderDiary();
     renderProfile();
@@ -575,6 +778,7 @@
     renderFaqAddon();
     syncLaunchVisuals();
     activateRoute(state.route);
+    fetchProducts();
     window.SupportRDRemoteRebuildVersion = "20260408c";
   }
 
