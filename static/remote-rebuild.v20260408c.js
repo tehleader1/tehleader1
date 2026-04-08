@@ -1,7 +1,7 @@
 (() => {
   const KEY = "sr_rebuild_state_v1";
   const DEFAULTS = {
-    route: "floatBoardsBox",
+    route: "",
     diaryLevel: "Intro",
     diaryHistorySize: "small",
     diaryText: "",
@@ -145,7 +145,10 @@
       .float-mode-shell.support-rebuild-mode #floatTGuide,
       .float-mode-shell.support-rebuild-mode .remote-guardian-rail,
       .float-mode-shell.support-rebuild-mode #floatPrimeMenu,
-      .float-mode-shell.support-rebuild-mode #floatFounderLayer{
+      .float-mode-shell.support-rebuild-mode #floatFounderLayer,
+      .float-mode-shell.support-rebuild-mode #sessionSignal,
+      .float-mode-shell.support-rebuild-mode #remotePurchaseEditor,
+      .float-mode-shell.support-rebuild-mode #remoteEditsMenu{
         display:none !important;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-grid{
@@ -200,7 +203,7 @@
         min-height:calc(100vh - 190px);
         border-radius:28px;
         padding:22px;
-        background:rgba(7,12,22,.88);
+        background:linear-gradient(180deg, rgba(8,14,25,.82), rgba(13,19,35,.72));
       }
       .float-mode-shell.support-rebuild-mode .float-mode-top{
         margin:0 !important;
@@ -219,15 +222,15 @@
   }
 
   function activateRoute(routeId) {
-    state.route = routeId;
+    state.route = routeId || "";
     saveState();
     const shell = document.querySelector(".float-mode-shell");
     if (shell) shell.dataset.remoteTheme = state.map === "default" ? "default" : state.map;
     document.querySelectorAll(".float-box").forEach((box) => {
-      box.classList.toggle("support-rebuild-active", box.id === routeId);
+      box.classList.toggle("support-rebuild-active", !!routeId && box.id === routeId);
     });
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
-      btn.classList.toggle("pulse-ring", btn.dataset.floatTarget === routeId);
+      btn.classList.toggle("pulse-ring", !!routeId && btn.dataset.floatTarget === routeId);
     });
   }
 
@@ -838,6 +841,10 @@
           <div class="support-rebuild-line">FAQ Lounge: relax, breathe, laugh at reels, and get real answers.</div>
         </div>
       </div>`;
+    top.addEventListener("click", (event) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest(".support-rebuild-card")) return;
+    });
   }
 
   function bindLaunchButtons() {
@@ -885,6 +892,8 @@
   }
 
   function init() {
+    state.route = "";
+    saveState();
     injectStyle();
     activatePresentationMode();
     renderShellChrome();
