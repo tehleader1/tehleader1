@@ -10121,11 +10121,13 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         shell.classList.add("touch-home")
         shell.classList.remove("panel-open")
         shell.classList.add("touch-optimized")
+        remoteState.currentRoute = "home"
         remoteState.currentPanel = defaultFloatPanel
         localStorage.setItem(floatPanelKey, defaultFloatPanel)
         launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
         qsa(".float-box").forEach(box => box.hidden = true)
         if(remoteStageHome) remoteStageHome.hidden = false
+        syncRemoteLaunchVisual("default")
         syncMapHero(shell?.dataset?.remoteTheme || "default")
         applyAssistantDemoScene("home", false)
         if(message) setRemoteStatus(message)
@@ -13403,9 +13405,9 @@ const WORLD_VIEWS = [
 
   function syncRemoteLaunchVisual(viewKey = "default"){
     const shell = qs("#floatModeShell")
-    if(shell) shell.style.setProperty("--remote-launch-bg", getRemoteLaunchVisualByView(viewKey))
+    if(shell) shell.style.removeProperty("--remote-launch-bg")
     qsa(".float-launch-btn").forEach(btn=>{
-      btn.dataset.mapView = viewKey
+      btn.dataset.mapView = "default"
     })
   }
 

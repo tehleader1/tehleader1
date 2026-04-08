@@ -3020,7 +3020,7 @@ body.competition-world .bg-layers::before{
   border:1px solid rgba(255,255,255,.24);
   background:
     linear-gradient(180deg, rgba(10,20,34,.18), rgba(10,20,34,.28)),
-    var(--remote-launch-bg, url('/static/images/woman-waking-up12.jpg') center/cover no-repeat),
+    url('/static/images/woman-waking-up12.jpg') center/cover no-repeat,
     linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,.08)),
     linear-gradient(135deg, rgba(116,179,255,.18), rgba(13,31,58,.12));
   color:#eef7ff;
