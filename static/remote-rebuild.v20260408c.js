@@ -41,6 +41,17 @@
     map: "default",
     push: true,
     premium: "None",
+    account: {
+      engine: "PocketBase Ready",
+      pocketbaseUrl: "http://127.0.0.1:8090",
+      email: "",
+      password: "",
+      displayName: "SupportRD Guest",
+      loggedIn: false,
+      plan: "Free",
+      historySync: "Pending account sync",
+      collapsed: false
+    },
     statistics: {
       payments: "Needs verification",
       developerLog: "Listening for founder praise and field feedback.",
@@ -110,7 +121,15 @@
 
   function loadState() {
     try {
-      return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || "{}") };
+      const saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+      return {
+        ...DEFAULTS,
+        ...saved,
+        diarySocial: { ...DEFAULTS.diarySocial, ...(saved.diarySocial || {}) },
+        profile: { ...DEFAULTS.profile, ...(saved.profile || {}) },
+        account: { ...DEFAULTS.account, ...(saved.account || {}) },
+        statistics: { ...DEFAULTS.statistics, ...(saved.statistics || {}) }
+      };
     } catch {
       return structuredClone ? structuredClone(DEFAULTS) : JSON.parse(JSON.stringify(DEFAULTS));
     }
@@ -187,6 +206,11 @@
       }
       .support-rebuild-shell{display:grid;gap:14px}
       .support-rebuild-route-host{display:grid;gap:16px;align-content:start}
+      .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(360px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
+      .support-rebuild-account-panel.compact .support-rebuild-account-body{display:none}
+      .support-rebuild-account-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
+      .support-rebuild-account-kicker{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.64)}
+      .support-rebuild-account-meta{display:grid;gap:8px}
       .support-rebuild-overview{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
       .support-rebuild-home-top{display:grid;gap:12px;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr)}
       .support-rebuild-card{background:rgba(9,12,22,.78);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:16px;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.24)}
@@ -479,6 +503,82 @@
     if ($("srAssistantBubble")) $("srAssistantBubble").textContent = text;
   }
 
+  function accountSummary() {
+    const account = state.account || DEFAULTS.account;
+    return account.loggedIn
+      ? `${account.displayName || account.email || "SupportRD Member"} · ${account.plan}`
+      : "Guest mode · account system ready";
+  }
+
+  function renderAccountPanel() {
+    let panel = $("srAccountPanel");
+    if (!panel) {
+      panel = document.createElement("aside");
+      panel.id = "srAccountPanel";
+      document.body.appendChild(panel);
+    }
+    panel.className = `support-rebuild-account-panel${state.account.collapsed ? " compact" : ""}`;
+    panel.innerHTML = `
+      <div class="support-rebuild-account-head">
+        <div>
+          <div class="support-rebuild-account-kicker">Account Engine</div>
+          <div class="support-rebuild-title" style="margin:0">${state.account.engine}</div>
+        </div>
+        <button class="support-rebuild-btn ghost" id="srAccountToggle">${state.account.collapsed ? "Open" : "Hide"}</button>
+      </div>
+      <div class="support-rebuild-note">${accountSummary()}</div>
+      <div class="support-rebuild-account-body" style="margin-top:10px">
+        <div class="support-rebuild-account-meta">
+          <input class="support-rebuild-input" id="srAccountPbUrl" placeholder="PocketBase URL" value="${state.account.pocketbaseUrl || ""}">
+          <input class="support-rebuild-input" id="srAccountEmail" placeholder="Email / Username" value="${state.account.email || ""}">
+          <input class="support-rebuild-input" id="srAccountPassword" type="password" placeholder="Password">
+          <input class="support-rebuild-input" id="srAccountName" placeholder="Display Name" value="${state.account.displayName || ""}">
+        </div>
+        <div class="support-rebuild-row" style="margin-top:10px">
+          <button class="support-rebuild-btn pulse" id="srAccountSave">${state.account.loggedIn ? "Update Account" : "Save + Sign In"}</button>
+          <button class="support-rebuild-btn ghost" id="srAccountLogout">${state.account.loggedIn ? "Log Out" : "Clear"}</button>
+        </div>
+        <div class="support-rebuild-note" id="srAccountStatus" style="margin-top:10px">PocketBase-ready account state powers diary, profile, settings, studio memory, and premium history.</div>
+      </div>`;
+    $("srAccountToggle").onclick = () => {
+      state.account.collapsed = !state.account.collapsed;
+      saveState();
+      renderAccountPanel();
+    };
+    $("srAccountSave").onclick = () => {
+      state.account.pocketbaseUrl = $("srAccountPbUrl").value.trim() || state.account.pocketbaseUrl;
+      state.account.email = $("srAccountEmail").value.trim();
+      state.account.password = $("srAccountPassword").value;
+      state.account.displayName = $("srAccountName").value.trim() || state.account.displayName;
+      state.account.loggedIn = !!state.account.email;
+      state.account.historySync = state.account.loggedIn ? "Diary/Profile/Studio history ready to sync" : "Pending account sync";
+      if (state.account.loggedIn) state.profile.name = state.account.displayName || state.profile.name;
+      saveState();
+      renderShellChrome();
+      renderSettings();
+      renderDiary();
+      renderProfile();
+      renderAccountPanel();
+      $("srAccountStatus").textContent = state.account.loggedIn
+        ? `Account saved for ${state.account.displayName || state.account.email}. PocketBase URL is set and every Remote panel now reads from the account state.`
+        : "Account was saved in guest mode.";
+    };
+    $("srAccountLogout").onclick = () => {
+      state.account.email = "";
+      state.account.password = "";
+      state.account.loggedIn = false;
+      state.account.displayName = "SupportRD Guest";
+      state.account.plan = "Free";
+      state.account.historySync = "Pending account sync";
+      saveState();
+      renderShellChrome();
+      renderSettings();
+      renderDiary();
+      renderProfile();
+      renderAccountPanel();
+    };
+  }
+
   function renderSettings() {
     const box = $("floatProfileBox");
     if (!box) return;
@@ -496,7 +596,7 @@
             <button class="support-rebuild-btn pulse" id="srPushBtn">${state.push ? "Push Notifications: On" : "Push Notifications: Off"}</button>
             <button class="support-rebuild-btn" id="srOpenFullSettings">Open Full Settings</button>
           </div>
-          <div class="support-rebuild-note" id="srSettingsStatus">Premium status: ${state.premium}. Full settings includes links, password, address, and payment review.</div>
+          <div class="support-rebuild-note" id="srSettingsStatus">Premium status: ${state.premium}. Account engine: ${accountSummary()}. Full settings includes links, password, address, and payment review.</div>
           <div id="srSettingsFullLane" style="display:none;margin-top:12px" class="support-rebuild-grid two">
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Identity + Security</div>
@@ -547,9 +647,13 @@
           return;
         }
         state.profile.name = $("srSettingsUsername").value.trim();
+        state.account.displayName = state.profile.name || state.account.displayName;
         state.profile.contact = $("srSettingsUrl").value.trim();
         state.premium = $("srSettingsPayment").value.trim() || state.premium;
+        state.account.plan = state.premium;
         saveState();
+        renderShellChrome();
+        renderAccountPanel();
         $("srSettingsStatus").textContent = newPass
           ? "Full settings saved locally. Password flow accepted in the app shell and push stays connected through browser permission."
           : "Full settings saved locally. Push stays connected through browser notification permission.";
@@ -570,6 +674,7 @@
             <div>
               <button class="support-rebuild-btn pulse" id="srSendSocialBtn">Send To Social</button>
               <div class="support-rebuild-note" style="margin-top:8px">${state.diaryUseCase}</div>
+              <div class="support-rebuild-note" style="margin-top:8px">Account lane: ${accountSummary()}</div>
             </div>
             <div>
               <label class="support-rebuild-note">Description Box</label>
@@ -641,6 +746,7 @@
       state.diaryText = $("srDiaryText").value;
       document.querySelectorAll("[data-platform]").forEach((cb) => { state.diarySocial[cb.dataset.platform] = cb.checked; });
       saveState();
+      renderShellChrome();
       renderDiary();
     };
   }
@@ -667,6 +773,7 @@
                 <span class="support-rebuild-pill">${p.aiAssists[1] || "Polished routine"}</span>
               </div>
               <div class="support-rebuild-note" style="margin-top:10px">Live location URL: ${p.contact || "https://supportrd.com/live"}</div>
+              <div class="support-rebuild-note" style="margin-top:10px">Account status: ${accountSummary()}</div>
             </div>
           </div>
           <div class="support-rebuild-grid two">
@@ -720,7 +827,10 @@
       p.name = $("srProfileName").value;
       p.tone = $("srProfileTone").value;
       p.contact = $("srProfileContact").value;
+      state.account.displayName = p.name || state.account.displayName;
       saveState();
+      renderShellChrome();
+      renderAccountPanel();
       renderProfile();
     };
     $("srProfileLive").onclick = () => {
@@ -972,6 +1082,7 @@
           <div class="support-rebuild-line">Statistics: SEO build, remote usefulness, and account flow health.</div>
           <div class="support-rebuild-line">Contacts / Channels: Render, GitHub, support email, payments, in-person routes, technical support, and fan feedback.</div>
           <div class="support-rebuild-line">FAQ Lounge: relax, breathe, laugh at reels, and get real answers.</div>
+          <div class="support-rebuild-line">Account Engine: ${accountSummary()} · ${state.account.historySync}</div>
         </div>
       </div>`;
     top.addEventListener("click", (event) => {
@@ -1028,9 +1139,10 @@
     state.route = "";
     saveState();
     injectStyle();
-    activatePresentationMode();
-    renderShellChrome();
-    renderAssistantDock();
+      activatePresentationMode();
+      renderShellChrome();
+      renderAccountPanel();
+      renderAssistantDock();
     updateAssistantDock("Aria and Jake are moving with the page. Tap them when you need them.");
     bindLaunchButtons();
     bindQuickGlobalButtons();
@@ -1043,8 +1155,8 @@
     syncLaunchVisuals();
     activateRoute(state.route);
     fetchProducts();
-    window.SupportRDRemoteRebuildVersion = "20260409c";
-  }
+      window.SupportRDRemoteRebuildVersion = "20260409d";
+    }
 
   setTimeout(init, 700);
 })();
