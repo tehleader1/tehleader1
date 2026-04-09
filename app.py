@@ -4218,6 +4218,28 @@ def prevention_ok():
 def manifest():
     return send_from_directory("static", "manifest.json")
 
+
+@app.route("/api/status/architecture")
+def architecture_status():
+    return jsonify({
+        "ok": True,
+        "build": "20260409e",
+        "layers": {
+            "openai": "intelligence",
+            "pocketbase": "account memory",
+            "frontend": "feel",
+            "backend": "operations",
+            "transcribe_international": "accessibility",
+            "cloud": "scale and reliability",
+        },
+        "serves": {
+            "main_structure": "durability, payment friendly flow, responsive remote shell",
+            "general_options": "fun and useful actions across diary, studio, map, faq, and profile",
+            "contacts_channels": "support email, payments, in-person routes, technical support, and fan feedback",
+            "statistics": "SEO build, remote usefulness, and account flow health",
+        }
+    })
+
 @app.route("/sw.js")
 def sw():
     return send_from_directory("static", "sw.js")

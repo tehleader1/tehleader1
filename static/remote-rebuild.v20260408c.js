@@ -55,7 +55,8 @@
     statistics: {
       payments: "Needs verification",
       developerLog: "Listening for founder praise and field feedback.",
-      contacts: "Tracking serious buyers, fly-ins, and bulk orders."
+      contacts: "Tracking serious buyers, fly-ins, and bulk orders.",
+      architecture: "Loading architecture stack..."
     },
     products: []
   };
@@ -137,6 +138,18 @@
 
   function saveState() {
     localStorage.setItem(KEY, JSON.stringify(state));
+  }
+
+  async function syncArchitectureStatus() {
+    try {
+      const res = await fetch("/api/status/architecture", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const layers = data?.layers || {};
+      state.statistics.architecture = `OpenAI=${layers.openai || "intelligence"} · PocketBase=${layers.pocketbase || "account memory"} · Frontend=${layers.frontend || "feel"} · Backend=${layers.backend || "operations"} · Transcribe=${layers.transcribe_international || "accessibility"} · Cloud=${layers.cloud || "scale"}`;
+      saveState();
+      if (document.querySelector(".float-mode-top")) renderShellChrome();
+    } catch {}
   }
 
   function $(id) {
@@ -1083,6 +1096,7 @@
           <div class="support-rebuild-line">Contacts / Channels: Render, GitHub, support email, payments, in-person routes, technical support, and fan feedback.</div>
           <div class="support-rebuild-line">FAQ Lounge: relax, breathe, laugh at reels, and get real answers.</div>
           <div class="support-rebuild-line">Account Engine: ${accountSummary()} · ${state.account.historySync}</div>
+          <div class="support-rebuild-line">Architecture: ${state.statistics.architecture}</div>
         </div>
       </div>`;
     top.addEventListener("click", (event) => {
@@ -1151,11 +1165,12 @@
     renderProfile();
     renderMap();
     renderStudio();
-    renderFaqAddon();
-    syncLaunchVisuals();
-    activateRoute(state.route);
-    fetchProducts();
-      window.SupportRDRemoteRebuildVersion = "20260409d";
+      renderFaqAddon();
+      syncLaunchVisuals();
+      activateRoute(state.route);
+      fetchProducts();
+      syncArchitectureStatus();
+      window.SupportRDRemoteRebuildVersion = "20260409e";
     }
 
   setTimeout(init, 700);
