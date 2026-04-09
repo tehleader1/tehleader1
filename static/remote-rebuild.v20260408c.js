@@ -56,8 +56,18 @@
       payments: "Needs verification",
       developerLog: "Listening for founder praise and field feedback.",
       contacts: "Tracking serious buyers, fly-ins, and bulk orders.",
-      architecture: "Loading architecture stack..."
+      architecture: "Loading architecture stack...",
+      adAttribution: "No ad route selected yet."
     },
+    adQuestionnaire: "",
+    studioMode: "quick",
+    studioBoards: {
+      voice: "voice-track.wav",
+      beat: "beat-track.wav",
+      adlib: "adlib-track.wav",
+      instrument: "instrument-track.wav"
+    },
+    studioRecent: [],
     products: []
   };
 
@@ -109,10 +119,57 @@
     floatAssistantBox: "Profile"
   };
 
+  const SUPPORTRD_COPY = {
+    title: "SupportRD - Premium Hair Industry Brand",
+    brandMark: "SupportRD",
+    mission: "SupportRD - We are a revolutionary company in the hair industry and believe true love and passion. This app belongs on phone, tablet, TV, radio, and in your hand the moment hair help is needed.",
+    generalOptions: "Perks, fun lanes, and revolutionary reasons to keep using the app.",
+    sticky: {
+      paymentsTitle: "Payments",
+      paymentsBody: "Fast Pay, custom orders, and premium checkout stay one tap away.",
+      editsTitle: "Edits Menu",
+      infoTitle: "Important Information",
+      infoBody: "Main Structure, Statistics, Contacts / Channels, and account memory stay visible while you move.",
+      adsTitle: "Ad System",
+      adsPrompt: "Which advertisement led you here?"
+    },
+    statisticsBoard: {
+      title: "SupportRD Statistics Drawing Board",
+      intro: "Exclusive page handling for the founder view: see what is working, what feels premium, and what SupportRD should push next.",
+      pillars: [
+        "Main Structure: durable, payment-friendly, responsive, and clearly branded.",
+        "General Options: the app must feel fun, useful, and worth opening.",
+        "Contacts / Channels: support, payments, routes, fans, and founder contact movement.",
+        "Statistics: SEO build, remote usefulness, account flow clarity, and live readiness."
+      ]
+    },
+    ads: [
+      {
+        title: "SupportRD Hair Rescue",
+        route: "floatSettingsBox",
+        note: "Ad route: Hair Rescue pushed this visitor toward Diary Mode and FAQ support."
+      },
+      {
+        title: "SupportRD Mobile Studio",
+        route: "floatBoardsBox",
+        note: "Ad route: Mobile Studio pushed this visitor toward Studio Quick Panel."
+      }
+    ]
+  };
+
+  const AD_QUESTIONS = [
+    { label: "Have tangle issues?", route: "floatLiveBox", note: "FAQ Lounge opened for detangle help." },
+    { label: "Have color loss issues?", route: "floatAssistantBox", note: "Profile + hair analysis opened for color support." },
+    { label: "Need a hair AI buddy?", route: "floatSettingsBox", note: "Diary Mode opened for hands-free Aria support." },
+    { label: "Premium all natural hair products", action: "payments", note: "Fast Pay opened for premium product checkout." },
+    { label: "Revolutionary hair app on the go studio", route: "floatBoardsBox", note: "Studio opened for on-the-go creation." }
+  ];
+
   let state = loadState();
   let mediaRecorder = null;
   let mediaStream = null;
   let recordChunks = [];
+  let studioUndoStack = [];
   const boardAudio = { voice: null, beat: null, adlib: null, instrument: null };
   const boardBlobs = { voice: null, beat: null, adlib: null, instrument: null };
   let currentBoard = "voice";
@@ -129,7 +186,8 @@
         diarySocial: { ...DEFAULTS.diarySocial, ...(saved.diarySocial || {}) },
         profile: { ...DEFAULTS.profile, ...(saved.profile || {}) },
         account: { ...DEFAULTS.account, ...(saved.account || {}) },
-        statistics: { ...DEFAULTS.statistics, ...(saved.statistics || {}) }
+        statistics: { ...DEFAULTS.statistics, ...(saved.statistics || {}) },
+        studioBoards: { ...DEFAULTS.studioBoards, ...(saved.studioBoards || {}) }
       };
     } catch {
       return structuredClone ? structuredClone(DEFAULTS) : JSON.parse(JSON.stringify(DEFAULTS));
@@ -138,6 +196,67 @@
 
   function saveState() {
     localStorage.setItem(KEY, JSON.stringify(state));
+  }
+
+  function pushDiaryFeed(...lines) {
+    state.diaryFeed = [...(state.diaryFeed || []), ...lines].slice(-15);
+    saveState();
+  }
+
+  function playUiTone(kind = "intro") {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = kind === "outro" ? "triangle" : "sine";
+      oscillator.frequency.value = kind === "outro" ? 520 : 680;
+      gain.gain.value = 0.0001;
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      const now = ctx.currentTime;
+      gain.gain.exponentialRampToValueAtTime(0.045, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === "outro" ? 0.26 : 0.18));
+      oscillator.start(now);
+      oscillator.stop(now + (kind === "outro" ? 0.28 : 0.2));
+    } catch {}
+  }
+
+  function studioSnapshot(label) {
+    return {
+      label,
+      currentBoard,
+      boards: { ...state.studioBoards }
+    };
+  }
+
+  function pushStudioUndo(label) {
+    studioUndoStack.push(studioSnapshot(label));
+    if (studioUndoStack.length > 20) studioUndoStack = studioUndoStack.slice(-20);
+  }
+
+  function saveRecentStudioBuild(label, type = "session") {
+    const item = {
+      label,
+      type,
+      savedAt: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+      boards: { ...state.studioBoards }
+    };
+    state.studioRecent = [item, ...(state.studioRecent || [])]
+      .slice(0, 3);
+    saveState();
+  }
+
+  function restoreStudioSnapshot(snapshot) {
+    if (!snapshot) return;
+    state.studioBoards = { ...DEFAULTS.studioBoards, ...(snapshot.boards || {}) };
+    currentBoard = snapshot.currentBoard || "voice";
+    saveState();
+    renderStudio();
+    if ($("srStudioStatus")) {
+      $("srStudioStatus").textContent = `${snapshot.label} restored across the motherboards.`;
+    }
   }
 
   async function syncArchitectureStatus() {
@@ -165,10 +284,26 @@
       .float-box.support-rebuild-active{display:block !important}
       .float-mode-shell.support-rebuild-mode{
         min-height:100vh;
-        padding:18px;
+        padding:18px 332px 18px 18px;
         display:grid;
         gap:14px;
         align-content:start;
+      }
+      @media (max-width: 1180px){
+        .float-mode-shell.support-rebuild-mode{
+          padding:18px !important;
+        }
+        .support-rebuild-sticky-rail{
+          position:static !important;
+          width:auto !important;
+          margin:10px 0 0 !important;
+        }
+        .support-rebuild-account-panel{
+          position:static !important;
+          width:auto !important;
+          margin-bottom:12px !important;
+        }
+        .support-rebuild-assistants{right:12px !important;bottom:12px !important}
       }
       .float-mode-shell.support-rebuild-mode .float-mode-footer,
         body.support-rebuild-page #launchMenu,
@@ -219,8 +354,13 @@
         box-shadow:0 18px 38px rgba(0,0,0,.22);
       }
       .support-rebuild-shell{display:grid;gap:14px}
-      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:46px;position:relative;z-index:1}
-      .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(360px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
+      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:20px;position:relative;z-index:1;min-width:0}
+      .support-rebuild-account-panel{position:fixed;top:16px;left:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
+      .support-rebuild-sticky-rail{position:fixed;top:16px;right:16px;z-index:74;width:min(300px,calc(100vw - 24px));display:grid;gap:12px}
+      .support-rebuild-sticky-card{padding:14px;border-radius:22px;background:rgba(7,12,22,.90);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.26);color:#fff}
+      .support-rebuild-mini-title{font:700 .92rem/1.2 Georgia,serif;margin:0 0 8px}
+      .support-rebuild-mini-list{display:grid;gap:8px}
+      .support-rebuild-brand-mark{position:fixed;right:22px;bottom:16px;z-index:73;color:rgba(255,255,255,.9);font:700 1rem/1 Georgia,serif;letter-spacing:.06em;text-shadow:0 6px 18px rgba(0,0,0,.36)}
       .support-rebuild-account-panel.compact .support-rebuild-account-body{display:none}
       .support-rebuild-account-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
       .support-rebuild-account-kicker{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.64)}
@@ -272,7 +412,7 @@
         position:relative;
         z-index:1;
         margin:0 !important;
-        min-height:calc(100vh - 235px);
+        min-height:calc(100vh - 190px);
         border-radius:28px;
         padding:22px;
         background:linear-gradient(180deg, rgba(8,14,25,.82), rgba(13,19,35,.72));
@@ -325,6 +465,25 @@
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
       btn.classList.toggle("pulse-ring", !!routeId && btn.dataset.floatTarget === routeId);
     });
+    document.body.classList.toggle("support-route-open", !!routeId);
+    if (routeId && routeHost) {
+      requestAnimationFrame(() => {
+        routeHost.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }
+
+  function openQuestionnaireRoute(item) {
+    if (!item) return;
+    state.adQuestionnaire = item.label;
+    state.statistics.adAttribution = item.note;
+    saveState();
+    renderStickyPanels();
+    if (item.action === "payments") {
+      openPaymentModal();
+      return;
+    }
+    if (item.route) activateRoute(item.route);
   }
 
   function formatDiaryLines(text) {
@@ -398,11 +557,13 @@
           <div class="support-rebuild-note">Email the founder before Fast Pay if the order is manual or specialized.</div>
           <div class="support-rebuild-row" style="margin-top:12px">
             <a class="support-rebuild-btn ghost" href="mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order" target="_blank" rel="noopener">Email Custom Order</a>
+            <a class="support-rebuild-btn ghost" href="https://supportrd.com/custom-orders" target="_blank" rel="noopener">Open Custom Orders</a>
           </div>
         </div>
         <div class="support-rebuild-card" style="padding:12px">
           <div class="support-rebuild-title">Credit / Debit Capture</div>
           <div class="support-rebuild-note">Shopify Checkout should show the real card page, and Apple Pay / Google Pay appear there when supported.</div>
+          <div class="support-rebuild-note" style="margin-top:10px">Account plan right now: ${state.account.plan}. Payments must push premium back into the account memory.</div>
         </div>
       </div>
       <div class="support-rebuild-grid two" style="margin-top:14px">
@@ -424,15 +585,56 @@
     $("srClosePaymentModal").onclick = () => modal.classList.remove("is-open");
     body.querySelectorAll("[data-checkout]").forEach((btn) => btn.onclick = () => {
       const product = products.find((item) => item.handle === btn.dataset.checkout);
-      window.location.href = getCheckoutUrl(product);
+      const url = getCheckoutUrl(product);
+      state.statistics.payments = `Checkout launched for ${product?.title || "SupportRD product"}`;
+      state.account.historySync = "Pending payment verification";
+      saveState();
+      renderShellChrome();
+      window.open(url, "_blank", "noopener");
     });
     body.querySelectorAll("[data-details]").forEach((btn) => btn.onclick = () => {
       const product = products.find((item) => item.handle === btn.dataset.details);
       const title = product?.title || "SupportRD Product";
       const desc = product?.body_html || product?.description || "Product details are loading from the SupportRD catalog.";
-      body.innerHTML = `<div class="support-rebuild-row" style="justify-content:space-between"><h3 class="support-rebuild-title">${title}</h3><button class="support-rebuild-btn ghost" id="srBackPaymentModal">Back</button></div><div class="support-rebuild-note">${desc}</div>`;
+      body.innerHTML = `<div class="support-rebuild-row" style="justify-content:space-between"><h3 class="support-rebuild-title">${title}</h3><button class="support-rebuild-btn ghost" id="srBackPaymentModal">Back</button></div><div class="support-rebuild-note">${desc}</div><div class="support-rebuild-row" style="margin-top:12px"><button class="support-rebuild-btn pulse" id="srCheckoutThis">Go To Credit Card Page</button></div>`;
       $("srBackPaymentModal").onclick = openPaymentModal;
+      $("srCheckoutThis").onclick = () => {
+        const url = getCheckoutUrl(product);
+        state.statistics.payments = `Direct checkout lane opened for ${title}`;
+        saveState();
+        renderShellChrome();
+        window.open(url, "_blank", "noopener");
+      };
     });
+    modal.classList.add("is-open");
+  }
+
+  function openStatisticsBoard() {
+    const modal = ensurePaymentModal();
+    const body = $("srPaymentModalBody");
+    body.innerHTML = `
+      <div class="support-rebuild-row" style="justify-content:space-between">
+        <h3 class="support-rebuild-title">${SUPPORTRD_COPY.statisticsBoard.title}</h3>
+        <button class="support-rebuild-btn ghost" id="srCloseStatsBoard">Close</button>
+      </div>
+      <div class="support-rebuild-note">${SUPPORTRD_COPY.statisticsBoard.intro}</div>
+      <div class="support-rebuild-grid two" style="margin-top:14px">
+        ${SUPPORTRD_COPY.statisticsBoard.pillars.map((item) => `<div class="support-rebuild-card" style="padding:12px"><div class="support-rebuild-note">${item}</div></div>`).join("")}
+      </div>
+      <div class="support-rebuild-grid two" style="margin-top:14px">
+        <div class="support-rebuild-card" style="padding:12px">
+          <div class="support-rebuild-title">Live Operational Read</div>
+          <div class="support-rebuild-note">Payments: ${state.statistics.payments}</div>
+          <div class="support-rebuild-note" style="margin-top:8px">Contacts: ${state.statistics.contacts}</div>
+          <div class="support-rebuild-note" style="margin-top:8px">Developer Log: ${state.statistics.developerLog}</div>
+        </div>
+        <div class="support-rebuild-card" style="padding:12px">
+          <div class="support-rebuild-title">Architecture</div>
+          <div class="support-rebuild-note">${state.statistics.architecture}</div>
+          <div class="support-rebuild-note" style="margin-top:8px">Ad Attribution: ${state.statistics.adAttribution}</div>
+        </div>
+      </div>`;
+    $("srCloseStatsBoard").onclick = () => modal.classList.remove("is-open");
     modal.classList.add("is-open");
   }
 
@@ -458,12 +660,13 @@
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const finish = (heard) => {
       const reply = buildAssistantReply(name, heard);
-      state.diaryFeed = [
+      playUiTone("outro");
+      pushDiaryFeed(
         `${name}: listening activated.`,
         `You: ${heard}`,
+        `${name}: responding in 2 seconds...`,
         `${name}: ${reply}`
-      ];
-      saveState();
+      );
       renderDiary();
       updateAssistantDock(`${name} is responding now.`);
       setTimeout(() => speakText(reply), 2200);
@@ -475,9 +678,9 @@
       recog.maxAlternatives = 1;
       recog.onresult = (event) => finish(event.results?.[0]?.[0]?.transcript || "I need help with my hair.");
       recog.onerror = () => finish(prompt(`${name} is ready. Tell ${name} your hair problem.`) || "I need help with my hair.");
+      playUiTone("intro");
       recog.start();
-      state.diaryFeed = [`${name}: mic open. Speak now.`, "Listening for your hair problem..."];
-      saveState();
+      pushDiaryFeed(`${name}: mic open. Speak now.`, "Listening for your hair problem...");
       renderDiary();
       updateAssistantDock(`${name} is listening... take your time.`);
       return;
@@ -511,6 +714,68 @@
     document.body.appendChild(dock);
     $("srDockAria").onclick = () => startAssistant("Aria");
     $("srDockJake").onclick = () => startAssistant("Jake");
+  }
+
+  function renderStickyPanels() {
+    let rail = $("srStickyRail");
+    if (!rail) {
+      rail = document.createElement("aside");
+      rail.id = "srStickyRail";
+      rail.className = "support-rebuild-sticky-rail";
+      document.body.appendChild(rail);
+    }
+    rail.innerHTML = `
+      <section class="support-rebuild-sticky-card">
+        <div class="support-rebuild-mini-title">${SUPPORTRD_COPY.sticky.paymentsTitle}</div>
+        <div class="support-rebuild-note">${SUPPORTRD_COPY.sticky.paymentsBody}</div>
+        <div class="support-rebuild-row" style="margin-top:10px">
+          <button class="support-rebuild-btn pulse" id="srStickyPay">Open Fast Pay</button>
+        </div>
+      </section>
+      <section class="support-rebuild-sticky-card">
+        <div class="support-rebuild-mini-title">${SUPPORTRD_COPY.sticky.editsTitle}</div>
+        <div class="support-rebuild-mini-list">
+          <button class="support-rebuild-btn ghost" data-sticky-route="floatBoardsBox">Open Studio</button>
+          <button class="support-rebuild-btn ghost" data-sticky-route="floatSettingsBox">Open Diary</button>
+          <button class="support-rebuild-btn ghost" data-sticky-route="floatAssistantBox">Open Profile</button>
+        </div>
+      </section>
+      <section class="support-rebuild-sticky-card">
+        <div class="support-rebuild-mini-title">${SUPPORTRD_COPY.sticky.infoTitle}</div>
+        <div class="support-rebuild-note">${SUPPORTRD_COPY.sticky.infoBody}</div>
+        <div class="support-rebuild-note" style="margin-top:10px">${state.statistics.adAttribution}</div>
+        <div class="support-rebuild-row" style="margin-top:10px">
+          <button class="support-rebuild-btn ghost" id="srOpenStatsBoard">Open Statistics Drawing Board</button>
+        </div>
+      </section>
+      <section class="support-rebuild-sticky-card">
+        <div class="support-rebuild-mini-title">${SUPPORTRD_COPY.sticky.adsTitle}</div>
+        <div class="support-rebuild-grid" style="gap:8px">
+          ${SUPPORTRD_COPY.ads.map((ad, index) => `<button class="support-rebuild-btn ghost" data-ad-index="${index}">${ad.title}</button>`).join("")}
+        </div>
+        <div class="support-rebuild-note" style="margin-top:10px">${SUPPORTRD_COPY.sticky.adsPrompt}</div>
+        <div class="support-rebuild-mini-list" style="margin-top:10px">
+          ${AD_QUESTIONS.map((item, index) => `<button class="support-rebuild-btn ghost" data-ad-question="${index}">${item.label}</button>`).join("")}
+        </div>
+      </section>`;
+    $("srStickyPay")?.addEventListener("click", openPaymentModal);
+    $("srOpenStatsBoard")?.addEventListener("click", openStatisticsBoard);
+    rail.querySelectorAll("[data-sticky-route]").forEach((btn) => {
+      btn.addEventListener("click", () => activateRoute(btn.dataset.stickyRoute));
+    });
+    rail.querySelectorAll("[data-ad-index]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const ad = SUPPORTRD_COPY.ads[Number(btn.dataset.adIndex)];
+        if (!ad) return;
+        state.statistics.adAttribution = ad.note;
+        saveState();
+        renderStickyPanels();
+        activateRoute(ad.route);
+      });
+    });
+    rail.querySelectorAll("[data-ad-question]").forEach((btn) => {
+      btn.addEventListener("click", () => openQuestionnaireRoute(AD_QUESTIONS[Number(btn.dataset.adQuestion)]));
+    });
   }
 
   function updateAssistantDock(text) {
@@ -898,11 +1163,17 @@
   function renderStudio() {
     const box = $("floatBoardsBox");
     if (!box) return;
+    const recentItems = (state.studioRecent || []).map((item, index) => `
+      <button class="support-rebuild-btn ghost" data-recent-index="${index}">
+        ${item.label} · ${item.savedAt}
+      </button>`).join("");
     box.innerHTML = `
       <div class="support-rebuild-shell">
         <div class="support-rebuild-card">
           <h3 class="support-rebuild-title">Studio Quick Panel</h3>
           <div class="support-rebuild-row">
+            <button class="support-rebuild-btn ${state.studioMode === "quick" ? "pulse" : "ghost"}" id="srStudioQuickMode">Quick Mode</button>
+            <button class="support-rebuild-btn ${state.studioMode === "full" ? "pulse" : "ghost"}" id="srStudioFullMode">Full Studio Mode</button>
             <button class="support-rebuild-btn pulse" id="srStudioRecord">Record</button>
             <button class="support-rebuild-btn ghost" id="srStudioVideo">Live Record Video</button>
             <button class="support-rebuild-btn ghost" id="srStudioStop">Stop</button>
@@ -910,10 +1181,12 @@
             <button class="support-rebuild-btn ghost" id="srStudioPause">Pause</button>
             <button class="support-rebuild-btn ghost" id="srStudioRewind">Rewind</button>
             <button class="support-rebuild-btn ghost" id="srStudioForward">Fast Forward</button>
+            <button class="support-rebuild-btn ghost" id="srStudioUndo">Undo</button>
             <button class="support-rebuild-btn ghost" id="srStudioExport">Export File</button>
           </div>
-          <div class="support-rebuild-grid three" style="display:grid;gap:12px;grid-template-columns:1fr">
-            ${["voice","beat","adlib","instrument"].map((board)=>`<div class="support-rebuild-board"><div class="support-rebuild-row"><strong>${board.toUpperCase()} BOARD</strong><button class="support-rebuild-btn ghost" data-board="${board}">Select</button><input type="file" accept="audio/*,video/*" data-upload="${board}"></div><div class="support-rebuild-note" id="srBoardName_${board}">${board}-track.wav</div><div class="support-rebuild-wave"></div></div>`).join("")}
+          <div class="support-rebuild-note" style="margin-top:10px">${state.studioMode === "full" ? "Full studio mode opens the whole motherboard lane for vocals, beat, instrument, adlib, FX, video, and recent saved builds." : "Quick mode keeps record, upload, play, and export one tap away."}</div>
+          <div class="support-rebuild-grid ${state.studioMode === "full" ? "two" : "three"}" style="display:grid;gap:12px;grid-template-columns:1fr">
+            ${["voice","beat","adlib","instrument"].map((board)=>`<div class="support-rebuild-board"><div class="support-rebuild-row"><strong>${board.toUpperCase()} BOARD</strong><button class="support-rebuild-btn ghost" data-board="${board}">Select</button><input type="file" accept="audio/*,video/*" data-upload="${board}"></div><div class="support-rebuild-note" id="srBoardName_${board}">${state.studioBoards[board] || `${board}-track.wav`}</div><div class="support-rebuild-wave"></div><div class="support-rebuild-note" style="margin-top:8px">${board === currentBoard ? "Active motherboard. Record and FX land here." : "Select this motherboard to record or apply edits."}</div></div>`).join("")}
           </div>
           <div class="support-rebuild-grid two" style="margin-top:12px">
             <div>
@@ -921,6 +1194,19 @@
               <select class="support-rebuild-select" id="srStudioFx"><option>Echo</option><option>Reverb</option><option>Fade In</option><option>Fade Out</option><option>Bass</option><option>Treble</option><option>Deep Voice</option><option>Opera Voice</option><option>Slow Motion</option><option>Camera Lighting</option><option>Panoramic</option><option>Zoom</option></select>
             </div>
             <div class="support-rebuild-note" id="srStudioStatus">Ready. Motherboards should play from beginning to end and export with visible progress.</div>
+          </div>
+          <div class="support-rebuild-grid two" style="margin-top:12px">
+            <div class="support-rebuild-card" style="padding:12px">
+              <div class="support-rebuild-title">Recent Builds</div>
+              <div class="support-rebuild-mini-list">
+                ${recentItems || `<div class="support-rebuild-note">The latest 3 builds will stay here after recording, upload, or export.</div>`}
+              </div>
+            </div>
+            <div class="support-rebuild-card" style="padding:12px">
+              <div class="support-rebuild-title">Full Studio Lane</div>
+              <div class="support-rebuild-note">Beat, vocal, instrument, and adlib motherboards should line up, play together, undo together, and export into one SupportRD-ready file.</div>
+              <div class="support-rebuild-note" style="margin-top:10px">Current board: ${currentBoard.toUpperCase()} · Account lane: ${accountSummary()}</div>
+            </div>
           </div>
           <div class="support-rebuild-card" style="margin-top:12px;padding:12px">
             <div class="support-rebuild-title">Export Types</div>
@@ -930,13 +1216,23 @@
           <div class="support-rebuild-progress" style="margin-top:12px"><span id="srStudioBar"></span></div>
         </div>
       </div>`;
-    box.querySelectorAll("[data-board]").forEach((btn) => btn.onclick = () => { currentBoard = btn.dataset.board; $("srStudioStatus").textContent = `Editing ${currentBoard} board.`; });
+    $("srStudioQuickMode").onclick = () => { state.studioMode = "quick"; saveState(); renderStudio(); };
+    $("srStudioFullMode").onclick = () => { state.studioMode = "full"; saveState(); renderStudio(); };
+    box.querySelectorAll("[data-board]").forEach((btn) => btn.onclick = () => {
+      currentBoard = btn.dataset.board;
+      $("srStudioStatus").textContent = `Editing ${currentBoard} board. Highlight here before using FX or record.`;
+      renderStudio();
+    });
     box.querySelectorAll("[data-upload]").forEach((input) => input.onchange = () => {
       const file = input.files && input.files[0];
       if (!file) return;
+      pushStudioUndo(`Before loading ${file.name}`);
       boardAudio[input.dataset.upload] = new Audio(URL.createObjectURL(file));
+      state.studioBoards[input.dataset.upload] = file.name;
+      saveRecentStudioBuild(`${file.name} into ${input.dataset.upload}`, "upload");
       $(`srBoardName_${input.dataset.upload}`).textContent = file.name;
       $("srStudioStatus").textContent = `${file.name} loaded into ${input.dataset.upload} board.`;
+      saveState();
     });
     $("srStudioRecord").onclick = startRecord;
     $("srStudioVideo").onclick = () => { $("srStudioStatus").textContent = "Live Record Video armed: panoramic, zoom, wave sweep, lighting, and selfie capture are the active camera modes."; };
@@ -945,11 +1241,18 @@
     $("srStudioPause").onclick = () => Object.values(boardAudio).forEach((audio) => audio && audio.pause());
     $("srStudioRewind").onclick = () => Object.values(boardAudio).forEach((audio) => { if (audio) audio.currentTime = 0; });
     $("srStudioForward").onclick = () => Object.values(boardAudio).forEach((audio) => { if (audio) audio.currentTime += 3; });
+    $("srStudioUndo").onclick = () => restoreStudioSnapshot(studioUndoStack.pop());
     $("srStudioExport").onclick = exportStudio;
+    box.querySelectorAll("[data-recent-index]").forEach((btn) => btn.onclick = () => {
+      const item = state.studioRecent?.[Number(btn.dataset.recentIndex)];
+      if (!item) return;
+      restoreStudioSnapshot(item);
+    });
   }
 
   async function startRecord() {
     try {
+      pushStudioUndo(`Before recording ${currentBoard}`);
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       recordChunks = [];
       mediaRecorder = new MediaRecorder(mediaStream);
@@ -957,8 +1260,12 @@
       mediaRecorder.onstop = () => {
         const blob = new Blob(recordChunks, { type: "audio/webm" });
         boardAudio[currentBoard] = new Audio(URL.createObjectURL(blob));
-        $(`srBoardName_${currentBoard}`).textContent = `${currentBoard}-take.webm`;
+        const takeName = `${currentBoard}-take.webm`;
+        state.studioBoards[currentBoard] = takeName;
+        saveRecentStudioBuild(`${takeName} saved`, "recording");
+        $(`srBoardName_${currentBoard}`).textContent = takeName;
         $("srStudioStatus").textContent = `${currentBoard} recording saved.`;
+        saveState();
         mediaStream.getTracks().forEach((track) => track.stop());
       };
       mediaRecorder.start();
@@ -986,6 +1293,12 @@
     [20,40,60,100].forEach((n, idx) => setTimeout(() => {
       bar.style.width = `${n}%`;
       $("srStudioStatus").textContent = n < 100 ? `Export building ${n}%` : "Export complete. Main studio file is ready.";
+      if (n === 100) {
+        saveRecentStudioBuild(`SupportRD studio export ${new Date().toLocaleDateString()}`, "export");
+        state.statistics.developerLog = "Studio export lane is now producing recent saved builds for founder review.";
+        saveState();
+        renderShellChrome();
+      }
     }, 300 * (idx + 1)));
   }
 
@@ -1079,27 +1392,28 @@
     const top = document.querySelector(".float-mode-top");
     if (!top) return;
     top.innerHTML = `
-      <div class="support-rebuild-home-top">
-        <div class="support-rebuild-card">
-          <div class="support-rebuild-title">Main Structure</div>
-          <div class="support-rebuild-note">Durable, payment-friendly, responsive, and ready for that on-the-go curve moment where someone first hears about SupportRD.</div>
-          <div class="support-rebuild-overview" style="margin-top:12px">
-            <div class="support-rebuild-card"><div class="support-rebuild-title">Diary Mode</div><div class="support-rebuild-note">Live mode, hands-free Aria, real diary, and hair-problem support.</div></div>
-            <div class="support-rebuild-card"><div class="support-rebuild-title">Studio</div><div class="support-rebuild-note">Vocals, beat, instrument, FX, and export-minded creation on the move.</div></div>
+        <div class="support-rebuild-home-top">
+          <div class="support-rebuild-card">
+            <div class="support-rebuild-title">Main Structure</div>
+            <div class="support-rebuild-note">${SUPPORTRD_COPY.mission}</div>
+            <div class="support-rebuild-overview" style="margin-top:12px">
+              <div class="support-rebuild-card"><div class="support-rebuild-title">Diary Mode</div><div class="support-rebuild-note">Live mode, hands-free Aria, real diary, and hair-problem support.</div></div>
+              <div class="support-rebuild-card"><div class="support-rebuild-title">Studio</div><div class="support-rebuild-note">Vocals, beat, instrument, FX, and export-minded creation on the move.</div></div>
             <div class="support-rebuild-card"><div class="support-rebuild-title">Profile</div><div class="support-rebuild-note">Hair analysis, serious image, live invite, and professional prep.</div></div>
             <div class="support-rebuild-card"><div class="support-rebuild-title">Map Change</div><div class="support-rebuild-note">Fun visuals, serious routing, and making-money map help.</div></div>
           </div>
         </div>
           <div class="support-rebuild-card">
             <div class="support-rebuild-title">General Options</div>
-            <div class="support-rebuild-note">Perks, fun lanes, and revolutionary reasons to keep using the app.</div>
-            <div class="support-rebuild-line">Statistics: SEO build, remote usefulness, account flow health, and live payment readiness.</div>
+            <div class="support-rebuild-note">${SUPPORTRD_COPY.generalOptions}</div>
+            <div class="support-rebuild-line">Statistics: SEO build, remote usefulness, account flow health, live payment readiness, and founder-exclusive drawing board handling.</div>
             <div class="support-rebuild-line">Contacts / Channels: Render, GitHub, support email, payments, in-person routes, technical support, and fan feedback.</div>
             <div class="support-rebuild-line">FAQ Lounge: relax, breathe, laugh at reels, and get real answers.</div>
             <div class="support-rebuild-line">Account Engine: ${accountSummary()} · ${state.account.historySync}</div>
             <div class="support-rebuild-line">Architecture: ${state.statistics.architecture}</div>
+          </div>
         </div>
-      </div>`;
+        <div class="support-rebuild-brand-mark">${SUPPORTRD_COPY.brandMark}</div>`;
     top.addEventListener("click", (event) => {
       const target = event.target;
       if (target instanceof HTMLElement && target.closest(".support-rebuild-card")) return;
