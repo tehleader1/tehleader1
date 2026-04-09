@@ -4223,7 +4223,7 @@ def manifest():
 def architecture_status():
     return jsonify({
         "ok": True,
-        "build": "20260409e",
+        "build": "20260409f",
         "layers": {
             "openai": "intelligence",
             "pocketbase": "account memory",

@@ -180,6 +180,9 @@
         body.support-rebuild-page #satQuickModal,
         body.support-rebuild-page #satQuickOpen,
         body.support-rebuild-page #loginGate,
+        body.support-rebuild-page #remotePurchaseEditor,
+        body.support-rebuild-page #remoteEditsMenu,
+        body.support-rebuild-page #remoteLatestAds,
       .float-mode-shell.support-rebuild-mode .remote-display-strip,
       .float-mode-shell.support-rebuild-mode .remote-stage-shell,
       .float-mode-shell.support-rebuild-mode .float-mode-nav,
@@ -195,11 +198,9 @@
         display:none !important;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-grid{
-        display:block !important;
-        grid-template-columns:1fr !important;
-        padding:34px 0 0 !important;
+        display:none !important;
         margin:0 !important;
-        clear:both;
+        padding:0 !important;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-top,
       .float-mode-shell.support-rebuild-mode .float-mode-launch{
@@ -209,8 +210,8 @@
       .float-mode-shell.support-rebuild-mode .float-mode-launch{
         position:relative;
         top:auto;
-        z-index:3;
-        margin:0 0 22px !important;
+        z-index:5;
+        margin:0 0 34px !important;
         padding:14px !important;
         background:rgba(5,10,20,.74);
         border:1px solid rgba(255,255,255,.12);
@@ -218,7 +219,7 @@
         box-shadow:0 18px 38px rgba(0,0,0,.22);
       }
       .support-rebuild-shell{display:grid;gap:14px}
-      .support-rebuild-route-host{display:grid;gap:16px;align-content:start}
+      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:46px;position:relative;z-index:1}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(360px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
       .support-rebuild-account-panel.compact .support-rebuild-account-body{display:none}
       .support-rebuild-account-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
@@ -270,7 +271,7 @@
       .float-mode-shell.support-rebuild-mode .float-box{
         position:relative;
         z-index:1;
-        margin:26px 0 0 !important;
+        margin:0 !important;
         min-height:calc(100vh - 235px);
         border-radius:28px;
         padding:22px;
@@ -1089,14 +1090,14 @@
             <div class="support-rebuild-card"><div class="support-rebuild-title">Map Change</div><div class="support-rebuild-note">Fun visuals, serious routing, and making-money map help.</div></div>
           </div>
         </div>
-        <div class="support-rebuild-card">
-          <div class="support-rebuild-title">General Options</div>
-          <div class="support-rebuild-note">Perks and advantages that make the app feel good to use.</div>
-          <div class="support-rebuild-line">Statistics: SEO build, remote usefulness, and account flow health.</div>
-          <div class="support-rebuild-line">Contacts / Channels: Render, GitHub, support email, payments, in-person routes, technical support, and fan feedback.</div>
-          <div class="support-rebuild-line">FAQ Lounge: relax, breathe, laugh at reels, and get real answers.</div>
-          <div class="support-rebuild-line">Account Engine: ${accountSummary()} · ${state.account.historySync}</div>
-          <div class="support-rebuild-line">Architecture: ${state.statistics.architecture}</div>
+          <div class="support-rebuild-card">
+            <div class="support-rebuild-title">General Options</div>
+            <div class="support-rebuild-note">Perks, fun lanes, and revolutionary reasons to keep using the app.</div>
+            <div class="support-rebuild-line">Statistics: SEO build, remote usefulness, account flow health, and live payment readiness.</div>
+            <div class="support-rebuild-line">Contacts / Channels: Render, GitHub, support email, payments, in-person routes, technical support, and fan feedback.</div>
+            <div class="support-rebuild-line">FAQ Lounge: relax, breathe, laugh at reels, and get real answers.</div>
+            <div class="support-rebuild-line">Account Engine: ${accountSummary()} · ${state.account.historySync}</div>
+            <div class="support-rebuild-line">Architecture: ${state.statistics.architecture}</div>
         </div>
       </div>`;
     top.addEventListener("click", (event) => {
@@ -1170,7 +1171,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260409e";
+      window.SupportRDRemoteRebuildVersion = "20260409f";
     }
 
   setTimeout(init, 700);
