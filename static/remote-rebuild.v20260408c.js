@@ -139,6 +139,15 @@
         align-content:start;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-footer,
+        body.support-rebuild-page #launchMenu,
+        body.support-rebuild-page #launchSplash,
+        body.support-rebuild-page .topbar,
+        body.support-rebuild-page .main-content-row,
+        body.support-rebuild-page .brochure-float,
+        body.support-rebuild-page #sessionSignal,
+        body.support-rebuild-page #satQuickModal,
+        body.support-rebuild-page #satQuickOpen,
+        body.support-rebuild-page #loginGate,
       .float-mode-shell.support-rebuild-mode .remote-display-strip,
       .float-mode-shell.support-rebuild-mode .remote-stage-shell,
       .float-mode-shell.support-rebuild-mode .float-mode-nav,
@@ -916,8 +925,30 @@
   function activatePresentationMode() {
     const shell = document.querySelector(".float-mode-shell");
     if (!shell) return;
+    document.body.classList.add("support-rebuild-page");
+    const app = document.getElementById("app");
+    if (app) app.classList.add("support-rebuild-app");
+    const launchMenu = document.getElementById("launchMenu");
+    if (launchMenu) launchMenu.setAttribute("hidden", "hidden");
+    const launchSplash = document.getElementById("launchSplash");
+    if (launchSplash) launchSplash.setAttribute("hidden", "hidden");
+    const topbar = document.querySelector(".topbar");
+    if (topbar) topbar.setAttribute("hidden", "hidden");
+    const mainRow = document.querySelector(".main-content-row");
+    if (mainRow) mainRow.setAttribute("hidden", "hidden");
+    const satBtn = document.getElementById("satQuickOpen");
+    if (satBtn) satBtn.setAttribute("hidden", "hidden");
+    const satModal = document.getElementById("satQuickModal");
+    if (satModal) satModal.setAttribute("hidden", "hidden");
+    const brochure = document.querySelector(".brochure-float");
+    if (brochure) brochure.setAttribute("hidden", "hidden");
+    const loginGate = document.getElementById("loginGate");
+    if (loginGate) loginGate.setAttribute("hidden", "hidden");
+    shell.hidden = false;
+    shell.setAttribute("aria-hidden", "false");
     shell.classList.add("support-rebuild-mode");
     shell.dataset.remoteTheme = state.map === "default" ? "default" : state.map;
+    document.body.classList.add("float-mode-active");
   }
 
   function renderShellChrome() {
@@ -1012,11 +1043,13 @@
     syncLaunchVisuals();
     activateRoute(state.route);
     fetchProducts();
-    window.SupportRDRemoteRebuildVersion = "20260408k";
+    window.SupportRDRemoteRebuildVersion = "20260409c";
   }
 
   setTimeout(init, 700);
 })();
+
+
 
 
 
