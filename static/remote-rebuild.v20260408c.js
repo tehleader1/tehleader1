@@ -67,6 +67,7 @@
       adAttribution: "No ad route selected yet."
     },
     adQuestionnaire: "",
+    productMenuOpen: true,
     technicalLane: {
       accountLookup: "",
       issueType: "Button stuck",
@@ -404,6 +405,10 @@
           width:auto !important;
           margin-bottom:12px !important;
         }
+        .support-rebuild-hero-layout,
+        .support-rebuild-product-featured{
+          grid-template-columns:1fr !important;
+        }
         .support-rebuild-assistants{right:12px !important;bottom:12px !important}
       }
       .float-mode-shell.support-rebuild-mode .float-mode-footer,
@@ -478,10 +483,21 @@
       .support-rebuild-hero-title{font:700 clamp(1.25rem,2.8vw,2rem)/1.06 Georgia,serif;margin:0}
       .support-rebuild-hero-sub{font-size:1rem;line-height:1.5;color:rgba(255,255,255,.88)}
       .support-rebuild-top-tools{display:grid;gap:12px}
+      .support-rebuild-hero-layout{display:grid;gap:14px;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);align-items:stretch}
+      .support-rebuild-hero-visual{min-height:260px;border-radius:22px;background:linear-gradient(180deg,rgba(4,8,18,.16),rgba(4,8,18,.48)),url('/static/images/lezawli.jpeg') center/cover no-repeat;border:1px solid rgba(255,255,255,.12)}
       .support-rebuild-product-strip{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
       .support-rebuild-product-mini{padding:12px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1)}
       .support-rebuild-product-mini .support-rebuild-title{font-size:.96rem;margin-bottom:6px}
       .support-rebuild-mini-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+      .support-rebuild-product-menu{display:grid;gap:12px;padding:14px;border-radius:22px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(8,12,20,.38),rgba(8,12,20,.72)),url('/static/images/brochure-scroll-store.jpg') center/cover no-repeat}
+      .support-rebuild-product-menu[hidden]{display:none!important}
+      .support-rebuild-product-featured{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
+      .support-rebuild-product-digital{min-height:230px;border-radius:20px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;box-shadow:0 16px 38px rgba(0,0,0,.24);position:relative;overflow:hidden}
+      .support-rebuild-product-digital::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,7,14,.08),rgba(3,7,14,.72))}
+      .support-rebuild-product-digital > *{position:relative;z-index:1}
+      .support-rebuild-ad-banner{min-height:180px;border-radius:20px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;box-shadow:0 16px 38px rgba(0,0,0,.22);position:relative;overflow:hidden}
+      .support-rebuild-ad-banner::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,9,16,.1),rgba(5,9,16,.72))}
+      .support-rebuild-ad-banner > *{position:relative;z-index:1}
       .support-rebuild-input,.support-rebuild-select,.support-rebuild-textarea{width:100%;background:#fff;color:#12151f;border:0;border-radius:14px;padding:12px}
       .support-rebuild-textarea{min-height:110px;resize:vertical}
       .support-rebuild-btn{border:0;border-radius:999px;padding:11px 16px;font-weight:700;color:#08101f;background:linear-gradient(135deg,#ffd54a,#55d7ff);cursor:pointer}
@@ -651,6 +667,13 @@
     } catch {
       state.products = [];
     }
+    if (document.querySelector(".float-mode-top")) renderShellChrome();
+  }
+
+  function toggleProductMenu(forceValue) {
+    state.productMenuOpen = typeof forceValue === "boolean" ? forceValue : !state.productMenuOpen;
+    saveState();
+    renderShellChrome();
   }
 
   function getCheckoutUrl(product) {
@@ -1843,11 +1866,17 @@
   function renderShellChrome() {
     const top = document.querySelector(".float-mode-top");
     if (!top) return;
-    const featuredProducts = (state.products || []).slice(0, 2).map((product) => {
+    const featuredProducts = (state.products || []).slice(0, 3).map((product, index) => {
       const title = product.title || "SupportRD Product";
       const price = product.price ? `$${product.price}` : "Live store pricing";
       const handle = product.handle || "";
-      return `<div class="support-rebuild-product-mini">
+      const image = [
+        "/static/images/hija-de-felix.jpeg",
+        "/static/images/have-healthy-hair.jpeg",
+        "/static/images/lezawli.jpeg"
+      ][index % 3];
+      return `<div class="support-rebuild-product-digital" style="background-image:url('${image}')">
+        <div class="support-rebuild-kicker">Digital Product ${index + 1}</div>
         <div class="support-rebuild-title">${title}</div>
         <div class="support-rebuild-note">${price}</div>
         <div class="support-rebuild-mini-actions">
@@ -1859,26 +1888,45 @@
     top.innerHTML = `
         <div class="support-rebuild-home-top">
           <div class="support-rebuild-card">
-            <div class="support-rebuild-store-banner">
-              <div class="support-rebuild-kicker">SupportRD Storefront Remote</div>
-              <h1 class="support-rebuild-hero-title">Custom order now to feel the hair solution in your scalp.</h1>
-              <div class="support-rebuild-hero-sub">Join the SupportRD system and introduce a new cycle for your hair. The Remote should feel like a premium hair store, a diary companion, a studio booth, and a serious profile engine all at once.</div>
-              <div class="support-rebuild-row">
-                <button class="support-rebuild-btn pulse" id="srHeroCustomOrder">Custom Order Now</button>
-                <button class="support-rebuild-btn ghost" id="srHeroProducts">Open Product Page</button>
-                <button class="support-rebuild-btn ghost" id="srHeroDiaryInvite">Invitable Diary Mode</button>
-              </div>
-            </div>
-            <div class="support-rebuild-product-strip" style="margin-top:14px">
-              ${featuredProducts || `
-                <div class="support-rebuild-product-mini">
-                  <div class="support-rebuild-title">SupportRD Shampoo Lane</div>
-                  <div class="support-rebuild-note">Retail shampoo store feel, pulled directly into the Remote.</div>
-                  <div class="support-rebuild-mini-actions">
-                    <a class="support-rebuild-btn pulse" href="https://supportrd.com/products" target="_blank" rel="noopener">Open Product Page</a>
-                  </div>
+            <div class="support-rebuild-hero-layout">
+              <div class="support-rebuild-store-banner">
+                <div class="support-rebuild-kicker">SupportRD Storefront Remote</div>
+                <h1 class="support-rebuild-hero-title">Custom order now to feel the hair solution in your scalp.</h1>
+                <div class="support-rebuild-hero-sub">Join the SupportRD system and introduce a new cycle for your hair. The Remote should feel like a traditional premium store with enticing descriptions, product confidence, and the exact lane you need right when hair help matters.</div>
+                <div class="support-rebuild-row">
+                  <button class="support-rebuild-btn pulse" id="srHeroCustomOrder">Custom Order Now</button>
+                  <button class="support-rebuild-btn ghost" id="srHeroProducts">${state.productMenuOpen ? "Close Products" : "Products"}</button>
+                  <button class="support-rebuild-btn ghost" id="srHeroDiaryInvite">Invitable Diary Mode</button>
                 </div>
-              `}
+                <div class="support-rebuild-note">Products should feel open by default like a real store, but never take over the Remote.</div>
+              </div>
+              <div class="support-rebuild-hero-visual"></div>
+            </div>
+            <div class="support-rebuild-product-menu" id="srTopProductMenu" ${state.productMenuOpen ? "" : "hidden"}>
+              <div class="support-rebuild-title">Products Open By Default</div>
+              <div class="support-rebuild-note">The product menu stays visible like a traditional store lane. Custom orders use the full product backdrop and 3 digital product cards so the Remote keeps its retail shampoo feel.</div>
+              <div class="support-rebuild-product-featured">
+                ${featuredProducts || `
+                  <div class="support-rebuild-product-digital" style="background-image:url('/static/images/hija-de-felix.jpeg')">
+                    <div class="support-rebuild-kicker">Digital Product 1</div>
+                    <div class="support-rebuild-title">Hair Strength Formula</div>
+                    <div class="support-rebuild-note">Scalp comfort, cycle support, and daily confidence.</div>
+                    <div class="support-rebuild-mini-actions"><a class="support-rebuild-btn pulse" href="https://supportrd.com/products" target="_blank" rel="noopener">Open Product Page</a></div>
+                  </div>
+                  <div class="support-rebuild-product-digital" style="background-image:url('/static/images/have-healthy-hair.jpeg')">
+                    <div class="support-rebuild-kicker">Digital Product 2</div>
+                    <div class="support-rebuild-title">Healthy Hair Support</div>
+                    <div class="support-rebuild-note">A testimonial-driven lane that makes the store feel alive.</div>
+                    <div class="support-rebuild-mini-actions"><a class="support-rebuild-btn ghost" href="https://supportrd.com/products" target="_blank" rel="noopener">Open Product</a></div>
+                  </div>
+                  <div class="support-rebuild-product-digital" style="background-image:url('/static/images/lezawli.jpeg')">
+                    <div class="support-rebuild-kicker">Digital Product 3</div>
+                    <div class="support-rebuild-title">SupportRD Signature Bundle</div>
+                    <div class="support-rebuild-note">Traditional store confidence with a branded model visual.</div>
+                    <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" id="srFallbackCheckout">Buy Now</button></div>
+                  </div>
+                `}
+              </div>
             </div>
             <div class="support-rebuild-overview" style="margin-top:14px">
               <div class="support-rebuild-card"><div class="support-rebuild-title">Diary Mode</div><div class="support-rebuild-note">Live mode, hands-free Aria, real diary, and hair-problem support.</div></div>
@@ -1889,6 +1937,20 @@
           </div>
           <div class="support-rebuild-card">
             <div class="support-rebuild-top-tools">
+              <div class="support-rebuild-grid">
+                <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/have-healthy-hair.jpeg')">
+                  <div class="support-rebuild-kicker">Advertisement 1</div>
+                  <div class="support-rebuild-title">Have tangle issues? Let the AI help you through your hair problems.</div>
+                  <div class="support-rebuild-note">Diary mode can help when you are alone. Premium all natural hair products stay one tap away.</div>
+                  <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="0">Open Hair Rescue</button></div>
+                </div>
+                <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/brochure-contacts-remote.jpg')">
+                  <div class="support-rebuild-kicker">Advertisement 2</div>
+                  <div class="support-rebuild-title">Pro features, fantasy pricing, and custom orders for future shampoo sellers.</div>
+                  <div class="support-rebuild-note">Professional / making money mode, custom order support, and product trust should feel present without taking over the page.</div>
+                  <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="1">Open Pro Lane</button></div>
+                </div>
+              </div>
               <div>
                 <div class="support-rebuild-title">General Settings</div>
                 <div class="support-rebuild-note">Change password, subscription pay date, change email / username, invite Diary Mode link, social URLs, and product/store access all live here.</div>
@@ -1909,16 +1971,25 @@
         </div>
         <div class="support-rebuild-brand-mark">${SUPPORTRD_COPY.brandMark}</div>`;
     $("srHeroCustomOrder")?.addEventListener("click", () => window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order", "_blank", "noopener"));
-    $("srHeroProducts")?.addEventListener("click", () => window.open("https://supportrd.com/products", "_blank", "noopener"));
+    $("srHeroProducts")?.addEventListener("click", () => toggleProductMenu());
     $("srHeroDiaryInvite")?.addEventListener("click", () => activateRoute("floatSettingsBox"));
     $("srTopOpenSettings")?.addEventListener("click", () => activateRoute("floatProfileBox"));
-    $("srTopOpenProducts")?.addEventListener("click", openPaymentModal);
+    $("srTopOpenProducts")?.addEventListener("click", () => toggleProductMenu());
     $("srTopLoginToggle")?.addEventListener("click", () => {
       state.account.collapsed = !state.account.collapsed;
       saveState();
       renderAccountPanel();
       renderShellChrome();
     });
+    $("srFallbackCheckout")?.addEventListener("click", () => window.open("https://supportrd.com/cart", "_blank", "noopener"));
+    top.querySelectorAll("[data-ad-open]").forEach((btn) => btn.addEventListener("click", () => {
+      const ad = SUPPORTRD_COPY.ads[Number(btn.dataset.adOpen)];
+      if (!ad) return;
+      state.statistics.adAttribution = ad.note;
+      saveState();
+      renderStickyPanels();
+      activateRoute(ad.route);
+    }));
     top.querySelectorAll("[data-top-details]").forEach((btn) => btn.addEventListener("click", () => {
       const handle = btn.dataset.topDetails;
       window.open(handle ? `https://supportrd.com/products/${handle}` : "https://supportrd.com/products", "_blank", "noopener");
@@ -1996,7 +2067,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410a";
+      window.SupportRDRemoteRebuildVersion = "20260410b";
     }
 
   setTimeout(init, 700);
