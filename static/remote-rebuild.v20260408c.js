@@ -1938,11 +1938,11 @@
           <div class="support-rebuild-card">
             <div class="support-rebuild-top-tools">
               <div class="support-rebuild-grid">
-                <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/have-healthy-hair.jpeg')">
+                <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
                   <div class="support-rebuild-kicker">Advertisement 1</div>
-                  <div class="support-rebuild-title">Have tangle issues? Let the AI help you through your hair problems.</div>
-                  <div class="support-rebuild-note">Diary mode can help when you are alone. Premium all natural hair products stay one tap away.</div>
-                  <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="0">Open Hair Rescue</button></div>
+                  <div class="support-rebuild-title">Aria Premium/Pro</div>
+                  <div class="support-rebuild-note">Fantasy-ready presence, premium guidance, and a serious AI beauty lane that feels elevated the moment the page opens.</div>
+                  <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="0">Open Aria Premium/Pro</button></div>
                 </div>
                 <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/brochure-contacts-remote.jpg')">
                   <div class="support-rebuild-kicker">Advertisement 2</div>
@@ -2067,7 +2067,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410b";
+      window.SupportRDRemoteRebuildVersion = "20260410c";
     }
 
   setTimeout(init, 700);
