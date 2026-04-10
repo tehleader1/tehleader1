@@ -1938,11 +1938,11 @@
           <div class="support-rebuild-card">
             <div class="support-rebuild-top-tools">
               <div class="support-rebuild-grid">
-                <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
+                <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/fantasy-21-plus-main-ad.jpg')">
                   <div class="support-rebuild-kicker">Advertisement 1</div>
-                  <div class="support-rebuild-title">Aria Premium/Pro</div>
-                  <div class="support-rebuild-note">Fantasy-ready presence, premium guidance, and a serious AI beauty lane that feels elevated the moment the page opens.</div>
-                  <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="0">Open Aria Premium/Pro</button></div>
+                  <div class="support-rebuild-title">21+ Fantasies</div>
+                  <div class="support-rebuild-note">Fantasy-ready chemistry, elevated couple energy, and a premium 21+ lane that feels exclusive the moment SupportRD opens.</div>
+                  <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="0">Open 21+ Fantasies</button></div>
                 </div>
                 <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/jake-studio-premium.jpg')">
                   <div class="support-rebuild-kicker">Advertisement 2</div>
@@ -2067,7 +2067,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410d";
+      window.SupportRDRemoteRebuildVersion = "20260410e";
     }
 
   setTimeout(init, 700);

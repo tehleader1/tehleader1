@@ -5320,7 +5320,7 @@ function setupPwa(){
     })
   }
   if("serviceWorker" in navigator){
-navigator.serviceWorker.register("/sw.js?v=20260410d").then((registration)=>{
+navigator.serviceWorker.register("/sw.js?v=20260410e").then((registration)=>{
       if(registration?.waiting){
         registration.waiting.postMessage({ type:"SKIP_WAITING" })
       }
