@@ -52,6 +52,7 @@
       password: "",
       phone: "",
       address: "",
+      subscriptionPayDate: "2026-05-01",
       displayName: "SupportRD Guest",
       loggedIn: false,
       plan: "Free",
@@ -66,6 +67,14 @@
       adAttribution: "No ad route selected yet."
     },
     adQuestionnaire: "",
+    technicalLane: {
+      accountLookup: "",
+      issueType: "Button stuck",
+      graceDays: "3",
+      resetButton: false,
+      notes: "",
+      lastScreenshot: "/static/images/Screenshot_2-3-2026_211121_ccrsupport.my.canva.site.jpeg"
+    },
     studioMode: "quick",
     studioPublic: false,
     studioShareUrl: "https://supportrd.com/studio/public",
@@ -154,14 +163,14 @@
     },
     ads: [
       {
-        title: "SupportRD Hair Rescue",
+        title: "Fantasy Hair Rescue",
         route: "floatSettingsBox",
-        note: "Ad route: Hair Rescue pushed this visitor toward Diary Mode and FAQ support."
+        note: "Fantasy pricing, diary privacy, and AI buddy support pushed this visitor toward Diary Mode."
       },
       {
-        title: "SupportRD Mobile Studio",
-        route: "floatBoardsBox",
-        note: "Ad route: Mobile Studio pushed this visitor toward Studio Quick Panel."
+        title: "Pro Money + Product Lane",
+        route: "floatProfileBox",
+        note: "Pro features, custom shampoo orders, and making-money mode pushed this visitor toward Settings and Payments."
       }
     ]
   };
@@ -266,6 +275,7 @@
         profile: { ...DEFAULTS.profile, ...(saved.profile || {}) },
         account: { ...DEFAULTS.account, ...(saved.account || {}) },
         statistics: { ...DEFAULTS.statistics, ...(saved.statistics || {}) },
+        technicalLane: { ...DEFAULTS.technicalLane, ...(saved.technicalLane || {}) },
         studioBoards: { ...DEFAULTS.studioBoards, ...(saved.studioBoards || {}) },
         publicTracks: Array.isArray(saved.publicTracks) ? saved.publicTracks : DEFAULTS.publicTracks
       };
@@ -445,9 +455,9 @@
         box-shadow:0 18px 38px rgba(0,0,0,.22);
       }
       .support-rebuild-shell{display:grid;gap:14px}
-      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:20px;position:relative;z-index:1;min-width:0}
-      .support-rebuild-account-panel{position:fixed;top:16px;left:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
-      .support-rebuild-sticky-rail{position:fixed;top:16px;right:16px;z-index:74;width:min(300px,calc(100vw - 24px));display:grid;gap:12px}
+      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:14px;position:relative;z-index:1;min-width:0}
+      .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
+      .support-rebuild-sticky-rail{position:fixed;top:214px;right:16px;z-index:74;width:min(300px,calc(100vw - 24px));display:grid;gap:12px}
       .support-rebuild-sticky-card{padding:14px;border-radius:22px;background:rgba(7,12,22,.90);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.26);color:#fff}
       .support-rebuild-mini-title{font:700 .92rem/1.2 Georgia,serif;margin:0 0 8px}
       .support-rebuild-mini-list{display:grid;gap:8px}
@@ -457,12 +467,21 @@
       .support-rebuild-account-kicker{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.64)}
       .support-rebuild-account-meta{display:grid;gap:8px}
       .support-rebuild-overview{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-      .support-rebuild-home-top{display:grid;gap:12px;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr)}
+      .support-rebuild-home-top{display:grid;gap:12px;grid-template-columns:minmax(0,1.45fr) minmax(280px,.7fr)}
       .support-rebuild-card{background:rgba(9,12,22,.78);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:16px;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.24)}
       .support-rebuild-title{font:700 1.05rem/1.2 Georgia,serif;letter-spacing:.02em;margin:0 0 10px}
       .support-rebuild-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
       .support-rebuild-grid{display:grid;gap:12px}
       .support-rebuild-grid.two{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+      .support-rebuild-store-banner{display:grid;gap:10px}
+      .support-rebuild-kicker{font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+      .support-rebuild-hero-title{font:700 clamp(1.25rem,2.8vw,2rem)/1.06 Georgia,serif;margin:0}
+      .support-rebuild-hero-sub{font-size:1rem;line-height:1.5;color:rgba(255,255,255,.88)}
+      .support-rebuild-top-tools{display:grid;gap:12px}
+      .support-rebuild-product-strip{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+      .support-rebuild-product-mini{padding:12px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1)}
+      .support-rebuild-product-mini .support-rebuild-title{font-size:.96rem;margin-bottom:6px}
+      .support-rebuild-mini-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
       .support-rebuild-input,.support-rebuild-select,.support-rebuild-textarea{width:100%;background:#fff;color:#12151f;border:0;border-radius:14px;padding:12px}
       .support-rebuild-textarea{min-height:110px;resize:vertical}
       .support-rebuild-btn{border:0;border-radius:999px;padding:11px 16px;font-weight:700;color:#08101f;background:linear-gradient(135deg,#ffd54a,#55d7ff);cursor:pointer}
@@ -816,6 +835,66 @@
     modal.classList.add("is-open");
   }
 
+  function openTechnicalLane() {
+    const modal = ensurePaymentModal();
+    const body = $("srPaymentModalBody");
+    const lane = state.technicalLane;
+    body.innerHTML = `
+      <div class="support-rebuild-row" style="justify-content:space-between">
+        <h3 class="support-rebuild-title">SupportRD Technical Lane</h3>
+        <button class="support-rebuild-btn ghost" id="srCloseTechnicalLane">Close</button>
+      </div>
+      <div class="support-rebuild-note">This lane is for a future technical person to handle account-related support only. Main core product logic stays locked.</div>
+      <div class="support-rebuild-grid two" style="margin-top:14px">
+        <div class="support-rebuild-card" style="padding:12px">
+          <div class="support-rebuild-title">Main Working State Screenshot</div>
+          <div class="support-rebuild-moment-image" style="background-image:url('${lane.lastScreenshot}')"></div>
+          <div class="support-rebuild-note" style="margin-top:10px">Use this as the current reference state while helping a customer account.</div>
+        </div>
+        <div class="support-rebuild-card" style="padding:12px">
+          <div class="support-rebuild-title">Allowed Technical Actions</div>
+          <div class="support-rebuild-line">Edit stuck account button states</div>
+          <div class="support-rebuild-line">Give a few more days for payment</div>
+          <div class="support-rebuild-line">Refresh deploy awareness / support notes</div>
+          <div class="support-rebuild-line">Account-only assistance, no core system edits</div>
+        </div>
+      </div>
+      <div class="support-rebuild-grid two" style="margin-top:14px">
+        <div class="support-rebuild-card" style="padding:12px">
+          <div class="support-rebuild-title">Account Issue Controls</div>
+          <input class="support-rebuild-input" id="srTechAccountLookup" placeholder="Account email / username" value="${lane.accountLookup || ""}">
+          <select class="support-rebuild-select" id="srTechIssueType" style="margin-top:10px">
+            ${["Button stuck","Payment grace period","Premium not showing","Account refresh","Profile save help"].map((item)=>`<option ${lane.issueType===item?"selected":""}>${item}</option>`).join("")}
+          </select>
+          <input class="support-rebuild-input" id="srTechGraceDays" style="margin-top:10px" placeholder="Grace days" value="${lane.graceDays || "3"}">
+          <label class="support-rebuild-row support-rebuild-note" style="margin-top:10px"><input type="checkbox" id="srTechResetButton" ${lane.resetButton ? "checked" : ""}> Reset stuck button / account UI state</label>
+        </div>
+        <div class="support-rebuild-card" style="padding:12px">
+          <div class="support-rebuild-title">Technical Notes</div>
+          <textarea class="support-rebuild-textarea" id="srTechNotes" placeholder="Support notes for the technical person">${lane.notes || ""}</textarea>
+          <div class="support-rebuild-row" style="margin-top:10px">
+            <button class="support-rebuild-btn pulse" id="srTechSave">Save Technical Case</button>
+            <button class="support-rebuild-btn ghost" id="srTechMail">Open Support Mail</button>
+          </div>
+          <div class="support-rebuild-note" id="srTechStatus" style="margin-top:10px">Core system locked. Account-only tools active.</div>
+        </div>
+      </div>`;
+    $("srCloseTechnicalLane").onclick = () => modal.classList.remove("is-open");
+    $("srTechMail").onclick = () => window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Technical%20Lane", "_blank", "noopener");
+    $("srTechSave").onclick = () => {
+      lane.accountLookup = $("srTechAccountLookup").value.trim();
+      lane.issueType = $("srTechIssueType").value;
+      lane.graceDays = $("srTechGraceDays").value.trim();
+      lane.resetButton = $("srTechResetButton").checked;
+      lane.notes = $("srTechNotes").value;
+      state.statistics.contacts = `Technical lane active for ${lane.accountLookup || "account support"} · ${lane.issueType}`;
+      saveState();
+      renderShellChrome();
+      $("srTechStatus").textContent = `Saved account-only technical case for ${lane.accountLookup || "SupportRD visitor"}. Core remains locked.`;
+    };
+    modal.classList.add("is-open");
+  }
+
   function buildAssistantReply(name, prompt) {
     const text = String(prompt || "").toLowerCase();
     if (/dry|dryness|moist/.test(text)) return `${name === "Jake" ? "Jake" : "Aria"} here. For dryness, I would guide you toward a moisture-building laciador or smoothing support that restores style and softness. The best next move is the purchase menu so we can match the right product and check you out cleanly.`;
@@ -911,14 +990,15 @@
           <button class="support-rebuild-btn pulse" id="srStickyPay">Open Fast Pay</button>
         </div>
       </section>
-      <section class="support-rebuild-sticky-card">
-        <div class="support-rebuild-mini-title">${SUPPORTRD_COPY.sticky.editsTitle}</div>
-        <div class="support-rebuild-mini-list">
-          <button class="support-rebuild-btn ghost" data-sticky-route="floatBoardsBox">Open Studio</button>
-          <button class="support-rebuild-btn ghost" data-sticky-route="floatSettingsBox">Open Diary</button>
-          <button class="support-rebuild-btn ghost" data-sticky-route="floatAssistantBox">Open Profile</button>
-        </div>
-      </section>
+        <section class="support-rebuild-sticky-card">
+          <div class="support-rebuild-mini-title">${SUPPORTRD_COPY.sticky.editsTitle}</div>
+          <div class="support-rebuild-mini-list">
+            <button class="support-rebuild-btn ghost" data-sticky-route="floatBoardsBox">Open Studio</button>
+            <button class="support-rebuild-btn ghost" data-sticky-route="floatSettingsBox">Open Diary</button>
+            <button class="support-rebuild-btn ghost" data-sticky-route="floatAssistantBox">Open Profile</button>
+            <button class="support-rebuild-btn ghost" id="srOpenTechnicalLane">Technical Lane</button>
+          </div>
+        </section>
         <section class="support-rebuild-sticky-card">
           <div class="support-rebuild-mini-title">${SUPPORTRD_COPY.sticky.infoTitle}</div>
           <div class="support-rebuild-note">${SUPPORTRD_COPY.sticky.infoBody}</div>
@@ -941,6 +1021,7 @@
     $("srStickyPay")?.addEventListener("click", openPaymentModal);
     $("srOpenStatsBoard")?.addEventListener("click", openStatisticsBoard);
     $("srOpenDeveloperFeed")?.addEventListener("click", openDeveloperFeed);
+    $("srOpenTechnicalLane")?.addEventListener("click", openTechnicalLane);
     rail.querySelectorAll("[data-sticky-route]").forEach((btn) => {
       btn.addEventListener("click", () => activateRoute(btn.dataset.stickyRoute));
     });
@@ -1011,12 +1092,12 @@
     panel.innerHTML = `
       <div class="support-rebuild-account-head">
         <div>
-          <div class="support-rebuild-account-kicker">Account Engine</div>
-          <div class="support-rebuild-title" style="margin:0">${state.account.engine}</div>
+          <div class="support-rebuild-account-kicker">Login</div>
+          <div class="support-rebuild-title" style="margin:0">SupportRD Account</div>
         </div>
-        <button class="support-rebuild-btn ghost" id="srAccountToggle">${state.account.collapsed ? "Open" : "Hide"}</button>
+        <button class="support-rebuild-btn ghost" id="srAccountToggle">${state.account.collapsed ? "Open Login" : "Hide Login"}</button>
       </div>
-      <div class="support-rebuild-note">${accountSummary()}</div>
+      <div class="support-rebuild-note">${accountSummary()} · ${state.account.engine}</div>
       <div class="support-rebuild-account-body" style="margin-top:10px">
         <div class="support-rebuild-account-meta">
           <input class="support-rebuild-input" id="srAccountPbUrl" placeholder="PocketBase URL" value="${state.account.pocketbaseUrl || ""}">
@@ -1102,12 +1183,19 @@
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Payments + URLs</div>
               <input class="support-rebuild-input" id="srSettingsPayment" placeholder="Current payment / premium status" value="${state.premium}">
+              <input class="support-rebuild-input" id="srSettingsPayDate" style="margin-top:10px" placeholder="Subscription pay date" value="${state.account.subscriptionPayDate || ""}">
               <input class="support-rebuild-input" id="srSettingsUrl" style="margin-top:10px" placeholder="Primary URL link" value="${state.profile.contact || ""}">
+              <input class="support-rebuild-input" id="srSettingsDiaryInvite" style="margin-top:10px" placeholder="Invitable Diary Mode link" value="${state.profile.contact || "https://supportrd.com/live"}">
+              <input class="support-rebuild-input" id="srSettingsSocialLinks" style="margin-top:10px" placeholder="Diary social links update" value="${Object.values(state.diarySocial || {}).filter(Boolean).join(", ")}">
               <select class="support-rebuild-select" id="srSettingsFantasy" style="margin-top:10px">
                 <option>Fantasy Off</option>
                 <option>Fantasy Basic</option>
                 <option>Fantasy Advanced</option>
               </select>
+              <div class="support-rebuild-row" style="margin-top:10px">
+                <button class="support-rebuild-btn ghost" id="srSettingsOpenProducts">Open Product Page</button>
+                <button class="support-rebuild-btn ghost" id="srSettingsOpenDiaryInvite">Open Diary Invite</button>
+              </div>
             </div>
             <div class="support-rebuild-card" style="padding:12px">
               <div class="support-rebuild-title">Contacts / Channels</div>
@@ -1155,6 +1243,7 @@
         state.account.displayName = state.profile.name || state.account.displayName;
         state.account.phone = $("srSettingsPhone").value.trim();
         state.account.address = $("srSettingsAddress").value.trim();
+        state.account.subscriptionPayDate = $("srSettingsPayDate").value.trim() || state.account.subscriptionPayDate;
         state.profile.contact = $("srSettingsUrl").value.trim();
         state.premium = $("srSettingsPayment").value.trim() || state.premium;
         state.account.plan = state.premium;
@@ -1167,6 +1256,8 @@
           ? "Full settings saved locally. Password flow accepted, push stays connected, and account controls are obvious now."
           : "Full settings saved locally. Push stays connected through browser notification permission.";
       };
+      $("srSettingsOpenProducts").onclick = () => window.open("https://supportrd.com/products", "_blank", "noopener");
+      $("srSettingsOpenDiaryInvite").onclick = () => window.open($("srSettingsDiaryInvite").value.trim() || "https://supportrd.com/live", "_blank", "noopener");
     };
     if (professionalMode) {
       $("srProfessionalPrev")?.addEventListener("click", () => {
@@ -1679,6 +1770,7 @@
                   <button class="support-rebuild-btn ghost" id="srFaqTech">Technical Support</button>
                   <button class="support-rebuild-btn ghost" id="srFaqFan">Fan Feedback</button>
                   <button class="support-rebuild-btn ghost" id="srFaqDeveloperFeed">Developer Feed</button>
+                  <button class="support-rebuild-btn ghost" id="srFaqTechnicalLane">Technical Lane</button>
                 </div>
               </div>
             </div>
@@ -1695,6 +1787,7 @@
     $("srFaqTech")?.addEventListener("click", ()=>window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Technical%20Support","_blank","noopener"));
     $("srFaqFan")?.addEventListener("click", ()=>window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Fan%20Feedback","_blank","noopener"));
     $("srFaqDeveloperFeed")?.addEventListener("click", openDeveloperFeed);
+    $("srFaqTechnicalLane")?.addEventListener("click", openTechnicalLane);
     box.querySelectorAll("[data-public-play]").forEach((btn) => btn.addEventListener("click", () => {
       const track = state.publicTracks?.[Number(btn.dataset.publicPlay)];
       if (!track) return;
@@ -1750,33 +1843,91 @@
   function renderShellChrome() {
     const top = document.querySelector(".float-mode-top");
     if (!top) return;
+    const featuredProducts = (state.products || []).slice(0, 2).map((product) => {
+      const title = product.title || "SupportRD Product";
+      const price = product.price ? `$${product.price}` : "Live store pricing";
+      const handle = product.handle || "";
+      return `<div class="support-rebuild-product-mini">
+        <div class="support-rebuild-title">${title}</div>
+        <div class="support-rebuild-note">${price}</div>
+        <div class="support-rebuild-mini-actions">
+          <button class="support-rebuild-btn ghost" data-top-details="${handle}">Open Product</button>
+          <button class="support-rebuild-btn pulse" data-top-checkout="${handle}">Buy Now</button>
+        </div>
+      </div>`;
+    }).join("");
     top.innerHTML = `
         <div class="support-rebuild-home-top">
           <div class="support-rebuild-card">
-            <div class="support-rebuild-title">Main Structure</div>
-            <div class="support-rebuild-note">${SUPPORTRD_COPY.mission}</div>
-            <div class="support-rebuild-overview" style="margin-top:12px">
+            <div class="support-rebuild-store-banner">
+              <div class="support-rebuild-kicker">SupportRD Storefront Remote</div>
+              <h1 class="support-rebuild-hero-title">Custom order now to feel the hair solution in your scalp.</h1>
+              <div class="support-rebuild-hero-sub">Join the SupportRD system and introduce a new cycle for your hair. The Remote should feel like a premium hair store, a diary companion, a studio booth, and a serious profile engine all at once.</div>
+              <div class="support-rebuild-row">
+                <button class="support-rebuild-btn pulse" id="srHeroCustomOrder">Custom Order Now</button>
+                <button class="support-rebuild-btn ghost" id="srHeroProducts">Open Product Page</button>
+                <button class="support-rebuild-btn ghost" id="srHeroDiaryInvite">Invitable Diary Mode</button>
+              </div>
+            </div>
+            <div class="support-rebuild-product-strip" style="margin-top:14px">
+              ${featuredProducts || `
+                <div class="support-rebuild-product-mini">
+                  <div class="support-rebuild-title">SupportRD Shampoo Lane</div>
+                  <div class="support-rebuild-note">Retail shampoo store feel, pulled directly into the Remote.</div>
+                  <div class="support-rebuild-mini-actions">
+                    <a class="support-rebuild-btn pulse" href="https://supportrd.com/products" target="_blank" rel="noopener">Open Product Page</a>
+                  </div>
+                </div>
+              `}
+            </div>
+            <div class="support-rebuild-overview" style="margin-top:14px">
               <div class="support-rebuild-card"><div class="support-rebuild-title">Diary Mode</div><div class="support-rebuild-note">Live mode, hands-free Aria, real diary, and hair-problem support.</div></div>
               <div class="support-rebuild-card"><div class="support-rebuild-title">Studio</div><div class="support-rebuild-note">Vocals, beat, instrument, FX, and export-minded creation on the move.</div></div>
-            <div class="support-rebuild-card"><div class="support-rebuild-title">Profile</div><div class="support-rebuild-note">Hair analysis, serious image, live invite, and professional prep.</div></div>
-            <div class="support-rebuild-card"><div class="support-rebuild-title">Map Change</div><div class="support-rebuild-note">Fun visuals, serious routing, and making-money map help.</div></div>
+              <div class="support-rebuild-card"><div class="support-rebuild-title">Profile</div><div class="support-rebuild-note">Hair analysis, serious image, live invite, and professional prep.</div></div>
+              <div class="support-rebuild-card"><div class="support-rebuild-title">Map Change</div><div class="support-rebuild-note">Fun visuals, serious routing, and making-money map help.</div></div>
+            </div>
           </div>
-        </div>
           <div class="support-rebuild-card">
-            <div class="support-rebuild-title">General Options</div>
-            <div class="support-rebuild-note">${SUPPORTRD_COPY.generalOptions}</div>
-            <div class="support-rebuild-line">Statistics: SEO build, remote usefulness, account flow health, live payment readiness, and founder-exclusive drawing board handling.</div>
-            <div class="support-rebuild-line">Contacts / Channels: Render, GitHub, support email, payments, in-person routes, technical support, and fan feedback.</div>
-            <div class="support-rebuild-line">FAQ Lounge: relax, breathe, laugh at reels, and get real answers.</div>
-            <div class="support-rebuild-line">Account Engine: ${accountSummary()} · ${state.account.historySync}</div>
-            <div class="support-rebuild-line">Architecture: ${state.statistics.architecture}</div>
+            <div class="support-rebuild-top-tools">
+              <div>
+                <div class="support-rebuild-title">General Settings</div>
+                <div class="support-rebuild-note">Change password, subscription pay date, change email / username, invite Diary Mode link, social URLs, and product/store access all live here.</div>
+              </div>
+              <div class="support-rebuild-row">
+                <button class="support-rebuild-btn pulse" id="srTopOpenSettings">Open Settings</button>
+                <button class="support-rebuild-btn ghost" id="srTopOpenProducts">Products</button>
+                <button class="support-rebuild-btn ghost" id="srTopLoginToggle">${state.account.collapsed ? "Open Login" : "Hide Login"}</button>
+              </div>
+              <div class="support-rebuild-line">Main Structure: durable, payment-friendly, responsive, and store-ready.</div>
+              <div class="support-rebuild-line">Statistics: SEO build, remote usefulness, account flow health, live payment readiness, and founder-exclusive drawing board handling.</div>
+              <div class="support-rebuild-line">General Options: ${SUPPORTRD_COPY.generalOptions}</div>
+              <div class="support-rebuild-line">Contacts / Channels: Render, GitHub, support email, payments, in-person routes, technical support, and fan feedback.</div>
+              <div class="support-rebuild-line">Account Engine: ${accountSummary()} · ${state.account.historySync}</div>
+              <div class="support-rebuild-line">Architecture: ${state.statistics.architecture}</div>
+            </div>
           </div>
         </div>
         <div class="support-rebuild-brand-mark">${SUPPORTRD_COPY.brandMark}</div>`;
-    top.addEventListener("click", (event) => {
-      const target = event.target;
-      if (target instanceof HTMLElement && target.closest(".support-rebuild-card")) return;
+    $("srHeroCustomOrder")?.addEventListener("click", () => window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order", "_blank", "noopener"));
+    $("srHeroProducts")?.addEventListener("click", () => window.open("https://supportrd.com/products", "_blank", "noopener"));
+    $("srHeroDiaryInvite")?.addEventListener("click", () => activateRoute("floatSettingsBox"));
+    $("srTopOpenSettings")?.addEventListener("click", () => activateRoute("floatProfileBox"));
+    $("srTopOpenProducts")?.addEventListener("click", openPaymentModal);
+    $("srTopLoginToggle")?.addEventListener("click", () => {
+      state.account.collapsed = !state.account.collapsed;
+      saveState();
+      renderAccountPanel();
+      renderShellChrome();
     });
+    top.querySelectorAll("[data-top-details]").forEach((btn) => btn.addEventListener("click", () => {
+      const handle = btn.dataset.topDetails;
+      window.open(handle ? `https://supportrd.com/products/${handle}` : "https://supportrd.com/products", "_blank", "noopener");
+    }));
+    top.querySelectorAll("[data-top-checkout]").forEach((btn) => btn.addEventListener("click", () => {
+      const handle = btn.dataset.topCheckout;
+      const product = (state.products || []).find((item) => (item.handle || "") === handle);
+      window.open(getCheckoutUrl(product), "_blank", "noopener");
+    }));
   }
 
   function bindLaunchButtons() {
@@ -1845,7 +1996,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260409f";
+      window.SupportRDRemoteRebuildVersion = "20260410a";
     }
 
   setTimeout(init, 700);
