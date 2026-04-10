@@ -23,6 +23,9 @@
       picture: "",
       contact: "https://supportrd.com/live",
       tone: "Professional",
+      currentHairState: "",
+      socialMood: "",
+      aiSummary: "SupportRD profile summary will appear here after the profile reader runs.",
       professionalMode: false,
       professionalTask: "",
       professionalSlide: 0,
@@ -395,9 +398,9 @@
       .float-box.support-rebuild-active{display:block !important}
       .float-mode-shell.support-rebuild-mode{
         min-height:100vh;
-        padding:18px 332px 18px 18px;
+        padding:18px 18px 120px;
         display:grid;
-        gap:14px;
+        gap:18px;
         align-content:start;
       }
       @media (max-width: 1180px){
@@ -458,28 +461,27 @@
         z-index:3;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-top{
-        margin-bottom:22px !important;
+        margin-bottom:0 !important;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-launch{
         position:relative;
         top:auto;
         z-index:5;
-        margin:0 0 26px !important;
-        margin-left:auto !important;
-        padding:14px !important;
-        width:min(350px,calc(100vw - 36px));
+        margin:0 !important;
+        padding:16px !important;
+        width:100%;
         overflow:visible !important;
-        background:rgba(5,10,20,.74);
+        background:linear-gradient(180deg,rgba(5,10,20,.92),rgba(11,17,30,.86));
         border:1px solid rgba(255,255,255,.12);
-        border-radius:26px;
-        box-shadow:0 18px 38px rgba(0,0,0,.22);
+        border-radius:28px;
+        box-shadow:0 22px 48px rgba(0,0,0,.28);
       }
-      .float-mode-shell.support-rebuild-mode .float-mode-launch{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px !important}
-      .float-mode-shell.support-rebuild-mode .float-launch-btn{min-height:118px !important;padding:16px 12px 16px 54px !important;font-size:15px !important}
+      .float-mode-shell.support-rebuild-mode .float-mode-launch{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:12px !important}
+      .float-mode-shell.support-rebuild-mode .float-launch-btn{min-height:134px !important;padding:18px 14px 18px 56px !important;font-size:15px !important;border-radius:22px !important;box-shadow:0 16px 36px rgba(0,0,0,.28)}
       .support-rebuild-shell{display:grid;gap:14px}
-      .support-rebuild-route-host{display:none;gap:16px;align-content:start;position:fixed;inset:18px;z-index:120;min-width:0;padding:22px;border-radius:28px;background:rgba(5,9,18,.94);border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:auto}
+      .support-rebuild-route-host{display:none;gap:16px;align-content:start;position:relative;z-index:4;min-width:0;padding:0;border-radius:0;background:transparent;border:0;box-shadow:none;overflow:visible}
       .support-rebuild-route-host.is-open{display:grid}
-      .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:8px;position:sticky;top:0;z-index:2}
+      .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:0;position:absolute;top:16px;right:16px;z-index:2}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
       .support-rebuild-sticky-rail{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:74;width:min(200px,calc(100vw - 24px));display:grid;gap:12px}
       .support-rebuild-sticky-card{padding:14px;border-radius:22px;background:rgba(7,12,22,.90);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.26);color:#fff}
@@ -491,7 +493,7 @@
       .support-rebuild-account-kicker{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.64)}
       .support-rebuild-account-meta{display:grid;gap:8px}
       .support-rebuild-overview{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-      .support-rebuild-home-top{display:grid;gap:12px;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr)}
+      .support-rebuild-home-top{display:grid;gap:16px;grid-template-columns:minmax(0,1.45fr) minmax(280px,.65fr)}
       .support-rebuild-card{background:rgba(9,12,22,.78);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:16px;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.24)}
       .support-rebuild-title{font:700 1.05rem/1.2 Georgia,serif;letter-spacing:.02em;margin:0 0 10px}
       .support-rebuild-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -501,10 +503,25 @@
       .support-rebuild-kicker{font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.7)}
       .support-rebuild-hero-title{font:700 clamp(1.25rem,2.8vw,2rem)/1.06 Georgia,serif;margin:0}
       .support-rebuild-hero-sub{font-size:1rem;line-height:1.5;color:rgba(255,255,255,.88)}
-      .support-rebuild-top-tools{display:grid;gap:12px}
+      .support-rebuild-top-tools{display:grid;gap:10px}
       .support-rebuild-settings-tab{display:inline-flex;align-items:center;justify-content:center;min-height:64px;padding:14px 18px;border-radius:22px;background:rgba(9,12,22,.86);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 42px rgba(0,0,0,.24)}
+      .support-rebuild-top-meta{display:grid;gap:12px}
       .support-rebuild-hero-layout{display:grid;gap:14px;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);align-items:stretch}
       .support-rebuild-hero-visual{min-height:260px;border-radius:22px;background:linear-gradient(180deg,rgba(4,8,18,.16),rgba(4,8,18,.48)),url('/static/images/lezawli.jpeg') center/cover no-repeat;border:1px solid rgba(255,255,255,.12)}
+      .support-rebuild-remote-stage{display:grid;gap:16px;grid-template-columns:minmax(240px,.75fr) minmax(0,1.1fr) minmax(240px,.75fr);align-items:start}
+      .support-rebuild-remote-column{display:grid;gap:14px}
+      .support-rebuild-remote-copy{display:grid;gap:10px}
+      .support-rebuild-content-shell{display:grid;gap:16px}
+      .support-rebuild-content-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+      .support-rebuild-content-head .support-rebuild-title{margin:0}
+      .support-rebuild-remote-note{font-size:.92rem;color:rgba(255,255,255,.78)}
+      .support-rebuild-aria-menu{display:grid;gap:12px;grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr)}
+      .support-rebuild-reader{display:grid;gap:12px;padding:14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+      .support-rebuild-audacity{display:grid;gap:12px;padding:14px;border-radius:22px;background:linear-gradient(180deg,rgba(17,26,42,.96),rgba(8,13,25,.92));border:1px solid rgba(255,255,255,.1)}
+      .support-rebuild-audacity-toolbar{display:flex;flex-wrap:wrap;gap:10px}
+      .support-rebuild-audacity-track{display:grid;gap:8px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:transform .18s ease, box-shadow .18s ease}
+      .support-rebuild-audacity-track.active{transform:translateY(-2px);box-shadow:0 16px 28px rgba(0,0,0,.24);border-color:rgba(255,213,74,.45)}
+      .support-rebuild-faq-tv{display:grid;gap:12px}
       .support-rebuild-product-strip{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
       .support-rebuild-product-mini{padding:12px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1)}
       .support-rebuild-product-mini .support-rebuild-title{font-size:.96rem;margin-bottom:6px}
@@ -600,7 +617,7 @@
         position:relative;
         z-index:1;
         margin:0 !important;
-        min-height:calc(100vh - 190px);
+        min-height:auto;
         border-radius:28px;
         padding:22px;
         background:linear-gradient(180deg, rgba(8,14,25,.82), rgba(13,19,35,.72));
@@ -629,9 +646,10 @@
       }
       @media (max-width: 980px){
         .support-rebuild-home-top{grid-template-columns:1fr}
-        .float-mode-shell.support-rebuild-mode .float-mode-launch{width:100%;margin-left:0 !important}
+        .float-mode-shell.support-rebuild-mode .float-mode-launch{width:100%;margin-left:0 !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+        .support-rebuild-remote-stage,.support-rebuild-aria-menu{grid-template-columns:1fr}
         .support-rebuild-sticky-rail{left:10px;top:auto;bottom:110px;transform:none;width:min(180px,calc(100vw - 20px))}
-        .support-rebuild-route-host{inset:10px;padding:16px}
+        .support-rebuild-route-actions{position:static;justify-content:flex-end}
       }
     `;
     document.head.appendChild(style);
@@ -662,8 +680,8 @@
           $("srCloseRouteView")?.addEventListener("click", () => closeContentView());
         }
       } else {
-        routeHost.innerHTML = "";
-        routeHost.classList.remove("is-open");
+        routeHost.innerHTML = `<div class="support-rebuild-card"><div class="support-rebuild-title">SupportRD Content</div><div class="support-rebuild-note">Choose a Remote button and SupportRD will load the live content right here under the Remote.</div></div>`;
+        routeHost.classList.add("is-open");
       }
     } else {
       document.querySelectorAll(".float-box").forEach((box) => {
@@ -680,8 +698,6 @@
 
   function closeContentView() {
     activateRoute("");
-    const top = document.querySelector(".float-mode-top");
-    requestAnimationFrame(() => top?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function openQuestionnaireRoute(item) {
@@ -1428,75 +1444,49 @@
   function renderSettings() {
     const box = $("floatProfileBox");
     if (!box) return;
-    const professionalMode = !!state.profile.professionalMode;
-    const slideIndex = state.profile.professionalSlide || 0;
     box.innerHTML = `
-      <div class="support-rebuild-shell">
-        <div class="support-rebuild-overview">
-          <div class="support-rebuild-card"><div class="support-rebuild-title">Main Structure</div><div class="support-rebuild-note">On-the-go premium operating system for hair support.</div></div>
-          <div class="support-rebuild-card"><div class="support-rebuild-title">Statistics</div><div class="support-rebuild-note">${state.statistics.payments}</div></div>
-          <div class="support-rebuild-card"><div class="support-rebuild-title">General Options</div><div class="support-rebuild-note">Fun, revolutionary settings stay tucked inside the full lane.</div></div>
-          <div class="support-rebuild-card"><div class="support-rebuild-title">Contacts / Channels</div><div class="support-rebuild-note">${state.statistics.contacts}</div></div>
+      <div class="support-rebuild-content-shell">
+        <div class="support-rebuild-card">
+          <div class="support-rebuild-content-head">
+            <h3 class="support-rebuild-title">General Settings</h3>
+          </div>
+          <div class="support-rebuild-note">Settings only deal with using SupportRD under an account: login state, password, email, subscription date, social links, and product access.</div>
+        </div>
+        <div class="support-rebuild-grid two">
+          <div class="support-rebuild-card">
+            <div class="support-rebuild-title">Account Access</div>
+            <input class="support-rebuild-input" id="srSettingsUsername" placeholder="Username" value="${state.profile.name || state.account.displayName || ""}">
+            <input class="support-rebuild-input" id="srSettingsEmail" style="margin-top:10px" placeholder="Email" value="${state.account.email || ""}">
+            <input class="support-rebuild-input" id="srSettingsPassword" style="margin-top:10px" type="password" placeholder="Change password">
+            <div class="support-rebuild-row" style="margin-top:12px">
+              <button class="support-rebuild-btn pulse" id="srSettingsLoginState">${state.account.loggedIn ? "Log Out" : "Log In"}</button>
+              <button class="support-rebuild-btn ghost" id="srSettingsPush">${state.push ? "Push On" : "Push Off"}</button>
+            </div>
+          </div>
+          <div class="support-rebuild-card">
+            <div class="support-rebuild-title">Product Usage</div>
+            <input class="support-rebuild-input" id="srSettingsPayDate" placeholder="Subscription pay date" value="${state.account.subscriptionPayDate || ""}">
+            <input class="support-rebuild-input" id="srSettingsUrl" style="margin-top:10px" placeholder="Diary invite / primary link" value="${state.profile.contact || ""}">
+            <input class="support-rebuild-input" id="srSettingsPhone" style="margin-top:10px" placeholder="Phone number" value="${state.account.phone || ""}">
+            <textarea class="support-rebuild-textarea" id="srSettingsLinks" style="margin-top:10px">${Object.entries(state.diarySocial || {}).filter(([, enabled]) => enabled).map(([platform]) => platform).join(", ")}</textarea>
+          </div>
         </div>
         <div class="support-rebuild-card">
-          <h3 class="support-rebuild-title">Settings</h3>
+          <div class="support-rebuild-title">Product Account Controls</div>
           <div class="support-rebuild-row">
-            <button class="support-rebuild-btn pulse" id="srPushBtn">${state.push ? "Push Notifications: On" : "Push Notifications: Off"}</button>
-            <button class="support-rebuild-btn" id="srOpenFullSettings">Open Full Settings</button>
+            <button class="support-rebuild-btn ghost" id="srSettingsPayments">Open Payments</button>
+            <button class="support-rebuild-btn ghost" id="srSettingsAccount">Account Menu</button>
+            <button class="support-rebuild-btn pulse" id="srSettingsSaveAll">Save Settings</button>
           </div>
-          <div class="support-rebuild-note" id="srSettingsStatus">${professionalMode ? "Professional Mode contained: document reminders, meeting posture, and serious account controls only." : `Premium status: ${state.premium}. Account engine: ${accountSummary()}. Full settings includes links, password, address, and payment review.`}</div>
-          <div id="srSettingsFullLane" style="display:none;margin-top:12px" class="support-rebuild-grid two">
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Identity + Security</div>
-              <input class="support-rebuild-input" id="srSettingsUsername" placeholder="Username" value="${state.profile.name || ""}">
-              <input class="support-rebuild-input" id="srSettingsPhone" style="margin-top:10px" placeholder="Phone number" value="${state.account.phone || ""}">
-              <input class="support-rebuild-input" id="srSettingsOldPassword" style="margin-top:10px" type="password" placeholder="Current password">
-              <input class="support-rebuild-input" id="srSettingsPassword" style="margin-top:10px" type="password" placeholder="Change password flow">
-              <input class="support-rebuild-input" id="srSettingsPasswordConfirm" style="margin-top:10px" type="password" placeholder="Confirm new password">
-              <input class="support-rebuild-input" id="srSettingsAddress" style="margin-top:10px" placeholder="Address information" value="${state.account.address || ""}">
-            </div>
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Payments + URLs</div>
-              <input class="support-rebuild-input" id="srSettingsPayment" placeholder="Current payment / premium status" value="${state.premium}">
-              <input class="support-rebuild-input" id="srSettingsPayDate" style="margin-top:10px" placeholder="Subscription pay date" value="${state.account.subscriptionPayDate || ""}">
-              <input class="support-rebuild-input" id="srSettingsUrl" style="margin-top:10px" placeholder="Primary URL link" value="${state.profile.contact || ""}">
-              <input class="support-rebuild-input" id="srSettingsDiaryInvite" style="margin-top:10px" placeholder="Invitable Diary Mode link" value="${state.profile.contact || "https://supportrd.com/live"}">
-              <input class="support-rebuild-input" id="srSettingsSocialLinks" style="margin-top:10px" placeholder="Diary social links update" value="${Object.values(state.diarySocial || {}).filter(Boolean).join(", ")}">
-              <select class="support-rebuild-select" id="srSettingsFantasy" style="margin-top:10px">
-                <option>Fantasy Off</option>
-                <option>Fantasy Basic</option>
-                <option>Fantasy Advanced</option>
-              </select>
-              <div class="support-rebuild-row" style="margin-top:10px">
-                <button class="support-rebuild-btn ghost" id="srSettingsOpenProducts">Open Product Page</button>
-                <button class="support-rebuild-btn ghost" id="srSettingsOpenDiaryInvite">Open Diary Invite</button>
-              </div>
-            </div>
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Contacts / Channels</div>
-              <div class="support-rebuild-note">Email, payments, in-person location, team accessibility, technical support, and fan feedback stay visible here.</div>
-              <div class="support-rebuild-note" style="margin-top:10px">Saved main link: ${state.profile.contact || "https://supportrd.com/live"}</div>
-            </div>
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Save Changes</div>
-              <div class="support-rebuild-note">Push notifications can request browser permission here so Aria can stay in touch about hair status.</div>
-              <button class="support-rebuild-btn pulse" id="srSettingsSaveAll">Save Full Settings</button>
-            </div>
-          </div>
-          ${professionalMode ? `
-            <div class="support-rebuild-card" style="margin-top:12px;padding:12px">
-              <div class="support-rebuild-title">Professional Workspace Slides</div>
-              <div class="support-rebuild-note">PowerPoint feel: quick case scenarios for when hair is not correct for the occasion.</div>
-              <div class="support-rebuild-line" id="srProfessionalSlide">${PROFESSIONAL_SLIDES[slideIndex]}</div>
-              <div class="support-rebuild-row" style="margin-top:10px">
-                <button class="support-rebuild-btn ghost" id="srProfessionalPrev">Previous</button>
-                <button class="support-rebuild-btn ghost" id="srProfessionalNext">Next</button>
-              </div>
-              <div class="support-rebuild-note" style="margin-top:10px">Document reminders: keep `.docx`, `.doc`, `.exe`, and `.txt` files ready for serious business settings.</div>
-            </div>` : ""}
+          <div class="support-rebuild-note" id="srSettingsStatus" style="margin-top:12px">Current plan: ${state.account.plan}. Contacts / Channels: ${state.statistics.contacts}</div>
         </div>
       </div>`;
-    $("srPushBtn").onclick = async () => {
+    $("srSettingsLoginState").onclick = () => {
+      state.account.loggedIn = !state.account.loggedIn;
+      saveState();
+      renderSettings();
+    };
+    $("srSettingsPush").onclick = async () => {
       if ("Notification" in window && Notification.permission === "default") {
         try { await Notification.requestPermission(); } catch {}
       }
@@ -1504,442 +1494,231 @@
       saveState();
       renderSettings();
     };
-    $("srOpenFullSettings").onclick = () => {
-      $("srSettingsStatus").textContent = "Full Settings opened: username/password, payments, URL links, push notifications, and fantasy routing are active.";
-      $("srSettingsFullLane").style.display = "grid";
-      $("srSettingsSaveAll").onclick = () => {
-        const newPass = $("srSettingsPassword").value;
-        const confirmPass = $("srSettingsPasswordConfirm").value;
-        if (newPass && newPass !== confirmPass) {
-          $("srSettingsStatus").textContent = "Password change did not save. New password and confirm password must match.";
-          return;
-        }
-        state.profile.name = $("srSettingsUsername").value.trim();
-        state.account.displayName = state.profile.name || state.account.displayName;
-        state.account.phone = $("srSettingsPhone").value.trim();
-        state.account.address = $("srSettingsAddress").value.trim();
-        state.account.subscriptionPayDate = $("srSettingsPayDate").value.trim() || state.account.subscriptionPayDate;
-        state.profile.contact = $("srSettingsUrl").value.trim();
-        state.premium = $("srSettingsPayment").value.trim() || state.premium;
-        state.account.plan = state.premium;
-        saveState();
-        renderShellChrome();
-        
-        renderProfile();
-        updateAssistantDock("Aria and Jake moved into Settings to confirm your save.");
-        $("srSettingsStatus").textContent = newPass
-          ? "Full settings saved locally. Password flow accepted, push stays connected, and account controls are obvious now."
-          : "Full settings saved locally. Push stays connected through browser notification permission.";
-      };
-      $("srSettingsOpenProducts").onclick = () => window.open("https://supportrd.com/products", "_blank", "noopener");
-      $("srSettingsOpenDiaryInvite").onclick = () => window.open($("srSettingsDiaryInvite").value.trim() || "https://supportrd.com/live", "_blank", "noopener");
+    $("srSettingsPayments").onclick = openPaymentModal;
+    $("srSettingsAccount").onclick = openAccountModal;
+    $("srSettingsSaveAll").onclick = () => {
+      state.profile.name = $("srSettingsUsername").value.trim();
+      state.account.displayName = state.profile.name || state.account.displayName;
+      state.account.email = $("srSettingsEmail").value.trim();
+      state.account.phone = $("srSettingsPhone").value.trim();
+      state.account.subscriptionPayDate = $("srSettingsPayDate").value.trim() || state.account.subscriptionPayDate;
+      state.profile.contact = $("srSettingsUrl").value.trim() || state.profile.contact;
+      state.account.password = $("srSettingsPassword").value.trim() || state.account.password;
+      const links = ($("srSettingsLinks").value || "").toLowerCase();
+      Object.keys(state.diarySocial).forEach((platform) => {
+        state.diarySocial[platform] = links.includes(platform);
+      });
+      saveState();
+      renderShellChrome();
+      $("srSettingsStatus").textContent = "Settings saved. SupportRD account controls are updated and ready.";
     };
-    if (professionalMode) {
-      $("srProfessionalPrev")?.addEventListener("click", () => {
-        state.profile.professionalSlide = (slideIndex - 1 + PROFESSIONAL_SLIDES.length) % PROFESSIONAL_SLIDES.length;
-        saveState();
-        renderSettings();
-      });
-      $("srProfessionalNext")?.addEventListener("click", () => {
-        state.profile.professionalSlide = (slideIndex + 1) % PROFESSIONAL_SLIDES.length;
-        saveState();
-        renderSettings();
-      });
-    }
   }
-
   function renderDiary() {
     const box = $("floatSettingsBox");
     if (!box) return;
-    const lines = formatDiaryLines(state.diaryText);
-    const historyLines = state.diaryFeed.length ? state.diaryFeed : ["Chat history empty right before they start.", "Aria is ready for hair talk.", "Jake is waiting for studio help."];
-    const liveSessionUrl = `${state.profile.contact || "https://supportrd.com/live"}?room=${encodeURIComponent((state.profile.name || "supportrd-live").toLowerCase().replace(/\s+/g, "-"))}`;
-    const professionalMode = !!state.profile.professionalMode;
+    const historyLines = state.diaryFeed.length ? state.diaryFeed : ["Aria is ready for SupportRD hair questions.", "Jake is standing by for booth energy."];
     box.innerHTML = `
-      <div class="support-rebuild-shell">
+      <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
-          <h3 class="support-rebuild-title">Diary Mode</h3>
-          <div class="support-rebuild-grid two">
-            <div>
-              <button class="support-rebuild-btn pulse" id="srSendSocialBtn">Send To Social</button>
-              <div class="support-rebuild-note" style="margin-top:8px">${state.diaryUseCase}</div>
-              <div class="support-rebuild-note" style="margin-top:8px">Account lane: ${accountSummary()}</div>
-            </div>
-            <div>
-              <label class="support-rebuild-note">Description Box</label>
-              <textarea class="support-rebuild-textarea" id="srDiaryDesc">${state.diaryDescription}</textarea>
-            </div>
+          <div class="support-rebuild-content-head">
+            <h3 class="support-rebuild-title">Diary</h3>
           </div>
-          <div class="support-rebuild-grid two" style="margin-top:12px">
-            <div>
-              <label class="support-rebuild-note">Aria / Jake Level</label>
-              <select class="support-rebuild-select" id="srDiaryLevel">
-                <option ${state.diaryLevel==="Intro"?"selected":""}>Intro</option>
-                <option ${state.diaryLevel==="Advanced"?"selected":""}>Advanced</option>
-                <option ${state.diaryLevel==="Inner Circle"?"selected":""}>Inner Circle</option>
-                <option ${state.diaryLevel==="Professional / Making Money"?"selected":""}>Professional / Making Money</option>
-              </select>
-            </div>
+          <div class="support-rebuild-note">Aria and Jake stay above the history reader. Ask Aria any hair question regarding SupportRD and she answers only in that lane.</div>
+        </div>
+        <div class="support-rebuild-aria-menu">
+          <div class="support-rebuild-reader">
+            <div class="support-rebuild-title">Aria / Jake Menu</div>
             <div class="support-rebuild-row">
-              <button class="support-rebuild-btn ghost" id="srHandsFreeBtn">Hands-Free Mode</button>
-              <button class="support-rebuild-btn ghost" id="srDiaryLiveBtn">${state.liveMode ? "Stop Live Session" : "Live Session"}</button>
-              <button class="support-rebuild-btn ghost" id="srDiarySaveBtn">Save</button>
+              <button class="support-rebuild-btn pulse" id="srTalkAria">Ask Aria</button>
+              <button class="support-rebuild-btn ghost" id="srTalkJake">Call Jake</button>
+              <button class="support-rebuild-btn ghost" id="srDiarySaveBtn">Save Diary</button>
             </div>
+            <textarea class="support-rebuild-textarea" id="srDiaryQuestion" placeholder="What hair problem is SupportRD helping with today?">${state.diaryDescription || ""}</textarea>
+            <textarea class="support-rebuild-textarea" id="srDiaryText" placeholder="Private diary notes stay here.">${state.diaryText || ""}</textarea>
           </div>
-          <div class="support-rebuild-grid two" style="margin-top:12px">
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">${professionalMode ? "Professional Share Links" : "Send Links"}</div>
-              <div class="support-rebuild-note">${professionalMode ? "Business-only sharing lane for the people that matter." : "Route best options for IG, FB, TikTok, X, Snapchat, and LinkedIn posting."}</div>
-              <div class="support-rebuild-note" style="margin-top:8px">Live URL / VR code link: ${liveSessionUrl}</div>
-              ${["instagram","facebook","tiktok","x","snapchat","linkedin"].map((p)=>`<label class="support-rebuild-row support-rebuild-note"><input type="checkbox" data-platform="${p}" ${state.diarySocial[p] ? "checked" : ""}/> ${p}</label>`).join("")}
-              ${professionalMode ? `<select class="support-rebuild-select" id="srProfessionalDiaryTopic" style="margin-top:10px">${PROFESSIONAL_DIARY_TOPICS.map((topic)=>`<option>${topic}</option>`).join("")}</select>` : ""}
-            </div>
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Aria / Jake</div>
-              <div class="support-rebuild-note">${professionalMode ? "Contained business-only assistant lane: economics, payment, health, project, revenue, inventory, legal, and next move." : "Fixed above the history, hands-free ready, and listening for hair problems."}</div>
-              <div class="support-rebuild-row" style="margin:10px 0 12px">
-                <button class="support-rebuild-btn pulse" id="srTalkAria">Talk To Aria</button>
-                <button class="support-rebuild-btn ghost" id="srTalkJake">Talk To Jake</button>
-              </div>
-              <div class="support-rebuild-history">
-                ${historyLines.map((line)=>`<div class="support-rebuild-line">${line}</div>`).join("")}
-              </div>
-            </div>
+          <div class="support-rebuild-reader">
+            <div class="support-rebuild-title">SupportRD History Reader</div>
+            <div class="support-rebuild-history">${historyLines.map((line)=>`<div class="support-rebuild-line">${line}</div>`).join("")}</div>
+            <div class="support-rebuild-note">Live invite: ${state.profile.contact || "https://supportrd.com/live"}</div>
           </div>
-          <div class="support-rebuild-grid two" style="margin-top:12px">
-            <div>
-              <label class="support-rebuild-note">Diary Record</label>
-              <div class="support-rebuild-row" style="margin-bottom:8px">
-                <button class="support-rebuild-btn ghost" id="srDiaryHideBtn">${state.diaryHidden ? "Reveal Private Diary" : "Quick Hide Diary"}</button>
-              </div>
-              <textarea class="support-rebuild-textarea" id="srDiaryText">${state.diaryText}</textarea>
-              <div class="support-rebuild-private-note">Private diary mode is sensitive by design. Only the owner should reveal this page.</div>
-            </div>
-            <div class="support-rebuild-diary-preview ${state.diaryHidden ? "private" : ""}" id="srDiaryPreview">
-              ${lines.map((line)=>`<div>${line}</div>`).join("")}
-            </div>
-          </div>
-          ${state.liveMode ? `<div class="support-rebuild-livefeed" style="margin-top:12px"><div class="support-rebuild-title">Live Session</div><div class="support-rebuild-note">Public display active. Hearts, likes, comments, guest username popup, Fast Pay, and live URL all belong to this lane.</div><div class="support-rebuild-row"><span class="support-rebuild-pill">Heart Support</span><span class="support-rebuild-pill">Two Thumbs Up</span><span class="support-rebuild-pill">Fast Pay Gifts</span><span class="support-rebuild-pill">Guest Username</span></div><div class="support-rebuild-note" style="margin-top:8px">Live room URL: ${liveSessionUrl}</div><div class="support-rebuild-note">Click Live Session again to exit and restore normal diary mode.</div></div>` : ""}
         </div>
       </div>`;
-    $("srSendSocialBtn").onclick = openPlatforms;
-    $("srDiaryLevel").onchange = (e) => { state.diaryLevel = e.target.value; saveState(); };
-    $("srHandsFreeBtn").onclick = () => {
-      pushDiaryFeed(
-        "Hands-free Aria is now listening to hair problems.",
-        "Jake is standing by for studio-toned support.",
-        `Current level: ${state.diaryLevel}.`
-      );
+    $("srTalkAria").onclick = () => {
+      state.diaryDescription = $("srDiaryQuestion").value.trim();
+      pushDiaryFeed(`Aria pending: ${state.diaryDescription || "SupportRD hair question ready."}`);
+      startAssistant("Aria");
       renderDiary();
     };
-    $("srTalkAria").onclick = () => startAssistant("Aria");
-    $("srTalkJake").onclick = () => startAssistant("Jake");
-    $("srDiaryLiveBtn").onclick = () => { state.liveMode = !state.liveMode; saveState(); renderDiary(); };
-    $("srDiaryHideBtn").onclick = () => {
-      state.diaryHidden = !state.diaryHidden;
-      saveState();
-      renderDiary();
-      if (state.diaryHidden) return;
-      $("srDiaryPreview")?.classList.add("revealed");
-    };
-    $("srDiaryText").oninput = () => {
-      state.diaryText = $("srDiaryText").value;
-      state.diaryHidden = true;
-      saveState();
+    $("srTalkJake").onclick = () => {
+      pushDiaryFeed("Jake joined the diary lane to keep the SupportRD booth energy steady.");
+      startAssistant("Jake");
       renderDiary();
     };
     $("srDiarySaveBtn").onclick = () => {
-      state.diaryDescription = $("srDiaryDesc").value;
+      state.diaryDescription = $("srDiaryQuestion").value.trim();
       state.diaryText = $("srDiaryText").value;
-      if (professionalMode && $("srProfessionalDiaryTopic")) {
-        pushDiaryFeed(`Professional tip saved: ${$("srProfessionalDiaryTopic").value}`);
-      }
-      document.querySelectorAll("[data-platform]").forEach((cb) => { state.diarySocial[cb.dataset.platform] = cb.checked; });
-      pushDiaryFeed(`Diary saved privately for ${(state.profile.name || "SupportRD owner")}.`);
+      pushDiaryFeed(`Diary saved for ${(state.profile.name || "SupportRD Guest")}.`);
       saveState();
-      renderShellChrome();
       renderDiary();
     };
   }
-
   function renderProfile() {
     const box = $("floatAssistantBox");
     if (!box) return;
     const p = state.profile;
-    const professionalMode = !!p.professionalMode;
     const profileImageStyle = p.picture
       ? `style="background-image:linear-gradient(180deg, rgba(8,12,20,.10), rgba(8,12,20,.62)), url('${p.picture.replace(/'/g, "%27")}')"`
       : "";
     box.innerHTML = `
-      <div class="support-rebuild-shell">
+      <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
-          <h3 class="support-rebuild-title">Profile</h3>
-          <div class="support-rebuild-profile-quick">
-            <div class="support-rebuild-profile-image" ${profileImageStyle}>
-              <span class="support-rebuild-profile-tag">${p.name || "SupportRD Profile"}</span>
-            </div>
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Registered Profile</div>
-              <div class="support-rebuild-row">
-                <span class="support-rebuild-pill">${p.aiAssists[0] || "Hair-aware"}</span>
-                <span class="support-rebuild-pill">${p.aiAssists[1] || "Polished routine"}</span>
+          <div class="support-rebuild-content-head">
+            <h3 class="support-rebuild-title">Profile Reader</h3>
+          </div>
+          <div class="support-rebuild-note">Photo, current hair state, and social mood combine into one SupportRD AI profile summary.</div>
+        </div>
+        <div class="support-rebuild-grid two">
+          <div class="support-rebuild-card">
+            <div class="support-rebuild-profile-quick">
+              <div class="support-rebuild-profile-image" ${profileImageStyle}><span class="support-rebuild-profile-tag">${p.name || "SupportRD Profile"}</span></div>
+              <div class="support-rebuild-reader">
+                <input class="support-rebuild-input" id="srProfilePicture" placeholder="Photo URL" value="${p.picture || ""}">
+                <input class="support-rebuild-input" id="srProfileName" style="margin-top:10px" placeholder="Profile name" value="${p.name || ""}">
+                <input class="support-rebuild-input" id="srProfileHairState" style="margin-top:10px" placeholder="Current hair state" value="${p.currentHairState || ""}">
+                <input class="support-rebuild-input" id="srProfileMood" style="margin-top:10px" placeholder="Social mood" value="${p.socialMood || ""}">
+                <button class="support-rebuild-btn pulse" id="srProfileGenerate" style="margin-top:12px">Generate Profile</button>
               </div>
-              <div class="support-rebuild-note" style="margin-top:10px">Live location URL: ${p.contact || "https://supportrd.com/live"}</div>
-              <div class="support-rebuild-note" style="margin-top:10px">Account status: ${accountSummary()}</div>
-              <button class="support-rebuild-btn ${p.professionalMode ? "support-rebuild-toggle-on" : "support-rebuild-toggle-off"}" id="srProfessionalModeBtn" style="margin-top:10px">${p.professionalMode ? "Professional Mode: ON" : "Professional Mode: OFF"}</button>
-              ${professionalMode ? `<div class="support-rebuild-note" style="margin-top:10px">Professional task: ${p.professionalTask || "Pending task assignment"}</div>` : ""}
             </div>
           </div>
-          <div class="support-rebuild-grid two">
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Set Profile Picture</div>
-              <div class="support-rebuild-note">Intelligent profile picture should route back to live mode and identity.</div>
-              <input class="support-rebuild-input" id="srProfilePicture" placeholder="Image URL or saved picture note" value="${p.picture}">
-              <input class="support-rebuild-input" id="srProfileName" placeholder="Profile name" value="${p.name}" style="margin-top:10px">
-              <button class="support-rebuild-btn" id="srProfileSave" style="margin-top:10px">Save Profile</button>
-              <button class="support-rebuild-btn ghost" id="srProfileLive" style="margin-top:10px">Open Live Invite</button>
+          <div class="support-rebuild-card">
+            <div class="support-rebuild-title">AI Summary</div>
+            <div class="support-rebuild-history">
+              <div class="support-rebuild-line">${p.aiSummary || "SupportRD profile summary will appear here after the profile reader runs."}</div>
+              <div class="support-rebuild-line">Verified read: ${p.verified}</div>
+              <div class="support-rebuild-line">Current contact: ${p.contact || "https://supportrd.com/live"}</div>
             </div>
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Latest Results Verified</div>
-              <div class="support-rebuild-note">${p.verified}</div>
-              <div style="margin-top:12px">${p.aiAssists.map((s)=>`<div class="support-rebuild-line">${s}</div>`).join("")}</div>
+            <div class="support-rebuild-row" style="margin-top:12px">
+              <button class="support-rebuild-btn ghost" id="srProfileHairScan">Hair Analysis</button>
+              <button class="support-rebuild-btn ghost" id="srProfileLive">Open Live Invite</button>
             </div>
-          </div>
-          <div class="support-rebuild-grid two" style="margin-top:12px">
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">General AI Summary</div>
-              ${p.summary.map((line)=>`<div class="support-rebuild-line">${line}</div>`).join("")}
-            </div>
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Credentials</div>
-              <select class="support-rebuild-select" id="srProfileTone">
-                <option ${p.tone==="Laid Back"?"selected":""}>Laid Back</option>
-                <option ${p.tone==="Professional"?"selected":""}>Professional</option>
-                <option ${p.tone==="Sports"?"selected":""}>Sports</option>
-                <option ${p.tone==="Event-Ready"?"selected":""}>Event-Ready</option>
-              </select>
-              <div class="support-rebuild-note" style="margin-top:12px">${p.credentials}</div>
-            </div>
-          </div>
-          <div class="support-rebuild-grid two" style="margin-top:12px">
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Hair Analysis</div>
-              <button class="support-rebuild-btn" id="srHairScanBtn">Begin Hair Scan</button>
-              <div class="support-rebuild-progress" style="margin-top:12px"><span id="srHairScanBar"></span></div>
-              <div class="support-rebuild-note support-rebuild-reading-pending" id="srHairScanStatus" style="margin-top:10px">Texture, hair color, sign of damage, and hair type will appear here.</div>
-            </div>
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">2-Step Verification</div>
-              <div class="support-rebuild-note">Require password plus phone or 6-digit code after 4 hours away.</div>
-              <input class="support-rebuild-input" id="srProfileContact" placeholder="Main contact / live invite URL" value="${p.contact}" style="margin-top:10px">
-              ${professionalMode ? `<button class="support-rebuild-btn ghost" id="srProfileExportDoc" style="margin-top:10px">Export Professional PDF</button>` : ""}
-            </div>
+            <div class="support-rebuild-note" id="srProfileStatus" style="margin-top:12px">SupportRD profile reader is ready.</div>
           </div>
         </div>
       </div>`;
-    $("srProfileSave").onclick = () => {
-      p.picture = $("srProfilePicture").value;
-      p.name = $("srProfileName").value;
-      p.tone = $("srProfileTone").value;
-      p.contact = $("srProfileContact").value;
+    $("srProfileGenerate").onclick = () => {
+      p.picture = $("srProfilePicture").value.trim();
+      p.name = $("srProfileName").value.trim();
+      p.currentHairState = $("srProfileHairState").value.trim();
+      p.socialMood = $("srProfileMood").value.trim();
+      p.aiSummary = `${p.name || "This profile"} reads as ${p.currentHairState || "hair-aware"}, feels ${p.socialMood || "steady socially"}, and carries SupportRD polish through the day.`;
       state.account.displayName = p.name || state.account.displayName;
       saveState();
       renderShellChrome();
-      
       renderProfile();
-      updateAssistantDock("Aria and Jake moved into Profile to confirm your update.");
     };
-    $("srProfileLive").onclick = () => {
-      window.open(p.contact || "https://supportrd.com/live", "_blank", "noopener");
-    };
-    $("srProfessionalModeBtn").onclick = () => {
-      p.professionalMode = !p.professionalMode;
-      if (p.professionalMode && !p.professionalTask) {
-        p.professionalTask = prompt("Professional Mode task: what are you trying to accomplish?") || "Prepare the next serious move.";
-      }
+    $("srProfileHairScan").onclick = () => {
+      p.verified = `Hair analysis ready: ${p.currentHairState || "normal presentation"}.`;
+      $("srProfileStatus").textContent = "Hair analysis locked into the profile reader.";
       saveState();
-      setProfessionalReminder();
-      updateAssistantDock(p.professionalMode ? `Professional Mode active. Task: ${p.professionalTask}` : "Professional Mode turned off. Maps are open again.");
-      renderProfile();
-      renderMap();
     };
-    $("srProfileExportDoc")?.addEventListener("click", () => {
-      alert(`Professional export ready for ${p.name || "SupportRD Profile"}. PDF / resume / official document lane is active.`);
+    $("srProfileLive").onclick = () => openCatalogProductModal({
+      title: "SupportRD Live Invite",
+      price: "Included",
+      description: `Share this profile with confidence. Live contact: ${p.contact || "https://supportrd.com/live"}`,
+      image: p.picture || "/static/images/hija-de-felix.jpeg"
     });
-    $("srHairScanBtn").onclick = () => {
-      const bar = $("srHairScanBar");
-      const status = $("srHairScanStatus");
-      status.classList.add("support-rebuild-reading-pending");
-      status.innerHTML = `<span class="support-rebuild-gear-pending"><span class="support-rebuild-gear-icon"></span><span class="support-rebuild-gear-dots">Pending serious profile reading</span></span>`;
-      [10,40,50,60,80,100].forEach((n, idx) => setTimeout(() => {
-        bar.style.width = `${n}%`;
-        if (n < 100) return;
-        p.verified = "Verified: hair ready for professional presentation.";
-        status.classList.remove("support-rebuild-reading-pending");
-        status.innerHTML = `
-          <div class="support-rebuild-line">Aria scan: look left complete. Look right complete.</div>
-          <div class="support-rebuild-line">Texture: soft wave</div>
-          <div class="support-rebuild-line">Hair problem: light dryness</div>
-          <div class="support-rebuild-line">Color: dark brown</div>
-          <div class="support-rebuild-line">Category: elegant / straight-curly mix</div>
-          <div class="support-rebuild-line">Condition: Healthy / Normal</div>`;
-        saveState();
-        renderProfile();
-      }, 900 * (idx + 1)));
-    };
   }
-
   function renderMap() {
     const box = $("floatDeviceBox");
     if (!box) return;
     const view = MAPS[state.map] || MAPS.default;
-    const professionalLock = state.profile.professionalMode && state.map === "default";
     box.innerHTML = `
-      <div class="support-rebuild-shell">
+      <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
-          <h3 class="support-rebuild-title">Map Change</h3>
+          <div class="support-rebuild-content-head">
+            <h3 class="support-rebuild-title">Map Change</h3>
+          </div>
+          <div class="support-rebuild-note">Map Change only updates the button layout and map mood for the Remote.</div>
+        </div>
+        <div class="support-rebuild-card">
           <div class="support-rebuild-map-hero" style="background:${view.image}">
             <div class="support-rebuild-title">${view.title}</div>
-            <div class="support-rebuild-note">Tourist spot / resort brochure feel. Map perks should help diary, live, studio, profile, and matching premium themes.</div>
+            <div class="support-rebuild-note">Current map layout applied to the Remote buttons.</div>
           </div>
           <div class="support-rebuild-map-carousel" style="margin-top:12px">
-            ${Object.keys(MAPS).map((key)=>`<button class="support-rebuild-map-disc ${state.map===key?"pulse":""}" data-map="${key}" ${(professionalLock && key !== "default") ? "disabled" : ""} style="background:${MAPS[key].image}"><div class="support-rebuild-title">${MAPS[key].title}</div><div class="support-rebuild-note">${(professionalLock && key !== "default") ? "Cannot proceed in Professional Mode." : "Swipe or sort this disc to choose the route."}</div></button>`).join("")}
+            ${Object.keys(MAPS).map((key)=>`<button class="support-rebuild-map-disc ${state.map===key?"pulse":""}" data-map="${key}" style="background:${MAPS[key].image}"><div class="support-rebuild-title">${MAPS[key].title}</div><div class="support-rebuild-note">Set this map style on the Remote.</div></button>`).join("")}
           </div>
-          <div class="support-rebuild-perks" style="margin-top:12px">
-            ${view.perks.map((perk)=>`<button class="support-rebuild-btn ghost" data-perk="${perk.name}">${perk.name}</button>`).join("")}
-          </div>
-          <div class="support-rebuild-grid two" style="margin-top:12px">
-            ${view.perks.map((perk)=>`<div class="support-rebuild-card" style="padding:12px"><div class="support-rebuild-title">${perk.name}</div><div class="support-rebuild-note">Helps with: ${perk.help}</div><div class="support-rebuild-note" style="margin-top:8px">${perk.pro}</div></div>`).join("")}
-          </div>
-          <div class="support-rebuild-note" id="srMapStatus">${professionalLock ? "Professional Mode is active. Turn it off in Profile before changing maps from default." : "Choosing a perk should route you to the next best help area. Premium / Pro / 21+ Adult Fantasy Ready should feel matched to the selected theme."}</div>
         </div>
       </div>`;
     box.querySelectorAll("[data-map]").forEach((btn) => btn.onclick = () => {
-      if (professionalLock && btn.dataset.map !== "default") {
-        $("srMapStatus").textContent = "Cannot proceed in Professional Mode.";
-        updateAssistantDock("Cannot proceed in Professional Mode.");
-        return;
-      }
       state.map = btn.dataset.map;
       saveState();
-      syncLaunchVisuals();
       renderMap();
-    });
-    box.querySelectorAll("[data-perk]").forEach((btn) => btn.onclick = () => {
-      const perk = view.perks.find((item) => item.name === btn.dataset.perk) || view.perks[0];
-      const next = perk.route;
-      state.premium = "Professional / Making Money";
-      saveState();
-      $("srMapStatus").textContent = `${perk.name} helps with ${perk.help} and now tags this route toward Professional / Making Money.`;
-      activateRoute(next);
+      syncLaunchVisuals();
     });
   }
-
   function renderStudio() {
     const box = $("floatBoardsBox");
     if (!box) return;
-    const recentItems = (state.studioRecent || []).map((item, index) => `
-      <button class="support-rebuild-btn ghost" data-recent-index="${index}">
-        ${item.label} · ${item.savedAt}
-      </button>`).join("");
+    const tracks = ["voice", "beat", "instrument", "adlib"];
     box.innerHTML = `
-      <div class="support-rebuild-shell">
+      <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
-          <h3 class="support-rebuild-title">Studio Quick Panel</h3>
-          <div class="support-rebuild-row">
-            <button class="support-rebuild-btn ${state.studioMode === "quick" ? "pulse" : "ghost"}" id="srStudioQuickMode">Quick Mode</button>
-            <button class="support-rebuild-btn ${state.studioMode === "full" ? "pulse" : "ghost"}" id="srStudioFullMode">Full Studio Mode</button>
-            <button class="support-rebuild-btn ghost" id="srStudioVisibility">${state.studioPublic ? "Make Private" : "Make Public"}</button>
-            <button class="support-rebuild-btn ghost" id="srStudioShareSocial">Share To Social</button>
+          <div class="support-rebuild-content-head">
+            <h3 class="support-rebuild-title">Studio Quick Panel</h3>
+          </div>
+          <div class="support-rebuild-note">SupportRD Studio uses an Audacity-style booth inside the app. Click a motherboard, record directly into it, and build the session live.</div>
+        </div>
+        <div class="support-rebuild-audacity">
+          <div class="support-rebuild-audacity-toolbar">
             <button class="support-rebuild-btn pulse" id="srStudioRecord">Record</button>
-            <button class="support-rebuild-btn ghost" id="srStudioVideo">Live Record Video</button>
             <button class="support-rebuild-btn ghost" id="srStudioStop">Stop</button>
             <button class="support-rebuild-btn ghost" id="srStudioPlay">Play</button>
             <button class="support-rebuild-btn ghost" id="srStudioPause">Pause</button>
-            <button class="support-rebuild-btn ghost" id="srStudioRewind">Rewind</button>
-            <button class="support-rebuild-btn ghost" id="srStudioForward">Fast Forward</button>
             <button class="support-rebuild-btn ghost" id="srStudioUndo">Undo</button>
-            <button class="support-rebuild-btn ghost" id="srStudioExport">Export File</button>
+            <button class="support-rebuild-btn ghost" id="srStudioExport">Export</button>
           </div>
-          <div class="support-rebuild-note" style="margin-top:10px">${state.studioMode === "full" ? "Full studio mode opens the whole motherboard lane for vocals, beat, instrument, adlib, FX, video, and recent saved builds." : "Quick mode keeps record, upload, play, and export one tap away."}</div>
-          <div class="support-rebuild-grid ${state.studioMode === "full" ? "two" : "three"}" style="display:grid;gap:12px;grid-template-columns:1fr">
-            ${["voice","beat","adlib","instrument"].map((board)=>`<div class="support-rebuild-board"><div class="support-rebuild-row"><strong>${board.toUpperCase()} BOARD</strong><button class="support-rebuild-btn ghost" data-board="${board}">Select</button><input type="file" accept="audio/*,video/*" data-upload="${board}"></div><div class="support-rebuild-note" id="srBoardName_${board}">${state.studioBoards[board] || `${board}-track.wav`}</div><div class="support-rebuild-wave"></div><div class="support-rebuild-note" style="margin-top:8px">${board === currentBoard ? "Active motherboard. Record and FX land here." : "Select this motherboard to record or apply edits."}</div></div>`).join("")}
-          </div>
-          <div class="support-rebuild-grid two" style="margin-top:12px">
-            <div>
-              <label class="support-rebuild-note">FX Settings</label>
-              <select class="support-rebuild-select" id="srStudioFx"><option>Echo</option><option>Reverb</option><option>Fade In</option><option>Fade Out</option><option>Bass</option><option>Treble</option><option>Deep Voice</option><option>Opera Voice</option><option>Slow Motion</option><option>Camera Lighting</option><option>Panoramic</option><option>Zoom</option></select>
+          ${tracks.map((board) => `
+            <div class="support-rebuild-audacity-track ${board === currentBoard ? "active" : ""}" data-board="${board}">
+              <div class="support-rebuild-row"><strong>${board.toUpperCase()} MOTHERBOARD</strong><span class="support-rebuild-pill">${state.studioBoards[board] || `${board}-track.wav`}</span></div>
+              <div class="support-rebuild-wave"></div>
+              <div class="support-rebuild-note">${board === currentBoard ? "Active board: record and upload land here live." : "Click to arm this board."}</div>
+              <input type="file" accept="audio/*" data-upload="${board}">
+            </div>`).join("")}
+          <div class="support-rebuild-grid two">
+            <div class="support-rebuild-card">
+              <div class="support-rebuild-title">Studio Status</div>
+              <div class="support-rebuild-note" id="srStudioStatus">Ready to bring the booth to life.</div>
             </div>
-            <div class="support-rebuild-note" id="srStudioStatus">Ready. Motherboards should play from beginning to end and export with visible progress.</div>
-          </div>
-          <div class="support-rebuild-grid two" style="margin-top:12px">
-            <div class="support-rebuild-card" style="padding:12px">
+            <div class="support-rebuild-card">
               <div class="support-rebuild-title">Recent Builds</div>
-              <div class="support-rebuild-mini-list">
-                ${recentItems || `<div class="support-rebuild-note">The latest 3 builds will stay here after recording, upload, or export.</div>`}
-              </div>
-              <div class="support-rebuild-note" style="margin-top:10px">Visibility: ${state.studioPublic ? "Public in FAQ Lounge" : "Private to this account"}</div>
-            </div>
-            <div class="support-rebuild-card" style="padding:12px">
-              <div class="support-rebuild-title">Full Studio Lane</div>
-              <div class="support-rebuild-note">Beat, vocal, instrument, and adlib motherboards should line up, play together, undo together, and export into one SupportRD-ready file.</div>
-              <div class="support-rebuild-note" style="margin-top:10px">Current board: ${currentBoard.toUpperCase()} · Account lane: ${accountSummary()}</div>
+              <div class="support-rebuild-mini-list">${(state.studioRecent || []).map((item) => `<div class="support-rebuild-line">${item.label} · ${item.savedAt}</div>`).join("") || `<div class="support-rebuild-note">The latest 3 studio builds will stay here.</div>`}</div>
             </div>
           </div>
-          <div class="support-rebuild-card" style="margin-top:12px;padding:12px">
-            <div class="support-rebuild-title">Export Types</div>
-            <div class="support-rebuild-row"><span class="support-rebuild-pill">.mp3</span><span class="support-rebuild-pill">.mp4</span><span class="support-rebuild-pill">.m4a</span></div>
-            <div class="support-rebuild-note" style="margin-top:10px">Live recording mode should expose camera settings, panoramic, zoom, wave sweep, lighting, and selfie capture.</div>
-          </div>
-          <div class="support-rebuild-progress" style="margin-top:12px"><span id="srStudioBar"></span></div>
+          <div class="support-rebuild-progress"><span id="srStudioBar"></span></div>
         </div>
       </div>`;
-    $("srStudioQuickMode").onclick = () => { state.studioMode = "quick"; saveState(); renderStudio(); };
-    $("srStudioFullMode").onclick = () => { state.studioMode = "full"; saveState(); renderStudio(); };
-    $("srStudioVisibility").onclick = () => {
-      state.studioPublic = !state.studioPublic;
-      if (state.studioPublic) publishStudioTrack(`SupportRD Studio Mix ${new Date().toLocaleDateString()}`);
-      saveState();
-      renderStudio();
-      renderFaqAddon();
-    };
-    $("srStudioShareSocial").onclick = () => {
-      state.diaryDescription = `Listen to my latest SupportRD studio build: ${state.studioShareUrl}`;
-      saveState();
-      openPlatforms();
-    };
     box.querySelectorAll("[data-board]").forEach((btn) => btn.onclick = () => {
       currentBoard = btn.dataset.board;
-      $("srStudioStatus").textContent = `Editing ${currentBoard} board. Highlight here before using FX or record.`;
       renderStudio();
     });
     box.querySelectorAll("[data-upload]").forEach((input) => input.onchange = () => {
       const file = input.files && input.files[0];
       if (!file) return;
       pushStudioUndo(`Before loading ${file.name}`);
-      boardAudio[input.dataset.upload] = new Audio(URL.createObjectURL(file));
       state.studioBoards[input.dataset.upload] = file.name;
       saveRecentStudioBuild(`${file.name} into ${input.dataset.upload}`, "upload");
-      $(`srBoardName_${input.dataset.upload}`).textContent = file.name;
-      $("srStudioStatus").textContent = `${file.name} loaded into ${input.dataset.upload} board.`;
       saveState();
+      renderStudio();
+      $("srStudioStatus").textContent = `${file.name} loaded into ${input.dataset.upload}.`;
     });
     $("srStudioRecord").onclick = startRecord;
-    $("srStudioVideo").onclick = () => { $("srStudioStatus").textContent = "Live Record Video armed: panoramic, zoom, wave sweep, lighting, and selfie capture are the active camera modes."; };
     $("srStudioStop").onclick = stopRecord;
     $("srStudioPlay").onclick = playBoards;
     $("srStudioPause").onclick = () => Object.values(boardAudio).forEach((audio) => audio && audio.pause());
-    $("srStudioRewind").onclick = () => Object.values(boardAudio).forEach((audio) => { if (audio) audio.currentTime = 0; });
-    $("srStudioForward").onclick = () => Object.values(boardAudio).forEach((audio) => { if (audio) audio.currentTime += 3; });
     $("srStudioUndo").onclick = () => restoreStudioSnapshot(studioUndoStack.pop());
     $("srStudioExport").onclick = exportStudio;
-    box.querySelectorAll("[data-recent-index]").forEach((btn) => btn.onclick = () => {
-      const item = state.studioRecent?.[Number(btn.dataset.recentIndex)];
-      if (!item) return;
-      restoreStudioSnapshot(item);
-    });
   }
-
   async function startRecord() {
     try {
       pushStudioUndo(`Before recording ${currentBoard}`);
@@ -1995,169 +1774,88 @@
   function renderFaqAddon() {
     const box = $("floatLiveBox");
     if (!box) return;
-    const view = MAPS[state.map] || MAPS.default;
-    const professionalMode = !!state.profile.professionalMode;
-    const publicTracks = (state.publicTracks || []).map((track, index) => `
-      <div class="support-rebuild-public-track">
-        <div>
-          <div class="support-rebuild-title">${track.label}</div>
-          <div class="support-rebuild-note">Artist featured by Studio SupportRD: ${track.artist}</div>
-        </div>
-        <div class="support-rebuild-row">
-          <button class="support-rebuild-btn ghost" data-public-play="${index}">Play</button>
-          <button class="support-rebuild-btn ghost" data-public-pause="${index}">Pause</button>
-        </div>
-      </div>`).join("");
     box.innerHTML = `
-      <div class="support-rebuild-shell">
-        <div class="support-rebuild-card">
-          <h3 class="support-rebuild-title">FAQ Lounge</h3>
+      <div class="support-rebuild-content-shell">
+        <div class="support-rebuild-card support-rebuild-faq-tv">
+          <div class="support-rebuild-content-head">
+            <h3 class="support-rebuild-title">FAQ Lounge</h3>
+          </div>
+          <div class="support-rebuild-note">FAQ Lounge keeps the TV Reel front and center. This is the relaxed lane beside Diary and Profile.</div>
           <iframe class="support-rebuild-reel-frame" src="/static/reel.html?v=20260322b&theme=tiktok" title="SupportRD TV Reel"></iframe>
-          <div class="support-rebuild-note" style="margin-top:10px">${professionalMode ? "Professional Mode contained: FAQ now leans interviews, world news, and serious answers." : `${view.title} now drives the FAQ reel mood and route ideas.`}</div>
-          <div class="support-rebuild-row">
-            <button class="support-rebuild-btn pulse">Tiktok Style Hair</button>
-            <button class="support-rebuild-btn ghost">Youtube Style Hair</button>
-            <button class="support-rebuild-btn ghost">Movies Style Hair</button>
-          </div>
-          <select class="support-rebuild-select" style="margin-top:12px">
-            ${professionalMode ? `
-              <option>How should I prepare hair for a professional interview?</option>
-              <option>What is the latest world news event affecting image and presentation?</option>
-              <option>How do I keep hair serious for business travel?</option>` : `
-              <option>What helps dryness fastest?</option>
-              <option>How do I detangle without damage?</option>
-              <option>What premium level fits me?</option>`}
-          </select>
-          <div class="support-rebuild-note" style="margin-top:12px">Map-specific links and cool event-style references belong here so the FAQ feels alive instead of static.</div>
-            <div class="support-rebuild-grid two" style="margin-top:12px">
-              <div class="support-rebuild-card" style="padding:12px">
-                <div class="support-rebuild-title">Contacts / Channels</div>
-              <div class="support-rebuild-row">
-                <a class="support-rebuild-btn ghost" href="mailto:xxfigueroa1993@yahoo.com" target="_blank" rel="noopener">Email</a>
-                <button class="support-rebuild-btn ghost" id="srFaqPayments">Payments</button>
-                <a class="support-rebuild-btn ghost" href="https://www.google.com/maps/search/Charlotte,+NC" target="_blank" rel="noopener">In-Person</a>
-              </div>
-              <div class="support-rebuild-note" style="margin-top:10px">Render and GitHub remain the core engine image behind SupportRD operations.</div>
-            </div>
-              <div class="support-rebuild-card" style="padding:12px">
-                <div class="support-rebuild-title">Feedback</div>
-                <div class="support-rebuild-row">
-                  <button class="support-rebuild-btn ghost" id="srFaqTech">Technical Support</button>
-                  <button class="support-rebuild-btn ghost" id="srFaqFan">Fan Feedback</button>
-                  <button class="support-rebuild-btn ghost" id="srFaqDeveloperFeed">Developer Feed</button>
-                  <button class="support-rebuild-btn ghost" id="srFaqTechnicalLane">Technical Lane</button>
-                </div>
-              </div>
-            </div>
-            <div class="support-rebuild-card" style="padding:12px;margin-top:12px">
-              <div class="support-rebuild-title">Studio Share Lounge</div>
-              <div class="support-rebuild-note">Public tracks from quick studio and full studio show up here fast.</div>
-              <div class="support-rebuild-mini-list" style="margin-top:10px">
-                ${publicTracks || `<div class="support-rebuild-note">No public SupportRD studio tracks yet. Use Make Public in Studio.</div>`}
-              </div>
-            </div>
-          </div>
-        </div>`;
-    $("srFaqPayments")?.addEventListener("click", openPaymentModal);
-    $("srFaqTech")?.addEventListener("click", ()=>window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Technical%20Support","_blank","noopener"));
-    $("srFaqFan")?.addEventListener("click", ()=>window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Fan%20Feedback","_blank","noopener"));
-    $("srFaqDeveloperFeed")?.addEventListener("click", openDeveloperFeed);
-    $("srFaqTechnicalLane")?.addEventListener("click", openTechnicalLane);
-    box.querySelectorAll("[data-public-play]").forEach((btn) => btn.addEventListener("click", () => {
-      const track = state.publicTracks?.[Number(btn.dataset.publicPlay)];
-      if (!track) return;
-      alert(`Playing ${track.label} by ${track.artist} from SupportRD Studio.`);
-    }));
-    box.querySelectorAll("[data-public-pause]").forEach((btn) => btn.addEventListener("click", () => {
-      const track = state.publicTracks?.[Number(btn.dataset.publicPause)];
-      if (!track) return;
-      alert(`Paused ${track.label}.`);
-    }));
+          <div class="support-rebuild-note">Need more SupportRD answers? Open Diary for Aria or Profile for the hair reader.</div>
+        </div>
+      </div>`;
   }
-
-  function syncLaunchVisuals() {
-    const view = MAPS[state.map] || MAPS.default;
-    document.querySelectorAll(".float-launch-btn").forEach((btn) => {
-      btn.style.background = state.map === "default"
-        ? "linear-gradient(180deg, rgba(4,8,18,.28), rgba(4,8,18,.62)), url('/static/images/woman-waking-up12.jpg') center/cover no-repeat"
-        : view.image;
-      btn.style.borderRadius = "22px";
-      btn.style.color = "#fff";
-    });
-  }
-
-  function activatePresentationMode() {
-    const shell = document.querySelector(".float-mode-shell");
-    if (!shell) return;
-    document.body.classList.add("support-rebuild-page");
-    const app = document.getElementById("app");
-    if (app) app.classList.add("support-rebuild-app");
-    const launchMenu = document.getElementById("launchMenu");
-    if (launchMenu) launchMenu.setAttribute("hidden", "hidden");
-    const launchSplash = document.getElementById("launchSplash");
-    if (launchSplash) launchSplash.setAttribute("hidden", "hidden");
-    const topbar = document.querySelector(".topbar");
-    if (topbar) topbar.setAttribute("hidden", "hidden");
-    const mainRow = document.querySelector(".main-content-row");
-    if (mainRow) mainRow.setAttribute("hidden", "hidden");
-    const satBtn = document.getElementById("satQuickOpen");
-    if (satBtn) satBtn.setAttribute("hidden", "hidden");
-    const satModal = document.getElementById("satQuickModal");
-    if (satModal) satModal.setAttribute("hidden", "hidden");
-    const brochure = document.querySelector(".brochure-float");
-    if (brochure) brochure.setAttribute("hidden", "hidden");
-    const loginGate = document.getElementById("loginGate");
-    if (loginGate) loginGate.setAttribute("hidden", "hidden");
-    shell.hidden = false;
-    shell.setAttribute("aria-hidden", "false");
-    shell.classList.add("support-rebuild-mode");
-    shell.dataset.remoteTheme = state.map === "default" ? "default" : state.map;
-    document.body.classList.add("float-mode-active");
-  }
-
   function renderShellChrome() {
     const top = document.querySelector(".float-mode-top");
     if (!top) return;
     const catalogMarkup = renderCatalogSection();
+    const adCards = SUPPORTRD_COPY.ads.map((ad, index) => `
+      <div class="support-rebuild-ad-banner" style="background-image:linear-gradient(180deg,rgba(5,9,16,.12),rgba(5,9,16,.70)),url('${index === 0 ? "/static/images/fantasy-21-plus-main-ad.jpg" : "/static/images/jake-studio-premium.jpg"}')">
+        <div class="support-rebuild-ad-topline">
+          <div class="support-rebuild-kicker">SupportRD Ad</div>
+          <div class="support-rebuild-price-badge">${ad.price}</div>
+        </div>
+        <div class="support-rebuild-title">${ad.title}</div>
+        <div class="support-rebuild-note">${ad.note}</div>
+        <div class="support-rebuild-row" style="margin-top:12px">
+          <button class="support-rebuild-btn pulse" data-ad-route="${ad.route}">${ad.cta}</button>
+        </div>
+      </div>`);
     top.innerHTML = `
         <div class="support-rebuild-home-top">
           <div class="support-rebuild-card">
             <div class="support-rebuild-hero-layout">
               <div class="support-rebuild-store-banner">
                 <div class="support-rebuild-kicker">SupportRD Storefront Remote</div>
-                <h1 class="support-rebuild-hero-title">Custom order now to feel the hair solution in your scalp.</h1>
-                <div class="support-rebuild-hero-sub">Join the SupportRD system and introduce a new cycle for your hair. Catalog stays as the main page, the Remote lives as a smaller six-button corner controller, and every click swaps the content cleanly under it.</div>
+                <h1 class="support-rebuild-hero-title">SupportRD keeps the catalog on top, the Remote in the middle, and the real help directly underneath.</h1>
+                <div class="support-rebuild-hero-sub">Formula Exclusiva, Gotero, Gotika, Laciador, Mascarilla, and Shampoo live in the catalog. The Remote stays visible and every click sends the content directly underneath it without taking over the page.</div>
                 <div class="support-rebuild-row">
                   <button class="support-rebuild-btn ghost" id="srHeroCustomOrder">Custom Order</button>
                   <button class="support-rebuild-btn ghost" id="srHeroProducts">Main Catalog</button>
-                  <button class="support-rebuild-btn ghost" id="srHeroDiaryInvite">Invitable Diary Mode</button>
+                  <button class="support-rebuild-btn ghost" id="srHeroDiaryInvite">Open Diary</button>
                 </div>
-                <div class="support-rebuild-note">Products should feel open by default like a real store, but never take over the Remote or the route content below it.</div>
+                <div class="support-rebuild-note">Products stay as the main meat. Remote buttons switch the live help below. SupportRD Remote gives freedom to the person and their hair anywhere the day moves.</div>
               </div>
               <div class="support-rebuild-hero-visual"></div>
             </div>
             ${catalogMarkup}
-            <div class="support-rebuild-card" style="margin-top:14px">
-              <div class="support-rebuild-title">Learn More About The SupportRD Remote</div>
-              <div class="support-rebuild-note">SupportRD Remote gives freedom to the person and their hair. It features an in-home studio booth inspired by an Audacity-style booth from rapper developer Anthony Figueroa, an in-depth hair analysis, and your chance to express hair problems to our confirmed-working hair AI Aria.</div>
-              <div class="support-rebuild-note" style="margin-top:10px">You can find Aria in Diary Mode, in the bottom-right corner, or moving in front of you on the page from time to time. The Remote keeps SupportRD hair technology and knowledge close after buying Formula Exclusiva, Gotero, Gotika, Laciador, Mascarilla, or Shampoo.</div>
-              <div class="support-rebuild-note" style="margin-top:10px">Works seamlessly for jungle adventures, road trip adventures, GPS adventures, and personal in-home adventures.</div>
-              <div class="support-rebuild-row" style="margin-top:12px">
-                <button class="support-rebuild-btn pulse" id="srLearnRemoteTech">Find Out More AI Remote Technology In Hair Products Page</button>
+          </div>
+          <div class="support-rebuild-top-meta">
+            <div class="support-rebuild-settings-tab">
+              <div class="support-rebuild-top-tools">
+                <button class="support-rebuild-btn pulse" id="srTopOpenSettings">General Settings</button>
+                <button class="support-rebuild-btn ghost" id="srTopOpenProducts">Main Catalog</button>
+                <button class="support-rebuild-btn ghost" id="srTopLoginToggle">Login / Logout Account</button>
               </div>
             </div>
-            <div class="support-rebuild-overview" style="margin-top:14px">
-              <div class="support-rebuild-card"><div class="support-rebuild-title">Diary Mode</div><div class="support-rebuild-note">Live mode, hands-free Aria, real diary, and hair-problem support.</div></div>
-              <div class="support-rebuild-card"><div class="support-rebuild-title">Studio</div><div class="support-rebuild-note">Vocals, beat, instrument, FX, and export-minded creation on the move.</div></div>
-              <div class="support-rebuild-card"><div class="support-rebuild-title">Profile</div><div class="support-rebuild-note">Hair analysis, serious image, live invite, and professional prep.</div></div>
-              <div class="support-rebuild-card"><div class="support-rebuild-title">Map Change</div><div class="support-rebuild-note">Fun visuals, serious routing, and making-money map help.</div></div>
+            <div class="support-rebuild-card">
+              <div class="support-rebuild-title">Main Structure</div>
+              <div class="support-rebuild-note">Frontend = Remote feel. Backend = account operations. OpenAI = Aria hair guidance. Statistics and Contacts stay measurable.</div>
             </div>
           </div>
-          <div class="support-rebuild-settings-tab">
-            <div class="support-rebuild-top-tools">
-              <button class="support-rebuild-btn pulse" id="srTopOpenSettings">General Settings</button>
-              <button class="support-rebuild-btn ghost" id="srTopOpenProducts">Main Catalog</button>
-              <button class="support-rebuild-btn ghost" id="srTopLoginToggle">Login / Logout Account</button>
+        </div>
+        <div class="support-rebuild-remote-stage">
+          <div class="support-rebuild-remote-column">
+            ${adCards[0] || ""}
+            <div class="support-rebuild-card support-rebuild-remote-copy">
+              <div class="support-rebuild-title">Learn More About The SupportRD Remote</div>
+              <div class="support-rebuild-remote-note">SupportRD Remote features an in-home studio booth inspired by an Audacity-style workflow from rapper developer Anthony Figueroa, in-depth hair analysis, and direct hair-problem support from Aria.</div>
+              <div class="support-rebuild-remote-note">Use it for jungle adventures, road trips, GPS moments, and personal in-home hair support.</div>
+              <button class="support-rebuild-btn ghost" id="srLearnRemoteTech">Find Out More AI Remote Technology In Hair Products Page</button>
+            </div>
+          </div>
+          <div class="support-rebuild-card support-rebuild-remote-copy">
+            <div class="support-rebuild-title">SupportRD Remote</div>
+            <div class="support-rebuild-note">This six-button Remote stays visible. The content under it changes instantly for Diary, Profile, Studio, FAQ Lounge, Map Change, and Settings.</div>
+            <div class="support-rebuild-note">Aria is confirmed working and shows up in Diary Mode, the corner dock, and the product flow when hair support matters.</div>
+          </div>
+          <div class="support-rebuild-remote-column">
+            ${adCards[1] || ""}
+            <div class="support-rebuild-card">
+              <div class="support-rebuild-title">Contacts / Channels</div>
+              <div class="support-rebuild-note">${state.statistics.contacts}</div>
+              <div class="support-rebuild-note" style="margin-top:10px">Developer feed, support, fan mail, and payment activity stay inside SupportRD menus.</div>
             </div>
           </div>
         </div>
@@ -2213,6 +1911,9 @@
     top.querySelectorAll("[data-catalog-buy]").forEach((btn) => btn.addEventListener("click", () => {
       const product = getCatalogProducts().find((item) => item.id === btn.dataset.catalogBuy);
       openCheckoutForProduct(product, product?.title || "SupportRD product");
+    }));
+    top.querySelectorAll("[data-ad-route]").forEach((btn) => btn.addEventListener("click", () => {
+      openQuestionnaireRoute({ route: btn.dataset.adRoute, label: btn.textContent.trim(), note: "Catalog ad routed the visitor into a live SupportRD section." });
     }));
   }
 
@@ -2284,11 +1985,17 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410q";
+      window.SupportRDRemoteRebuildVersion = "20260410r";
     }
 
   setTimeout(init, 700);
 })();
+
+
+
+
+
+
 
 
 
