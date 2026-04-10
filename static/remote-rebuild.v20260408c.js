@@ -464,19 +464,23 @@
         top:auto;
         z-index:5;
         margin:0 0 26px !important;
+        margin-left:auto !important;
         padding:14px !important;
+        width:min(350px,calc(100vw - 36px));
         overflow:visible !important;
         background:rgba(5,10,20,.74);
         border:1px solid rgba(255,255,255,.12);
         border-radius:26px;
         box-shadow:0 18px 38px rgba(0,0,0,.22);
       }
+      .float-mode-shell.support-rebuild-mode .float-mode-launch{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px !important}
+      .float-mode-shell.support-rebuild-mode .float-launch-btn{min-height:118px !important;padding:16px 12px 16px 54px !important;font-size:15px !important}
       .support-rebuild-shell{display:grid;gap:14px}
       .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:0;position:relative;z-index:1;min-width:0;scroll-margin-top:18px}
       .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:8px}
       .support-rebuild-launch-tools{display:flex;justify-content:flex-end;gap:10px;margin:0 0 10px}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
-      .support-rebuild-sticky-rail{position:fixed;top:214px;right:16px;z-index:74;width:min(280px,calc(100vw - 24px));display:grid;gap:12px}
+      .support-rebuild-sticky-rail{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:74;width:min(200px,calc(100vw - 24px));display:grid;gap:12px}
       .support-rebuild-sticky-card{padding:14px;border-radius:22px;background:rgba(7,12,22,.90);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.26);color:#fff}
       .support-rebuild-mini-title{font:700 .92rem/1.2 Georgia,serif;margin:0 0 8px}
       .support-rebuild-mini-list{display:grid;gap:8px}
@@ -486,7 +490,7 @@
       .support-rebuild-account-kicker{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.64)}
       .support-rebuild-account-meta{display:grid;gap:8px}
       .support-rebuild-overview{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-      .support-rebuild-home-top{display:grid;gap:12px;grid-template-columns:minmax(0,1.45fr) minmax(280px,.7fr)}
+      .support-rebuild-home-top{display:grid;gap:12px;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr)}
       .support-rebuild-card{background:rgba(9,12,22,.78);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:16px;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.24)}
       .support-rebuild-title{font:700 1.05rem/1.2 Georgia,serif;letter-spacing:.02em;margin:0 0 10px}
       .support-rebuild-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -623,6 +627,11 @@
       }
       .float-mode-shell.support-rebuild-mode .float-box-head{
         margin-bottom:18px;
+      }
+      @media (max-width: 980px){
+        .support-rebuild-home-top{grid-template-columns:1fr}
+        .float-mode-shell.support-rebuild-mode .float-mode-launch{width:100%;margin-left:0 !important}
+        .support-rebuild-sticky-rail{left:10px;top:auto;bottom:110px;transform:none;width:min(180px,calc(100vw - 20px))}
       }
     `;
     document.head.appendChild(style);
@@ -1073,11 +1082,25 @@
     return `${name} here. Tell me the exact hair issue and I will keep it focused, helpful, and ready for the next step.`;
   }
 
-  function speakText(text) {
+  function pickAssistantVoice(name) {
+    try {
+      const voices = window.speechSynthesis?.getVoices?.() || [];
+      const preferred = name === "Aria"
+        ? ["Microsoft Aria", "Microsoft Jenny", "Zira", "Samantha", "Google UK English Female"]
+        : ["Microsoft Guy", "Microsoft Davis", "Google UK English Male", "Daniel", "Alex"];
+      return voices.find((voice) => preferred.some((token) => voice.name.includes(token))) || voices[0] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function speakText(text, name = "Aria") {
     try {
       const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 0.93;
-      utter.pitch = 1;
+      utter.rate = name === "Aria" ? 0.9 : 0.92;
+      utter.pitch = name === "Aria" ? 0.9 : 0.82;
+      const voice = pickAssistantVoice(name);
+      if (voice) utter.voice = voice;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utter);
     } catch {}
@@ -1096,7 +1119,7 @@
       );
       renderDiary();
       updateAssistantDock(`${name} is responding now.`);
-      setTimeout(() => speakText(reply), 2200);
+      setTimeout(() => speakText(reply, name), 2200);
     };
     if (Recognition) {
       const recog = new Recognition();
@@ -1152,13 +1175,7 @@
       rail.className = "support-rebuild-sticky-rail";
       document.body.appendChild(rail);
     }
-    let productsPanel = $("srProductsPanel");
-    if (!productsPanel) {
-      productsPanel = document.createElement("aside");
-      productsPanel.id = "srProductsPanel";
-      productsPanel.className = "support-rebuild-products-panel";
-      document.body.appendChild(productsPanel);
-    }
+    $("srProductsPanel")?.remove();
     let infoFooter = $("srInfoFooter");
     if (!infoFooter) {
       infoFooter = document.createElement("aside");
@@ -1175,16 +1192,6 @@
           <button class="support-rebuild-btn ghost" data-sticky-route="floatAssistantBox">Open Profile</button>
           <button class="support-rebuild-btn pulse" id="srStickyPay">Open Fast Pay</button>
           <button class="support-rebuild-btn ghost" id="srOpenTechnicalLane">Technical Lane</button>
-        </div>
-      </section>`;
-    productsPanel.innerHTML = `
-      <section class="support-rebuild-sticky-card">
-        <div class="support-rebuild-mini-title">Products Menu</div>
-        <div class="support-rebuild-note">Bottom-right product menu keeps the SupportRD catalog easy to reach without taking over the Remote.</div>
-        <div class="support-rebuild-mini-list" style="margin-top:10px">
-          <button class="support-rebuild-btn pulse" id="srStickyCatalog">Open Main Catalog</button>
-          <button class="support-rebuild-btn ghost" id="srStickyCustomOrder">Custom Order</button>
-          <button class="support-rebuild-btn ghost" id="srStickyProductsPay">Fast Pay</button>
         </div>
       </section>`;
     infoFooter.innerHTML = `
@@ -1204,14 +1211,6 @@
     $("srOpenTechnicalLane")?.addEventListener("click", openTechnicalLane);
     $("srOpenStatsBoard")?.addEventListener("click", openStatisticsBoard);
     $("srOpenDeveloperFeed")?.addEventListener("click", openDeveloperFeed);
-    $("srStickyCatalog")?.addEventListener("click", () => {
-      state.catalogSelected = "";
-      saveState();
-      renderShellChrome();
-      document.querySelector(".float-mode-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-    $("srStickyCustomOrder")?.addEventListener("click", () => window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order", "_blank", "noopener"));
-    $("srStickyProductsPay")?.addEventListener("click", openPaymentModal);
     rail.querySelectorAll("[data-sticky-route]").forEach((btn) => {
       btn.addEventListener("click", () => activateRoute(btn.dataset.stickyRoute));
     });
@@ -2028,7 +2027,7 @@
               <div class="support-rebuild-store-banner">
                 <div class="support-rebuild-kicker">SupportRD Storefront Remote</div>
                 <h1 class="support-rebuild-hero-title">Custom order now to feel the hair solution in your scalp.</h1>
-                <div class="support-rebuild-hero-sub">Join the SupportRD system and introduce a new cycle for your hair. The catalog, the intro, and the Remote should all stay visible while the page content changes under the Remote the moment a button is clicked.</div>
+                <div class="support-rebuild-hero-sub">Join the SupportRD system and introduce a new cycle for your hair. Catalog stays as the main page, the Remote lives as a smaller six-button corner controller, and every click swaps the content cleanly under it.</div>
                 <div class="support-rebuild-row">
                   <button class="support-rebuild-btn pulse" id="srHeroCustomOrder">Custom Order Now</button>
                   <button class="support-rebuild-btn ghost" id="srHeroProducts">Main Catalog</button>
@@ -2039,6 +2038,15 @@
               <div class="support-rebuild-hero-visual"></div>
             </div>
             ${catalogMarkup}
+            <div class="support-rebuild-card" style="margin-top:14px">
+              <div class="support-rebuild-title">Learn More About The SupportRD Remote</div>
+              <div class="support-rebuild-note">SupportRD Remote gives freedom to the person and their hair. It features an in-home studio booth inspired by an Audacity-style booth from rapper developer Anthony Figueroa, an in-depth hair analysis, and your chance to express hair problems to our confirmed-working hair AI Aria.</div>
+              <div class="support-rebuild-note" style="margin-top:10px">You can find Aria in Diary Mode, in the bottom-right corner, or moving in front of you on the page from time to time. The Remote keeps SupportRD hair technology and knowledge close after buying Formula Exclusiva, Gotero, Gotika, Laciador, Mascarilla, or Shampoo.</div>
+              <div class="support-rebuild-note" style="margin-top:10px">Works seamlessly for jungle adventures, road trip adventures, GPS adventures, and personal in-home adventures.</div>
+              <div class="support-rebuild-row" style="margin-top:12px">
+                <button class="support-rebuild-btn pulse" id="srLearnRemoteTech">Find Out More AI Remote Technology In Hair Products Page</button>
+              </div>
+            </div>
             <div class="support-rebuild-overview" style="margin-top:14px">
               <div class="support-rebuild-card"><div class="support-rebuild-title">Diary Mode</div><div class="support-rebuild-note">Live mode, hands-free Aria, real diary, and hair-problem support.</div></div>
               <div class="support-rebuild-card"><div class="support-rebuild-title">Studio</div><div class="support-rebuild-note">Vocals, beat, instrument, FX, and export-minded creation on the move.</div></div>
@@ -2050,7 +2058,7 @@
             <div class="support-rebuild-top-tools">
               <div>
                 <div class="support-rebuild-title">General Settings</div>
-                <div class="support-rebuild-note">Settings, Account, and Login stay to the right as a collapsable sticky page. The catalog remains the product seller while the Remote changes the live content under it.</div>
+                <div class="support-rebuild-note">Settings, Account, and Login stay to the right as a collapsable sticky page. The catalog remains the main seller while the smaller Remote changes the live content under it.</div>
               </div>
               <div class="support-rebuild-row">
                 <button class="support-rebuild-btn pulse" id="srTopOpenSettings">Open Settings</button>
@@ -2074,6 +2082,7 @@
       renderShellChrome();
     });
     $("srHeroDiaryInvite")?.addEventListener("click", () => activateRoute("floatSettingsBox"));
+    $("srLearnRemoteTech")?.addEventListener("click", () => activateRoute("floatLiveBox"));
     $("srTopOpenSettings")?.addEventListener("click", () => activateRoute("floatProfileBox"));
     $("srTopOpenProducts")?.addEventListener("click", () => {
       state.catalogSelected = "";
@@ -2196,11 +2205,12 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410l";
+      window.SupportRDRemoteRebuildVersion = "20260410m";
     }
 
   setTimeout(init, 700);
 })();
+
 
 
 
