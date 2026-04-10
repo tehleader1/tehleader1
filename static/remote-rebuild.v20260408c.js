@@ -66,7 +66,6 @@
       architecture: "Loading architecture stack...",
       adAttribution: "No ad route selected yet."
     },
-    compactRemote: false,
     adQuestionnaire: "",
     productMenuOpen: true,
     catalogPage: 0,
@@ -503,6 +502,7 @@
       .support-rebuild-hero-title{font:700 clamp(1.25rem,2.8vw,2rem)/1.06 Georgia,serif;margin:0}
       .support-rebuild-hero-sub{font-size:1rem;line-height:1.5;color:rgba(255,255,255,.88)}
       .support-rebuild-top-tools{display:grid;gap:12px}
+      .support-rebuild-settings-tab{display:inline-flex;align-items:center;justify-content:center;min-height:64px;padding:14px 18px;border-radius:22px;background:rgba(9,12,22,.86);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 42px rgba(0,0,0,.24)}
       .support-rebuild-hero-layout{display:grid;gap:14px;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);align-items:stretch}
       .support-rebuild-hero-visual{min-height:260px;border-radius:22px;background:linear-gradient(180deg,rgba(4,8,18,.16),rgba(4,8,18,.48)),url('/static/images/lezawli.jpeg') center/cover no-repeat;border:1px solid rgba(255,255,255,.12)}
       .support-rebuild-product-strip{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
@@ -860,42 +860,88 @@
     modal.classList.add("is-open");
   }
 
+  function buildCustomOrderSummary(productName) {
+    const orderProduct = productName || "SupportRD Product";
+    const details = state.customOrderDraft || {};
+    const customer = details.customer || state.account.email || "guest@supportrd.com";
+    const brief = details.brief || "Need a custom SupportRD product lane.";
+    const quantity = details.quantity || "1";
+    return [
+      `SupportRD Custom Order Pending`,
+      `Product: ${orderProduct}`,
+      `Customer: ${customer}`,
+      `Quantity: ${quantity}`,
+      `Notes: ${brief}`
+    ].join(" · ");
+  }
+
   function openCustomOrderProductModal(product) {
-    if (!product) return;
+    const activeProduct = product || {
+      title: "SupportRD Product",
+      price: "Custom quote",
+      description: "Founder-led custom product support with SupportRD retail confidence.",
+      image: "/static/images/brochure-scroll-store.jpg"
+    };
     const modal = ensureProductModal();
     const body = $("srProductModalBody");
+    const draft = state.customOrderDraft || {};
     body.innerHTML = `
       <div class="support-rebuild-row" style="justify-content:space-between">
-        <h3 class="support-rebuild-title">${product.title} Custom Order</h3>
+        <h3 class="support-rebuild-title">${activeProduct.title} Custom Order</h3>
         <button class="support-rebuild-btn ghost" id="srCloseProductModal">X</button>
       </div>
       <div class="support-rebuild-catalog-detail" style="margin-top:12px">
-        <div class="support-rebuild-catalog-hero" style="background-image:url('${product.image}')"></div>
+        <div class="support-rebuild-catalog-hero" style="background-image:url('${activeProduct.image}')"></div>
         <div class="support-rebuild-card">
-          <div class="support-rebuild-price-badge">${product.price}</div>
-          <div class="support-rebuild-note" style="margin-top:14px">${product.description}</div>
+          <div class="support-rebuild-price-badge">${activeProduct.price}</div>
+          <div class="support-rebuild-note" style="margin-top:14px">${activeProduct.description}</div>
           <div class="support-rebuild-note" style="margin-top:12px">This is a physical SupportRD product, so the clean full view goes straight into the custom-order lane.</div>
           <div style="margin-top:14px">
             <label class="support-rebuild-note">Choose your custom order product</label>
             <select class="support-rebuild-select" id="srCustomOrderProduct">
-              <option ${product.title === "Formula Exclusiva" ? "selected" : ""}>Formula Exclusiva</option>
-              <option ${product.title === "Gotero" ? "selected" : ""}>Gotero</option>
-              <option ${product.title === "Gotika" ? "selected" : ""}>Gotika</option>
-              <option ${product.title === "Laciador" ? "selected" : ""}>Laciador</option>
-              <option ${product.title === "Mascarilla" ? "selected" : ""}>Mascarilla</option>
-              <option ${product.title === "Shampoo SupportRD" ? "selected" : ""}>Shampoo</option>
+              <option ${activeProduct.title === "Formula Exclusiva" ? "selected" : ""}>Formula Exclusiva</option>
+              <option ${activeProduct.title === "Gotero" ? "selected" : ""}>Gotero</option>
+              <option ${activeProduct.title === "Gotika" ? "selected" : ""}>Gotika</option>
+              <option ${activeProduct.title === "Laciador" ? "selected" : ""}>Laciador</option>
+              <option ${activeProduct.title === "Mascarilla" ? "selected" : ""}>Mascarilla</option>
+              <option ${activeProduct.title === "Shampoo SupportRD" ? "selected" : ""}>Shampoo</option>
             </select>
           </div>
+          <div class="support-rebuild-grid two" style="margin-top:14px">
+            <input class="support-rebuild-input" id="srCustomOrderCustomer" placeholder="Customer email" value="${draft.customer || state.account.email || ""}">
+            <input class="support-rebuild-input" id="srCustomOrderQuantity" placeholder="Quantity" value="${draft.quantity || "1"}">
+          </div>
+          <textarea class="support-rebuild-textarea" id="srCustomOrderBrief" placeholder="What should SupportRD prepare for this order?" style="margin-top:12px">${draft.brief || ""}</textarea>
+          <div class="support-rebuild-note" id="srCustomOrderSummary" style="margin-top:12px">${buildCustomOrderSummary(activeProduct.title)}</div>
           <div class="support-rebuild-row" style="margin-top:14px">
-            <a class="support-rebuild-btn pulse" id="srEmailCustomOrder" href="mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order%20-${encodeURIComponent(product.title)}" target="_blank" rel="noopener">Start Custom Order</a>
-            <a class="support-rebuild-btn ghost" href="https://supportrd.com/custom-orders" target="_blank" rel="noopener">Open Custom Orders</a>
+            <button class="support-rebuild-btn pulse" id="srSaveCustomOrder">Save Custom Order</button>
+            <button class="support-rebuild-btn ghost" id="srRouteCustomOrderPayment">Route To Payments</button>
           </div>
         </div>
       </div>`;
     $("srCloseProductModal").onclick = () => modal.classList.remove("is-open");
-    $("srCustomOrderProduct").onchange = (event) => {
-      const selectedTitle = event.target.value;
-      $("srEmailCustomOrder").href = `mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order%20-${encodeURIComponent(selectedTitle)}`;
+    const syncCustomOrderSummary = () => {
+      const selectedTitle = $("srCustomOrderProduct").value;
+      state.customOrderDraft = {
+        customer: $("srCustomOrderCustomer").value.trim(),
+        quantity: $("srCustomOrderQuantity").value.trim() || "1",
+        brief: $("srCustomOrderBrief").value.trim()
+      };
+      $("srCustomOrderSummary").textContent = buildCustomOrderSummary(selectedTitle);
+      saveState();
+    };
+    $("srCustomOrderProduct").onchange = syncCustomOrderSummary;
+    $("srCustomOrderCustomer").oninput = syncCustomOrderSummary;
+    $("srCustomOrderQuantity").oninput = syncCustomOrderSummary;
+    $("srCustomOrderBrief").oninput = syncCustomOrderSummary;
+    $("srSaveCustomOrder").onclick = () => {
+      syncCustomOrderSummary();
+      pushDiaryFeed(`Custom order saved for ${$("srCustomOrderProduct").value}. SupportRD can route this order without leaving the app.`);
+    };
+    $("srRouteCustomOrderPayment").onclick = () => {
+      syncCustomOrderSummary();
+      modal.classList.remove("is-open");
+      openPaymentModal();
     };
     modal.classList.add("is-open");
   }
@@ -920,7 +966,7 @@
     body.innerHTML = `
       <div class="support-rebuild-row" style="justify-content:space-between">
         <h3 class="support-rebuild-title">Fast Pay</h3>
-        <button class="support-rebuild-btn ghost" id="srClosePaymentModal">Close</button>
+        <button class="support-rebuild-btn ghost" id="srClosePaymentModal">X</button>
       </div>
       <div class="support-rebuild-note">Open Purchase Menu stays descriptive. Shopify Checkout should move straight into the card lane.</div>
       <div class="support-rebuild-grid two" style="margin-top:14px">
@@ -928,8 +974,7 @@
           <div class="support-rebuild-title">Custom Order</div>
           <div class="support-rebuild-note">Email the founder before Fast Pay if the order is manual or specialized.</div>
           <div class="support-rebuild-row" style="margin-top:12px">
-            <a class="support-rebuild-btn ghost" href="mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order" target="_blank" rel="noopener">Email Custom Order</a>
-            <a class="support-rebuild-btn ghost" href="https://supportrd.com/custom-orders" target="_blank" rel="noopener">Open Custom Orders</a>
+            <button class="support-rebuild-btn ghost" id="srPaymentCustomOrder">Open Custom Order</button>
           </div>
         </div>
         <div class="support-rebuild-card" style="padding:12px">
@@ -955,6 +1000,15 @@
       </div>
       <div class="support-rebuild-note" style="margin-top:12px">Apple Pay and Google Pay appear on the Shopify side when supported by the device and store settings.</div>`;
     $("srClosePaymentModal").onclick = () => modal.classList.remove("is-open");
+    $("srPaymentCustomOrder")?.addEventListener("click", () => {
+      modal.classList.remove("is-open");
+      openCustomOrderProductModal({
+        title: "SupportRD Product",
+        price: "Custom quote",
+        description: "Open a clean in-app custom order flow without leaving the SupportRD experience.",
+        image: "/static/images/brochure-scroll-store.jpg"
+      });
+    });
     body.querySelectorAll("[data-checkout]").forEach((btn) => btn.onclick = () => {
       const product = products.find((item) => item.handle === btn.dataset.checkout);
       openCheckoutForProduct(product);
@@ -978,7 +1032,7 @@
     body.innerHTML = `
       <div class="support-rebuild-row" style="justify-content:space-between">
         <h3 class="support-rebuild-title">${SUPPORTRD_COPY.statisticsBoard.title}</h3>
-        <button class="support-rebuild-btn ghost" id="srCloseStatsBoard">Close</button>
+        <button class="support-rebuild-btn ghost" id="srCloseStatsBoard">X</button>
       </div>
       <div class="support-rebuild-note">${SUPPORTRD_COPY.statisticsBoard.intro}</div>
       <div class="support-rebuild-grid two" style="margin-top:14px">
@@ -1009,7 +1063,7 @@
     body.innerHTML = `
       <div class="support-rebuild-row" style="justify-content:space-between">
         <h3 class="support-rebuild-title">SupportRD Developer Feed</h3>
-        <button class="support-rebuild-btn ghost" id="srCloseDeveloperFeed">Close</button>
+        <button class="support-rebuild-btn ghost" id="srCloseDeveloperFeed">X</button>
       </div>
       <div class="support-rebuild-note">Developer feed health checks public SupportRD mentions, fan chatter, support routes, and builder activity. Email inbox contents still need real inbox integration to appear automatically.</div>
       <div class="support-rebuild-card" style="padding:12px;margin-top:12px">
@@ -1072,7 +1126,7 @@
     body.innerHTML = `
       <div class="support-rebuild-row" style="justify-content:space-between">
         <h3 class="support-rebuild-title">SupportRD Technical Lane</h3>
-        <button class="support-rebuild-btn ghost" id="srCloseTechnicalLane">Close</button>
+        <button class="support-rebuild-btn ghost" id="srCloseTechnicalLane">X</button>
       </div>
       <div class="support-rebuild-note">This lane is for a future technical person to handle account-related support only. Main core product logic stays locked.</div>
       <div class="support-rebuild-grid two" style="margin-top:14px">
@@ -1308,42 +1362,7 @@
       : "Guest mode · account system ready";
   }
 
-  function renderAccountPanel() {
-    let panel = $("srAccountPanel");
-    if (!panel) {
-      panel = document.createElement("aside");
-      panel.id = "srAccountPanel";
-      document.body.appendChild(panel);
-    }
-    panel.className = `support-rebuild-account-panel${state.account.collapsed ? " compact" : ""}`;
-    panel.innerHTML = `
-      <div class="support-rebuild-account-head">
-        <div>
-          <div class="support-rebuild-account-kicker">Login</div>
-          <div class="support-rebuild-title" style="margin:0">SupportRD Account</div>
-        </div>
-        <button class="support-rebuild-btn ghost" id="srAccountToggle">${state.account.collapsed ? "Open Login" : "Hide Login"}</button>
-      </div>
-      <div class="support-rebuild-note">${accountSummary()} · ${state.account.engine}</div>
-      <div class="support-rebuild-account-body" style="margin-top:10px">
-        <div class="support-rebuild-account-meta">
-          <input class="support-rebuild-input" id="srAccountPbUrl" placeholder="PocketBase URL" value="${state.account.pocketbaseUrl || ""}">
-          <input class="support-rebuild-input" id="srAccountEmail" placeholder="Email / Username" value="${state.account.email || ""}">
-          <input class="support-rebuild-input" id="srAccountPassword" type="password" placeholder="Password">
-          <input class="support-rebuild-input" id="srAccountName" placeholder="Display Name" value="${state.account.displayName || ""}">
-        </div>
-        <div class="support-rebuild-row" style="margin-top:10px">
-          <button class="support-rebuild-btn pulse" id="srAccountSave">${state.account.loggedIn ? "Update Account" : "Save + Sign In"}</button>
-          <button class="support-rebuild-btn ghost" id="srAccountLogout">${state.account.loggedIn ? "Log Out" : "Clear"}</button>
-        </div>
-        <div class="support-rebuild-note" id="srAccountStatus" style="margin-top:10px">PocketBase-ready account state powers diary, profile, settings, studio memory, and premium history.</div>
-      </div>`;
-    $("srAccountToggle").onclick = () => {
-      state.account.collapsed = !state.account.collapsed;
-      saveState();
-      renderAccountPanel();
-    };
-    $("srAccountSave").onclick = () => {
+  function saveAccountStateFromFields(prefix = "srAccount") {
       state.account.pocketbaseUrl = $("srAccountPbUrl").value.trim() || state.account.pocketbaseUrl;
       state.account.email = $("srAccountEmail").value.trim();
       state.account.password = $("srAccountPassword").value;
@@ -1356,12 +1375,12 @@
       renderSettings();
       renderDiary();
       renderProfile();
-      renderAccountPanel();
-      $("srAccountStatus").textContent = state.account.loggedIn
-        ? `Account saved for ${state.account.displayName || state.account.email}. PocketBase URL is set and every Remote panel now reads from the account state.`
-        : "Account was saved in guest mode.";
-    };
-    $("srAccountLogout").onclick = () => {
+    return state.account.loggedIn
+      ? `Account saved for ${state.account.displayName || state.account.email}. PocketBase URL is set and every Remote panel now reads from the account state.`
+      : "Account was saved in guest mode.";
+  }
+
+  function logoutAccountState() {
       state.account.email = "";
       state.account.password = "";
       state.account.loggedIn = false;
@@ -1373,8 +1392,37 @@
       renderSettings();
       renderDiary();
       renderProfile();
-      renderAccountPanel();
+  }
+
+  function openAccountModal() {
+    const modal = ensurePaymentModal();
+    const body = $("srPaymentModalBody");
+    body.innerHTML = `
+      <div class="support-rebuild-row" style="justify-content:space-between">
+        <h3 class="support-rebuild-title">SupportRD Account</h3>
+        <button class="support-rebuild-btn ghost" id="srCloseAccountModal">X</button>
+      </div>
+      <div class="support-rebuild-note">${accountSummary()} · ${state.account.engine}</div>
+      <div class="support-rebuild-account-meta" style="margin-top:14px">
+        <input class="support-rebuild-input" id="srAccountPbUrl" placeholder="PocketBase URL" value="${state.account.pocketbaseUrl || ""}">
+        <input class="support-rebuild-input" id="srAccountEmail" placeholder="Email / Username" value="${state.account.email || ""}">
+        <input class="support-rebuild-input" id="srAccountPassword" type="password" placeholder="Password">
+        <input class="support-rebuild-input" id="srAccountName" placeholder="Display Name" value="${state.account.displayName || ""}">
+      </div>
+      <div class="support-rebuild-row" style="margin-top:14px">
+        <button class="support-rebuild-btn pulse" id="srAccountSave">${state.account.loggedIn ? "Update Account" : "Save + Sign In"}</button>
+        <button class="support-rebuild-btn ghost" id="srAccountLogout">${state.account.loggedIn ? "Log Out" : "Clear"}</button>
+      </div>
+      <div class="support-rebuild-note" id="srAccountStatus" style="margin-top:10px">PocketBase-ready account state powers diary, profile, settings, studio memory, and premium history.</div>`;
+    $("srCloseAccountModal").onclick = () => modal.classList.remove("is-open");
+    $("srAccountSave").onclick = () => {
+      $("srAccountStatus").textContent = saveAccountStateFromFields();
     };
+    $("srAccountLogout").onclick = () => {
+      logoutAccountState();
+      $("srAccountStatus").textContent = "Account cleared back to guest mode.";
+    };
+    modal.classList.add("is-open");
   }
 
   function renderSettings() {
@@ -1476,7 +1524,7 @@
         state.account.plan = state.premium;
         saveState();
         renderShellChrome();
-        renderAccountPanel();
+        
         renderProfile();
         updateAssistantDock("Aria and Jake moved into Settings to confirm your save.");
         $("srSettingsStatus").textContent = newPass
@@ -1697,7 +1745,7 @@
       state.account.displayName = p.name || state.account.displayName;
       saveState();
       renderShellChrome();
-      renderAccountPanel();
+      
       renderProfile();
       updateAssistantDock("Aria and Jake moved into Profile to confirm your update.");
     };
@@ -2105,28 +2153,21 @@
               <div class="support-rebuild-card"><div class="support-rebuild-title">Map Change</div><div class="support-rebuild-note">Fun visuals, serious routing, and making-money map help.</div></div>
             </div>
           </div>
-          <div class="support-rebuild-card">
+          <div class="support-rebuild-settings-tab">
             <div class="support-rebuild-top-tools">
-              <div>
-                <div class="support-rebuild-title">General Settings</div>
-                <div class="support-rebuild-note">Settings, Account, and Login stay to the right as a collapsable sticky page. The catalog remains the main seller while the smaller Remote changes the live content under it.</div>
-              </div>
-              <div class="support-rebuild-row">
-                <button class="support-rebuild-btn pulse" id="srTopOpenSettings">Open Settings</button>
-                <button class="support-rebuild-btn ghost" id="srTopOpenProducts">Open Main Catalog</button>
-                <button class="support-rebuild-btn ghost" id="srTopLoginToggle">${state.account.collapsed ? "Open Login" : "Hide Login"}</button>
-              </div>
-              <div class="support-rebuild-line">Main Structure: durable, payment-friendly, responsive, and store-ready.</div>
-              <div class="support-rebuild-line">Statistics: SEO build, remote usefulness, account flow health, live payment readiness, and founder-exclusive drawing board handling.</div>
-              <div class="support-rebuild-line">General Options: ${SUPPORTRD_COPY.generalOptions}</div>
-              <div class="support-rebuild-line">Contacts / Channels: Render, GitHub, support email, payments, in-person routes, technical support, and fan feedback.</div>
-              <div class="support-rebuild-line">Account Engine: ${accountSummary()} · ${state.account.historySync}</div>
-              <div class="support-rebuild-line">Architecture: ${state.statistics.architecture}</div>
+              <button class="support-rebuild-btn pulse" id="srTopOpenSettings">General Settings</button>
+              <button class="support-rebuild-btn ghost" id="srTopOpenProducts">Main Catalog</button>
+              <button class="support-rebuild-btn ghost" id="srTopLoginToggle">Login / Logout Account</button>
             </div>
           </div>
         </div>
         <div class="support-rebuild-brand-mark">${SUPPORTRD_COPY.brandMark}</div>`;
-    $("srHeroCustomOrder")?.addEventListener("click", () => window.open("mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order", "_blank", "noopener"));
+    $("srHeroCustomOrder")?.addEventListener("click", () => openCustomOrderProductModal({
+      title: "SupportRD Product",
+      price: "Custom quote",
+      description: "Choose a SupportRD custom product and keep the whole ordering flow inside the app.",
+      image: "/static/images/brochure-scroll-store.jpg"
+    }));
     $("srHeroProducts")?.addEventListener("click", () => {
       state.catalogSelected = "";
       saveState();
@@ -2140,12 +2181,7 @@
       saveState();
       renderShellChrome();
     });
-    $("srTopLoginToggle")?.addEventListener("click", () => {
-      state.account.collapsed = !state.account.collapsed;
-      saveState();
-      renderAccountPanel();
-      renderShellChrome();
-    });
+    $("srTopLoginToggle")?.addEventListener("click", openAccountModal);
     $("srCatalogPrev")?.addEventListener("click", () => {
       state.catalogPage = Math.max(0, (state.catalogPage || 0) - 1);
       saveState();
@@ -2232,7 +2268,7 @@
       activatePresentationMode();
       ensureRouteHost();
       renderShellChrome();
-      renderAccountPanel();
+      
       renderAssistantDock();
     updateAssistantDock("Aria and Jake are moving with the page. Tap them when you need them.");
     bindLaunchButtons();
@@ -2248,11 +2284,13 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410o";
+      window.SupportRDRemoteRebuildVersion = "20260410q";
     }
 
   setTimeout(init, 700);
 })();
+
+
 
 
 
