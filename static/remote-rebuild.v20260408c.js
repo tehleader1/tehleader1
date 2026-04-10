@@ -583,6 +583,15 @@
         padding:18px !important;
         display:block !important;
       }
+      body.support-route-open .float-mode-shell.support-rebuild-mode .float-mode-top{
+        display:none !important;
+      }
+      body.support-route-open .float-mode-shell.support-rebuild-mode .float-mode-launch{
+        margin-bottom:16px !important;
+      }
+      body.support-route-open .support-rebuild-route-host{
+        margin-top:0 !important;
+      }
       .float-mode-shell.support-rebuild-mode .float-mode-actions,
       .float-mode-shell.support-rebuild-mode .remote-go-toggle{
         display:none !important;
@@ -628,7 +637,8 @@
     bindAssistantMotion();
     if (routeId && routeHost) {
       requestAnimationFrame(() => {
-        routeHost.scrollIntoView({ behavior: "smooth", block: "start" });
+        const launch = document.querySelector(".float-mode-launch");
+        (launch || routeHost).scrollIntoView({ behavior: "smooth", block: "start" });
       });
     }
   }
@@ -2035,7 +2045,8 @@
       btn.replaceWith(clone);
       clone.addEventListener("click", (event) => {
         event.preventDefault();
-        activateRoute(clone.dataset.floatTarget);
+        const target = clone.dataset.floatTarget;
+        activateRoute(state.route === target ? "" : target);
       });
     });
   }
@@ -2096,7 +2107,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410g";
+      window.SupportRDRemoteRebuildVersion = "20260410h";
     }
 
   setTimeout(init, 700);
