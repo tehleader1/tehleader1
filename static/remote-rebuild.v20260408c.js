@@ -92,7 +92,13 @@
       instrument: "instrument-track.wav"
     },
     studioRecent: [],
-    products: []
+    products: [],
+    shopify: {
+      connected: false,
+      storefrontBase: "",
+      cartUrl: "/cart",
+      ordersUrl: "/account/orders"
+    }
   };
 
   const MAPS = {
@@ -385,8 +391,37 @@
     } catch {}
   }
 
+  async function syncShopifyPublicConfig() {
+    try {
+      const res = await fetch("/api/shopify/public-config", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      state.shopify = {
+        connected: !!data?.ok,
+        storefrontBase: data?.storefront_base || "",
+        cartUrl: data?.cart_url || "/cart",
+        ordersUrl: data?.orders_url || "/account/orders"
+      };
+      saveState();
+    } catch {}
+  }
+
   function $(id) {
     return document.getElementById(id);
+  }
+
+  function syncLaunchVisuals() {
+    const wakeUpImage = "/static/images/woman-waking-up12.jpg";
+    document.querySelectorAll(".float-launch-btn").forEach((btn) => {
+      const target = btn.dataset.floatTarget || "";
+      const label = ROUTES[target] || btn.textContent.trim();
+      btn.style.backgroundImage = `linear-gradient(180deg, rgba(5,10,20,.18), rgba(5,10,20,.74)), url('${wakeUpImage}')`;
+      btn.style.backgroundSize = "cover";
+      btn.style.backgroundPosition = "center";
+      btn.style.backgroundRepeat = "no-repeat";
+      btn.style.boxShadow = "0 18px 36px rgba(0,0,0,.28)";
+      btn.setAttribute("aria-label", `${label} - SupportRD Remote`);
+    });
   }
 
   function injectStyle() {
@@ -822,14 +857,17 @@
 
   function getCheckoutUrl(product) {
     const variantId = String(product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
+    if (variantId && state.shopify?.storefrontBase) {
+      return `${state.shopify.storefrontBase}/cart/${variantId}:1?ref=supportrd-remote`;
+    }
     if (variantId) return `/checkout/${variantId}?src=remote`;
-    return "/cart";
+    return state.shopify?.cartUrl || "/cart";
   }
 
   function openCheckoutForProduct(product, titleOverride) {
     const title = titleOverride || product?.title || "SupportRD product";
     const url = getCheckoutUrl(product);
-    state.statistics.payments = `Checkout launched for ${title}`;
+    state.statistics.payments = `Checkout launched for ${title} using ${state.shopify?.connected ? "Shopify storefront direct" : "SupportRD checkout redirect"}.`;
     state.account.historySync = "Pending payment verification";
     saveState();
     renderShellChrome();
@@ -1985,7 +2023,8 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410r";
+      syncShopifyPublicConfig();
+      window.SupportRDRemoteRebuildVersion = "20260410s";
     }
 
   setTimeout(init, 700);

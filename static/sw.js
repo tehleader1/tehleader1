@@ -1,4 +1,4 @@
-const CACHE_NAME = "supportrd-pwa-v50-20260410r"
+const CACHE_NAME = "supportrd-pwa-v51-20260410s"
 const APP_ASSETS = [
   "/",
   "/manifest.json",
