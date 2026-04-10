@@ -164,14 +164,20 @@
     },
     ads: [
       {
-        title: "Fantasy Hair Rescue",
+        title: "21+ Fantasies",
         route: "floatSettingsBox",
-        note: "Fantasy pricing, diary privacy, and AI buddy support pushed this visitor toward Diary Mode."
+        note: "Fantasy pricing, diary privacy, and AI buddy support pushed this visitor toward Diary Mode.",
+        price: "$300 basic · $600 advanced",
+        meta: "Adult fantasy lane",
+        cta: "Open 21+ Fantasies"
       },
       {
-        title: "Pro Money + Product Lane",
+        title: "Jake Studio Premium",
         route: "floatProfileBox",
-        note: "Pro features, custom shampoo orders, and making-money mode pushed this visitor toward Settings and Payments."
+        note: "Pro features, custom shampoo orders, and making-money mode pushed this visitor toward Settings and Payments.",
+        price: "$50 Pro entry · custom studio quote",
+        meta: "Studio premium lane",
+        cta: "Open Jake Studio Premium"
       }
     ]
   };
@@ -498,6 +504,12 @@
       .support-rebuild-ad-banner{min-height:180px;border-radius:20px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;box-shadow:0 16px 38px rgba(0,0,0,.22);position:relative;overflow:hidden}
       .support-rebuild-ad-banner::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,9,16,.1),rgba(5,9,16,.72))}
       .support-rebuild-ad-banner > *{position:relative;z-index:1}
+      .support-rebuild-ad-topline{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:auto}
+      .support-rebuild-price-badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.92);color:#09111f;font-weight:800;font-size:.84rem;box-shadow:0 10px 24px rgba(0,0,0,.18)}
+      .support-rebuild-ad-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+      .support-rebuild-ad-stat{padding:8px 10px;border-radius:14px;background:rgba(255,255,255,.12);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.14)}
+      .support-rebuild-ad-stat strong{display:block;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:4px}
+      .support-rebuild-ad-stat span{display:block;font-weight:700;color:#fff;font-size:.9rem}
       .support-rebuild-input,.support-rebuild-select,.support-rebuild-textarea{width:100%;background:#fff;color:#12151f;border:0;border-radius:14px;padding:12px}
       .support-rebuild-textarea{min-height:110px;resize:vertical}
       .support-rebuild-btn{border:0;border-radius:999px;padding:11px 16px;font-weight:700;color:#08101f;background:linear-gradient(135deg,#ffd54a,#55d7ff);cursor:pointer}
@@ -1941,15 +1953,29 @@
             <div class="support-rebuild-top-tools">
               <div class="support-rebuild-grid">
                 <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/fantasy-21-plus-main-ad.jpg')">
-                  <div class="support-rebuild-kicker">Advertisement 1</div>
+                  <div class="support-rebuild-ad-topline">
+                    <div class="support-rebuild-kicker">Advertisement 1</div>
+                    <div class="support-rebuild-price-badge">$300 · $600</div>
+                  </div>
                   <div class="support-rebuild-title">21+ Fantasies</div>
                   <div class="support-rebuild-note">Fantasy-ready chemistry, elevated couple energy, and a premium 21+ lane that feels exclusive the moment SupportRD opens.</div>
+                  <div class="support-rebuild-ad-stats">
+                    <div class="support-rebuild-ad-stat"><strong>Mode</strong><span>21+ Adult Fantasy</span></div>
+                    <div class="support-rebuild-ad-stat"><strong>Pricing</strong><span>Basic or Advanced</span></div>
+                  </div>
                   <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="0">Open 21+ Fantasies</button></div>
                 </div>
                 <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/jake-studio-premium.jpg')">
-                  <div class="support-rebuild-kicker">Advertisement 2</div>
+                  <div class="support-rebuild-ad-topline">
+                    <div class="support-rebuild-kicker">Advertisement 2</div>
+                    <div class="support-rebuild-price-badge">$50+ Pro</div>
+                  </div>
                   <div class="support-rebuild-title">Jake Studio Premium</div>
                   <div class="support-rebuild-note">Premium studio presence, polished creator energy, and Jake-led booth support for serious sessions that need a richer sound and a higher-end feel.</div>
+                  <div class="support-rebuild-ad-stats">
+                    <div class="support-rebuild-ad-stat"><strong>Lane</strong><span>Pro / Studio Premium</span></div>
+                    <div class="support-rebuild-ad-stat"><strong>Order</strong><span>Custom Quote Ready</span></div>
+                  </div>
                   <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="1">Open Jake Studio Premium</button></div>
                 </div>
               </div>
@@ -2070,7 +2096,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410f";
+      window.SupportRDRemoteRebuildVersion = "20260410g";
     }
 
   setTimeout(init, 700);
