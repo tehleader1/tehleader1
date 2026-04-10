@@ -3386,6 +3386,20 @@ def shopify_cart_redirect():
         return {"ok": False, "error": "shopify_store_not_configured"}, 404
     return redirect(f"https://{store}/cart", code=302)
 
+@app.route("/checkout/<variant_id>")
+def shopify_checkout_redirect(variant_id):
+    store = resolve_shopify_storefront_domain()
+    clean_variant = "".join(ch for ch in str(variant_id) if ch.isdigit())
+    if not store:
+        return {"ok": False, "error": "shopify_store_not_configured"}, 404
+    if not clean_variant:
+        return redirect(f"https://{store}/cart", code=302)
+    ref = request.args.get("src", "supportrd-remote")[:80]
+    return redirect(
+        f"https://{store}/cart/{clean_variant}:1?ref={ref}",
+        code=302,
+    )
+
 @app.route("/account/orders")
 def shopify_orders_redirect():
     store = resolve_shopify_storefront_domain()

@@ -460,7 +460,7 @@
         box-shadow:0 18px 38px rgba(0,0,0,.22);
       }
       .support-rebuild-shell{display:grid;gap:14px}
-      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:14px;position:relative;z-index:1;min-width:0}
+      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:14px;position:relative;z-index:1;min-width:0;scroll-margin-top:18px}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
       .support-rebuild-sticky-rail{position:fixed;top:214px;right:16px;z-index:74;width:min(300px,calc(100vw - 24px));display:grid;gap:12px}
       .support-rebuild-sticky-card{padding:14px;border-radius:22px;background:rgba(7,12,22,.90);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.26);color:#fff}
@@ -583,6 +583,7 @@
   }
 
   function activateRoute(routeId) {
+    if (!routeHost) ensureRouteHost();
     state.route = routeId || "";
     saveState();
     const shell = document.querySelector(".float-mode-shell");
@@ -679,9 +680,19 @@
   function getCheckoutUrl(product) {
     const variantId = String(product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
     const handle = String(product?.handle || "").trim();
-    if (variantId) return `https://supportrd.com/cart/${variantId}:1?checkout`;
-    if (handle) return `https://supportrd.com/products/${handle}`;
-    return "https://supportrd.com/cart";
+    if (variantId) return `/checkout/${variantId}?src=remote`;
+    if (handle) return `/products/${handle}`;
+    return "/cart";
+  }
+
+  function openCheckoutForProduct(product, titleOverride) {
+    const title = titleOverride || product?.title || "SupportRD product";
+    const url = getCheckoutUrl(product);
+    state.statistics.payments = `Checkout launched for ${title}`;
+    state.account.historySync = "Pending payment verification";
+    saveState();
+    renderShellChrome();
+    window.location.assign(url);
   }
 
   function ensurePaymentModal() {
@@ -741,12 +752,7 @@
     $("srClosePaymentModal").onclick = () => modal.classList.remove("is-open");
     body.querySelectorAll("[data-checkout]").forEach((btn) => btn.onclick = () => {
       const product = products.find((item) => item.handle === btn.dataset.checkout);
-      const url = getCheckoutUrl(product);
-      state.statistics.payments = `Checkout launched for ${product?.title || "SupportRD product"}`;
-      state.account.historySync = "Pending payment verification";
-      saveState();
-      renderShellChrome();
-      window.open(url, "_blank", "noopener");
+      openCheckoutForProduct(product);
     });
     body.querySelectorAll("[data-details]").forEach((btn) => btn.onclick = () => {
       const product = products.find((item) => item.handle === btn.dataset.details);
@@ -755,11 +761,7 @@
       body.innerHTML = `<div class="support-rebuild-row" style="justify-content:space-between"><h3 class="support-rebuild-title">${title}</h3><button class="support-rebuild-btn ghost" id="srBackPaymentModal">Back</button></div><div class="support-rebuild-note">${desc}</div><div class="support-rebuild-row" style="margin-top:12px"><button class="support-rebuild-btn pulse" id="srCheckoutThis">Go To Credit Card Page</button></div>`;
       $("srBackPaymentModal").onclick = openPaymentModal;
       $("srCheckoutThis").onclick = () => {
-        const url = getCheckoutUrl(product);
-        state.statistics.payments = `Direct checkout lane opened for ${title}`;
-        saveState();
-        renderShellChrome();
-        window.open(url, "_blank", "noopener");
+        openCheckoutForProduct(product, title);
       };
     });
     modal.classList.add("is-open");
@@ -1981,7 +1983,7 @@
       renderAccountPanel();
       renderShellChrome();
     });
-    $("srFallbackCheckout")?.addEventListener("click", () => window.open("https://supportrd.com/cart", "_blank", "noopener"));
+    $("srFallbackCheckout")?.addEventListener("click", () => openCheckoutForProduct(null, "SupportRD cart"));
     top.querySelectorAll("[data-ad-open]").forEach((btn) => btn.addEventListener("click", () => {
       const ad = SUPPORTRD_COPY.ads[Number(btn.dataset.adOpen)];
       if (!ad) return;
@@ -1997,7 +1999,7 @@
     top.querySelectorAll("[data-top-checkout]").forEach((btn) => btn.addEventListener("click", () => {
       const handle = btn.dataset.topCheckout;
       const product = (state.products || []).find((item) => (item.handle || "") === handle);
-      window.open(getCheckoutUrl(product), "_blank", "noopener");
+      openCheckoutForProduct(product);
     }));
   }
 
@@ -2050,6 +2052,7 @@
     saveState();
     injectStyle();
       activatePresentationMode();
+      ensureRouteHost();
       renderShellChrome();
       renderAccountPanel();
       renderAssistantDock();
@@ -2067,7 +2070,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410e";
+      window.SupportRDRemoteRebuildVersion = "20260410f";
     }
 
   setTimeout(init, 700);
