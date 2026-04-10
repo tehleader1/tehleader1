@@ -467,6 +467,7 @@
       }
       .support-rebuild-shell{display:grid;gap:14px}
       .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:14px;position:relative;z-index:1;min-width:0;scroll-margin-top:18px}
+      .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:8px}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
       .support-rebuild-sticky-rail{position:fixed;top:214px;right:16px;z-index:74;width:min(300px,calc(100vw - 24px));display:grid;gap:12px}
       .support-rebuild-sticky-card{padding:14px;border-radius:22px;background:rgba(7,12,22,.90);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.26);color:#fff}
@@ -618,8 +619,13 @@
         const activeBox = document.getElementById(routeId);
         if (activeBox) {
           routeHost.innerHTML = "";
+          const actions = document.createElement("div");
+          actions.className = "support-rebuild-route-actions";
+          actions.innerHTML = `<button class="support-rebuild-btn ghost" id="srBackToRemote">Back To Remote</button>`;
+          routeHost.appendChild(actions);
           routeHost.appendChild(activeBox);
           activeBox.classList.add("support-rebuild-active");
+          $("srBackToRemote")?.addEventListener("click", () => activateRoute(""));
         }
       } else {
         routeHost.innerHTML = "";
@@ -2107,7 +2113,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410h";
+      window.SupportRDRemoteRebuildVersion = "20260410i";
     }
 
   setTimeout(init, 700);
