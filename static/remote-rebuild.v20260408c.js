@@ -271,6 +271,7 @@
   const boardBlobs = { voice: null, beat: null, adlib: null, instrument: null };
   let currentBoard = "voice";
   let paymentModal = null;
+  let productModal = null;
   let routeHost = null;
   let routeGrid = null;
   let professionalReminderTimer = null;
@@ -477,9 +478,9 @@
       .float-mode-shell.support-rebuild-mode .float-mode-launch{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px !important}
       .float-mode-shell.support-rebuild-mode .float-launch-btn{min-height:118px !important;padding:16px 12px 16px 54px !important;font-size:15px !important}
       .support-rebuild-shell{display:grid;gap:14px}
-      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:0;position:relative;z-index:1;min-width:0;scroll-margin-top:18px}
-      .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:8px}
-      .support-rebuild-launch-tools{display:flex;justify-content:flex-end;gap:10px;margin:0 0 10px}
+      .support-rebuild-route-host{display:none;gap:16px;align-content:start;position:fixed;inset:18px;z-index:120;min-width:0;padding:22px;border-radius:28px;background:rgba(5,9,18,.94);border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:auto}
+      .support-rebuild-route-host.is-open{display:grid}
+      .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:8px;position:sticky;top:0;z-index:2}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
       .support-rebuild-sticky-rail{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:74;width:min(200px,calc(100vw - 24px));display:grid;gap:12px}
       .support-rebuild-sticky-card{padding:14px;border-radius:22px;background:rgba(7,12,22,.90);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.26);color:#fff}
@@ -583,7 +584,7 @@
       .support-rebuild-profile-tag{display:inline-flex;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);font-size:.86rem}
       .support-rebuild-reel-frame{width:100%;min-height:280px;border:0;border-radius:18px;background:#09101f}
       .support-rebuild-assistants{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:60}
-      .support-rebuild-products-panel{position:fixed;right:16px;bottom:18px;z-index:74;width:min(280px,calc(100vw - 24px))}
+      .support-rebuild-products-panel{display:none!important}
       .support-rebuild-info-footer{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:73;width:min(620px,calc(100vw - 36px))}
       .support-rebuild-assistant-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(7,12,22,.78);color:#fff;box-shadow:0 18px 40px rgba(0,0,0,.26);animation:supportFloatBob 3.4s ease-in-out infinite}
       .support-rebuild-assistant-btn.jake{animation-delay:1.2s}
@@ -619,21 +620,6 @@
       body.support-route-open .float-mode-shell.support-rebuild-mode .float-mode-launch{
         margin-bottom:22px !important;
       }
-      body.support-route-open .support-rebuild-route-host{
-        margin-top:0 !important;
-      }
-      body.support-compact-remote .float-mode-shell.support-rebuild-mode .float-mode-top{
-        display:none !important;
-      }
-      body.support-compact-remote .float-mode-shell.support-rebuild-mode .float-mode-launch{
-        position:sticky;
-        top:12px;
-        margin:12px 16px 18px auto !important;
-        z-index:8;
-      }
-      body.support-compact-remote .support-rebuild-route-host{
-        margin-top:8px !important;
-      }
       .float-mode-shell.support-rebuild-mode .float-mode-actions,
       .float-mode-shell.support-rebuild-mode .remote-go-toggle{
         display:none !important;
@@ -645,6 +631,7 @@
         .support-rebuild-home-top{grid-template-columns:1fr}
         .float-mode-shell.support-rebuild-mode .float-mode-launch{width:100%;margin-left:0 !important}
         .support-rebuild-sticky-rail{left:10px;top:auto;bottom:110px;transform:none;width:min(180px,calc(100vw - 20px))}
+        .support-rebuild-route-host{inset:10px;padding:16px}
       }
     `;
     document.head.appendChild(style);
@@ -667,15 +654,16 @@
           routeHost.innerHTML = "";
           const actions = document.createElement("div");
           actions.className = "support-rebuild-route-actions";
-          actions.innerHTML = `<button class="support-rebuild-btn ghost" id="srRefreshRemoteInline">Refresh Remote</button><button class="support-rebuild-btn ghost" id="srBackToRemote">Back To Remote</button>`;
+          actions.innerHTML = `<button class="support-rebuild-btn ghost" id="srCloseRouteView">X</button>`;
           routeHost.appendChild(actions);
           routeHost.appendChild(activeBox);
           activeBox.classList.add("support-rebuild-active");
-          $("srBackToRemote")?.addEventListener("click", () => activateRoute(""));
-          $("srRefreshRemoteInline")?.addEventListener("click", () => refreshRemoteHome());
+          routeHost.classList.add("is-open");
+          $("srCloseRouteView")?.addEventListener("click", () => closeContentView());
         }
       } else {
         routeHost.innerHTML = "";
+        routeHost.classList.remove("is-open");
       }
     } else {
       document.querySelectorAll(".float-box").forEach((box) => {
@@ -690,30 +678,10 @@
     bindAssistantMotion();
   }
 
-  function refreshRemoteHome() {
-    state.route = "";
-    state.catalogSelected = "";
-    state.catalogPage = 0;
-    saveState();
-    renderShellChrome();
+  function closeContentView() {
     activateRoute("");
     const top = document.querySelector(".float-mode-top");
-    const launch = document.querySelector(".float-mode-launch");
-    requestAnimationFrame(() => ((state.compactRemote ? launch : top) || launch || top)?.scrollIntoView({ behavior: "smooth", block: "start" }));
-  }
-
-  function syncCompactRemoteMode() {
-    document.body.classList.toggle("support-compact-remote", !!state.compactRemote);
-  }
-
-  function toggleCompactRemoteMode() {
-    state.compactRemote = !state.compactRemote;
-    saveState();
-    syncCompactRemoteMode();
-    bindLaunchButtons();
-    const launch = document.querySelector(".float-mode-launch");
-    const top = document.querySelector(".float-mode-top");
-    requestAnimationFrame(() => ((state.compactRemote ? launch : top) || launch || top)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    requestAnimationFrame(() => top?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function openQuestionnaireRoute(item) {
@@ -788,18 +756,18 @@
     }));
     if (live.length) return live;
     return [
-      { id: "catalog-1", title: "Hair Strength Formula", price: "$35", description: "Digital product support that pushes scalp comfort, hair cycle confidence, and strong daily routine care.", image: "/static/images/hija-de-felix.jpeg", handle: "" },
-      { id: "catalog-2", title: "Aria Premium/Pro", price: "$35 premium · $50 pro", description: "AI beauty guidance, stronger product support, and premium help when the hair day needs real attention.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "" },
-      { id: "catalog-3", title: "Jake Studio Premium", price: "$50+ Pro", description: "Creator-ready studio lane with polished premium booth support and a richer SupportRD sound feel.", image: "/static/images/jake-studio-premium.jpg", handle: "" },
-      { id: "catalog-4", title: "21+ Fantasies", price: "$300 basic · $600 advanced", description: "Exclusive 21+ fantasy lane tied to premium presence, chemistry, and a stronger SupportRD private experience.", image: "/static/images/fantasy-21-plus-main-ad.jpg", handle: "" },
-      { id: "catalog-5", title: "Healthy Hair Support", price: "$40", description: "A testimonial-heavy support lane for moisture, bounce, product trust, and visible progress in the hair cycle.", image: "/static/images/have-healthy-hair.jpeg", handle: "" },
-      { id: "catalog-6", title: "Custom Orders", price: "Custom quote", description: "Founder-led custom order support for specialized shampoo lanes, retail confidence, and product expansion.", image: "/static/images/brochure-scroll-store.jpg", handle: "" },
-      { id: "catalog-7", title: "Scalp Reset Routine", price: "$28", description: "Scalp-first product guidance for a lighter, cleaner, and better prepared wash-day cycle.", image: "/static/images/lezawli.jpeg", handle: "" },
-      { id: "catalog-8", title: "Profile Hair Scan", price: "Included with profile", description: "Hair analysis, texture guidance, and stronger SupportRD identity with scan-first profile support.", image: "/static/images/hija-de-felix.jpeg", handle: "" },
-      { id: "catalog-9", title: "Diary Private Lane", price: "$20 add-on", description: "Private diary support, live link sharing, and AI comfort when hair problems need a personal place.", image: "/static/images/have-healthy-hair.jpeg", handle: "" },
-      { id: "catalog-10", title: "Map Resort Mode", price: "$25 add-on", description: "Map-based premium routing, matching themes, and stronger making-money presentation modes.", image: "/static/images/brochure-scroll-store.jpg", handle: "" },
-      { id: "catalog-11", title: "Studio Share Pack", price: "$15 add-on", description: "Quick studio social share support with polished product and creator-facing presentation.", image: "/static/images/jake-studio-premium.jpg", handle: "" },
-      { id: "catalog-12", title: "Support Bundle", price: "$75", description: "A stronger bundled SupportRD lane for product trust, AI guidance, and scalp-focused results.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "" }
+      { id: "catalog-1", title: "Formula Exclusiva", price: "$35", description: "Physical scalp comfort and hair cycle support for a stronger daily routine.", image: "/static/images/hija-de-felix.jpeg", handle: "", physical: true },
+      { id: "catalog-2", title: "Aria Premium/Pro", price: "$35 premium · $50 pro", description: "AI beauty guidance, stronger product support, and premium help when the hair day needs real attention.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "", physical: false },
+      { id: "catalog-3", title: "Jake Studio Premium", price: "$50+ Pro", description: "Creator-ready studio lane with polished premium booth support and a richer SupportRD sound feel.", image: "/static/images/jake-studio-premium.jpg", handle: "", physical: false },
+      { id: "catalog-4", title: "21+ Fantasies", price: "$300 basic · $600 advanced", description: "Exclusive 21+ fantasy lane tied to premium presence, chemistry, and a stronger SupportRD private experience.", image: "/static/images/fantasy-21-plus-main-ad.jpg", handle: "", physical: false },
+      { id: "catalog-5", title: "Shampoo SupportRD", price: "$40", description: "Physical shampoo lane for moisture, bounce, product trust, and visible progress in the hair cycle.", image: "/static/images/have-healthy-hair.jpeg", handle: "", physical: true },
+      { id: "catalog-6", title: "Custom Orders", price: "Custom quote", description: "Founder-led custom order support for specialized shampoo lanes, retail confidence, and product expansion.", image: "/static/images/brochure-scroll-store.jpg", handle: "", physical: true },
+      { id: "catalog-7", title: "Gotero", price: "$28", description: "Physical scalp-first product guidance for a lighter, cleaner, and better prepared wash-day cycle.", image: "/static/images/lezawli.jpeg", handle: "", physical: true },
+      { id: "catalog-8", title: "Profile Hair Scan", price: "Included with profile", description: "Hair analysis, texture guidance, and stronger SupportRD identity with scan-first profile support.", image: "/static/images/hija-de-felix.jpeg", handle: "", physical: false },
+      { id: "catalog-9", title: "Diary Private Lane", price: "$20 add-on", description: "Private diary support, live link sharing, and AI comfort when hair problems need a personal place.", image: "/static/images/have-healthy-hair.jpeg", handle: "", physical: false },
+      { id: "catalog-10", title: "Mascarilla", price: "$25", description: "Physical mask support with premium routing and stronger hair presentation help.", image: "/static/images/brochure-scroll-store.jpg", handle: "", physical: true },
+      { id: "catalog-11", title: "Studio Share Pack", price: "$15 add-on", description: "Quick studio social share support with polished product and creator-facing presentation.", image: "/static/images/jake-studio-premium.jpg", handle: "", physical: false },
+      { id: "catalog-12", title: "Support Bundle", price: "$75", description: "A stronger bundled SupportRD lane for product trust, AI guidance, and scalp-focused results.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "", physical: false }
     ];
   }
 
@@ -809,31 +777,7 @@
     const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
     const page = Math.max(0, Math.min(state.catalogPage || 0, totalPages - 1));
     state.catalogPage = page;
-    const selected = products.find((item) => item.id === state.catalogSelected);
-    if (selected) {
-      return `
-        <div class="support-rebuild-product-menu">
-          <div class="support-rebuild-row" style="justify-content:space-between">
-            <div>
-              <div class="support-rebuild-kicker">SupportRD Products Catalog</div>
-              <div class="support-rebuild-title">${selected.title}</div>
-            </div>
-            <button class="support-rebuild-btn ghost" id="srBackCatalog">Back To 6 Products</button>
-          </div>
-          <div class="support-rebuild-catalog-detail">
-            <div class="support-rebuild-catalog-hero" style="background-image:url('${selected.image}')"></div>
-            <div class="support-rebuild-card">
-              <div class="support-rebuild-price-badge">${selected.price}</div>
-              <div class="support-rebuild-note" style="margin-top:14px">${selected.description}</div>
-              <div class="support-rebuild-note" style="margin-top:12px">This screen should feel like a real product page: price, general description, and a strong SupportRD retail confidence lane.</div>
-              <div class="support-rebuild-row" style="margin-top:14px">
-                <button class="support-rebuild-btn pulse" data-catalog-buy="${selected.id}">Go To Credit Card Page</button>
-                <button class="support-rebuild-btn ghost" id="srCatalogBackMain">Back To Main Catalog</button>
-              </div>
-            </div>
-          </div>
-        </div>`;
-    }
+    state.catalogSelected = "";
     const items = products.slice(page * pageSize, page * pageSize + pageSize);
     return `
       <div class="support-rebuild-product-menu">
@@ -842,7 +786,7 @@
             <div class="support-rebuild-kicker">SupportRD Products Catalog</div>
             <div class="support-rebuild-title">6 products shown at a time</div>
           </div>
-          <div class="support-rebuild-note">Tap one and the catalog area intelligently becomes the product page without taking over the Remote.</div>
+          <div class="support-rebuild-note">Tap one and it opens as a full-view product screen with a clean X close.</div>
         </div>
         <div class="support-rebuild-catalog-grid">
           ${items.map((product) => `
@@ -874,6 +818,86 @@
     saveState();
     renderShellChrome();
     window.location.assign(url);
+  }
+
+  function ensureProductModal() {
+    if (productModal) return productModal;
+    productModal = document.createElement("div");
+    productModal.className = "support-rebuild-modal";
+    productModal.id = "srProductModal";
+    productModal.innerHTML = `<div class="support-rebuild-modal-card"><div id="srProductModalBody"></div></div>`;
+    productModal.addEventListener("click", (event) => {
+      if (event.target === productModal) productModal.classList.remove("is-open");
+    });
+    document.body.appendChild(productModal);
+    return productModal;
+  }
+
+  function openCatalogProductModal(product) {
+    if (!product) return;
+    const modal = ensureProductModal();
+    const body = $("srProductModalBody");
+    body.innerHTML = `
+      <div class="support-rebuild-row" style="justify-content:space-between">
+        <h3 class="support-rebuild-title">${product.title}</h3>
+        <button class="support-rebuild-btn ghost" id="srCloseProductModal">X</button>
+      </div>
+      <div class="support-rebuild-catalog-detail" style="margin-top:12px">
+        <div class="support-rebuild-catalog-hero" style="background-image:url('${product.image}')"></div>
+        <div class="support-rebuild-card">
+          <div class="support-rebuild-price-badge">${product.price}</div>
+          <div class="support-rebuild-note" style="margin-top:14px">${product.description}</div>
+          <div class="support-rebuild-note" style="margin-top:12px">This SupportRD product view should feel real: image first, price clear, description direct, and checkout close by.</div>
+          <div class="support-rebuild-row" style="margin-top:14px">
+            <button class="support-rebuild-btn pulse" id="srProductCheckout">Go To Credit Card Page</button>
+            <button class="support-rebuild-btn ghost" id="srProductBackCatalog">Back To Main Catalog</button>
+          </div>
+        </div>
+      </div>`;
+    $("srCloseProductModal").onclick = () => modal.classList.remove("is-open");
+    $("srProductBackCatalog").onclick = () => modal.classList.remove("is-open");
+    $("srProductCheckout").onclick = () => openCheckoutForProduct(product, product.title);
+    modal.classList.add("is-open");
+  }
+
+  function openCustomOrderProductModal(product) {
+    if (!product) return;
+    const modal = ensureProductModal();
+    const body = $("srProductModalBody");
+    body.innerHTML = `
+      <div class="support-rebuild-row" style="justify-content:space-between">
+        <h3 class="support-rebuild-title">${product.title} Custom Order</h3>
+        <button class="support-rebuild-btn ghost" id="srCloseProductModal">X</button>
+      </div>
+      <div class="support-rebuild-catalog-detail" style="margin-top:12px">
+        <div class="support-rebuild-catalog-hero" style="background-image:url('${product.image}')"></div>
+        <div class="support-rebuild-card">
+          <div class="support-rebuild-price-badge">${product.price}</div>
+          <div class="support-rebuild-note" style="margin-top:14px">${product.description}</div>
+          <div class="support-rebuild-note" style="margin-top:12px">This is a physical SupportRD product, so the clean full view goes straight into the custom-order lane.</div>
+          <div style="margin-top:14px">
+            <label class="support-rebuild-note">Choose your custom order product</label>
+            <select class="support-rebuild-select" id="srCustomOrderProduct">
+              <option ${product.title === "Formula Exclusiva" ? "selected" : ""}>Formula Exclusiva</option>
+              <option ${product.title === "Gotero" ? "selected" : ""}>Gotero</option>
+              <option ${product.title === "Gotika" ? "selected" : ""}>Gotika</option>
+              <option ${product.title === "Laciador" ? "selected" : ""}>Laciador</option>
+              <option ${product.title === "Mascarilla" ? "selected" : ""}>Mascarilla</option>
+              <option ${product.title === "Shampoo SupportRD" ? "selected" : ""}>Shampoo</option>
+            </select>
+          </div>
+          <div class="support-rebuild-row" style="margin-top:14px">
+            <a class="support-rebuild-btn pulse" id="srEmailCustomOrder" href="mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order%20-${encodeURIComponent(product.title)}" target="_blank" rel="noopener">Start Custom Order</a>
+            <a class="support-rebuild-btn ghost" href="https://supportrd.com/custom-orders" target="_blank" rel="noopener">Open Custom Orders</a>
+          </div>
+        </div>
+      </div>`;
+    $("srCloseProductModal").onclick = () => modal.classList.remove("is-open");
+    $("srCustomOrderProduct").onchange = (event) => {
+      const selectedTitle = event.target.value;
+      $("srEmailCustomOrder").href = `mailto:xxfigueroa1993@yahoo.com?subject=SupportRD%20Custom%20Order%20-${encodeURIComponent(selectedTitle)}`;
+    };
+    modal.classList.add("is-open");
   }
 
   function ensurePaymentModal() {
@@ -2056,7 +2080,7 @@
                 <h1 class="support-rebuild-hero-title">Custom order now to feel the hair solution in your scalp.</h1>
                 <div class="support-rebuild-hero-sub">Join the SupportRD system and introduce a new cycle for your hair. Catalog stays as the main page, the Remote lives as a smaller six-button corner controller, and every click swaps the content cleanly under it.</div>
                 <div class="support-rebuild-row">
-                  <button class="support-rebuild-btn pulse" id="srHeroCustomOrder">Custom Order Now</button>
+                  <button class="support-rebuild-btn ghost" id="srHeroCustomOrder">Custom Order</button>
                   <button class="support-rebuild-btn ghost" id="srHeroProducts">Main Catalog</button>
                   <button class="support-rebuild-btn ghost" id="srHeroDiaryInvite">Invitable Diary Mode</button>
                 </div>
@@ -2143,9 +2167,12 @@
       renderShellChrome();
     });
     top.querySelectorAll("[data-catalog-open]").forEach((btn) => btn.addEventListener("click", () => {
-      state.catalogSelected = btn.dataset.catalogOpen;
-      saveState();
-      renderShellChrome();
+      const product = getCatalogProducts().find((item) => item.id === btn.dataset.catalogOpen);
+      if (product?.physical) {
+        openCustomOrderProductModal(product);
+      } else {
+        openCatalogProductModal(product);
+      }
     }));
     top.querySelectorAll("[data-catalog-buy]").forEach((btn) => btn.addEventListener("click", () => {
       const product = getCatalogProducts().find((item) => item.id === btn.dataset.catalogBuy);
@@ -2154,26 +2181,6 @@
   }
 
   function bindLaunchButtons() {
-    const launch = document.querySelector(".float-mode-launch");
-    if (launch) {
-      let tools = launch.querySelector(".support-rebuild-launch-tools");
-      if (!tools) {
-        tools = document.createElement("div");
-        tools.className = "support-rebuild-launch-tools";
-        launch.prepend(tools);
-      }
-      tools.innerHTML = `
-        <button class="support-rebuild-btn ghost" id="srRemoteModeBtn">${state.compactRemote ? "Full Catalog View" : "On-The-Go Remote"}</button>
-        <button class="support-rebuild-btn ghost" id="srRemoteRefreshBtn">Refresh Remote</button>`;
-      $("srRemoteRefreshBtn")?.addEventListener("click", (event) => {
-        event.preventDefault();
-        refreshRemoteHome();
-      });
-      $("srRemoteModeBtn")?.addEventListener("click", (event) => {
-        event.preventDefault();
-        toggleCompactRemoteMode();
-      });
-    }
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
       const clone = btn.cloneNode(true);
       btn.replaceWith(clone);
@@ -2223,7 +2230,6 @@
     saveState();
     injectStyle();
       activatePresentationMode();
-      syncCompactRemoteMode();
       ensureRouteHost();
       renderShellChrome();
       renderAccountPanel();
@@ -2242,11 +2248,12 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410n";
+      window.SupportRDRemoteRebuildVersion = "20260410o";
     }
 
   setTimeout(init, 700);
 })();
+
 
 
 
