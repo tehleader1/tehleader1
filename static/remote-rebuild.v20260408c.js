@@ -1944,11 +1944,11 @@
                   <div class="support-rebuild-note">Fantasy-ready presence, premium guidance, and a serious AI beauty lane that feels elevated the moment the page opens.</div>
                   <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="0">Open Aria Premium/Pro</button></div>
                 </div>
-                <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/brochure-contacts-remote.jpg')">
+                <div class="support-rebuild-ad-banner" style="background-image:url('/static/images/jake-studio-premium.jpg')">
                   <div class="support-rebuild-kicker">Advertisement 2</div>
-                  <div class="support-rebuild-title">Pro features, fantasy pricing, and custom orders for future shampoo sellers.</div>
-                  <div class="support-rebuild-note">Professional / making money mode, custom order support, and product trust should feel present without taking over the page.</div>
-                  <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="1">Open Pro Lane</button></div>
+                  <div class="support-rebuild-title">Jake Studio Premium</div>
+                  <div class="support-rebuild-note">Premium studio presence, polished creator energy, and Jake-led booth support for serious sessions that need a richer sound and a higher-end feel.</div>
+                  <div class="support-rebuild-mini-actions"><button class="support-rebuild-btn pulse" data-ad-open="1">Open Jake Studio Premium</button></div>
                 </div>
               </div>
               <div>
@@ -2067,7 +2067,7 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410c";
+      window.SupportRDRemoteRebuildVersion = "20260410d";
     }
 
   setTimeout(init, 700);
