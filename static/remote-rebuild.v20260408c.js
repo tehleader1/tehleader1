@@ -474,6 +474,7 @@
       .support-rebuild-shell{display:grid;gap:14px}
       .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:0;position:relative;z-index:1;min-width:0;scroll-margin-top:18px}
       .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:8px}
+      .support-rebuild-launch-tools{display:flex;justify-content:flex-end;gap:10px;margin:0 0 10px}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
       .support-rebuild-sticky-rail{position:fixed;top:214px;right:16px;z-index:74;width:min(280px,calc(100vw - 24px));display:grid;gap:12px}
       .support-rebuild-sticky-card{padding:14px;border-radius:22px;background:rgba(7,12,22,.90);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.26);color:#fff}
@@ -644,11 +645,12 @@
           routeHost.innerHTML = "";
           const actions = document.createElement("div");
           actions.className = "support-rebuild-route-actions";
-          actions.innerHTML = `<button class="support-rebuild-btn ghost" id="srBackToRemote">Back To Remote</button>`;
+          actions.innerHTML = `<button class="support-rebuild-btn ghost" id="srRefreshRemoteInline">Refresh Remote</button><button class="support-rebuild-btn ghost" id="srBackToRemote">Back To Remote</button>`;
           routeHost.appendChild(actions);
           routeHost.appendChild(activeBox);
           activeBox.classList.add("support-rebuild-active");
           $("srBackToRemote")?.addEventListener("click", () => activateRoute(""));
+          $("srRefreshRemoteInline")?.addEventListener("click", () => refreshRemoteHome());
         }
       } else {
         routeHost.innerHTML = "";
@@ -664,6 +666,18 @@
     document.body.classList.toggle("support-route-open", !!routeId);
     updateAssistantDock(routeId ? `Aria and Jake moved into ${ROUTES[routeId] || "SupportRD"}.` : "Aria and Jake are moving with the page. Tap them when you need them.");
     bindAssistantMotion();
+  }
+
+  function refreshRemoteHome() {
+    state.route = "";
+    state.catalogSelected = "";
+    state.catalogPage = 0;
+    saveState();
+    renderShellChrome();
+    activateRoute("");
+    const top = document.querySelector(".float-mode-top");
+    const launch = document.querySelector(".float-mode-launch");
+    requestAnimationFrame(() => (top || launch)?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function openQuestionnaireRoute(item) {
@@ -2104,6 +2118,17 @@
   }
 
   function bindLaunchButtons() {
+    const launch = document.querySelector(".float-mode-launch");
+    if (launch && !$("srRemoteRefreshBtn")) {
+      const tools = document.createElement("div");
+      tools.className = "support-rebuild-launch-tools";
+      tools.innerHTML = `<button class="support-rebuild-btn ghost" id="srRemoteRefreshBtn">Refresh Remote</button>`;
+      launch.prepend(tools);
+      $("srRemoteRefreshBtn")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        refreshRemoteHome();
+      });
+    }
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
       const clone = btn.cloneNode(true);
       btn.replaceWith(clone);
@@ -2171,11 +2196,12 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410k";
+      window.SupportRDRemoteRebuildVersion = "20260410l";
     }
 
   setTimeout(init, 700);
 })();
+
 
 
 
