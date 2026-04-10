@@ -456,11 +456,14 @@
         position:relative;
         z-index:3;
       }
+      .float-mode-shell.support-rebuild-mode .float-mode-top{
+        margin-bottom:22px !important;
+      }
       .float-mode-shell.support-rebuild-mode .float-mode-launch{
         position:relative;
         top:auto;
         z-index:5;
-        margin:0 0 34px !important;
+        margin:0 0 26px !important;
         padding:14px !important;
         overflow:visible !important;
         background:rgba(5,10,20,.74);
@@ -469,7 +472,7 @@
         box-shadow:0 18px 38px rgba(0,0,0,.22);
       }
       .support-rebuild-shell{display:grid;gap:14px}
-      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:14px;position:relative;z-index:1;min-width:0;scroll-margin-top:18px}
+      .support-rebuild-route-host{display:grid;gap:16px;align-content:start;margin-top:0;position:relative;z-index:1;min-width:0;scroll-margin-top:18px}
       .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:8px}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
       .support-rebuild-sticky-rail{position:fixed;top:214px;right:16px;z-index:74;width:min(280px,calc(100vw - 24px));display:grid;gap:12px}
@@ -608,10 +611,10 @@
         display:block !important;
       }
       body.support-route-open .float-mode-shell.support-rebuild-mode .float-mode-launch{
-        margin-bottom:26px !important;
+        margin-bottom:22px !important;
       }
       body.support-route-open .support-rebuild-route-host{
-        margin-top:8px !important;
+        margin-top:0 !important;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-actions,
       .float-mode-shell.support-rebuild-mode .remote-go-toggle{
@@ -661,12 +664,6 @@
     document.body.classList.toggle("support-route-open", !!routeId);
     updateAssistantDock(routeId ? `Aria and Jake moved into ${ROUTES[routeId] || "SupportRD"}.` : "Aria and Jake are moving with the page. Tap them when you need them.");
     bindAssistantMotion();
-    if (routeId && routeHost) {
-      requestAnimationFrame(() => {
-        const launch = document.querySelector(".float-mode-launch");
-        (launch || routeHost).scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
   }
 
   function openQuestionnaireRoute(item) {
@@ -815,9 +812,7 @@
 
   function getCheckoutUrl(product) {
     const variantId = String(product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
-    const handle = String(product?.handle || "").trim();
     if (variantId) return `/checkout/${variantId}?src=remote`;
-    if (handle) return `/products/${handle}`;
     return "/cart";
   }
 
@@ -2176,11 +2171,12 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410j";
+      window.SupportRDRemoteRebuildVersion = "20260410k";
     }
 
   setTimeout(init, 700);
 })();
+
 
 
 
