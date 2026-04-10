@@ -66,6 +66,7 @@
       architecture: "Loading architecture stack...",
       adAttribution: "No ad route selected yet."
     },
+    compactRemote: false,
     adQuestionnaire: "",
     productMenuOpen: true,
     catalogPage: 0,
@@ -621,6 +622,18 @@
       body.support-route-open .support-rebuild-route-host{
         margin-top:0 !important;
       }
+      body.support-compact-remote .float-mode-shell.support-rebuild-mode .float-mode-top{
+        display:none !important;
+      }
+      body.support-compact-remote .float-mode-shell.support-rebuild-mode .float-mode-launch{
+        position:sticky;
+        top:12px;
+        margin:12px 16px 18px auto !important;
+        z-index:8;
+      }
+      body.support-compact-remote .support-rebuild-route-host{
+        margin-top:8px !important;
+      }
       .float-mode-shell.support-rebuild-mode .float-mode-actions,
       .float-mode-shell.support-rebuild-mode .remote-go-toggle{
         display:none !important;
@@ -686,7 +699,21 @@
     activateRoute("");
     const top = document.querySelector(".float-mode-top");
     const launch = document.querySelector(".float-mode-launch");
-    requestAnimationFrame(() => (top || launch)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    requestAnimationFrame(() => ((state.compactRemote ? launch : top) || launch || top)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  function syncCompactRemoteMode() {
+    document.body.classList.toggle("support-compact-remote", !!state.compactRemote);
+  }
+
+  function toggleCompactRemoteMode() {
+    state.compactRemote = !state.compactRemote;
+    saveState();
+    syncCompactRemoteMode();
+    bindLaunchButtons();
+    const launch = document.querySelector(".float-mode-launch");
+    const top = document.querySelector(".float-mode-top");
+    requestAnimationFrame(() => ((state.compactRemote ? launch : top) || launch || top)?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function openQuestionnaireRoute(item) {
@@ -2128,14 +2155,23 @@
 
   function bindLaunchButtons() {
     const launch = document.querySelector(".float-mode-launch");
-    if (launch && !$("srRemoteRefreshBtn")) {
-      const tools = document.createElement("div");
-      tools.className = "support-rebuild-launch-tools";
-      tools.innerHTML = `<button class="support-rebuild-btn ghost" id="srRemoteRefreshBtn">Refresh Remote</button>`;
-      launch.prepend(tools);
+    if (launch) {
+      let tools = launch.querySelector(".support-rebuild-launch-tools");
+      if (!tools) {
+        tools = document.createElement("div");
+        tools.className = "support-rebuild-launch-tools";
+        launch.prepend(tools);
+      }
+      tools.innerHTML = `
+        <button class="support-rebuild-btn ghost" id="srRemoteModeBtn">${state.compactRemote ? "Full Catalog View" : "On-The-Go Remote"}</button>
+        <button class="support-rebuild-btn ghost" id="srRemoteRefreshBtn">Refresh Remote</button>`;
       $("srRemoteRefreshBtn")?.addEventListener("click", (event) => {
         event.preventDefault();
         refreshRemoteHome();
+      });
+      $("srRemoteModeBtn")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        toggleCompactRemoteMode();
       });
     }
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
@@ -2187,6 +2223,7 @@
     saveState();
     injectStyle();
       activatePresentationMode();
+      syncCompactRemoteMode();
       ensureRouteHost();
       renderShellChrome();
       renderAccountPanel();
@@ -2205,11 +2242,12 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      window.SupportRDRemoteRebuildVersion = "20260410m";
+      window.SupportRDRemoteRebuildVersion = "20260410n";
     }
 
   setTimeout(init, 700);
 })();
+
 
 
 
