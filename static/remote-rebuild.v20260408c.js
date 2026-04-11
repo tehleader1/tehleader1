@@ -2148,7 +2148,7 @@
       syncArchitectureStatus();
       syncShopifyPublicConfig();
       ensureShellChrome();
-      window.SupportRDRemoteRebuildVersion = "20260411d";
+      window.SupportRDRemoteRebuildVersion = "20260411e";
     }
 
   setTimeout(init, 700);
