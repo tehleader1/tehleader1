@@ -411,18 +411,34 @@
     return document.getElementById(id);
   }
 
+  const LAUNCH_VISUALS = {
+    floatSettingsBox: "/static/images/dr-flow-1.jpg",
+    floatBoardsBox: "/static/images/dr-flow-2.jpg",
+    floatAssistantBox: "/static/images/dr-flow-3.jpg",
+    floatDeviceBox: "/static/images/dr-flow-4.jpg",
+    floatLiveBox: "/static/images/dr-flow-5.jpg",
+    floatProfileBox: "/static/images/dr-flow-6.jpg"
+  };
+
   function syncLaunchVisuals() {
     const wakeUpImage = "/static/images/woman-waking-up12.jpg";
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
       const target = btn.dataset.floatTarget || "";
       const label = ROUTES[target] || btn.textContent.trim();
-      btn.style.backgroundImage = `linear-gradient(180deg, rgba(5,10,20,.18), rgba(5,10,20,.74)), url('${wakeUpImage}')`;
+      const flowImage = LAUNCH_VISUALS[target] || wakeUpImage;
+      btn.style.backgroundImage = [
+        "linear-gradient(180deg, rgba(3,10,18,.2), rgba(3,10,18,.78))",
+        `linear-gradient(130deg, rgba(255,255,255,.04), rgba(255,186,120,.08))`,
+        `url('${wakeUpImage}')`,
+        `url('${flowImage}')`
+      ].join(", ");
       btn.style.backgroundSize = "cover";
-      btn.style.backgroundPosition = "center";
-      btn.style.backgroundRepeat = "no-repeat";
-      btn.style.boxShadow = "0 18px 36px rgba(0,0,0,.28)";
+      btn.style.backgroundPosition = "center, center, center, center";
+      btn.style.backgroundRepeat = "no-repeat, no-repeat, no-repeat, no-repeat";
+      btn.style.backgroundBlendMode = "normal, screen, lighten, normal";
+      btn.style.boxShadow = "0 18px 36px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.12)";
       btn.setAttribute("aria-label", `${label} - SupportRD Remote`);
-      btn.dataset.launchVisual = "woman-wakeup";
+      btn.dataset.launchVisual = "support-flow-mix";
     });
   }
 
@@ -514,9 +530,8 @@
         box-shadow:0 22px 48px rgba(0,0,0,.28);
       }
       .float-mode-shell.support-rebuild-mode .float-mode-launch{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:12px !important}
-      .float-mode-shell.support-rebuild-mode .float-launch-btn{min-height:134px !important;padding:18px 14px 18px 56px !important;font-size:15px !important;border-radius:22px !important;box-shadow:0 16px 36px rgba(0,0,0,.28)}
-      .float-mode-shell.support-rebuild-mode .float-t-bar,
-      .float-mode-shell.support-rebuild-mode .float-t-controls{display:none !important}
+      .float-mode-shell.support-rebuild-mode .float-launch-btn{position:relative;min-height:134px !important;padding:18px 14px 18px 56px !important;font-size:15px !important;border-radius:22px !important;box-shadow:0 16px 36px rgba(0,0,0,.28);overflow:hidden;isolation:isolate}
+      .float-mode-shell.support-rebuild-mode .float-launch-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(255,255,255,.06), transparent 44%, rgba(0,0,0,.22));pointer-events:none}
       .support-rebuild-shell{display:grid;gap:14px}
       .support-rebuild-route-host{display:none;gap:16px;align-content:start;position:relative;z-index:4;min-width:0;padding:0;border-radius:0;background:transparent;border:0;box-shadow:none;overflow:visible}
       .support-rebuild-route-host.is-open{display:grid}
@@ -591,6 +606,14 @@
       .support-rebuild-catalog-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.22)}
       .support-rebuild-catalog-dot.active{background:#ffd54a;box-shadow:0 0 0 4px rgba(255,213,74,.18)}
       .support-rebuild-ad-banner{min-height:240px;border-radius:20px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;box-shadow:0 16px 38px rgba(0,0,0,.22);position:relative;overflow:hidden}
+      .support-rebuild-mini-catalog{position:fixed;top:86px;left:18px;z-index:76;width:min(330px,calc(100vw - 36px));display:grid;gap:10px;padding:14px;border-radius:24px;background:rgba(8,14,24,.88);border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 54px rgba(0,0,0,.28);backdrop-filter:blur(10px)}
+      .support-rebuild-mini-catalog.minimized .support-rebuild-mini-catalog-body{display:none}
+      .support-rebuild-mini-catalog-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+      .support-rebuild-mini-catalog-body{display:grid;gap:10px}
+      .support-rebuild-mini-catalog-grid{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+      .support-rebuild-mini-product{min-height:120px;border-radius:18px;padding:12px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12);cursor:pointer}
+      .support-rebuild-mini-product::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,8,16,.06),rgba(4,8,16,.8))}
+      .support-rebuild-mini-product > *{position:relative;z-index:1}
       .support-rebuild-ad-banner::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,9,16,.1),rgba(5,9,16,.72))}
       .support-rebuild-ad-banner > *{position:relative;z-index:1}
       .support-rebuild-ad-topline{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:auto}
@@ -1952,128 +1975,79 @@
       </div>`;
   }
   function renderShellChrome() {
-    const top = document.querySelector(".float-mode-top");
-    if (!top) return;
-    const catalogMarkup = renderCatalogSection();
-    const adCards = SUPPORTRD_COPY.ads.map((ad, index) => `
-      <div class="support-rebuild-ad-banner" style="background-image:linear-gradient(180deg,rgba(5,9,16,.12),rgba(5,9,16,.70)),url('${index === 0 ? "/static/images/fantasy-21-plus-main-ad.jpg" : "/static/images/jake-studio-premium.jpg"}')">
-        <div class="support-rebuild-ad-topline">
-          <div class="support-rebuild-kicker">SupportRD Ad</div>
-          <div class="support-rebuild-price-badge">${ad.price}</div>
+    const products = getCatalogProducts();
+    const pageSize = 4;
+    const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+    const page = Math.max(0, Math.min(state.catalogPage || 0, totalPages - 1));
+    state.catalogPage = page;
+    const items = products.slice(page * pageSize, page * pageSize + pageSize);
+    let widget = $("srMiniCatalogWidget");
+    if (!widget) {
+      widget = document.createElement("aside");
+      widget.id = "srMiniCatalogWidget";
+      widget.className = "support-rebuild-mini-catalog";
+      document.body.appendChild(widget);
+    }
+    widget.classList.toggle("minimized", !!state.catalogMinimized);
+    widget.innerHTML = `
+      <div class="support-rebuild-mini-catalog-head">
+        <div>
+          <div class="support-rebuild-kicker">SupportRD Catalog</div>
+          <div class="support-rebuild-title" style="margin-bottom:0">Real product corner</div>
         </div>
-        <div class="support-rebuild-title">${ad.title}</div>
-        <div class="support-rebuild-note">${ad.note}</div>
-        <div class="support-rebuild-row" style="margin-top:12px">
-          <button class="support-rebuild-btn pulse" data-ad-route="${ad.route}">${ad.cta}</button>
+        <div class="support-rebuild-row" style="justify-content:flex-end">
+          <button class="support-rebuild-btn ghost" id="srMiniCatalogToggle">${state.catalogMinimized ? "Open" : "Minimize"}</button>
         </div>
-      </div>`);
-    top.innerHTML = `
-        <div id="srCatalogShellMarker" hidden></div>
-        <div class="support-rebuild-home-top">
-          <div class="support-rebuild-card">
-            <div class="support-rebuild-catalog-copy" style="margin-bottom:12px">
-              <div class="support-rebuild-kicker">SupportRD Storefront Remote</div>
-              <h1 class="support-rebuild-hero-title">We can reverse the catalog-heavy build: the Remote drives the page and the catalog supports it with real product images.</h1>
-              <div class="support-rebuild-hero-sub">This pass keeps the stronger real-life product imagery, but makes the catalog smaller so the Remote feels like the true engine again.</div>
-            </div>
-            ${catalogMarkup}
-          </div>
-          <div class="support-rebuild-top-meta">
-            <div class="support-rebuild-settings-tab">
-              <div class="support-rebuild-top-tools">
-                <button class="support-rebuild-btn pulse" id="srTopOpenSettings">General Settings</button>
-                <button class="support-rebuild-btn ghost" id="srTopOpenProducts">Products</button>
-                <button class="support-rebuild-btn ghost" id="srTopLoginToggle">Login / Logout Account</button>
-              </div>
-            </div>
-            <div class="support-rebuild-card">
-              <div class="support-rebuild-title">Main Structure</div>
-              <div class="support-rebuild-note">Remote stays in charge. Catalog stays smaller and image-led. Content keeps opening under the Remote without taking the whole page away.</div>
-            </div>
-          </div>
+      </div>
+      <div class="support-rebuild-mini-catalog-body">
+        <div class="support-rebuild-note">Keep this as an eye-catcher while the old big-button Remote stays in your face for on-the-trail use.</div>
+        <div class="support-rebuild-mini-catalog-grid">
+          ${items.map((product) => `
+            <button class="support-rebuild-mini-product" data-mini-catalog-open="${product.id}" style="background-image:url('${product.image}')">
+              <div class="support-rebuild-kicker">SupportRD Product</div>
+              <div class="support-rebuild-title" style="font-size:.92rem;margin-bottom:6px">${product.title}</div>
+              <div class="support-rebuild-price-badge">${product.price}</div>
+            </button>
+          `).join("")}
         </div>
-        <div class="support-rebuild-remote-stage">
-          <div class="support-rebuild-remote-column">
-            ${adCards[0] || ""}
-            <div class="support-rebuild-card support-rebuild-remote-copy">
-              <div class="support-rebuild-title">Remote Technology</div>
-              <div class="support-rebuild-remote-note">Audacity-style booth workflow, hair analysis, Aria support, and on-the-go hair technology stay tied to the six main buttons.</div>
-              <button class="support-rebuild-btn ghost" id="srLearnRemoteTech">Find Out More AI Remote Technology</button>
-            </div>
-          </div>
-          <div class="support-rebuild-remote-core">
-            <div class="support-rebuild-title">SupportRD Remote</div>
-            <div class="support-rebuild-note">This six-button Remote is the main giver of the page. Diary, Profile, Studio, FAQ Lounge, Map Change, and Settings all appear under it.</div>
-            <div class="support-rebuild-note">Aria stays confirmed working and shows up in Diary Mode, the corner dock, and the product flow when hair support matters.</div>
-          </div>
-          <div class="support-rebuild-remote-column">
-            ${adCards[1] || ""}
-            <div class="support-rebuild-card">
-              <div class="support-rebuild-title">Contacts / Channels</div>
-              <div class="support-rebuild-note">${state.statistics.contacts}</div>
-              <div class="support-rebuild-note" style="margin-top:10px">Developer feed, support, fan mail, and payment activity stay inside SupportRD menus.</div>
-            </div>
-          </div>
+        <div class="support-rebuild-catalog-pager">
+          <button class="support-rebuild-btn ghost" id="srMiniCatalogPrev" ${page === 0 ? "disabled" : ""}>Prev</button>
+          <div class="support-rebuild-catalog-dots">${Array.from({ length: totalPages }, (_, idx) => `<span class="support-rebuild-catalog-dot ${idx === page ? "active" : ""}"></span>`).join("")}</div>
+          <button class="support-rebuild-btn ghost" id="srMiniCatalogNext" ${page >= totalPages - 1 ? "disabled" : ""}>Next</button>
         </div>
-        <div class="support-rebuild-brand-mark">${SUPPORTRD_COPY.brandMark}</div>`;
-    $("srLearnRemoteTech")?.addEventListener("click", () => activateRoute("floatLiveBox"));
-    $("srTopOpenSettings")?.addEventListener("click", () => activateRoute("floatProfileBox"));
-    $("srTopOpenProducts")?.addEventListener("click", () => {
-      state.catalogSelected = "";
+      </div>`;
+    $("srMiniCatalogToggle")?.addEventListener("click", () => {
+      state.catalogMinimized = !state.catalogMinimized;
       saveState();
       renderShellChrome();
     });
-    $("srTopLoginToggle")?.addEventListener("click", openAccountModal);
-    $("srCatalogPrev")?.addEventListener("click", () => {
+    $("srMiniCatalogPrev")?.addEventListener("click", () => {
       state.catalogPage = Math.max(0, (state.catalogPage || 0) - 1);
       saveState();
       renderShellChrome();
     });
-    $("srCatalogNext")?.addEventListener("click", () => {
-      state.catalogPage = (state.catalogPage || 0) + 1;
+    $("srMiniCatalogNext")?.addEventListener("click", () => {
+      state.catalogPage = Math.min(totalPages - 1, (state.catalogPage || 0) + 1);
       saveState();
       renderShellChrome();
     });
-    $("srBackCatalog")?.addEventListener("click", () => {
-      state.catalogSelected = "";
-      saveState();
-      renderShellChrome();
-    });
-    $("srCatalogBackMain")?.addEventListener("click", () => {
-      state.catalogSelected = "";
-      saveState();
-      renderShellChrome();
-    });
-    top.querySelectorAll("[data-catalog-open]").forEach((btn) => btn.addEventListener("click", () => {
-      const product = getCatalogProducts().find((item) => item.id === btn.dataset.catalogOpen);
-      if (product?.physical) {
-        openCustomOrderProductModal(product);
-      } else {
-        openCatalogProductModal(product);
-      }
-    }));
-    top.querySelectorAll("[data-catalog-buy]").forEach((btn) => btn.addEventListener("click", () => {
-      const product = getCatalogProducts().find((item) => item.id === btn.dataset.catalogBuy);
-      openCheckoutForProduct(product, product?.title || "SupportRD product");
-    }));
-    top.querySelectorAll("[data-ad-route]").forEach((btn) => btn.addEventListener("click", () => {
-      openQuestionnaireRoute({ route: btn.dataset.adRoute, label: btn.textContent.trim(), note: "Catalog ad routed the visitor into a live SupportRD section." });
+    widget.querySelectorAll("[data-mini-catalog-open]").forEach((btn) => btn.addEventListener("click", () => {
+      const product = getCatalogProducts().find((item) => item.id === btn.dataset.miniCatalogOpen);
+      if (product?.physical) openCustomOrderProductModal(product);
+      else openCatalogProductModal(product);
     }));
   }
 
   function ensureShellChrome() {
-    const top = document.querySelector(".float-mode-top");
-    if (!top) return;
-    if (!top.querySelector("#srCatalogShellMarker")) renderShellChrome();
+    if (!$("srMiniCatalogWidget")) renderShellChrome();
   }
 
   function watchShellChrome() {
-    const top = document.querySelector(".float-mode-top");
-    if (!top || shellChromeObserver) return;
+    if (shellChromeObserver) return;
     shellChromeObserver = new MutationObserver(() => {
-      if (!top.querySelector("#srCatalogShellMarker")) renderShellChrome();
+      if (!$("srMiniCatalogWidget")) renderShellChrome();
     });
-    shellChromeObserver.observe(top, { childList: true });
+    shellChromeObserver.observe(document.body, { childList: true });
   }
 
   function bindLaunchButtons() {
@@ -2148,7 +2122,7 @@
       syncArchitectureStatus();
       syncShopifyPublicConfig();
       ensureShellChrome();
-      window.SupportRDRemoteRebuildVersion = "20260411e";
+      window.SupportRDRemoteRebuildVersion = "20260411f";
     }
 
   setTimeout(init, 700);
