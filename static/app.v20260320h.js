@@ -5320,7 +5320,7 @@ function setupPwa(){
     })
   }
   if("serviceWorker" in navigator){
-navigator.serviceWorker.register("/sw.js?v=20260411c").then((registration)=>{
+navigator.serviceWorker.register("/sw.js?v=20260411d").then((registration)=>{
       if(registration?.waiting){
         registration.waiting.postMessage({ type:"SKIP_WAITING" })
       }
@@ -13761,6 +13761,7 @@ safe(setupReel)
     }
   })
 })
+
 
 
 
