@@ -1500,13 +1500,17 @@
   function renderSettings() {
     const box = $("floatProfileBox");
     if (!box) return;
+    const socialList = Object.entries(state.diarySocial || {})
+      .filter(([, enabled]) => enabled)
+      .map(([platform]) => platform)
+      .join(", ");
     box.innerHTML = `
       <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
           <div class="support-rebuild-content-head">
             <h3 class="support-rebuild-title">General Settings</h3>
           </div>
-          <div class="support-rebuild-note">Settings only deal with using SupportRD under an account: login state, password, email, subscription date, social links, and product access.</div>
+          <div class="support-rebuild-note">Settings now handle the stronger first-rebuild account flow again: login state, password, email, subscription date, social links, product access, and the full settings lane.</div>
         </div>
         <div class="support-rebuild-grid two">
           <div class="support-rebuild-card">
@@ -1517,6 +1521,7 @@
             <div class="support-rebuild-row" style="margin-top:12px">
               <button class="support-rebuild-btn pulse" id="srSettingsLoginState">${state.account.loggedIn ? "Log Out" : "Log In"}</button>
               <button class="support-rebuild-btn ghost" id="srSettingsPush">${state.push ? "Push On" : "Push Off"}</button>
+              <button class="support-rebuild-btn ghost" id="srOpenFullSettings">Open Full Settings</button>
             </div>
           </div>
           <div class="support-rebuild-card">
@@ -1524,7 +1529,7 @@
             <input class="support-rebuild-input" id="srSettingsPayDate" placeholder="Subscription pay date" value="${state.account.subscriptionPayDate || ""}">
             <input class="support-rebuild-input" id="srSettingsUrl" style="margin-top:10px" placeholder="Diary invite / primary link" value="${state.profile.contact || ""}">
             <input class="support-rebuild-input" id="srSettingsPhone" style="margin-top:10px" placeholder="Phone number" value="${state.account.phone || ""}">
-            <textarea class="support-rebuild-textarea" id="srSettingsLinks" style="margin-top:10px">${Object.entries(state.diarySocial || {}).filter(([, enabled]) => enabled).map(([platform]) => platform).join(", ")}</textarea>
+            <textarea class="support-rebuild-textarea" id="srSettingsLinks" style="margin-top:10px">${socialList}</textarea>
           </div>
         </div>
         <div class="support-rebuild-card">
@@ -1535,6 +1540,24 @@
             <button class="support-rebuild-btn pulse" id="srSettingsSaveAll">Save Settings</button>
           </div>
           <div class="support-rebuild-note" id="srSettingsStatus" style="margin-top:12px">Current plan: ${state.account.plan}. Contacts / Channels: ${state.statistics.contacts}</div>
+        </div>
+        <div class="support-rebuild-grid two" id="srSettingsFullLane" style="display:none">
+          <div class="support-rebuild-card">
+            <div class="support-rebuild-title">Identity + Security</div>
+            <input class="support-rebuild-input" id="srSettingsFullUsername" placeholder="Username" value="${state.profile.name || state.account.displayName || ""}">
+            <input class="support-rebuild-input" id="srSettingsOldPassword" style="margin-top:10px" type="password" placeholder="Current password">
+            <input class="support-rebuild-input" id="srSettingsNewPassword" style="margin-top:10px" type="password" placeholder="New password">
+            <input class="support-rebuild-input" id="srSettingsConfirmPassword" style="margin-top:10px" type="password" placeholder="Confirm new password">
+            <input class="support-rebuild-input" id="srSettingsAddress" style="margin-top:10px" placeholder="Address info" value="${state.account.address || ""}">
+          </div>
+          <div class="support-rebuild-card">
+            <div class="support-rebuild-title">Payments + Links</div>
+            <input class="support-rebuild-input" id="srSettingsPremium" placeholder="Premium / plan status" value="${state.account.plan || ""}">
+            <input class="support-rebuild-input" id="srSettingsFantasy" style="margin-top:10px" placeholder="Fantasy setting" value="${state.account.fantasyMode || ""}">
+            <input class="support-rebuild-input" id="srSettingsPrimaryUrl" style="margin-top:10px" placeholder="Primary URL link" value="${state.profile.contact || ""}">
+            <input class="support-rebuild-input" id="srSettingsDiaryInvite" style="margin-top:10px" placeholder="Invitable Diary link" value="${state.diaryInviteUrl || ""}">
+            <textarea class="support-rebuild-textarea" id="srSettingsSocialUpdate" style="margin-top:10px" placeholder="Comma-separated social update routes">${socialList}</textarea>
+          </div>
         </div>
       </div>`;
     $("srSettingsLoginState").onclick = () => {
@@ -1552,6 +1575,14 @@
     };
     $("srSettingsPayments").onclick = openPaymentModal;
     $("srSettingsAccount").onclick = openAccountModal;
+    $("srOpenFullSettings").onclick = () => {
+      const lane = $("srSettingsFullLane");
+      if (!lane) return;
+      lane.style.display = lane.style.display === "none" ? "grid" : "none";
+      $("srSettingsStatus").textContent = lane.style.display === "none"
+        ? "Full settings hidden. Core account controls stay active."
+        : "Full settings opened. Identity, password, links, and payment details are ready to edit.";
+    };
     $("srSettingsSaveAll").onclick = () => {
       state.profile.name = $("srSettingsUsername").value.trim();
       state.account.displayName = state.profile.name || state.account.displayName;
@@ -1564,38 +1595,71 @@
       Object.keys(state.diarySocial).forEach((platform) => {
         state.diarySocial[platform] = links.includes(platform);
       });
+      if ($("srSettingsFullLane")?.style.display !== "none") {
+        const newPassword = $("srSettingsNewPassword")?.value.trim();
+        const confirmPassword = $("srSettingsConfirmPassword")?.value.trim();
+        if (newPassword && newPassword === confirmPassword) state.account.password = newPassword;
+        state.account.address = $("srSettingsAddress")?.value.trim() || state.account.address;
+        state.account.plan = $("srSettingsPremium")?.value.trim() || state.account.plan;
+        state.account.fantasyMode = $("srSettingsFantasy")?.value.trim() || state.account.fantasyMode;
+        state.profile.contact = $("srSettingsPrimaryUrl")?.value.trim() || state.profile.contact;
+        state.diaryInviteUrl = $("srSettingsDiaryInvite")?.value.trim() || state.diaryInviteUrl;
+        const socialUpdate = (($("srSettingsSocialUpdate")?.value) || "").toLowerCase();
+        Object.keys(state.diarySocial).forEach((platform) => {
+          state.diarySocial[platform] = socialUpdate.includes(platform);
+        });
+      }
       saveState();
       renderShellChrome();
-      $("srSettingsStatus").textContent = "Settings saved. SupportRD account controls are updated and ready.";
+      $("srSettingsStatus").textContent = "Settings saved. SupportRD account controls and the full settings lane are updated and ready.";
     };
   }
   function renderDiary() {
     const box = $("floatSettingsBox");
     if (!box) return;
-    const historyLines = state.diaryFeed.length ? state.diaryFeed : ["Aria is ready for SupportRD hair questions.", "Jake is standing by for booth energy."];
+    const historyLines = state.diaryFeed.length ? state.diaryFeed : ["Chat history empty right before they start.", "Aria is ready for hair talk.", "Jake is waiting for studio help."];
+    const lines = formatDiaryLines(state.diaryText);
     box.innerHTML = `
       <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
           <div class="support-rebuild-content-head">
-            <h3 class="support-rebuild-title">Diary</h3>
+            <h3 class="support-rebuild-title">Diary Mode</h3>
           </div>
-          <div class="support-rebuild-note">Aria and Jake stay above the history reader. Ask Aria any hair question regarding SupportRD and she answers only in that lane.</div>
+          <div class="support-rebuild-note">Aria and Jake stay above the history reader. Ask Aria any hair question regarding SupportRD and she answers only in that lane, with the stronger first-rebuild Diary controls back in place.</div>
         </div>
         <div class="support-rebuild-aria-menu">
           <div class="support-rebuild-reader">
             <div class="support-rebuild-title">Aria / Jake Menu</div>
             <div class="support-rebuild-row">
-              <button class="support-rebuild-btn pulse" id="srTalkAria">Ask Aria</button>
-              <button class="support-rebuild-btn ghost" id="srTalkJake">Call Jake</button>
+              <button class="support-rebuild-btn pulse" id="srTalkAria">Talk To Aria</button>
+              <button class="support-rebuild-btn ghost" id="srTalkJake">Talk To Jake</button>
+              <button class="support-rebuild-btn ghost" id="srHandsFreeBtn">Hands-Free Mode</button>
+              <button class="support-rebuild-btn ghost" id="srDiaryLiveBtn">${state.liveMode ? "Stop Live Session" : "Live Session"}</button>
               <button class="support-rebuild-btn ghost" id="srDiarySaveBtn">Save Diary</button>
             </div>
             <textarea class="support-rebuild-textarea" id="srDiaryQuestion" placeholder="What hair problem is SupportRD helping with today?">${state.diaryDescription || ""}</textarea>
-            <textarea class="support-rebuild-textarea" id="srDiaryText" placeholder="Private diary notes stay here.">${state.diaryText || ""}</textarea>
+            <div class="support-rebuild-grid two" style="margin-top:12px">
+              <div class="support-rebuild-card" style="padding:12px">
+                <div class="support-rebuild-title">Send Links</div>
+                <div class="support-rebuild-note">Route best options for IG, FB, TikTok, X, Snapchat, and LinkedIn posting.</div>
+                <div class="support-rebuild-mini-actions" style="margin-top:10px">
+                  ${Object.keys(state.diarySocial).map((platform) => `<label class="support-rebuild-pill"><input type="checkbox" data-platform="${platform}" ${state.diarySocial[platform] ? "checked" : ""}> ${platform}</label>`).join("")}
+                </div>
+              </div>
+              <div class="support-rebuild-card" style="padding:12px">
+                <div class="support-rebuild-title">Private Diary</div>
+                <div class="support-rebuild-note">Fixed above the history, hands-free ready, and listening for hair problems.</div>
+                <textarea class="support-rebuild-textarea" id="srDiaryText" placeholder="Private diary notes stay here." style="margin-top:10px">${state.diaryText || ""}</textarea>
+              </div>
+            </div>
           </div>
           <div class="support-rebuild-reader">
             <div class="support-rebuild-title">SupportRD History Reader</div>
             <div class="support-rebuild-history">${historyLines.map((line)=>`<div class="support-rebuild-line">${line}</div>`).join("")}</div>
-            <div class="support-rebuild-note">Live invite: ${state.profile.contact || "https://supportrd.com/live"}</div>
+            <div class="support-rebuild-note">Live invite: ${state.diaryInviteUrl || state.profile.contact || "https://supportrd.com/live"}</div>
+            <div class="support-rebuild-diary-preview" style="margin-top:12px">
+              ${lines.map((line) => `<div>${line || "&nbsp;"}</div>`).join("")}
+            </div>
           </div>
         </div>
       </div>`;
@@ -1610,11 +1674,29 @@
       startAssistant("Jake");
       renderDiary();
     };
+    $("srHandsFreeBtn").onclick = () => {
+      state.diaryFeed = [
+        "Hands-free Aria is now listening to hair problems.",
+        "Jake is standing by for studio-toned support.",
+        `Current level: ${state.diaryLevel}.`
+      ];
+      saveState();
+      renderDiary();
+    };
+    $("srDiaryLiveBtn").onclick = () => {
+      state.liveMode = !state.liveMode;
+      saveState();
+      renderDiary();
+    };
     $("srDiarySaveBtn").onclick = () => {
       state.diaryDescription = $("srDiaryQuestion").value.trim();
       state.diaryText = $("srDiaryText").value;
+      document.querySelectorAll("[data-platform]").forEach((cb) => {
+        state.diarySocial[cb.dataset.platform] = cb.checked;
+      });
       pushDiaryFeed(`Diary saved for ${(state.profile.name || "SupportRD Guest")}.`);
       saveState();
+      renderShellChrome();
       renderDiary();
     };
   }
@@ -1716,52 +1798,71 @@
   function renderStudio() {
     const box = $("floatBoardsBox");
     if (!box) return;
-    const tracks = ["voice", "beat", "instrument", "adlib"];
+    const recentItems = (state.studioRecent || []).map((item, index) => `
+      <button class="support-rebuild-btn ghost" data-recent-index="${index}">
+        ${item.label} · ${item.savedAt}
+      </button>`).join("");
     box.innerHTML = `
       <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
           <div class="support-rebuild-content-head">
             <h3 class="support-rebuild-title">Studio Quick Panel</h3>
           </div>
-          <div class="support-rebuild-note">SupportRD Studio uses an Audacity-style booth inside the app. Click a motherboard, record directly into it, and build the session live.</div>
+          <div class="support-rebuild-note">SupportRD Studio uses the stronger first-rebuild booth behavior again: clickable motherboards, quick/full modes, live record, undo, export, and recent builds.</div>
         </div>
         <div class="support-rebuild-audacity">
           <div class="support-rebuild-audacity-toolbar">
+            <button class="support-rebuild-btn ${state.studioMode === "quick" ? "pulse" : "ghost"}" id="srStudioQuickMode">Quick Mode</button>
+            <button class="support-rebuild-btn ${state.studioMode === "full" ? "pulse" : "ghost"}" id="srStudioFullMode">Full Studio Mode</button>
             <button class="support-rebuild-btn pulse" id="srStudioRecord">Record</button>
+            <button class="support-rebuild-btn ghost" id="srStudioVideo">Live Record Video</button>
             <button class="support-rebuild-btn ghost" id="srStudioStop">Stop</button>
             <button class="support-rebuild-btn ghost" id="srStudioPlay">Play</button>
             <button class="support-rebuild-btn ghost" id="srStudioPause">Pause</button>
+            <button class="support-rebuild-btn ghost" id="srStudioRewind">Rewind</button>
+            <button class="support-rebuild-btn ghost" id="srStudioForward">Fast Forward</button>
             <button class="support-rebuild-btn ghost" id="srStudioUndo">Undo</button>
-            <button class="support-rebuild-btn ghost" id="srStudioExport">Export</button>
+            <button class="support-rebuild-btn ghost" id="srStudioExport">Export File</button>
           </div>
-          ${tracks.map((board) => `
+          <div class="support-rebuild-note">${state.studioMode === "full" ? "Full studio mode opens the whole motherboard lane for vocals, beat, instrument, adlib, FX, video, and recent saved builds." : "Quick mode keeps record, upload, play, and export one tap away."}</div>
+          ${["voice", "beat", "adlib", "instrument"].map((board) => `
             <div class="support-rebuild-audacity-track ${board === currentBoard ? "active" : ""}" data-board="${board}">
-              <div class="support-rebuild-row"><strong>${board.toUpperCase()} MOTHERBOARD</strong><span class="support-rebuild-pill">${state.studioBoards[board] || `${board}-track.wav`}</span></div>
+              <div class="support-rebuild-row"><strong>${board.toUpperCase()} MOTHERBOARD</strong><span class="support-rebuild-pill" id="srBoardName_${board}">${state.studioBoards[board] || `${board}-track.wav`}</span></div>
               <div class="support-rebuild-wave"></div>
-              <div class="support-rebuild-note">${board === currentBoard ? "Active board: record and upload land here live." : "Click to arm this board."}</div>
-              <input type="file" accept="audio/*" data-upload="${board}">
+              <div class="support-rebuild-note">${board === currentBoard ? "Active motherboard. Record and FX land here." : "Select this motherboard to record or apply edits."}</div>
+              <input type="file" accept="audio/*,video/*" data-upload="${board}">
             </div>`).join("")}
           <div class="support-rebuild-grid two">
             <div class="support-rebuild-card">
               <div class="support-rebuild-title">Studio Status</div>
               <div class="support-rebuild-note" id="srStudioStatus">Ready to bring the booth to life.</div>
+              <label class="support-rebuild-note" style="margin-top:10px;display:block">FX Settings</label>
+              <select class="support-rebuild-select" id="srStudioFx" style="margin-top:8px">
+                <option>Echo</option><option>Reverb</option><option>Fade In</option><option>Fade Out</option>
+                <option>Bass</option><option>Treble</option><option>Deep Voice</option><option>Opera Voice</option>
+                <option>Slow Motion</option><option>Camera Lighting</option><option>Panoramic</option><option>Zoom</option>
+              </select>
             </div>
             <div class="support-rebuild-card">
               <div class="support-rebuild-title">Recent Builds</div>
-              <div class="support-rebuild-mini-list">${(state.studioRecent || []).map((item) => `<div class="support-rebuild-line">${item.label} · ${item.savedAt}</div>`).join("") || `<div class="support-rebuild-note">The latest 3 studio builds will stay here.</div>`}</div>
+              <div class="support-rebuild-mini-list">${recentItems || `<div class="support-rebuild-note">The latest 3 builds will stay here after recording, upload, or export.</div>`}</div>
             </div>
           </div>
           <div class="support-rebuild-progress"><span id="srStudioBar"></span></div>
         </div>
       </div>`;
+    $("srStudioQuickMode").onclick = () => { state.studioMode = "quick"; saveState(); renderStudio(); };
+    $("srStudioFullMode").onclick = () => { state.studioMode = "full"; saveState(); renderStudio(); };
     box.querySelectorAll("[data-board]").forEach((btn) => btn.onclick = () => {
       currentBoard = btn.dataset.board;
+      $("srStudioStatus").textContent = `Editing ${currentBoard} board. Highlight here before using FX or record.`;
       renderStudio();
     });
     box.querySelectorAll("[data-upload]").forEach((input) => input.onchange = () => {
       const file = input.files && input.files[0];
       if (!file) return;
       pushStudioUndo(`Before loading ${file.name}`);
+      boardAudio[input.dataset.upload] = new Audio(URL.createObjectURL(file));
       state.studioBoards[input.dataset.upload] = file.name;
       saveRecentStudioBuild(`${file.name} into ${input.dataset.upload}`, "upload");
       saveState();
@@ -1772,8 +1873,16 @@
     $("srStudioStop").onclick = stopRecord;
     $("srStudioPlay").onclick = playBoards;
     $("srStudioPause").onclick = () => Object.values(boardAudio).forEach((audio) => audio && audio.pause());
+    $("srStudioVideo").onclick = () => $("srStudioStatus").textContent = "Live record video lane is staged from this booth controller.";
+    $("srStudioRewind").onclick = () => $("srStudioStatus").textContent = "Rewind armed for the active motherboard.";
+    $("srStudioForward").onclick = () => $("srStudioStatus").textContent = "Fast forward armed for the active motherboard.";
     $("srStudioUndo").onclick = () => restoreStudioSnapshot(studioUndoStack.pop());
     $("srStudioExport").onclick = exportStudio;
+    box.querySelectorAll("[data-recent-index]").forEach((btn) => btn.onclick = () => {
+      const item = state.studioRecent?.[Number(btn.dataset.recentIndex)];
+      if (!item) return;
+      restoreStudioSnapshot(item);
+    });
   }
   async function startRecord() {
     try {
@@ -2039,7 +2148,7 @@
       syncArchitectureStatus();
       syncShopifyPublicConfig();
       ensureShellChrome();
-      window.SupportRDRemoteRebuildVersion = "20260411b";
+      window.SupportRDRemoteRebuildVersion = "20260411c";
     }
 
   setTimeout(init, 700);
