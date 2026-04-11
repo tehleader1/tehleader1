@@ -528,12 +528,17 @@
       .support-rebuild-account-kicker{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.64)}
       .support-rebuild-account-meta{display:grid;gap:8px}
       .support-rebuild-overview{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-      .support-rebuild-home-top{display:grid;gap:16px;grid-template-columns:minmax(0,1.45fr) minmax(280px,.65fr)}
+      .support-rebuild-home-top{display:grid;gap:14px;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);align-items:start}
       .support-rebuild-card{background:rgba(9,12,22,.78);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:16px;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.24)}
       .support-rebuild-title{font:700 1.05rem/1.2 Georgia,serif;letter-spacing:.02em;margin:0 0 10px}
       .support-rebuild-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
       .support-rebuild-grid{display:grid;gap:12px}
       .support-rebuild-grid.two{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+      .support-rebuild-catalog-main{display:grid;gap:12px}
+      .support-rebuild-catalog-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+      .support-rebuild-catalog-copy{display:grid;gap:8px}
+      .support-rebuild-catalog-summary{font-size:.94rem;line-height:1.45;color:rgba(255,255,255,.84)}
+      .support-rebuild-catalog-callout{min-height:100%;display:grid;gap:10px;align-content:start;padding:14px;border-radius:20px;background:linear-gradient(180deg,rgba(10,18,30,.86),rgba(12,22,38,.72));border:1px solid rgba(255,255,255,.10)}
       .support-rebuild-store-banner{display:grid;gap:10px}
       .support-rebuild-kicker{font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.7)}
       .support-rebuild-hero-title{font:700 clamp(1.25rem,2.8vw,2rem)/1.06 Georgia,serif;margin:0}
@@ -541,11 +546,13 @@
       .support-rebuild-top-tools{display:grid;gap:10px}
       .support-rebuild-settings-tab{display:inline-flex;align-items:center;justify-content:center;min-height:64px;padding:14px 18px;border-radius:22px;background:rgba(9,12,22,.86);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 42px rgba(0,0,0,.24)}
       .support-rebuild-top-meta{display:grid;gap:12px}
-      .support-rebuild-hero-layout{display:grid;gap:14px;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);align-items:stretch}
-      .support-rebuild-hero-visual{min-height:260px;border-radius:22px;background:linear-gradient(180deg,rgba(4,8,18,.16),rgba(4,8,18,.48)),url('/static/images/lezawli.jpeg') center/cover no-repeat;border:1px solid rgba(255,255,255,.12)}
-      .support-rebuild-remote-stage{display:grid;gap:16px;grid-template-columns:minmax(240px,.75fr) minmax(0,1.1fr) minmax(240px,.75fr);align-items:start}
+      .support-rebuild-hero-layout{display:grid;gap:14px;grid-template-columns:minmax(0,1fr) minmax(220px,.72fr);align-items:stretch}
+      .support-rebuild-hero-visual{min-height:220px;border-radius:22px;background:linear-gradient(180deg,rgba(4,8,18,.16),rgba(4,8,18,.48)),url('/static/images/lezawli.jpeg') center/cover no-repeat;border:1px solid rgba(255,255,255,.12)}
+      .support-rebuild-remote-stage{display:grid;gap:16px;grid-template-columns:minmax(240px,.68fr) minmax(0,1.45fr) minmax(240px,.68fr);align-items:start}
       .support-rebuild-remote-column{display:grid;gap:14px}
       .support-rebuild-remote-copy{display:grid;gap:10px}
+      .support-rebuild-remote-core{display:grid;gap:14px;padding:18px;border-radius:26px;background:linear-gradient(180deg,rgba(6,11,20,.96),rgba(10,16,28,.90));border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 58px rgba(0,0,0,.3)}
+      .support-rebuild-remote-core .support-rebuild-title{font-size:1.15rem}
       .support-rebuild-content-shell{display:grid;gap:16px}
       .support-rebuild-content-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
       .support-rebuild-content-head .support-rebuild-title{margin:0}
@@ -561,14 +568,14 @@
       .support-rebuild-product-mini{padding:12px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1)}
       .support-rebuild-product-mini .support-rebuild-title{font-size:.96rem;margin-bottom:6px}
       .support-rebuild-mini-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-      .support-rebuild-product-menu{display:grid;gap:12px;padding:14px;border-radius:22px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(8,12,20,.38),rgba(8,12,20,.72)),url('/static/images/brochure-scroll-store.jpg') center/cover no-repeat}
+      .support-rebuild-product-menu{display:grid;gap:12px;padding:14px;border-radius:22px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(8,12,20,.26),rgba(8,12,20,.64)),url('/static/images/brochure-scroll-store.jpg') center/cover no-repeat}
       .support-rebuild-product-menu[hidden]{display:none!important}
       .support-rebuild-product-featured{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
       .support-rebuild-product-digital{min-height:230px;border-radius:20px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;box-shadow:0 16px 38px rgba(0,0,0,.24);position:relative;overflow:hidden}
       .support-rebuild-product-digital::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,7,14,.08),rgba(3,7,14,.72))}
       .support-rebuild-product-digital > *{position:relative;z-index:1}
       .support-rebuild-catalog-grid{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
-      .support-rebuild-catalog-card{min-height:210px;border-radius:22px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.14);box-shadow:0 20px 40px rgba(0,0,0,.22);cursor:pointer;transition:transform .18s ease, box-shadow .18s ease}
+      .support-rebuild-catalog-card{min-height:170px;border-radius:22px;padding:14px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.14);box-shadow:0 20px 40px rgba(0,0,0,.22);cursor:pointer;transition:transform .18s ease, box-shadow .18s ease}
       .support-rebuild-catalog-card::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,8,16,.04),rgba(4,8,16,.78))}
       .support-rebuild-catalog-card > *{position:relative;z-index:1}
       .support-rebuild-catalog-card:hover{transform:translateY(-3px);box-shadow:0 26px 44px rgba(0,0,0,.28)}
@@ -579,7 +586,7 @@
       .support-rebuild-catalog-dots{display:flex;gap:8px;justify-content:center}
       .support-rebuild-catalog-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.22)}
       .support-rebuild-catalog-dot.active{background:#ffd54a;box-shadow:0 0 0 4px rgba(255,213,74,.18)}
-      .support-rebuild-ad-banner{min-height:180px;border-radius:20px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;box-shadow:0 16px 38px rgba(0,0,0,.22);position:relative;overflow:hidden}
+      .support-rebuild-ad-banner{min-height:240px;border-radius:20px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;box-shadow:0 16px 38px rgba(0,0,0,.22);position:relative;overflow:hidden}
       .support-rebuild-ad-banner::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,9,16,.1),rgba(5,9,16,.72))}
       .support-rebuild-ad-banner > *{position:relative;z-index:1}
       .support-rebuild-ad-topline{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:auto}
@@ -681,6 +688,7 @@
       }
       @media (max-width: 980px){
         .support-rebuild-home-top{grid-template-columns:1fr}
+        .support-rebuild-hero-layout{grid-template-columns:1fr}
         .float-mode-shell.support-rebuild-mode .float-mode-launch{width:100%;margin-left:0 !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important}
         .support-rebuild-remote-stage,.support-rebuild-aria-menu{grid-template-columns:1fr}
         .support-rebuild-sticky-rail{left:10px;top:auto;bottom:110px;transform:none;width:min(180px,calc(100vw - 20px))}
@@ -831,21 +839,27 @@
     state.catalogSelected = "";
     const items = products.slice(page * pageSize, page * pageSize + pageSize);
     return `
-      <div class="support-rebuild-product-menu">
-        <div class="support-rebuild-row" style="justify-content:space-between">
-          <div>
+      <div class="support-rebuild-catalog-main">
+        <div class="support-rebuild-catalog-header">
+          <div class="support-rebuild-catalog-copy">
             <div class="support-rebuild-kicker">SupportRD Products Catalog</div>
-            <div class="support-rebuild-title">6 products shown at a time</div>
+            <div class="support-rebuild-title">Real product visuals first</div>
+            <div class="support-rebuild-catalog-summary">Keep the catalog smaller and cleaner so the Remote stays the main giver of the page, but the real-life product images still grab the eyeballs right away.</div>
           </div>
-          <div class="support-rebuild-note">Tap one and it opens as a full-view product screen with a clean X close.</div>
+          <div class="support-rebuild-catalog-callout">
+            <div class="support-rebuild-kicker">How It Opens</div>
+            <div class="support-rebuild-note">Tap a product and SupportRD opens the full-view product screen with the clean X close. The Remote stays the main controller underneath.</div>
+          </div>
         </div>
-        <div class="support-rebuild-catalog-grid">
+        <div class="support-rebuild-product-menu">
+          <div class="support-rebuild-catalog-grid">
           ${items.map((product) => `
             <button class="support-rebuild-catalog-card" data-catalog-open="${product.id}" style="background-image:url('${product.image}')">
               <div class="support-rebuild-kicker">SupportRD Product</div>
               <div class="support-rebuild-title">${product.title}</div>
               <div class="support-rebuild-price-badge">${product.price}</div>
             </button>`).join("")}
+          </div>
         </div>
         <div class="support-rebuild-catalog-pager">
           <button class="support-rebuild-btn ghost" id="srCatalogPrev" ${page === 0 ? "disabled" : ""}>Previous 6</button>
@@ -1843,19 +1857,10 @@
     top.innerHTML = `
         <div class="support-rebuild-home-top">
           <div class="support-rebuild-card">
-            <div class="support-rebuild-hero-layout">
-              <div class="support-rebuild-store-banner">
-                <div class="support-rebuild-kicker">SupportRD Storefront Remote</div>
-                <h1 class="support-rebuild-hero-title">SupportRD keeps the catalog on top, the Remote in the middle, and the real help directly underneath.</h1>
-                <div class="support-rebuild-hero-sub">Formula Exclusiva, Gotero, Gotika, Laciador, Mascarilla, and Shampoo live in the catalog. The Remote stays visible and every click sends the content directly underneath it without taking over the page.</div>
-                <div class="support-rebuild-row">
-                  <button class="support-rebuild-btn ghost" id="srHeroCustomOrder">Custom Order</button>
-                  <button class="support-rebuild-btn ghost" id="srHeroProducts">Main Catalog</button>
-                  <button class="support-rebuild-btn ghost" id="srHeroDiaryInvite">Open Diary</button>
-                </div>
-                <div class="support-rebuild-note">Products stay as the main meat. Remote buttons switch the live help below. SupportRD Remote gives freedom to the person and their hair anywhere the day moves.</div>
-              </div>
-              <div class="support-rebuild-hero-visual"></div>
+            <div class="support-rebuild-catalog-copy" style="margin-bottom:12px">
+              <div class="support-rebuild-kicker">SupportRD Storefront Remote</div>
+              <h1 class="support-rebuild-hero-title">We can reverse the catalog-heavy build: the Remote drives the page and the catalog supports it with real product images.</h1>
+              <div class="support-rebuild-hero-sub">This pass keeps the stronger real-life product imagery, but makes the catalog smaller so the Remote feels like the true engine again.</div>
             </div>
             ${catalogMarkup}
           </div>
@@ -1863,13 +1868,13 @@
             <div class="support-rebuild-settings-tab">
               <div class="support-rebuild-top-tools">
                 <button class="support-rebuild-btn pulse" id="srTopOpenSettings">General Settings</button>
-                <button class="support-rebuild-btn ghost" id="srTopOpenProducts">Main Catalog</button>
+                <button class="support-rebuild-btn ghost" id="srTopOpenProducts">Products</button>
                 <button class="support-rebuild-btn ghost" id="srTopLoginToggle">Login / Logout Account</button>
               </div>
             </div>
             <div class="support-rebuild-card">
               <div class="support-rebuild-title">Main Structure</div>
-              <div class="support-rebuild-note">Frontend = Remote feel. Backend = account operations. OpenAI = Aria hair guidance. Statistics and Contacts stay measurable.</div>
+              <div class="support-rebuild-note">Remote stays in charge. Catalog stays smaller and image-led. Content keeps opening under the Remote without taking the whole page away.</div>
             </div>
           </div>
         </div>
@@ -1877,16 +1882,15 @@
           <div class="support-rebuild-remote-column">
             ${adCards[0] || ""}
             <div class="support-rebuild-card support-rebuild-remote-copy">
-              <div class="support-rebuild-title">Learn More About The SupportRD Remote</div>
-              <div class="support-rebuild-remote-note">SupportRD Remote features an in-home studio booth inspired by an Audacity-style workflow from rapper developer Anthony Figueroa, in-depth hair analysis, and direct hair-problem support from Aria.</div>
-              <div class="support-rebuild-remote-note">Use it for jungle adventures, road trips, GPS moments, and personal in-home hair support.</div>
-              <button class="support-rebuild-btn ghost" id="srLearnRemoteTech">Find Out More AI Remote Technology In Hair Products Page</button>
+              <div class="support-rebuild-title">Remote Technology</div>
+              <div class="support-rebuild-remote-note">Audacity-style booth workflow, hair analysis, Aria support, and on-the-go hair technology stay tied to the six main buttons.</div>
+              <button class="support-rebuild-btn ghost" id="srLearnRemoteTech">Find Out More AI Remote Technology</button>
             </div>
           </div>
-          <div class="support-rebuild-card support-rebuild-remote-copy">
+          <div class="support-rebuild-remote-core">
             <div class="support-rebuild-title">SupportRD Remote</div>
-            <div class="support-rebuild-note">This six-button Remote stays visible. The content under it changes instantly for Diary, Profile, Studio, FAQ Lounge, Map Change, and Settings.</div>
-            <div class="support-rebuild-note">Aria is confirmed working and shows up in Diary Mode, the corner dock, and the product flow when hair support matters.</div>
+            <div class="support-rebuild-note">This six-button Remote is the main giver of the page. Diary, Profile, Studio, FAQ Lounge, Map Change, and Settings all appear under it.</div>
+            <div class="support-rebuild-note">Aria stays confirmed working and shows up in Diary Mode, the corner dock, and the product flow when hair support matters.</div>
           </div>
           <div class="support-rebuild-remote-column">
             ${adCards[1] || ""}
@@ -1898,18 +1902,6 @@
           </div>
         </div>
         <div class="support-rebuild-brand-mark">${SUPPORTRD_COPY.brandMark}</div>`;
-    $("srHeroCustomOrder")?.addEventListener("click", () => openCustomOrderProductModal({
-      title: "SupportRD Product",
-      price: "Custom quote",
-      description: "Choose a SupportRD custom product and keep the whole ordering flow inside the app.",
-      image: "/static/images/brochure-scroll-store.jpg"
-    }));
-    $("srHeroProducts")?.addEventListener("click", () => {
-      state.catalogSelected = "";
-      saveState();
-      renderShellChrome();
-    });
-    $("srHeroDiaryInvite")?.addEventListener("click", () => activateRoute("floatSettingsBox"));
     $("srLearnRemoteTech")?.addEventListener("click", () => activateRoute("floatLiveBox"));
     $("srTopOpenSettings")?.addEventListener("click", () => activateRoute("floatProfileBox"));
     $("srTopOpenProducts")?.addEventListener("click", () => {
