@@ -283,6 +283,7 @@
   let routeHost = null;
   let routeGrid = null;
   let professionalReminderTimer = null;
+  let shellChromeObserver = null;
 
   function loadState() {
     try {
@@ -421,6 +422,7 @@
       btn.style.backgroundRepeat = "no-repeat";
       btn.style.boxShadow = "0 18px 36px rgba(0,0,0,.28)";
       btn.setAttribute("aria-label", `${label} - SupportRD Remote`);
+      btn.dataset.launchVisual = "woman-wakeup";
     });
   }
 
@@ -513,6 +515,8 @@
       }
       .float-mode-shell.support-rebuild-mode .float-mode-launch{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:12px !important}
       .float-mode-shell.support-rebuild-mode .float-launch-btn{min-height:134px !important;padding:18px 14px 18px 56px !important;font-size:15px !important;border-radius:22px !important;box-shadow:0 16px 36px rgba(0,0,0,.28)}
+      .float-mode-shell.support-rebuild-mode .float-t-bar,
+      .float-mode-shell.support-rebuild-mode .float-t-controls{display:none !important}
       .support-rebuild-shell{display:grid;gap:14px}
       .support-rebuild-route-host{display:none;gap:16px;align-content:start;position:relative;z-index:4;min-width:0;padding:0;border-radius:0;background:transparent;border:0;box-shadow:none;overflow:visible}
       .support-rebuild-route-host.is-open{display:grid}
@@ -1855,6 +1859,7 @@
         </div>
       </div>`);
     top.innerHTML = `
+        <div id="srCatalogShellMarker" hidden></div>
         <div class="support-rebuild-home-top">
           <div class="support-rebuild-card">
             <div class="support-rebuild-catalog-copy" style="margin-bottom:12px">
@@ -1947,6 +1952,21 @@
     }));
   }
 
+  function ensureShellChrome() {
+    const top = document.querySelector(".float-mode-top");
+    if (!top) return;
+    if (!top.querySelector("#srCatalogShellMarker")) renderShellChrome();
+  }
+
+  function watchShellChrome() {
+    const top = document.querySelector(".float-mode-top");
+    if (!top || shellChromeObserver) return;
+    shellChromeObserver = new MutationObserver(() => {
+      if (!top.querySelector("#srCatalogShellMarker")) renderShellChrome();
+    });
+    shellChromeObserver.observe(top, { childList: true });
+  }
+
   function bindLaunchButtons() {
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
       const clone = btn.cloneNode(true);
@@ -1957,6 +1977,7 @@
         activateRoute(state.route === target ? "" : target);
       });
     });
+    syncLaunchVisuals();
   }
 
   function bindQuickGlobalButtons() {
@@ -1999,6 +2020,7 @@
       activatePresentationMode();
       ensureRouteHost();
       renderShellChrome();
+      watchShellChrome();
       
       renderAssistantDock();
     updateAssistantDock("Aria and Jake are moving with the page. Tap them when you need them.");
@@ -2016,7 +2038,8 @@
       fetchProducts();
       syncArchitectureStatus();
       syncShopifyPublicConfig();
-      window.SupportRDRemoteRebuildVersion = "20260410s";
+      ensureShellChrome();
+      window.SupportRDRemoteRebuildVersion = "20260411b";
     }
 
   setTimeout(init, 700);

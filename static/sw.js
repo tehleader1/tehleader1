@@ -1,4 +1,4 @@
-const CACHE_NAME = "supportrd-pwa-v51-20260411a"
+const CACHE_NAME = "supportrd-pwa-v51-20260411b"
 const APP_ASSETS = [
   "/",
   "/manifest.json",
@@ -72,6 +72,7 @@ self.addEventListener("fetch", (event) => {
     })
   )
 })
+
 
 
 
