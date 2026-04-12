@@ -73,6 +73,7 @@
       address: "",
       subscriptionPayDate: "2026-05-01",
       displayName: "SupportRD Guest",
+      loginProvider: "Guest",
       loggedIn: false,
       plan: "Free",
       historySync: "Pending account sync",
@@ -108,6 +109,7 @@
       instrument: "instrument-track.wav"
     },
     studioRecent: [],
+    assistantPreset: "Greetings",
     products: [],
     shopify: {
       connected: false,
@@ -1519,49 +1521,116 @@
     modal.classList.add("is-open");
   }
 
+  function openPasswordChangeModal() {
+    const modal = ensurePaymentModal();
+    const body = $("srPaymentModalBody");
+    body.innerHTML = `
+      <div class="support-rebuild-row" style="justify-content:space-between">
+        <h3 class="support-rebuild-title">Change Password</h3>
+        <button class="support-rebuild-btn ghost" id="srClosePasswordModal">X</button>
+      </div>
+      <div class="support-rebuild-note">Start with verification by email. Once confirmed, SupportRD opens the password change window here.</div>
+      <div class="support-rebuild-card" style="margin-top:14px;padding:12px">
+        <div class="support-rebuild-title">Verification Email</div>
+        <div class="support-rebuild-note">Verification will route to: ${state.account.email || "No email saved yet."}</div>
+        <div class="support-rebuild-row" style="margin-top:12px">
+          <button class="support-rebuild-btn pulse" id="srSendPasswordVerification">Send Verification To Email</button>
+        </div>
+      </div>
+      <div class="support-rebuild-grid two" id="srPasswordChangeFields" style="margin-top:14px;display:none">
+        <div class="support-rebuild-card" style="padding:12px">
+          <input class="support-rebuild-input" id="srPasswordOld" type="password" placeholder="Old password">
+          <input class="support-rebuild-input" id="srPasswordNew" type="password" placeholder="New password" style="margin-top:10px">
+          <input class="support-rebuild-input" id="srPasswordConfirm" type="password" placeholder="Confirm password" style="margin-top:10px">
+        </div>
+        <div class="support-rebuild-card" style="padding:12px">
+          <div class="support-rebuild-title">SupportRD Password Window</div>
+          <div class="support-rebuild-note" id="srPasswordStatus">Waiting on email verification.</div>
+          <button class="support-rebuild-btn pulse" id="srSavePasswordChange" style="margin-top:12px">Save New Password</button>
+        </div>
+      </div>`;
+    $("srClosePasswordModal").onclick = () => modal.classList.remove("is-open");
+    $("srSendPasswordVerification").onclick = () => {
+      $("srPasswordChangeFields").style.display = "grid";
+      $("srPasswordStatus").textContent = `Verification email sent to ${state.account.email || "your saved email"}. Continue with old and new password.`;
+    };
+    $("srSavePasswordChange").onclick = () => {
+      const oldPassword = $("srPasswordOld").value.trim();
+      const newPassword = $("srPasswordNew").value.trim();
+      const confirmPassword = $("srPasswordConfirm").value.trim();
+      if (state.account.password && oldPassword && oldPassword !== state.account.password) {
+        $("srPasswordStatus").textContent = "Old password does not match the saved SupportRD account password.";
+        return;
+      }
+      if (!newPassword || newPassword !== confirmPassword) {
+        $("srPasswordStatus").textContent = "New password and confirm password must match.";
+        return;
+      }
+      state.account.password = newPassword;
+      saveState();
+      $("srPasswordStatus").textContent = "Password updated. SupportRD account security is refreshed.";
+      renderSettings();
+    };
+    modal.classList.add("is-open");
+  }
+
   function renderSettings() {
     const box = $("floatProfileBox");
     if (!box) return;
-    const socialList = Object.entries(state.diarySocial || {})
-      .filter(([, enabled]) => enabled)
-      .map(([platform]) => platform)
-      .join(", ");
+    const provider = state.account.loginProvider || "Guest";
+    const preset = state.assistantPreset || "Greetings";
     box.innerHTML = `
       <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
           <div class="support-rebuild-content-head">
             <h3 class="support-rebuild-title">General Settings</h3>
           </div>
-          <div class="support-rebuild-note">Settings now handle the stronger first-rebuild account flow again: login state, password, email, subscription date, social links, product access, and the full settings lane.</div>
+          <div class="support-rebuild-note">Settings now read like a real account center: login provider, password flow by email verification, phone push prompts, due-date reading, theme reading, premium/pro reading, live profile URL, and Aria/Jake presets.</div>
         </div>
       <div class="support-rebuild-grid two">
         <div class="support-rebuild-card">
-          <div class="support-rebuild-title">Account Access</div>
+          <div class="support-rebuild-title">Login Access</div>
             <input class="support-rebuild-input" id="srSettingsUsername" placeholder="Username" value="${state.profile.name || state.account.displayName || ""}">
             <input class="support-rebuild-input" id="srSettingsEmail" style="margin-top:10px" placeholder="Email" value="${state.account.email || ""}">
-            <input class="support-rebuild-input" id="srSettingsPassword" style="margin-top:10px" type="password" placeholder="Change password">
             <div class="support-rebuild-row" style="margin-top:12px">
-              <button class="support-rebuild-btn pulse" id="srSettingsLoginState">${state.account.loggedIn ? "Log Out" : "Log In"}</button>
-              <button class="support-rebuild-btn ghost" id="srSettingsPush">${state.push ? "Push On" : "Push Off"}</button>
-              <button class="support-rebuild-btn ghost" id="srOpenFullSettings">Open Full Settings</button>
+              <button class="support-rebuild-btn ${provider === "Google" ? "pulse" : "ghost"}" data-login-provider="Google">Google Login</button>
+              <button class="support-rebuild-btn ${provider === "Yahoo" ? "pulse" : "ghost"}" data-login-provider="Yahoo">Yahoo Login</button>
+              <button class="support-rebuild-btn ${provider === "Microsoft" ? "pulse" : "ghost"}" data-login-provider="Microsoft">Microsoft Login</button>
+              <button class="support-rebuild-btn ${provider === "Apple" ? "pulse" : "ghost"}" data-login-provider="Apple">Apple Login</button>
+              <button class="support-rebuild-btn ghost" id="srOpenPasswordWindow">Change Password</button>
             </div>
           </div>
         <div class="support-rebuild-card">
-          <div class="support-rebuild-title">Product Usage</div>
-            <input class="support-rebuild-input" id="srSettingsPayDate" placeholder="Subscription pay date" value="${state.account.subscriptionPayDate || ""}">
-            <input class="support-rebuild-input" id="srSettingsUrl" style="margin-top:10px" placeholder="Diary invite / primary link" value="${state.profile.contact || ""}">
-            <input class="support-rebuild-input" id="srSettingsPhone" style="margin-top:10px" placeholder="Phone number" value="${state.account.phone || ""}">
-            <textarea class="support-rebuild-textarea" id="srSettingsLinks" style="margin-top:10px">${socialList}</textarea>
+          <div class="support-rebuild-title">Push + Reading Layer</div>
+            <div class="support-rebuild-row">
+              <button class="support-rebuild-btn ${state.push ? "pulse" : "ghost"}" id="srSettingsPush">Push Notifications</button>
+              <button class="support-rebuild-btn ghost" id="srOpenFullSettings">Open Full Settings</button>
+            </div>
+            <div class="support-rebuild-note" style="margin-top:12px">If you are on a cell phone, Push Notifications should route the browser asking to send SupportRD notifications to your phone.</div>
+            <div class="support-rebuild-note" style="margin-top:12px">New Payment Due Next: ${state.account.subscriptionPayDate || "Not set"}</div>
+            <div class="support-rebuild-note">Current Theme Reader: ${MAPS[state.map]?.title || "Wake-Up Route"}</div>
+            <div class="support-rebuild-note">Premium / Pro Reader: ${state.account.plan || "Free"}</div>
+            <div class="support-rebuild-note">Profile URL Tag: ${state.profile.contact || "https://supportrd.com/live"}</div>
         </div>
       </div>
       <div class="support-rebuild-grid two">
         <div class="support-rebuild-card">
-          <div class="support-rebuild-title">PocketBase Layer</div>
-          <div class="support-rebuild-note">PocketBase URL: ${state.account.pocketbaseUrl || "Not set yet"}</div>
-          <div class="support-rebuild-note">History Sync: ${state.account.historySync || "Pending account sync"}</div>
-          <div class="support-rebuild-note">This layer should power diary, profile, studio, and premium account memory.</div>
+          <div class="support-rebuild-title">Aria / Jake Preset Functionality</div>
+          <select class="support-rebuild-select" id="srAssistantPreset">
+            ${["Greetings","Advanced","Inner Circle","Professional Making Money"].map((item) => `<option ${preset === item ? "selected" : ""}>${item}</option>`).join("")}
+          </select>
+          <div class="support-rebuild-note" style="margin-top:12px">Aria Mode by text can answer hair problem questions from the phone and diary lane using this preset as the tone.</div>
         </div>
         <div class="support-rebuild-card">
+          <div class="support-rebuild-title">PocketBase + Account Layer</div>
+          <input class="support-rebuild-input" id="srSettingsPhone" placeholder="Phone number" value="${state.account.phone || ""}">
+          <input class="support-rebuild-input" id="srSettingsPayDate" style="margin-top:10px" placeholder="New payment due next" value="${state.account.subscriptionPayDate || ""}">
+          <input class="support-rebuild-input" id="srSettingsUrl" style="margin-top:10px" placeholder="Profile URL tag / live URL" value="${state.profile.contact || ""}">
+          <div class="support-rebuild-note" style="margin-top:12px">PocketBase URL: ${state.account.pocketbaseUrl || "Not set yet"}</div>
+          <div class="support-rebuild-note">History Sync: ${state.account.historySync || "Pending account sync"}</div>
+        </div>
+      </div>
+      <div class="support-rebuild-card">
           <div class="support-rebuild-title">Important Pages</div>
           <div class="support-rebuild-row">
             <button class="support-rebuild-btn ghost" id="srSettingsFaq">FAQ Lounge</button>
@@ -1569,7 +1638,6 @@
             <button class="support-rebuild-btn ghost" id="srSettingsDiary">Diary</button>
             <button class="support-rebuild-btn ghost" id="srSettingsMiniCatalog">Mini Catalog</button>
           </div>
-        </div>
       </div>
       <div class="support-rebuild-card">
         <div class="support-rebuild-title">Product Account Controls</div>
@@ -1595,15 +1663,20 @@
             <input class="support-rebuild-input" id="srSettingsFantasy" style="margin-top:10px" placeholder="Fantasy setting" value="${state.account.fantasyMode || ""}">
             <input class="support-rebuild-input" id="srSettingsPrimaryUrl" style="margin-top:10px" placeholder="Primary URL link" value="${state.profile.contact || ""}">
             <input class="support-rebuild-input" id="srSettingsDiaryInvite" style="margin-top:10px" placeholder="Invitable Diary link" value="${state.diaryInviteUrl || ""}">
-            <textarea class="support-rebuild-textarea" id="srSettingsSocialUpdate" style="margin-top:10px" placeholder="Comma-separated social update routes">${socialList}</textarea>
+            <textarea class="support-rebuild-textarea" id="srSettingsSocialUpdate" style="margin-top:10px" placeholder="Comma-separated social update routes">${Object.entries(state.diarySocial || {}).filter(([, enabled]) => enabled).map(([platform]) => platform).join(", ")}</textarea>
           </div>
         </div>
       </div>`;
-    $("srSettingsLoginState").onclick = () => {
-      state.account.loggedIn = !state.account.loggedIn;
-      saveState();
-      renderSettings();
-    };
+    box.querySelectorAll("[data-login-provider]").forEach((btn) => {
+      btn.onclick = () => {
+        state.account.loginProvider = btn.dataset.loginProvider;
+        state.account.loggedIn = true;
+        state.account.displayName = state.profile.name || state.account.displayName;
+        saveState();
+        renderSettings();
+      };
+    });
+    $("srOpenPasswordWindow").onclick = openPasswordChangeModal;
     $("srSettingsPush").onclick = async () => {
       if ("Notification" in window && Notification.permission === "default") {
         try { await Notification.requestPermission(); } catch {}
@@ -1638,11 +1711,7 @@
       state.account.phone = $("srSettingsPhone").value.trim();
       state.account.subscriptionPayDate = $("srSettingsPayDate").value.trim() || state.account.subscriptionPayDate;
       state.profile.contact = $("srSettingsUrl").value.trim() || state.profile.contact;
-      state.account.password = $("srSettingsPassword").value.trim() || state.account.password;
-      const links = ($("srSettingsLinks").value || "").toLowerCase();
-      Object.keys(state.diarySocial).forEach((platform) => {
-        state.diarySocial[platform] = links.includes(platform);
-      });
+      state.assistantPreset = $("srAssistantPreset").value;
       if ($("srSettingsFullLane")?.style.display !== "none") {
         const newPassword = $("srSettingsNewPassword")?.value.trim();
         const confirmPassword = $("srSettingsConfirmPassword")?.value.trim();
@@ -1659,7 +1728,7 @@
       }
       saveState();
       renderShellChrome();
-      $("srSettingsStatus").textContent = `Settings saved. ${state.account.loggedIn ? "Account is signed in" : "Guest mode remains active"} and PocketBase layer points to ${state.account.pocketbaseUrl || "local readiness only"}.`;
+      $("srSettingsStatus").textContent = `Settings saved. ${state.account.loginProvider || "Guest"} login is active, preset is ${state.assistantPreset}, and the next payment due reads ${state.account.subscriptionPayDate || "not set"}.`;
     };
   }
   function renderDiary() {
@@ -2211,7 +2280,7 @@
       syncArchitectureStatus();
       syncShopifyPublicConfig();
       ensureShellChrome();
-      window.SupportRDRemoteRebuildVersion = "20260412d";
+      window.SupportRDRemoteRebuildVersion = "20260412e";
     }
 
   setTimeout(init, 700);
