@@ -8,6 +8,21 @@
     diaryUseCase: "Use case: talk through your hair issue and save it cleanly.",
     diaryDescription: "",
     diaryFeed: [],
+    diaryHistoryCollapsed: false,
+    diaryLikes: 28,
+    diaryHearts: 14,
+    diaryComments: [
+      "Visitor lane: watching for the next hair update.",
+      "SupportRD live room is open for steady guidance."
+    ],
+    diaryPostTargets: {
+      instagram: "https://www.instagram.com/",
+      facebook: "https://www.facebook.com/",
+      tiktok: "https://www.tiktok.com/upload",
+      x: "https://twitter.com/intent/tweet",
+      snapchat: "https://www.snapchat.com/",
+      linkedin: "https://www.linkedin.com/feed/"
+    },
     diaryHidden: false,
     diarySocial: {
       instagram: true,
@@ -21,6 +36,7 @@
     profile: {
       name: "",
       picture: "",
+      lastHairStatus: "No verified hair status yet.",
       contact: "https://supportrd.com/live",
       tone: "Professional",
       currentHairState: "",
@@ -420,6 +436,8 @@
     floatProfileBox: "/static/images/dr-flow-6.jpg"
   };
 
+  const DEFAULT_PROFILE_IMAGE = "/static/images/hija-de-felix.jpeg";
+
   function syncLaunchVisuals() {
     const wakeUpImage = "/static/images/woman-waking-up12.jpg";
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
@@ -475,38 +493,6 @@
           grid-template-columns:1fr !important;
         }
         .support-rebuild-assistants{right:12px !important;bottom:12px !important}
-      }
-      .float-mode-shell.support-rebuild-mode .float-mode-footer,
-        body.support-rebuild-page #launchMenu,
-        body.support-rebuild-page #launchSplash,
-        body.support-rebuild-page .topbar,
-        body.support-rebuild-page .main-content-row,
-        body.support-rebuild-page .brochure-float,
-        body.support-rebuild-page #sessionSignal,
-        body.support-rebuild-page #satQuickModal,
-        body.support-rebuild-page #satQuickOpen,
-        body.support-rebuild-page #loginGate,
-        body.support-rebuild-page #remotePurchaseEditor,
-        body.support-rebuild-page #remoteEditsMenu,
-        body.support-rebuild-page #remoteLatestAds,
-      .float-mode-shell.support-rebuild-mode .remote-display-strip,
-      .float-mode-shell.support-rebuild-mode .remote-stage-shell,
-      .float-mode-shell.support-rebuild-mode .float-mode-nav,
-      .float-mode-shell.support-rebuild-mode #reelPanel,
-      .float-mode-shell.support-rebuild-mode .float-mode-sticky-bottom,
-      .float-mode-shell.support-rebuild-mode #floatTGuide,
-      .float-mode-shell.support-rebuild-mode .remote-guardian-rail,
-      .float-mode-shell.support-rebuild-mode #floatPrimeMenu,
-      .float-mode-shell.support-rebuild-mode #floatFounderLayer,
-      .float-mode-shell.support-rebuild-mode #sessionSignal,
-      .float-mode-shell.support-rebuild-mode #remotePurchaseEditor,
-      .float-mode-shell.support-rebuild-mode #remoteEditsMenu{
-        display:none !important;
-      }
-      .float-mode-shell.support-rebuild-mode .float-mode-grid{
-        display:none !important;
-        margin:0 !important;
-        padding:0 !important;
       }
       .float-mode-shell.support-rebuild-mode .float-mode-top,
       .float-mode-shell.support-rebuild-mode .float-mode-launch{
@@ -606,14 +592,6 @@
       .support-rebuild-catalog-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.22)}
       .support-rebuild-catalog-dot.active{background:#ffd54a;box-shadow:0 0 0 4px rgba(255,213,74,.18)}
       .support-rebuild-ad-banner{min-height:240px;border-radius:20px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;box-shadow:0 16px 38px rgba(0,0,0,.22);position:relative;overflow:hidden}
-      .support-rebuild-mini-catalog{position:fixed;top:86px;left:18px;z-index:76;width:min(330px,calc(100vw - 36px));display:grid;gap:10px;padding:14px;border-radius:24px;background:rgba(8,14,24,.88);border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 54px rgba(0,0,0,.28);backdrop-filter:blur(10px)}
-      .support-rebuild-mini-catalog.minimized .support-rebuild-mini-catalog-body{display:none}
-      .support-rebuild-mini-catalog-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
-      .support-rebuild-mini-catalog-body{display:grid;gap:10px}
-      .support-rebuild-mini-catalog-grid{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
-      .support-rebuild-mini-product{min-height:120px;border-radius:18px;padding:12px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12);cursor:pointer}
-      .support-rebuild-mini-product::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,8,16,.06),rgba(4,8,16,.8))}
-      .support-rebuild-mini-product > *{position:relative;z-index:1}
       .support-rebuild-ad-banner::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,9,16,.1),rgba(5,9,16,.72))}
       .support-rebuild-ad-banner > *{position:relative;z-index:1}
       .support-rebuild-ad-topline{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:auto}
@@ -770,6 +748,13 @@
     activateRoute("");
   }
 
+  function enableLegacyRemoteMode() {
+    document.body.classList.remove("support-rebuild-page");
+    document.documentElement.removeAttribute("data-support-rebuild");
+    document.querySelector(".float-mode-shell")?.classList.add("support-rebuild-mode");
+    $("srMiniCatalogWidget")?.remove();
+  }
+
   function openQuestionnaireRoute(item) {
     if (!item) return;
     state.adQuestionnaire = item.label;
@@ -791,21 +776,28 @@
     return lines;
   }
 
-  function openPlatforms() {
+  function diaryPostUrl(platform) {
+    const custom = state.diaryPostTargets?.[platform];
+    if (custom) return custom;
     const message = encodeURIComponent(state.diaryDescription || state.diaryUseCase);
-    const liveCodeUrl = encodeURIComponent(`${state.profile.contact || "https://supportrd.com/live"}?ref=diary-live`);
-    const urls = {
+    const liveUrl = encodeURIComponent(state.profile.contact || "https://supportrd.com/live");
+    const defaults = {
       instagram: "https://www.instagram.com/",
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent("https://supportrd.com")}&quote=${message}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${liveUrl}&quote=${message}`,
       tiktok: "https://www.tiktok.com/upload",
       x: `https://twitter.com/intent/tweet?text=${message}`,
       snapchat: "https://www.snapchat.com/",
       linkedin: `https://www.linkedin.com/feed/?shareActive=true&text=${message}`
     };
+    return defaults[platform] || "https://supportrd.com";
+  }
+
+  function openPlatforms() {
+    const liveCodeUrl = `${state.profile.contact || "https://supportrd.com/live"}?ref=diary-live`;
     Object.entries(state.diarySocial).forEach(([platform, enabled]) => {
-      if (enabled) window.open(urls[platform], "_blank", "noopener");
+      if (enabled) window.open(diaryPostUrl(platform), "_blank", "noopener");
     });
-    pushDiaryFeed(`SupportRD share pack ready. Live code link: ${decodeURIComponent(liveCodeUrl)}`);
+    pushDiaryFeed(`SupportRD share pack ready. Live code link: ${liveCodeUrl}`);
   }
 
   async function fetchProducts() {
@@ -817,7 +809,6 @@
     } catch {
       state.products = [];
     }
-    if (document.querySelector(".float-mode-top")) renderShellChrome();
   }
 
   function toggleProductMenu(forceValue) {
@@ -1535,9 +1526,9 @@
           </div>
           <div class="support-rebuild-note">Settings now handle the stronger first-rebuild account flow again: login state, password, email, subscription date, social links, product access, and the full settings lane.</div>
         </div>
-        <div class="support-rebuild-grid two">
-          <div class="support-rebuild-card">
-            <div class="support-rebuild-title">Account Access</div>
+      <div class="support-rebuild-grid two">
+        <div class="support-rebuild-card">
+          <div class="support-rebuild-title">Account Access</div>
             <input class="support-rebuild-input" id="srSettingsUsername" placeholder="Username" value="${state.profile.name || state.account.displayName || ""}">
             <input class="support-rebuild-input" id="srSettingsEmail" style="margin-top:10px" placeholder="Email" value="${state.account.email || ""}">
             <input class="support-rebuild-input" id="srSettingsPassword" style="margin-top:10px" type="password" placeholder="Change password">
@@ -1547,16 +1538,33 @@
               <button class="support-rebuild-btn ghost" id="srOpenFullSettings">Open Full Settings</button>
             </div>
           </div>
-          <div class="support-rebuild-card">
-            <div class="support-rebuild-title">Product Usage</div>
+        <div class="support-rebuild-card">
+          <div class="support-rebuild-title">Product Usage</div>
             <input class="support-rebuild-input" id="srSettingsPayDate" placeholder="Subscription pay date" value="${state.account.subscriptionPayDate || ""}">
             <input class="support-rebuild-input" id="srSettingsUrl" style="margin-top:10px" placeholder="Diary invite / primary link" value="${state.profile.contact || ""}">
             <input class="support-rebuild-input" id="srSettingsPhone" style="margin-top:10px" placeholder="Phone number" value="${state.account.phone || ""}">
             <textarea class="support-rebuild-textarea" id="srSettingsLinks" style="margin-top:10px">${socialList}</textarea>
-          </div>
+        </div>
+      </div>
+      <div class="support-rebuild-grid two">
+        <div class="support-rebuild-card">
+          <div class="support-rebuild-title">PocketBase Layer</div>
+          <div class="support-rebuild-note">PocketBase URL: ${state.account.pocketbaseUrl || "Not set yet"}</div>
+          <div class="support-rebuild-note">History Sync: ${state.account.historySync || "Pending account sync"}</div>
+          <div class="support-rebuild-note">This layer should power diary, profile, studio, and premium account memory.</div>
         </div>
         <div class="support-rebuild-card">
-          <div class="support-rebuild-title">Product Account Controls</div>
+          <div class="support-rebuild-title">Important Pages</div>
+          <div class="support-rebuild-row">
+            <button class="support-rebuild-btn ghost" id="srSettingsFaq">FAQ Lounge</button>
+            <button class="support-rebuild-btn ghost" id="srSettingsProfile">Profile</button>
+            <button class="support-rebuild-btn ghost" id="srSettingsDiary">Diary</button>
+            <button class="support-rebuild-btn ghost" id="srSettingsMiniCatalog">Mini Catalog</button>
+          </div>
+        </div>
+      </div>
+      <div class="support-rebuild-card">
+        <div class="support-rebuild-title">Product Account Controls</div>
           <div class="support-rebuild-row">
             <button class="support-rebuild-btn ghost" id="srSettingsPayments">Open Payments</button>
             <button class="support-rebuild-btn ghost" id="srSettingsAccount">Account Menu</button>
@@ -1598,6 +1606,15 @@
     };
     $("srSettingsPayments").onclick = openPaymentModal;
     $("srSettingsAccount").onclick = openAccountModal;
+    $("srSettingsFaq").onclick = () => activateRoute("floatLiveBox");
+    $("srSettingsProfile").onclick = () => activateRoute("floatAssistantBox");
+    $("srSettingsDiary").onclick = () => activateRoute("floatSettingsBox");
+    $("srSettingsMiniCatalog").onclick = () => {
+      state.catalogMinimized = false;
+      saveState();
+      renderShellChrome();
+      $("srSettingsStatus").textContent = "Mini catalog opened from settings.";
+    };
     $("srOpenFullSettings").onclick = () => {
       const lane = $("srSettingsFullLane");
       if (!lane) return;
@@ -1634,7 +1651,7 @@
       }
       saveState();
       renderShellChrome();
-      $("srSettingsStatus").textContent = "Settings saved. SupportRD account controls and the full settings lane are updated and ready.";
+      $("srSettingsStatus").textContent = `Settings saved. ${state.account.loggedIn ? "Account is signed in" : "Guest mode remains active"} and PocketBase layer points to ${state.account.pocketbaseUrl || "local readiness only"}.`;
     };
   }
   function renderDiary() {
@@ -1642,6 +1659,11 @@
     if (!box) return;
     const historyLines = state.diaryFeed.length ? state.diaryFeed : ["Chat history empty right before they start.", "Aria is ready for hair talk.", "Jake is waiting for studio help."];
     const lines = formatDiaryLines(state.diaryText);
+    const socialRows = Object.keys(state.diarySocial).map((platform) => `
+      <div class="support-rebuild-row" style="justify-content:space-between;align-items:center">
+        <label class="support-rebuild-pill"><input type="checkbox" data-platform="${platform}" ${state.diarySocial[platform] ? "checked" : ""}> ${platform}</label>
+        <input class="support-rebuild-input" data-post-url="${platform}" style="max-width:240px;padding:8px 10px" value="${state.diaryPostTargets?.[platform] || diaryPostUrl(platform)}">
+      </div>`).join("");
     box.innerHTML = `
       <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
@@ -1654,8 +1676,10 @@
           <div class="support-rebuild-reader">
             <div class="support-rebuild-title">Aria / Jake Menu</div>
             <div class="support-rebuild-row">
+              <button class="support-rebuild-btn pulse" id="srDiaryPostNow">Post Now</button>
               <button class="support-rebuild-btn pulse" id="srTalkAria">Talk To Aria</button>
               <button class="support-rebuild-btn ghost" id="srTalkJake">Talk To Jake</button>
+              <button class="support-rebuild-btn ghost" id="srDiaryCollapseBtn">${state.diaryHistoryCollapsed ? "Open History View" : "Collapse History View"}</button>
               <button class="support-rebuild-btn ghost" id="srHandsFreeBtn">Hands-Free Mode</button>
               <button class="support-rebuild-btn ghost" id="srDiaryLiveBtn">${state.liveMode ? "Stop Live Session" : "Live Session"}</button>
               <button class="support-rebuild-btn ghost" id="srDiarySaveBtn">Save Diary</button>
@@ -1663,11 +1687,25 @@
             <textarea class="support-rebuild-textarea" id="srDiaryQuestion" placeholder="What hair problem is SupportRD helping with today?">${state.diaryDescription || ""}</textarea>
             <div class="support-rebuild-grid two" style="margin-top:12px">
               <div class="support-rebuild-card" style="padding:12px">
-                <div class="support-rebuild-title">Send Links</div>
-                <div class="support-rebuild-note">Route best options for IG, FB, TikTok, X, Snapchat, and LinkedIn posting.</div>
-                <div class="support-rebuild-mini-actions" style="margin-top:10px">
-                  ${Object.keys(state.diarySocial).map((platform) => `<label class="support-rebuild-pill"><input type="checkbox" data-platform="${platform}" ${state.diarySocial[platform] ? "checked" : ""}> ${platform}</label>`).join("")}
+                <div class="support-rebuild-title">Live Comments</div>
+                <div class="support-rebuild-mini-list">${(state.diaryComments || []).slice(-4).map((line) => `<div class="support-rebuild-comment">${line}</div>`).join("")}</div>
+              </div>
+              <div class="support-rebuild-card" style="padding:12px">
+                <div class="support-rebuild-title">Visitor View</div>
+                <div class="support-rebuild-row">
+                  <button class="support-rebuild-btn ghost" id="srDiaryLikesBtn">Likes ${state.diaryLikes || 0}</button>
+                  <button class="support-rebuild-btn ghost" id="srDiaryHeartsBtn">Hearts ${state.diaryHearts || 0}</button>
+                  <button class="support-rebuild-btn ghost" id="srDiaryMoneyBtn">Receive Money</button>
+                  <button class="support-rebuild-btn pulse" id="srDiaryPaymentsBtn">Enter Payments</button>
+                  <button class="support-rebuild-btn ghost" id="srDiaryGuestBtn">${state.account.loggedIn ? "Account Ready" : "Guest Login"}</button>
                 </div>
+              </div>
+            </div>
+            <div class="support-rebuild-grid two" style="margin-top:12px">
+              <div class="support-rebuild-card" style="padding:12px">
+                <div class="support-rebuild-title">Send Links</div>
+                <div class="support-rebuild-note">Posting URLs stay under Post Now so SupportRD can open the sharing page automatically.</div>
+                <div class="support-rebuild-grid" style="margin-top:10px">${socialRows}</div>
               </div>
               <div class="support-rebuild-card" style="padding:12px">
                 <div class="support-rebuild-title">Private Diary</div>
@@ -1678,7 +1716,8 @@
           </div>
           <div class="support-rebuild-reader">
             <div class="support-rebuild-title">SupportRD History Reader</div>
-            <div class="support-rebuild-history">${historyLines.map((line)=>`<div class="support-rebuild-line">${line}</div>`).join("")}</div>
+            <div class="support-rebuild-history" style="${state.diaryHistoryCollapsed ? "display:none" : ""}">${historyLines.map((line)=>`<div class="support-rebuild-line">${line}</div>`).join("")}</div>
+            <div class="support-rebuild-note" style="${state.diaryHistoryCollapsed ? "" : "display:none"}">History is collapsed for on-the-go privacy. Tap the button to open it again.</div>
             <div class="support-rebuild-note">Live invite: ${state.diaryInviteUrl || state.profile.contact || "https://supportrd.com/live"}</div>
             <div class="support-rebuild-diary-preview" style="margin-top:12px">
               ${lines.map((line) => `<div>${line || "&nbsp;"}</div>`).join("")}
@@ -1686,6 +1725,21 @@
           </div>
         </div>
       </div>`;
+    $("srDiaryPostNow").onclick = () => {
+      state.diaryDescription = $("srDiaryQuestion").value.trim();
+      state.diaryText = $("srDiaryText").value;
+      document.querySelectorAll("[data-platform]").forEach((cb) => {
+        state.diarySocial[cb.dataset.platform] = cb.checked;
+      });
+      document.querySelectorAll("[data-post-url]").forEach((input) => {
+        state.diaryPostTargets[input.dataset.postUrl] = input.value.trim() || diaryPostUrl(input.dataset.postUrl);
+      });
+      state.diaryComments = [...(state.diaryComments || []), `Live post ready for ${(state.profile.name || state.account.displayName || "SupportRD Guest")}.`].slice(-6);
+      pushDiaryFeed(`Post Now armed: ${state.diaryDescription || "SupportRD hair update ready."}`);
+      saveState();
+      openPlatforms();
+      renderDiary();
+    };
     $("srTalkAria").onclick = () => {
       state.diaryDescription = $("srDiaryQuestion").value.trim();
       pushDiaryFeed(`Aria pending: ${state.diaryDescription || "SupportRD hair question ready."}`);
@@ -1703,19 +1757,46 @@
         "Jake is standing by for studio-toned support.",
         `Current level: ${state.diaryLevel}.`
       ];
+      state.diaryComments = [...(state.diaryComments || []), "Hands-free live guidance activated."].slice(-6);
+      saveState();
+      renderDiary();
+    };
+    $("srDiaryCollapseBtn").onclick = () => {
+      state.diaryHistoryCollapsed = !state.diaryHistoryCollapsed;
       saveState();
       renderDiary();
     };
     $("srDiaryLiveBtn").onclick = () => {
       state.liveMode = !state.liveMode;
+      state.diaryComments = [...(state.diaryComments || []), state.liveMode ? "Live comments opened under Post Now." : "Live comments paused."].slice(-6);
       saveState();
       renderDiary();
     };
+    $("srDiaryLikesBtn").onclick = () => {
+      state.diaryLikes = (state.diaryLikes || 0) + 1;
+      saveState();
+      renderDiary();
+    };
+    $("srDiaryHeartsBtn").onclick = () => {
+      state.diaryHearts = (state.diaryHearts || 0) + 1;
+      saveState();
+      renderDiary();
+    };
+    $("srDiaryMoneyBtn").onclick = () => {
+      state.statistics.payments = "Live receive money lane opened from Diary visitor view.";
+      saveState();
+      openPaymentModal();
+    };
+    $("srDiaryPaymentsBtn").onclick = openPaymentModal;
+    $("srDiaryGuestBtn").onclick = openAccountModal;
     $("srDiarySaveBtn").onclick = () => {
       state.diaryDescription = $("srDiaryQuestion").value.trim();
       state.diaryText = $("srDiaryText").value;
       document.querySelectorAll("[data-platform]").forEach((cb) => {
         state.diarySocial[cb.dataset.platform] = cb.checked;
+      });
+      document.querySelectorAll("[data-post-url]").forEach((input) => {
+        state.diaryPostTargets[input.dataset.postUrl] = input.value.trim() || diaryPostUrl(input.dataset.postUrl);
       });
       pushDiaryFeed(`Diary saved for ${(state.profile.name || "SupportRD Guest")}.`);
       saveState();
@@ -1727,9 +1808,8 @@
     const box = $("floatAssistantBox");
     if (!box) return;
     const p = state.profile;
-    const profileImageStyle = p.picture
-      ? `style="background-image:linear-gradient(180deg, rgba(8,12,20,.10), rgba(8,12,20,.62)), url('${p.picture.replace(/'/g, "%27")}')"`
-      : "";
+    const profileImage = (p.picture || DEFAULT_PROFILE_IMAGE).replace(/'/g, "%27");
+    const profileImageStyle = `style="background-image:linear-gradient(180deg, rgba(8,12,20,.10), rgba(8,12,20,.62)), url('${profileImage}')"`;
     box.innerHTML = `
       <div class="support-rebuild-content-shell">
         <div class="support-rebuild-card">
@@ -1747,7 +1827,10 @@
                 <input class="support-rebuild-input" id="srProfileName" style="margin-top:10px" placeholder="Profile name" value="${p.name || ""}">
                 <input class="support-rebuild-input" id="srProfileHairState" style="margin-top:10px" placeholder="Current hair state" value="${p.currentHairState || ""}">
                 <input class="support-rebuild-input" id="srProfileMood" style="margin-top:10px" placeholder="Social mood" value="${p.socialMood || ""}">
-                <button class="support-rebuild-btn pulse" id="srProfileGenerate" style="margin-top:12px">Generate Profile</button>
+                <div class="support-rebuild-row" style="margin-top:12px">
+                  <button class="support-rebuild-btn pulse" id="srProfileGenerate">Generate AI Summary</button>
+                  <button class="support-rebuild-btn ghost" id="srProfilePictureBtn">Change Profile Picture</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1756,10 +1839,13 @@
             <div class="support-rebuild-history">
               <div class="support-rebuild-line">${p.aiSummary || "SupportRD profile summary will appear here after the profile reader runs."}</div>
               <div class="support-rebuild-line">Verified read: ${p.verified}</div>
+              <div class="support-rebuild-line">Last hair status: ${p.lastHairStatus || "No verified hair status yet."}</div>
               <div class="support-rebuild-line">Current contact: ${p.contact || "https://supportrd.com/live"}</div>
             </div>
             <div class="support-rebuild-row" style="margin-top:12px">
-              <button class="support-rebuild-btn ghost" id="srProfileHairScan">Hair Analysis</button>
+              <button class="support-rebuild-btn ghost" id="srProfileHairScan">Hair Analyser</button>
+              <button class="support-rebuild-btn ghost" id="srProfileVerified">Verified</button>
+              <button class="support-rebuild-btn ghost" id="srProfileLinkedIn">LinkedIn Post URL</button>
               <button class="support-rebuild-btn ghost" id="srProfileLive">Open Live Invite</button>
             </div>
             <div class="support-rebuild-note" id="srProfileStatus" style="margin-top:12px">SupportRD profile reader is ready.</div>
@@ -1772,21 +1858,43 @@
       p.currentHairState = $("srProfileHairState").value.trim();
       p.socialMood = $("srProfileMood").value.trim();
       p.aiSummary = `${p.name || "This profile"} reads as ${p.currentHairState || "hair-aware"}, feels ${p.socialMood || "steady socially"}, and carries SupportRD polish through the day.`;
+      p.lastHairStatus = p.currentHairState || p.lastHairStatus;
       state.account.displayName = p.name || state.account.displayName;
       saveState();
       renderShellChrome();
       renderProfile();
     };
+    $("srProfilePictureBtn").onclick = () => {
+      p.picture = $("srProfilePicture").value.trim() || DEFAULT_PROFILE_IMAGE;
+      saveState();
+      renderProfile();
+      $("srProfileStatus").textContent = "Profile image locked in and now sits as the main profile picture.";
+    };
     $("srProfileHairScan").onclick = () => {
       p.verified = `Hair analysis ready: ${p.currentHairState || "normal presentation"}.`;
+      p.lastHairStatus = p.currentHairState || "normal presentation";
+      p.aiSummary = `${p.name || "SupportRD profile"} shows ${p.currentHairState || "balanced hair"}, a ${p.socialMood || "steady"} social mood, and a presentation that is ready for SupportRD guidance.`;
       $("srProfileStatus").textContent = "Hair analysis locked into the profile reader.";
       saveState();
+      renderProfile();
+    };
+    $("srProfileVerified").onclick = () => {
+      p.verified = `Verified at ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}: ${p.currentHairState || "normal presentation"}.`;
+      p.lastHairStatus = p.currentHairState || p.lastHairStatus;
+      saveState();
+      renderProfile();
+      $("srProfileStatus").textContent = "Last hair status is now verified.";
+    };
+    $("srProfileLinkedIn").onclick = () => {
+      const shareText = encodeURIComponent(`${p.name || "SupportRD profile"} · ${p.aiSummary || "Hair summary ready."}`);
+      window.open(`https://www.linkedin.com/feed/?shareActive=true&text=${shareText}`, "_blank", "noopener");
+      $("srProfileStatus").textContent = "LinkedIn share window opened with the current profile summary.";
     };
     $("srProfileLive").onclick = () => openCatalogProductModal({
       title: "SupportRD Live Invite",
       price: "Included",
       description: `Share this profile with confidence. Live contact: ${p.contact || "https://supportrd.com/live"}`,
-      image: p.picture || "/static/images/hija-de-felix.jpeg"
+      image: p.picture || DEFAULT_PROFILE_IMAGE
     });
   }
   function renderMap() {
@@ -1821,6 +1929,7 @@
   function renderStudio() {
     const box = $("floatBoardsBox");
     if (!box) return;
+    const isRecording = !!(mediaRecorder && mediaRecorder.state === "recording");
     const recentItems = (state.studioRecent || []).map((item, index) => `
       <button class="support-rebuild-btn ghost" data-recent-index="${index}">
         ${item.label} · ${item.savedAt}
@@ -1837,7 +1946,7 @@
           <div class="support-rebuild-audacity-toolbar">
             <button class="support-rebuild-btn ${state.studioMode === "quick" ? "pulse" : "ghost"}" id="srStudioQuickMode">Quick Mode</button>
             <button class="support-rebuild-btn ${state.studioMode === "full" ? "pulse" : "ghost"}" id="srStudioFullMode">Full Studio Mode</button>
-            <button class="support-rebuild-btn pulse" id="srStudioRecord">Record</button>
+            <button class="support-rebuild-btn pulse" id="srStudioRecord">${isRecording ? "Recording..." : "Record"}</button>
             <button class="support-rebuild-btn ghost" id="srStudioVideo">Live Record Video</button>
             <button class="support-rebuild-btn ghost" id="srStudioStop">Stop</button>
             <button class="support-rebuild-btn ghost" id="srStudioPlay">Play</button>
@@ -1851,14 +1960,14 @@
           ${["voice", "beat", "adlib", "instrument"].map((board) => `
             <div class="support-rebuild-audacity-track ${board === currentBoard ? "active" : ""}" data-board="${board}">
               <div class="support-rebuild-row"><strong>${board.toUpperCase()} MOTHERBOARD</strong><span class="support-rebuild-pill" id="srBoardName_${board}">${state.studioBoards[board] || `${board}-track.wav`}</span></div>
-              <div class="support-rebuild-wave"></div>
-              <div class="support-rebuild-note">${board === currentBoard ? "Active motherboard. Record and FX land here." : "Select this motherboard to record or apply edits."}</div>
+              <div class="support-rebuild-wave">${Array.from({ length: 24 }, (_, idx) => `<span style="height:${board === currentBoard && isRecording ? (16 + ((idx * 11) % 52)) : (10 + ((idx * 7) % 24))}px"></span>`).join("")}</div>
+              <div class="support-rebuild-note">${board === currentBoard ? (isRecording ? "Recording live into this motherboard right now." : "Active motherboard. Record and FX land here.") : "Select this motherboard to record or apply edits."}</div>
               <input type="file" accept="audio/*,video/*" data-upload="${board}">
             </div>`).join("")}
           <div class="support-rebuild-grid two">
             <div class="support-rebuild-card">
               <div class="support-rebuild-title">Studio Status</div>
-              <div class="support-rebuild-note" id="srStudioStatus">Ready to bring the booth to life.</div>
+              <div class="support-rebuild-note" id="srStudioStatus">${isRecording ? `Recording live into ${currentBoard}. Waveform and take name update in real time.` : "Ready to bring the booth to life."}</div>
               <label class="support-rebuild-note" style="margin-top:10px;display:block">FX Settings</label>
               <select class="support-rebuild-select" id="srStudioFx" style="margin-top:8px">
                 <option>Echo</option><option>Reverb</option><option>Fade In</option><option>Fade Out</option>
@@ -1920,20 +2029,25 @@
         const takeName = `${currentBoard}-take.webm`;
         state.studioBoards[currentBoard] = takeName;
         saveRecentStudioBuild(`${takeName} saved`, "recording");
-        $(`srBoardName_${currentBoard}`).textContent = takeName;
-        $("srStudioStatus").textContent = `${currentBoard} recording saved.`;
+        if ($(`srBoardName_${currentBoard}`)) $(`srBoardName_${currentBoard}`).textContent = takeName;
+        if ($("srStudioStatus")) $("srStudioStatus").textContent = `${currentBoard} recording saved.`;
         saveState();
         mediaStream.getTracks().forEach((track) => track.stop());
+        renderStudio();
       };
       mediaRecorder.start();
-      $("srStudioStatus").textContent = `Recording into ${currentBoard} board now.`;
+      if ($("srStudioStatus")) $("srStudioStatus").textContent = `Recording into ${currentBoard} board now.`;
+      renderStudio();
     } catch {
       $("srStudioStatus").textContent = "Mic permission is needed to record here.";
     }
   }
 
   function stopRecord() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    renderStudio();
   }
 
   function playBoards() {
@@ -1975,80 +2089,12 @@
       </div>`;
   }
   function renderShellChrome() {
-    const products = getCatalogProducts();
-    const pageSize = 4;
-    const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
-    const page = Math.max(0, Math.min(state.catalogPage || 0, totalPages - 1));
-    state.catalogPage = page;
-    const items = products.slice(page * pageSize, page * pageSize + pageSize);
-    let widget = $("srMiniCatalogWidget");
-    if (!widget) {
-      widget = document.createElement("aside");
-      widget.id = "srMiniCatalogWidget";
-      widget.className = "support-rebuild-mini-catalog";
-      document.body.appendChild(widget);
-    }
-    widget.classList.toggle("minimized", !!state.catalogMinimized);
-    widget.innerHTML = `
-      <div class="support-rebuild-mini-catalog-head">
-        <div>
-          <div class="support-rebuild-kicker">SupportRD Catalog</div>
-          <div class="support-rebuild-title" style="margin-bottom:0">Real product corner</div>
-        </div>
-        <div class="support-rebuild-row" style="justify-content:flex-end">
-          <button class="support-rebuild-btn ghost" id="srMiniCatalogToggle">${state.catalogMinimized ? "Open" : "Minimize"}</button>
-        </div>
-      </div>
-      <div class="support-rebuild-mini-catalog-body">
-        <div class="support-rebuild-note">Keep this as an eye-catcher while the old big-button Remote stays in your face for on-the-trail use.</div>
-        <div class="support-rebuild-mini-catalog-grid">
-          ${items.map((product) => `
-            <button class="support-rebuild-mini-product" data-mini-catalog-open="${product.id}" style="background-image:url('${product.image}')">
-              <div class="support-rebuild-kicker">SupportRD Product</div>
-              <div class="support-rebuild-title" style="font-size:.92rem;margin-bottom:6px">${product.title}</div>
-              <div class="support-rebuild-price-badge">${product.price}</div>
-            </button>
-          `).join("")}
-        </div>
-        <div class="support-rebuild-catalog-pager">
-          <button class="support-rebuild-btn ghost" id="srMiniCatalogPrev" ${page === 0 ? "disabled" : ""}>Prev</button>
-          <div class="support-rebuild-catalog-dots">${Array.from({ length: totalPages }, (_, idx) => `<span class="support-rebuild-catalog-dot ${idx === page ? "active" : ""}"></span>`).join("")}</div>
-          <button class="support-rebuild-btn ghost" id="srMiniCatalogNext" ${page >= totalPages - 1 ? "disabled" : ""}>Next</button>
-        </div>
-      </div>`;
-    $("srMiniCatalogToggle")?.addEventListener("click", () => {
-      state.catalogMinimized = !state.catalogMinimized;
-      saveState();
-      renderShellChrome();
-    });
-    $("srMiniCatalogPrev")?.addEventListener("click", () => {
-      state.catalogPage = Math.max(0, (state.catalogPage || 0) - 1);
-      saveState();
-      renderShellChrome();
-    });
-    $("srMiniCatalogNext")?.addEventListener("click", () => {
-      state.catalogPage = Math.min(totalPages - 1, (state.catalogPage || 0) + 1);
-      saveState();
-      renderShellChrome();
-    });
-    widget.querySelectorAll("[data-mini-catalog-open]").forEach((btn) => btn.addEventListener("click", () => {
-      const product = getCatalogProducts().find((item) => item.id === btn.dataset.miniCatalogOpen);
-      if (product?.physical) openCustomOrderProductModal(product);
-      else openCatalogProductModal(product);
-    }));
+    $("srMiniCatalogWidget")?.remove();
   }
 
-  function ensureShellChrome() {
-    if (!$("srMiniCatalogWidget")) renderShellChrome();
-  }
+  function ensureShellChrome() {}
 
-  function watchShellChrome() {
-    if (shellChromeObserver) return;
-    shellChromeObserver = new MutationObserver(() => {
-      if (!$("srMiniCatalogWidget")) renderShellChrome();
-    });
-    shellChromeObserver.observe(document.body, { childList: true });
-  }
+  function watchShellChrome() {}
 
   function bindLaunchButtons() {
     document.querySelectorAll(".float-launch-btn").forEach((btn) => {
@@ -2100,11 +2146,8 @@
     state.route = "";
     saveState();
     injectStyle();
-      activatePresentationMode();
+      enableLegacyRemoteMode();
       ensureRouteHost();
-      renderShellChrome();
-      watchShellChrome();
-      
       renderAssistantDock();
     updateAssistantDock("Aria and Jake are moving with the page. Tap them when you need them.");
     bindLaunchButtons();
@@ -2122,7 +2165,7 @@
       syncArchitectureStatus();
       syncShopifyPublicConfig();
       ensureShellChrome();
-      window.SupportRDRemoteRebuildVersion = "20260411g";
+      window.SupportRDRemoteRebuildVersion = "20260412a";
     }
 
   setTimeout(init, 700);
