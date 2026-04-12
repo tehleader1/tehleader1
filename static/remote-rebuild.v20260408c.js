@@ -115,7 +115,9 @@
       connected: false,
       storefrontBase: "",
       cartUrl: "/cart",
-      ordersUrl: "/account/orders"
+      ordersUrl: "/account/orders",
+      checkoutMap: {},
+      checkoutMapLoaded: false
     }
   };
 
@@ -419,7 +421,9 @@
         connected: !!data?.ok,
         storefrontBase: data?.storefront_base || "",
         cartUrl: data?.cart_url || "/cart",
-        ordersUrl: data?.orders_url || "/account/orders"
+        ordersUrl: data?.orders_url || "/account/orders",
+        checkoutMap: data?.checkout_map || {},
+        checkoutMapLoaded: !!data?.checkout_map_loaded
       };
       saveState();
     } catch {}
@@ -844,17 +848,17 @@
     if (live.length) return live;
     return [
       { id: "catalog-1", title: "Formula Exclusiva", price: "$35", description: "Physical scalp comfort and hair cycle support for a stronger daily routine.", image: "/static/images/hija-de-felix.jpeg", handle: "", physical: true },
-      { id: "catalog-2", title: "Aria Premium/Pro", price: "$35 premium · $50 pro", description: "AI beauty guidance, stronger product support, and premium help when the hair day needs real attention.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "", physical: false },
-      { id: "catalog-3", title: "Jake Studio Premium", price: "$50+ Pro", description: "Creator-ready studio lane with polished premium booth support and a richer SupportRD sound feel.", image: "/static/images/jake-studio-premium.jpg", handle: "", physical: false },
-      { id: "catalog-4", title: "21+ Fantasies", price: "$300 basic · $600 advanced", description: "Exclusive 21+ fantasy lane tied to premium presence, chemistry, and a stronger SupportRD private experience.", image: "/static/images/fantasy-21-plus-main-ad.jpg", handle: "", physical: false },
+      { id: "catalog-2", title: "Aria Premium/Pro", price: "$35 premium · $50 pro", description: "AI beauty guidance, stronger product support, and premium help when the hair day needs real attention.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "", physical: false, checkoutPlans: ["premium", "pro"] },
+      { id: "catalog-3", title: "Jake Studio Premium", price: "$50+ Pro", description: "Creator-ready studio lane with polished premium booth support and a richer SupportRD sound feel.", image: "/static/images/jake-studio-premium.jpg", handle: "", physical: false, checkoutPlans: ["pro"] },
+      { id: "catalog-4", title: "21+ Fantasies", price: "$300 basic · $600 advanced", description: "Exclusive 21+ fantasy lane tied to premium presence, chemistry, and a stronger SupportRD private experience.", image: "/static/images/fantasy-21-plus-main-ad.jpg", handle: "", physical: false, checkoutPlans: ["fantasy300", "fantasy600"] },
       { id: "catalog-5", title: "Shampoo SupportRD", price: "$40", description: "Physical shampoo lane for moisture, bounce, product trust, and visible progress in the hair cycle.", image: "/static/images/have-healthy-hair.jpeg", handle: "", physical: true },
       { id: "catalog-6", title: "Custom Orders", price: "Custom quote", description: "Founder-led custom order support for specialized shampoo lanes, retail confidence, and product expansion.", image: "/static/images/brochure-scroll-store.jpg", handle: "", physical: true },
       { id: "catalog-7", title: "Gotero", price: "$28", description: "Physical scalp-first product guidance for a lighter, cleaner, and better prepared wash-day cycle.", image: "/static/images/lezawli.jpeg", handle: "", physical: true },
       { id: "catalog-8", title: "Profile Hair Scan", price: "Included with profile", description: "Hair analysis, texture guidance, and stronger SupportRD identity with scan-first profile support.", image: "/static/images/hija-de-felix.jpeg", handle: "", physical: false },
-      { id: "catalog-9", title: "Diary Private Lane", price: "$20 add-on", description: "Private diary support, live link sharing, and AI comfort when hair problems need a personal place.", image: "/static/images/have-healthy-hair.jpeg", handle: "", physical: false },
+      { id: "catalog-9", title: "Diary Private Lane", price: "$20 add-on", description: "Private diary support, live link sharing, and AI comfort when hair problems need a personal place.", image: "/static/images/have-healthy-hair.jpeg", handle: "", physical: false, checkoutPlans: ["yoda"] },
       { id: "catalog-10", title: "Mascarilla", price: "$25", description: "Physical mask support with premium routing and stronger hair presentation help.", image: "/static/images/brochure-scroll-store.jpg", handle: "", physical: true },
       { id: "catalog-11", title: "Studio Share Pack", price: "$15 add-on", description: "Quick studio social share support with polished product and creator-facing presentation.", image: "/static/images/jake-studio-premium.jpg", handle: "", physical: false },
-      { id: "catalog-12", title: "Support Bundle", price: "$75", description: "A stronger bundled SupportRD lane for product trust, AI guidance, and scalp-focused results.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "", physical: false }
+      { id: "catalog-12", title: "Support Bundle", price: "$75", description: "A stronger bundled SupportRD lane for product trust, AI guidance, and scalp-focused results.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "", physical: false, checkoutPlans: ["family200"] }
     ];
   }
 
@@ -898,12 +902,37 @@
   }
 
   function getCheckoutUrl(product) {
-    const variantId = String(product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
+    const variantId = String(product?.variantId || product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
     if (variantId && state.shopify?.storefrontBase) {
       return `${state.shopify.storefrontBase}/cart/${variantId}:1?ref=supportrd-remote`;
     }
     if (variantId) return `/checkout/${variantId}?src=remote`;
     return state.shopify?.cartUrl || "/cart";
+  }
+
+  function getCheckoutEntries(product) {
+    const liveVariantId = String(product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
+    if (liveVariantId) {
+      return [{
+        id: liveVariantId,
+        label: product?.price ? `Go To Credit Card Page · ${product.price}` : "Go To Credit Card Page",
+        variantId: liveVariantId,
+        title: product?.title || "SupportRD Product"
+      }];
+    }
+    const checkoutMap = state.shopify?.checkoutMap || {};
+    const planKeys = Array.isArray(product?.checkoutPlans) ? product.checkoutPlans : [];
+    return planKeys.map((planKey) => {
+      const entry = checkoutMap[planKey];
+      const variantId = String(entry?.variant_id || "").replace(/\D/g, "");
+      if (!variantId) return null;
+      return {
+        id: planKey,
+        label: `${entry?.label || product?.title || "SupportRD"} · ${entry?.price_label || product?.price || "Checkout"}`,
+        variantId,
+        title: entry?.label || product?.title || "SupportRD Product"
+      };
+    }).filter(Boolean);
   }
 
   function openCheckoutForProduct(product, titleOverride) {
@@ -933,6 +962,7 @@
     if (!product) return;
     const modal = ensureProductModal();
     const body = $("srProductModalBody");
+    const checkoutEntries = getCheckoutEntries(product);
     body.innerHTML = `
       <div class="support-rebuild-row" style="justify-content:space-between">
         <h3 class="support-rebuild-title">${product.title}</h3>
@@ -943,16 +973,21 @@
         <div class="support-rebuild-card">
           <div class="support-rebuild-price-badge">${product.price}</div>
           <div class="support-rebuild-note" style="margin-top:14px">${product.description}</div>
-          <div class="support-rebuild-note" style="margin-top:12px">This SupportRD product view should feel real: image first, price clear, description direct, and checkout close by.</div>
-          <div class="support-rebuild-row" style="margin-top:14px">
-            <button class="support-rebuild-btn pulse" id="srProductCheckout">Go To Credit Card Page</button>
+          <div class="support-rebuild-note" style="margin-top:12px">${checkoutEntries.length ? "This SupportRD product view should feel real: image first, price clear, description direct, and checkout close by." : "This SupportRD product is visible, but live Shopify variant routing is not mapped yet. The product view stays clean while we finish that payment wiring."}</div>
+          <div class="support-rebuild-row" style="margin-top:14px;flex-wrap:wrap">
+            ${checkoutEntries.length ? checkoutEntries.map((entry) => `<button class="support-rebuild-btn pulse" data-product-checkout="${entry.id}">${entry.label}</button>`).join("") : `<button class="support-rebuild-btn pulse" id="srProductCheckoutFallback">Open Shopify Cart</button>`}
             <button class="support-rebuild-btn ghost" id="srProductBackCatalog">Back To Main Catalog</button>
           </div>
         </div>
       </div>`;
     $("srCloseProductModal").onclick = () => modal.classList.remove("is-open");
     $("srProductBackCatalog").onclick = () => modal.classList.remove("is-open");
-    $("srProductCheckout").onclick = () => openCheckoutForProduct(product, product.title);
+    body.querySelectorAll("[data-product-checkout]").forEach((btn) => {
+      const entry = checkoutEntries.find((item) => item.id === btn.dataset.productCheckout);
+      if (!entry) return;
+      btn.onclick = () => openCheckoutForProduct(entry, entry.title);
+    });
+    $("srProductCheckoutFallback")?.addEventListener("click", () => openCheckoutForProduct(product, product.title));
     modal.classList.add("is-open");
   }
 
@@ -1058,13 +1093,13 @@
   function openPaymentModal() {
     const modal = ensurePaymentModal();
     const body = $("srPaymentModalBody");
-    const products = state.products.slice(0, 8);
+    const products = (state.products.length ? state.products : getCatalogProducts().filter((item) => item.physical || getCheckoutEntries(item).length)).slice(0, 8);
     body.innerHTML = `
       <div class="support-rebuild-row" style="justify-content:space-between">
         <h3 class="support-rebuild-title">Fast Pay</h3>
         <button class="support-rebuild-btn ghost" id="srClosePaymentModal">X</button>
       </div>
-      <div class="support-rebuild-note">Open Purchase Menu stays descriptive. Shopify Checkout should move straight into the card lane.</div>
+      <div class="support-rebuild-note">Open Purchase Menu stays descriptive. Shopify Checkout should move straight into the card lane. ${state.shopify?.checkoutMapLoaded ? "Plan variant map is loaded." : "Plan variant map still needs Shopify help."}</div>
       <div class="support-rebuild-grid two" style="margin-top:14px">
         <div class="support-rebuild-card" style="padding:12px">
           <div class="support-rebuild-title">Custom Order</div>
@@ -1082,17 +1117,18 @@
       <div class="support-rebuild-grid two" style="margin-top:14px">
         ${products.length ? products.map((product) => {
           const title = product.title || "SupportRD Product";
-          const price = product.price ? `$${product.price}` : "Live price on checkout";
-          const handle = product.handle || "";
+          const price = product.price ? `${String(product.price).startsWith("$") ? "" : "$"}${product.price}` : "Live price on checkout";
+          const key = product.handle || product.id || "";
+          const checkoutEntries = getCheckoutEntries(product);
           return `<div class="support-rebuild-card" style="padding:12px">
             <div class="support-rebuild-title">${title}</div>
             <div class="support-rebuild-note">${price}</div>
             <div class="support-rebuild-row" style="margin-top:12px">
-              <button class="support-rebuild-btn ghost" data-details="${handle}">Open Purchase Menu</button>
-              <button class="support-rebuild-btn pulse" data-checkout="${handle}">Shopify Checkout</button>
+              <button class="support-rebuild-btn ghost" data-details="${key}">Open Purchase Menu</button>
+              <button class="support-rebuild-btn pulse" data-checkout="${key}">${product.physical ? "Custom Order" : (checkoutEntries.length ? "Shopify Checkout" : "Open Shopify Cart")}</button>
             </div>
           </div>`;
-        }).join("") : `<div class="support-rebuild-card"><div class="support-rebuild-note">Live product feed is empty right now. Using SupportRD storefront fallback.</div><div class="support-rebuild-row" style="margin-top:12px"><a class="support-rebuild-btn pulse" href="https://supportrd.com/cart" target="_blank" rel="noopener">Open Shopify Cart</a></div></div>`}
+        }).join("") : `<div class="support-rebuild-card"><div class="support-rebuild-note">Live product feed is empty right now. Using SupportRD storefront fallback.</div><div class="support-rebuild-row" style="margin-top:12px"><button class="support-rebuild-btn pulse" id="srOpenFallbackCart">Open Shopify Cart</button></div></div>`}
       </div>
       <div class="support-rebuild-note" style="margin-top:12px">Apple Pay and Google Pay appear on the Shopify side when supported by the device and store settings.</div>`;
     $("srClosePaymentModal").onclick = () => modal.classList.remove("is-open");
@@ -1105,19 +1141,43 @@
         image: "/static/images/brochure-scroll-store.jpg"
       });
     });
+    $("srOpenFallbackCart")?.addEventListener("click", () => openCheckoutForProduct({ title: "SupportRD Cart" }, "SupportRD Cart"));
     body.querySelectorAll("[data-checkout]").forEach((btn) => btn.onclick = () => {
-      const product = products.find((item) => item.handle === btn.dataset.checkout);
-      openCheckoutForProduct(product);
+      const product = products.find((item) => (item.handle || item.id) === btn.dataset.checkout);
+      if (!product) return;
+      if (product.physical) {
+        modal.classList.remove("is-open");
+        openCustomOrderProductModal(product);
+        return;
+      }
+      const checkoutEntries = getCheckoutEntries(product);
+      if (checkoutEntries.length === 1) {
+        openCheckoutForProduct(checkoutEntries[0], checkoutEntries[0].title);
+        return;
+      }
+      if (checkoutEntries.length > 1) {
+        openCatalogProductModal(product);
+        return;
+      }
+      openCheckoutForProduct(product, product.title);
     });
     body.querySelectorAll("[data-details]").forEach((btn) => btn.onclick = () => {
-      const product = products.find((item) => item.handle === btn.dataset.details);
+      const product = products.find((item) => (item.handle || item.id) === btn.dataset.details);
       const title = product?.title || "SupportRD Product";
       const desc = product?.body_html || product?.description || "Product details are loading from the SupportRD catalog.";
-      body.innerHTML = `<div class="support-rebuild-row" style="justify-content:space-between"><h3 class="support-rebuild-title">${title}</h3><button class="support-rebuild-btn ghost" id="srBackPaymentModal">Back</button></div><div class="support-rebuild-note">${desc}</div><div class="support-rebuild-row" style="margin-top:12px"><button class="support-rebuild-btn pulse" id="srCheckoutThis">Go To Credit Card Page</button></div>`;
+      const checkoutEntries = getCheckoutEntries(product);
+      body.innerHTML = `<div class="support-rebuild-row" style="justify-content:space-between"><h3 class="support-rebuild-title">${title}</h3><button class="support-rebuild-btn ghost" id="srBackPaymentModal">Back</button></div><div class="support-rebuild-note">${desc}</div><div class="support-rebuild-row" style="margin-top:12px;flex-wrap:wrap">${product?.physical ? `<button class="support-rebuild-btn pulse" id="srOpenCustomOrderFromPayment">Open Custom Order</button>` : (checkoutEntries.length ? checkoutEntries.map((entry) => `<button class="support-rebuild-btn pulse" data-checkout-entry="${entry.id}">${entry.label}</button>`).join("") : `<button class="support-rebuild-btn pulse" id="srCheckoutThis">Go To Credit Card Page</button>`)}</div>`;
       $("srBackPaymentModal").onclick = openPaymentModal;
-      $("srCheckoutThis").onclick = () => {
-        openCheckoutForProduct(product, title);
-      };
+      $("srOpenCustomOrderFromPayment")?.addEventListener("click", () => {
+        modal.classList.remove("is-open");
+        openCustomOrderProductModal(product);
+      });
+      body.querySelectorAll("[data-checkout-entry]").forEach((checkoutBtn) => {
+        const entry = checkoutEntries.find((item) => item.id === checkoutBtn.dataset.checkoutEntry);
+        if (!entry) return;
+        checkoutBtn.onclick = () => openCheckoutForProduct(entry, entry.title);
+      });
+      $("srCheckoutThis")?.addEventListener("click", () => openCheckoutForProduct(product, title));
     });
     modal.classList.add("is-open");
   }
@@ -2278,9 +2338,9 @@
       activateRoute(state.route);
       fetchProducts();
       syncArchitectureStatus();
-      syncShopifyPublicConfig();
+      syncShopifyPublicConfig().then(renderShellChrome);
       ensureShellChrome();
-      window.SupportRDRemoteRebuildVersion = "20260412e";
+      window.SupportRDRemoteRebuildVersion = "20260412f";
     }
 
   setTimeout(init, 700);

@@ -122,6 +122,16 @@ DEFAULT_SHOPIFY_PLAN_TITLE_PATTERNS = [
     ("premium", ["aria puzzle tier", "hair advisor premium"]),
 ]
 
+PUBLIC_SHOPIFY_CHECKOUT_META = {
+    "premium": {"label": "Aria Premium", "price_label": "$35 premium"},
+    "pro": {"label": "Jake Studio Pro", "price_label": "$50 pro"},
+    "yoda": {"label": "Diary Private Lane", "price_label": "$20 add-on"},
+    "bingo100": {"label": "Bingo Fantasy", "price_label": "$100 monthly"},
+    "family200": {"label": "Support Bundle", "price_label": "$200 family"},
+    "fantasy300": {"label": "21+ Fantasies Basic", "price_label": "$300 basic"},
+    "fantasy600": {"label": "21+ Fantasies Advanced", "price_label": "$600 advanced"},
+}
+
 def _normalize_key(value):
     return re.sub(r"[^a-z0-9]+", "", (value or "").strip().lower())
 
@@ -151,6 +161,23 @@ def _load_shopify_plan_maps():
     return sku_map, variant_map
 
 SHOPIFY_PLAN_SKU_MAP, SHOPIFY_PLAN_VARIANT_MAP = _load_shopify_plan_maps()
+
+def get_public_shopify_checkout_map():
+    reverse_map = {}
+    for variant_id, plan in SHOPIFY_PLAN_VARIANT_MAP.items():
+        plan_key = str(plan or "").strip().lower()
+        clean_variant = str(variant_id or "").strip()
+        if plan_key and clean_variant and plan_key not in reverse_map:
+            reverse_map[plan_key] = clean_variant
+    payload = {}
+    for plan_key, meta in PUBLIC_SHOPIFY_CHECKOUT_META.items():
+        variant_id = reverse_map.get(plan_key, "")
+        payload[plan_key] = {
+            **meta,
+            "variant_id": variant_id,
+            "checkout_path": f"/checkout/{variant_id}?src=remote" if variant_id else "",
+        }
+    return payload
 
 def infer_shopify_plan_from_line_items(items):
     rows = items if isinstance(items, list) else []
@@ -3370,6 +3397,8 @@ def shopify_public_config():
         "storefront_token_public": SHOPIFY_TOKEN if store and SHOPIFY_TOKEN else "",
         "cart_url": f"{storefront_base}/cart" if storefront_base else "",
         "orders_url": f"{storefront_base}/account/orders" if storefront_base else "",
+        "checkout_map": get_public_shopify_checkout_map(),
+        "checkout_map_loaded": bool(SHOPIFY_PLAN_VARIANT_MAP),
     }
 
 @app.route("/products/<path:slug>")
