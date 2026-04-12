@@ -523,6 +523,12 @@
       .support-rebuild-route-host.is-open{display:grid}
       .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:0;position:absolute;top:16px;right:16px;z-index:2}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
+      .support-rebuild-catalog-corner{position:fixed;top:92px;right:286px;z-index:72;width:min(280px,calc(100vw - 390px));display:grid;gap:10px;padding:14px;border-radius:24px;background:rgba(7,12,22,.88);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.24);backdrop-filter:blur(10px)}
+      .support-rebuild-catalog-corner-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+      .support-rebuild-catalog-corner-grid{display:grid;gap:10px}
+      .support-rebuild-catalog-corner-btn{min-height:78px;border-radius:18px;padding:12px;display:flex;align-items:flex-end;justify-content:flex-start;background-size:cover;background-position:center;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12);cursor:pointer;color:#fff;box-shadow:0 14px 26px rgba(0,0,0,.2)}
+      .support-rebuild-catalog-corner-btn::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,8,16,.08),rgba(4,8,16,.82))}
+      .support-rebuild-catalog-corner-btn > *{position:relative;z-index:1}
       .support-rebuild-sticky-rail{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:74;width:min(200px,calc(100vw - 24px));display:grid;gap:12px}
       .support-rebuild-sticky-card{padding:14px;border-radius:22px;background:rgba(7,12,22,.90);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.26);color:#fff}
       .support-rebuild-mini-title{font:700 .92rem/1.2 Georgia,serif;margin:0 0 8px}
@@ -696,6 +702,7 @@
         .support-rebuild-hero-layout{grid-template-columns:1fr}
         .float-mode-shell.support-rebuild-mode .float-mode-launch{width:100%;margin-left:0 !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important}
         .support-rebuild-remote-stage,.support-rebuild-aria-menu{grid-template-columns:1fr}
+        .support-rebuild-catalog-corner{position:static;width:auto;margin:10px 16px 0}
         .support-rebuild-sticky-rail{left:10px;top:auto;bottom:110px;transform:none;width:min(180px,calc(100vw - 20px))}
         .support-rebuild-route-actions{position:static;justify-content:flex-end}
       }
@@ -2090,9 +2097,43 @@
   }
   function renderShellChrome() {
     $("srMiniCatalogWidget")?.remove();
+    const products = getCatalogProducts().slice(0, 3);
+    if (!products.length) return;
+    let widget = $("srCatalogCorner");
+    if (!widget) {
+      widget = document.createElement("aside");
+      widget.id = "srCatalogCorner";
+      widget.className = "support-rebuild-catalog-corner";
+      document.body.appendChild(widget);
+    }
+    widget.innerHTML = `
+      <div class="support-rebuild-catalog-corner-head">
+        <div>
+          <div class="support-rebuild-kicker">Featured Catalog</div>
+          <div class="support-rebuild-title" style="margin-bottom:0">Open Product Page</div>
+        </div>
+      </div>
+      <div class="support-rebuild-catalog-corner-grid">
+        ${products.map((product) => `
+          <button class="support-rebuild-catalog-corner-btn" data-corner-product="${product.id}" style="background-image:url('${product.image}')">
+            <div>
+              <div class="support-rebuild-title" style="font-size:.94rem;margin-bottom:4px">${product.title}</div>
+              <div class="support-rebuild-price-badge">${product.price}</div>
+            </div>
+          </button>
+        `).join("")}
+      </div>`;
+    widget.querySelectorAll("[data-corner-product]").forEach((btn) => btn.addEventListener("click", () => {
+      const product = getCatalogProducts().find((item) => item.id === btn.dataset.cornerProduct);
+      if (!product) return;
+      if (product.physical) openCustomOrderProductModal(product);
+      else openCatalogProductModal(product);
+    }));
   }
 
-  function ensureShellChrome() {}
+  function ensureShellChrome() {
+    if (!$("srCatalogCorner")) renderShellChrome();
+  }
 
   function watchShellChrome() {}
 
@@ -2165,7 +2206,7 @@
       syncArchitectureStatus();
       syncShopifyPublicConfig();
       ensureShellChrome();
-      window.SupportRDRemoteRebuildVersion = "20260412a";
+      window.SupportRDRemoteRebuildVersion = "20260412b";
     }
 
   setTimeout(init, 700);
