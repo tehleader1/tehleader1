@@ -523,7 +523,7 @@
       .support-rebuild-route-host.is-open{display:grid}
       .support-rebuild-route-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:0;position:absolute;top:16px;right:16px;z-index:2}
       .support-rebuild-account-panel{position:fixed;top:16px;right:16px;z-index:75;width:min(320px,calc(100vw - 24px));padding:14px;border-radius:22px;background:rgba(7,12,22,.86);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.28)}
-      .support-rebuild-catalog-corner{position:fixed;top:92px;right:286px;z-index:72;width:min(280px,calc(100vw - 390px));display:grid;gap:10px;padding:14px;border-radius:24px;background:rgba(7,12,22,.88);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.24);backdrop-filter:blur(10px)}
+      .support-rebuild-catalog-corner{position:absolute;top:14px;right:340px;z-index:6;width:min(290px,calc(100vw - 760px));display:grid;gap:10px;padding:14px;border-radius:24px;background:rgba(7,12,22,.88);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.24);backdrop-filter:blur(10px)}
       .support-rebuild-catalog-corner-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
       .support-rebuild-catalog-corner-grid{display:grid;gap:10px}
       .support-rebuild-catalog-corner-btn{min-height:78px;border-radius:18px;padding:12px;display:flex;align-items:flex-end;justify-content:flex-start;background-size:cover;background-position:center;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12);cursor:pointer;color:#fff;box-shadow:0 14px 26px rgba(0,0,0,.2)}
@@ -2099,12 +2099,16 @@
     $("srMiniCatalogWidget")?.remove();
     const products = getCatalogProducts().slice(0, 3);
     if (!products.length) return;
+    const top = document.querySelector(".float-mode-top");
+    if (!top) return;
     let widget = $("srCatalogCorner");
     if (!widget) {
       widget = document.createElement("aside");
       widget.id = "srCatalogCorner";
       widget.className = "support-rebuild-catalog-corner";
-      document.body.appendChild(widget);
+      top.appendChild(widget);
+    } else if (widget.parentElement !== top) {
+      top.appendChild(widget);
     }
     widget.innerHTML = `
       <div class="support-rebuild-catalog-corner-head">
@@ -2206,7 +2210,7 @@
       syncArchitectureStatus();
       syncShopifyPublicConfig();
       ensureShellChrome();
-      window.SupportRDRemoteRebuildVersion = "20260412b";
+      window.SupportRDRemoteRebuildVersion = "20260412c";
     }
 
   setTimeout(init, 700);
