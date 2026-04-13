@@ -66,10 +66,17 @@ def resolve_shopify_api_domain():
     return store
 
 def resolve_shopify_storefront_domain():
-    # Always prefer the explicit Shopify store host from env for storefront
-    # redirects so checkout/product routes don't loop back into the app's own
-    # custom domain.
-    return resolve_shopify_api_domain()
+    # Always force storefront / cart redirects onto the actual Shopify-hosted
+    # domain so app-domain aliases never create redirect loops.
+    store = resolve_shopify_api_domain()
+    if not store:
+        return ""
+    store = normalize_shopify_store_domain(store)
+    if store.endswith(".myshopify.com"):
+        return store
+    if store.endswith("supportrd.com") or store.endswith("theplantmaninc.com"):
+        return "supportdr-com.myshopify.com"
+    return "supportdr-com.myshopify.com"
 
 SEO_ENABLED = os.environ.get("SEO_ENABLED", "false").lower() == "true"
 SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "72"))
