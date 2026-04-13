@@ -942,7 +942,9 @@
         id: liveVariantId,
         label: product?.price ? `Go To Credit Card Page · ${product.price}` : "Go To Credit Card Page",
         variantId: liveVariantId,
-        title: product?.title || "SupportRD Product"
+        title: product?.title || "SupportRD Product",
+        handle: product?.handle || "",
+        physical: !!product?.physical
       }];
     }
     const checkoutMap = state.shopify?.checkoutMap || {};
@@ -955,7 +957,9 @@
         id: planKey,
         label: `${entry?.label || product?.title || "SupportRD"} · ${entry?.price_label || product?.price || "Checkout"}`,
         variantId,
-        title: entry?.label || product?.title || "SupportRD Product"
+        title: entry?.label || product?.title || "SupportRD Product",
+        handle: product?.handle || "",
+        physical: !!product?.physical
       };
     }).filter(Boolean);
   }
