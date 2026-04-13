@@ -1261,6 +1261,17 @@ def init_subscription_db():
             "updated_at TEXT"
             ")"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS purchase_memory ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "email TEXT,"
+            "package_key TEXT,"
+            "package_title TEXT,"
+            "source TEXT,"
+            "order_id TEXT,"
+            "created_at TEXT"
+            ")"
+        )
         conn.commit()
         conn.close()
     except:
@@ -1393,6 +1404,37 @@ def get_subscription_for_email(email):
     except:
         return "free"
 
+def get_subscription_details_for_email(email):
+    details = {
+        "plan": "free",
+        "source": "",
+        "order_id": "",
+        "updated_at": "",
+    }
+    if not email:
+        return details
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT plan, source, order_id, updated_at FROM user_subscriptions WHERE email = ? LIMIT 1",
+            (email.lower(),),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return details
+        plan = (row[0] or "free").lower().strip()
+        if plan not in ("free", "premium", "pro", "yoda", "bingo100", "family200", "fantasy300", "fantasy600"):
+            plan = "free"
+        details["plan"] = plan
+        details["source"] = row[1] or ""
+        details["order_id"] = row[2] or ""
+        details["updated_at"] = row[3] or ""
+        return details
+    except:
+        return details
+
 def set_subscription_for_email(email, plan, source="manual", order_id=""):
     if not email:
         return False
@@ -1412,6 +1454,54 @@ def set_subscription_for_email(email, plan, source="manual", order_id=""):
         return True
     except:
         return False
+
+def remember_purchase_for_email(email, package_key, package_title="", source="manual", order_id=""):
+    if not email or not package_key:
+        return False
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO purchase_memory (email, package_key, package_title, source, order_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                email.lower(),
+                package_key[:40],
+                (package_title or package_key)[:140],
+                source[:40],
+                (order_id or "")[:80],
+                datetime.utcnow().isoformat() + "Z",
+            ),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
+
+def get_recent_purchases_for_email(email, limit=5):
+    if not email:
+        return []
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT package_key, package_title, source, order_id, created_at FROM purchase_memory WHERE email = ? ORDER BY id DESC LIMIT ?",
+            (email.lower(), int(limit)),
+        )
+        rows = cur.fetchall()
+        conn.close()
+        return [
+            {
+                "package_key": row[0] or "",
+                "package_title": row[1] or row[0] or "",
+                "source": row[2] or "",
+                "order_id": row[3] or "",
+                "created_at": row[4] or "",
+            }
+            for row in rows
+        ]
+    except:
+        return []
 
 def init_app_settings_db():
     try:
@@ -3223,7 +3313,15 @@ def subscription_status():
     email = (request.args.get("email") or user.get("email") or "").strip().lower()
     if not email:
         return {"ok": False, "error": "email_required"}, 400
-    return {"ok": True, "subscription": get_subscription_for_email(email)}
+    details = get_subscription_details_for_email(email)
+    return {
+        "ok": True,
+        "subscription": details.get("plan") or "free",
+        "source": details.get("source") or "",
+        "order_id": details.get("order_id") or "",
+        "updated_at": details.get("updated_at") or "",
+        "recent_purchases": get_recent_purchases_for_email(email, limit=5),
+    }
 
 @app.route("/api/studio/plan")
 def studio_plan():
@@ -3330,6 +3428,7 @@ def shopify_orders_paid_webhook():
         if not plan:
             return {"ok": True, "ignored": "not_subscription_order"}
         ok = set_subscription_for_email(email, plan, source="shopify_webhook_paid", order_id=order_id)
+        remember_purchase_for_email(email, plan, plan, source="shopify_webhook_paid", order_id=order_id)
         return {"ok": bool(ok), "email": email, "plan": plan, "match_reason": match_reason}
     except Exception as e:
         return {"ok": False, "error": str(e)[:200]}, 500
@@ -4133,6 +4232,8 @@ def aria_speech():
         muslim_greeting = bool(body.get("muslim_greeting")) if isinstance(body, dict) else False
         same_feel_voice = bool(body.get("same_feel_voice")) if isinstance(body, dict) else False
         thought_style = (body.get("thought_style") or "").strip() if isinstance(body, dict) else ""
+        assistant_id = (body.get("assistant_id") or "aria").strip().lower() if isinstance(body, dict) else "aria"
+        membership_tier = (body.get("membership_tier") or "free").strip().lower() if isinstance(body, dict) else "free"
         voice = requested_voice if requested_voice in TTS_ALLOWED_VOICES else os.environ.get("OPENAI_TTS_VOICE", "shimmer")
         payload = {
             "model": os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),
@@ -4153,6 +4254,24 @@ def aria_speech():
                 instructions.append(f"Consistency reference pack: {cleaned[:420]}")
         if same_feel_voice:
             instructions.append(f"Use same-feel consistency mode. Keep cadence and tone stable. Thought style: {thought_style[:120] or 'calm, descriptive, warm'}.")
+        if assistant_id == "projake":
+            instructions.append("Jake should sound like a natural studio guide: grounded, smooth, calm, masculine, never robotic, never exaggerated.")
+        else:
+            instructions.append("Aria should sound like a natural premium beauty-tech guide: warm, confident, gentle, feminine, and never robotic.")
+        if membership_tier == "premium":
+            instructions.append("Keep the delivery premium, polished, and welcoming with light concierge energy.")
+        elif membership_tier == "pro":
+            instructions.append("Use a more executive, focused, confident delivery with crisp pacing and professional warmth.")
+        elif membership_tier == "yoda":
+            instructions.append("Keep the delivery wise, steady, reflective, and calming without sounding theatrical.")
+        elif membership_tier == "bingo100":
+            instructions.append("Keep the delivery playful, charismatic, and smooth while staying hair-first and family-safe.")
+        elif membership_tier == "family200":
+            instructions.append("Keep the delivery warm, reassuring, and family-friendly with gentle confidence.")
+        elif membership_tier == "fantasy300":
+            instructions.append("Keep the delivery flirty-light, polished, and cinematic while staying non-explicit and emotionally safe.")
+        elif membership_tier == "fantasy600":
+            instructions.append("Keep the delivery intimate, cinematic, and confidence-building while staying non-explicit and emotionally warm.")
         if instructions:
             payload["instructions"] = " ".join(instructions)
         r = requests.post(

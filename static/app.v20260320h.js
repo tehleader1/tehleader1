@@ -98,17 +98,17 @@ const SHOPIFY_LINK_PATHS = {
     donate: "/products/supportrd-product-tip-donate"
   }
 const LINKS = {
-    myOrders: "https://supportrd.com/account/orders",
-    cart: "https://supportrd.com/cart",
-    premium: "https://supportrd.com/products/hair-advisor-premium-1",
-  bingo100: "https://supportrd.com/products/bingo-fantasy-100",
-  studio100: "https://supportrd.com/products/jake-premium-studio",
-  family200: "https://supportrd.com/products/family-fantasy-200",
-  yoda: "https://supportrd.com/products/yoda-pass",
-  pro: "https://supportrd.com/products/professional-hair-advisor-1",
-  fantasy300: "https://supportrd.com/products/basic-fantasy-21-plus-300",
-  fantasy600: "https://supportrd.com/products/advanced-fantasy-21-plus-600",
-    donate: "https://supportrd.com/products/supportrd-product-tip-donate",
+    myOrders: "https://shop.supportrd.com/account/orders",
+    cart: "https://shop.supportrd.com/cart",
+    premium: "https://shop.supportrd.com/products/hair-advisor-premium-1",
+  bingo100: "https://shop.supportrd.com/products/bingo-fantasy-100",
+  studio100: "https://shop.supportrd.com/products/jake-premium-studio",
+  family200: "https://shop.supportrd.com/products/family-fantasy-200",
+  yoda: "https://shop.supportrd.com/products/yoda-pass",
+  pro: "https://shop.supportrd.com/products/professional-hair-advisor-1",
+  fantasy300: "https://shop.supportrd.com/products/basic-fantasy-21-plus-300",
+  fantasy600: "https://shop.supportrd.com/products/advanced-fantasy-21-plus-600",
+    donate: "https://shop.supportrd.com/products/supportrd-product-tip-donate",
     custom: "https://supportrd.com/pages/custom-order"
   }
   const SHOPIFY_ROLLOUTS = [
@@ -1204,7 +1204,7 @@ function bumpHairScore(delta){
         })
       }
       bumpHairScore(1)
-      speakReply(reply)
+      speakReply(reply, { assistantId: assistant?.id || "aria" })
       state.ariaCount += 1
   const limit = (state.subscription === "pro" || state.subscription === "yoda" || state.subscription === "fantasy300" || state.subscription === "fantasy600" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
     if(state.ariaCount >= limit){
@@ -1216,7 +1216,7 @@ function bumpHairScore(delta){
       appendAria(`${assistant.name}: ${fallbackReply}`)
       appendConversation("aria", fallbackReply)
       showSpeechPopup(assistant.name, fallbackReply)
-      speakReply(fallbackReply)
+      speakReply(fallbackReply, { assistantId: assistant?.id || "aria" })
       setAriaFlow("idle")
     }
   }
@@ -1242,7 +1242,90 @@ function bumpHairScore(delta){
     return "Hello, I'm Aria. Tell me the issue first, like dryness, frizz, damage, low bounce, or color loss, and I will route you to the right SupportRD product and next step."
   }
 
-  let cachedAriaVoice = null
+  let cachedAssistantVoices = { aria: null, projake: null }
+
+function getActiveAssistantId(){
+  return state.activeAssistant === "projake" ? "projake" : "aria"
+}
+
+function getAssistantVoiceProfile(assistantId = getActiveAssistantId(), subscription = (state.subscription || "free")){
+  const tier = String(subscription || "free").trim().toLowerCase()
+  const isJake = assistantId === "projake"
+  const defaults = isJake
+    ? {
+        voice: "onyx",
+        rate: 0.96,
+        pitch: 0.9,
+        thoughtStyle: "grounded studio director, smooth, natural, no robotic cadence, calm but premium",
+        voiceReferencePack: "Natural masculine studio voice | grounded, smooth pacing | premium but human | no announcer voice",
+        fallbackNames: [
+          "Microsoft Andrew Online (Natural) - English (United States)",
+          "Microsoft Guy Online (Natural) - English (United States)",
+          "Microsoft Davis Online (Natural) - English (United States)",
+          "Google US English",
+          "David",
+          "Mark",
+          "Alex"
+        ]
+      }
+    : {
+        voice: "shimmer",
+        rate: 0.98,
+        pitch: 1.04,
+        thoughtStyle: "warm beauty-tech concierge, smooth, premium, natural, no robotic cadence",
+        voiceReferencePack: "Natural feminine beauty-tech guide | warm and confident | polished but human | no robotic delivery",
+        fallbackNames: [
+          "Microsoft Aria Online (Natural) - English (United States)",
+          "Microsoft Jenny Online (Natural) - English (United States)",
+          "Microsoft Ava Online (Natural) - English (United States)",
+          "Google US English",
+          "Samantha",
+          "Zira",
+          "Ava",
+          "Victoria"
+        ]
+      }
+  const tierOverrides = {
+    premium: isJake
+      ? { voice: "ash", rate: 0.94, thoughtStyle: "premium studio specialist, relaxed confidence, natural masculine warmth" }
+      : { voice: "coral", rate: 0.97, thoughtStyle: "premium concierge, beauty-tech polish, soft confidence, natural warmth" },
+    pro: isJake
+      ? { voice: "onyx", rate: 0.92, thoughtStyle: "executive studio operator, focused, premium, natural authority" }
+      : { voice: "sage", rate: 0.95, thoughtStyle: "executive beauty advisor, articulate, luxurious, natural authority" },
+    yoda: isJake
+      ? { voice: "echo", rate: 0.9, thoughtStyle: "wise, reflective studio mentor, natural and calm" }
+      : { voice: "sage", rate: 0.93, thoughtStyle: "wise, calming hair mentor, reflective and natural" },
+    bingo100: isJake
+      ? { voice: "ash", rate: 0.98, thoughtStyle: "playful studio wingman, smooth, charismatic, human" }
+      : { voice: "coral", rate: 1.0, thoughtStyle: "playful beauty guide, smooth, charismatic, human" },
+    family200: isJake
+      ? { voice: "echo", rate: 0.95, thoughtStyle: "family-safe guide, supportive, easy, natural" }
+      : { voice: "shimmer", rate: 0.98, thoughtStyle: "family-safe hair guide, reassuring, warm, natural" },
+    fantasy300: isJake
+      ? { voice: "ash", rate: 0.94, thoughtStyle: "cinematic but grounded, flirty-light, natural masculine warmth" }
+      : { voice: "nova", rate: 0.97, thoughtStyle: "cinematic, flirty-light, polished, very human and non-robotic" },
+    fantasy600: isJake
+      ? { voice: "ballad", rate: 0.9, thoughtStyle: "cinematic, intimate, confident, premium masculine warmth" }
+      : { voice: "ballad", rate: 0.94, thoughtStyle: "cinematic, intimate, luxe, emotionally warm, non-robotic" }
+  }
+  return {...defaults, ...(tierOverrides[tier] || {})}
+}
+
+function pickAssistantSpeechVoice(assistantId, lang){
+  const voices = window.speechSynthesis.getVoices() || []
+  const profile = getAssistantVoiceProfile(assistantId)
+  if(!cachedAssistantVoices[assistantId]){
+    const fallback = profile.fallbackNames
+      .map((name)=>voices.find((voice)=>voice.name === name && voice.lang === lang))
+      .find(Boolean)
+    cachedAssistantVoices[assistantId] = fallback
+      || voices.find((voice)=>voice.lang === lang && (assistantId === "projake" ? /guy|davis|andrew|christopher|eric|male|man/i.test(voice.name) : /aria|jenny|ava|zira|samantha|female|woman|girl/i.test(voice.name)))
+      || voices.find((voice)=>voice.lang === lang)
+      || voices.find((voice)=>voice.lang === "en-US")
+      || null
+  }
+  return cachedAssistantVoices[assistantId]
+}
     
 function setAriaFlow(state){
   const overlay = qs("#listeningOverlay")
@@ -1281,8 +1364,10 @@ function getAriaLang(){
   return (sel && sel.value) ? sel.value : "en-US"
 }
 
-async function speakReply(text){
+async function speakReply(text, options = {}){
     const transcriptEl = qs("#ariaTranscript")
+    const assistantId = options.assistantId || getActiveAssistantId()
+    const profile = getAssistantVoiceProfile(assistantId, state.subscription || "free")
     try{
       setAriaFlow("speaking")
       const prefs = state.socialLinks || {}
@@ -1291,14 +1376,16 @@ async function speakReply(text){
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
           text,
-          voice_preference: prefs.voiceProfile || "shimmer",
+          voice_preference: prefs.voiceProfile || profile.voice || "shimmer",
           wife_mode: !!prefs.wifeVoiceMode,
           wife_consent: !!prefs.wifeVoiceConsent,
           voice_reference: prefs.voiceReference || "",
           muslim_greeting: !!prefs.muslimGreeting,
           same_feel_voice: !!prefs.sameFeelVoice,
-          thought_style: prefs.thoughtStyle || "",
-          voice_reference_pack: prefs.voiceReferencePack || ""
+          thought_style: prefs.thoughtStyle || profile.thoughtStyle || "",
+          voice_reference_pack: prefs.voiceReferencePack || profile.voiceReferencePack || "",
+          assistant_id: assistantId,
+          membership_tier: state.subscription || "free"
         })
       })
       if(!r.ok) throw new Error("tts failed")
@@ -1318,30 +1405,12 @@ async function speakReply(text){
 
     try{
       const utter = new SpeechSynthesisUtterance(text)
-      utter.rate = 1
-      utter.pitch = 1.1
+      utter.rate = profile.rate || 1
+      utter.pitch = profile.pitch || 1
       const lang = getAriaLang()
       utter.lang = lang
-      const voices = window.speechSynthesis.getVoices() || []
-      const nameOrder = [
-        "Google US English",
-        "Microsoft Aria Online (Natural) - English (United States)",
-        "Microsoft Jenny Online (Natural) - English (United States)",
-        "Samantha",
-        "Zira",
-        "Ava",
-        "Allison",
-        "Victoria",
-        "Karen"
-      ]
-      if(!cachedAriaVoice){
-        cachedAriaVoice =
-          nameOrder.map(n => voices.find(v => v.name === n && v.lang === lang)).find(Boolean) ||
-          voices.find(v => v.lang === lang && /female|woman|girl/i.test(v.name)) ||
-          voices.find(v => v.lang === lang) ||
-          voices.find(v => v.lang === "en-US")
-      }
-      if(cachedAriaVoice){ utter.voice = cachedAriaVoice }
+      const selectedVoice = pickAssistantSpeechVoice(assistantId, lang)
+      if(selectedVoice){ utter.voice = selectedVoice }
       utter.onstart = ()=>setAriaFlow("speaking")
       utter.onend = ()=>{
         playDoneChime()
@@ -1358,7 +1427,7 @@ async function speakReply(text){
     }
   }
   if(window.speechSynthesis && typeof window.speechSynthesis.onvoiceschanged !== "undefined"){
-    window.speechSynthesis.onvoiceschanged = ()=>{ cachedAriaVoice = null }
+    window.speechSynthesis.onvoiceschanged = ()=>{ cachedAssistantVoices = { aria: null, projake: null } }
   }
   
   let listenCtx = null
@@ -1997,7 +2066,26 @@ function setupPaymentChooser(){
     </div>`
   }
 
-  async function checkUpgrade(){
+  const PURCHASE_TO_PLAN_KEY = {
+    premium: "premium",
+    pro: "pro",
+    studio100: "pro",
+    bingo100: "bingo100",
+    family200: "family200",
+    yoda: "yoda",
+    fantasy300: "fantasy300",
+    fantasy600: "fantasy600"
+  }
+
+  function syncRecentPurchaseState(details){
+    const recent = Array.isArray(details?.recent_purchases) ? details.recent_purchases : []
+    state.account = state.account || {}
+    state.account.recentPurchases = recent.slice(0, 5)
+    return state.account.recentPurchases
+  }
+
+  async function checkUpgrade(options = {}){
+    const silent = !!options.silent
     const email = (state.socialLinks && state.socialLinks.email) ? state.socialLinks.email : ""
     try{
       const url = email ? `/api/subscription/status?email=${encodeURIComponent(email)}` : "/api/subscription/status"
@@ -2006,18 +2094,25 @@ function setupPaymentChooser(){
       if(d && d.ok){
         state.subscription = d.subscription || "free"
         state.subscriptionNextDue = d.next_due || d.next_due_at || d.renewal_date || d.expires_at || d.ends_at || ""
+        state.subscriptionSource = d.source || ""
+        state.subscriptionOrderId = d.order_id || ""
+        state.subscriptionUpdatedAt = d.updated_at || ""
+        syncRecentPurchaseState(d)
         if(qs("#setSubscription")) qs("#setSubscription").value = state.subscription
         updateSubscriptionSummary(state.subscription, d)
         setDefaultLevelBySubscription()
         refreshDealUnlock()
-        toast(`Plan: ${(state.subscription || "free").toUpperCase()}`)
+        if(!silent) toast(`Plan: ${(state.subscription || "free").toUpperCase()}`)
+        return d
       } else {
         updateSubscriptionSummary(qs("#setSubscription")?.value || state.subscription || "free", null)
-        toast("Could not verify plan yet")
+        if(!silent) toast("Could not verify plan yet")
+        return null
       }
     }catch{
       updateSubscriptionSummary(qs("#setSubscription")?.value || state.subscription || "free", null)
-      toast("Could not verify plan yet")
+      if(!silent) toast("Could not verify plan yet")
+      return null
     }
   }
 
@@ -6089,7 +6184,7 @@ function setupHairAnalysis(){
       if(status) status.textContent = summary
       if(result) result.textContent = summary
       showSpeechPopup("ARIA", summary)
-      speakReply(summary)
+      speakReply(summary, { assistantId: "aria" })
       releaseAssistantTeleport()
       setTimeout(()=>{ overlay.style.display = "none" }, 2400)
     }, 1800)
@@ -7282,7 +7377,7 @@ function setupFloatMode(){
         y: Math.max(164, window.innerHeight * 0.38)
       })
       playAssistantCue("intro")
-      try{ speakReply(introLine) }catch{}
+      try{ speakReply(introLine, { assistantId: assistantName === "Jake" ? "projake" : "aria" }) }catch{}
       if(assistantStatus) assistantStatus.textContent = introLine
       if(transcriptEl) transcriptEl.textContent = introLine
       showSpeechPopup(assistantName, introLine)
@@ -12286,8 +12381,13 @@ function setupRemoteFastPay(){
       if(status) status.textContent = `${checkoutProduct.title} Shopify checkout is opening now${sourceLabel ? ` from ${sourceLabel}` : ""}.`
       try{
         localStorage.setItem("supportrd_checkout_pending", JSON.stringify({
+          key: checkoutProduct.key || "",
+          expectedPlan: PURCHASE_TO_PLAN_KEY[checkoutProduct.key] || "",
+          previousPlan: state.subscription || "free",
+          email: (state.socialLinks && state.socialLinks.email) ? state.socialLinks.email : "",
           title: checkoutProduct.title,
           price: checkoutProduct.price,
+          link: checkoutProduct.link,
           at: Date.now()
         }))
       }catch{}
@@ -12297,6 +12397,32 @@ function setupRemoteFastPay(){
         openLinkModal(checkoutProduct.link, `${checkoutProduct.title} Checkout`)
       }
     }
+
+  async function resolvePendingCheckout(pending){
+    if(!pending?.title) return { resolved: false }
+    const previousPlan = String(pending.previousPlan || state.subscription || "free").trim().toLowerCase()
+    const expectedPlan = String(pending.expectedPlan || "").trim().toLowerCase()
+    const email = String(pending.email || (state.socialLinks && state.socialLinks.email) || "").trim()
+    let latest = null
+    for(let attempt = 0; attempt < 3; attempt += 1){
+      latest = await checkUpgrade({ silent: true })
+      const currentPlan = String(latest?.subscription || state.subscription || "free").trim().toLowerCase()
+      const recentPurchases = Array.isArray(latest?.recent_purchases) ? latest.recent_purchases : []
+      const matchedPurchase = recentPurchases.find((item)=>String(item.package_key || "").trim().toLowerCase() === expectedPlan)
+      if((expectedPlan && currentPlan === expectedPlan && currentPlan !== previousPlan) || matchedPurchase){
+        return {
+          resolved: true,
+          details: latest,
+          currentPlan,
+          matchedPurchase
+        }
+      }
+      if(attempt < 2){
+        await new Promise((resolve)=>setTimeout(resolve, 1600))
+      }
+    }
+    return { resolved: false, details: latest, currentPlan: String(latest?.subscription || state.subscription || "free").trim().toLowerCase(), email }
+  }
 
   function renderProducts(){
     const specialCards = `
@@ -12492,25 +12618,49 @@ function setupRemoteFastPay(){
   window.addEventListener("supportrd-login-ready", ()=>{ resumePendingPurchaseIntent() })
   window.addEventListener("focus", ()=>{ setTimeout(()=>resumePendingPurchaseIntent(), 140) })
   window.addEventListener("focus", ()=>{
-    setTimeout(()=>{
+    setTimeout(async ()=>{
       try{
         const pending = JSON.parse(localStorage.getItem("supportrd_checkout_pending") || "null")
         if(!pending?.title) return
         if(Date.now() - Number(pending.at || 0) < 2500) return
         localStorage.removeItem("supportrd_checkout_pending")
-        if(typeof openRemoteSheet === "function"){
-          openRemoteSheet("Thank You", `
+        const result = await resolvePendingCheckout(pending)
+        const resolvedPlan = String(result?.currentPlan || state.subscription || "free").toUpperCase()
+        const purchaseTitle = result?.matchedPurchase?.package_title || pending.title
+        const panelBody = result?.resolved
+          ? `
             <div class="float-sheet-panel">
-              <h4>Thank you for supporting SupportRD</h4>
-              <p>${pending.title} was your latest checkout lane. If Shopify finished the payment, your purchase is now tied to your buyer account and ready to connect back into the Remote.</p>
+              <h4>Purchase confirmed inside SupportRD</h4>
+              <p>${purchaseTitle} is now tied to your account. SupportRD moved your access into the <strong>${resolvedPlan}</strong> lane and saved the latest package into your purchase memory.</p>
               <div class="float-sheet-button-row">
                 <button class="btn" data-open-fastpay>Open Fast Pay Again</button>
                 <button class="btn ghost" data-sheet-close>Back To Remote</button>
               </div>
             </div>
-          `, { message:`${pending.title} returned from the Shopify checkout lane.` })
+          `
+          : `
+            <div class="float-sheet-panel">
+              <h4>Checkout returned — waiting on Shopify confirmation</h4>
+              <p>${pending.title} came back from the store lane, but SupportRD is still waiting on the paid order confirmation for ${(pending.email || "your account")}.</p>
+              <div class="float-sheet-button-row">
+                <button class="btn" data-open-fastpay>Open Fast Pay Again</button>
+                <button class="btn ghost" data-sheet-close>Back To Remote</button>
+              </div>
+            </div>
+          `
+        if(typeof openRemoteSheet === "function"){
+          openRemoteSheet(result?.resolved ? "Purchase Confirmed" : "Checkout Returned", panelBody, {
+            message: result?.resolved
+              ? `${purchaseTitle} is now tied to your ${resolvedPlan} account lane.`
+              : `${pending.title} returned from the Shopify checkout lane and is waiting on final confirmation.`
+          })
         }else{
-          openMiniWindow("Thank You", `${pending.title} returned from the checkout lane. If Shopify finished the payment, SupportRD is ready for the next route.`)
+          openMiniWindow(
+            result?.resolved ? "Purchase Confirmed" : "Checkout Returned",
+            result?.resolved
+              ? `${purchaseTitle} is now connected to your ${resolvedPlan} SupportRD lane.`
+              : `${pending.title} came back from checkout and is waiting on Shopify confirmation.`
+          )
         }
       }catch{}
     }, 180)
