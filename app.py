@@ -61,13 +61,19 @@ def normalize_shopify_store_domain(raw_store):
 
 def resolve_shopify_api_domain():
     store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    if store == "shop.supportrd.com":
+        return "supportdr-com.myshopify.com"
     if store and store.endswith("supportrd.com"):
         return "supportdr-com.myshopify.com"
     return store
 
 def resolve_shopify_storefront_domain():
-    # Always force storefront / cart redirects onto the actual Shopify-hosted
-    # domain so app-domain aliases never create redirect loops.
+    # Keep the live storefront/cart domain separate from the app domain so
+    # Shopify checkout can open on the real store without looping back into
+    # the Render-hosted SupportRD app.
+    configured_store = normalize_shopify_store_domain(SHOPIFY_STORE)
+    if configured_store == "shop.supportrd.com":
+        return "shop.supportrd.com"
     store = resolve_shopify_api_domain()
     if not store:
         return ""
