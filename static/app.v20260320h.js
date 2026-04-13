@@ -314,8 +314,20 @@ function normalizeShopifyStorefrontBase(raw){
   if(/^https?:\/\//i.test(value)) return value.replace(/\/+$/, "")
   return `https://${value.replace(/^\/+/, "").replace(/\/+$/, "")}`
 }
+function normalizeActualShopifyCheckoutBase(raw){
+  const base = normalizeShopifyStorefrontBase(raw)
+  const fallback = "https://supportdr-com.myshopify.com"
+  if(!base) return fallback
+  try{
+    const host = new URL(base).host.toLowerCase()
+    if(host.includes("supportrd.com") || host.includes("theplantmaninc.com")) return fallback
+  }catch{
+    if(base.toLowerCase().includes("supportrd.com") || base.toLowerCase().includes("theplantmaninc.com")) return fallback
+  }
+  return base
+}
 function applyShopifyStorefrontBase(rawBase){
-  const base = normalizeShopifyStorefrontBase(rawBase)
+  const base = normalizeActualShopifyCheckoutBase(rawBase)
   if(!base) return false
   state.shopifyStorefrontBase = base
   try{
@@ -339,8 +351,11 @@ function applyShopifyStorefrontBase(rawBase){
 }
 function getDirectShopifyBase(){
   const host = String(state.shopifyStorefrontHost || "").trim()
-  if(host) return `https://${host.replace(/^https?:\/\//i, "").replace(/\/+$/, "")}`
-  const base = normalizeShopifyStorefrontBase(state.shopifyStorefrontBase)
+  if(host){
+    const sanitized = normalizeActualShopifyCheckoutBase(host)
+    if(sanitized) return sanitized.replace(/\/+$/, "")
+  }
+  const base = normalizeActualShopifyCheckoutBase(state.shopifyStorefrontBase)
   if(base) return base.replace(/\/+$/, "")
   return "https://supportdr-com.myshopify.com"
 }
@@ -5320,7 +5335,7 @@ function setupPwa(){
     })
   }
   if("serviceWorker" in navigator){
-navigator.serviceWorker.register("/sw.js?v=20260413a").then((registration)=>{
+navigator.serviceWorker.register("/sw.js?v=20260413b").then((registration)=>{
       if(registration?.waiting){
         registration.waiting.postMessage({ type:"SKIP_WAITING" })
       }

@@ -417,10 +417,13 @@
       const res = await fetch("/api/shopify/public-config", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
+      const fallbackBase = "https://supportdr-com.myshopify.com";
+      const incomingBase = String(data?.storefront_base || "").trim();
+      const safeBase = !incomingBase || /supportrd\.com|theplantmaninc\.com/i.test(incomingBase) ? fallbackBase : incomingBase;
       state.shopify = {
         connected: !!data?.ok,
-        storefrontBase: data?.storefront_base || "",
-        cartUrl: data?.cart_url || "/cart",
+        storefrontBase: safeBase,
+        cartUrl: safeBase ? `${safeBase}/cart` : (data?.cart_url || "/cart"),
         ordersUrl: data?.orders_url || "/account/orders",
         checkoutMap: data?.checkout_map || {},
         checkoutMapLoaded: !!data?.checkout_map_loaded
@@ -902,12 +905,15 @@
   }
 
   function getCheckoutUrl(product) {
+    const safeBase = String(state.shopify?.storefrontBase || "").trim() && !/supportrd\.com|theplantmaninc\.com/i.test(String(state.shopify?.storefrontBase || ""))
+      ? String(state.shopify.storefrontBase).trim()
+      : "https://supportdr-com.myshopify.com";
     const variantId = String(product?.variantId || product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
-    if (variantId && state.shopify?.storefrontBase) {
-      return `${state.shopify.storefrontBase}/cart/${variantId}:1?ref=supportrd-remote`;
+    if (variantId && safeBase) {
+      return `${safeBase}/cart/${variantId}:1?ref=supportrd-remote`;
     }
     if (variantId) return `/checkout/${variantId}?src=remote`;
-    return state.shopify?.cartUrl || "/cart";
+    return safeBase ? `${safeBase}/cart` : (state.shopify?.cartUrl || "/cart");
   }
 
   function getCheckoutEntries(product) {
@@ -2358,7 +2364,7 @@
       ensureShellChrome();
       window.openSupportRDPaymentModal = openPaymentModal;
       window.closeSupportRDPaymentModal = closePaymentModal;
-      window.SupportRDRemoteRebuildVersion = "20260413a";
+      window.SupportRDRemoteRebuildVersion = "20260413b";
     }
 
   setTimeout(init, 700);
