@@ -1057,6 +1057,13 @@ function bumpHairScore(delta){
       </div>
     `
     anchor.appendChild(pop)
+    updateAssistantTracker({
+      activeAssistant: /jake/i.test(who) ? "projake" : "aria",
+      voiceState: "speaking",
+      voiceText: text,
+      liveTranscript: text,
+      focusLabel: who
+    })
     if(stage && anchor === qs("#speechPopupAnchor")){
       const bounds = stage.getBoundingClientRect()
       const x = bounds.width * (0.08 + Math.random() * 0.84)
@@ -1117,6 +1124,12 @@ function bumpHairScore(delta){
     const textEl = liveSpeechPopup.querySelector(".speech-text")
     if(textEl){ textEl.textContent = text || "Listening…" }
     state.livePopupActive = true
+    updateAssistantTracker({
+      activeAssistant: state.activeAssistant || "aria",
+      voiceState: "listening",
+      voiceText: text || `${getAssistantTrackerName(state.activeAssistant || "aria")} is listening now.`,
+      liveTranscript: text || ""
+    })
   }
 
   function finalizeLiveSpeechPopup(){
@@ -1124,6 +1137,10 @@ function bumpHairScore(delta){
     const pop = liveSpeechPopup
     setTimeout(()=>{ pop.classList.remove("show"); setTimeout(()=>pop.remove(), 240) }, 1200)
     liveSpeechPopup = null
+    updateAssistantTracker({
+      liveTranscript: "",
+      voiceText: `${getAssistantTrackerName(state.activeAssistant || "aria")} finished capturing the live line.`
+    })
   }
 
 
@@ -1357,6 +1374,13 @@ function setAriaFlow(state){
     document.body.classList.remove("gps-active")
     if(nowPlaying){ nowPlaying.textContent = "Currently Playing Audio Feedback: Idle" }
   }
+  updateAssistantTracker({
+    activeAssistant: window.__supportrdListeningAssistant || state.activeAssistant || "aria",
+    voiceState: state,
+    voiceText: textEl.textContent || "",
+    liveTranscript: transcriptEl?.textContent || "",
+    anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "home")
+  })
 }
 
 function getAriaLang(){
@@ -6527,9 +6551,16 @@ function setupFloatMode(){
   const diaryLiveComment = qs("#floatDiaryLiveComment")
   const diaryLiveCommentBtn = qs("#floatDiaryLiveCommentBtn")
   const diaryLiveComments = qs("#floatDiaryLiveComments")
-  function setRemoteStatus(text){
-    if(text && liveStatus) liveStatus.textContent = text
-  }
+    function setRemoteStatus(text){
+      if(text && liveStatus) liveStatus.textContent = text
+      if(text){
+        updateAssistantTracker({
+          route: remoteState.currentRoute || "home",
+          status: text,
+          focusLabel: getAssistantTrackerFocusLabel(remoteState.currentRoute || "home", state.activeAssistant || "aria")
+        })
+      }
+    }
   function setRemoteGoMode(enabled){
     if(!shell) return
     shell.classList.toggle("remote-go-mode", !!enabled)
@@ -6833,6 +6864,12 @@ function setupFloatMode(){
       if(assistantStatus && overrideStatus !== false){
         assistantStatus.textContent = overrideStatus || scene.status
       }
+      updateAssistantTracker({
+        route: sceneKey,
+        status: overrideStatus || scene.status,
+        focusLabel: getAssistantTrackerFocusLabel(sceneKey, state.activeAssistant || "aria"),
+        anchorSelector: getAssistantAnchorSelector(sceneKey)
+      })
     }
   const REMOTE_ASSISTANT_HELP = {
       home: {
@@ -7170,6 +7207,12 @@ function setupFloatMode(){
       const statusLine = options.status || moment.status
       const bubbleLine = options.line || moment.line
       if(assistantStatus) assistantStatus.textContent = statusLine
+      updateAssistantTracker({
+        moment: kind,
+        activeAssistant: options.assistantName && /jake/i.test(options.assistantName) ? "projake" : (state.activeAssistant || "aria"),
+        status: statusLine,
+        voiceText: bubbleLine
+      })
       if(options.bubble !== false){
         showSpeechPopup(options.assistantName || "Aria", bubbleLine)
       }
@@ -7396,7 +7439,7 @@ function setupFloatMode(){
         if(typeof window.startAriaListening === "function"){
           window.startAriaListening({ assistantName, thinkDelay: 2700 })
         }else if(typeof startOpenAIListening === "function"){
-          startOpenAIListening({ assistantName, thinkDelay: 2700 })
+          startOpenAIListening({ assistantId, assistantName, thinkDelay: 2700 })
         }else{
           playAssistantCue("response")
           const fallback = `${assistantName} is ready, but this device needs mic support enabled before live listening can begin.`
@@ -7418,6 +7461,13 @@ function setupFloatMode(){
       const transcriptEl = qs("#ariaTranscript")
       clearAssistantSequence()
       state.activeAssistant = assistantId
+      updateAssistantTracker({
+        activeAssistant: assistantId,
+        route,
+        focusLabel: getAssistantTrackerFocusLabel(route, assistantId),
+        anchorSelector: getAssistantAnchorSelector(route),
+        voiceText: `${getAssistantTrackerName(assistantId)} is locking onto ${getAssistantTrackerRouteLabel(route)}.`
+      })
       applyAssistantUI(true)
       syncProfile()
       interruptPageAudio()
@@ -8744,9 +8794,9 @@ function setupFloatMode(){
     }
   }
   const remoteState = {
-    activeBoard: 0,
-    boards: [null, null, null],
-    history: [],
+      activeBoard: 0,
+      boards: [null, null, null],
+      history: [],
     previewUrl: "",
     previewMediaEl: null,
     recorder: null,
@@ -8760,12 +8810,212 @@ function setupFloatMode(){
     handsfreeActive: false,
     currentPanel: "floatSettingsBox",
     guideTimer: null,
-    guideIndex: 0,
-    guideKey: "",
-    selfieStream: null,
-    selfieFilter: "clean",
-    selfiePanorama: false
-  }
+      guideIndex: 0,
+      guideKey: "",
+      selfieStream: null,
+      selfieFilter: "clean",
+      selfiePanorama: false,
+      currentRoute: "home"
+    }
+    const assistantTrackerState = {
+      route: "home",
+      status: "Remote home is ready.",
+      voiceState: "idle",
+      voiceText: "Standing by",
+      activeAssistant: state.activeAssistant || "aria",
+      focusLabel: "Remote home",
+      liveTranscript: "",
+      recordingKind: "",
+      recordingTarget: "",
+      moment: "idle",
+      anchorSelector: "",
+      rafId: 0
+    }
+    let assistantTrackerHud = null
+    let assistantRecorderAnchor = null
+
+    function getAssistantTrackerName(id){
+      return id === "projake" ? "Jake" : "Aria"
+    }
+
+    function getAssistantTrackerRouteLabel(route){
+      const meta = REMOTE_ROUTE_META[route] || REMOTE_ROUTE_META.home
+      return meta?.title || "SupportRD Remote"
+    }
+
+    function getAssistantTrackerFocusLabel(route, assistantId){
+      const help = getAssistantHelp(route || remoteState.currentRoute || "home", assistantId || state.activeAssistant || "aria")
+      if(!help?.focus) return getAssistantTrackerRouteLabel(route || remoteState.currentRoute || "home")
+      const target = qs(help.focus)
+      if(target){
+        const explicit = target.getAttribute("data-assistant-track-label")
+        if(explicit) return explicit
+        const heading = target.querySelector?.("h1, h2, h3, h4, .float-title, .title, .who")
+        const text = (heading?.textContent || target.getAttribute("aria-label") || target.id || "").trim()
+        if(text) return text.replace(/\s+/g, " ").slice(0, 72)
+      }
+      return getAssistantTrackerRouteLabel(route || remoteState.currentRoute || "home")
+    }
+
+    function getAssistantAnchorSelector(route = remoteState.currentRoute || "home"){
+      if(assistantTrackerState.recordingKind){
+        return assistantTrackerState.recordingKind === "instrument" ? "#floatInstrumentRecordBtn" : "#floatRecordVoiceBtn"
+      }
+      if(assistantTrackerState.voiceState === "listening" || assistantTrackerState.voiceState === "processing"){
+        return (assistantTrackerState.activeAssistant || state.activeAssistant || "aria") === "projake" ? "#floatJakeBtn" : "#floatAriaBtn"
+      }
+      const routeAnchors = {
+        studio: "#floatRecordVoiceBtn",
+        diary: "#floatDiaryRecordBtn",
+        profile: "#startHairScan",
+        settings: "#fullSettingsBtn",
+        payments: "[data-open-fastpay], #openFastPayBtn, #checkoutPremiumBtn",
+        map: "#floatThemeCardRail",
+        faq: "#floatFaqReelHost"
+      }
+      return routeAnchors[route] || ((assistantTrackerState.activeAssistant || state.activeAssistant || "aria") === "projake" ? "#floatJakeBtn" : "#floatAriaBtn")
+    }
+
+    function ensureAssistantTrackerUI(){
+      if(!assistantTrackerHud){
+        assistantTrackerHud = document.createElement("aside")
+        assistantTrackerHud.id = "assistantTrackerHud"
+        assistantTrackerHud.className = "assistant-tracker-hud"
+        assistantTrackerHud.innerHTML = `
+          <div class="assistant-tracker-head">
+            <div>
+              <div class="assistant-tracker-kicker">OpenAI Live Tracker</div>
+              <div class="assistant-tracker-title">Aria / Jake Motion HUD</div>
+            </div>
+            <div class="assistant-tracker-chip" data-track="voiceState">Idle</div>
+          </div>
+          <div class="assistant-tracker-grid">
+            <div class="assistant-tracker-cell">
+              <span>Route</span>
+              <strong data-track="routeLabel">SupportRD Remote</strong>
+            </div>
+            <div class="assistant-tracker-cell">
+              <span>Lead</span>
+              <strong data-track="assistantName">Aria</strong>
+            </div>
+            <div class="assistant-tracker-cell">
+              <span>Focus</span>
+              <strong data-track="focusLabel">Remote home</strong>
+            </div>
+            <div class="assistant-tracker-cell">
+              <span>Recorder</span>
+              <strong data-track="recordingLabel">Stand by</strong>
+            </div>
+          </div>
+          <div class="assistant-tracker-pos">
+            <div><span>Aria</span><strong data-track="ariaPos">--</strong></div>
+            <div><span>Jake</span><strong data-track="jakePos">--</strong></div>
+          </div>
+          <div class="assistant-tracker-live" data-track="liveText">Tracking where the assistants are going in real time.</div>
+        `
+        document.body.appendChild(assistantTrackerHud)
+      }
+      if(!assistantRecorderAnchor){
+        assistantRecorderAnchor = document.createElement("div")
+        assistantRecorderAnchor.id = "assistantRecorderAnchor"
+        assistantRecorderAnchor.className = "assistant-recorder-anchor"
+        assistantRecorderAnchor.innerHTML = `
+          <div class="assistant-recorder-dot"></div>
+          <div class="assistant-recorder-copy">
+            <div class="assistant-recorder-title">Sound Anchor</div>
+            <div class="assistant-recorder-sub" data-track="anchorText">Recording placement will appear here.</div>
+          </div>
+        `
+        document.body.appendChild(assistantRecorderAnchor)
+      }
+    }
+
+    function renderAssistantTracker(){
+      ensureAssistantTrackerUI()
+      const routeLabel = getAssistantTrackerRouteLabel(assistantTrackerState.route)
+      const assistantName = getAssistantTrackerName(assistantTrackerState.activeAssistant)
+      const focusLabel = assistantTrackerState.focusLabel || getAssistantTrackerFocusLabel(assistantTrackerState.route, assistantTrackerState.activeAssistant)
+      const recordingLabel = assistantTrackerState.recordingKind
+        ? `${assistantTrackerState.recordingKind === "instrument" ? "Instrument" : "Voice"} -> ${assistantTrackerState.recordingTarget || "board capture"}`
+        : assistantTrackerState.voiceState === "listening"
+          ? `${assistantName} listening live`
+          : "Stand by"
+      const voiceState = assistantTrackerState.voiceState === "processing"
+        ? "Thinking"
+        : assistantTrackerState.voiceState === "speaking"
+          ? "Talking"
+          : assistantTrackerState.voiceState === "listening"
+            ? "Listening"
+            : assistantTrackerState.voiceState === "recording"
+              ? "Recording"
+              : "Idle"
+      const liveText = assistantTrackerState.liveTranscript
+        || assistantTrackerState.voiceText
+        || assistantTrackerState.status
+        || "Tracking where the assistants are going in real time."
+      const mappings = {
+        routeLabel,
+        assistantName,
+        focusLabel,
+        recordingLabel,
+        voiceState,
+        liveText
+      }
+      Object.entries(mappings).forEach(([key, value])=>{
+        const node = assistantTrackerHud?.querySelector?.(`[data-track="${key}"]`)
+        if(node) node.textContent = value
+      })
+      assistantTrackerHud?.classList.toggle("is-live", assistantTrackerState.voiceState !== "idle" || !!assistantTrackerState.recordingKind)
+    }
+
+    function syncAssistantTrackerFrame(){
+      ensureAssistantTrackerUI()
+      const updatePos = (selector, key)=>{
+        const node = qs(selector)
+        const labelNode = assistantTrackerHud?.querySelector?.(`[data-track="${key}"]`)
+        if(!node || !labelNode) return
+        const rect = node.getBoundingClientRect()
+        labelNode.textContent = `${Math.round(rect.left)}, ${Math.round(rect.top)}`
+      }
+      updatePos("#floatAriaBtn", "ariaPos")
+      updatePos("#floatJakeBtn", "jakePos")
+      const anchorSelector = assistantTrackerState.anchorSelector || getAssistantAnchorSelector(assistantTrackerState.route)
+      const anchorTarget = anchorSelector ? qs(anchorSelector) : null
+      const anchorText = assistantRecorderAnchor?.querySelector?.('[data-track="anchorText"]')
+      if(anchorTarget && assistantRecorderAnchor){
+        const rect = anchorTarget.getBoundingClientRect()
+        assistantRecorderAnchor.style.left = `${Math.min(window.innerWidth - 210, rect.right + 14)}px`
+        assistantRecorderAnchor.style.top = `${Math.max(96, rect.top - 8)}px`
+        assistantRecorderAnchor.classList.add("show")
+        if(anchorText){
+          anchorText.textContent = assistantTrackerState.recordingKind
+            ? `${assistantTrackerState.recordingKind === "instrument" ? "Instrument" : "Voice"} capture is tied to this lane.`
+            : `${getAssistantTrackerName(assistantTrackerState.activeAssistant)} is steering attention here right now.`
+        }
+      }else if(assistantRecorderAnchor){
+        assistantRecorderAnchor.classList.remove("show")
+      }
+      assistantTrackerState.rafId = window.requestAnimationFrame(syncAssistantTrackerFrame)
+    }
+
+    function startAssistantTrackerLoop(){
+      ensureAssistantTrackerUI()
+      if(assistantTrackerState.rafId) return
+      assistantTrackerState.rafId = window.requestAnimationFrame(syncAssistantTrackerFrame)
+    }
+
+    function updateAssistantTracker(patch = {}){
+      Object.assign(assistantTrackerState, patch)
+      if(!assistantTrackerState.route) assistantTrackerState.route = remoteState.currentRoute || "home"
+      if(!assistantTrackerState.focusLabel){
+        assistantTrackerState.focusLabel = getAssistantTrackerFocusLabel(assistantTrackerState.route, assistantTrackerState.activeAssistant)
+      }
+      if(!assistantTrackerState.anchorSelector){
+        assistantTrackerState.anchorSelector = getAssistantAnchorSelector(assistantTrackerState.route)
+      }
+      renderAssistantTracker()
+      startAssistantTrackerLoop()
+    }
   const floatPanelKey = "supportrdFloatPanel"
   const floatPrimeSeenKey = "supportrdPrimeSeen"
   const defaultFloatPanel = "floatSettingsBox"
@@ -10149,12 +10399,19 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       }catch{}
     }
     function renderRemoteRoute(route = "home", options = {}){
-      const normalized = REMOTE_ROUTE_META[route] ? route : "home"
-      updateRemoteDocumentMeta(normalized)
-      applyAssistantDemoScene(normalized, false)
-      if(options.openShell && shell.hidden){
-        openFloat({ preserveHome:true, preserveRoute:true })
-      }
+        const normalized = REMOTE_ROUTE_META[route] ? route : "home"
+        updateRemoteDocumentMeta(normalized)
+        applyAssistantDemoScene(normalized, false)
+        updateAssistantTracker({
+          route: normalized,
+          focusLabel: getAssistantTrackerFocusLabel(normalized, state.activeAssistant || "aria"),
+          anchorSelector: getAssistantAnchorSelector(normalized),
+          status: REMOTE_ROUTE_META[normalized]?.description || "Remote route changed.",
+          voiceText: `${getAssistantTrackerName(state.activeAssistant || "aria")} moved into ${REMOTE_ROUTE_META[normalized]?.title || "SupportRD Remote"}.`
+        })
+        if(options.openShell && shell.hidden){
+          openFloat({ preserveHome:true, preserveRoute:true })
+        }
       if(normalized === "home"){
         setFloatHome("Remote home is ready. Pick any route and the page fills smoothly underneath.")
       }else if(normalized === "payments"){
@@ -10546,6 +10803,16 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(remoteState.recorder && remoteState.recorder.state === "recording"){
       stopVoiceRecord()
     }
+    updateAssistantTracker({
+      route: remoteState.currentRoute || "studio",
+      activeAssistant: "projake",
+      recordingKind: kind,
+      recordingTarget: getBoard().name,
+      voiceState: "recording",
+      voiceText: `${kind === "instrument" ? "Instrument" : "Voice"} capture is arming on ${getBoard().name}.`,
+      anchorSelector: kind === "instrument" ? "#floatInstrumentRecordBtn" : "#floatRecordVoiceBtn",
+      focusLabel: getBoard().name
+    })
     navigator.mediaDevices.getUserMedia({audio:true}).then((stream)=>{
       const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : ""
       const audioContext = window.AudioContext ? new AudioContext() : (window.webkitAudioContext ? new webkitAudioContext() : null)
@@ -10572,6 +10839,14 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         const active = getBoard()
         active.duration = duration
         renderBoard()
+        updateAssistantTracker({
+          recordingKind: "",
+          recordingTarget: active.name,
+          voiceState: "idle",
+          voiceText: `${kind === "instrument" ? "Instrument" : "Voice"} capture saved into ${active.name}.`,
+          anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "studio"),
+          focusLabel: active.name
+        })
       }
       remoteState.recorder.start()
       holdSingleAssistantTeleport("projake", {
@@ -10586,6 +10861,13 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       if(boardMode) boardMode.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live. Sound waves are being drawn into ${getBoard().name}.`
       setRemoteStatus(`${kind === "instrument" ? "Instrument" : "Voice"} recording started on ${getBoard().name}.`)
     }).catch(()=>{
+      updateAssistantTracker({
+        recordingKind: "",
+        recordingTarget: "",
+        voiceState: "idle",
+        voiceText: "Microphone access was blocked before recording could begin.",
+        anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "studio")
+      })
       openMiniWindow("Record", "Microphone access was blocked. We need mic permission to record.")
     })
   }
@@ -10593,9 +10875,20 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(remoteState.recorder && remoteState.recorder.state !== "inactive"){
       remoteState.recorder.stop()
       remoteState.recorder = null
+      updateAssistantTracker({
+        recordingKind: "",
+        voiceState: "idle",
+        voiceText: "Recording stopped. SupportRD is saving the take into the active board.",
+        anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "studio")
+      })
       return true
     }
     stopWaveform()
+    updateAssistantTracker({
+      recordingKind: "",
+      voiceState: "idle",
+      anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "studio")
+    })
     return false
   }
   function openRemoteFullSettingsLane(options = {}){
@@ -11514,6 +11807,13 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   if(bootRoute){
     setTimeout(()=>renderRemoteRoute(bootRoute, { skipHistory:true, openShell:true }), 0)
   }
+  updateAssistantTracker({
+    route: remoteState.currentRoute || bootRoute || "home",
+    focusLabel: getAssistantTrackerFocusLabel(remoteState.currentRoute || bootRoute || "home", state.activeAssistant || "aria"),
+    voiceText: "OpenAI live tracker is online. Aria and Jake movement will stay visible here.",
+    anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || bootRoute || "home")
+  })
+  startAssistantTrackerLoop()
   window.SupportRDAriaLinks = {
     chat: "/api/aria",
     transcribe: "/api/aria/transcribe",
@@ -12906,9 +13206,17 @@ function uiError(msg){
     transcribeBusy = false
   }
 
-  async function stopOpenAIListening(){
+async function stopOpenAIListening(){
     if(maxRecordTimer){ clearTimeout(maxRecordTimer); maxRecordTimer = null }
     stopVAD()
+    window.__supportrdListeningAssistant = null
+    updateAssistantTracker({
+      activeAssistant: state.activeAssistant || "aria",
+      voiceState: "idle",
+      voiceText: `${getAssistantTrackerName(state.activeAssistant || "aria")} is standing by for the next request.`,
+      liveTranscript: "",
+      anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "home")
+    })
     try{
       if(mediaRecorder && mediaRecorder.state !== "inactive"){
         mediaRecorder.stop()
@@ -12922,10 +13230,20 @@ function uiError(msg){
     }
   }
 
-  async function startOpenAIListening(options = {}){
+async function startOpenAIListening(options = {}){
     if(ariaActive){
       await stopOpenAIListening()
     }
+    const listeningAssistant = options.assistantId || state.activeAssistant || "aria"
+    window.__supportrdListeningAssistant = listeningAssistant
+    updateAssistantTracker({
+      activeAssistant: listeningAssistant,
+      route: remoteState.currentRoute || "home",
+      focusLabel: getAssistantTrackerFocusLabel(remoteState.currentRoute || "home", listeningAssistant),
+      anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "home"),
+      voiceState: "listening",
+      voiceText: `${options.assistantName || getAssistantDisplayName(listeningAssistant)} is arming the live mic lane.`
+    })
     const Speech = window.SpeechRecognition || window.webkitSpeechRecognition
     if(Speech){
       try{
