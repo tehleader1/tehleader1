@@ -5320,7 +5320,7 @@ function setupPwa(){
     })
   }
   if("serviceWorker" in navigator){
-navigator.serviceWorker.register("/sw.js?v=20260412f").then((registration)=>{
+navigator.serviceWorker.register("/sw.js?v=20260413a").then((registration)=>{
       if(registration?.waiting){
         registration.waiting.postMessage({ type:"SKIP_WAITING" })
       }
@@ -12386,6 +12386,18 @@ function setupRemoteFastPay(){
   }
 
   function openRemoteFastPay(){
+    if(typeof window.openSupportRDPaymentModal === "function"){
+      hideProcessing()
+      hideConfirm()
+      hideOwner()
+      if(modal){
+        modal.hidden = true
+        modal.setAttribute("aria-hidden","true")
+      }
+      document.body.classList.remove("remote-fastpay-active")
+      window.openSupportRDPaymentModal()
+      return
+    }
     modal.hidden = false
     modal.setAttribute("aria-hidden","false")
     document.body.classList.add("remote-fastpay-active")
@@ -12408,6 +12420,9 @@ function setupRemoteFastPay(){
   }
 
   function closeRemoteFastPay(){
+    if(typeof window.closeSupportRDPaymentModal === "function"){
+      window.closeSupportRDPaymentModal()
+    }
     hideProcessing()
     hideConfirm()
     hideOwner()

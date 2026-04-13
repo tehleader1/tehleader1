@@ -1090,10 +1090,32 @@
     return paymentModal;
   }
 
+  function closePaymentModal() {
+    ensurePaymentModal().classList.remove("is-open");
+  }
+
   function openPaymentModal() {
     const modal = ensurePaymentModal();
     const body = $("srPaymentModalBody");
-    const products = (state.products.length ? state.products : getCatalogProducts().filter((item) => item.physical || getCheckoutEntries(item).length)).slice(0, 8);
+    const products = (state.products.length ? state.products : getCatalogProducts()).slice(0, 12);
+    const physicalProducts = products.filter((item) => item.physical);
+    const digitalProducts = products.filter((item) => !item.physical);
+    const renderPaymentCard = (product) => {
+      const title = product.title || "SupportRD Product";
+      const price = product.price ? `${String(product.price).startsWith("$") ? "" : "$"}${product.price}` : "Live price on checkout";
+      const key = product.handle || product.id || "";
+      const checkoutEntries = getCheckoutEntries(product);
+      return `<div class="support-rebuild-card" style="padding:12px">
+        <div class="support-rebuild-catalog-hero" style="height:120px;background-image:url('${product.image || "/static/images/brochure-scroll-store.jpg"}')"></div>
+        <div class="support-rebuild-title" style="margin-top:12px">${title}</div>
+        <div class="support-rebuild-note">${price}</div>
+        <div class="support-rebuild-note" style="margin-top:10px">${product.description || "SupportRD payment lane."}</div>
+        <div class="support-rebuild-row" style="margin-top:12px;flex-wrap:wrap">
+          <button class="support-rebuild-btn ghost" data-details="${key}">Open Purchase Menu</button>
+          <button class="support-rebuild-btn pulse" data-checkout="${key}">${product.physical ? "Custom Order" : (checkoutEntries.length ? "Shopify Checkout" : "Open Shopify Cart")}</button>
+        </div>
+      </div>`;
+    };
     body.innerHTML = `
       <div class="support-rebuild-row" style="justify-content:space-between">
         <h3 class="support-rebuild-title">Fast Pay</h3>
@@ -1114,24 +1136,18 @@
           <div class="support-rebuild-note" style="margin-top:10px">Account plan right now: ${state.account.plan}. Payments must push premium back into the account memory.</div>
         </div>
       </div>
+      <div class="support-rebuild-title" style="margin-top:16px">Real Products</div>
+      <div class="support-rebuild-note">Physical products stay in the SupportRD custom-order lane and keep the product image right in front of the buyer.</div>
       <div class="support-rebuild-grid two" style="margin-top:14px">
-        ${products.length ? products.map((product) => {
-          const title = product.title || "SupportRD Product";
-          const price = product.price ? `${String(product.price).startsWith("$") ? "" : "$"}${product.price}` : "Live price on checkout";
-          const key = product.handle || product.id || "";
-          const checkoutEntries = getCheckoutEntries(product);
-          return `<div class="support-rebuild-card" style="padding:12px">
-            <div class="support-rebuild-title">${title}</div>
-            <div class="support-rebuild-note">${price}</div>
-            <div class="support-rebuild-row" style="margin-top:12px">
-              <button class="support-rebuild-btn ghost" data-details="${key}">Open Purchase Menu</button>
-              <button class="support-rebuild-btn pulse" data-checkout="${key}">${product.physical ? "Custom Order" : (checkoutEntries.length ? "Shopify Checkout" : "Open Shopify Cart")}</button>
-            </div>
-          </div>`;
-        }).join("") : `<div class="support-rebuild-card"><div class="support-rebuild-note">Live product feed is empty right now. Using SupportRD storefront fallback.</div><div class="support-rebuild-row" style="margin-top:12px"><button class="support-rebuild-btn pulse" id="srOpenFallbackCart">Open Shopify Cart</button></div></div>`}
+        ${physicalProducts.length ? physicalProducts.map(renderPaymentCard).join("") : `<div class="support-rebuild-card"><div class="support-rebuild-note">No physical products are loaded yet.</div></div>`}
+      </div>
+      <div class="support-rebuild-title" style="margin-top:18px">Digital Products</div>
+      <div class="support-rebuild-note">Digital products should go straight from this dark payment lane into Shopify checkout without the lighter screen in between.</div>
+      <div class="support-rebuild-grid two" style="margin-top:14px">
+        ${digitalProducts.length ? digitalProducts.map(renderPaymentCard).join("") : `<div class="support-rebuild-card"><div class="support-rebuild-note">Live digital products are not loading from Shopify yet, so SupportRD is using the mapped catalog fallback.</div><div class="support-rebuild-row" style="margin-top:12px"><button class="support-rebuild-btn pulse" id="srOpenFallbackCart">Open Shopify Cart</button></div></div>`}
       </div>
       <div class="support-rebuild-note" style="margin-top:12px">Apple Pay and Google Pay appear on the Shopify side when supported by the device and store settings.</div>`;
-    $("srClosePaymentModal").onclick = () => modal.classList.remove("is-open");
+    $("srClosePaymentModal").onclick = closePaymentModal;
     $("srPaymentCustomOrder")?.addEventListener("click", () => {
       modal.classList.remove("is-open");
       openCustomOrderProductModal({
@@ -2340,7 +2356,9 @@
       syncArchitectureStatus();
       syncShopifyPublicConfig().then(renderShellChrome);
       ensureShellChrome();
-      window.SupportRDRemoteRebuildVersion = "20260412f";
+      window.openSupportRDPaymentModal = openPaymentModal;
+      window.closeSupportRDPaymentModal = closePaymentModal;
+      window.SupportRDRemoteRebuildVersion = "20260413a";
     }
 
   setTimeout(init, 700);
