@@ -419,7 +419,15 @@
       const data = await res.json();
       const fallbackBase = "https://supportdr-com.myshopify.com";
       const incomingBase = String(data?.storefront_base || "").trim();
-      const safeBase = !incomingBase || /supportrd\.com|theplantmaninc\.com/i.test(incomingBase) ? fallbackBase : incomingBase;
+      const safeBase = !incomingBase
+        ? fallbackBase
+        : /theplantmaninc\.com/i.test(incomingBase)
+          ? fallbackBase
+          : /shop\.supportrd\.com/i.test(incomingBase)
+            ? "https://shop.supportrd.com"
+            : /supportrd\.com/i.test(incomingBase)
+              ? fallbackBase
+              : incomingBase;
       state.shopify = {
         connected: !!data?.ok,
         storefrontBase: safeBase,
@@ -851,9 +859,9 @@
     if (live.length) return live;
     return [
       { id: "catalog-1", title: "Formula Exclusiva", price: "$35", description: "Physical scalp comfort and hair cycle support for a stronger daily routine.", image: "/static/images/hija-de-felix.jpeg", handle: "", physical: true },
-      { id: "catalog-2", title: "Aria Premium/Pro", price: "$35 premium · $50 pro", description: "AI beauty guidance, stronger product support, and premium help when the hair day needs real attention.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "", physical: false, checkoutPlans: ["premium", "pro"] },
-      { id: "catalog-3", title: "Jake Studio Premium", price: "$50+ Pro", description: "Creator-ready studio lane with polished premium booth support and a richer SupportRD sound feel.", image: "/static/images/jake-studio-premium.jpg", handle: "", physical: false, checkoutPlans: ["pro"] },
-      { id: "catalog-4", title: "21+ Fantasies", price: "$300 basic · $600 advanced", description: "Exclusive 21+ fantasy lane tied to premium presence, chemistry, and a stronger SupportRD private experience.", image: "/static/images/fantasy-21-plus-main-ad.jpg", handle: "", physical: false, checkoutPlans: ["fantasy300", "fantasy600"] },
+      { id: "catalog-2", title: "Aria Premium/Pro", price: "$35 premium · $50 pro", description: "AI beauty guidance, stronger product support, and premium help when the hair day needs real attention.", image: "/static/images/aria-premium-pro-main-ad.jpg", handle: "hair-advisor-premium-1", physical: false, checkoutPlans: ["premium", "pro"] },
+      { id: "catalog-3", title: "Jake Studio Premium", price: "$50+ Pro", description: "Creator-ready studio lane with polished premium booth support and a richer SupportRD sound feel.", image: "/static/images/jake-studio-premium.jpg", handle: "jake-premium-studio", physical: false, checkoutPlans: ["pro"] },
+      { id: "catalog-4", title: "21+ Fantasies", price: "$300 basic · $600 advanced", description: "Exclusive 21+ fantasy lane tied to premium presence, chemistry, and a stronger SupportRD private experience.", image: "/static/images/fantasy-21-plus-main-ad.jpg", handle: "basic-fantasy-21-plus-300", physical: false, checkoutPlans: ["fantasy300", "fantasy600"] },
       { id: "catalog-5", title: "Shampoo SupportRD", price: "$40", description: "Physical shampoo lane for moisture, bounce, product trust, and visible progress in the hair cycle.", image: "/static/images/have-healthy-hair.jpeg", handle: "", physical: true },
       { id: "catalog-6", title: "Custom Orders", price: "Custom quote", description: "Founder-led custom order support for specialized shampoo lanes, retail confidence, and product expansion.", image: "/static/images/brochure-scroll-store.jpg", handle: "", physical: true },
       { id: "catalog-7", title: "Gotero", price: "$28", description: "Physical scalp-first product guidance for a lighter, cleaner, and better prepared wash-day cycle.", image: "/static/images/lezawli.jpeg", handle: "", physical: true },
@@ -905,10 +913,21 @@
   }
 
   function getCheckoutUrl(product) {
-    const safeBase = String(state.shopify?.storefrontBase || "").trim() && !/supportrd\.com|theplantmaninc\.com/i.test(String(state.shopify?.storefrontBase || ""))
-      ? String(state.shopify.storefrontBase).trim()
-      : "https://supportdr-com.myshopify.com";
+    const rawBase = String(state.shopify?.storefrontBase || "").trim();
+    const safeBase = !rawBase
+      ? "https://supportdr-com.myshopify.com"
+      : /theplantmaninc\.com/i.test(rawBase)
+        ? "https://supportdr-com.myshopify.com"
+        : /shop\.supportrd\.com/i.test(rawBase)
+          ? "https://shop.supportrd.com"
+          : /supportrd\.com/i.test(rawBase)
+            ? "https://supportdr-com.myshopify.com"
+            : rawBase;
     const variantId = String(product?.variantId || product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
+    const handle = String(product?.handle || "").trim().replace(/^\/?products\/?/i, "");
+    if (!product?.physical && handle && safeBase) {
+      return `${safeBase}/products/${handle}`;
+    }
     if (variantId && safeBase) {
       return `${safeBase}/cart/${variantId}:1?ref=supportrd-remote`;
     }

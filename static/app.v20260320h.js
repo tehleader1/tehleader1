@@ -320,9 +320,12 @@ function normalizeActualShopifyCheckoutBase(raw){
   if(!base) return fallback
   try{
     const host = new URL(base).host.toLowerCase()
-    if(host.includes("supportrd.com") || host.includes("theplantmaninc.com")) return fallback
+    if(host === "shop.supportrd.com") return "https://shop.supportrd.com"
+    if((host.includes("supportrd.com") && host !== "shop.supportrd.com") || host.includes("theplantmaninc.com")) return fallback
   }catch{
-    if(base.toLowerCase().includes("supportrd.com") || base.toLowerCase().includes("theplantmaninc.com")) return fallback
+    const lowerBase = base.toLowerCase()
+    if(lowerBase === "https://shop.supportrd.com" || lowerBase === "shop.supportrd.com") return "https://shop.supportrd.com"
+    if(lowerBase.includes("supportrd.com") || lowerBase.includes("theplantmaninc.com")) return fallback
   }
   return base
 }
@@ -5335,7 +5338,7 @@ function setupPwa(){
     })
   }
   if("serviceWorker" in navigator){
-navigator.serviceWorker.register("/sw.js?v=20260413b").then((registration)=>{
+navigator.serviceWorker.register("/sw.js?v=20260413c").then((registration)=>{
       if(registration?.waiting){
         registration.waiting.postMessage({ type:"SKIP_WAITING" })
       }
@@ -12110,6 +12113,23 @@ function setupRemoteFastPay(){
   function buildShopifyCheckoutUrl(product, liveProduct){
     const storefrontBase = getDirectShopifyBase()
     const variantId = String(liveProduct?.variant || "").trim()
+    const liveHandle = normalizeShopifyHandle(liveProduct?.handle || "")
+    const linkedProductPath = (() => {
+      try{
+        const parsed = new URL(product?.link || "", storefrontBase)
+        return /^\/products\//.test(parsed.pathname) ? parsed.pathname : ""
+      }catch{
+        return ""
+      }
+    })()
+    if(!product?.physical){
+      if(linkedProductPath){
+        return `${storefrontBase}${linkedProductPath}`
+      }
+      if(liveHandle){
+        return `${storefrontBase}/products/${liveHandle}`
+      }
+    }
     if(variantId && /^\d+$/.test(variantId)){
       return `${storefrontBase}/cart/${variantId}:1`
     }
