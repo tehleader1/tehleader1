@@ -6464,6 +6464,7 @@ function setupFloatMode(){
   const fastForwardBtn = qs("#floatFastForwardBtn")
   const recordVoiceBtn = qs("#floatRecordVoiceBtn")
   const instrumentRecordBtn = qs("#floatInstrumentRecordBtn")
+  const videoRecordBtn = qs("#floatVideoRecordBtn")
   const guitarBtn = qs("#floatGuitarBtn")
   const speakerBtn = qs("#floatSpeakerBtn")
   const gigSwitchBtn = qs("#floatGigSwitchBtn")
@@ -7847,6 +7848,9 @@ function setupFloatMode(){
       const current = board || emptyBoard(index)
       const isActive = index === remoteState.activeBoard
       const kindLabel = current.kind === "video" ? "MP4 / Video" : current.kind === "audio" ? "MP3 / M4A / Audio" : "Fresh Board"
+      const thumb = current.kind === "video" && current.objectUrl
+        ? `<div class="float-studio-video-thumb"><video src="${escapeRemoteHtml(current.objectUrl)}" muted playsinline preload="metadata"></video></div>`
+        : ""
       const detail = current.kind === "empty"
         ? "Ready for a new voice take, beat layer, or imported file."
         : `${current.fileName || "Live take loaded"} · ${current.highlighted ? `Highlight ${current.trimStart}% → ${current.trimEnd}%` : "No highlight locked yet."}`
@@ -7856,6 +7860,7 @@ function setupFloatMode(){
             <strong>${escapeRemoteHtml(current.name || `Motherboard ${index + 1}`)}</strong>
             <span>${escapeRemoteHtml(kindLabel)}</span>
           </div>
+          ${thumb}
           <div class="float-studio-wave-row">${renderQuickStudioWaveBars(current, index)}</div>
           <small>${escapeRemoteHtml(detail)}</small>
         </button>
@@ -7906,6 +7911,7 @@ function setupFloatMode(){
               <option value="cinema"${board.gigFilter === "cinema" ? " selected" : ""}>Cinema</option>
               <option value="vivid"${board.gigFilter === "vivid" ? " selected" : ""}>Vivid</option>
               <option value="mono"${board.gigFilter === "mono" ? " selected" : ""}>Mono</option>
+              <option value="wave-sweep"${board.gigFilter === "wave-sweep" ? " selected" : ""}>Wave Sweep</option>
             </select>
           </label>
           <label class="float-select-card">
@@ -7951,8 +7957,8 @@ function setupFloatMode(){
   function renderQuickStudioVideoStatus(){
     const board = getBoard()
     const label = board.kind === "video"
-      ? `${board.fileName || "Video clip"} is loaded with ${board.gigFilter || "natural"} filter, ${board.gigFrameRate || "24"} FPS, ${board.gigZoom || "1x"} zoom, and ${board.gigSlowMotion || "off"} slow motion.`
-      : "MP4 display view is ready. Import an MP4 and SupportRD will preview visuals while you build the motherboard."
+      ? `${board.fileName || "Video clip"} is loaded with ${board.gigFilter || "natural"} filter, ${board.gigFrameRate || "24"} FPS, ${board.gigZoom || "1x"} zoom, and ${board.gigSlowMotion || "off"} slow motion. Scrub across the preview or waveform to fast-forward and rewind visually.`
+      : "MP4 display view is ready. Import an MP4 or use Video → Live Screen so SupportRD can record the device camera directly into the active motherboard."
     return `
       <div class="float-studio-video-card">
         <strong>MP4 Display View</strong>
@@ -8863,12 +8869,19 @@ function setupFloatMode(){
     previewUrl: "",
     previewMediaEl: null,
     recorder: null,
+    recordKind: "",
+    recordPaused: false,
+    recordDiscard: false,
     recordChunks: [],
     recordStream: null,
     analyser: null,
     analyserFrame: 0,
+    analyserContext: null,
     recordStartedAt: 0,
+    recordElapsedMs: 0,
+    liveWaveformData: [],
     mode: "audio",
+    selectionDraft: null,
     handsfreeRecognition: null,
     handsfreeActive: false,
     currentPanel: "floatSettingsBox",
@@ -10566,21 +10579,135 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
 
   function revokePreview(){
-    if(remoteState.previewUrl){
-      try{ URL.revokeObjectURL(remoteState.previewUrl) }catch{}
-      remoteState.previewUrl = ""
-    }
+    remoteState.previewUrl = ""
+    remoteState.previewMediaEl = null
     if(boardPreviewAudio){
       boardPreviewAudio.pause()
+      boardPreviewAudio.srcObject = null
       boardPreviewAudio.removeAttribute("src")
       boardPreviewAudio.hidden = true
     }
     if(boardPreviewVideo){
       boardPreviewVideo.pause()
+      boardPreviewVideo.srcObject = null
       boardPreviewVideo.removeAttribute("src")
       boardPreviewVideo.hidden = true
+      boardPreviewVideo.style.filter = "none"
+      boardPreviewVideo.style.transform = ""
+      boardPreviewVideo.style.transformOrigin = "50% 50%"
+      boardPreviewVideo.style.borderRadius = "16px"
+      boardPreviewVideo.playbackRate = 1
     }
     if(boardPreviewMediaWrap) boardPreviewMediaWrap.hidden = true
+  }
+  function setTransportButtonState(button, enabled, label){
+    if(!button) return
+    button.classList.toggle("active", !!enabled)
+    if(label) button.setAttribute("data-live-label", label)
+    else button.removeAttribute("data-live-label")
+  }
+  function updateStudioTransportState(){
+    const recorder = remoteState.recorder
+    const hasRecording = !!(recorder && recorder.state !== "inactive")
+    const isPaused = !!(hasRecording && recorder.state === "paused")
+    const kind = remoteState.recordKind || (getBoard().kind === "video" ? "video" : "voice")
+    setTransportButtonState(recordVoiceBtn, hasRecording && kind === "voice", isPaused ? "Resume Voice" : "Recording Voice")
+    setTransportButtonState(instrumentRecordBtn, hasRecording && kind === "instrument", isPaused ? "Resume Instrument" : "Recording Instrument")
+    setTransportButtonState(videoRecordBtn, hasRecording && kind === "video", isPaused ? "Resume Video" : "Recording Video")
+    setTransportButtonState(pauseBtn, isPaused, isPaused ? "Resume" : "")
+    setTransportButtonState(stopBtn, hasRecording, hasRecording ? "Stop Capture" : "")
+    if(recordVoiceBtn) recordVoiceBtn.textContent = hasRecording && kind === "voice" && isPaused ? "⏵" : "⏺"
+    if(stopBtn) stopBtn.textContent = hasRecording ? "⏹" : "⏏"
+    if(pauseBtn) pauseBtn.textContent = isPaused ? "⏵" : "⏸"
+  }
+  function buildWaveformData(values, count = 96){
+    const source = Array.isArray(values) ? values : Array.from(values || [])
+    if(!source.length) return Array.from({ length: count }, (_, index)=>0.28 + (((index * 7) % 13) / 28))
+    const step = Math.max(1, Math.floor(source.length / count))
+    const points = []
+    for(let i = 0; i < count; i += 1){
+      let total = 0
+      let seen = 0
+      for(let j = 0; j < step; j += 1){
+        const value = source[(i * step) + j]
+        if(value == null) continue
+        total += Math.abs(Number(value) || 0)
+        seen += 1
+      }
+      const avg = seen ? total / seen : 0
+      points.push(Math.max(0.06, Math.min(1, avg)))
+    }
+    return points
+  }
+  async function buildWaveformDataFromFile(file, count = 96){
+    try{
+      const buffer = await file.arrayBuffer()
+      const view = new Uint8Array(buffer)
+      if(!view.length) return buildWaveformData([], count)
+      const points = []
+      const stride = Math.max(1, Math.floor(view.length / count))
+      for(let i = 0; i < count; i += 1){
+        let peak = 0
+        for(let j = 0; j < stride; j += 1){
+          const raw = view[(i * stride) + j]
+          if(raw == null) break
+          const normalized = Math.abs((raw - 128) / 128)
+          if(normalized > peak) peak = normalized
+        }
+        points.push(Math.max(0.08, Math.min(1, peak || 0.12)))
+      }
+      return points
+    }catch{
+      return buildWaveformData([], count)
+    }
+  }
+  function applyPreviewFx(board){
+    if(!boardPreviewVideo) return
+    const filterMap = {
+      natural: "none",
+      cinema: "contrast(1.06) saturate(0.9) brightness(0.92)",
+      vivid: "saturate(1.28) contrast(1.08) brightness(1.02)",
+      mono: "grayscale(1) contrast(1.04)",
+      "wave-sweep": "saturate(1.14) contrast(1.12) hue-rotate(-10deg)"
+    }
+    const zoomMap = {
+      "1x": 1,
+      "1.5x": 1.08,
+      "2x": 1.18,
+      "3x": 1.3
+    }
+    const panMap = {
+      standard: "50% 50%",
+      wide: "40% 50%",
+      ultra: "35% 50%"
+    }
+    const speedMap = {
+      off: 1,
+      "2x": 0.75,
+      "4x": 0.55,
+      "8x": 0.4
+    }
+    const scale = zoomMap[board.gigZoom || "1x"] || 1
+    boardPreviewVideo.style.filter = filterMap[board.gigFilter || "natural"] || "none"
+    boardPreviewVideo.style.transform = `scale(${scale})`
+    boardPreviewVideo.style.transformOrigin = panMap[board.gigPan || "standard"] || "50% 50%"
+    boardPreviewVideo.style.borderRadius = board.gigFilter === "wave-sweep" ? "28px" : "16px"
+    boardPreviewVideo.playbackRate = speedMap[board.gigSlowMotion || "off"] || 1
+  }
+  function updateBoardSelectionFromRatio(startRatio, endRatio, lock = false){
+    const board = getBoard()
+    if(board.kind === "empty") return
+    const safeStart = Math.max(0, Math.min(99, Math.round(Math.min(startRatio, endRatio) * 100)))
+    const safeEnd = Math.max(safeStart + 1, Math.min(100, Math.round(Math.max(startRatio, endRatio) * 100)))
+    board.trimStart = safeStart
+    board.trimEnd = safeEnd
+    board.highlighted = !!lock
+    syncTrimInputs("range")
+    drawWaveform(false)
+    if(lock && quickEditStatus){
+      quickEditStatus.textContent = `${board.name} highlight tightened to ${safeStart}% → ${safeEnd}%.`
+    }
+    syncQuickStudioSheet()
   }
   function formatClock(totalSeconds = 0){
     const safe = Math.max(0, Math.floor(totalSeconds))
@@ -10588,15 +10715,20 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     const seconds = String(safe % 60).padStart(2, "0")
     return `${minutes}:${seconds}`
   }
-  function stopWaveform(){
+  function stopWaveform(options = {}){
     if(remoteState.analyserFrame){
       cancelAnimationFrame(remoteState.analyserFrame)
       remoteState.analyserFrame = 0
     }
-    if(remoteState.recordStream){
+    if(!options.keepStream && remoteState.recordStream){
       remoteState.recordStream.getTracks().forEach(track=>track.stop())
       remoteState.recordStream = null
     }
+    if(!options.keepContext && remoteState.analyserContext){
+      try{ remoteState.analyserContext.close() }catch{}
+      remoteState.analyserContext = null
+    }
+    if(!options.keepLiveWaveform) remoteState.liveWaveformData = []
     remoteState.analyser = null
   }
   function drawWaveform(active = false){
@@ -10611,6 +10743,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     gradient.addColorStop(1, "rgba(255,205,118,0.9)")
     ctx.fillStyle = "rgba(10,20,34,0.82)"
     ctx.fillRect(0, 0, width, height)
+    const activeBoard = getBoard()
     ctx.strokeStyle = gradient
     ctx.lineWidth = 3
     ctx.beginPath()
@@ -10618,26 +10751,47 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(active && remoteState.analyser){
       const data = new Uint8Array(remoteState.analyser.frequencyBinCount)
       remoteState.analyser.getByteTimeDomainData(data)
+      remoteState.liveWaveformData = buildWaveformData(Array.from(data, value=>Math.abs((value - 128) / 128)), bars)
       for(let i = 0; i < bars; i += 1){
-        const sourceIndex = Math.floor((i / bars) * data.length)
-        const value = (data[sourceIndex] || 128) / 255
+        const value = remoteState.liveWaveformData[i] || 0.12
         const x = (i / (bars - 1)) * width
-        const y = height * value
+        const y = (height / 2) + ((value - 0.5) * height * 0.85)
         if(i === 0) ctx.moveTo(x, y)
         else ctx.lineTo(x, y)
       }
     }else{
+      const points = activeBoard.waveformData?.length ? activeBoard.waveformData : buildWaveformData([], bars)
       for(let i = 0; i < bars; i += 1){
         const x = (i / (bars - 1)) * width
-        const wave = Math.sin((i / bars) * Math.PI * 8) * 22
-        const y = (height / 2) + wave
+        const value = points[i] || 0.12
+        const y = (height / 2) + ((0.5 - value) * height * 0.78)
         if(i === 0) ctx.moveTo(x, y)
         else ctx.lineTo(x, y)
       }
     }
     ctx.stroke()
+    const selectionStart = Math.max(0, Math.min(width, (activeBoard.trimStart || 0) / 100 * width))
+    const selectionEnd = Math.max(selectionStart, Math.min(width, (activeBoard.trimEnd || 100) / 100 * width))
+    if(activeBoard.kind !== "empty"){
+      ctx.fillStyle = activeBoard.highlighted ? "rgba(86,220,197,0.18)" : "rgba(118,189,255,0.12)"
+      ctx.fillRect(selectionStart, 0, selectionEnd - selectionStart, height)
+      ctx.strokeStyle = activeBoard.highlighted ? "rgba(255,220,120,0.95)" : "rgba(118,189,255,0.78)"
+      ctx.lineWidth = 2
+      ctx.strokeRect(selectionStart, 8, Math.max(2, selectionEnd - selectionStart), height - 16)
+      const media = remoteState.previewMediaEl
+      if(media && Number.isFinite(media.duration) && media.duration > 0){
+        const ratio = Math.max(0, Math.min(1, (media.currentTime || 0) / media.duration))
+        const cursorX = ratio * width
+        ctx.strokeStyle = "rgba(255,255,255,0.92)"
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(cursorX, 0)
+        ctx.lineTo(cursorX, height)
+        ctx.stroke()
+      }
+    }
     if(active && remoteState.recorder?.state === "recording"){
-      if(boardTimer) boardTimer.textContent = formatClock((Date.now() - remoteState.recordStartedAt) / 1000)
+      if(boardTimer) boardTimer.textContent = formatClock((remoteState.recordElapsedMs + (Date.now() - remoteState.recordStartedAt)) / 1000)
       remoteState.analyserFrame = requestAnimationFrame(()=>drawWaveform(true))
     }
   }
@@ -10656,11 +10810,16 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       trimStart: 10,
       trimEnd: 90,
       highlighted: false,
-      exported: ""
+      exported: "",
+      duration: 0,
+      waveformData: [],
+      objectUrl: "",
+      fxAppliedRange: ""
     }
   }
   function resetBoards(message){
     revokePreview()
+    stopVoiceRecord(false)
     try{ stopBoardMixPreview(true) }catch{}
     remoteState.boards = [emptyBoard(0), emptyBoard(1), emptyBoard(2)]
     remoteState.activeBoard = 0
@@ -10692,7 +10851,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(boardPreviewCopy){
       boardPreviewCopy.textContent = board.kind === "empty"
         ? "Upload material to start a fresh 3-board quick edit."
-        : `${board.name} · Type: ${prettyKind} · File: ${board.fileName || "live take"} · ${trimLine} · Export: ${board.exported || "Not exported yet."}`
+        : `${board.name} · Type: ${prettyKind} · File: ${board.fileName || "live take"} · ${trimLine} · ${board.fxAppliedRange || "FX ready for a highlight pass."} · Export: ${board.exported || "Not exported yet."}`
     }else if(boardPreview){
       boardPreview.textContent = board.kind === "empty"
         ? "Upload material to start a fresh 3-board quick edit."
@@ -10708,16 +10867,19 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(board.kind === "empty"){
       revokePreview()
       drawWaveform(false)
-    }else if(board.file){
+    }else if(board.file || board.objectUrl){
       revokePreview()
       try{
-        remoteState.previewUrl = URL.createObjectURL(board.file)
+        remoteState.previewUrl = board.objectUrl || URL.createObjectURL(board.file)
         if(board.kind === "video" && boardPreviewVideo){
+          boardPreviewVideo.srcObject = null
           boardPreviewVideo.src = remoteState.previewUrl
           boardPreviewVideo.hidden = false
           if(boardPreviewMediaWrap) boardPreviewMediaWrap.hidden = false
           remoteState.previewMediaEl = boardPreviewVideo
+          applyPreviewFx(board)
         }else if(boardPreviewAudio){
+          boardPreviewAudio.srcObject = null
           boardPreviewAudio.src = remoteState.previewUrl
           boardPreviewAudio.hidden = false
           if(boardPreviewMediaWrap) boardPreviewMediaWrap.hidden = false
@@ -10728,6 +10890,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
     const status = qs("#floatBoardStatus")
     if(status) status.textContent = `${board.name} selected. ${board.kind === "empty" ? "Upload fresh material or record directly." : `Working on ${board.fileName || board.kind} now.`}`
+    updateStudioTransportState()
     syncQuickStudioSheet()
   }
   function setActiveBoard(btn){
@@ -10736,12 +10899,13 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     remoteState.activeBoard = Math.max(0, Number(btn?.dataset.floatBoard || 1) - 1)
     renderBoard()
   }
-  function loadFileToBoard(file, kindOverride){
+  async function loadFileToBoard(file, kindOverride){
     if(!file) return
     snapshotBoards()
     revokePreview()
     try{ stopBoardMixPreview(true) }catch{}
     const idx = remoteState.activeBoard
+    const objectUrl = URL.createObjectURL(file)
     remoteState.boards[idx] = {
       ...emptyBoard(idx),
       name: remoteState.boards[idx]?.name || emptyBoard(idx).name,
@@ -10753,9 +10917,12 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       highlighted: false,
       exported: "",
       duration: 0,
-      file
+      file,
+      objectUrl
     }
-    remoteState.previewUrl = URL.createObjectURL(file)
+    remoteState.mode = remoteState.boards[idx].kind === "video" ? "video" : "audio"
+    if(gigSettings) gigSettings.hidden = remoteState.mode !== "video"
+    remoteState.boards[idx].waveformData = await buildWaveformDataFromFile(file)
     if(quickEditStatus) quickEditStatus.textContent = `${file.name} loaded into ${remoteState.boards[idx].name}. Play, trim, delete, or export it fast.`
     renderBoard()
   }
@@ -10790,10 +10957,18 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       return
     }
     snapshotBoards()
+    const points = Array.isArray(board.waveformData) ? [...board.waveformData] : []
+    if(points.length){
+      const startIndex = Math.max(0, Math.floor((board.trimStart / 100) * points.length))
+      const endIndex = Math.max(startIndex + 1, Math.ceil((board.trimEnd / 100) * points.length))
+      points.splice(startIndex, endIndex - startIndex)
+      board.waveformData = points.length ? buildWaveformData(points, 96) : buildWaveformData([], 96)
+    }
     board.highlighted = false
     board.exported = `Section ${board.trimStart}% → ${board.trimEnd}% removed`
     board.trimStart = 10
     board.trimEnd = 90
+    board.fxAppliedRange = "Selected section erased from the active motherboard."
     renderBoard()
     if(quickEditStatus) quickEditStatus.textContent = `${board.name} had the highlighted section removed.`
   }
@@ -10807,6 +10982,10 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     board.gigFrameRate = gigFrameRateInput?.value || board.gigFrameRate || "24"
     board.gigZoom = gigZoomInput?.value || board.gigZoom || "1x"
     board.gigSlowMotion = gigSlowMotionInput?.value || board.gigSlowMotion || "off"
+    board.fxAppliedRange = board.highlighted
+      ? `FX routed to ${board.trimStart}% → ${board.trimEnd}% on ${board.name}.`
+      : `FX routed to the whole ${board.name} motherboard.`
+    applyPreviewFx(board)
     renderBoard()
     if(quickEditStatus){
       quickEditStatus.textContent = remoteState.mode === "video"
@@ -10858,13 +11037,63 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(quickEditStatus) quickEditStatus.textContent = `${board.name} exported to ${destination}. Reset or upload new material to keep moving.`
     openMiniWindow("Export", `${board.name} exported to ${destination}.`)
   }
+  function finalizeRecording(kind, mimeType, stream, saveTake = true){
+    const duration = (remoteState.recordElapsedMs + Math.max(0, Date.now() - remoteState.recordStartedAt)) / 1000
+    const waveformData = remoteState.liveWaveformData?.length ? [...remoteState.liveWaveformData] : buildWaveformData([], 96)
+    const chunks = Array.isArray(remoteState.recordChunks) ? [...remoteState.recordChunks] : []
+    stopWaveform()
+    remoteState.recorder = null
+    remoteState.recordElapsedMs = 0
+    remoteState.recordStartedAt = 0
+    remoteState.recordChunks = []
+    remoteState.recordKind = ""
+    remoteState.recordPaused = false
+    if(!saveTake || !chunks.length){
+      updateStudioTransportState()
+      return
+    }
+    const safeMime = mimeType || (kind === "video" ? "video/webm" : "audio/webm")
+    const blob = new Blob(chunks, { type: safeMime })
+    const ext = kind === "video" ? "webm" : "webm"
+    const file = new File([blob], `${kind}-take.${ext}`, { type: blob.type || safeMime })
+    loadFileToBoard(file, kind).then(()=>{
+      const active = getBoard()
+      active.duration = duration
+      active.waveformData = waveformData
+      active.fxAppliedRange = kind === "video"
+        ? "Video lane ready. Highlight the timeline, add FX, then export."
+        : "Audio lane ready. Highlight the timeline, add FX, then export."
+      renderBoard()
+      updateAssistantTracker({
+        recordingKind: "",
+        recordingTarget: active.name,
+        voiceState: "idle",
+        voiceText: `${kind === "video" ? "Video" : kind === "instrument" ? "Instrument" : "Voice"} capture saved into ${active.name}.`,
+        anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "studio"),
+        focusLabel: active.name
+      })
+    })
+  }
   function startVoiceRecord(kind){
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
       openMiniWindow("Record", "Recording is not available on this device right now.")
       return
     }
+    if(remoteState.recorder && remoteState.recorder.state === "paused" && remoteState.recordKind === kind){
+      try{
+        remoteState.recorder.resume()
+        remoteState.recordStartedAt = Date.now()
+        remoteState.recordPaused = false
+        drawWaveform(true)
+        updateStudioTransportState()
+        if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} ${kind} recording resumed live.`
+      }catch{}
+      return
+    }
     if(remoteState.recorder && remoteState.recorder.state === "recording"){
-      stopVoiceRecord()
+      const activeKind = remoteState.recordKind
+      stopVoiceRecord(true)
+      if(activeKind === kind) return
     }
     updateAssistantTracker({
       route: remoteState.currentRoute || "studio",
@@ -10885,33 +11114,36 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         analyser.fftSize = 2048
         source.connect(analyser)
         remoteState.analyser = analyser
+        remoteState.analyserContext = audioContext
       }
       remoteState.recordStream = stream
       remoteState.recordStartedAt = Date.now()
+      remoteState.recordElapsedMs = 0
       remoteState.recordChunks = []
+      remoteState.recordKind = kind
+      remoteState.recordPaused = false
+      remoteState.recordDiscard = false
       remoteState.recorder = new MediaRecorder(stream, mimeType ? {mimeType} : undefined)
       remoteState.recorder.ondataavailable = (event)=>{
         if(event.data?.size) remoteState.recordChunks.push(event.data)
       }
       remoteState.recorder.onstop = ()=>{
-        const blob = new Blob(remoteState.recordChunks, {type: mimeType || "audio/webm"})
-        const file = new File([blob], `${kind}-take.webm`, {type: blob.type})
-        const duration = (Date.now() - remoteState.recordStartedAt) / 1000
-        stopWaveform()
-        loadFileToBoard(file, kind)
-        const active = getBoard()
-        active.duration = duration
-        renderBoard()
-        updateAssistantTracker({
-          recordingKind: "",
-          recordingTarget: active.name,
-          voiceState: "idle",
-          voiceText: `${kind === "instrument" ? "Instrument" : "Voice"} capture saved into ${active.name}.`,
-          anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "studio"),
-          focusLabel: active.name
-        })
+        finalizeRecording(kind, mimeType, stream, !remoteState.recordDiscard)
+      }
+      remoteState.recorder.onpause = ()=>{
+        remoteState.recordElapsedMs += Math.max(0, Date.now() - remoteState.recordStartedAt)
+        remoteState.recordPaused = true
+        stopWaveform({ keepStream:true, keepContext:true, keepLiveWaveform:true })
+        updateStudioTransportState()
+      }
+      remoteState.recorder.onresume = ()=>{
+        remoteState.recordStartedAt = Date.now()
+        remoteState.recordPaused = false
+        drawWaveform(true)
+        updateStudioTransportState()
       }
       remoteState.recorder.start()
+      updateStudioTransportState()
       holdSingleAssistantTeleport("projake", {
         x: window.innerWidth * 0.28,
         y: window.innerHeight * 0.66
@@ -10920,7 +11152,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         status: "Jake teleported into the lower-left studio lane while the motherboard started receiving new material."
       })
       drawWaveform(true)
-      if(quickEditStatus) quickEditStatus.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live on ${getBoard().name}. Press Pause to save it into the board.`
+      if(quickEditStatus) quickEditStatus.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live on ${getBoard().name}. Press Pause to hold it or Record again to save it into the board.`
       if(boardMode) boardMode.textContent = `${kind === "instrument" ? "Instrument" : "Voice"} recording is live. Sound waves are being drawn into ${getBoard().name}.`
       setRemoteStatus(`${kind === "instrument" ? "Instrument" : "Voice"} recording started on ${getBoard().name}.`)
     }).catch(()=>{
@@ -10934,16 +11166,105 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       openMiniWindow("Record", "Microphone access was blocked. We need mic permission to record.")
     })
   }
-  function stopVoiceRecord(){
+  function startVideoRecord(){
+    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+      openMiniWindow("Video Record", "Camera recording is not available on this device right now.")
+      return
+    }
+    if(remoteState.recorder && remoteState.recorder.state === "paused" && remoteState.recordKind === "video"){
+      try{
+        remoteState.recorder.resume()
+        remoteState.recordStartedAt = Date.now()
+        remoteState.recordPaused = false
+        drawWaveform(true)
+        updateStudioTransportState()
+      }catch{}
+      return
+    }
+    if(remoteState.recorder && remoteState.recorder.state === "recording"){
+      const activeKind = remoteState.recordKind
+      stopVoiceRecord(true)
+      if(activeKind === "video") return
+    }
+    remoteState.mode = "video"
+    if(gigSettings) gigSettings.hidden = false
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream)=>{
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+        ? "video/webm;codecs=vp9,opus"
+        : (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus") ? "video/webm;codecs=vp8,opus" : "video/webm")
+      const audioContext = window.AudioContext ? new AudioContext() : (window.webkitAudioContext ? new webkitAudioContext() : null)
+      if(audioContext){
+        const source = audioContext.createMediaStreamSource(stream)
+        const analyser = audioContext.createAnalyser()
+        analyser.fftSize = 2048
+        source.connect(analyser)
+        remoteState.analyser = analyser
+        remoteState.analyserContext = audioContext
+      }
+      remoteState.recordStream = stream
+      remoteState.recordStartedAt = Date.now()
+      remoteState.recordElapsedMs = 0
+      remoteState.recordChunks = []
+      remoteState.recordKind = "video"
+      remoteState.recordPaused = false
+      remoteState.recordDiscard = false
+      remoteState.recorder = new MediaRecorder(stream, { mimeType })
+      remoteState.recorder.ondataavailable = (event)=>{
+        if(event.data?.size) remoteState.recordChunks.push(event.data)
+      }
+      remoteState.recorder.onpause = ()=>{
+        remoteState.recordElapsedMs += Math.max(0, Date.now() - remoteState.recordStartedAt)
+        remoteState.recordPaused = true
+        stopWaveform({ keepStream:true, keepContext:true, keepLiveWaveform:true })
+        updateStudioTransportState()
+      }
+      remoteState.recorder.onresume = ()=>{
+        remoteState.recordStartedAt = Date.now()
+        remoteState.recordPaused = false
+        drawWaveform(true)
+        updateStudioTransportState()
+      }
+      remoteState.recorder.onstop = ()=>{
+        if(boardPreviewVideo){
+          boardPreviewVideo.pause()
+          boardPreviewVideo.srcObject = null
+        }
+        finalizeRecording("video", mimeType, stream, !remoteState.recordDiscard)
+      }
+      if(boardPreviewMediaWrap) boardPreviewMediaWrap.hidden = false
+      if(boardPreviewVideo){
+        boardPreviewVideo.hidden = false
+        boardPreviewVideo.srcObject = stream
+        boardPreviewVideo.muted = true
+        boardPreviewVideo.play().catch(()=>{})
+        remoteState.previewMediaEl = boardPreviewVideo
+      }
+      remoteState.recorder.start()
+      drawWaveform(true)
+      updateStudioTransportState()
+      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} video capture is live. The camera feed is landing in the motherboard with editable wave visuals.`
+      if(boardMode) boardMode.textContent = "Video live screen is open. Scrub, panoramic, wave sweep, zoom, and slow motion are ready in the same motherboard lane."
+      setRemoteStatus("Video recording started on the active motherboard with the live preview screen open.")
+    }).catch(()=>{
+      openMiniWindow("Video Record", "Camera access was blocked. We need camera + mic permission for the live video screen.")
+    })
+  }
+  function stopVoiceRecord(saveTake = true){
     if(remoteState.recorder && remoteState.recorder.state !== "inactive"){
-      remoteState.recorder.stop()
-      remoteState.recorder = null
+      remoteState.recordDiscard = !saveTake
+      if(remoteState.recorder.state === "paused"){
+        remoteState.recorder.stop()
+      }else{
+        remoteState.recordElapsedMs += Math.max(0, Date.now() - remoteState.recordStartedAt)
+        remoteState.recorder.stop()
+      }
       updateAssistantTracker({
         recordingKind: "",
         voiceState: "idle",
-        voiceText: "Recording stopped. SupportRD is saving the take into the active board.",
+        voiceText: saveTake ? "Recording stopped. SupportRD is saving the take into the active board." : "Recording stopped and the live take was cleared.",
         anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "studio")
       })
+      updateStudioTransportState()
       return true
     }
     stopWaveform()
@@ -10952,7 +11273,34 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       voiceState: "idle",
       anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "studio")
     })
+    updateStudioTransportState()
     return false
+  }
+  function pauseVoiceRecord(){
+    const recorder = remoteState.recorder
+    if(!recorder || recorder.state === "inactive") return false
+    if(recorder.state === "paused"){
+      try{
+        recorder.resume()
+        remoteState.recordStartedAt = Date.now()
+        remoteState.recordPaused = false
+        drawWaveform(true)
+        updateStudioTransportState()
+        return true
+      }catch{
+        return false
+      }
+    }
+    try{
+      remoteState.recordElapsedMs += Math.max(0, Date.now() - remoteState.recordStartedAt)
+      recorder.pause()
+      remoteState.recordPaused = true
+      stopWaveform({ keepStream:true, keepContext:true, keepLiveWaveform:true })
+      updateStudioTransportState()
+      return true
+    }catch{
+      return false
+    }
   }
   function openRemoteFullSettingsLane(options = {}){
     try{ syncFloatSettings() }catch{}
@@ -11747,8 +12095,11 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
   })
   pauseBtn?.addEventListener("click", ()=>{
-    if(stopVoiceRecord()){
-      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} recording paused and saved.`
+    if(remoteState.recorder && remoteState.recorder.state !== "inactive"){
+      const resumed = pauseVoiceRecord()
+      if(quickEditStatus) quickEditStatus.textContent = resumed
+        ? (remoteState.recordPaused ? `${getBoard().name} capture paused. Press Pause again to resume or Stop to save.` : `${getBoard().name} capture resumed live.`)
+        : `${getBoard().name} capture did not pause cleanly.`
       return
     }
     if(Array.isArray(remoteState.mixPlayers) && remoteState.mixPlayers.length){
@@ -11763,6 +12114,27 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
     openMiniWindow("Pause", "Quick preview paused.")
   })
+  stopBtn?.addEventListener("click", ()=>{
+    if(stopVoiceRecord(true)){
+      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} capture stopped and saved into the motherboard.`
+      return
+    }
+    if(Array.isArray(remoteState.mixPlayers) && remoteState.mixPlayers.length){
+      stopBoardMixPreview(true)
+      if(quickEditStatus) quickEditStatus.textContent = "Motherboard mix stopped and rewound."
+      return
+    }
+    if(remoteState.previewMediaEl){
+      try{
+        remoteState.previewMediaEl.pause()
+        remoteState.previewMediaEl.currentTime = 0
+      }catch{}
+      drawWaveform(false)
+      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} preview stopped and rewound.`
+      return
+    }
+    openMiniWindow("Stop", "Nothing is playing yet, but the motherboard lane is ready.")
+  })
   prevBtn?.addEventListener("click", ()=>{
     remoteState.activeBoard = (remoteState.activeBoard + 2) % 3
     const btn = qsa(".float-board")[remoteState.activeBoard]
@@ -11775,8 +12147,30 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(btn) setActiveBoard(btn)
   })
   fastForwardBtn?.addEventListener("click", ()=>seekPreview(3))
-  recordVoiceBtn?.addEventListener("click", ()=>startVoiceRecord("voice"))
-  instrumentRecordBtn?.addEventListener("click", ()=>startVoiceRecord("instrument"))
+  recordVoiceBtn?.addEventListener("click", ()=>{
+    if(remoteState.recorder && remoteState.recordKind === "voice"){
+      stopVoiceRecord(true)
+      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} voice take closed and saved into the motherboard.`
+      return
+    }
+    startVoiceRecord("voice")
+  })
+  instrumentRecordBtn?.addEventListener("click", ()=>{
+    if(remoteState.recorder && remoteState.recordKind === "instrument"){
+      stopVoiceRecord(true)
+      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} instrument take closed and saved into the motherboard.`
+      return
+    }
+    startVoiceRecord("instrument")
+  })
+  videoRecordBtn?.addEventListener("click", ()=>{
+    if(remoteState.recorder && remoteState.recordKind === "video"){
+      stopVoiceRecord(true)
+      if(quickEditStatus) quickEditStatus.textContent = `${getBoard().name} video take closed and saved into the motherboard.`
+      return
+    }
+    startVideoRecord()
+  })
   guitarBtn?.addEventListener("click", ()=>{
     if(instrumentTypeInput) instrumentTypeInput.value = "guitar"
     updateBoardFxState()
@@ -12153,6 +12547,50 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     boardPreviewVideo.currentTime = boardPreviewVideo.duration * ratio
     boardPreviewVideo.muted = false
     boardPreviewVideo.play().catch(()=>{})
+  })
+  boardPreviewVideo?.addEventListener("timeupdate", ()=>drawWaveform(false))
+  boardPreviewVideo?.addEventListener("loadedmetadata", ()=>{
+    const board = getBoard()
+    if(board.kind === "video"){
+      board.duration = boardPreviewVideo.duration || board.duration || 0
+      if(boardTimer) boardTimer.textContent = formatClock(board.duration || 0)
+    }
+  })
+  boardPreviewAudio?.addEventListener("timeupdate", ()=>drawWaveform(false))
+  boardPreviewAudio?.addEventListener("loadedmetadata", ()=>{
+    const board = getBoard()
+    if(board.kind !== "empty"){
+      board.duration = boardPreviewAudio.duration || board.duration || 0
+      if(boardTimer) boardTimer.textContent = formatClock(board.duration || 0)
+    }
+  })
+  waveCanvas?.addEventListener("mousedown", (event)=>{
+    const board = getBoard()
+    if(board.kind === "empty") return
+    const rect = waveCanvas.getBoundingClientRect()
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+    remoteState.selectionDraft = ratio
+    updateBoardSelectionFromRatio(ratio, ratio, false)
+  })
+  waveCanvas?.addEventListener("mousemove", (event)=>{
+    if(remoteState.selectionDraft == null) return
+    const rect = waveCanvas.getBoundingClientRect()
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+    updateBoardSelectionFromRatio(remoteState.selectionDraft, ratio, false)
+  })
+  waveCanvas?.addEventListener("mouseup", (event)=>{
+    if(remoteState.selectionDraft == null) return
+    const rect = waveCanvas.getBoundingClientRect()
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+    updateBoardSelectionFromRatio(remoteState.selectionDraft, ratio, true)
+    remoteState.selectionDraft = null
+  })
+  waveCanvas?.addEventListener("mouseleave", ()=>{
+    if(remoteState.selectionDraft == null) return
+    const board = getBoard()
+    board.highlighted = true
+    remoteState.selectionDraft = null
+    renderBoard()
   })
   resetBoards("Fresh 3 motherboards ready. Upload a new .mp3 or .mp4 to begin quick remote editing.")
   renderThemeCards()

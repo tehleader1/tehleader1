@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-  <link rel="stylesheet" href="/static/style.v20260320h.css?v=20260413h">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260413i">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -1925,12 +1925,14 @@ body .float-launch-btn {
         <button class="btn ghost float-transport-btn" id="floatRewindBtn" title="Rewind" aria-label="Rewind">⏪</button>
         <button class="btn ghost float-transport-btn" id="floatPlayBtn" title="Play" aria-label="Play">▶</button>
         <button class="btn ghost float-transport-btn" id="floatPauseBtn" title="Pause" aria-label="Pause">⏸</button>
+        <button class="btn ghost float-transport-btn" id="floatStopBtn" title="Stop" aria-label="Stop">⏹</button>
         <button class="btn ghost float-transport-btn" id="floatRecordVoiceBtn" title="Record" aria-label="Record">⏺</button>
         <button class="btn ghost float-transport-btn" id="floatNextBtn" title="Next Board" aria-label="Next Board">⏭</button>
         <button class="btn ghost float-transport-btn" id="floatFastForwardBtn" title="Fast Forward" aria-label="Fast Forward">⏩</button>
       </div>
       <div class="float-mini-actions">
         <button class="btn ghost" id="floatInstrumentRecordBtn">Instrument → Record</button>
+        <button class="btn ghost" id="floatVideoRecordBtn">Video → Live Screen</button>
         <button class="btn ghost" id="floatGuitarBtn">Guitar Jacked In</button>
         <button class="btn ghost" id="floatSpeakerBtn">Responding On Speaker</button>
         <button class="btn ghost" id="floatGigSwitchBtn">Gig Studio Connecter</button>
@@ -1980,6 +1982,7 @@ body .float-launch-btn {
             <option value="cinema">Filter · Cinema</option>
             <option value="vivid">Filter · Vivid</option>
             <option value="mono">Filter · Mono</option>
+            <option value="wave-sweep">Filter · Wave Sweep</option>
           </select>
           <select id="floatGigPan" class="input">
             <option value="standard">Panoramic · Standard</option>
@@ -2289,7 +2292,7 @@ body .float-launch-btn {
   
   <script>
 (function(){
-  const BUILD = "20260413h";
+      const BUILD = "20260413i";
   const KEY = "sr_force_build";
   try {
     const last = localStorage.getItem(KEY);
@@ -2316,8 +2319,8 @@ body .float-launch-btn {
 })();
 </script>
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260413h"></script>
-<script src="/static/remote-rebuild.v20260408c.js?v=20260413h"></script>
+<script src="/static/app.v20260320h.js?v=20260413i"></script>
+<script src="/static/remote-rebuild.v20260408c.js?v=20260413i"></script>
 <footer class="launch-footer-links">
   <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>
