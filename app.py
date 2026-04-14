@@ -1702,6 +1702,114 @@ def init_voice_db():
         pass
 
 
+def init_diary_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS diary_sessions ("
+            "session_id TEXT PRIMARY KEY,"
+            "owner_email TEXT,"
+            "live_slug TEXT,"
+            "payload_json TEXT,"
+            "updated_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS diary_comments ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "session_id TEXT,"
+            "author_name TEXT,"
+            "comment_text TEXT,"
+            "comment_kind TEXT,"
+            "amount_label TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def load_diary_session_payload(session_id):
+    if not session_id:
+        return {}
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT payload_json FROM diary_sessions WHERE session_id = ? LIMIT 1", (session_id,))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return {}
+        return json.loads(row[0] or "{}")
+    except:
+        return {}
+
+
+def save_diary_session_payload(session_id, owner_email, live_slug, payload):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO diary_sessions (session_id, owner_email, live_slug, payload_json, updated_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(session_id) DO UPDATE SET owner_email=excluded.owner_email, live_slug=excluded.live_slug, payload_json=excluded.payload_json, updated_at=excluded.updated_at",
+            (session_id, owner_email or "guest", live_slug or "", json.dumps(payload, ensure_ascii=False), _studio_now()),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def append_diary_comment(session_id, author_name, comment_text, comment_kind="comment", amount_label=""):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO diary_comments (session_id, author_name, comment_text, comment_kind, amount_label, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (session_id, (author_name or "Guest")[:80], (comment_text or "")[:500], (comment_kind or "comment")[:40], (amount_label or "")[:40], _studio_now()),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def get_diary_comments(session_id, limit=25):
+    if not session_id:
+        return []
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT author_name, comment_text, comment_kind, amount_label, created_at FROM diary_comments WHERE session_id = ? ORDER BY id DESC LIMIT ?",
+            (session_id, max(1, min(50, int(limit)))),
+        )
+        rows = cur.fetchall() or []
+        conn.close()
+        return [
+            {
+                "author_name": row[0] or "Guest",
+                "comment_text": row[1] or "",
+                "comment_kind": row[2] or "comment",
+                "amount_label": row[3] or "",
+                "created_at": row[4] or "",
+            }
+            for row in reversed(rows)
+        ]
+    except:
+        return []
+
+
+def build_diary_live_slug(owner_email, payload=None):
+    payload = payload or {}
+    seed = (payload.get("display_name") or payload.get("username") or owner_email or "supportrd-live").strip().lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", seed).strip("-") or "supportrd-live"
+    return slug[:60]
+
+
 def load_voice_session_payload(session_id):
     if not session_id:
         return {}
@@ -4929,6 +5037,102 @@ def voice_session_history():
     }
 
 
+@app.route("/api/diary/session/bootstrap", methods=["POST"])
+def diary_session_bootstrap():
+    body = request.json if request.is_json else {}
+    owner_email = _studio_owner_email()
+    session_id = (body.get("session_id") or "").strip() or f"diary-{uuid.uuid4().hex}"
+    payload = load_diary_session_payload(session_id)
+    payload = {**payload}
+    payload["display_name"] = (body.get("display_name") or payload.get("display_name") or "").strip()
+    payload["username"] = (body.get("username") or payload.get("username") or "").strip()
+    payload["live_active"] = bool(body.get("live_active")) if "live_active" in body else bool(payload.get("live_active"))
+    payload["entry_text"] = payload.get("entry_text") or ""
+    payload["transcript"] = payload.get("transcript") or ""
+    payload["social_post"] = payload.get("social_post") or ""
+    payload["voice_session_id"] = (body.get("voice_session_id") or payload.get("voice_session_id") or "").strip()
+    live_slug = build_diary_live_slug(owner_email, payload)
+    payload["live_slug"] = live_slug
+    payload["session_id"] = session_id
+    payload["updated_at"] = _studio_now()
+    save_diary_session_payload(session_id, owner_email, live_slug, payload)
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "owner_email": owner_email,
+        "live_slug": live_slug,
+        "live_url": f"{request.host_url.rstrip('/')}/?diary-live={live_slug}",
+        "payload": payload,
+        "comments": get_diary_comments(session_id, limit=25),
+        "voice_history": get_recent_voice_turns(payload.get("voice_session_id"), limit=12),
+    }
+
+
+@app.route("/api/diary/session/save", methods=["POST"])
+def diary_session_save():
+    body = request.json if request.is_json else {}
+    session_id = (body.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    owner_email = _studio_owner_email()
+    payload = load_diary_session_payload(session_id)
+    payload = {**payload}
+    payload["entry_text"] = (body.get("entry_text") or payload.get("entry_text") or "")[:12000]
+    payload["transcript"] = (body.get("transcript") or payload.get("transcript") or "")[:12000]
+    payload["social_post"] = (body.get("social_post") or payload.get("social_post") or "")[:4000]
+    payload["live_active"] = bool(body.get("live_active")) if "live_active" in body else bool(payload.get("live_active"))
+    payload["voice_session_id"] = (body.get("voice_session_id") or payload.get("voice_session_id") or "").strip()
+    payload["display_name"] = (body.get("display_name") or payload.get("display_name") or "").strip()
+    payload["username"] = (body.get("username") or payload.get("username") or "").strip()
+    payload["updated_at"] = _studio_now()
+    live_slug = build_diary_live_slug(owner_email, payload)
+    payload["live_slug"] = live_slug
+    save_diary_session_payload(session_id, owner_email, live_slug, payload)
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "live_slug": live_slug,
+        "payload": payload,
+        "comments": get_diary_comments(session_id, limit=25),
+        "voice_history": get_recent_voice_turns(payload.get("voice_session_id"), limit=12),
+    }
+
+
+@app.route("/api/diary/session/feed")
+def diary_session_feed():
+    session_id = (request.args.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    payload = load_diary_session_payload(session_id)
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "payload": payload,
+        "comments": get_diary_comments(session_id, limit=25),
+        "voice_history": get_recent_voice_turns((payload or {}).get("voice_session_id"), limit=12),
+    }
+
+
+@app.route("/api/diary/comment", methods=["POST"])
+def diary_comment():
+    body = request.json if request.is_json else {}
+    session_id = (body.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    author_name = (body.get("author_name") or "Guest").strip()[:80]
+    comment_text = (body.get("comment_text") or "").strip()
+    if not comment_text:
+        return {"ok": False, "error": "comment_required"}, 400
+    comment_kind = (body.get("comment_kind") or "comment").strip().lower()[:40]
+    amount_label = (body.get("amount_label") or "").strip()[:40]
+    append_diary_comment(session_id, author_name, comment_text, comment_kind, amount_label)
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "comments": get_diary_comments(session_id, limit=25),
+    }
+
+
 #################################################
 # ARIA AI
 #################################################
@@ -5287,6 +5491,7 @@ init_app_settings_db()
 init_security_db()
 init_studio_db()
 init_voice_db()
+init_diary_db()
 set_setting("money_guard_enabled", "1")
 try:
     run_trade_bots()

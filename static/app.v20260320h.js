@@ -6866,6 +6866,10 @@ ${line}`
     history.unshift({ role, speaker, text: clean, at: new Date().toISOString(), entryMode: options.entryMode || "icon" })
     localStorage.setItem("supportrdDiaryVoiceTurns", JSON.stringify(history.slice(0, 30)))
     remoteState.lastDiaryVoiceTurn = line
+    queueDiaryApiSync({
+      voice_session_id: state.voiceSessions?.[getVoiceSessionKey(options.assistantId || state.activeAssistant || "aria", "diary")] || "",
+      live_active: !!remoteState.diaryLiveActive
+    })
   }
   window.recordDiaryVoiceTurn = recordDiaryVoiceTurn
   const diaryFaqBtn = qs("#floatDiaryFaqBtn")
@@ -9519,6 +9523,9 @@ ${line}`
     studioSaveTimer: null,
     handsfreeRecognition: null,
     handsfreeActive: false,
+    diarySessionId: localStorage.getItem("supportrdDiarySessionId") || "",
+    diaryFeedBootPromise: null,
+    diaryFeedSyncTimer: null,
     currentPanel: "floatSettingsBox",
     guideTimer: null,
       guideIndex: 0,
@@ -9946,6 +9953,126 @@ ${line}`
     localStorage.setItem("supportrd2faConfig", JSON.stringify(authConfig))
     localStorage.setItem("supportrdLastAuthAt", String(Date.now()))
   }
+  async function ensureDiarySessionBoot(force = false){
+    if(remoteState.diaryFeedBootPromise && !force) return remoteState.diaryFeedBootPromise
+    const ownerName = (state.socialLinks?.username || state.socialLinks?.name || "").trim()
+    remoteState.diaryFeedBootPromise = fetch("/api/diary/session/bootstrap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: remoteState.diarySessionId || "",
+        display_name: ownerName,
+        username: ownerName,
+        live_active: !!remoteState.diaryLiveActive,
+        voice_session_id: state.voiceSessions?.[getVoiceSessionKey(state.activeAssistant || "aria", "diary")] || ""
+      })
+    }).then(async (response)=>{
+      if(!response.ok) throw new Error("diary_bootstrap_failed")
+      const data = await response.json()
+      if(data?.session_id){
+        remoteState.diarySessionId = data.session_id
+        localStorage.setItem("supportrdDiarySessionId", data.session_id)
+      }
+      return data
+    }).catch(()=>null).finally(()=>{
+      remoteState.diaryFeedBootPromise = null
+    })
+    return remoteState.diaryFeedBootPromise
+  }
+
+  async function saveDiarySessionToApi(extra = {}){
+    const boot = await ensureDiarySessionBoot()
+    const sessionId = extra.session_id || remoteState.diarySessionId || boot?.session_id || ""
+    if(!sessionId) return null
+    const payload = {
+      session_id: sessionId,
+      entry_text: (qs("#floatDiaryInput")?.value || "").trim(),
+      transcript: (handsfreeTranscript?.value || "").trim(),
+      social_post: (diarySocialPost?.value || "").trim(),
+      live_active: !!remoteState.diaryLiveActive,
+      voice_session_id: state.voiceSessions?.[getVoiceSessionKey(state.activeAssistant || "aria", "diary")] || "",
+      display_name: (state.socialLinks?.username || state.socialLinks?.name || "").trim(),
+      username: (state.socialLinks?.username || state.socialLinks?.name || "").trim(),
+      ...extra
+    }
+    try{
+      const response = await fetch("/api/diary/session/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      if(!response.ok) throw new Error("diary_save_failed")
+      const data = await response.json()
+      if(data?.session_id){
+        remoteState.diarySessionId = data.session_id
+        localStorage.setItem("supportrdDiarySessionId", data.session_id)
+      }
+      return data
+    }catch{
+      return null
+    }
+  }
+
+  async function fetchDiaryFeed(){
+    const boot = await ensureDiarySessionBoot()
+    const sessionId = remoteState.diarySessionId || boot?.session_id || ""
+    if(!sessionId) return null
+    try{
+      const response = await fetch(`/api/diary/session/feed?session_id=${encodeURIComponent(sessionId)}`)
+      if(!response.ok) throw new Error("diary_feed_failed")
+      return await response.json()
+    }catch{
+      return null
+    }
+  }
+
+  function loadDiarySessionSlugFallback(){
+    const owner = (state.socialLinks?.username || state.socialLinks?.name || "supportrd-live").toLowerCase().replace(/\s+/g, "-")
+    return owner || "supportrd-live"
+  }
+
+  function renderDiaryApiFeed(feed){
+    if(!feed?.payload) return
+    const payload = feed.payload || {}
+    if(qs("#floatDiaryInput") && !qs("#floatDiaryInput").matches(":focus")){
+      qs("#floatDiaryInput").value = payload.entry_text || qs("#floatDiaryInput").value || ""
+    }
+    if(handsfreeTranscript && !handsfreeTranscript.matches(":focus")){
+      handsfreeTranscript.value = payload.transcript || handsfreeTranscript.value || ""
+    }
+    if(diarySocialPost && !diarySocialPost.matches(":focus")){
+      diarySocialPost.value = payload.social_post || diarySocialPost.value || ""
+    }
+    if(diaryLiveComments){
+      const comments = Array.isArray(feed.comments) ? feed.comments : []
+      diaryLiveComments.textContent = comments.length
+        ? comments.map((entry)=>{
+            const label = entry.comment_kind === "support"
+              ? `${entry.author_name} · ${entry.comment_text}${entry.amount_label ? ` ${entry.amount_label}` : ""}`
+              : `${entry.author_name}: ${entry.comment_text}`
+            return label
+          }).join("\n")
+        : "Live comments will appear here when the session starts."
+    }
+    if(diaryHistory && Array.isArray(feed.voice_history) && feed.voice_history.length){
+      diaryHistory.textContent = feed.voice_history.map((turn)=>{
+        const who = turn.speaker === "projake" ? "Jake" : turn.speaker === "aria" ? "Aria" : "You"
+        return `${who}: ${turn.text}`
+      }).join("\n")
+    }
+    if(diaryLiveStatus && payload.live_slug && remoteState.diaryLiveActive){
+      diaryLiveStatus.textContent = `Live mode is on. Session link: ${window.location.origin}/?diary-live=${encodeURIComponent(payload.live_slug)}`
+    }
+  }
+
+  function queueDiaryApiSync(extra = {}){
+    if(remoteState.diaryFeedSyncTimer) clearTimeout(remoteState.diaryFeedSyncTimer)
+    remoteState.diaryFeedSyncTimer = setTimeout(async ()=>{
+      const data = await saveDiarySessionToApi(extra)
+      if(data) renderDiaryApiFeed(data)
+    }, 260)
+  }
+
   function syncDiaryAndProfileExtras(){
     remoteState.diaryLiveActive = localStorage.getItem("supportrdDiaryLive") === "true" || !!remoteState.diaryLiveActive
     const diarySaved = JSON.parse(localStorage.getItem("supportrdDiaryEntry") || "{}")
@@ -9991,6 +10118,10 @@ ${line}`
       const entries = JSON.parse(localStorage.getItem("supportrdDiaryLiveComments") || "[]")
       diaryLiveComments.textContent = entries.length ? entries.join("\n") : "Live comments will appear here when the session starts."
     }
+    ensureDiarySessionBoot().then((data)=>{
+      if(data) renderDiaryApiFeed(data)
+      else return fetchDiaryFeed().then((feed)=>{ if(feed) renderDiaryApiFeed(feed) })
+    }).catch(()=>{})
     if(faqPromptSelect && !faqPromptSelect.dataset.boundInitial){
       faqPromptSelect.dataset.boundInitial = "true"
       faqPromptSelect.dispatchEvent(new Event("change"))
@@ -12185,6 +12316,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       savedAt: new Date().toISOString()
     }
     localStorage.setItem("supportrdDiaryEntry", JSON.stringify(payload))
+    queueDiaryApiSync()
     renderDiaryPagePreview(remoteState.diaryPageIndex || 0)
     if(settingsStatus) settingsStatus.textContent = text || transcript
       ? "Diary saved. Your latest thought and handsfree notes are preserved in Remote."
@@ -13130,6 +13262,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   diaryLiveBtn?.addEventListener("click", ()=>{
     remoteState.diaryLiveActive = !remoteState.diaryLiveActive
     localStorage.setItem("supportrdDiaryLive", remoteState.diaryLiveActive ? "true" : "false")
+    queueDiaryApiSync({ live_active: !!remoteState.diaryLiveActive })
     if(diaryLiveBtn) diaryLiveBtn.textContent = remoteState.diaryLiveActive ? "Turn Live Off" : "Live Session"
     if(remoteState.diaryLiveActive && navigator.mediaDevices?.getUserMedia && diaryLiveVideo){
       navigator.mediaDevices.getUserMedia({ video:true, audio:true }).then(stream=>{
@@ -13159,12 +13292,34 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     const comments = JSON.parse(localStorage.getItem("supportrdDiaryLiveComments") || "[]")
     comments.unshift(`Guest support · Heart sent at ${new Date().toLocaleTimeString()}`)
     localStorage.setItem("supportrdDiaryLiveComments", JSON.stringify(comments.slice(0, 25)))
+    ensureDiarySessionBoot().then(()=>fetch("/api/diary/comment", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        session_id: remoteState.diarySessionId || "",
+        author_name: "Guest support",
+        comment_text: "Heart sent",
+        comment_kind: "support",
+        amount_label: "heart"
+      })
+    }).then(r=>r.ok ? r.json() : null).then(data=>{ if(data){ renderDiaryApiFeed({ payload:{ live_slug: loadDiarySessionSlugFallback() }, comments:data.comments, voice_history:[] }) } }).catch(()=>{}))
     syncDiaryAndProfileExtras()
   })
   diaryLiveThumb?.addEventListener("click", ()=>{
     const comments = JSON.parse(localStorage.getItem("supportrdDiaryLiveComments") || "[]")
     comments.unshift(`Guest support · Thumbs up sent at ${new Date().toLocaleTimeString()}`)
     localStorage.setItem("supportrdDiaryLiveComments", JSON.stringify(comments.slice(0, 25)))
+    ensureDiarySessionBoot().then(()=>fetch("/api/diary/comment", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        session_id: remoteState.diarySessionId || "",
+        author_name: "Guest support",
+        comment_text: "Thumbs up sent",
+        comment_kind: "support",
+        amount_label: "thumb"
+      })
+    }).then(r=>r.ok ? r.json() : null).then(data=>{ if(data){ renderDiaryApiFeed({ payload:{ live_slug: loadDiarySessionSlugFallback() }, comments:data.comments, voice_history:[] }) } }).catch(()=>{}))
     syncDiaryAndProfileExtras()
   })
   diaryLiveCommentBtn?.addEventListener("click", ()=>{
@@ -13178,6 +13333,16 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     comments.unshift(`${guest}: ${comment}`)
     localStorage.setItem("supportrdDiaryLiveComments", JSON.stringify(comments.slice(0, 25)))
     if(diaryLiveComment) diaryLiveComment.value = ""
+    ensureDiarySessionBoot().then(()=>fetch("/api/diary/comment", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        session_id: remoteState.diarySessionId || "",
+        author_name: guest,
+        comment_text: comment,
+        comment_kind: "comment"
+      })
+    }).then(r=>r.ok ? r.json() : null).then(data=>{ if(data){ renderDiaryApiFeed({ payload:{ live_slug: loadDiarySessionSlugFallback() }, comments:data.comments, voice_history:[] }) } }).catch(()=>{}))
     syncDiaryAndProfileExtras()
   })
   handsfreeBtn?.addEventListener("click", toggleHandsfreeMode)
