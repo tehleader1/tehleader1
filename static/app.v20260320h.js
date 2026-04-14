@@ -607,6 +607,8 @@ function ensureAssistantPixelRail(){
     }
   })
   document.body.appendChild(rail)
+  setAssistantPixelState("aria", voiceSessionRuntime.pixelState.aria)
+  setAssistantPixelState("projake", voiceSessionRuntime.pixelState.projake)
   return rail
 }
 
@@ -6490,7 +6492,7 @@ function setupStudioMode(){
   const blogBtn = qs("#studioBlogBtn")
   let studioBootTimer = null
   if(!shell) return
-  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260414c"
+  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260414d"
 
   const promptStudioLogin = ()=>{
     if(typeof window.openLoginGateSticky === "function"){
@@ -7790,6 +7792,7 @@ function setupFloatMode(){
         liveTranscript: "",
         anchorSelector: getAssistantAnchorSelector(route)
       })
+      try{ toast?.(`${assistantName} is going live.`) }catch{}
       showSpeechPopup(assistantName, greetingLine)
       try{
         playAssistantCue("intro")
@@ -7805,6 +7808,11 @@ function setupFloatMode(){
         window.startAriaListening({ assistantId, assistantName, thinkDelay: thinkDelayMs })
       }else if(typeof startOpenAIListening === "function"){
         startOpenAIListening({ assistantId, assistantName, thinkDelay: thinkDelayMs })
+      }else{
+        const fallbackText = `${assistantName} opened, but the live mic engine is still missing on this browser.`
+        setAssistantPixelState(assistantId, { stage:"idle", text:fallbackText, mode: boot?.mode || "greeting" })
+        showSpeechPopup(assistantName, fallbackText)
+        try{ openMiniWindow("Assistant Live", fallbackText) }catch{}
       }
       showSpeechPopup(assistantName, `${help.listening} Speak now.`)
     }
@@ -7825,6 +7833,23 @@ function setupFloatMode(){
       document.addEventListener("click", handle, true)
       document.addEventListener("pointerup", handle, true)
       document.addEventListener("touchend", handle, { capture:true, passive:false })
+      const bindDirect = (node, assistantId)=>{
+        if(!node || node.dataset.liveBound === "true") return
+        node.dataset.liveBound = "true"
+        const directHandler = (event)=>launchAssistantLiveSession(assistantId, event)
+        node.addEventListener("click", directHandler)
+        node.addEventListener("pointerup", directHandler)
+        node.addEventListener("touchend", directHandler, { passive:false })
+        node.addEventListener("keydown", (event)=>{
+          if(event.key === "Enter" || event.key === " "){
+            launchAssistantLiveSession(assistantId, event)
+          }
+        })
+      }
+      bindDirect(assistantAriaOrb, "aria")
+      bindDirect(assistantJakeOrb, "projake")
+      bindDirect(guardianAriaBtn, "aria")
+      bindDirect(guardianJakeBtn, "projake")
     }
     bindAssistantLiveInterceptor()
     handleAssistantHover(assistantAriaOrb, "aria")

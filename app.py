@@ -3829,7 +3829,7 @@ def studio_jake_enter():
         "subscription": plan,
         "assistant": "projake",
         "assistant_title": "Jake Studio Specialist",
-        "studio_url": "/static/studio/index.html?v=20260414c",
+        "studio_url": "/static/studio/index.html?v=20260414d",
         "message": "Jake Premium Studio is live and logged in cleanly.",
     }
 
