@@ -9639,6 +9639,7 @@ ${line}`
         cloud: "watch"
       },
       buttonHealth: [],
+      dependencyHealth: [],
       seoEntries: [],
       layersLoaded: false,
       lastScanAt: 0,
@@ -9678,18 +9679,18 @@ ${line}`
         },
         studio: {
           panelLabel: "Studio Quick Panel",
-          anchors: ["#floatQuickEditStatus", "#floatRecordVoiceBtn", "#floatPauseRecordBtn", "#floatStopRecordBtn", "#studioModeFrame"],
-          controls: ["#floatRecordVoiceBtn", "#floatPauseRecordBtn", "#floatStopRecordBtn", "#floatRecordVideoBtn", "#fxPreset", "#gigFilter"]
+          anchors: ["#floatQuickEditStatus", "#floatRecordVoiceBtn", "#floatPauseBtn", "#floatStopBtn", "#studioModeFrame"],
+          controls: ["#floatRecordVoiceBtn", "#floatPauseBtn", "#floatStopBtn", "#floatVideoRecordBtn", "#floatFxBtn", "#floatStudioLiveBtn"]
         },
         settings: {
           panelLabel: "Configuration",
-          anchors: ["#floatProfileBox", "#fullSettingsBtn", "#settingsPushBtn"],
-          controls: ["#fullSettingsBtn", "#settingsPushBtn", "#settingsPasswordBtn", "#settingsGoogleLoginBtn", "#settingsAppleLoginBtn"]
+          anchors: ["#floatProfileBox", "#floatSettingsOpenBtn", "#floatSettingsPushBtn"],
+          controls: ["#floatSettingsOpenBtn", "#floatSettingsPushBtn", "#floatConfigPush", "#floatProfileAccessRefreshBtn", "#floatProfile2faSaveBtn"]
         },
         profile: {
           panelLabel: "Profile",
-          anchors: ["#floatAssistantBox", "#startHairScan", "#profileImage"],
-          controls: ["#startHairScan", "#profileSaveBtn", "#profileGenerateBtn", "#profileVerifyBtn"]
+          anchors: ["#floatAssistantBox", "#floatRunProfileScanBtn", "#floatProfileHero"],
+          controls: ["#floatRunProfileScanBtn", "#floatProfileSaveBtn", "#floatProfileAccessRefreshBtn", "#floatProfileExportPdfBtn", "#floatProfileExportDocxBtn"]
         },
         payments: {
           panelLabel: "Payments",
@@ -9703,14 +9704,52 @@ ${line}`
         },
         faq: {
           panelLabel: "FAQ Lounge",
-          anchors: ["#floatFaqReelHost", "#faqSearchInput"],
-          controls: ["#faqSearchInput", "#faqNextBtn", "#faqSeeMoreBtn", "#faqReelSubjectBtn"]
+          anchors: ["#floatFaqReelHost", "#floatFaqPromptSelect"],
+          controls: ["#floatFaqReelBtn", "#floatFaqPaymentBtn", "#floatFaqPromptSelect", "[data-faq-theme]"]
         },
         official: {
           panelLabel: "Official SupportRD",
           anchors: ["#floatFooterOfficial", "#floatFooterOfficialBottom"],
           controls: ["#floatFooterOfficial", "#floatFooterOfficialBottom", "#floatFooterBlog", "#floatFooterSubscribe"]
         }
+      }
+    }
+    const SUPPORT_RD_ROUTE_DEPENDENCIES = {
+      diary: {
+        "#floatDiaryRecordBtn": "Diary mic lane + website voice controller must both be armed.",
+        "#floatHandsfreeBtn": "Hands-Free depends on microphone permission and the persistent voice loop.",
+        "#diaryLiveToggle": "Live toggle depends on the diary feed session being booted first.",
+        "#floatDiaryTagInput": "The ^^ tag lane depends on Diary API save routes and account identity.",
+        "#remoteDiaryLobby": "Diary Lobby depends on the public lobby feed and movement reader APIs.",
+        "#diaryLiveFastPay": "Feed support depends on Shopify donate/support routing."
+      },
+      studio: {
+        "#floatRecordVoiceBtn": "Studio record needs microphone permission and the motherboard recorder lane.",
+        "#floatPauseBtn": "Pause only goes live once a recording or playback session is active.",
+        "#floatStopBtn": "Stop depends on an active preview or recorder session.",
+        "#floatVideoRecordBtn": "Video record needs camera permission and the studio session lane.",
+        "#floatFxBtn": "FX Change depends on a loaded motherboard clip.",
+        "#floatStudioLiveBtn": "Full Studio Live depends on the premium Jake studio gate and iframe session."
+      },
+      settings: {
+        "#floatSettingsOpenBtn": "Full settings opens the deeper account lane and trail-link editor.",
+        "#floatSettingsPushBtn": "Push needs browser notification permission and phone-ready account settings.",
+        "#floatConfigPush": "This switch depends on the same browser/device notification permission.",
+        "#floatProfileAccessRefreshBtn": "Scanner refresh depends on the profile access-scanner API.",
+        "#floatProfile2faSaveBtn": "2-step save depends on account identity and stored profile credentials."
+      },
+      profile: {
+        "#floatRunProfileScanBtn": "Hair Scan needs camera permission before the profile scanner can run.",
+        "#floatProfileSaveBtn": "Profile save depends on an authenticated or owner-ready SupportRD lane.",
+        "#floatProfileAccessRefreshBtn": "Access Scanner depends on the profile scanner API and system-map layer.",
+        "#floatProfileExportPdfBtn": "PDF export depends on a saved hair analysis payload and export API.",
+        "#floatProfileExportDocxBtn": "DOCX export depends on a saved hair analysis payload and export API."
+      },
+      faq: {
+        "#floatFaqReelBtn": "The TV reel needs the reel frame loaded before refresh can do real work.",
+        "#floatFaqPaymentBtn": "FAQ Fast Pay depends on the Shopify payment lane.",
+        "#floatFaqPromptSelect": "Prompt answers depend on the SupportRD FAQ answer deck being loaded.",
+        "[data-faq-theme]": "Theme chips depend on the embedded reel taking the new theme."
       }
     }
     window.getSupportRDSystemMap = ()=>JSON.parse(JSON.stringify(SUPPORT_RD_SYSTEM_MAP))
@@ -9748,8 +9787,8 @@ ${line}`
       const routeAnchors = {
         studio: "#floatRecordVoiceBtn",
         diary: "#floatDiaryRecordBtn",
-        profile: "#startHairScan",
-        settings: "#fullSettingsBtn",
+        profile: "#floatRunProfileScanBtn",
+        settings: "#floatSettingsOpenBtn",
         payments: "[data-open-fastpay], #openFastPayBtn, #checkoutPremiumBtn",
         map: "#floatThemeCardRail",
         faq: "#floatFaqReelHost"
@@ -9795,6 +9834,7 @@ ${line}`
 
     function getScannerButtonHealth(route = assistantTrackerState.route || remoteState.currentRoute || "home"){
       const config = SUPPORT_RD_SYSTEM_MAP.routes[route] || SUPPORT_RD_SYSTEM_MAP.routes.home
+      const dependencyMap = SUPPORT_RD_ROUTE_DEPENDENCIES[route] || {}
       return (config.controls || []).slice(0, 6).map((selector)=>{
         const node = qs(selector)
         const live = !!node && isVisibleScannerNode(node)
@@ -9802,7 +9842,8 @@ ${line}`
         return {
           selector,
           label: text || selector,
-          live
+          live,
+          dependency: dependencyMap[selector] || "SupportRD is still watching the dependency chain for this control."
         }
       })
     }
@@ -9832,6 +9873,7 @@ ${line}`
       assistantScannerState.visibleAnchors = visibleAnchors
       assistantScannerState.liveButtons = visibleControls.slice(0, 3)
       assistantScannerState.buttonHealth = getScannerButtonHealth(route)
+      assistantScannerState.dependencyHealth = assistantScannerState.buttonHealth.filter((entry)=>!entry.live).slice(0, 3)
       assistantScannerState.liveZone = visibleAnchors[0] || visibleControls[0] || assistantScannerState.liveZone || "Remote hero"
       if(!assistantScannerState.intentLabel) assistantScannerState.intentLabel = hotIntent
     }
@@ -9971,6 +10013,10 @@ ${line}`
               <span>Button Health</span>
               <strong data-track="buttonHealth">Waiting for route button health.</strong>
             </div>
+            <div class="assistant-scanner-list">
+              <span>Dependency Check</span>
+              <strong data-track="dependencyHealth">Watching for the first dead-button dependency report.</strong>
+            </div>
             <div class="assistant-scanner-actions">
               <button class="assistant-scanner-toggle" type="button" id="assistantMapOverlayToggle">Open Map</button>
             </div>
@@ -10029,6 +10075,7 @@ ${line}`
             <div class="assistant-map-line"><span>Zone</span><strong data-map-track="zone">Remote hero</strong></div>
             <div class="assistant-map-line"><span>Intent</span><strong data-map-track="intent">Remote home ready</strong></div>
             <div class="assistant-map-line"><span>Buttons</span><strong data-map-track="buttons">Watching</strong></div>
+            <div class="assistant-map-line"><span>Dependencies</span><strong data-map-track="dependencies">Watching</strong></div>
           </div>
         </div>
       `
@@ -10051,7 +10098,8 @@ ${line}`
         route: getAssistantTrackerRouteLabel(route),
         zone: assistantScannerState.liveZone || "Remote hero",
         intent: assistantScannerState.intentLabel || "Remote home ready",
-        buttons: assistantScannerState.buttonHealth.map((entry)=>`${entry.live ? "live" : "dead"} ${entry.label}`).join(" · ") || "Watching"
+        buttons: assistantScannerState.buttonHealth.map((entry)=>`${entry.live ? "live" : "dead"} ${entry.label}`).join(" · ") || "Watching",
+        dependencies: assistantScannerState.dependencyHealth.map((entry)=>`${entry.label}: ${entry.dependency}`).join(" · ") || "All tracked controls are currently live."
       }
       Object.entries(mappings).forEach(([key, value])=>{
         const node = assistantMapOverlay.querySelector(`[data-map-track="${key}"]`)
@@ -10107,6 +10155,7 @@ ${line}`
         visibleControls: assistantScannerState.visibleControls.join(" · ") || "Waiting for route controls.",
         visibleAnchors: assistantScannerState.visibleAnchors.join(" · ") || "Waiting for assistant anchors.",
         buttonHealth: assistantScannerState.buttonHealth.map((entry)=>`${entry.live ? "live" : "dead"} ${entry.label}`).join(" · ") || "Waiting for route button health.",
+        dependencyHealth: assistantScannerState.dependencyHealth.map((entry)=>`${entry.label}: ${entry.dependency}`).join(" · ") || "All tracked controls are currently live.",
         layerSummary,
         seoRoutes,
         layersLoaded: assistantScannerState.layersLoaded ? "Live" : "Watching"
@@ -13204,8 +13253,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       return
     }
     remoteState.handsfreeActive = true
-    if(typeof window.startSupportRDVoiceMode === "function"){
-      window.startSupportRDVoiceMode("handsfree", {
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("handsfree", {
         assistantId: state.activeAssistant || "aria",
         route: "diary"
       })
@@ -14062,8 +14111,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   qs("#floatDiaryRecordBtn")?.addEventListener("click", ()=>{
     const diary = (qs("#floatDiaryInput")?.value || "").trim()
     renderDiaryPagePreview(remoteState.diaryPageIndex || 0)
-    if(typeof window.startSupportRDVoiceMode === "function"){
-      window.startSupportRDVoiceMode("diary", {
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("diary", {
         assistantId: state.activeAssistant || "aria",
         route: "diary"
       })
@@ -14266,8 +14315,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }catch{}
   }, 280)
   handsfreeBtn?.addEventListener("click", toggleHandsfreeMode)
-  diaryAriaFixed?.addEventListener("click", ()=>window.startSupportRDVoiceMode ? window.startSupportRDVoiceMode("diary", { assistantId:"aria", route:"diary" }) : qs("#floatAriaBtn")?.click())
-  diaryJakeFixed?.addEventListener("click", ()=>window.startSupportRDVoiceMode ? window.startSupportRDVoiceMode("diary", { assistantId:"projake", route:"diary" }) : qs("#floatJakeBtn")?.click())
+  diaryAriaFixed?.addEventListener("click", ()=>window.activateSupportRDWebsiteVoice ? window.activateSupportRDWebsiteVoice("diary", { assistantId:"aria", route:"diary" }) : qs("#floatAriaBtn")?.click())
+  diaryJakeFixed?.addEventListener("click", ()=>window.activateSupportRDWebsiteVoice ? window.activateSupportRDWebsiteVoice("diary", { assistantId:"projake", route:"diary" }) : qs("#floatJakeBtn")?.click())
   faqReelBtn?.addEventListener("click", ()=>{
     if(faqReelFrame){
       faqReelFrame.src = faqReelFrame.src.split("&theme=")[0] + `&theme=${shell?.dataset?.faqTheme || "tiktok"}&refresh=${Date.now()}`
@@ -15419,6 +15468,30 @@ function setupAria(){
     }
   }
 
+  async function activateSupportRDWebsiteVoice(entryMode = "icon", options = {}){
+    const assistantId = options.assistantId || state.activeAssistant || "aria"
+    const route = options.route || remoteState?.currentRoute || (entryMode === "diary" || entryMode === "handsfree" ? "diary" : "home")
+    const assistantName = getAssistantDisplayName(assistantId)
+    registerRemoteIntent(`voice:${entryMode}`, `${assistantName} ${entryMode} voice`, {
+      x: options.x || (window.innerWidth / 2),
+      y: options.y || Math.max(140, window.innerHeight * 0.24)
+    }, route)
+    updateAssistantTracker({
+      activeAssistant: assistantId,
+      route,
+      focusLabel: getAssistantTrackerFocusLabel(route, assistantId),
+      voiceState: "arming",
+      voiceText: `${assistantName} is arming the website voice lane.`,
+      anchorSelector: getAssistantAnchorSelector(route)
+    })
+    refreshSupportRDScannerState(true)
+    return startSupportRDVoiceMode(entryMode, {
+      ...options,
+      assistantId,
+      route
+    })
+  }
+
   async function startSupportRDVoiceMode(entryMode = "icon", options = {}){
     const now = Date.now()
     if(now - (unifiedVoiceController.lastTriggerAt || 0) < 420){
@@ -15443,7 +15516,13 @@ function setupAria(){
     remoteState.handsfreeActive = !!modeProfile.persistentMic
     syncHandsFree()
     if(entryMode === "diary"){
-      try{ focusFloatSection("floatDiaryBox") }catch{}
+      try{ focusFloatSection("floatSettingsBox") }catch{}
+    }else if(route === "studio"){
+      try{ focusFloatSection("floatBoardsBox") }catch{}
+    }else if(route === "settings"){
+      try{ focusFloatSection("floatProfileBox") }catch{}
+    }else if(route === "profile"){
+      try{ focusFloatSection("floatAssistantBox") }catch{}
     }
     let boot = null
     try{
@@ -15528,9 +15607,10 @@ function setupAria(){
     syncHandsFree()
     handsBtn.addEventListener("click", ()=>{
       if(handsFreeMode) stopSupportRDVoiceMode("handsfree_toggle")
-      else startSupportRDVoiceMode("handsfree", { assistantId: state.activeAssistant || "aria", route: "diary" })
+      else activateSupportRDWebsiteVoice("handsfree", { assistantId: state.activeAssistant || "aria", route: "diary" })
     })
   }
+  window.activateSupportRDWebsiteVoice = activateSupportRDWebsiteVoice
   window.startSupportRDVoiceMode = startSupportRDVoiceMode
   window.stopSupportRDVoiceMode = stopSupportRDVoiceMode
 

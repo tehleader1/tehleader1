@@ -205,6 +205,38 @@ body.studio-api-locked .studio-page > :not(.studio-access-gate){
   font-size:15px;
   line-height:1.4;
 }
+.studio-website-voice{
+  display:grid;
+  gap:18px;
+  margin-bottom:14px;
+  background:
+    radial-gradient(circle at bottom left, rgba(113,199,255,.14), transparent 36%),
+    linear-gradient(135deg, rgba(9,21,36,.96), rgba(13,33,58,.92));
+  border:1px solid rgba(113,199,255,.2);
+}
+.studio-voice-mode-grid{
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
+}
+.voice-mode-card{
+  display:grid;
+  gap:8px;
+  padding:16px;
+  border-radius:18px;
+  background:rgba(7,17,29,.62);
+  border:1px solid rgba(113,199,255,.16);
+}
+.voice-mode-card span{
+  color:var(--green);
+  font-size:12px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.voice-mode-card strong{
+  font-size:15px;
+  line-height:1.45;
+}
 .command-card{
   display:grid;
   gap:8px;
@@ -239,6 +271,11 @@ body.studio-api-locked .studio-page > :not(.studio-access-gate){
 .competition-world-studio .studio-world-copy p{margin:0;color:var(--muted);max-width:760px;line-height:1.55}
 .competition-world-studio .studio-world-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
 .competition-world-studio .studio-world-pills span{display:inline-flex;align-items:center;padding:9px 12px;border-radius:999px;background:linear-gradient(180deg, rgba(255,255,255,.13), rgba(104,135,188,.18));border:1px solid rgba(132,180,247,.24);color:#eaf4ff;font-size:12px;letter-spacing:.05em}
+@media (max-width: 920px){
+  .studio-api-masthead{
+    grid-template-columns:1fr;
+  }
+}
 .studio-jake-orb{
   position:fixed;
   top:24px;
