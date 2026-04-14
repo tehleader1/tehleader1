@@ -48,6 +48,7 @@ SHOPIFY_BLOG_ID = os.environ.get("SHOPIFY_BLOG_ID", "")
 SHOPIFY_WEBHOOK_SECRET = os.environ.get("SHOPIFY_WEBHOOK_SECRET", "")
 SHOPIFY_PLAN_VARIANT_MAP_JSON = os.environ.get("SHOPIFY_PLAN_VARIANT_MAP_JSON", "")
 SHOPIFY_PLAN_SKU_MAP_JSON = os.environ.get("SHOPIFY_PLAN_SKU_MAP_JSON", "")
+STUDIO_STORAGE_DIR = os.environ.get("STUDIO_STORAGE_DIR", os.path.join(app.root_path, "studio_data"))
 
 def normalize_shopify_store_domain(raw_store):
     value = (raw_store or "").strip()
@@ -1531,10 +1532,111 @@ def init_studio_db():
             "updated_at TEXT"
             ")"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS studio_board_actions ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "session_id TEXT,"
+            "board_index INTEGER,"
+            "action_type TEXT,"
+            "payload_json TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS studio_exports ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "session_id TEXT,"
+            "board_index INTEGER,"
+            "destination TEXT,"
+            "payload_json TEXT,"
+            "created_at TEXT"
+            ")"
+        )
         conn.commit()
         conn.close()
     except:
         pass
+
+def _studio_now():
+    return datetime.utcnow().isoformat() + "Z"
+
+def _studio_owner_email():
+    try:
+        user = session.get("user") or {}
+        email = (user.get("email") or "").strip().lower()
+        if email:
+            return email
+    except:
+        pass
+    return "guest"
+
+def _studio_plan_for_email(email):
+    plan = get_subscription_for_email((email or "").strip().lower()) if email and email != "guest" else "free"
+    tier = "free"
+    if plan in ("premium", "bingo100", "family200", "fantasy300", "fantasy600"):
+        tier = "premium"
+    elif plan == "pro":
+        tier = "pro"
+    return plan, tier
+
+def _studio_safe_payload(payload):
+    if isinstance(payload, dict):
+        out = {}
+        for key, value in payload.items():
+            clean_key = str(key)[:80]
+            if clean_key in ("file", "blob", "srcObject", "rawBytes"):
+                continue
+            out[clean_key] = _studio_safe_payload(value)
+        return out
+    if isinstance(payload, list):
+        return [_studio_safe_payload(item) for item in payload[:50]]
+    if isinstance(payload, (str, int, float, bool)) or payload is None:
+        if isinstance(payload, str):
+            return payload[:12000]
+        return payload
+    return str(payload)[:1200]
+
+def _studio_load_session_payload(session_id):
+    conn = sqlite3.connect(CREDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute("SELECT payload_json FROM studio_sessions WHERE session_id = ? LIMIT 1", (session_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return {}
+    try:
+        return json.loads(row[0] or "{}")
+    except:
+        return {}
+
+def _studio_upsert_session(session_id, owner_email, payload):
+    payload_json = json.dumps(_studio_safe_payload(payload or {}), ensure_ascii=False)
+    conn = sqlite3.connect(CREDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO studio_sessions (session_id, owner_email, payload_json, updated_at) "
+        "VALUES (?, ?, ?, ?) "
+        "ON CONFLICT(session_id) DO UPDATE SET owner_email=excluded.owner_email, payload_json=excluded.payload_json, updated_at=excluded.updated_at",
+        (session_id, owner_email, payload_json, _studio_now()),
+    )
+    conn.commit()
+    conn.close()
+
+def _studio_append_action(session_id, board_index, action_type, payload):
+    conn = sqlite3.connect(CREDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO studio_board_actions (session_id, board_index, action_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (
+            session_id,
+            int(board_index or 0),
+            (action_type or "update")[:40],
+            json.dumps(_studio_safe_payload(payload or {}), ensure_ascii=False),
+            _studio_now(),
+        ),
+    )
+    conn.commit()
+    conn.close()
 
 def _studio_echo_suggestions(transcript, duration_sec):
     txt = (transcript or "").strip()
@@ -3402,6 +3504,179 @@ def studio_session_load():
         return {"ok": True, "session_id": session_id, "payload": payload, "updated_at": row[1]}
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}, 500
+
+@app.route("/api/studio/session/bootstrap", methods=["POST"])
+def studio_session_bootstrap():
+    data = request.json or {}
+    session_id = (data.get("session_id") or f"SES-{uuid.uuid4().hex[:10].upper()}").strip()[:40]
+    owner_email = _studio_owner_email()
+    plan, tier = _studio_plan_for_email(owner_email)
+    payload = _studio_load_session_payload(session_id)
+    if not payload:
+        payload = {
+            "session_id": session_id,
+            "owner_email": owner_email,
+            "plan": plan,
+            "tier": tier,
+            "route": (data.get("route") or "studio").strip()[:40],
+            "boards": [],
+            "updated_at": _studio_now(),
+        }
+        _studio_upsert_session(session_id, owner_email, payload)
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "owner_email": owner_email,
+        "plan": plan,
+        "tier": tier,
+        "payload": payload,
+    }
+
+@app.route("/api/studio/board/commit", methods=["POST"])
+def studio_board_commit():
+    data = request.json or {}
+    session_id = (data.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    board_index = int(data.get("board_index") or 0)
+    board = _studio_safe_payload(data.get("board") or {})
+    payload = _studio_load_session_payload(session_id)
+    boards = payload.get("boards") or []
+    while len(boards) <= board_index:
+        boards.append({})
+    boards[board_index] = board
+    payload["boards"] = boards
+    payload["updated_at"] = _studio_now()
+    payload["active_board"] = int(data.get("active_board") or board_index)
+    owner_email = _studio_owner_email()
+    _studio_upsert_session(session_id, owner_email, payload)
+    _studio_append_action(session_id, board_index, data.get("action_type") or "commit", {
+        "board_name": board.get("name"),
+        "kind": board.get("kind"),
+        "file_name": board.get("fileName"),
+        "highlighted": board.get("highlighted"),
+        "trimStart": board.get("trimStart"),
+        "trimEnd": board.get("trimEnd"),
+        "fx": board.get("fxPreset"),
+        "video_filter": board.get("gigFilter"),
+    })
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "board_index": board_index,
+        "saved_at": payload["updated_at"],
+    }
+
+@app.route("/api/studio/trim", methods=["POST"])
+def studio_trim():
+    data = request.json or {}
+    session_id = (data.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    board_index = int(data.get("board_index") or 0)
+    start = max(0, min(99, int(float(data.get("trim_start") or 0))))
+    end = max(start + 1, min(100, int(float(data.get("trim_end") or 100))))
+    payload = _studio_load_session_payload(session_id)
+    boards = payload.get("boards") or []
+    while len(boards) <= board_index:
+        boards.append({})
+    board = boards[board_index] or {}
+    board["trimStart"] = start
+    board["trimEnd"] = end
+    board["highlighted"] = bool(data.get("highlighted", True))
+    boards[board_index] = board
+    payload["boards"] = boards
+    payload["updated_at"] = _studio_now()
+    _studio_upsert_session(session_id, _studio_owner_email(), payload)
+    _studio_append_action(session_id, board_index, "trim", {"trimStart": start, "trimEnd": end, "highlighted": board["highlighted"]})
+    return {"ok": True, "session_id": session_id, "board_index": board_index, "trim_start": start, "trim_end": end}
+
+@app.route("/api/studio/fx/apply", methods=["POST"])
+def studio_fx_apply():
+    data = request.json or {}
+    session_id = (data.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    board_index = int(data.get("board_index") or 0)
+    payload = _studio_load_session_payload(session_id)
+    boards = payload.get("boards") or []
+    while len(boards) <= board_index:
+        boards.append({})
+    board = boards[board_index] or {}
+    fx_patch = {
+        "fxPreset": (data.get("fxPreset") or board.get("fxPreset") or "clean")[:40],
+        "gigFilter": (data.get("gigFilter") or board.get("gigFilter") or "natural")[:40],
+        "gigPan": (data.get("gigPan") or board.get("gigPan") or "standard")[:40],
+        "gigFrameRate": (data.get("gigFrameRate") or board.get("gigFrameRate") or "24")[:20],
+        "gigZoom": (data.get("gigZoom") or board.get("gigZoom") or "1x")[:20],
+        "gigSlowMotion": (data.get("gigSlowMotion") or board.get("gigSlowMotion") or "off")[:20],
+        "fxAppliedRange": (data.get("fxAppliedRange") or board.get("fxAppliedRange") or "")[:240],
+    }
+    board.update(fx_patch)
+    boards[board_index] = board
+    payload["boards"] = boards
+    payload["updated_at"] = _studio_now()
+    _studio_upsert_session(session_id, _studio_owner_email(), payload)
+    _studio_append_action(session_id, board_index, "fx", fx_patch)
+    return {"ok": True, "session_id": session_id, "board_index": board_index, "fx": fx_patch}
+
+@app.route("/api/studio/export", methods=["POST"])
+def studio_export():
+    data = request.json or {}
+    session_id = (data.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    board_index = int(data.get("board_index") or 0)
+    destination = (data.get("destination") or "Main Studio").strip()[:60]
+    payload = _studio_load_session_payload(session_id)
+    boards = payload.get("boards") or []
+    board = boards[board_index] if len(boards) > board_index else {}
+    summary = {
+        "board_name": board.get("name") or f"Motherboard {board_index + 1}",
+        "file_name": board.get("fileName") or "",
+        "kind": board.get("kind") or "empty",
+        "trimStart": board.get("trimStart"),
+        "trimEnd": board.get("trimEnd"),
+        "destination": destination,
+    }
+    conn = sqlite3.connect(CREDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO studio_exports (session_id, board_index, destination, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (session_id, board_index, destination, json.dumps(summary, ensure_ascii=False), _studio_now()),
+    )
+    conn.commit()
+    conn.close()
+    _studio_append_action(session_id, board_index, "export", summary)
+    return {"ok": True, "session_id": session_id, "board_index": board_index, "destination": destination, "summary": summary}
+
+@app.route("/api/studio/session/history")
+def studio_session_history():
+    session_id = (request.args.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    limit = max(1, min(60, int(request.args.get("limit") or 20)))
+    conn = sqlite3.connect(CREDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT board_index, action_type, payload_json, created_at FROM studio_board_actions WHERE session_id = ? ORDER BY id DESC LIMIT ?",
+        (session_id, limit),
+    )
+    rows = cur.fetchall() or []
+    conn.close()
+    history = []
+    for board_index, action_type, payload_json, created_at in rows:
+        try:
+            payload = json.loads(payload_json or "{}")
+        except:
+            payload = {}
+        history.append({
+            "board_index": board_index,
+            "action_type": action_type,
+            "payload": payload,
+            "created_at": created_at,
+        })
+    return {"ok": True, "session_id": session_id, "history": history}
 
 @app.route("/webhooks/shopify/orders-paid", methods=["POST"])
 def shopify_orders_paid_webhook():

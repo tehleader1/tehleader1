@@ -7982,6 +7982,159 @@ function setupFloatMode(){
         : `${board.name} is live with ${board.fileName || board.kind}. Press play, rewind, FX, or export to keep building.`
     }
   }
+  function getSerializableStudioBoard(board){
+    if(!board) return {}
+    return {
+      id: board.id || "",
+      name: board.name || "",
+      kind: board.kind || "empty",
+      fileName: board.fileName || "",
+      fileType: board.fileType || "",
+      trimStart: Number(board.trimStart ?? 10),
+      trimEnd: Number(board.trimEnd ?? 90),
+      highlighted: !!board.highlighted,
+      exported: board.exported || "",
+      duration: Number(board.duration || 0),
+      instrument: board.instrument || "voice",
+      fxPreset: board.fxPreset || "clean",
+      gigFilter: board.gigFilter || "natural",
+      gigPan: board.gigPan || "standard",
+      gigFrameRate: board.gigFrameRate || "24",
+      gigZoom: board.gigZoom || "1x",
+      gigSlowMotion: board.gigSlowMotion || "off",
+      fxAppliedRange: board.fxAppliedRange || "",
+      waveformData: Array.isArray(board.waveformData) ? board.waveformData.slice(0, 128) : [],
+      objectUrl: board.kind === "video" ? (board.objectUrl || "") : ""
+    }
+  }
+  function buildStudioSessionPayload(){
+    return {
+      session_id: remoteState.studioSessionId || "",
+      route: remoteState.currentRoute || "studio",
+      active_board: remoteState.activeBoard,
+      mode: remoteState.mode,
+      boards: remoteState.boards.map(getSerializableStudioBoard),
+      updated_from: "remote-quick-studio"
+    }
+  }
+  async function ensureStudioSession(){
+    if(remoteState.studioSessionId) return remoteState.studioSessionId
+    if(remoteState.studioSessionBootPromise) return remoteState.studioSessionBootPromise
+    remoteState.studioSessionBootPromise = fetch("/api/studio/session/bootstrap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: remoteState.studioSessionId || "",
+        route: remoteState.currentRoute || "studio"
+      })
+    }).then(r=>r.json()).then(data=>{
+      if(data?.ok && data.session_id){
+        remoteState.studioSessionId = data.session_id
+        localStorage.setItem("supportrdStudioSessionId", data.session_id)
+        return data.session_id
+      }
+      throw new Error(data?.error || "studio_session_bootstrap_failed")
+    }).catch(()=>{
+      return ""
+    }).finally(()=>{
+      remoteState.studioSessionBootPromise = null
+    })
+    return remoteState.studioSessionBootPromise
+  }
+  function queueStudioSessionSave(reason = "autosave"){
+    clearTimeout(remoteState.studioSaveTimer)
+    remoteState.studioSaveTimer = setTimeout(async ()=>{
+      const sessionId = await ensureStudioSession()
+      if(!sessionId) return
+      try{
+        await fetch("/api/studio/session/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: sessionId,
+            payload: {
+              ...buildStudioSessionPayload(),
+              reason
+            }
+          })
+        })
+      }catch{}
+    }, 240)
+  }
+  async function postStudioBoardAction(actionType, board, extra = {}){
+    const sessionId = await ensureStudioSession()
+    if(!sessionId) return
+    const serialBoard = getSerializableStudioBoard(board || getBoard())
+    try{
+      await fetch("/api/studio/board/commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          board_index: remoteState.activeBoard,
+          active_board: remoteState.activeBoard,
+          action_type: actionType,
+          board: {
+            ...serialBoard,
+            ...extra
+          }
+        })
+      })
+    }catch{}
+  }
+  async function postStudioTrimAction(board){
+    const sessionId = await ensureStudioSession()
+    if(!sessionId) return
+    try{
+      await fetch("/api/studio/trim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          board_index: remoteState.activeBoard,
+          trim_start: board.trimStart,
+          trim_end: board.trimEnd,
+          highlighted: !!board.highlighted
+        })
+      })
+    }catch{}
+  }
+  async function postStudioFxAction(board){
+    const sessionId = await ensureStudioSession()
+    if(!sessionId) return
+    try{
+      await fetch("/api/studio/fx/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          board_index: remoteState.activeBoard,
+          fxPreset: board.fxPreset,
+          gigFilter: board.gigFilter,
+          gigPan: board.gigPan,
+          gigFrameRate: board.gigFrameRate,
+          gigZoom: board.gigZoom,
+          gigSlowMotion: board.gigSlowMotion,
+          fxAppliedRange: board.fxAppliedRange
+        })
+      })
+    }catch{}
+  }
+  async function postStudioExportAction(board, destination){
+    const sessionId = await ensureStudioSession()
+    if(!sessionId) return
+    try{
+      await fetch("/api/studio/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          board_index: remoteState.activeBoard,
+          destination
+        })
+      })
+    }catch{}
+  }
   function triggerQuickStudioAction(action){
     focusFloatSection("floatBoardsBox", "Studio Quick Panel is ready for your current music/video piece.")
     const actionMap = {
@@ -8882,6 +9035,9 @@ function setupFloatMode(){
     liveWaveformData: [],
     mode: "audio",
     selectionDraft: null,
+    studioSessionId: localStorage.getItem("supportrdStudioSessionId") || "",
+    studioSessionBootPromise: null,
+    studioSaveTimer: null,
     handsfreeRecognition: null,
     handsfreeActive: false,
     currentPanel: "floatSettingsBox",
@@ -10708,6 +10864,10 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       quickEditStatus.textContent = `${board.name} highlight tightened to ${safeStart}% → ${safeEnd}%.`
     }
     syncQuickStudioSheet()
+    if(lock){
+      postStudioTrimAction(board)
+      queueStudioSessionSave("trim_lock")
+    }
   }
   function formatClock(totalSeconds = 0){
     const safe = Math.max(0, Math.floor(totalSeconds))
@@ -10828,6 +10988,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       btn.textContent = remoteState.boards[idx]?.name || `Motherboard ${idx + 1}`
     })
     renderBoard()
+    queueStudioSessionSave("reset_boards")
     if(quickEditStatus) quickEditStatus.textContent = message || "Fresh 3 motherboards ready. Upload material to begin a quick edit."
   }
   function getBoard(idx = remoteState.activeBoard){
@@ -10925,6 +11086,12 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     remoteState.boards[idx].waveformData = await buildWaveformDataFromFile(file)
     if(quickEditStatus) quickEditStatus.textContent = `${file.name} loaded into ${remoteState.boards[idx].name}. Play, trim, delete, or export it fast.`
     renderBoard()
+    postStudioBoardAction("load_file", remoteState.boards[idx], {
+      board_index: idx,
+      object_url: remoteState.boards[idx].kind === "video" ? objectUrl : "",
+      file_size: Number(file.size || 0)
+    })
+    queueStudioSessionSave("load_file")
   }
   function highlightBoard(){
     const board = getBoard()
@@ -10938,6 +11105,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     board.trimEnd = end
     board.highlighted = true
     renderBoard()
+    postStudioTrimAction(board)
+    queueStudioSessionSave("highlight_board")
     if(quickEditStatus) quickEditStatus.textContent = `${board.name} highlighted from ${start}% to ${end}%.`
   }
   function syncTrimInputs(source){
@@ -10970,6 +11139,12 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     board.trimEnd = 90
     board.fxAppliedRange = "Selected section erased from the active motherboard."
     renderBoard()
+    postStudioBoardAction("delete_highlight", board, {
+      board_index: remoteState.activeBoard,
+      trim_start: board.trimStart,
+      trim_end: board.trimEnd
+    })
+    queueStudioSessionSave("delete_highlight")
     if(quickEditStatus) quickEditStatus.textContent = `${board.name} had the highlighted section removed.`
   }
   function updateBoardFxState(){
@@ -10987,6 +11162,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       : `FX routed to the whole ${board.name} motherboard.`
     applyPreviewFx(board)
     renderBoard()
+    postStudioFxAction(board)
+    queueStudioSessionSave("apply_fx")
     if(quickEditStatus){
       quickEditStatus.textContent = remoteState.mode === "video"
         ? `${board.name} video lane tuned: ${board.gigFilter} filter · ${board.gigFrameRate} FPS · ${board.gigZoom} zoom.`
@@ -11002,6 +11179,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     const board = getBoard()
     board.exported = destination
     renderBoard()
+    postStudioExportAction(board, destination)
+    queueStudioSessionSave("export_board")
     const primary = filledBoards[0]
     const ext = destination === "Main Studio"
       ? (primary.kind === "video" ? "mp4" : "m4a")
@@ -11064,6 +11243,12 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         ? "Video lane ready. Highlight the timeline, add FX, then export."
         : "Audio lane ready. Highlight the timeline, add FX, then export."
       renderBoard()
+      postStudioBoardAction(kind === "video" ? "video_commit" : "audio_commit", active, {
+        board_index: remoteState.activeBoard,
+        duration,
+        mime_type: safeMime
+      })
+      queueStudioSessionSave(kind === "video" ? "video_commit" : "audio_commit")
       updateAssistantTracker({
         recordingKind: "",
         recordingTarget: active.name,
