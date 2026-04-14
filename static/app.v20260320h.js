@@ -9609,6 +9609,7 @@ ${line}`
         pocketbase: "not wired",
         cloud: "watch"
       },
+      buttonHealth: [],
       seoEntries: [],
       layersLoaded: false,
       lastScanAt: 0,
@@ -9616,6 +9617,7 @@ ${line}`
     }
     let assistantTrackerHud = null
     let assistantRecorderAnchor = null
+    let assistantMapOverlay = null
     const remoteIntentState = {
       lastKey: "",
       lastAt: 0,
@@ -9762,6 +9764,20 @@ ${line}`
       return out.slice(0, limit)
     }
 
+    function getScannerButtonHealth(route = assistantTrackerState.route || remoteState.currentRoute || "home"){
+      const config = SUPPORT_RD_SYSTEM_MAP.routes[route] || SUPPORT_RD_SYSTEM_MAP.routes.home
+      return (config.controls || []).slice(0, 6).map((selector)=>{
+        const node = qs(selector)
+        const live = !!node && isVisibleScannerNode(node)
+        const text = node ? describeScannerNode(node) : selector
+        return {
+          selector,
+          label: text || selector,
+          live
+        }
+      })
+    }
+
     function summarizeLayerState(layer = {}, key = ""){
       if(!layer || typeof layer !== "object") return assistantScannerState.apiSummary[key] || "watch"
       if(layer.configured === false) return "not wired"
@@ -9786,6 +9802,7 @@ ${line}`
       assistantScannerState.visibleControls = visibleControls
       assistantScannerState.visibleAnchors = visibleAnchors
       assistantScannerState.liveButtons = visibleControls.slice(0, 3)
+      assistantScannerState.buttonHealth = getScannerButtonHealth(route)
       assistantScannerState.liveZone = visibleAnchors[0] || visibleControls[0] || assistantScannerState.liveZone || "Remote hero"
       if(!assistantScannerState.intentLabel) assistantScannerState.intentLabel = hotIntent
     }
@@ -9921,9 +9938,22 @@ ${line}`
               <span>Movement Zones</span>
               <strong data-track="visibleAnchors">Waiting for assistant anchors.</strong>
             </div>
+            <div class="assistant-scanner-list">
+              <span>Button Health</span>
+              <strong data-track="buttonHealth">Waiting for route button health.</strong>
+            </div>
+            <div class="assistant-scanner-actions">
+              <button class="assistant-scanner-toggle" type="button" id="assistantMapOverlayToggle">Open Map</button>
+            </div>
           </div>
         `
         document.body.appendChild(assistantTrackerHud)
+        assistantTrackerHud.querySelector("#assistantMapOverlayToggle")?.addEventListener("click", ()=>{
+          ensureAssistantMapOverlay()
+          assistantMapOverlay?.classList.toggle("show")
+          const btn = assistantTrackerHud?.querySelector("#assistantMapOverlayToggle")
+          if(btn) btn.textContent = assistantMapOverlay?.classList.contains("show") ? "Hide Map" : "Open Map"
+        })
       }
       if(!assistantRecorderAnchor){
         assistantRecorderAnchor = document.createElement("div")
@@ -9938,6 +9968,66 @@ ${line}`
         `
         document.body.appendChild(assistantRecorderAnchor)
       }
+    }
+
+    function ensureAssistantMapOverlay(){
+      if(assistantMapOverlay) return
+      assistantMapOverlay = document.createElement("aside")
+      assistantMapOverlay.id = "assistantMapOverlay"
+      assistantMapOverlay.className = "assistant-map-overlay"
+      assistantMapOverlay.innerHTML = `
+        <div class="assistant-map-head">
+          <div>
+            <div class="assistant-map-kicker">SupportRD Site Map</div>
+            <div class="assistant-map-title">Assistant Travel Zones</div>
+          </div>
+          <button class="assistant-map-close" type="button" aria-label="Close assistant map">x</button>
+        </div>
+        <div class="assistant-map-body">
+          <div class="assistant-map-stage">
+            <div class="assistant-map-node" data-map-route="home">Remote</div>
+            <div class="assistant-map-node" data-map-route="diary">Diary</div>
+            <div class="assistant-map-node" data-map-route="studio">Studio</div>
+            <div class="assistant-map-node" data-map-route="settings">Settings</div>
+            <div class="assistant-map-node" data-map-route="profile">Profile</div>
+            <div class="assistant-map-node" data-map-route="payments">Payments</div>
+            <div class="assistant-map-node" data-map-route="faq">FAQ</div>
+            <div class="assistant-map-node" data-map-route="map">Map</div>
+            <div class="assistant-map-node" data-map-route="official">Official</div>
+          </div>
+          <div class="assistant-map-copy">
+            <div class="assistant-map-line"><span>Route</span><strong data-map-track="route">Remote</strong></div>
+            <div class="assistant-map-line"><span>Zone</span><strong data-map-track="zone">Remote hero</strong></div>
+            <div class="assistant-map-line"><span>Intent</span><strong data-map-track="intent">Remote home ready</strong></div>
+            <div class="assistant-map-line"><span>Buttons</span><strong data-map-track="buttons">Watching</strong></div>
+          </div>
+        </div>
+      `
+      document.body.appendChild(assistantMapOverlay)
+      assistantMapOverlay.querySelector(".assistant-map-close")?.addEventListener("click", ()=>{
+        assistantMapOverlay?.classList.remove("show")
+        const btn = assistantTrackerHud?.querySelector("#assistantMapOverlayToggle")
+        if(btn) btn.textContent = "Open Map"
+      })
+    }
+
+    function renderAssistantMapOverlay(){
+      ensureAssistantMapOverlay()
+      if(!assistantMapOverlay) return
+      const route = assistantScannerState.route || "home"
+      qsa("#assistantMapOverlay .assistant-map-node").forEach((node)=>{
+        node.classList.toggle("active", node.getAttribute("data-map-route") === route)
+      })
+      const mappings = {
+        route: getAssistantTrackerRouteLabel(route),
+        zone: assistantScannerState.liveZone || "Remote hero",
+        intent: assistantScannerState.intentLabel || "Remote home ready",
+        buttons: assistantScannerState.buttonHealth.map((entry)=>`${entry.live ? "live" : "dead"} ${entry.label}`).join(" · ") || "Watching"
+      }
+      Object.entries(mappings).forEach(([key, value])=>{
+        const node = assistantMapOverlay.querySelector(`[data-map-track="${key}"]`)
+        if(node) node.textContent = value
+      })
     }
 
     function renderAssistantTracker(){
@@ -9987,6 +10077,7 @@ ${line}`
         liveZone: assistantScannerState.liveZone || "Remote hero",
         visibleControls: assistantScannerState.visibleControls.join(" · ") || "Waiting for route controls.",
         visibleAnchors: assistantScannerState.visibleAnchors.join(" · ") || "Waiting for assistant anchors.",
+        buttonHealth: assistantScannerState.buttonHealth.map((entry)=>`${entry.live ? "live" : "dead"} ${entry.label}`).join(" · ") || "Waiting for route button health.",
         layerSummary,
         seoRoutes,
         layersLoaded: assistantScannerState.layersLoaded ? "Live" : "Watching"
@@ -9996,6 +10087,7 @@ ${line}`
         if(node) node.textContent = value
       })
       assistantTrackerHud?.classList.toggle("is-live", assistantTrackerState.voiceState !== "idle" || !!assistantTrackerState.recordingKind)
+      renderAssistantMapOverlay()
     }
 
     function syncAssistantTrackerFrame(){
