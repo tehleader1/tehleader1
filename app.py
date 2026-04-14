@@ -8,15 +8,18 @@ import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+from html import escape
 import os
 import re
 import requests
 import time
 import sqlite3
+import zipfile
 from datetime import datetime, timedelta
 import hmac
 import hashlib
 import base64
+from io import BytesIO
 from apscheduler.schedulers.background import BackgroundScheduler
 from openai import OpenAI
 
@@ -1732,6 +1735,29 @@ def init_diary_db():
         pass
 
 
+def init_profile_analysis_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS profile_analysis_reports ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "email TEXT,"
+            "display_name TEXT,"
+            "summary_text TEXT,"
+            "texture TEXT,"
+            "color TEXT,"
+            "damage TEXT,"
+            "hair_type TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
 def load_diary_session_payload(session_id):
     if not session_id:
         return {}
@@ -2201,6 +2227,102 @@ def set_setting(key, value):
         return True
     except:
         return False
+
+
+def _mask_ip(ip):
+    raw = (ip or "").strip()
+    if not raw:
+        return "hidden"
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:10]
+    return f"hash-{digest}"
+
+
+def _clean_export_name(value, fallback="supportrd-profile"):
+    cleaned = re.sub(r"[^a-zA-Z0-9_-]+", "-", (value or "").strip()).strip("-").lower()
+    return cleaned or fallback
+
+
+def _build_profile_analysis_pdf(lines):
+    safe_lines = [str(line or "").replace("\r", " ").replace("\n", " ")[:110] for line in (lines or []) if str(line or "").strip()]
+    if not safe_lines:
+        safe_lines = ["SupportRD profile analysis export"]
+    content = ["BT", "/F1 12 Tf", "50 780 Td"]
+    first = True
+    for line in safe_lines[:28]:
+        if not first:
+            content.append("0 -18 Td")
+        first = False
+        content.append(f"({_pdf_escape(line)}) Tj")
+    content.append("ET")
+    stream = "\n".join(content).encode("latin-1", "replace")
+    objects = [
+        b"1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
+        b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n",
+        b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>endobj\n",
+        b"4 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n",
+        b"5 0 obj<< /Length " + str(len(stream)).encode("ascii") + b" >>stream\n" + stream + b"\nendstream endobj\n",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for obj in objects:
+        offsets.append(len(out))
+        out.extend(obj)
+    xref = len(out)
+    out.extend(f"xref\n0 {len(offsets)}\n".encode("ascii"))
+    out.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        out.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    out.extend(f"trailer<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode("ascii"))
+    return bytes(out)
+
+
+def _build_profile_analysis_docx(lines):
+    body_lines = "".join(
+        f"<w:p><w:r><w:t>{escape(line)}</w:t></w:r></w:p>"
+        for line in (lines or []) if str(line or "").strip()
+    ) or "<w:p><w:r><w:t>SupportRD profile analysis export</w:t></w:r></w:p>"
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" '
+        'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+        'xmlns:o="urn:schemas-microsoft-com:office:office" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+        'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" '
+        'xmlns:v="urn:schemas-microsoft-com:vml" '
+        'xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" '
+        'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+        'xmlns:w10="urn:schemas-microsoft-com:office:word" '
+        'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+        'xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" '
+        'xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" '
+        'xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" '
+        'xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" '
+        'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" '
+        'mc:Ignorable="w14 wp14"><w:body>'
+        + body_lines +
+        '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>'
+        '</w:body></w:document>'
+    )
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+        '</Types>'
+    )
+    root_rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+        '</Relationships>'
+    )
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as docx:
+        docx.writestr("[Content_Types].xml", content_types)
+        docx.writestr("_rels/.rels", root_rels)
+        docx.writestr("word/document.xml", document_xml)
+    return buffer.getvalue()
 
 def trade_release_open():
     val = (get_setting("sell_aria_release_open", "0") or "0").strip().lower()
@@ -4547,6 +4669,169 @@ def system_map_status():
         },
     }
 
+
+@app.route("/api/profile/access-scanner")
+def profile_access_scanner():
+    user = session.get("user") or {}
+    email = (request.args.get("email") or user.get("email") or "").strip().lower()
+    display_name = (request.args.get("display_name") or user.get("name") or user.get("username") or email.split("@")[0] if email else "SupportRD Host").strip()
+    hair_damage = (request.args.get("hair_damage") or "").strip()
+    hair_texture = (request.args.get("hair_texture") or "").strip()
+    hair_type = (request.args.get("hair_type") or "").strip()
+    avatar_set = str(request.args.get("avatar_set") or "").strip().lower() in ("1", "true", "yes", "on")
+    activity = {
+        "voice_turns": 0,
+        "diary_sessions": 0,
+        "studio_sessions": 0,
+    }
+    latest_analysis = None
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        if email:
+            cur.execute("SELECT COUNT(*) FROM voice_sessions WHERE owner_email = ?", (email,))
+            activity["voice_turns"] = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute("SELECT COUNT(*) FROM diary_sessions WHERE owner_email = ?", (email,))
+            activity["diary_sessions"] = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute("SELECT COUNT(*) FROM studio_sessions WHERE owner_email = ?", (email,))
+            activity["studio_sessions"] = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute(
+                "SELECT display_name, summary_text, texture, color, damage, hair_type, created_at "
+                "FROM profile_analysis_reports WHERE email = ? ORDER BY id DESC LIMIT 1",
+                (email,),
+            )
+            row = cur.fetchone()
+            if row:
+                latest_analysis = {
+                    "display_name": row[0],
+                    "summary_text": row[1],
+                    "texture": row[2],
+                    "color": row[3],
+                    "damage": row[4],
+                    "hair_type": row[5],
+                    "created_at": row[6],
+                }
+        conn.close()
+    except Exception:
+        pass
+    identity_text = (
+        f"Identity Confirmed: {display_name or 'SupportRD Host'} looks present, welcome-ready, and tied to a protected SupportRD lane. "
+        f"Scanner anchor: {_mask_ip(request.headers.get('X-Forwarded-For') or request.remote_addr)}."
+    )
+    if not avatar_set:
+        identity_text += " Profile image is still on stock fallback, so live identity confidence is moderate until a personal picture is saved."
+    status_text = (
+        "General Status Reading: your status looks steady for the next presentation or meeting. "
+        f"Diary sessions: {activity['diary_sessions']} · Studio sessions: {activity['studio_sessions']} · Voice sessions: {activity['voice_turns']}."
+    )
+    if hair_damage:
+        status_text += f" Hair watch note: {hair_damage}."
+    else:
+        status_text += " No major hair crisis is showing from the current account memory."
+    return {
+        "ok": True,
+        "email": email,
+        "display_name": display_name,
+        "api_access": {
+            "openai": bool(OPENAI_KEY and client),
+            "shopify": bool(SHOPIFY_STORE and SHOPIFY_TOKEN),
+            "account": True,
+            "diary": True,
+            "studio": True,
+            "voice": True,
+            "cloud": True,
+            "pocketbase": False,
+        },
+        "identity_confirmed": identity_text,
+        "general_status": status_text,
+        "hair_analysis": {
+            "texture": hair_texture or (latest_analysis or {}).get("texture") or "waiting",
+            "hair_type": hair_type or (latest_analysis or {}).get("hair_type") or "waiting",
+            "damage": hair_damage or (latest_analysis or {}).get("damage") or "waiting",
+            "latest_export_at": (latest_analysis or {}).get("created_at") or "",
+            "latest_summary": (latest_analysis or {}).get("summary_text") or "",
+        },
+    }
+
+
+@app.route("/api/profile/analysis/export", methods=["POST"])
+def profile_analysis_export():
+    user = session.get("user") or {}
+    body = request.json or {}
+    email = (user.get("email") or body.get("email") or "").strip().lower()
+    display_name = (body.get("display_name") or user.get("name") or user.get("username") or email.split("@")[0] if email else "SupportRD Host").strip()
+    summary_text = (body.get("summary_text") or "").strip()
+    texture = (body.get("texture") or "").strip()
+    color = (body.get("color") or "").strip()
+    damage = (body.get("damage") or "").strip()
+    hair_type = (body.get("hair_type") or "").strip()
+    export_format = (body.get("format") or "pdf").strip().lower()
+    if export_format not in ("pdf", "docx"):
+        return {"ok": False, "error": "invalid_format"}, 400
+    lines = [
+        f"SupportRD Hair Analysis Export · {display_name}",
+        f"Email: {email or 'guest'}",
+        f"Created: {datetime.utcnow().isoformat()}Z",
+        "",
+        f"Texture: {texture or 'waiting'}",
+        f"Hair Color: {color or 'waiting'}",
+        f"Sign of Damage: {damage or 'waiting'}",
+        f"Hair Type: {hair_type or 'waiting'}",
+        "",
+        "Summary:",
+        summary_text or "No detailed summary was provided yet.",
+    ]
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO profile_analysis_reports (email, display_name, summary_text, texture, color, damage, hair_type, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (email, display_name, summary_text, texture, color, damage, hair_type, datetime.utcnow().isoformat() + "Z"),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+    safe_name = _clean_export_name(display_name or email.split("@")[0] if email else "supportrd-profile")
+    if export_format == "docx":
+        data = _build_profile_analysis_docx(lines)
+        response = Response(
+            data,
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        response.headers["Content-Disposition"] = f'attachment; filename="{safe_name}-hair-analysis.docx"'
+        return response
+    data = _build_profile_analysis_pdf(lines)
+    response = Response(data, mimetype="application/pdf")
+    response.headers["Content-Disposition"] = f'attachment; filename="{safe_name}-hair-analysis.pdf"'
+    return response
+
+
+@app.route("/api/diary/lobby/movement")
+def diary_lobby_movement():
+    feeds = list_diary_lobby_sessions("recent", limit=7)
+    finance = get_shopify_finance_snapshot()
+    latest_session = feeds[0] if feeds else {}
+    return {
+        "ok": True,
+        "header": "This is what SupportRD is doing",
+        "latest_activity": {
+            "session_name": latest_session.get("display_name") or latest_session.get("owner_name") or "No live session yet",
+            "tag": latest_session.get("profile_tag") or "",
+            "updated_at": latest_session.get("updated_at") or "",
+            "preview": latest_session.get("preview_text") or "Waiting for the next live diary session.",
+        },
+        "shopify_reader": {
+            "sessions": len(feeds),
+            "orders": finance.get("orders_count", 0) if finance.get("ok") else 0,
+            "total_sales": finance.get("today_total", 0) if finance.get("ok") else 0,
+            "conversion_rate": 0,
+            "currency": finance.get("currency", "USD") if finance.get("ok") else "USD",
+            "risk_level": finance.get("risk_level", "watch") if finance.get("ok") else "watch",
+        }
+    }
+
 @app.route("/products/<path:slug>")
 def shopify_product_redirect(slug):
     store = resolve_shopify_storefront_domain()
@@ -5763,6 +6048,7 @@ init_security_db()
 init_studio_db()
 init_voice_db()
 init_diary_db()
+init_profile_analysis_db()
 set_setting("money_guard_enabled", "1")
 try:
     run_trade_bots()

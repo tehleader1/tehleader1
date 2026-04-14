@@ -6784,6 +6784,9 @@ function setupFloatMode(){
   const profileDisplayName = qs("#floatProfileDisplayName")
   const profileLatestResult = qs("#floatProfileLatestResult")
   const profileCredentialsSummary = qs("#floatProfileCredentialsSummary")
+  const profileApiDeck = qs("#floatProfileApiDeck")
+  const profileIdentityReading = qs("#floatProfileIdentityReading")
+  const profileGeneralStatusReading = qs("#floatProfileGeneralStatusReading")
   const profileCredentialTheme = qs("#floatProfileCredentialTheme")
   const profileSaveBtn = qs("#floatProfileSaveBtn")
   const profilePasswordInput = qs("#floatProfilePassword")
@@ -6792,6 +6795,10 @@ function setupFloatMode(){
   const profile2faSaveBtn = qs("#floatProfile2faSaveBtn")
   const profileLinkedInUrl = qs("#floatProfileLinkedInUrl")
   const profileLinkedInPostBtn = qs("#floatProfileLinkedInPostBtn")
+  const profileAccessRefreshBtn = qs("#floatProfileAccessRefreshBtn")
+  const profileExportPdfBtn = qs("#floatProfileExportPdfBtn")
+  const profileExportDocxBtn = qs("#floatProfileExportDocxBtn")
+  const profileExportStatus = qs("#floatProfileExportStatus")
   const hairScanCamera = qs("#floatHairScanCamera")
   const hairScanOverlay = qs("#floatHairScanOverlay")
   const hairScanBeginBtn = qs("#floatHairScanBeginBtn")
@@ -6948,6 +6955,10 @@ ${line}`
   const diaryLobbyApply = qs("#remoteDiaryLobbyApply")
   const diaryLobbyRefresh = qs("#remoteDiaryLobbyRefresh")
   const diaryLobbyToggle = qs("#remoteDiaryLobbyToggle")
+  const diaryLobbySignalHeader = qs("#remoteDiaryLobbySignalHeader")
+  const diaryLobbySignalPreview = qs("#remoteDiaryLobbySignalPreview")
+  const diaryLobbyShopifySummary = qs("#remoteDiaryLobbyShopifySummary")
+  const diaryLobbyShopifyMeta = qs("#remoteDiaryLobbyShopifyMeta")
   const diaryViewer = qs("#remoteDiaryViewer")
   const diaryViewerClose = qs("#remoteDiaryViewerClose")
   const diaryViewerAvatar = qs("#remoteDiaryViewerAvatar")
@@ -9579,7 +9590,11 @@ ${line}`
     diaryLobbySearch: "",
     diaryLobbyHidden: localStorage.getItem("supportrdDiaryLobbyHidden") === "true",
     diaryLobbyItems: [],
+    diaryLobbySignal: null,
+    diaryLobbySignalLoadedAt: 0,
     activeDiaryLobbySessionId: "",
+    profileAccessSummary: null,
+    profileAccessLoadedAt: 0,
     currentPanel: "floatSettingsBox",
     guideTimer: null,
       guideIndex: 0,
@@ -10351,6 +10366,149 @@ ${line}`
     ]
     return variants[0]
   }
+  function formatSupportRDStamp(value){
+    if(!value) return "Standing by"
+    const date = new Date(value)
+    if(Number.isNaN(date.getTime())) return String(value)
+    return date.toLocaleString()
+  }
+  function summarizeApiAccessDeck(apiAccess = {}){
+    const labels = {
+      openai: "OpenAI",
+      shopify: "Shopify",
+      account: "Account",
+      diary: "Diary",
+      studio: "Studio",
+      voice: "Voice",
+      cloud: "Cloud",
+      pocketbase: "PocketBase"
+    }
+    return Object.entries(labels).map(([key, label])=>{
+      const online = !!apiAccess[key]
+      return `${label}: ${online ? "armed" : "waiting"}`
+    }).join(" · ")
+  }
+  function buildProfileAnalysisPayload(){
+    const displayName = (profileDisplayName?.value || state.socialLinks?.username || state.socialLinks?.name || "SupportRD Host").trim() || "SupportRD Host"
+    return {
+      email: state.socialLinks?.email || "",
+      display_name: displayName,
+      summary_text: state.socialLinks?.generalSummary || buildProfileGeneralSummary(),
+      texture: state.socialLinks?.hairTexture || "waiting",
+      color: state.socialLinks?.hairColor || "waiting",
+      damage: state.socialLinks?.hairDamage || "waiting",
+      hair_type: state.socialLinks?.hairType || "waiting"
+    }
+  }
+  async function refreshProfileAccessScanner(force = false){
+    const now = Date.now()
+    if(!force && remoteState.profileAccessLoadedAt && (now - remoteState.profileAccessLoadedAt) < 12000) return remoteState.profileAccessSummary || null
+    const params = new URLSearchParams({
+      email: state.socialLinks?.email || "",
+      display_name: profileDisplayName?.value || state.socialLinks?.username || state.socialLinks?.name || "SupportRD Host",
+      hair_damage: state.socialLinks?.hairDamage || "",
+      hair_texture: state.socialLinks?.hairTexture || "",
+      hair_type: state.socialLinks?.hairType || "",
+      avatar_set: state.userAvatar ? "1" : "0"
+    })
+    try{
+      if(profileApiDeck) profileApiDeck.textContent = "SupportRD is running the access deck right now..."
+      const response = await fetch(`/api/profile/access-scanner?${params.toString()}`, { cache:"no-store" })
+      if(!response.ok) throw new Error("profile_access_scanner_failed")
+      const data = await response.json()
+      if(!data?.ok) throw new Error("profile_access_scanner_bad_payload")
+      remoteState.profileAccessLoadedAt = now
+      remoteState.profileAccessSummary = data
+      if(profileApiDeck) profileApiDeck.textContent = summarizeApiAccessDeck(data.api_access || {})
+      if(profileIdentityReading) profileIdentityReading.textContent = data.identity_confirmed || "Identity scanner is standing by."
+      if(profileGeneralStatusReading){
+        const hair = data.hair_analysis || {}
+        const analysisBits = [
+          `Texture: ${hair.texture || "waiting"}`,
+          `Hair Type: ${hair.hair_type || "waiting"}`,
+          `Damage: ${hair.damage || "waiting"}`
+        ]
+        profileGeneralStatusReading.textContent = `${data.general_status || "General SupportRD status is ready."} ${analysisBits.join(" · ")}`
+      }
+      if(profileExportStatus){
+        const latestAt = data?.hair_analysis?.latest_export_at
+        profileExportStatus.textContent = latestAt
+          ? `Latest analysis export saved ${formatSupportRDStamp(latestAt)}. SupportRD can generate PDF or DOCX again whenever you need a last-minute presentation check.`
+          : "No saved hair-analysis export yet. Run a hair scan or refresh the scanner, then export PDF or DOCX from this lane."
+      }
+      return data
+    }catch{
+      if(profileApiDeck) profileApiDeck.textContent = "Access scanner could not refresh yet. SupportRD is keeping the profile lane ready."
+      return null
+    }
+  }
+  async function exportProfileAnalysis(format = "pdf"){
+    const safeFormat = format === "docx" ? "docx" : "pdf"
+    const payload = {
+      ...buildProfileAnalysisPayload(),
+      format: safeFormat
+    }
+    try{
+      if(profileExportStatus) profileExportStatus.textContent = `Preparing ${safeFormat.toUpperCase()} export from the latest SupportRD hair analysis...`
+      const response = await fetch("/api/profile/analysis/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      if(!response.ok) throw new Error("profile_export_failed")
+      const blob = await response.blob()
+      const fileName = `${String(payload.display_name || "supportrd-profile").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "supportrd-profile"}-hair-analysis.${safeFormat}`
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      setTimeout(()=>URL.revokeObjectURL(url), 1200)
+      if(profileExportStatus) profileExportStatus.textContent = `${safeFormat.toUpperCase()} export downloaded. SupportRD saved the latest analysis snapshot for this profile.`
+      await refreshProfileAccessScanner(true)
+      openMiniWindow("Hair Analysis Export", `${safeFormat.toUpperCase()} export is ready and downloaded for this profile.`)
+    }catch{
+      if(profileExportStatus) profileExportStatus.textContent = `SupportRD could not build the ${safeFormat.toUpperCase()} export yet. Try refreshing the access scanner first.`
+      openMiniWindow("Hair Analysis Export", `SupportRD could not export the ${safeFormat.toUpperCase()} file right now.`)
+    }
+  }
+  async function refreshDiaryLobbySignal(force = false){
+    const now = Date.now()
+    if(!force && remoteState.diaryLobbySignalLoadedAt && (now - remoteState.diaryLobbySignalLoadedAt) < 15000) return remoteState.diaryLobbySignal || null
+    try{
+      const response = await fetch("/api/diary/lobby/movement", { cache:"no-store" })
+      if(!response.ok) throw new Error("diary_lobby_signal_failed")
+      const data = await response.json()
+      if(!data?.ok) throw new Error("diary_lobby_signal_bad_payload")
+      remoteState.diaryLobbySignalLoadedAt = now
+      remoteState.diaryLobbySignal = data
+      const latest = data.latest_activity || {}
+      const shopify = data.shopify_reader || {}
+      if(diaryLobbySignalHeader){
+        const tag = latest.tag ? ` · ${latest.tag}` : ""
+        diaryLobbySignalHeader.textContent = `${latest.session_name || data.header || "SupportRD movement activity"}${tag}`
+      }
+      if(diaryLobbySignalPreview){
+        const updated = latest.updated_at ? ` Updated ${formatSupportRDStamp(latest.updated_at)}.` : ""
+        diaryLobbySignalPreview.textContent = `${latest.preview || "Waiting for the next live diary session movement."}${updated}`
+      }
+      if(diaryLobbyShopifySummary){
+        diaryLobbyShopifySummary.textContent = `Shopify Reader · ${shopify.sessions || 0} sessions · ${shopify.orders || 0} orders · ${formatMoney(shopify.total_sales || 0, shopify.currency || "USD")}`
+      }
+      if(diaryLobbyShopifyMeta){
+        diaryLobbyShopifyMeta.textContent = `Traffic risk: ${shopify.risk_level || "watch"} · Conversion rate: ${shopify.conversion_rate || 0}% · Lobby is watching the live revenue lane.`
+      }
+      return data
+    }catch{
+      if(diaryLobbySignalHeader) diaryLobbySignalHeader.textContent = "SupportRD movement activity is watching the next live diary signal."
+      if(diaryLobbySignalPreview) diaryLobbySignalPreview.textContent = "Waiting for the newest diary movement, live comments, and route handoff."
+      if(diaryLobbyShopifySummary) diaryLobbyShopifySummary.textContent = "Shopify Reader · waiting on the next traffic pull"
+      if(diaryLobbyShopifyMeta) diaryLobbyShopifyMeta.textContent = "Sessions, orders, total sales, and risk level will show here when the lobby reader refreshes."
+      return null
+    }
+  }
   function saveProfileState(){
     state.socialLinks = {
       ...(state.socialLinks || {}),
@@ -10520,6 +10678,7 @@ ${line}`
       if(data?.ok){
         renderDiaryLobby(data.feeds || [])
       }
+      refreshDiaryLobbySignal().catch(()=>{})
       return data
     }catch{
       renderDiaryLobby([])
@@ -10730,6 +10889,8 @@ ${line}`
       search: diaryLobbySearch?.value || "",
       searchBy: remoteState.diaryLobbySearchBy
     }).catch(()=>{})
+    refreshDiaryLobbySignal().catch(()=>{})
+    refreshProfileAccessScanner().catch(()=>{})
     if(faqPromptSelect && !faqPromptSelect.dataset.boundInitial){
       faqPromptSelect.dataset.boundInitial = "true"
       faqPromptSelect.dispatchEvent(new Event("change"))
@@ -10771,14 +10932,22 @@ ${line}`
     }
   }
   function buildSettingsGuide(lane = "overview"){
+    const systemMap = typeof window.getSupportRDSystemMap === "function" ? window.getSupportRDSystemMap() : null
+    const apiSummary = systemMap?.layers
+      ? Object.entries(systemMap.layers).slice(0, 4).map(([key, value])=>`${key}: ${value ? "armed" : "waiting"}`).join(" · ")
+      : "Scanner summary will appear here after the first Remote refresh."
     const guides = {
       overview: {
         title: "Full settings lane",
-        body: "Use this lane for the deeper account route when you want full identity, password, verification, and saved settings beyond the quick Remote page."
+        body: `Use this lane for the deeper account route when you want full identity, password, verification, saved links, and the SupportRD scanner summary before you go on trail. ${apiSummary}`
       },
       push: {
         title: "Text alert opt-in",
         body: "1. Enter the phone number for SupportRD alerts. 2. Turn on text-style opt-in. 3. Let the phone/browser allow alerts when asked. 4. Save the preference so Aria and Jake can keep the route active."
+      },
+      links: {
+        title: "URL + trail links",
+        body: "Use Open Full Settings when you need to tighten personal URL links, Diary routes, and the exact trail entrance people should hit from social media or your main website."
       }
     }
     const picked = guides[lane] || guides.overview
@@ -10788,7 +10957,8 @@ ${line}`
     if(configGuide) configGuide.innerHTML = buildSettingsGuide(lane)
     const labels = {
       overview: "Full settings lane is open inside Remote.",
-      push: "Text-style phone alert steps are ready in settings."
+      push: "Text-style phone alert steps are ready in settings.",
+      links: "Trail links, URL routes, and account entrances are ready in settings."
     }
     const message = labels[lane] || labels.overview
     if(configStatus) configStatus.textContent = message
@@ -12815,6 +12985,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         node.style.backgroundImage = ""
       }
     })
+    refreshProfileAccessScanner().catch(()=>{})
     syncDiaryAndProfileExtras()
   }
   function syncFloatSettings(){
@@ -12912,7 +13083,16 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         <strong>${action.label}</strong>
         <span>${action.detail}</span>
       </button>
-    `).join("")
+    `).join("") + `
+      <div class="float-map-action">
+        <strong>General Information</strong>
+        <span>${escapeHtml(view.helper || "SupportRD keeps the pit-stop route open for the next map decision.")}</span>
+      </div>
+      <div class="float-map-action">
+        <strong>Perks On The Side</strong>
+        <span>${escapeHtml(view.perk || "Remote-ready perks will appear here as the next map route locks in.")}</span>
+      </div>
+    `
   }
   function getMapFavoriteCounts(){
     try{
@@ -12941,6 +13121,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     syncRemoteLaunchVisual(activeView.key || "default")
     if(mapHeroTitle) mapHeroTitle.textContent = activeView.label || "SupportRD Default"
     if(mapHeroBody) mapHeroBody.textContent = `${activeView.helper || "SupportRD keeps the route clear and travel-ready."} ${activeView.perk ? `Extra feature: ${activeView.perk}.` : ""}`.trim()
+    if(deviceStatus) deviceStatus.textContent = `${activeView.label || "SupportRD Default"} is active. Use Map Change as the pit stop for general information, ads, the actual map switch, and perks tied to the other Remote features.`
     renderMapFeatureActions(activeView)
   }
   function renderThemeCards(){
@@ -13730,6 +13911,12 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     syncProfile()
     setRemoteStatus("Profile saved with the current AI summary, credentials, and security setup.")
   })
+  profileAccessRefreshBtn?.addEventListener("click", ()=>{
+    refreshProfileAccessScanner(true)
+    if(configStatus) configStatus.textContent = "Profile access scanner is refreshing now."
+  })
+  profileExportPdfBtn?.addEventListener("click", ()=>exportProfileAnalysis("pdf"))
+  profileExportDocxBtn?.addEventListener("click", ()=>exportProfileAnalysis("docx"))
   window.addEventListener("popstate", ()=>{
     const route = getRemoteRouteFromLocation()
     if(!route) return
@@ -13845,7 +14032,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   })
   qs("#floatSettingsOpenBtn")?.addEventListener("click", ()=>{
     openRemoteFullSettingsLane()
-    showSettingsGuide("overview")
+    showSettingsGuide("links")
   })
   pushToggleBtn?.addEventListener("click", ()=>{
     const pushBox = qs("#floatConfigPush")
@@ -14099,12 +14286,12 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   }))
   faqPromptSelect?.addEventListener("change", ()=>{
     const answers = {
-      dryness: "Dryness usually needs moisture-first help: lighter shampoo, more leave-in moisture, and a smoother Laciador lane if styling matters too.",
-      damage: "If the hair feels damaged, SupportRD pushes you toward the scan lane, gentler product support, and lower-heat recovery steps first.",
-      frizz: "Frizz on the go usually needs a lighter smoothing lane, less touching, and a fast product route that keeps style under control.",
-      premium: "Premium unlocks deeper Aria memory and stronger guidance. Pro adds the making-money professional lane.",
-      scan: "Hair Scan opens the camera, guides left and right views, then returns texture, color, damage signs, and hair type.",
-      payment: "Fast Pay is meant to move quickly in person: open the product details or go straight to Shopify checkout for card capture."
+      dryness: "Dryness usually needs moisture-first help: lighter shampoo, more leave-in moisture, a calmer reel pace, and a smoother Laciador lane if styling matters too.",
+      damage: "If the hair feels damaged, SupportRD pushes you toward the scan lane, gentler product support, and lower-heat recovery steps before any harder styling move.",
+      frizz: "Frizz on the go usually needs a lighter smoothing lane, less touching, a route reset, and a fast product path that keeps style under control in public.",
+      premium: "Premium unlocks deeper Aria memory, stronger product guidance, and the more serious SupportRD conversation lanes. Pro adds the making-money professional lane.",
+      scan: "Hair Scan opens the camera, guides left and right views, then returns texture, color, damage signs, and hair type so Profile, Diary, and Settings all stay connected.",
+      payment: "Fast Pay is meant to move quickly in person: open the product details or go straight to Shopify checkout for card capture while the FAQ reel keeps the social-world feel calm."
     }
     if(faqPromptAnswer) faqPromptAnswer.textContent = answers[faqPromptSelect.value] || answers.dryness
   })

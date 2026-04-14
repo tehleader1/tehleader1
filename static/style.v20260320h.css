@@ -2493,6 +2493,38 @@ body.aria-speaking .aria-large{box-shadow:0 0 48px rgba(0,226,255,0.8),0 0 90px 
   line-height:1.5;
   color:#f8fcff;
 }
+.float-profile-results-access{
+  margin-top:10px;
+}
+.remote-diary-lobby-signal{
+  display:grid;
+  gap:10px;
+  margin-bottom:12px;
+  padding:12px;
+  border-radius:18px;
+}
+.remote-diary-lobby-signal-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:10px;
+}
+.remote-diary-lobby-signal-card{
+  display:grid;
+  gap:6px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);
+}
+.remote-diary-lobby-signal-card strong{
+  font-size:13px;
+  line-height:1.35;
+}
+.remote-diary-lobby-signal-card span{
+  font-size:12px;
+  line-height:1.5;
+  color:var(--muted);
+}
 .assistant-recorder-anchor{
   position:fixed;
   z-index:236;
@@ -2558,6 +2590,9 @@ body.aria-speaking .aria-large{box-shadow:0 0 48px rgba(0,226,255,0.8),0 0 90px 
   }
   .assistant-map-stage{
     grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+  .remote-diary-lobby-signal-grid{
+    grid-template-columns:1fr;
   }
   .assistant-recorder-anchor{
     max-width:min(220px, calc(100vw - 24px));
