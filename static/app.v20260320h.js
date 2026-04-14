@@ -7484,26 +7484,30 @@ ${line}`
       node.style.setProperty("--demo-float-top", `${clampedY}px`)
       node.classList.add("demo-active")
     }
+    const ASSISTANT_CENTER_ROUTES = new Set(["diary", "studio", "settings", "map", "profile", "faq"])
+    function routeAllowsAssistantCenterFocus(route){
+      return ASSISTANT_CENTER_ROUTES.has(String(route || "home").toLowerCase())
+    }
     function buildAssistantScrollLayout(progress, direction){
       const width = window.innerWidth
       const height = window.innerHeight
       const phase = assistantMotionState.driftPhase % 4
       const layouts = [
         {
-          aria: { x: 128, y: 144 },
-          jake: { x: width - 138, y: 186 }
+          aria: { x: 126, y: 138 },
+          jake: { x: width - 144, y: 168 }
         },
         {
-          aria: { x: width - 158, y: Math.max(148, height * 0.32) },
-          jake: { x: 140, y: Math.max(168, height * 0.46) }
+          aria: { x: width - 158, y: 142 },
+          jake: { x: 144, y: height - 204 }
         },
         {
-          aria: { x: width - 150, y: height - 184 },
-          jake: { x: 146, y: height - 212 }
+          aria: { x: width - 152, y: height - 188 },
+          jake: { x: 146, y: 172 }
         },
         {
-          aria: { x: width * 0.46, y: height - 176 },
-          jake: { x: width - 146, y: Math.max(158, height * 0.42) }
+          aria: { x: 136, y: height - 194 },
+          jake: { x: width - 148, y: height - 220 }
         }
       ]
       let layout = layouts[Math.min(layouts.length - 1, Math.floor(progress * layouts.length))]
@@ -7564,6 +7568,7 @@ ${line}`
     }
     function getRouteFocusPoint(){
       const route = remoteState.currentRoute || "home"
+      if(!routeAllowsAssistantCenterFocus(route)) return null
       const help = REMOTE_ASSISTANT_HELP[route]
       const selector = help?.[state.activeAssistant || "aria"]?.focus || help?.aria?.focus
       const target = selector ? qs(selector) : null
@@ -7617,6 +7622,7 @@ ${line}`
     }
     function getRouteFocusPoint(){
       const route = remoteState.currentRoute || "home"
+      if(!routeAllowsAssistantCenterFocus(route)) return null
       const help = REMOTE_ASSISTANT_HELP[route]
       const selector = help?.[state.activeAssistant || "aria"]?.focus || help?.aria?.focus
       const target = selector ? qs(selector) : null
@@ -7643,6 +7649,19 @@ ${line}`
       const y = point?.y ?? centerY
       assistantMotionState.lastInteraction = { x, y, at: Date.now() - 900 }
       moveAssistantPairToInteraction(x, y)
+    }
+    function positionAssistantsForVoiceMode(route, assistantId = "aria"){
+      const focusPoint = getRouteFocusPoint()
+      if(focusPoint){
+        state.activeAssistant = assistantId
+        nudgeAssistantPresence("center", focusPoint)
+        return
+      }
+      assistantMotionState.driftPhase = (assistantMotionState.driftPhase + 1) % 4
+      applyAssistantPairLayout(buildAssistantScrollLayout(
+        Math.min(1, Math.max(0, (window.scrollY || 0) / Math.max(document.documentElement.scrollHeight - window.innerHeight, 1))),
+        "down"
+      ))
     }
     function triggerAssistantMoment(kind, options = {}){
       if(!shell || shell.hidden) return
@@ -7781,12 +7800,7 @@ ${line}`
             ? "center"
             : "left"
         const progress = Math.min(1, Math.max(0, (window.scrollY || 0) / Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)))
-        const roamPoint = progress > 0.7
-          ? { x: assistantMotionState.pointerBias === "left" ? assistantMovementTuning.bottomDockX : window.innerWidth - assistantMovementTuning.bottomDockX, y: window.innerHeight - assistantMovementTuning.bottomDockY }
-          : progress < 0.22
-            ? { x: assistantMotionState.pointerBias === "left" ? assistantMovementTuning.topDockX : window.innerWidth - assistantMovementTuning.topDockX, y: assistantMovementTuning.topDockY }
-            : { x: assistantMotionState.pointerBias === "left" ? assistantMovementTuning.centerDockX : window.innerWidth - assistantMovementTuning.centerDockX, y: window.innerHeight * assistantMovementTuning.centerDockYRatio }
-        moveAssistantPairToInteraction(roamPoint.x, roamPoint.y)
+        applyAssistantPairLayout(buildAssistantScrollLayout(progress, assistantMotionState.pointerBias === "left" ? "up" : "down"))
       }, assistantMovementTuning.roamIntervalMs)
     }
     function handleAssistantHover(node, assistantId){
@@ -15230,6 +15244,7 @@ function setupAria(){
     remoteState.currentRoute = route
     applyAssistantUI(true)
     syncProfile()
+    try{ positionAssistantsForVoiceMode(route, assistantId) }catch{}
     syncUnifiedVoiceController({
       entryMode,
       assistantId,

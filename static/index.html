@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414i">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414j">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -1520,7 +1520,7 @@ body .float-launch-btn {
     </div>
   </div>
   <div class="studio-mode-frame-wrap glass">
-        <iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414i" title="SupportRD Studio"></iframe>
+        <iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414j" title="SupportRD Studio"></iframe>
   </div>
 </div>
 
@@ -1850,6 +1850,30 @@ body .float-launch-btn {
           <div class="float-board-preview" id="floatProfileScanSummary">Hair analysis summary will appear here with texture, color, damage signs, and hair type.</div>
         </div>
         <div class="float-profile-history" id="floatProfileHistory">Chat history will appear here when account history is available.</div>
+        <div class="float-profile-security glass">
+          <strong>Access Scanner</strong>
+          <span>Detailed system access without exposing secret keys. Use this lane for last-minute identity, status, and hair-analysis checks before a meeting or presentation.</span>
+          <div class="float-profile-results float-profile-results-access">
+            <div class="float-profile-result-card">
+              <strong>API Access Deck</strong>
+              <span id="floatProfileApiDeck">OpenAI, Studio, Diary, Shopify, Cloud, and Account access checks will appear here.</span>
+            </div>
+            <div class="float-profile-result-card">
+              <strong>Identity Confirmed</strong>
+              <span id="floatProfileIdentityReading">Identity check is standing by for a profile picture, account lane, and protected access signal.</span>
+            </div>
+            <div class="float-profile-result-card">
+              <strong>General Status Reading</strong>
+              <span id="floatProfileGeneralStatusReading">General status will read account stability, presentation readiness, and hair crisis level.</span>
+            </div>
+          </div>
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatProfileAccessRefreshBtn">Refresh Access Scanner</button>
+            <button class="btn ghost" id="floatProfileExportPdfBtn">Export Hair Analysis PDF</button>
+            <button class="btn ghost" id="floatProfileExportDocxBtn">Export Hair Analysis DOCX</button>
+          </div>
+          <div class="float-profile-history" id="floatProfileExportStatus">Hair analysis export history will appear here after the first saved analysis export.</div>
+        </div>
         <div class="float-profile-security glass">
           <strong>2-Step Verification</strong>
           <span>After 4 hours away, sign-in can require password plus phone number or a 6-digit personal code.</span>
@@ -2313,6 +2337,19 @@ body .float-launch-btn {
       </div>
     </div>
     <div class="remote-sticky-count" id="remoteDiaryLobbyCount">Latest 7 diary feeds</div>
+    <div class="remote-diary-lobby-signal glass" id="remoteDiaryLobbySignal">
+      <div class="float-mode-kicker">This Is What SupportRD Is Doing</div>
+      <div class="remote-diary-lobby-signal-grid">
+        <div class="remote-diary-lobby-signal-card">
+          <strong id="remoteDiaryLobbySignalHeader">SupportRD movement activity is loading...</strong>
+          <span id="remoteDiaryLobbySignalPreview">Waiting for the latest live session movement.</span>
+        </div>
+        <div class="remote-diary-lobby-signal-card">
+          <strong id="remoteDiaryLobbyShopifySummary">Shopify Reader · loading...</strong>
+          <span id="remoteDiaryLobbyShopifyMeta">Sessions, orders, total sales, and risk level will show here.</span>
+        </div>
+      </div>
+    </div>
     <div class="remote-diary-lobby-search">
       <select id="remoteDiaryLobbySearchBy" class="input">
         <option value="name">Search Name</option>
@@ -2368,7 +2405,7 @@ body .float-launch-btn {
   
   <script>
 (function(){
-const BUILD = "20260414i";
+const BUILD = "20260414j";
   const KEY = "sr_force_build";
   try {
     const last = localStorage.getItem(KEY);
@@ -2395,8 +2432,8 @@ const BUILD = "20260414i";
 })();
 </script>
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260414i"></script>
-<script src="/static/remote-rebuild.v20260408c.js?v=20260414i"></script>
+<script src="/static/app.v20260320h.js?v=20260414j"></script>
+<script src="/static/remote-rebuild.v20260408c.js?v=20260414j"></script>
 <footer class="launch-footer-links">
   <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>
