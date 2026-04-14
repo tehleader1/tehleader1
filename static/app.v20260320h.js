@@ -7016,16 +7016,29 @@ ${line}`
   const supportrdOSDiaryList = qs("#supportrdOSDiaryList")
   const supportrdOSRefreshDiary = qs("#supportrdOSRefreshDiary")
   const supportrdOSOpenDiary = qs("#supportrdOSOpenDiary")
+  const supportrdOSFocusDiary = qs("#supportrdOSFocusDiary")
   const supportrdOSStudioTitle = qs("#supportrdOSStudioTitle")
   const supportrdOSStudioBody = qs("#supportrdOSStudioBody")
   const supportrdOSStudioList = qs("#supportrdOSStudioList")
   const supportrdOSOpenStudio = qs("#supportrdOSOpenStudio")
   const supportrdOSPrimeStudioVoice = qs("#supportrdOSPrimeStudioVoice")
+  const supportrdOSFocusStudio = qs("#supportrdOSFocusStudio")
   const supportrdOSProfileTitle = qs("#supportrdOSProfileTitle")
   const supportrdOSProfileBody = qs("#supportrdOSProfileBody")
   const supportrdOSProfileList = qs("#supportrdOSProfileList")
   const supportrdOSOpenProfile = qs("#supportrdOSOpenProfile")
   const supportrdOSRefreshProfile = qs("#supportrdOSRefreshProfile")
+  const supportrdOSFocusProfile = qs("#supportrdOSFocusProfile")
+  const osWorkspaceTabs = qsa("[data-os-workspace]")
+  const osWorkspacePanels = qsa("[data-os-workspace-panel]")
+  const supportrdOSWorkspaceTitle = qs("#supportrdOSWorkspaceTitle")
+  const supportrdOSWorkspacePill = qs("#supportrdOSWorkspacePill")
+  const supportrdOSWorkspaceDiaryBody = qs("#supportrdOSWorkspaceDiaryBody")
+  const supportrdOSWorkspaceDiaryList = qs("#supportrdOSWorkspaceDiaryList")
+  const supportrdOSWorkspaceStudioBody = qs("#supportrdOSWorkspaceStudioBody")
+  const supportrdOSWorkspaceStudioList = qs("#supportrdOSWorkspaceStudioList")
+  const supportrdOSWorkspaceProfileBody = qs("#supportrdOSWorkspaceProfileBody")
+  const supportrdOSWorkspaceProfileList = qs("#supportrdOSWorkspaceProfileList")
   const supportrdOSVoiceSequence = qs("#supportrdOSVoiceSequence")
   const supportrdOSVoiceAria = qs("#supportrdOSVoiceAria")
   const supportrdOSVoiceJake = qs("#supportrdOSVoiceJake")
@@ -7040,6 +7053,36 @@ ${line}`
       shell.classList.add("supportrd-os-active")
       shell.dataset.osLayer = layer
     }
+  }
+  function setSupportRDOSWorkspace(module = "diary"){
+    const safe = ["diary", "studio", "profile"].includes(module) ? module : "diary"
+    osWorkspaceTabs.forEach((button)=>button.classList.toggle("active", button.dataset.osWorkspace === safe))
+    osWorkspacePanels.forEach((panel)=>panel.classList.toggle("active", panel.dataset.osWorkspacePanel === safe))
+    if(shell){
+      shell.dataset.osWorkspace = safe
+    }
+    if(supportrdOSWorkspaceTitle) supportrdOSWorkspaceTitle.textContent = `${safe.charAt(0).toUpperCase()}${safe.slice(1)} workspace`
+    if(supportrdOSWorkspacePill) supportrdOSWorkspacePill.textContent = safe.charAt(0).toUpperCase() + safe.slice(1)
+  }
+  async function launchSupportRDOSVoice(mode = "icon", assistantId = "aria", route = "home", persistentMic = false){
+    setSupportRDOSLayer("frontend")
+    if(supportrdOSVoiceSequence){
+      supportrdOSVoiceSequence.textContent = `Cue sound → ${getAssistantDisplayName(assistantId)} greeting → mic ready → listening`
+    }
+    updateAssistantTracker({
+      activeAssistant: assistantId,
+      route,
+      voiceState: "arming",
+      voiceText: `${getAssistantDisplayName(assistantId)} is arming from the SupportRD OS layer.`
+    })
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      return window.activateSupportRDWebsiteVoice(mode, {
+        assistantId,
+        route,
+        persistentMic
+      })
+    }
+    return false
   }
   function renderSupportRDOSCards(){
     const systemMap = typeof window.getSupportRDSystemMap === "function" ? window.getSupportRDSystemMap() : null
@@ -7099,6 +7142,16 @@ ${line}`
         ? diaryFeeds.map((feed)=>`<div class="supportrd-os-shell__mini-item"><strong>${feed.display_name || "SupportRD Feed"}</strong><span>${feed.profile_tag || "^^ support"} · ${feed.live_slug || "live"}<\/span><\/div>`).join("")
         : `<div class="supportrd-os-shell__mini-item"><strong>Diary lobby</strong><span>Latest sessions will stack here when the feed refresh lands.<\/span><\/div>`
     }
+    if(supportrdOSWorkspaceDiaryBody){
+      supportrdOSWorkspaceDiaryBody.textContent = remoteState.diaryLiveActive
+        ? "Diary live session is on. The lobby, viewer, comments, and guest support are all expected to move together."
+        : "Diary workspace is preparing the latest lobby movement, comments, and guest support lane."
+    }
+    if(supportrdOSWorkspaceDiaryList){
+      supportrdOSWorkspaceDiaryList.innerHTML = diaryFeeds.length
+        ? diaryFeeds.map((feed)=>`<div class="supportrd-os-shell__mini-item"><strong>${feed.display_name || "SupportRD Feed"}</strong><span>${feed.preview_text || "Live diary preview ready."}<\/span><\/div>`).join("")
+        : `<div class="supportrd-os-shell__mini-item"><strong>Diary workspace</strong><span>Waiting for the latest live diary entries to populate this OS lane.<\/span><\/div>`
+    }
 
     if(supportrdOSStudioTitle){
       supportrdOSStudioTitle.textContent = remoteState.recorder?.state && remoteState.recorder.state !== "inactive"
@@ -7116,6 +7169,17 @@ ${line}`
       ]
       supportrdOSStudioList.innerHTML = studioFacts.map((item)=>`<div class="supportrd-os-shell__mini-item"><strong>${item.title}</strong><span>${item.value}<\/span><\/div>`).join("")
     }
+    if(supportrdOSWorkspaceStudioBody){
+      supportrdOSWorkspaceStudioBody.textContent = `Studio workspace is watching recorder ${remoteState.recorder?.state || "inactive"}, preview ${remoteState.previewUrl ? "loaded" : "waiting"}, and motherboard ${getBoard?.()?.label || "Ready"}.`
+    }
+    if(supportrdOSWorkspaceStudioList){
+      const studioWorkspaceFacts = [
+        { title:"Recorder", value:remoteState.recorder?.state || "inactive" },
+        { title:"Preview", value:remoteState.previewUrl ? "loaded" : "waiting" },
+        { title:"Return View", value:localStorage.getItem("supportrdStudioReturnView") || "remote" }
+      ]
+      supportrdOSWorkspaceStudioList.innerHTML = studioWorkspaceFacts.map((item)=>`<div class="supportrd-os-shell__mini-item"><strong>${item.title}</strong><span>${item.value}<\/span><\/div>`).join("")
+    }
 
     const profileSummary = remoteState.profileAccessSummary || {}
     if(supportrdOSProfileTitle){
@@ -7132,6 +7196,17 @@ ${line}`
         { title:"Damage", value:hair.damage || "waiting" }
       ]
       supportrdOSProfileList.innerHTML = profileFacts.map((item)=>`<div class="supportrd-os-shell__mini-item"><strong>${item.title}</strong><span>${item.value}<\/span><\/div>`).join("")
+    }
+    if(supportrdOSWorkspaceProfileBody){
+      supportrdOSWorkspaceProfileBody.textContent = profileSummary.general_status || "Profile workspace is preparing verification facts, scanner reads, and export readiness."
+    }
+    if(supportrdOSWorkspaceProfileList){
+      const profileWorkspaceFacts = [
+        { title:"Identity", value:profileSummary.identity_confirmed || "waiting" },
+        { title:"API Deck", value:summarizeApiAccessDeck(profileSummary.api_access || {}) || "waiting" },
+        { title:"Export", value:profileSummary?.hair_analysis?.latest_export_at ? `Latest ${formatSupportRDStamp(profileSummary.hair_analysis.latest_export_at)}` : "ready" }
+      ]
+      supportrdOSWorkspaceProfileList.innerHTML = profileWorkspaceFacts.map((item)=>`<div class="supportrd-os-shell__mini-item"><strong>${item.title}</strong><span>${item.value}<\/span><\/div>`).join("")
     }
 
     if(supportrdOSVoiceSequence){
@@ -13648,6 +13723,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
     setSupportRDShellV2Route(remoteState.currentRoute || "home")
     setSupportRDOSLayer(shell?.dataset?.osLayer || "foundation")
+    setSupportRDOSWorkspace(shell?.dataset?.osWorkspace || "diary")
     renderSupportRDOSCards()
     const activeRoute = getRemoteRouteFromLocation()
     if(activeRoute && activeRoute !== "home"){
@@ -13689,6 +13765,13 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     setSupportRDOSLayer(button.dataset.osLayer || "foundation")
     renderSupportRDOSCards()
   }))
+  osWorkspaceTabs.forEach((button)=>button.addEventListener("click", ()=>{
+    setSupportRDOSWorkspace(button.dataset.osWorkspace || "diary")
+  }))
+  supportrdOSFocusDiary?.addEventListener("click", ()=>{
+    setSupportRDOSLayer("frontend")
+    setSupportRDOSWorkspace("diary")
+  })
   supportrdOSOpenDiary?.addEventListener("click", ()=>renderRemoteRoute("diary", { openShell:true, force:true }))
   supportrdOSRefreshDiary?.addEventListener("click", ()=>{
     fetchDiaryLobby({
@@ -13698,6 +13781,11 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }).catch(()=>{})
     refreshDiaryLobbySignal(true).catch(()=>{})
     setSupportRDOSLayer("frontend")
+    setSupportRDOSWorkspace("diary")
+  })
+  supportrdOSFocusStudio?.addEventListener("click", ()=>{
+    setSupportRDOSLayer("frontend")
+    setSupportRDOSWorkspace("studio")
   })
   supportrdOSOpenStudio?.addEventListener("click", ()=>{
     localStorage.setItem("supportrdStudioReturnView", "remote")
@@ -13709,29 +13797,27 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     renderRemoteRoute("studio", { openShell:true, force:true })
   })
   supportrdOSPrimeStudioVoice?.addEventListener("click", ()=>{
-    if(typeof window.activateSupportRDWebsiteVoice === "function"){
-      window.activateSupportRDWebsiteVoice("icon", { assistantId:"projake", route:"studio", persistentMic:false })
-    }
+    setSupportRDOSWorkspace("studio")
+    launchSupportRDOSVoice("icon", "projake", "studio", false)
+  })
+  supportrdOSFocusProfile?.addEventListener("click", ()=>{
+    setSupportRDOSLayer("frontend")
+    setSupportRDOSWorkspace("profile")
   })
   supportrdOSOpenProfile?.addEventListener("click", ()=>renderRemoteRoute("profile", { openShell:true, force:true }))
-  supportrdOSRefreshProfile?.addEventListener("click", ()=>refreshProfileAccessScanner(true))
+  supportrdOSRefreshProfile?.addEventListener("click", ()=>{
+    setSupportRDOSWorkspace("profile")
+    refreshProfileAccessScanner(true)
+  })
   supportrdOSVoiceAria?.addEventListener("click", ()=>{
-    setSupportRDOSLayer("frontend")
-    if(typeof window.activateSupportRDWebsiteVoice === "function"){
-      window.activateSupportRDWebsiteVoice("icon", { assistantId:"aria", route: remoteState.currentRoute || "home", persistentMic:false })
-    }
+    launchSupportRDOSVoice("icon", "aria", remoteState.currentRoute || "home", false)
   })
   supportrdOSVoiceJake?.addEventListener("click", ()=>{
-    setSupportRDOSLayer("frontend")
-    if(typeof window.activateSupportRDWebsiteVoice === "function"){
-      window.activateSupportRDWebsiteVoice("icon", { assistantId:"projake", route: remoteState.currentRoute || "home", persistentMic:false })
-    }
+    launchSupportRDOSVoice("icon", "projake", remoteState.currentRoute || "home", false)
   })
   supportrdOSVoiceHandsfree?.addEventListener("click", ()=>{
-    setSupportRDOSLayer("frontend")
-    if(typeof window.activateSupportRDWebsiteVoice === "function"){
-      window.activateSupportRDWebsiteVoice("handsfree", { assistantId: state.activeAssistant || "aria", route:"diary", persistentMic:true })
-    }
+    setSupportRDOSWorkspace("diary")
+    launchSupportRDOSVoice("handsfree", state.activeAssistant || "aria", "diary", true)
   })
   shellV2GoDiary?.addEventListener("click", ()=>renderRemoteRoute("diary", { openShell:true }))
   shellV2GoStudio?.addEventListener("click", ()=>{

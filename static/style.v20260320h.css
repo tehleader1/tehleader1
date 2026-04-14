@@ -3991,6 +3991,39 @@ body.float-mode-active .float-mode-sticky-bottom{
   background:linear-gradient(180deg, rgba(9,19,34,.92), rgba(8,17,31,.84));
   border:1px solid rgba(176,224,255,.12);
 }
+.supportrd-os-shell__module-workspace{
+  margin-top:18px;
+  padding:20px;
+  border-radius:28px;
+  background:linear-gradient(180deg, rgba(8,18,33,.92), rgba(7,16,29,.86));
+  border:1px solid rgba(176,224,255,.12);
+}
+.supportrd-os-shell__workspace-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:16px;
+}
+.supportrd-os-shell__workspace-tab{
+  min-height:42px;
+  padding:0 14px;
+  border-radius:999px;
+  border:1px solid rgba(175,223,255,.12);
+  background:rgba(255,255,255,.05);
+  color:#e8f4ff;
+  font-weight:700;
+  cursor:pointer;
+}
+.supportrd-os-shell__workspace-tab.active{
+  background:linear-gradient(135deg, rgba(91,165,255,.24), rgba(41,76,140,.16));
+  border-color:rgba(184,226,255,.26);
+}
+.supportrd-os-shell__workspace-panel{
+  display:none;
+}
+.supportrd-os-shell__workspace-panel.active{
+  display:block;
+}
 .supportrd-os-shell__voice-sequence{
   padding:14px 16px;
   border-radius:18px;
