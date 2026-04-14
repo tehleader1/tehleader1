@@ -134,6 +134,56 @@ body.studio-api-locked .studio-page > :not(.studio-access-gate){
   pointer-events:none;
   user-select:none;
 }
+.studio-command-deck{
+  display:grid;
+  gap:18px;
+  margin-top:18px;
+  background:
+    linear-gradient(135deg, rgba(12,29,48,.94), rgba(8,18,31,.92)),
+    radial-gradient(circle at top right, rgba(113,199,255,.18), transparent 35%);
+  border:1px solid rgba(145,208,255,.22);
+}
+.studio-command-copy h2{
+  margin:10px 0 8px;
+  font-size:clamp(28px, 4vw, 42px);
+}
+.studio-command-copy p{
+  margin:0;
+  color:var(--text);
+  max-width:960px;
+}
+.studio-command-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+.studio-command-grid{
+  display:grid;
+  gap:14px;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+}
+.command-card{
+  display:grid;
+  gap:8px;
+  padding:18px;
+  border-radius:18px;
+  background:rgba(7,17,29,.62);
+  border:1px solid rgba(160,205,255,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+.command-card strong{
+  font-size:18px;
+}
+.command-card span{
+  color:var(--muted);
+  line-height:1.45;
+}
+.command-label{
+  color:var(--green);
+  font-size:12px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
 .studio-page{max-width:1400px;margin:0 auto;padding:18px 18px 120px;position:relative}
 .studio-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px}
 .studio-top h1{margin:0 0 8px;font-size:clamp(28px,4vw,40px);letter-spacing:.02em}

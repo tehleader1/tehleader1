@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Jake Premium Studio | SupportRD</title>
-  <link rel="stylesheet" href="/static/studio/studio.css?v=20260413a">
+  <link rel="stylesheet" href="/static/studio/studio.css?v=20260414a">
 </head>
 <body class="competition-world-studio">
   <main class="studio-page">
@@ -23,8 +23,8 @@
     </section>
     <header class="studio-top">
       <div>
-        <h1>SupportRD Free Roam World · Stream Prep HQ</h1>
-        <p>The booth is your sharpest place to build a stream, tighten the sound, line up visuals, and send stronger energy back into the world whenever you want.</p>
+        <h1>Jake Premium Studio API Booth</h1>
+        <p>One premium booth. One login. One API-controlled studio lane for the voice behind SupportRD. Capture the mic, load the camera, cut the motherboards, and keep every move attached to the account that paid for it.</p>
       </div>
       <div class="badge-wrap">
         <span class="badge">JAKE PREMIUM STUDIO API</span>
@@ -33,6 +33,36 @@
         <button id="backMainBtn">Back To Main Console</button>
       </div>
     </header>
+
+    <section class="studio-command-deck card wide">
+      <div class="studio-command-copy">
+        <div class="badge">FULL API TAKEOVER</div>
+        <h2>Studio Jake attends the booth and keeps the lane clean.</h2>
+        <p>Before recording, the browser now has to confirm the microphone or camera lane. If the device is handheld, laptop, or desktop, the booth checks that live permission first so the recording flow is not guessing.</p>
+      </div>
+      <div class="studio-command-actions">
+        <button id="studioPrimeMicBtn" type="button">Prime Microphone</button>
+        <button id="studioPrimeCameraBtn" type="button" class="ghost">Prime Camera</button>
+        <button id="studioRefreshDevicesBtn" type="button" class="ghost">Refresh Devices</button>
+      </div>
+      <div class="studio-command-grid">
+        <article class="command-card">
+          <div class="command-label">Mic Lane</div>
+          <strong id="studioMicStatus">Waiting for browser mic access.</strong>
+          <span id="studioMicDevices">No microphone labels detected yet.</span>
+        </article>
+        <article class="command-card">
+          <div class="command-label">Camera Lane</div>
+          <strong id="studioCameraStatus">Waiting for camera access.</strong>
+          <span id="studioCameraDevices">No camera labels detected yet.</span>
+        </article>
+        <article class="command-card">
+          <div class="command-label">Session Lane</div>
+          <strong id="studioSessionCardStatus">API session not attached yet.</strong>
+          <span id="studioApiStatus">Jake Premium Studio will attach once login and payment are verified.</span>
+        </article>
+      </div>
+    </section>
 
     <button id="studioJakeOrb" class="studio-jake-orb" title="Pro Jake"></button>
 
@@ -416,6 +446,6 @@
       <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>
     </footer>
   </main>
-  <script src="/static/studio/studio.js?v=20260413a"></script>
+  <script src="/static/studio/studio.js?v=20260414a"></script>
 </body>
 </html>

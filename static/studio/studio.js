@@ -48,6 +48,14 @@ let studioAccessState = {
   email: "",
   subscription: "free"
 };
+let studioDeviceState = {
+  audioGranted: false,
+  videoGranted: false,
+  micLabel: "",
+  cameraLabel: "",
+  micCount: 0,
+  cameraCount: 0
+};
 
 function playUiClickSound(type = "soft") {
   try {
@@ -96,6 +104,32 @@ function setStatus(id, message) {
   const el = qs(id);
   if (el) el.textContent = message;
 }
+function updateStudioDevicePanel() {
+  const micStatus = qs("#studioMicStatus");
+  const micDevices = qs("#studioMicDevices");
+  const camStatus = qs("#studioCameraStatus");
+  const camDevices = qs("#studioCameraDevices");
+  const sessionCard = qs("#studioSessionCardStatus");
+  const apiStatus = qs("#studioApiStatus");
+  if (micStatus) micStatus.textContent = studioDeviceState.audioGranted
+    ? `Microphone ready${studioDeviceState.micLabel ? ` · ${studioDeviceState.micLabel}` : ""}`
+    : "Waiting for browser mic access.";
+  if (micDevices) micDevices.textContent = studioDeviceState.micCount
+    ? `${studioDeviceState.micCount} mic device${studioDeviceState.micCount === 1 ? "" : "s"} detected for this booth.`
+    : "No microphone labels detected yet.";
+  if (camStatus) camStatus.textContent = studioDeviceState.videoGranted
+    ? `Camera ready${studioDeviceState.cameraLabel ? ` · ${studioDeviceState.cameraLabel}` : ""}`
+    : "Waiting for camera access.";
+  if (camDevices) camDevices.textContent = studioDeviceState.cameraCount
+    ? `${studioDeviceState.cameraCount} camera device${studioDeviceState.cameraCount === 1 ? "" : "s"} detected for live screen work.`
+    : "No camera labels detected yet.";
+  if (sessionCard) sessionCard.textContent = studioAccessState.access
+    ? `API session attached${studioAccessState.email ? ` · ${studioAccessState.email}` : ""}`
+    : "API session not attached yet.";
+  if (apiStatus) apiStatus.textContent = studioAccessState.access
+    ? `Premium Jake is active on ${studioAccessState.subscription || "studio100"} and the booth can record live.`
+    : "Jake Premium Studio will attach once login and payment are verified.";
+}
 function setStudioLocked(locked, options = {}) {
   studioAccessState.locked = !!locked;
   document.body.classList.toggle("studio-api-locked", !!locked);
@@ -110,6 +144,7 @@ function setStudioLocked(locked, options = {}) {
   if (meta && options.meta) meta.textContent = options.meta;
   if (loginBtn) loginBtn.hidden = !!options.hideLogin;
   if (upgradeBtn) upgradeBtn.hidden = !!options.hideUpgrade;
+  updateStudioDevicePanel();
 }
 function getSelectedTrack() {
   return trackState.find((track) => track.id === selectedTrackId) || null;
@@ -749,32 +784,65 @@ function handleGigVideoFiles(files = []) {
   setStatus("#gigStatus", `${videoAssets.length} video file(s) are now joined with the current motherboards.`);
 }
 
-async function applyStudioMicProfile() {
+async function refreshStudioDeviceInventory() {
   try {
-    if (!navigator.mediaDevices?.getUserMedia) throw new Error("mic_unavailable");
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: 48000,
-        channelCount: 1
-      }
-    });
+    if (!navigator.mediaDevices?.enumerateDevices) return;
     const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter((device) => device.kind === "audioinput");
+    const videoInputs = devices.filter((device) => device.kind === "videoinput");
+    studioDeviceState.micCount = audioInputs.length;
+    studioDeviceState.cameraCount = videoInputs.length;
+    if (!studioDeviceState.micLabel) studioDeviceState.micLabel = audioInputs[0]?.label || "";
+    if (!studioDeviceState.cameraLabel) studioDeviceState.cameraLabel = videoInputs[0]?.label || "";
     const micSelect = qs("#micSourceSelect");
     if (micSelect) {
-      const audioInputs = devices.filter((device) => device.kind === "audioinput");
       micSelect.innerHTML = audioInputs.length
         ? audioInputs.map((device, index) => `<option value="${device.deviceId || `mic-${index}`}">${device.label || `Microphone ${index + 1}`}</option>`).join("")
         : "<option value='default'>Default Mic</option>";
     }
+  } catch {}
+  updateStudioDevicePanel();
+}
+
+async function ensureStudioDeviceReady({ audio = false, video = false, source = "studio" } = {}) {
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error("device_api_unavailable");
+  const constraints = {};
+  if (audio) {
+    const selectedMicId = qs("#micSourceSelect")?.value || "default";
+    constraints.audio = selectedMicId && selectedMicId !== "default"
+      ? { deviceId: { exact: selectedMicId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, channelCount: 1 }
+      : { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, channelCount: 1 };
+  }
+  if (video) {
+    constraints.video = { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" };
+  }
+  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  const audioTrack = stream.getAudioTracks?.()[0] || null;
+  const videoTrack = stream.getVideoTracks?.()[0] || null;
+  if (audioTrack) {
+    studioDeviceState.audioGranted = true;
+    studioDeviceState.micLabel = audioTrack.label || studioDeviceState.micLabel || "";
+    setStatus("#transportStatus", `${source === "assistant" ? "Assistant" : "Studio"} microphone is ready on ${studioDeviceState.micLabel || "this device"}.`);
+  }
+  if (videoTrack) {
+    studioDeviceState.videoGranted = true;
+    studioDeviceState.cameraLabel = videoTrack.label || studioDeviceState.cameraLabel || "";
+    setStatus("#gigStatus", `Camera lane is ready on ${studioDeviceState.cameraLabel || "this device"}.`);
+  }
+  await refreshStudioDeviceInventory();
+  return stream;
+}
+
+async function applyStudioMicProfile() {
+  try {
+    const stream = await ensureStudioDeviceReady({ audio: true, source: "studio" });
     const micLabel = stream.getAudioTracks()[0]?.label || "your microphone";
     stream.getTracks().forEach((track) => track.stop());
     localStorage.setItem("studio_mic_profile", "normal");
     setStatus("#transportStatus", `Normal voice pickup is active by default on ${micLabel}.`);
   } catch {
     setStatus("#transportStatus", "Mic profile is ready once microphone permission is allowed.");
+    refreshStudioDeviceInventory();
   }
 }
 async function loadPlan() {
@@ -891,6 +959,7 @@ async function refreshStudioJakeAccess({ bootstrap = true } = {}) {
     if (studioAccessState.email) {
       setStatus("#sessionStatus", `Studio API linked to ${studioAccessState.email}.`);
     }
+    updateStudioDevicePanel();
     setStudioLocked(false);
     return true;
   } catch {
@@ -926,6 +995,28 @@ function setupStudioAccessGate() {
   });
   qs("#studioAccessRefreshBtn")?.addEventListener("click", () => {
     refreshStudioJakeAccess({ bootstrap: true });
+  });
+  qs("#studioPrimeMicBtn")?.addEventListener("click", async () => {
+    try {
+      const stream = await ensureStudioDeviceReady({ audio: true, source: "studio" });
+      stream.getTracks().forEach((track) => track.stop());
+      setStatus("#transportStatus", "Studio microphone lane is armed and ready for live recording.");
+    } catch {
+      setStatus("#transportStatus", "Browser microphone permission is required before live recording can start.");
+    }
+  });
+  qs("#studioPrimeCameraBtn")?.addEventListener("click", async () => {
+    try {
+      const stream = await ensureStudioDeviceReady({ video: true, source: "studio" });
+      activeCameraStream?.getTracks()?.forEach((track) => track.stop());
+      activeCameraStream = stream;
+      setStatus("#gigStatus", "Studio camera lane is armed and ready for the live screen.");
+    } catch {
+      setStatus("#gigStatus", "Browser camera permission is required before live video can start.");
+    }
+  });
+  qs("#studioRefreshDevicesBtn")?.addEventListener("click", () => {
+    refreshStudioDeviceInventory();
   });
 }
 
@@ -1349,12 +1440,7 @@ function updateLiveWaveFromMic() {
 async function startRecording() {
   if (isRecording) return;
   try {
-    const selectedMicId = qs("#micSourceSelect")?.value || "default";
-    currentMicStream = await navigator.mediaDevices.getUserMedia({
-      audio: selectedMicId && selectedMicId !== "default"
-        ? { deviceId: { exact: selectedMicId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-        : true
-    });
+    currentMicStream = await ensureStudioDeviceReady({ audio: true, source: "studio" });
     currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
     const source = currentAudioContext.createMediaStreamSource(currentMicStream);
     currentAnalyser = currentAudioContext.createAnalyser();
@@ -1419,7 +1505,7 @@ async function startRecording() {
     recordingTick = setInterval(updateLiveWaveFromMic, 220);
     setStatus("#placementStatus", "Recording ON · live waveform is drawing now.");
   } catch {
-    setStatus("#placementStatus", "Recording needs microphone permission.");
+    setStatus("#placementStatus", "Recording needs browser microphone permission before the booth can go live.");
   }
 }
 
@@ -1624,7 +1710,7 @@ function setupGigPanel() {
   qs("#cameraAccessBtn")?.addEventListener("click", async () => {
     try {
       activeCameraStream?.getTracks()?.forEach((track) => track.stop());
-      activeCameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      activeCameraStream = await ensureStudioDeviceReady({ video: true, source: "studio" });
       setStatus("#gigStatus", "Camera access is live. Kodak, Samsung, iPhone, and drone-ready preview is armed.");
       setStatus("#gigEditorStatus", "Camera stream is connected for the Gig 4K session.");
     } catch {
@@ -2000,6 +2086,7 @@ window.addEventListener("DOMContentLoaded", () => {
   renderProfileStats();
   renderUndoHistory();
   updateDbQuickLabel();
+  refreshStudioDeviceInventory();
   applyStudioMicProfile();
   refreshStudioJakeAccess({ bootstrap: true });
   qs("#voiceIntroBtn")?.addEventListener("click", playIntroVoice);

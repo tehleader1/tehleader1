@@ -6301,7 +6301,7 @@ function setupStudioMode(){
   const blogBtn = qs("#studioBlogBtn")
   let studioBootTimer = null
   if(!shell) return
-  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260413a"
+  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260414a"
 
   const promptStudioLogin = ()=>{
     if(typeof window.openLoginGateSticky === "function"){
@@ -14052,6 +14052,38 @@ async function startOpenAIListening(options = {}){
         return
       }catch{}
     }
+    const ensureAssistantMicReady = async ()=>{
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        throw new Error("microphone_api_unavailable")
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
+      try{
+        const devices = await navigator.mediaDevices.enumerateDevices?.().catch(()=>[])
+        const audioInputs = Array.isArray(devices) ? devices.filter(device => device.kind === "audioinput") : []
+        const activeLabel = stream.getAudioTracks?.()[0]?.label || audioInputs[0]?.label || "this device"
+        const transcriptEl = qs("#ariaTranscript")
+        const readyLine = `${options.assistantName || getAssistantDisplayName()} is on ${activeLabel}. Speak now.`
+        if(transcriptEl) transcriptEl.textContent = readyLine
+        if(typeof window.updateAssistantTracker === "function"){
+          try{
+            window.updateAssistantTracker({
+              route: state.route || "remote",
+              activeAssistant: options.assistantId || state.activeAssistant || "aria",
+              voiceState: "mic-ready",
+              voiceText: readyLine,
+              focusLabel: `${audioInputs.length || 1} audio device${(audioInputs.length || 1) === 1 ? "" : "s"} ready`
+            })
+          }catch{}
+        }
+      }catch{}
+      return stream
+    }
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
       const fallback = `${options.assistantName || getAssistantDisplayName()} needs microphone access on this device before the speech flow can start.`
       const transcriptEl = qs("#ariaTranscript")
@@ -14080,7 +14112,7 @@ async function startOpenAIListening(options = {}){
       }
     } }
 
-      recStream = await navigator.mediaDevices.getUserMedia({audio:true})
+      recStream = await ensureAssistantMicReady()
       audioChunks = []
       let chunkCount = 0
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm"
