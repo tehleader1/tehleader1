@@ -574,6 +574,102 @@ const voiceSessionRuntime = {
   }
 }
 
+const unifiedVoiceController = {
+  entryMode: "idle",
+  assistantId: "aria",
+  route: "home",
+  persistentMic: false,
+  lastTriggerAt: 0,
+  lastTranscript: "",
+  lastReply: ""
+}
+
+const VOICE_ENTRY_PROFILES = {
+  icon: {
+    bootstrapMode: "greeting",
+    greeting: {
+      aria: "Aria here, how may I help you?",
+      projake: "Jake here. What part of the studio or hair work should we handle?"
+    },
+    listening: {
+      aria: "Aria is listening now. Tell me the hair problem.",
+      projake: "Jake is listening now. Tell me the studio or hair issue."
+    },
+    thinkDelayMs: 2200,
+    greetingPauseMs: 2000,
+    persistentMic: false
+  },
+  handsfree: {
+    bootstrapMode: "advanced",
+    greeting: {
+      aria: "Welcome to Hands Free Mode by Aria.",
+      projake: "Welcome to Hands Free Mode with Jake."
+    },
+    listening: {
+      aria: "Hands Free Mode is live. Speak naturally and I will keep listening.",
+      projake: "Hands Free Mode is live. Speak naturally and I will keep the studio lane open."
+    },
+    thinkDelayMs: 1800,
+    greetingPauseMs: 2000,
+    persistentMic: true
+  },
+  diary: {
+    bootstrapMode: "advanced",
+    greeting: {
+      aria: "How can I help with your hair problem today?",
+      projake: "Jake is in Diary Mode. Tell me the hair or studio pressure you want help with."
+    },
+    listening: {
+      aria: "Diary Mode is listening now. Give me the real hair problem and I will cut to the chase.",
+      projake: "Diary Mode is listening now. Tell me the exact problem and I will answer directly."
+    },
+    thinkDelayMs: 1900,
+    greetingPauseMs: 1400,
+    persistentMic: false
+  }
+}
+
+function syncUnifiedVoiceController(patch = {}){
+  Object.assign(unifiedVoiceController, patch || {})
+  window.__supportrdVoiceModeState = { ...unifiedVoiceController }
+  window.__supportrdVoiceEntryMode = unifiedVoiceController.entryMode
+  return unifiedVoiceController
+}
+
+function getVoiceEntryProfile(entryMode = "icon", assistantId = "aria", route = (remoteState?.currentRoute || "home")){
+  const modeKey = VOICE_ENTRY_PROFILES[entryMode] ? entryMode : "icon"
+  const profile = VOICE_ENTRY_PROFILES[modeKey]
+  return {
+    entryMode: modeKey,
+    route,
+    assistantId,
+    bootstrapMode: profile.bootstrapMode || "greeting",
+    greetingLine: profile.greeting?.[assistantId] || profile.greeting?.aria || "Hello how may I help you.",
+    listeningLine: profile.listening?.[assistantId] || profile.listening?.aria || "Speak now.",
+    persistentMic: !!profile.persistentMic,
+    thinkDelayMs: Number(profile.thinkDelayMs || 2200),
+    greetingPauseMs: Number(profile.greetingPauseMs || 1600)
+  }
+}
+
+function recordUnifiedVoiceTurn(role, text, options = {}){
+  const clean = String(text || "").trim()
+  if(!clean) return
+  syncUnifiedVoiceController({
+    lastTranscript: role === "user" ? clean : unifiedVoiceController.lastTranscript,
+    lastReply: role === "assistant" ? clean : unifiedVoiceController.lastReply
+  })
+  try{
+    if(typeof window.recordDiaryVoiceTurn === "function"){
+      window.recordDiaryVoiceTurn(role, clean, {
+        ...options,
+        entryMode: options.entryMode || unifiedVoiceController.entryMode,
+        assistantId: options.assistantId || unifiedVoiceController.assistantId || state.activeAssistant || "aria"
+      })
+    }
+  }catch{}
+}
+
 function getVoiceSessionKey(assistantId = state.activeAssistant, route = (remoteState?.currentRoute || "home")){
   return `${assistantId}:${route || "home"}`
 }
@@ -1284,15 +1380,18 @@ function bumpHairScore(delta){
   }
 
 
-  async function askAria(msg){
+  async function askAria(msg, options = {}){
     if(!msg) return
     if(state.ariaBlocked && !isProOverride()){
       openModal("puzzleModal")
       return
     }
+    const assistantOverrideId = options.assistantId || state.activeAssistant
+    if(assistantOverrideId) state.activeAssistant = assistantOverrideId
     const assistant = getActiveAssistant()
     const topicContext = (state.assistantTopic || "hair_core").replace(/_/g, " ")
-    const routeContext = remoteState?.currentRoute || "home"
+    const routeContext = options.route || remoteState?.currentRoute || "home"
+    const requestedMode = options.mode || (options.entryMode === "diary" ? "advanced" : undefined) || voiceSessionRuntime.byAssistant[getVoiceSessionKey(assistant?.id || "aria", routeContext)]?.mode || "greeting"
     const laneKey = inferVisitorLaneFromMessage(msg)
     const laneLabel = typeof ACQUISITION_LANES !== "undefined" ? ACQUISITION_LANES[laneKey] || ACQUISITION_LANES.issues : laneKey
     const personaPrompt = [
@@ -1310,6 +1409,9 @@ function bumpHairScore(delta){
     ].join(" ")
     appendAria(`You: ${msg}`)
     appendConversation("user", msg)
+    if(!options.skipUserHistory){
+      recordUnifiedVoiceTurn("user", msg, { assistantId: assistant?.id || "aria", route: routeContext, entryMode: options.entryMode || unifiedVoiceController.entryMode })
+    }
     if(typeof trackAcquisitionSignal === "function"){
       trackAcquisitionSignal(`assistant_prompt_${laneKey}`, {
         lane: laneLabel,
@@ -1341,7 +1443,7 @@ function bumpHairScore(delta){
           {
             assistantId: assistant?.id || "aria",
             route: routeContext,
-            mode: voiceSessionRuntime.byAssistant[getVoiceSessionKey(assistant?.id || "aria", routeContext)]?.mode || "greeting"
+            mode: requestedMode
           }
         )
         reply = d?.reply || ""
@@ -1377,6 +1479,7 @@ function bumpHairScore(delta){
       }
       appendAria(`${assistant.name}: ${reply}`)
       appendConversation("aria", reply)
+      recordUnifiedVoiceTurn("assistant", reply, { assistantId: assistant?.id || "aria", route: routeContext, entryMode: options.entryMode || unifiedVoiceController.entryMode })
       showSpeechPopup(assistant.name, reply)
       if(typeof trackAcquisitionSignal === "function"){
         trackAcquisitionSignal(`assistant_reply_${laneKey}`, {
@@ -1397,6 +1500,7 @@ function bumpHairScore(delta){
       const fallbackReply = buildLocalAssistantFallback(msg, assistant)
       appendAria(`${assistant.name}: ${fallbackReply}`)
       appendConversation("aria", fallbackReply)
+      recordUnifiedVoiceTurn("assistant", fallbackReply, { assistantId: assistant?.id || "aria", route: routeContext, entryMode: options.entryMode || unifiedVoiceController.entryMode })
       showSpeechPopup(assistant.name, fallbackReply)
       speakReply(fallbackReply, { assistantId: assistant?.id || "aria" })
       setAriaFlow("idle")
@@ -6743,6 +6847,27 @@ function setupFloatMode(){
   const diaryExportPdfBtn = qs("#floatDiaryExportPdfBtn")
   const handsfreeBtn = qs("#floatHandsfreeBtn")
   const handsfreeTranscript = qs("#floatHandsfreeTranscript")
+  function recordDiaryVoiceTurn(role, text, options = {}){
+    const clean = String(text || "").trim()
+    if(!clean) return
+    const speaker = role === "assistant"
+      ? (options.assistantId === "projake" ? "Jake" : "Aria")
+      : "You"
+    const stamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    const line = `[${stamp}] ${speaker}: ${clean}`
+    if(handsfreeTranscript){
+      handsfreeTranscript.value = handsfreeTranscript.value
+        ? `${handsfreeTranscript.value}
+${line}`
+        : line
+      handsfreeTranscript.scrollTop = handsfreeTranscript.scrollHeight
+    }
+    const history = JSON.parse(localStorage.getItem("supportrdDiaryVoiceTurns") || "[]")
+    history.unshift({ role, speaker, text: clean, at: new Date().toISOString(), entryMode: options.entryMode || "icon" })
+    localStorage.setItem("supportrdDiaryVoiceTurns", JSON.stringify(history.slice(0, 30)))
+    remoteState.lastDiaryVoiceTurn = line
+  }
+  window.recordDiaryVoiceTurn = recordDiaryVoiceTurn
   const diaryFaqBtn = qs("#floatDiaryFaqBtn")
   const diaryGpsBtn = qs("#floatDiaryGpsBtn")
   const diaryGpsExplainBtn = qs("#floatDiaryGpsExplainBtn")
@@ -7029,6 +7154,42 @@ function setupFloatMode(){
   if(!shell) return
   const assistantAriaOrb = qs("#floatAriaBtn")
   const assistantJakeOrb = qs("#floatJakeBtn")
+  const assistantMovementTuning = window.SupportRDAssistantMotionTuning || {
+    interactionBiasLeft: 0.42,
+    interactionBiasRight: 0.58,
+    pointerLeftThreshold: 0.34,
+    pointerRightThreshold: 0.66,
+    interactionLeadX: 150,
+    interactionSupportX: 92,
+    interactionLeadYOffset: -54,
+    interactionSupportYOffset: 42,
+    centerLeadX: 96,
+    centerLeadYOffset: -66,
+    centerSupportX: 92,
+    centerSupportYOffset: 28,
+    interactionRecencyMs: 2200,
+    roamSkipRecencyMs: 1600,
+    mouseMoveThrottleMs: 900,
+    mouseMoveFollowYOffsetThreshold: 110,
+    mouseMoveRecentOffsetMs: 1300,
+    interactionBubbleOffsetX: 26,
+    interactionBubbleOffsetY: -26,
+    scrollTopProgress: 0.18,
+    scrollBottomProgress: 0.72,
+    roamIntervalMs: 2100,
+    roamVerticalLift: 54,
+    roamVerticalDrop: 58,
+    bottomDockX: 154,
+    topDockX: 162,
+    centerDockX: 178,
+    bottomDockY: 176,
+    topDockY: 154,
+    centerDockYRatio: 0.44,
+    tapBurstWindowMs: 2800,
+    tapBurstCount: 3,
+    tapMomentDurationMs: 3200
+  }
+  window.SupportRDAssistantMotionTuning = assistantMovementTuning
   const assistantMotionState = {
     lastInteraction: null,
     lastScrollBucket: -1,
@@ -7100,6 +7261,23 @@ function setupFloatMode(){
       jake: { x: "4px", y: "8px", tilt: "3deg", speed: "3.0s" },
       status: "Solid State is active. Aria and Jake are locked into verification mode."
     }
+  }
+  window.SupportRDAssistantMotionState = assistantMotionState
+  window.SupportRDAssistantScenes = REMOTE_ASSISTANT_SCENES
+  window.getSupportRDAssistantMotion = ()=>({
+    tuning: { ...assistantMovementTuning },
+    state: { ...assistantMotionState },
+    route: remoteState.currentRoute || "home"
+  })
+  window.updateSupportRDAssistantMotion = (patch = {})=>{
+    if(!patch || typeof patch !== "object") return window.getSupportRDAssistantMotion()
+    Object.entries(patch).forEach(([key, value])=>{
+      if(Object.prototype.hasOwnProperty.call(assistantMovementTuning, key) && Number.isFinite(Number(value))){
+        assistantMovementTuning[key] = Number(value)
+      }
+    })
+    syncAssistantViewportMotion(true)
+    return window.getSupportRDAssistantMotion()
   }
   function applyAssistantDemoScene(route = "home", overrideStatus){
       const sceneKey = REMOTE_ASSISTANT_SCENES[route] ? route : "home"
@@ -7339,18 +7517,18 @@ function setupFloatMode(){
     }
     function moveAssistantPairToInteraction(x, y){
       const clampedY = Math.max(148, Math.min(window.innerHeight - 146, y))
-      const bias = x < (window.innerWidth * 0.42) ? "left" : x > (window.innerWidth * 0.58) ? "right" : "center"
+      const bias = x < (window.innerWidth * assistantMovementTuning.interactionBiasLeft) ? "left" : x > (window.innerWidth * assistantMovementTuning.interactionBiasRight) ? "right" : "center"
       assistantMotionState.pointerBias = bias
       const ariaLead = bias === "left"
-        ? { x: Math.min(window.innerWidth - 210, x + 150), y: clampedY - 54 }
+        ? { x: Math.min(window.innerWidth - 210, x + assistantMovementTuning.interactionLeadX), y: clampedY + assistantMovementTuning.interactionLeadYOffset }
         : bias === "right"
-          ? { x: Math.max(174, x - 150), y: clampedY - 54 }
-          : { x: x - 96, y: clampedY - 66 }
+          ? { x: Math.max(174, x - assistantMovementTuning.interactionLeadX), y: clampedY + assistantMovementTuning.interactionLeadYOffset }
+          : { x: x - assistantMovementTuning.centerLeadX, y: clampedY + assistantMovementTuning.centerLeadYOffset }
       const jakeLead = bias === "left"
-        ? { x: Math.min(window.innerWidth - 152, x + 92), y: clampedY + 42 }
+        ? { x: Math.min(window.innerWidth - 152, x + assistantMovementTuning.interactionSupportX), y: clampedY + assistantMovementTuning.interactionSupportYOffset }
         : bias === "right"
-          ? { x: Math.max(144, x - 92), y: clampedY + 42 }
-          : { x: x + 92, y: clampedY + 28 }
+          ? { x: Math.max(144, x - assistantMovementTuning.interactionSupportX), y: clampedY + assistantMovementTuning.interactionSupportYOffset }
+          : { x: x + assistantMovementTuning.centerSupportX, y: clampedY + assistantMovementTuning.centerSupportYOffset }
       applyAssistantPairLayout({ aria: ariaLead, jake: jakeLead })
     }
     function getRouteFocusPoint(){
@@ -7487,7 +7665,7 @@ function setupFloatMode(){
         .filter(entry => now - entry.at < 1800)
       assistantMotionState.recentSideTaps.push({ side, at: now, x, y })
       const leftTapBurst = assistantMotionState.recentSideTaps.filter(entry => entry.side === "left")
-      if(leftTapBurst.length >= 3){
+      if(leftTapBurst.length >= assistantMovementTuning.tapBurstCount){
         triggerAssistantMoment("left_taps", {
           point: { x: Math.max(window.innerWidth * 0.78, 220), y: Math.max(152, y) },
           duration: 3600
@@ -7542,7 +7720,7 @@ function setupFloatMode(){
         moveAssistantPairToInteraction(focusPoint.x, focusPoint.y)
         return
       }
-      const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < 2200)
+      const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < assistantMovementTuning.interactionRecencyMs)
       if(recentInteraction){
         moveAssistantPairToInteraction(assistantMotionState.lastInteraction.x, assistantMotionState.lastInteraction.y)
         return
@@ -7553,11 +7731,11 @@ function setupFloatMode(){
       if(assistantMotionState.roamTimer) clearInterval(assistantMotionState.roamTimer)
       assistantMotionState.roamTimer = setInterval(()=>{
         if(!shell || shell.hidden) return
-        const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < 1600)
+        const recentInteraction = assistantMotionState.lastInteraction && (Date.now() - assistantMotionState.lastInteraction.at < assistantMovementTuning.roamSkipRecencyMs)
         if(recentInteraction) return
         const routeFocus = getRouteFocusPoint()
         if(routeFocus){
-          const verticalOffset = assistantMotionState.driftPhase % 2 === 0 ? -54 : 58
+          const verticalOffset = assistantMotionState.driftPhase % 2 === 0 ? -assistantMovementTuning.roamVerticalLift : assistantMovementTuning.roamVerticalDrop
           applyAssistantPairLayout({
             aria: { x: routeFocus.x - 124, y: routeFocus.y + verticalOffset },
             jake: { x: routeFocus.x + 118, y: routeFocus.y - verticalOffset }
@@ -7573,12 +7751,12 @@ function setupFloatMode(){
             : "left"
         const progress = Math.min(1, Math.max(0, (window.scrollY || 0) / Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)))
         const roamPoint = progress > 0.7
-          ? { x: assistantMotionState.pointerBias === "left" ? 154 : window.innerWidth - 154, y: window.innerHeight - 176 }
+          ? { x: assistantMotionState.pointerBias === "left" ? assistantMovementTuning.bottomDockX : window.innerWidth - assistantMovementTuning.bottomDockX, y: window.innerHeight - assistantMovementTuning.bottomDockY }
           : progress < 0.22
-            ? { x: assistantMotionState.pointerBias === "left" ? 162 : window.innerWidth - 162, y: 154 }
-            : { x: assistantMotionState.pointerBias === "left" ? 178 : window.innerWidth - 178, y: window.innerHeight * 0.44 }
+            ? { x: assistantMotionState.pointerBias === "left" ? assistantMovementTuning.topDockX : window.innerWidth - assistantMovementTuning.topDockX, y: assistantMovementTuning.topDockY }
+            : { x: assistantMotionState.pointerBias === "left" ? assistantMovementTuning.centerDockX : window.innerWidth - assistantMovementTuning.centerDockX, y: window.innerHeight * assistantMovementTuning.centerDockYRatio }
         moveAssistantPairToInteraction(roamPoint.x, roamPoint.y)
-      }, 2100)
+      }, assistantMovementTuning.roamIntervalMs)
     }
     function handleAssistantHover(node, assistantId){
       if(!node) return
@@ -7768,6 +7946,10 @@ function setupFloatMode(){
       event?.stopPropagation?.()
       event?.stopImmediatePropagation?.()
       const route = remoteState.currentRoute || "home"
+      if(typeof window.startSupportRDVoiceMode === "function"){
+        await window.startSupportRDVoiceMode("icon", { assistantId, route })
+        return
+      }
       const help = getAssistantHelp(route, assistantId)
       const assistantName = assistantId === "projake" ? "Jake Studio Specialist" : "Aria Hair Advisor"
       state.activeAssistant = assistantId
@@ -7871,9 +8053,9 @@ function setupFloatMode(){
       if(target && (target.closest?.("#floatAriaBtn") || target.closest?.("#floatJakeBtn") || target.closest?.("#remoteGuardianAria") || target.closest?.("#remoteGuardianJake"))){
         return
       }
-      assistantMotionState.lastInteraction = { x: event.clientX + 26, y: event.clientY - 26, at: Date.now() }
+      assistantMotionState.lastInteraction = { x: event.clientX + assistantMovementTuning.interactionBubbleOffsetX, y: event.clientY + assistantMovementTuning.interactionBubbleOffsetY, at: Date.now() }
       registerTapPattern(event.clientX, event.clientY)
-      moveAssistantPairToInteraction(event.clientX + 26, event.clientY - 26)
+      moveAssistantPairToInteraction(event.clientX + assistantMovementTuning.interactionBubbleOffsetX, event.clientY + assistantMovementTuning.interactionBubbleOffsetY)
       if(target?.closest?.("[data-faq-topic], [data-faq-next], [data-open-help-reel]")){
         triggerAssistantMoment("reel_bun", {
           point: { x: Math.max(160, event.clientX), y: Math.max(160, event.clientY - 34) },
@@ -7910,22 +8092,22 @@ function setupFloatMode(){
     document.addEventListener("touchstart", (event)=>{
       const touch = event.touches && event.touches[0]
       if(!touch || !shell || shell.hidden) return
-      assistantMotionState.lastInteraction = { x: touch.clientX + 26, y: touch.clientY - 26, at: Date.now() }
+      assistantMotionState.lastInteraction = { x: touch.clientX + assistantMovementTuning.interactionBubbleOffsetX, y: touch.clientY + assistantMovementTuning.interactionBubbleOffsetY, at: Date.now() }
       registerTapPattern(touch.clientX, touch.clientY)
-      moveAssistantPairToInteraction(touch.clientX + 26, touch.clientY - 26)
+      moveAssistantPairToInteraction(touch.clientX + assistantMovementTuning.interactionBubbleOffsetX, touch.clientY + assistantMovementTuning.interactionBubbleOffsetY)
     }, { passive:true })
     let lastMouseMoveAt = 0
     document.addEventListener("mousemove", (event)=>{
       if(!shell || shell.hidden) return
-      if(Date.now() - lastMouseMoveAt < 900) return
+      if(Date.now() - lastMouseMoveAt < assistantMovementTuning.mouseMoveThrottleMs) return
       lastMouseMoveAt = Date.now()
-      assistantMotionState.pointerBias = event.clientX < (window.innerWidth / 3)
+      assistantMotionState.pointerBias = event.clientX < (window.innerWidth * assistantMovementTuning.pointerLeftThreshold)
         ? "left"
-        : event.clientX > (window.innerWidth * 0.66)
+        : event.clientX > (window.innerWidth * assistantMovementTuning.pointerRightThreshold)
           ? "right"
           : "center"
-      if(Math.abs(event.clientY - (window.innerHeight / 2)) > 110){
-        assistantMotionState.lastInteraction = { x: event.clientX, y: event.clientY, at: Date.now() - 1300 }
+      if(Math.abs(event.clientY - (window.innerHeight / 2)) > assistantMovementTuning.mouseMoveFollowYOffsetThreshold){
+        assistantMotionState.lastInteraction = { x: event.clientX, y: event.clientY, at: Date.now() - assistantMovementTuning.mouseMoveRecentOffsetMs }
         syncAssistantViewportMotion(true)
       }
     }, { passive:true })
@@ -12038,14 +12220,29 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     openMiniWindow("Export PDF", "Diary export opened. Use Save as PDF in the print window for your PDF copy.")
   }
   function toggleHandsfreeMode(){
-    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition
-    if(remoteState.handsfreeActive && remoteState.handsfreeRecognition){
-      remoteState.handsfreeRecognition.stop()
+    if(remoteState.handsfreeActive){
       remoteState.handsfreeActive = false
+      if(typeof window.stopSupportRDVoiceMode === "function"){
+        window.stopSupportRDVoiceMode("handsfree_toggle")
+      }else if(remoteState.handsfreeRecognition){
+        try{ remoteState.handsfreeRecognition.stop() }catch{}
+      }
       if(settingsStatus) settingsStatus.textContent = "Handsfree mode paused."
       return
     }
+    remoteState.handsfreeActive = true
+    if(typeof window.startSupportRDVoiceMode === "function"){
+      window.startSupportRDVoiceMode("handsfree", {
+        assistantId: state.activeAssistant || "aria",
+        route: "diary"
+      })
+      if(settingsStatus) settingsStatus.textContent = "Handsfree mode is live. Aria is keeping the mic open and the transcript is saving below."
+      openMiniWindow("Handsfree Mode", "Handsfree mode is live. Talk naturally and SupportRD will keep recording your hair conversation below.")
+      return
+    }
+    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition
     if(!Speech){
+      remoteState.handsfreeActive = false
       openMiniWindow("Handsfree Mode", "Speech recognition is not available on this device right now.")
       return
     }
@@ -12065,7 +12262,6 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
     recognition.start()
     remoteState.handsfreeRecognition = recognition
-    remoteState.handsfreeActive = true
     if(settingsStatus) settingsStatus.textContent = "Handsfree mode is live. SupportRD is transcribing the conversation below."
     openMiniWindow("Handsfree Mode", "Handsfree transcription is live. Talk naturally and we will keep the details below.")
   }
@@ -12887,12 +13083,20 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   qs("#floatDiaryRecordBtn")?.addEventListener("click", ()=>{
     const diary = (qs("#floatDiaryInput")?.value || "").trim()
     renderDiaryPagePreview(remoteState.diaryPageIndex || 0)
-    if(!remoteState.handsfreeActive) toggleHandsfreeMode()
+    if(typeof window.startSupportRDVoiceMode === "function"){
+      window.startSupportRDVoiceMode("diary", {
+        assistantId: state.activeAssistant || "aria",
+        route: "diary"
+      })
+      remoteState.handsfreeActive = false
+    }else if(!remoteState.handsfreeActive){
+      toggleHandsfreeMode()
+    }
     if(settingsStatus) settingsStatus.textContent = diary
-      ? "Diary page is live. Hands-Free Mode is listening so you can keep recording hair thoughts naturally."
-      : "Diary page is open and Hands-Free Mode is listening. Start talking and SupportRD will keep the diary moving."
+      ? "Diary mode is live. The main SupportRD voice is listening and will save the hair conversation into your history."
+      : "Diary mode is live. Start talking and SupportRD will capture the next hair thought into the diary lane."
     openMiniWindow("Diary Mode", diary
-      ? "Diary page updated and hands-free capture is ready above your history."
+      ? "Diary page updated and the main SupportRD voice is ready above your history."
       : "Diary page opened. Start talking and SupportRD will capture the next hair thought into the diary lane.")
   })
   diaryPostBtn?.addEventListener("click", ()=>{
@@ -12977,8 +13181,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     syncDiaryAndProfileExtras()
   })
   handsfreeBtn?.addEventListener("click", toggleHandsfreeMode)
-  diaryAriaFixed?.addEventListener("click", ()=>qs("#floatAriaBtn")?.click())
-  diaryJakeFixed?.addEventListener("click", ()=>qs("#floatJakeBtn")?.click())
+  diaryAriaFixed?.addEventListener("click", ()=>window.startSupportRDVoiceMode ? window.startSupportRDVoiceMode("diary", { assistantId:"aria", route:"diary" }) : qs("#floatAriaBtn")?.click())
+  diaryJakeFixed?.addEventListener("click", ()=>window.startSupportRDVoiceMode ? window.startSupportRDVoiceMode("diary", { assistantId:"projake", route:"diary" }) : qs("#floatJakeBtn")?.click())
   faqReelBtn?.addEventListener("click", ()=>{
     if(faqReelFrame){
       faqReelFrame.src = faqReelFrame.src.split("&theme=")[0] + `&theme=${shell?.dataset?.faqTheme || "tiktok"}&refresh=${Date.now()}`
@@ -14077,7 +14281,145 @@ function setupAria(){
     showSpeechPopup(assistantName, line)
   }
 
+  async function primeVoiceDeviceLane(assistantName, entryMode = "icon"){
+    if(!navigator.mediaDevices?.getUserMedia){
+      throw new Error("microphone_api_unavailable")
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    })
+    try{
+      const devices = await navigator.mediaDevices.enumerateDevices?.().catch(()=>[])
+      const audioInputs = Array.isArray(devices) ? devices.filter(device => device.kind === "audioinput") : []
+      const activeLabel = stream.getAudioTracks?.()[0]?.label || audioInputs[0]?.label || "this device"
+      const readyLine = `${assistantName} is ready on ${activeLabel}.`
+      const transcriptEl = qs("#ariaTranscript")
+      if(transcriptEl) transcriptEl.textContent = readyLine
+      setAssistantPixelState(state.activeAssistant || "aria", {
+        stage: "mic-ready",
+        mode: unifiedVoiceController.entryMode === "diary" ? "advanced" : (voiceSessionRuntime.byAssistant[getVoiceSessionKey(state.activeAssistant || "aria", unifiedVoiceController.route || remoteState?.currentRoute || "home")]?.mode || "greeting"),
+        text: readyLine
+      })
+      updateAssistantTracker({
+        route: unifiedVoiceController.route || remoteState?.currentRoute || "home",
+        activeAssistant: state.activeAssistant || "aria",
+        voiceState: "mic-ready",
+        voiceText: readyLine,
+        focusLabel: `${audioInputs.length || 1} audio device${(audioInputs.length || 1) === 1 ? "" : "s"} ready`
+      })
+      if(entryMode === "diary" || entryMode === "handsfree"){
+        recordUnifiedVoiceTurn("assistant", readyLine, {
+          assistantId: state.activeAssistant || "aria",
+          entryMode,
+          route: unifiedVoiceController.route || remoteState?.currentRoute || "home"
+        })
+      }
+    }catch{}
+    try{ stream.getTracks().forEach(track=>track.stop()) }catch{}
+    return true
+  }
+
+  async function stopSupportRDVoiceMode(reason = "manual"){
+    handsFreeMode = false
+    syncUnifiedVoiceController({ entryMode: "idle", persistentMic: false })
+    remoteState.handsfreeActive = false
+    syncHandsFree()
+    await stopOpenAIListening()
+    if(reason !== "silent"){
+      playAssistantCue("close")
+    }
+  }
+
+  async function startSupportRDVoiceMode(entryMode = "icon", options = {}){
+    const now = Date.now()
+    if(now - (unifiedVoiceController.lastTriggerAt || 0) < 420){
+      return false
+    }
+    const assistantId = options.assistantId || state.activeAssistant || "aria"
+    const route = options.route || remoteState?.currentRoute || (entryMode === "diary" ? "diary" : "home")
+    const modeProfile = getVoiceEntryProfile(entryMode, assistantId, route)
+    state.activeAssistant = assistantId
+    remoteState.currentRoute = route
+    applyAssistantUI(true)
+    syncProfile()
+    syncUnifiedVoiceController({
+      entryMode,
+      assistantId,
+      route,
+      persistentMic: !!modeProfile.persistentMic,
+      lastTriggerAt: now
+    })
+    handsFreeMode = !!modeProfile.persistentMic
+    remoteState.handsfreeActive = !!modeProfile.persistentMic
+    syncHandsFree()
+    if(entryMode === "diary"){
+      try{ focusFloatSection("floatDiaryBox") }catch{}
+    }
+    let boot = null
+    try{
+      boot = await bootstrapVoiceAssistantSession(assistantId, route, modeProfile.bootstrapMode)
+    }catch{}
+    const assistantName = getAssistantDisplayName(assistantId)
+    const greetingLine = options.greetingLine || boot?.greeting || modeProfile.greetingLine
+    const listeningLine = options.listeningLine || modeProfile.listeningLine
+    const thinkDelayMs = Number(boot?.profile?.think_delay_ms || modeProfile.thinkDelayMs)
+    const greetingPauseMs = Number(boot?.profile?.greeting_pause_ms || modeProfile.greetingPauseMs)
+    try{
+      await primeVoiceDeviceLane(assistantName, entryMode)
+    }catch{
+      const fallback = `${assistantName} needs microphone access before the live voice lane can start.`
+      showSpeechPopup(assistantName, fallback)
+      openMiniWindow("Microphone Access", fallback)
+      return false
+    }
+    updateAssistantTracker({
+      activeAssistant: assistantId,
+      route,
+      focusLabel: getAssistantTrackerFocusLabel(route, assistantId),
+      voiceState: "greeting",
+      voiceText: greetingLine,
+      liveTranscript: "",
+      anchorSelector: getAssistantAnchorSelector(route)
+    })
+    showSpeechPopup(assistantName, greetingLine)
+    setAssistantPixelState(assistantId, { stage: "greeting", mode: modeProfile.bootstrapMode, text: greetingLine })
+    try{
+      playAssistantCue("intro")
+      await speakReply(greetingLine, { assistantId, skipDoneChime: true })
+    }catch{}
+    await new Promise(resolve => setTimeout(resolve, greetingPauseMs))
+    setAssistantPixelState(assistantId, { stage: "listening", mode: modeProfile.bootstrapMode, text: listeningLine })
+    showSpeechPopup(assistantName, `${listeningLine} Speak now.`)
+    if(typeof window.startAriaListening === "function"){
+      window.startAriaListening({
+        assistantId,
+        assistantName,
+        thinkDelay: thinkDelayMs,
+        mode: modeProfile.bootstrapMode,
+        persistentMic: !!modeProfile.persistentMic,
+        entryMode,
+        routeContext: route
+      })
+    }else if(typeof startOpenAIListening === "function"){
+      startOpenAIListening({
+        assistantId,
+        assistantName,
+        thinkDelay: thinkDelayMs,
+        mode: modeProfile.bootstrapMode,
+        persistentMic: !!modeProfile.persistentMic,
+        entryMode,
+        routeContext: route
+      })
+    }
+    return true
+  }
+
   function syncHandsFree(){
+    remoteState.handsfreeActive = !!handsFreeMode
     if(!handsBtn) return
     handsBtn.textContent = handsFreeMode ? "Hands-Free: ON" : "Hands-Free: OFF"
     handsBtn.classList.toggle("active", handsFreeMode)
@@ -14089,13 +14431,8 @@ function setupAria(){
       floatingHandsfree.hidden = true
       document.body.appendChild(floatingHandsfree)
       floatingHandsfree.addEventListener("click", ()=>{
-        handsFreeMode = !handsFreeMode
-        if(!handsFreeMode){
-          stopOpenAIListening()
-        }else{
-          startOpenAIListening()
-        }
-        syncHandsFree()
+        if(handsFreeMode) stopSupportRDVoiceMode("handsfree_toggle")
+        else startSupportRDVoiceMode("handsfree", { assistantId: state.activeAssistant || "aria", route: "diary" })
       })
     }
     floatingHandsfree.hidden = !handsFreeMode
@@ -14104,12 +14441,12 @@ function setupAria(){
   if(handsBtn){
     syncHandsFree()
     handsBtn.addEventListener("click", ()=>{
-      handsFreeMode = !handsFreeMode
-      syncHandsFree()
-      if(handsFreeMode) startOpenAIListening()
-      else stopOpenAIListening()
+      if(handsFreeMode) stopSupportRDVoiceMode("handsfree_toggle")
+      else startSupportRDVoiceMode("handsfree", { assistantId: state.activeAssistant || "aria", route: "diary" })
     })
   }
+  window.startSupportRDVoiceMode = startSupportRDVoiceMode
+  window.stopSupportRDVoiceMode = stopSupportRDVoiceMode
 
 function uiError(msg){
   if(!msg) return
@@ -14222,15 +14559,26 @@ async function startOpenAIListening(options = {}){
     if(ariaActive){
       await stopOpenAIListening()
     }
-    const listeningAssistant = options.assistantId || state.activeAssistant || "aria"
-    window.__supportrdListeningAssistant = listeningAssistant
+    const listeningAssistantId = options.assistantId || state.activeAssistant || "aria"
+    const listeningAssistantName = options.assistantName || getAssistantDisplayName(listeningAssistantId)
+    const listeningRoute = options.routeContext || remoteState.currentRoute || unifiedVoiceController.route || "home"
+    const listeningMode = options.mode || (options.entryMode === "diary" ? "advanced" : "greeting")
+    const keepMicOpen = !!options.persistentMic || handsFreeMode
+    state.activeAssistant = listeningAssistantId
+    window.__supportrdListeningAssistant = listeningAssistantId
+    syncUnifiedVoiceController({
+      assistantId: listeningAssistantId,
+      route: listeningRoute,
+      entryMode: options.entryMode || unifiedVoiceController.entryMode || "icon",
+      persistentMic: keepMicOpen
+    })
     updateAssistantTracker({
-      activeAssistant: listeningAssistant,
-      route: remoteState.currentRoute || "home",
-      focusLabel: getAssistantTrackerFocusLabel(remoteState.currentRoute || "home", listeningAssistant),
-      anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "home"),
+      activeAssistant: listeningAssistantId,
+      route: listeningRoute,
+      focusLabel: getAssistantTrackerFocusLabel(listeningRoute, listeningAssistantId),
+      anchorSelector: getAssistantAnchorSelector(listeningRoute),
       voiceState: "listening",
-      voiceText: `${options.assistantName || getAssistantDisplayName(listeningAssistant)} is arming the live mic lane.`
+      voiceText: `${listeningAssistantName} is arming the live mic lane.`
     })
     const Speech = window.SpeechRecognition || window.webkitSpeechRecognition
     if(Speech){
@@ -14252,20 +14600,23 @@ async function startOpenAIListening(options = {}){
             else interim += piece
           }
           if(transcriptEl){
-            transcriptEl.textContent = (finalTranscript + interim).trim() || `${options.assistantName || getAssistantDisplayName()} is listening...`
+            transcriptEl.textContent = (finalTranscript + interim).trim() || `${listeningAssistantName} is listening...`
           }
         }
         recognition.onerror = ()=>{
+          ariaActive = false
           setAriaFlow("idle")
           stopListenLoop()
         }
         recognition.onend = ()=>{
+          ariaActive = false
           const transcript = finalTranscript.trim()
           if(!transcript){
             setAriaFlow("idle")
             stopListenLoop()
             playAssistantCue("close")
             setTimeout(()=>releasePageAudio(), 260)
+            if(keepMicOpen){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
             return
           }
           if(transcriptEl) transcriptEl.textContent = transcript
@@ -14273,12 +14624,13 @@ async function startOpenAIListening(options = {}){
           stopListenLoop()
           setAriaFlow("processing")
           setTimeout(async ()=>{
-            if(transcriptEl) transcriptEl.textContent = `${options.assistantName || getAssistantDisplayName()} is thinking...`
+            if(transcriptEl) transcriptEl.textContent = `${listeningAssistantName} is thinking...`
             playAssistantCue("response")
-            await askAria(transcript)
+            recordUnifiedVoiceTurn("user", transcript, { assistantId: listeningAssistantId, route: listeningRoute, entryMode: options.entryMode || unifiedVoiceController.entryMode })
+            await askAria(transcript, { assistantId: listeningAssistantId, route: listeningRoute, mode: listeningMode, entryMode: options.entryMode || unifiedVoiceController.entryMode, skipUserHistory: true })
             setTimeout(()=>playAssistantCue("close"), 180)
             setTimeout(()=>releasePageAudio(), 420)
-            if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
+            if(keepMicOpen){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
           }, Number(options.thinkDelay || 2000))
         }
         recognition.start()
@@ -14305,13 +14657,13 @@ async function startOpenAIListening(options = {}){
         const audioInputs = Array.isArray(devices) ? devices.filter(device => device.kind === "audioinput") : []
         const activeLabel = stream.getAudioTracks?.()[0]?.label || audioInputs[0]?.label || "this device"
         const transcriptEl = qs("#ariaTranscript")
-        const readyLine = `${options.assistantName || getAssistantDisplayName()} is on ${activeLabel}. Speak now.`
+        const readyLine = `${listeningAssistantName} is on ${activeLabel}. Speak now.`
         if(transcriptEl) transcriptEl.textContent = readyLine
         if(typeof window.updateAssistantTracker === "function"){
           try{
             window.updateAssistantTracker({
-              route: state.route || "remote",
-              activeAssistant: options.assistantId || state.activeAssistant || "aria",
+              route: listeningRoute,
+              activeAssistant: listeningAssistantId,
               voiceState: "mic-ready",
               voiceText: readyLine,
               focusLabel: `${audioInputs.length || 1} audio device${(audioInputs.length || 1) === 1 ? "" : "s"} ready`
@@ -14322,33 +14674,25 @@ async function startOpenAIListening(options = {}){
       return stream
     }
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      const fallback = `${options.assistantName || getAssistantDisplayName()} needs microphone access on this device before the speech flow can start.`
+      const fallback = `${listeningAssistantName} needs microphone access on this device before the speech flow can start.`
       const transcriptEl = qs("#ariaTranscript")
       if(transcriptEl) transcriptEl.textContent = fallback
-      showSpeechPopup(options.assistantName || getAssistantDisplayName(), fallback)
+      showSpeechPopup(listeningAssistantName, fallback)
       return
     }
     if(!window.MediaRecorder){
-      const fallback = `${options.assistantName || getAssistantDisplayName()} needs a browser with live recording support before the speech flow can start.`
+      const fallback = `${listeningAssistantName} needs a browser with live recording support before the speech flow can start.`
       const transcriptEl = qs("#ariaTranscript")
       if(transcriptEl) transcriptEl.textContent = fallback
-      showSpeechPopup(options.assistantName || getAssistantDisplayName(), fallback)
+      showSpeechPopup(listeningAssistantName, fallback)
       return
     }
     try{
       startListenLoop()
       setAriaFlow("listening")
-      
       liveTranscript = ""
       const reelVid = qs(".reel-embed video")
-      if(reelVid){ try{ reelVid.pause() }catch{
-      transcribeFailures += 1
-      if(transcribeFailures >= 3){
-        const t = qs('#ariaTranscript')
-        if(t) t.textContent = 'Mic: transcribe failing (check server)'
-      }
-    } }
-
+      if(reelVid){ try{ reelVid.pause() }catch{} }
       recStream = await ensureAssistantMicReady()
       audioChunks = []
       let chunkCount = 0
@@ -14361,20 +14705,19 @@ async function startOpenAIListening(options = {}){
           transcribeChunk(e.data)
         }
       }
-      mediaRecorder.onerror = ()=>{  }
+      mediaRecorder.onerror = ()=>{}
       mediaRecorder.onstop = async ()=>{
         ariaActive = false
-        if(reelVid){ try{ reelVid.play() }catch{
-      transcribeFailures += 1
-      if(transcribeFailures >= 3){
-        const t = qs('#ariaTranscript')
-        if(t) t.textContent = 'Mic: transcribe failing (check server)'
-      }
-    } }
-        if(!chunkCount){  setAriaFlow('idle'); stopListenLoop(); return }
+        if(reelVid){ try{ reelVid.play() }catch{} }
+        if(!chunkCount){
+          setAriaFlow("idle")
+          stopListenLoop()
+          if(keepMicOpen){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
+          return
+        }
         const blob = new Blob(audioChunks, {type: "audio/webm"})
         if(recStream){ recStream.getTracks().forEach(t=>t.stop()) }
-      try{
+        try{
           setAriaFlow("processing")
           const form = new FormData()
           form.append("audio", blob, "speech.webm")
@@ -14394,19 +14737,20 @@ async function startOpenAIListening(options = {}){
             stopListenLoop()
             setTimeout(async ()=>{
               const transcriptEl = qs("#ariaTranscript")
-              if(transcriptEl) transcriptEl.textContent = `${options.assistantName || getAssistantDisplayName()} is thinking...`
+              if(transcriptEl) transcriptEl.textContent = `${listeningAssistantName} is thinking...`
               playAssistantCue("response")
-              await askAria(transcript)
+              recordUnifiedVoiceTurn("user", transcript, { assistantId: listeningAssistantId, route: listeningRoute, entryMode: options.entryMode || unifiedVoiceController.entryMode })
+              await askAria(transcript, { assistantId: listeningAssistantId, route: listeningRoute, mode: listeningMode, entryMode: options.entryMode || unifiedVoiceController.entryMode, skipUserHistory: true })
               setTimeout(()=>playAssistantCue("close"), 180)
               setTimeout(()=>releasePageAudio(), 420)
-              if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
+              if(keepMicOpen){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
             }, Number(options.thinkDelay || 2700))
           } else {
             setAriaFlow("idle")
             stopListenLoop()
             playAssistantCue("close")
             setTimeout(()=>releasePageAudio(), 260)
-            if(handsFreeMode){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
+            if(keepMicOpen){ setTimeout(()=>{ startOpenAIListening(options) }, 900) }
           }
         }catch(err){
           uiError("Voice error: " + (err && err.message ? err.message : "could not transcribe"))
@@ -14421,7 +14765,6 @@ async function startOpenAIListening(options = {}){
       startVAD(recStream)
       maxRecordTimer = setTimeout(()=>{ stopOpenAIListening() }, 12000)
     }catch{
-      
       setAriaFlow("idle")
       stopListenLoop()
       playAssistantCue("close")
@@ -14429,10 +14772,11 @@ async function startOpenAIListening(options = {}){
     }
   }
 
-  if(btn){ btn.addEventListener("click", ()=>{ ariaMasterGreeting(); startOpenAIListening() }) }
+
+  if(btn){ btn.addEventListener("click", ()=>{ startSupportRDVoiceMode("icon", { assistantId: state.activeAssistant || "aria", route: remoteState?.currentRoute || "home" }) }) }
   if(sphere){
     sphere.classList.add("aria-pulse")
-    sphere.addEventListener("click", ()=>{ ariaMasterGreeting(); startOpenAIListening() })
+    sphere.addEventListener("click", ()=>{ startSupportRDVoiceMode("icon", { assistantId: state.activeAssistant || "aria", route: remoteState?.currentRoute || "home" }) })
   }
   window.startAriaListening = startOpenAIListening
   window.askAriaDirect = askAria
