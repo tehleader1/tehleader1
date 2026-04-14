@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414n">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414o">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -1520,7 +1520,7 @@ body .float-launch-btn {
     </div>
   </div>
   <div class="studio-mode-frame-wrap glass">
-<iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414n" title="SupportRD Studio"></iframe>
+<iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414o" title="SupportRD Studio"></iframe>
   </div>
 </div>
 
@@ -1619,6 +1619,29 @@ body .float-launch-btn {
                 <p>Guest payment and paid live support belong directly inside the feed viewer, not outside the Remote.</p>
               </article>
             </div>
+            <div class="supportrd-shell-v2__app-grid">
+              <article class="supportrd-shell-v2__app-card supportrd-shell-v2__app-card--spotlight">
+                <div class="supportrd-shell-v2__eyebrow">Live Session Lobby</div>
+                <h4 id="shellV2DiaryTitle">Latest diary sessions are loading...</h4>
+                <p id="shellV2DiarySummary">SupportRD is pulling the latest live diary movement, session tag, and feed-readiness right into the new shell.</p>
+                <div class="supportrd-shell-v2__metric-row">
+                  <span id="shellV2DiaryMetricPrimary">Lobby signal waiting...</span>
+                  <span id="shellV2DiaryMetricSecondary">Guest support + comments ready</span>
+                </div>
+                <div class="supportrd-shell-v2__button-row">
+                  <button class="btn" id="shellV2DiaryRefresh">Refresh Diary Feed</button>
+                  <button class="btn ghost" id="shellV2DiaryOpenViewer">Open Diary Viewer</button>
+                </div>
+              </article>
+              <article class="supportrd-shell-v2__app-card">
+                <div class="supportrd-shell-v2__eyebrow">Search + Discovery</div>
+                <ul class="supportrd-shell-v2__bullet-list">
+                  <li>Search by `Name`, `Email`, `Tag ^^`, or `URL`</li>
+                  <li>Sticky lobby should collapse cleanly and stay off the middle of the app</li>
+                  <li>Direct feed URLs should open the viewer on top of the Remote</li>
+                </ul>
+              </article>
+            </div>
           </section>
 
           <section class="supportrd-shell-v2__panel" data-shell-v2-panel="studio">
@@ -1643,6 +1666,29 @@ body .float-launch-btn {
                 <p>Studio premium gating stays connected to the account system and payment unlock memory.</p>
               </article>
             </div>
+            <div class="supportrd-shell-v2__app-grid">
+              <article class="supportrd-shell-v2__app-card supportrd-shell-v2__app-card--spotlight">
+                <div class="supportrd-shell-v2__eyebrow">Studio Command Deck</div>
+                <h4 id="shellV2StudioTitle">Studio API booth is ready for the reset build.</h4>
+                <p id="shellV2StudioSummary">Prime microphone, prime camera, waveform motherboard, and Website Voice support all belong here under one studio-grade surface.</p>
+                <div class="supportrd-shell-v2__metric-row">
+                  <span id="shellV2StudioMetricPrimary">Mic + camera preflight</span>
+                  <span id="shellV2StudioMetricSecondary">Waveform + export lane</span>
+                </div>
+                <div class="supportrd-shell-v2__button-row">
+                  <button class="btn" id="shellV2StudioLaunch">Launch Studio App</button>
+                  <button class="btn ghost" id="shellV2StudioPrimeVoice">Website Voice Assist</button>
+                </div>
+              </article>
+              <article class="supportrd-shell-v2__app-card">
+                <div class="supportrd-shell-v2__eyebrow">Booth Targets</div>
+                <ul class="supportrd-shell-v2__bullet-list">
+                  <li>Live record / pause / stop should behave like a real booth</li>
+                  <li>Motherboard editing and waveform visuals should read instantly</li>
+                  <li>Studio needs to feel like its own API app, not a leftover page</li>
+                </ul>
+              </article>
+            </div>
           </section>
 
           <section class="supportrd-shell-v2__panel" data-shell-v2-panel="profile">
@@ -1665,6 +1711,30 @@ body .float-launch-btn {
               <article class="supportrd-shell-v2__feature">
                 <strong>Hair Analysis Export</strong>
                 <p>PDF and DOCX exports turn scans into a real account artifact that can be revisited later.</p>
+              </article>
+            </div>
+            <div class="supportrd-shell-v2__app-grid">
+              <article class="supportrd-shell-v2__app-card supportrd-shell-v2__app-card--spotlight">
+                <div class="supportrd-shell-v2__eyebrow">Access Scanner</div>
+                <h4 id="shellV2ProfileTitle">Profile verification is loading the SupportRD access deck.</h4>
+                <p id="shellV2ProfileSummary">Identity confirmed, general status, and hair-analysis history all belong to this verification lane.</p>
+                <div class="supportrd-shell-v2__metric-row">
+                  <span id="shellV2ProfileMetricPrimary">API scanner waiting...</span>
+                  <span id="shellV2ProfileMetricSecondary">PDF / DOCX exports ready</span>
+                </div>
+                <div class="supportrd-shell-v2__button-row">
+                  <button class="btn" id="shellV2ProfileRefresh">Refresh Access Scanner</button>
+                  <button class="btn ghost" id="shellV2ProfileExportPdf">Export PDF</button>
+                  <button class="btn ghost" id="shellV2ProfileExportDocx">Export DOCX</button>
+                </div>
+              </article>
+              <article class="supportrd-shell-v2__app-card">
+                <div class="supportrd-shell-v2__eyebrow">Verification Targets</div>
+                <ul class="supportrd-shell-v2__bullet-list">
+                  <li>Identity should read like a real person/account confidence lane</li>
+                  <li>Hair analysis should save as a revisitable SupportRD record</li>
+                  <li>Profile has to feel premium and professional on its own</li>
+                </ul>
               </article>
             </div>
           </section>
@@ -2691,7 +2761,7 @@ body .float-launch-btn {
   
   <script>
 (function(){
-const BUILD = "20260414n";
+const BUILD = "20260414o";
   const KEY = "sr_force_build";
   try {
     const last = localStorage.getItem(KEY);
@@ -2718,8 +2788,8 @@ const BUILD = "20260414n";
 })();
 </script>
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260414n"></script>
-<script src="/static/remote-rebuild.v20260408c.js?v=20260414n"></script>
+<script src="/static/app.v20260320h.js?v=20260414o"></script>
+<script src="/static/remote-rebuild.v20260408c.js?v=20260414o"></script>
 <footer class="launch-footer-links">
   <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>

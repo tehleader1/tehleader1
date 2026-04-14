@@ -6979,6 +6979,25 @@ ${line}`
   const shellV2GoDiary = qs("#shellV2GoDiary")
   const shellV2GoStudio = qs("#shellV2GoStudio")
   const shellV2StartVoice = qs("#shellV2StartVoice")
+  const shellV2DiaryTitle = qs("#shellV2DiaryTitle")
+  const shellV2DiarySummary = qs("#shellV2DiarySummary")
+  const shellV2DiaryMetricPrimary = qs("#shellV2DiaryMetricPrimary")
+  const shellV2DiaryMetricSecondary = qs("#shellV2DiaryMetricSecondary")
+  const shellV2DiaryRefresh = qs("#shellV2DiaryRefresh")
+  const shellV2DiaryOpenViewer = qs("#shellV2DiaryOpenViewer")
+  const shellV2StudioTitle = qs("#shellV2StudioTitle")
+  const shellV2StudioSummary = qs("#shellV2StudioSummary")
+  const shellV2StudioMetricPrimary = qs("#shellV2StudioMetricPrimary")
+  const shellV2StudioMetricSecondary = qs("#shellV2StudioMetricSecondary")
+  const shellV2StudioLaunch = qs("#shellV2StudioLaunch")
+  const shellV2StudioPrimeVoice = qs("#shellV2StudioPrimeVoice")
+  const shellV2ProfileTitle = qs("#shellV2ProfileTitle")
+  const shellV2ProfileSummary = qs("#shellV2ProfileSummary")
+  const shellV2ProfileMetricPrimary = qs("#shellV2ProfileMetricPrimary")
+  const shellV2ProfileMetricSecondary = qs("#shellV2ProfileMetricSecondary")
+  const shellV2ProfileRefresh = qs("#shellV2ProfileRefresh")
+  const shellV2ProfileExportPdf = qs("#shellV2ProfileExportPdf")
+  const shellV2ProfileExportDocx = qs("#shellV2ProfileExportDocx")
   function isSupportRDShellV2Active(){
     return !!shell?.querySelector?.(".supportrd-shell-v2")
   }
@@ -6989,6 +7008,53 @@ ${line}`
     if(shell){
       shell.dataset.remoteRoute = normalized
       shell.classList.add("supportrd-shell-v2-active")
+    }
+  }
+  function syncSupportRDShellV2Panels(){
+    const diarySignal = remoteState.diaryLobbySignal || {}
+    const latestDiary = diarySignal.latest_activity || {}
+    if(shellV2DiaryTitle){
+      shellV2DiaryTitle.textContent = latestDiary.session_name || diarySignal.header || "Diary live sessions are standing by."
+    }
+    if(shellV2DiarySummary){
+      shellV2DiarySummary.textContent = latestDiary.summary || "SupportRD Diary will surface live sessions, comment energy, and guest support inside this route."
+    }
+    if(shellV2DiaryMetricPrimary){
+      shellV2DiaryMetricPrimary.textContent = latestDiary.tag ? `Tag ${latestDiary.tag}` : "Recent 7 feeds ready"
+    }
+    if(shellV2DiaryMetricSecondary){
+      const shopifyMeta = diarySignal.shopify_reader?.sessions || diarySignal.shopify_reader?.summary || "Guest support + comments ready"
+      shellV2DiaryMetricSecondary.textContent = String(shopifyMeta)
+    }
+
+    if(shellV2StudioTitle){
+      shellV2StudioTitle.textContent = localStorage.getItem("loggedIn") === "true"
+        ? "Studio API booth is armed for the signed-in account."
+        : "Studio API booth is ready for login, device priming, and premium work."
+    }
+    if(shellV2StudioSummary){
+      shellV2StudioSummary.textContent = "Prime devices, open the booth, and keep the waveform/video motherboard under one stronger studio-grade command deck."
+    }
+    if(shellV2StudioMetricPrimary){
+      shellV2StudioMetricPrimary.textContent = `Return view: ${localStorage.getItem("supportrdStudioReturnView") || "remote"}`
+    }
+    if(shellV2StudioMetricSecondary){
+      shellV2StudioMetricSecondary.textContent = "Mic + camera + exports + Jake Premium"
+    }
+
+    const profileSummary = remoteState.profileAccessSummary || {}
+    if(shellV2ProfileTitle){
+      shellV2ProfileTitle.textContent = profileSummary.identity_confirmed || "Profile verification is waiting on the access scanner."
+    }
+    if(shellV2ProfileSummary){
+      shellV2ProfileSummary.textContent = profileSummary.general_status || "Profile will carry identity, general status, and hair credential reads for this account."
+    }
+    if(shellV2ProfileMetricPrimary){
+      shellV2ProfileMetricPrimary.textContent = summarizeApiAccessDeck(profileSummary.api_access || {}) || "API deck waiting..."
+    }
+    if(shellV2ProfileMetricSecondary){
+      const latestAt = profileSummary?.hair_analysis?.latest_export_at
+      shellV2ProfileMetricSecondary.textContent = latestAt ? `Latest export ${formatSupportRDStamp(latestAt)}` : "PDF / DOCX exports ready"
     }
   }
     function setRemoteStatus(text){
@@ -10519,9 +10585,11 @@ ${line}`
           ? `Latest analysis export saved ${formatSupportRDStamp(latestAt)}. SupportRD can generate PDF or DOCX again whenever you need a last-minute presentation check.`
           : "No saved hair-analysis export yet. Run a hair scan or refresh the scanner, then export PDF or DOCX from this lane."
       }
+      syncSupportRDShellV2Panels()
       return data
     }catch{
       if(profileApiDeck) profileApiDeck.textContent = "Access scanner could not refresh yet. SupportRD is keeping the profile lane ready."
+      syncSupportRDShellV2Panels()
       return null
     }
   }
@@ -10583,12 +10651,14 @@ ${line}`
       if(diaryLobbyShopifyMeta){
         diaryLobbyShopifyMeta.textContent = `Traffic risk: ${shopify.risk_level || "watch"} · Conversion rate: ${shopify.conversion_rate || 0}% · Lobby is watching the live revenue lane.`
       }
+      syncSupportRDShellV2Panels()
       return data
     }catch{
       if(diaryLobbySignalHeader) diaryLobbySignalHeader.textContent = "SupportRD movement activity is watching the next live diary signal."
       if(diaryLobbySignalPreview) diaryLobbySignalPreview.textContent = "Waiting for the newest diary movement, live comments, and route handoff."
       if(diaryLobbyShopifySummary) diaryLobbyShopifySummary.textContent = "Shopify Reader · waiting on the next traffic pull"
       if(diaryLobbyShopifyMeta) diaryLobbyShopifyMeta.textContent = "Sessions, orders, total sales, and risk level will show here when the lobby reader refreshes."
+      syncSupportRDShellV2Panels()
       return null
     }
   }
@@ -13077,6 +13147,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       }
     })
     refreshProfileAccessScanner().catch(()=>{})
+    syncSupportRDShellV2Panels()
     syncDiaryAndProfileExtras()
   }
   function syncFloatSettings(){
@@ -13447,6 +13518,41 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
     qs(preferredAssistant === "projake" ? "#remoteGuardianJake" : "#remoteGuardianAria")?.click()
   })
+  shellV2DiaryRefresh?.addEventListener("click", ()=>{
+    fetchDiaryLobby({
+      sort: remoteState.diaryLobbySort || "recent",
+      search: diaryLobbySearch?.value || "",
+      searchBy: remoteState.diaryLobbySearchBy || "name"
+    }).catch(()=>{})
+    refreshDiaryLobbySignal(true).catch(()=>{})
+    renderRemoteRoute("diary", { openShell:true, force:true })
+  })
+  shellV2DiaryOpenViewer?.addEventListener("click", ()=>{
+    const candidate = remoteState.diaryLobbyEntries?.[0]
+    if(candidate) openDiaryViewer(candidate)
+    else renderRemoteRoute("diary", { openShell:true, force:true })
+  })
+  shellV2StudioLaunch?.addEventListener("click", ()=>{
+    localStorage.setItem("supportrdStudioReturnView", "remote")
+    if(typeof window.openStudioMode === "function"){
+      closeFloat()
+      window.openStudioMode()
+      return
+    }
+    renderRemoteRoute("studio", { openShell:true, force:true })
+  })
+  shellV2StudioPrimeVoice?.addEventListener("click", ()=>{
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("icon", {
+        assistantId: "projake",
+        route: "studio",
+        persistentMic: false
+      })
+    }
+  })
+  shellV2ProfileRefresh?.addEventListener("click", ()=>refreshProfileAccessScanner(true))
+  shellV2ProfileExportPdf?.addEventListener("click", ()=>exportProfileAnalysis("pdf"))
+  shellV2ProfileExportDocx?.addEventListener("click", ()=>exportProfileAnalysis("docx"))
   remoteStageGpsBtn?.addEventListener("click", ()=>renderRemoteRoute("map"))
   remoteStageStudioBtn?.addEventListener("click", ()=>renderRemoteRoute("studio"))
   remoteStagePaymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())
