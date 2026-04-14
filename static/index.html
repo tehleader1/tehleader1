@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414q">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414r">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -1520,12 +1520,156 @@ body .float-launch-btn {
     </div>
   </div>
   <div class="studio-mode-frame-wrap glass">
-<iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414q" title="SupportRD Studio"></iframe>
+<iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414r" title="SupportRD Studio"></iframe>
   </div>
 </div>
 
 <div id="floatModeShell" class="float-mode-shell" hidden aria-hidden="true">
   <div class="float-mode-backdrop"></div>
+    <div class="supportrd-os-shell" aria-label="SupportRD Operating System">
+      <header class="supportrd-os-shell__top glass">
+        <div class="supportrd-os-shell__brand">
+          <div class="supportrd-os-shell__eyebrow">SupportRD Operating System</div>
+          <h1>Blank system foundation for the whole app.</h1>
+          <p>SupportRD now starts from a clean operating layer: structure first, then APIs, revenue, backend, and frontend with connected boundary logic.</p>
+        </div>
+        <div class="supportrd-os-shell__status">
+          <div class="supportrd-os-shell__status-card">
+            <span>Mode</span>
+            <strong>OS Reset</strong>
+            <small>Blank slate · modern shell · app-grade layers</small>
+          </div>
+          <div class="supportrd-os-shell__status-card">
+            <span>State</span>
+            <strong id="supportrdOSState">Layer scan loading...</strong>
+            <small id="supportrdOSStateMeta">Remote is rebuilding on top of one clean system.</small>
+          </div>
+        </div>
+      </header>
+
+      <div class="supportrd-os-shell__workspace">
+        <aside class="supportrd-os-shell__rail glass">
+          <div class="supportrd-os-shell__eyebrow">SupportRD &gt; Layers</div>
+          <button class="supportrd-os-shell__layer-btn active" type="button" data-os-layer="foundation">1. Structural Foundation</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="apis">2. APIs</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="revenue">3. Revenue</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="backend">4. Back End Layer</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="frontend">5. Front End Layer</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="boundaries">Connected Boundary Logic</button>
+        </aside>
+
+        <main class="supportrd-os-shell__canvas">
+          <section class="supportrd-os-shell__panel active" data-os-panel="foundation">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Structural Foundation</div>
+                <h2>One clean system floor plan.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">SupportRD Core</span>
+            </div>
+            <div class="supportrd-os-shell__grid">
+              <article class="supportrd-os-shell__card">
+                <span>Main Structure</span>
+                <strong>Remote shell, route engine, motion system, assistant zones.</strong>
+                <p>The app starts with one shell, one route map, one motion language, and one ownership model.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>Account</span>
+                <strong>Identity, premium state, session ownership, diary ownership, studio ownership.</strong>
+                <p>Every lane should know who the person is and what they own without feeling fragmented.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>Statistics</span>
+                <strong>Session movement, conversions, diary traffic, voice state, and scanner reads.</strong>
+                <p>SupportRD should measure the world it is building, not guess at it.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="apis">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">APIs</div>
+                <h2>Connected services instead of hidden glue.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">Service Grid</span>
+            </div>
+            <div class="supportrd-os-shell__service-grid" id="supportrdOSApiGrid"></div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="revenue">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Revenue</div>
+                <h2>Money lanes that unlock the product.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">Shopify + Account</span>
+            </div>
+            <div class="supportrd-os-shell__grid">
+              <article class="supportrd-os-shell__card">
+                <span>Payments</span>
+                <strong>Shopify, guest support, custom orders, diary support, studio premium, premium/pro.</strong>
+                <p>Revenue belongs inside the Remote, not outside the product identity.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>Account Unlock</span>
+                <strong>Purchases should immediately change access, buttons, and assistant behavior.</strong>
+                <p>What gets bought should modify SupportRD memory and boundaries right away.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="backend">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Back End Layer</div>
+                <h2>Persistent systems behind the shell.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">Data + Sessions</span>
+            </div>
+            <div class="supportrd-os-shell__service-grid" id="supportrdOSBackendGrid"></div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="frontend">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Front End Layer</div>
+                <h2>The visible app surfaces built on top of the OS.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">2026 JavaScript Shell</span>
+            </div>
+            <div class="supportrd-os-shell__grid">
+              <article class="supportrd-os-shell__card">
+                <span>Pages</span>
+                <strong>Diary, Studio, Profile, Settings, Map Change, FAQ Lounge, Payments.</strong>
+                <p>Each page should feel like a real app module and still remain part of one system.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>Contacts / Channels</span>
+                <strong>Profile links, direct contact, social feeds, URL entrances, push notifications.</strong>
+                <p>These are the entrances into SupportRD, not random extras.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>General Options</span>
+                <strong>Settings, accessibility, language, layout behavior, sticky widgets, route actions.</strong>
+                <p>The shell should feel controlled and intentional from the first click.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="boundaries">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Connected Boundary Logic</div>
+                <h2>Every action should lead somewhere real.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">System Links</span>
+            </div>
+            <div class="supportrd-os-shell__boundary-map" id="supportrdOSBoundaryMap"></div>
+          </section>
+        </main>
+      </div>
+    </div>
     <div class="supportrd-shell-v2" aria-label="SupportRD App Shell">
       <header class="supportrd-shell-v2__hero glass">
         <div class="supportrd-shell-v2__hero-copy">
@@ -2771,7 +2915,7 @@ body .float-launch-btn {
   
   <script>
 (function(){
-const BUILD = "20260414q";
+const BUILD = "20260414r";
   const KEY = "sr_force_build";
   try {
     const last = localStorage.getItem(KEY);
@@ -2798,8 +2942,8 @@ const BUILD = "20260414q";
 })();
 </script>
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260414q"></script>
-<script src="/static/remote-rebuild.v20260408c.js?v=20260414q"></script>
+<script src="/static/app.v20260320h.js?v=20260414r"></script>
+<script src="/static/remote-rebuild.v20260408c.js?v=20260414r"></script>
 <footer class="launch-footer-links">
   <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>

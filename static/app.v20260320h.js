@@ -7004,8 +7004,68 @@ ${line}`
   const shellV2VoiceAria = qs("#shellV2VoiceAria")
   const shellV2VoiceJake = qs("#shellV2VoiceJake")
   const shellV2VoiceSequence = qs("#shellV2VoiceSequence")
+  const osLayerButtons = qsa("[data-os-layer]")
+  const osPanels = qsa("[data-os-panel]")
+  const supportrdOSState = qs("#supportrdOSState")
+  const supportrdOSStateMeta = qs("#supportrdOSStateMeta")
+  const supportrdOSApiGrid = qs("#supportrdOSApiGrid")
+  const supportrdOSBackendGrid = qs("#supportrdOSBackendGrid")
+  const supportrdOSBoundaryMap = qs("#supportrdOSBoundaryMap")
   function isSupportRDShellV2Active(){
     return !!shell?.querySelector?.(".supportrd-shell-v2")
+  }
+  function setSupportRDOSLayer(layer = "foundation"){
+    osLayerButtons.forEach((button)=>button.classList.toggle("active", button.dataset.osLayer === layer))
+    osPanels.forEach((panel)=>panel.classList.toggle("active", panel.dataset.osPanel === layer))
+    if(shell){
+      shell.classList.add("supportrd-os-active")
+      shell.dataset.osLayer = layer
+    }
+  }
+  function renderSupportRDOSCards(){
+    const systemMap = typeof window.getSupportRDSystemMap === "function" ? window.getSupportRDSystemMap() : null
+    const scanner = typeof window.getSupportRDScannerState === "function" ? window.getSupportRDScannerState() : assistantScannerState
+    if(supportrdOSState){
+      supportrdOSState.textContent = systemMap?.sealed_remote ? "Remote sealed on blank OS" : "System map watching live layers"
+    }
+    if(supportrdOSStateMeta){
+      const routeText = scanner?.route ? `Current route: ${scanner.route}` : "Current route: home"
+      const intentText = scanner?.intentLabel || "Remote home ready"
+      supportrdOSStateMeta.textContent = `${routeText} · ${intentText}`
+    }
+    if(supportrdOSApiGrid){
+      const apiCards = [
+        { title:"OpenAI Layer", meta:(systemMap?.layers?.openai ? "armed" : "waiting"), body:"Website Voice, speech, and assistant intelligence should live here." },
+        { title:"Language / Transcribe", meta:(systemMap?.layers?.voice ? "armed" : "waiting"), body:"Speech capture, transcription, and response timing all pass through this lane." },
+        { title:"Cloud Layer", meta:(systemMap?.layers?.cloud ? "armed" : "waiting"), body:"Remote-wide delivery, deploy state, and shared service reach belong here." },
+        { title:"PocketBase Layer", meta:(systemMap?.layers?.pocketbase ? "armed" : "not wired"), body:"Future database/auth sync lane for richer account and feed ownership." },
+        { title:"Contacts / Channels", meta:"entrances", body:"Profile links, diary entrances, push notifications, and official SupportRD routes." },
+        { title:"APIs", meta:"connected", body:"Diary API, Studio API, Profile scanner API, system map, payments, and voice sessions." }
+      ]
+      supportrdOSApiGrid.innerHTML = apiCards.map((card)=>`<article class="supportrd-os-shell__service-card"><span>${card.meta}</span><strong>${card.title}</strong><p>${card.body}<\/p><\/article>`).join("")
+    }
+    if(supportrdOSBackendGrid){
+      const backendCards = [
+        { title:"Account", meta:(systemMap?.layers?.account ? "armed" : "waiting"), body:"Identity, login, premium, session ownership, diary ownership, studio ownership." },
+        { title:"Payments", meta:(systemMap?.layers?.shopify ? "armed" : "waiting"), body:"Checkout, guest support, custom order, diary support, and account unlock memory." },
+        { title:"Statistics", meta:"tracking", body:`Route ${scanner?.route || "home"} · zone ${scanner?.liveZone || "Remote hero"} · controls ${(scanner?.visibleControls || []).length}` },
+        { title:"Diary Sessions", meta:(systemMap?.layers?.diary ? "armed" : "waiting"), body:"Live feed sessions, comments, lobby entries, direct URLs, and viewer overlays." },
+        { title:"Studio Sessions", meta:(systemMap?.layers?.studio ? "armed" : "waiting"), body:"Motherboards, recording states, exports, premium Jake booth history." },
+        { title:"Main Structure", meta:"core", body:"One shell, one route map, one scanner, one assistant system, one OS floor plan." }
+      ]
+      supportrdOSBackendGrid.innerHTML = backendCards.map((card)=>`<article class="supportrd-os-shell__service-card"><span>${card.meta}</span><strong>${card.title}</strong><p>${card.body}<\/p><\/article>`).join("")
+    }
+    if(supportrdOSBoundaryMap){
+      const boundaryCards = [
+        { title:"Remote → APIs", meta:"handoff", body:"Every action from the shell should land on a real API lane." },
+        { title:"APIs → Revenue", meta:"unlock", body:"Payments and guest support should immediately affect account permissions and buttons." },
+        { title:"Back End → Front End", meta:"state", body:"Sessions, scanner reads, and product ownership must update the visible app surfaces." },
+        { title:"Front End → Contacts / Channels", meta:"entrance", body:"Search, profile links, direct diary URLs, and official routes all point back to SupportRD." },
+        { title:"Voice → Pages", meta:"shared", body:`Assistant stage ${assistantTrackerState.voiceState || "idle"} should follow the same OS no matter the page.` },
+        { title:"Boundaries", meta:"connected", body:"No dead buttons, no floating leftovers, no isolated panels — every action leads somewhere real." }
+      ]
+      supportrdOSBoundaryMap.innerHTML = boundaryCards.map((card)=>`<article class="supportrd-os-shell__boundary-card"><span>${card.meta}</span><strong>${card.title}</strong><p>${card.body}<\/p><\/article>`).join("")
+    }
   }
   function setSupportRDShellV2Route(route = "home"){
     const normalized = REMOTE_ROUTE_META[route] ? route : "home"
@@ -7098,6 +7158,7 @@ ${line}`
       }
       shellV2VoiceSequence.textContent = stageMap[assistantTrackerState.voiceState] || stageMap.idle
     }
+    renderSupportRDOSCards()
   }
     function setRemoteStatus(text){
       if(text && liveStatus) liveStatus.textContent = text
@@ -13475,6 +13536,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     shell.setAttribute("aria-hidden","false")
     shell.classList.toggle("preview-mode", !!options.previewOnly)
     shell.classList.add("supportrd-shell-v2-active")
+    shell.classList.add("supportrd-os-active")
     document.body.classList.add("float-mode-active")
     document.body.classList.add("remote-home-active")
     hideTGuide()
@@ -13505,6 +13567,8 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       if(!options.preserveHome) setRemoteStatus("SupportRD Personal Remote is open in on-the-go mode. Use one tap for GPS, studio, payment, diary, profile, and FAQ while the rest of the site stays out of the way.")
     }
     setSupportRDShellV2Route(remoteState.currentRoute || "home")
+    setSupportRDOSLayer(shell?.dataset?.osLayer || "foundation")
+    renderSupportRDOSCards()
     const activeRoute = getRemoteRouteFromLocation()
     if(activeRoute && activeRoute !== "home"){
       setTimeout(()=>renderRemoteRoute(activeRoute, { skipHistory:true }), 0)
@@ -13520,6 +13584,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     shell.setAttribute("aria-hidden","true")
     shell.classList.remove("preview-mode")
     shell.classList.remove("supportrd-shell-v2-active")
+    shell.classList.remove("supportrd-os-active")
     document.body.classList.remove("float-mode-active")
     document.body.classList.remove("remote-home-active")
   }
@@ -13539,6 +13604,10 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   shellV2RouteButtons.forEach((button)=>button.addEventListener("click", ()=>{
     const route = button.dataset.shellV2Route || "home"
     renderRemoteRoute(route, { openShell:true })
+  }))
+  osLayerButtons.forEach((button)=>button.addEventListener("click", ()=>{
+    setSupportRDOSLayer(button.dataset.osLayer || "foundation")
+    renderSupportRDOSCards()
   }))
   shellV2GoDiary?.addEventListener("click", ()=>renderRemoteRoute("diary", { openShell:true }))
   shellV2GoStudio?.addEventListener("click", ()=>{
