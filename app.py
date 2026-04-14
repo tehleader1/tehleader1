@@ -6069,6 +6069,10 @@ def remote_shell(section=None):
     target = f"/?remote={section}" if section else "/?remote=home"
     return redirect(target, code=302)
 
+@app.route("/local-remote")
+def local_remote_shell():
+    return send_from_directory("static", "local-remote.html")
+
 @app.route("/studio")
 def studio_home():
     return send_from_directory("static/studio", "index.html")

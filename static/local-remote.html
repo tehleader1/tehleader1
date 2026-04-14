@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SupportRD Local Remote Sandbox</title>
+  <style>
+    :root{
+      --bg:#07111f;
+      --bg2:#0d1c33;
+      --panel:rgba(10,19,34,.84);
+      --panel-soft:rgba(255,255,255,.06);
+      --line:rgba(181,224,255,.14);
+      --text:#edf6ff;
+      --muted:rgba(220,235,255,.72);
+      --blue:#79b8ff;
+      --gold:#ffd086;
+      --green:#77e0c7;
+      --shadow:0 24px 60px rgba(0,0,0,.32);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:Georgia, "Times New Roman", serif;background:
+      radial-gradient(900px 500px at 0% 0%, rgba(82,170,255,.16), transparent 55%),
+      radial-gradient(780px 520px at 100% 0%, rgba(255,208,134,.12), transparent 52%),
+      linear-gradient(180deg, var(--bg), var(--bg2));color:var(--text)}
+    body{overflow:hidden}
+    .local-shell{
+      position:relative;
+      min-height:100vh;
+      padding:20px;
+      display:grid;
+      grid-template-columns:260px minmax(0,1fr) 280px;
+      gap:18px;
+    }
+    .glass{
+      background:var(--panel);
+      border:1px solid var(--line);
+      backdrop-filter:blur(18px) saturate(1.08);
+      box-shadow:var(--shadow);
+    }
+    .left-rail,.right-rail,.center-stage{border-radius:28px}
+    .left-rail,.right-rail{padding:18px}
+    .eyebrow{
+      font-size:11px;
+      letter-spacing:.26em;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:10px;
+    }
+    .title{margin:0;font-size:40px;line-height:.95}
+    .sub{color:var(--muted);line-height:1.55;margin-top:12px}
+    .left-rail{display:grid;grid-template-rows:auto auto 1fr;gap:18px}
+    .badge-grid,.stack-list{display:grid;gap:12px}
+    .badge,.stack-card,.sticky-card,.panel-card,.menu-chip,.voice-bubble{
+      border-radius:20px;
+      border:1px solid var(--line);
+      background:var(--panel-soft);
+    }
+    .badge,.stack-card,.sticky-card,.panel-card{padding:14px}
+    .badge strong,.stack-card strong,.panel-card strong{display:block;color:var(--text)}
+    .badge small,.stack-card small,.panel-card small{color:var(--muted)}
+    .center-stage{padding:20px;display:grid;grid-template-rows:auto auto 1fr;gap:18px;position:relative;overflow:hidden}
+    .top-bar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+    .voice-console{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .voice-pill{
+      min-height:42px;padding:0 16px;border-radius:999px;border:1px solid var(--line);
+      background:rgba(255,255,255,.08);display:inline-flex;align-items:center;color:var(--text);font-weight:700
+    }
+    .voice-status{flex:1;min-width:240px;padding:14px 16px;border-radius:22px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+    .voice-status strong{display:block}
+    .button-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+    }
+    .shell-btn{
+      min-height:154px;padding:18px;border-radius:26px;border:1px solid rgba(196,228,255,.2);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)),
+        radial-gradient(circle at 12% 18%, rgba(121,184,255,.16), transparent 30%);
+      color:var(--text);text-align:left;cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+    }
+    .shell-btn:hover,.shell-btn.active{transform:translateY(-2px);border-color:rgba(207,235,255,.38);box-shadow:0 16px 34px rgba(0,0,0,.22)}
+    .shell-btn span{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+    .shell-btn strong{display:block;font-size:28px;font-family:"Cormorant Garamond", Georgia, serif}
+    .shell-btn p{margin:10px 0 0;color:var(--muted);line-height:1.5}
+    .panel-stack{position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);gap:18px}
+    .panel-card{min-height:420px}
+    .panel-card h2{margin:0 0 12px;font-size:34px;font-family:"Cormorant Garamond", Georgia, serif}
+    .panel-card p{color:var(--muted);line-height:1.6}
+    .feature-list{display:grid;gap:10px;margin-top:16px}
+    .feature-item{padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted)}
+    .feature-item strong{display:block;color:var(--text);margin-bottom:4px}
+    .sticky-wrap{display:grid;gap:16px}
+    .sticky-card h3{margin:0 0 8px;font-size:26px;font-family:"Cormorant Garamond", Georgia, serif}
+    .sticky-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+    .sticky-controls{display:flex;gap:8px}
+    .sticky-btn,.menu-chip{
+      border:none;cursor:pointer;color:var(--text);font-weight:700
+    }
+    .sticky-btn{
+      min-height:36px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid var(--line)
+    }
+    .mini-list{display:grid;gap:10px}
+    .mini-item{padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+    .mini-item strong{display:block}
+    .mini-item span{color:var(--muted);font-size:14px}
+    .menu-chip{width:100%;padding:14px 16px;border-radius:18px;background:linear-gradient(180deg, rgba(89,151,235,.34), rgba(43,80,132,.42));border:1px solid rgba(195,228,255,.2);text-align:left}
+    .assistant-layer{
+      position:absolute;inset:0;pointer-events:none
+    }
+    .assistant{
+      position:absolute;width:244px;padding:14px 16px;border-radius:999px;background:rgba(12,23,40,.94);
+      border:1px solid rgba(171,220,255,.18);display:flex;align-items:center;gap:14px;color:var(--text);
+      box-shadow:0 18px 42px rgba(0,0,0,.32);pointer-events:auto;cursor:pointer;transition:left .55s ease,top .55s ease,transform .2s ease
+    }
+    .assistant:hover{transform:translateY(-2px)}
+    .orb{width:54px;height:54px;border-radius:50%}
+    .aria-orb{background:radial-gradient(circle at 35% 35%, #a7fbff, #53a7ff 55%, #253f6f)}
+    .jake-orb{background:radial-gradient(circle at 35% 35%, #ffecc1, #d5a96d 55%, #5a3e1f)}
+    .assistant-copy strong{display:block;font-size:18px}
+    .assistant-copy small{color:var(--muted)}
+    .voice-bubble{
+      position:absolute;left:50%;top:26px;transform:translateX(-50%);
+      width:min(720px, calc(100% - 80px));padding:16px 18px;display:none;z-index:4
+    }
+    .voice-bubble.active{display:block}
+    .voice-bubble strong{display:block;margin-bottom:6px}
+    .voice-bubble span{color:var(--muted)}
+    @media (max-width: 1280px){
+      .local-shell{grid-template-columns:1fr;grid-template-rows:auto auto auto;overflow:auto;height:100vh}
+      .panel-stack,.button-grid{grid-template-columns:1fr}
+      .assistant-layer{position:fixed;inset:0}
+    }
+  </style>
+</head>
+<body>
+  <div class="local-shell">
+    <aside class="left-rail glass">
+      <div>
+        <div class="eyebrow">Local Editing Sandbox</div>
+        <h1 class="title">Old big button Remote shell.</h1>
+        <p class="sub">This is a local-only editing page so we can work on the six-panel sticky layout without the live site getting in the way.</p>
+      </div>
+      <div class="badge-grid">
+        <div class="badge"><strong>Mode</strong><small>Local Remote Sandbox</small></div>
+        <div class="badge"><strong>Panels</strong><small>Diary · Studio · Settings · Map · FAQ · Profile</small></div>
+        <div class="badge"><strong>Sticky</strong><small>Diary Lobby · Edits Menu · Payments Menu</small></div>
+      </div>
+      <div class="stack-list">
+        <div class="stack-card"><strong>Aria / Jake</strong><small>Roaming prototype with click-to-voice sequence.</small></div>
+        <div class="stack-card"><strong>Safe Reset</strong><small>This page is for local editing and experimentation.</small></div>
+      </div>
+    </aside>
+
+    <main class="center-stage glass">
+      <div class="voice-bubble" id="voiceBubble">
+        <strong id="voiceBubbleTitle">Website Voice</strong>
+        <span id="voiceBubbleText">Cue sound → greeting → mic ready → listening.</span>
+      </div>
+
+      <div class="top-bar">
+        <div>
+          <div class="eyebrow">SupportRD Remote Sandbox</div>
+          <h2 class="title" style="font-size:54px">Six big buttons, one stage, sticky tools.</h2>
+        </div>
+        <div class="voice-console">
+          <div class="voice-pill">Local Route: <span id="activePanelName" style="margin-left:8px">Diary Mode</span></div>
+          <div class="voice-status">
+            <strong id="voiceConsoleTitle">Website Voice idle</strong>
+            <span id="voiceConsoleText" style="color:var(--muted)">Click Aria or Jake to test the cue → greeting → mic flow.</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="button-grid" id="buttonGrid">
+        <button class="shell-btn active" data-panel="diary"><span>Panel 1</span><strong>Diary Mode</strong><p>Live sessions, lobby, comments, and shareable feed links.</p></button>
+        <button class="shell-btn" data-panel="studio"><span>Panel 2</span><strong>Studio Quick Panel</strong><p>Recording, waveform, motherboard, and exports.</p></button>
+        <button class="shell-btn" data-panel="settings"><span>Panel 3</span><strong>Configuration</strong><p>Notifications, links, access, and route controls.</p></button>
+        <button class="shell-btn" data-panel="map"><span>Panel 4</span><strong>Map Change</strong><p>General info, ads, map switch, and perks.</p></button>
+        <button class="shell-btn" data-panel="faq"><span>Panel 5</span><strong>FAQ Lounge</strong><p>Social-world reel, quick answers, and relaxed support.</p></button>
+        <button class="shell-btn" data-panel="profile"><span>Panel 6</span><strong>Profile</strong><p>Identity, hair credentials, scanner, and exports.</p></button>
+      </section>
+
+      <section class="panel-stack">
+        <article class="panel-card glass">
+          <div class="eyebrow" id="panelEyebrow">SupportRD Diary</div>
+          <h2 id="panelTitle">Diary Mode</h2>
+          <p id="panelBody">The diary workspace is the emotional and live-social center for SupportRD. This local page lets us rebuild that shell without fighting the live site.</p>
+          <div class="feature-list" id="panelFeatures"></div>
+        </article>
+        <article class="panel-card glass">
+          <div class="eyebrow">Local Direction</div>
+          <h2 style="font-size:30px">Editing Goals</h2>
+          <div class="feature-list">
+            <div class="feature-item"><strong>Keep the old big button feel</strong><span>Six strong action cards with one clear stage under them.</span></div>
+            <div class="feature-item"><strong>Keep sticky tools</strong><span>Diary Lobby, Edits Menu, and Payments Menu should sit on the page cleanly.</span></div>
+            <div class="feature-item"><strong>Keep roaming assistants</strong><span>Aria and Jake move around this sandbox and can be tuned here.</span></div>
+          </div>
+        </article>
+      </section>
+
+      <div class="assistant-layer">
+        <button class="assistant" id="localAria" type="button" aria-label="Talk to Aria">
+          <span class="orb aria-orb"></span>
+          <span class="assistant-copy"><strong>Aria Hair Advisor</strong><small>Click to test website voice</small></span>
+        </button>
+        <button class="assistant" id="localJake" type="button" aria-label="Talk to Jake">
+          <span class="orb jake-orb"></span>
+          <span class="assistant-copy"><strong>Jake Studio Specialist</strong><small>Click to test website voice</small></span>
+        </button>
+      </div>
+    </main>
+
+    <aside class="right-rail glass">
+      <div class="sticky-wrap">
+        <section class="sticky-card">
+          <div class="sticky-head">
+            <h3>Diary Lobby</h3>
+            <div class="sticky-controls">
+              <button class="sticky-btn" type="button">Refresh</button>
+              <button class="sticky-btn" type="button">Hide</button>
+            </div>
+          </div>
+          <div class="mini-list">
+            <div class="mini-item"><strong>^^ silky-route</strong><span>Latest 7 diary feeds will stack here for local editing.</span></div>
+            <div class="mini-item"><strong>Search / Sort</strong><span>Name · Email · Tag ^^ · URL</span></div>
+          </div>
+        </section>
+
+        <section class="sticky-card">
+          <div class="sticky-head">
+            <h3>Edits Menu</h3>
+            <div class="sticky-controls">
+              <button class="sticky-btn" type="button">Prev</button>
+              <button class="sticky-btn" type="button">Hide</button>
+              <button class="sticky-btn" type="button">Next</button>
+            </div>
+          </div>
+          <div class="mini-list">
+            <button class="menu-chip" type="button">Product / Premium Purchase</button>
+            <button class="menu-chip" type="button">Functionality Virtual</button>
+          </div>
+        </section>
+
+        <section class="sticky-card">
+          <div class="sticky-head">
+            <h3>Payments Menu</h3>
+            <div class="sticky-controls">
+              <button class="sticky-btn" type="button">Prev</button>
+              <button class="sticky-btn" type="button">Hide</button>
+              <button class="sticky-btn" type="button">Next</button>
+            </div>
+          </div>
+          <div class="mini-list">
+            <button class="menu-chip" type="button">Product Page</button>
+            <button class="menu-chip" type="button">Purchase Premium / Pro</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const panelMeta = {
+      diary: {
+        eyebrow: "SupportRD Diary",
+        title: "Diary Mode",
+        body: "Diary is the live feed and recording lane. In this local sandbox, it keeps the old big button feel while we rebuild comments, sessions, and the lobby cleanly.",
+        features: [
+          ["Live sessions", "Diary lobby, comments, guest support, and direct links."],
+          ["Recording lane", "Hands-free, diary record, and live session flow."],
+          ["Sticky connection", "Diary Lobby stays visible without taking over the whole app."]
+        ]
+      },
+      studio: {
+        eyebrow: "SupportRD Studio",
+        title: "Studio Quick Panel",
+        body: "Studio should feel like its own app. Here we keep the six-button remote feel while giving it a dedicated recording and waveform staging area.",
+        features: [
+          ["Record", "Mic, camera, waveform, motherboard, and exports."],
+          ["Jake lane", "Jake is tied to the studio voice and editing booth."],
+          ["Local-first editing", "A safe page to tune the studio shell before touching live."]
+        ]
+      },
+      settings: {
+        eyebrow: "SupportRD Configuration",
+        title: "Configuration",
+        body: "Settings stays as the calm pit-stop: notifications, URL entrances, scanner visibility, and route control without the live site getting messy.",
+        features: [
+          ["Push notifications", "Clear toggles and route guidance."],
+          ["URL entrances", "SupportRD links and route entry points."],
+          ["Scanner visibility", "A settings lane that still feels premium."]
+        ]
+      },
+      map: {
+        eyebrow: "SupportRD Map",
+        title: "Map Change",
+        body: "Map Change is the pit stop button. It should hold general information, ads, the map itself, and perks details on the side.",
+        features: [
+          ["General info", "Where the route is headed and why."],
+          ["Ads / perks", "Promos and feature support without clutter."],
+          ["Actual map", "A focused place for the map switch and trail logic."]
+        ]
+      },
+      faq: {
+        eyebrow: "SupportRD FAQ Lounge",
+        title: "FAQ Lounge",
+        body: "FAQ Lounge is the social-world view. It should stay relaxing with a reel feel while still helping configure fast support details.",
+        features: [
+          ["TV reel feel", "Quick relaxed support clips and direct FAQ answers."],
+          ["Trail support", "URL and push changes without stress."],
+          ["SupportRD feel", "Still soft and social, not robotic."]
+        ]
+      },
+      profile: {
+        eyebrow: "SupportRD Profile",
+        title: "Profile",
+        body: "Profile is the identity and hair credential lane. It should hold verification, analysis, and exports in one polished place.",
+        features: [
+          ["Identity", "Real person, profile picture, and account confidence."],
+          ["Hair credentials", "Texture, damage, type, and summary."],
+          ["Exports", "PDF / DOCX and scanner history."]
+        ]
+      }
+    };
+
+    const buttonGrid = document.getElementById("buttonGrid");
+    const panelEyebrow = document.getElementById("panelEyebrow");
+    const panelTitle = document.getElementById("panelTitle");
+    const panelBody = document.getElementById("panelBody");
+    const panelFeatures = document.getElementById("panelFeatures");
+    const activePanelName = document.getElementById("activePanelName");
+    const voiceConsoleTitle = document.getElementById("voiceConsoleTitle");
+    const voiceConsoleText = document.getElementById("voiceConsoleText");
+    const voiceBubble = document.getElementById("voiceBubble");
+    const voiceBubbleTitle = document.getElementById("voiceBubbleTitle");
+    const voiceBubbleText = document.getElementById("voiceBubbleText");
+    const localAria = document.getElementById("localAria");
+    const localJake = document.getElementById("localJake");
+
+    let activePanel = "diary";
+    let roamTick = 0;
+
+    function renderPanel(panelKey){
+      activePanel = panelKey;
+      const meta = panelMeta[panelKey];
+      buttonGrid.querySelectorAll(".shell-btn").forEach((button)=>button.classList.toggle("active", button.dataset.panel === panelKey));
+      panelEyebrow.textContent = meta.eyebrow;
+      panelTitle.textContent = meta.title;
+      panelBody.textContent = meta.body;
+      activePanelName.textContent = meta.title;
+      panelFeatures.innerHTML = meta.features.map(([title, copy])=>`<div class="feature-item"><strong>${title}</strong><span>${copy}</span></div>`).join("");
+      roamAssistants(true);
+    }
+
+    buttonGrid.addEventListener("click", (event)=>{
+      const button = event.target.closest(".shell-btn");
+      if(!button) return;
+      renderPanel(button.dataset.panel);
+    });
+
+    function cueTone(type){
+      try{
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        const ctx = new Ctx();
+        const gain = ctx.createGain();
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        const notes = type === "close" ? [[640,0,.08],[520,.1,.08]] : [[520,0,.08],[760,.09,.12]];
+        notes.forEach(([freq, offset, dur])=>{
+          const osc = ctx.createOscillator();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + offset);
+          osc.connect(gain);
+          osc.start(ctx.currentTime + offset);
+          osc.stop(ctx.currentTime + offset + dur);
+        });
+        gain.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+        setTimeout(()=>ctx.close().catch(()=>{}), 700);
+      }catch{}
+    }
+
+    function runVoiceSequence(who){
+      cueTone("intro");
+      const greeting = who === "Jake"
+        ? "Jake here. Studio support is ready. How may I help you?"
+        : "Aria here. How may I help you?";
+      voiceConsoleTitle.textContent = `${who} greeting`;
+      voiceConsoleText.textContent = greeting;
+      voiceBubbleTitle.textContent = `${who} Website Voice`;
+      voiceBubbleText.textContent = greeting;
+      voiceBubble.classList.add("active");
+      setTimeout(()=>{
+        voiceConsoleTitle.textContent = `${who} mic ready`;
+        voiceConsoleText.textContent = "2 second pause... mic opens... listening for your response.";
+        voiceBubbleText.textContent = "Mic ready. Listening and transcribing the next hair-related response.";
+      }, 1400);
+      setTimeout(()=>{
+        voiceConsoleTitle.textContent = `${who} transcribing`;
+        voiceConsoleText.textContent = "Transcribing, checking history, and preparing the response.";
+        voiceBubbleText.textContent = "Transcribing and preparing the response now.";
+      }, 3400);
+      setTimeout(()=>{
+        voiceConsoleTitle.textContent = `${who} response`;
+        voiceConsoleText.textContent = who === "Jake"
+          ? "Studio response complete. Close cue ready."
+          : "Hair support response complete. Close cue ready.";
+        voiceBubbleText.textContent = "Response delivered. Close cue played for the end of the conversation.";
+        cueTone("close");
+      }, 5200);
+      setTimeout(()=>voiceBubble.classList.remove("active"), 7000);
+    }
+
+    localAria.addEventListener("click", ()=>runVoiceSequence("Aria"));
+    localJake.addEventListener("click", ()=>runVoiceSequence("Jake"));
+
+    const roamTargets = {
+      diary: [{x:40,y:130},{x:window.innerWidth-320,y:110},{x:80,y:window.innerHeight-190},{x:window.innerWidth-340,y:window.innerHeight-210}],
+      studio: [{x:60,y:150},{x:window.innerWidth-330,y:120},{x:window.innerWidth*0.56,y:170},{x:90,y:window.innerHeight-220}],
+      settings: [{x:60,y:120},{x:window.innerWidth-330,y:120},{x:window.innerWidth*0.58,y:window.innerHeight*0.3},{x:140,y:window.innerHeight-210}],
+      map: [{x:70,y:140},{x:window.innerWidth-320,y:150},{x:window.innerWidth*0.5,y:window.innerHeight*0.36},{x:100,y:window.innerHeight-190}],
+      faq: [{x:70,y:110},{x:window.innerWidth-340,y:140},{x:window.innerWidth*0.48,y:window.innerHeight*0.34},{x:120,y:window.innerHeight-190}],
+      profile: [{x:70,y:120},{x:window.innerWidth-330,y:110},{x:window.innerWidth*0.62,y:window.innerHeight*0.33},{x:130,y:window.innerHeight-180}]
+    };
+
+    function setAssistantPosition(node, x, y){
+      node.style.left = `${Math.max(16, Math.min(window.innerWidth - 280, x))}px`;
+      node.style.top = `${Math.max(16, Math.min(window.innerHeight - 110, y))}px`;
+    }
+
+    function roamAssistants(forceCenter = false){
+      const targets = roamTargets[activePanel] || roamTargets.diary;
+      roamTick = (roamTick + 1) % targets.length;
+      const ariaTarget = targets[roamTick];
+      const jakeTarget = targets[(roamTick + 2) % targets.length];
+      setAssistantPosition(localAria, ariaTarget.x, ariaTarget.y);
+      setAssistantPosition(localJake, jakeTarget.x, jakeTarget.y);
+      if(forceCenter && (activePanel === "diary" || activePanel === "studio" || activePanel === "settings" || activePanel === "map" || activePanel === "profile" || activePanel === "faq")){
+        setAssistantPosition(localAria, window.innerWidth * 0.58, 120);
+        setAssistantPosition(localJake, window.innerWidth * 0.66, 210);
+      }
+    }
+
+    window.addEventListener("resize", ()=>roamAssistants(true));
+    setInterval(()=>roamAssistants(false), 2400);
+    renderPanel("diary");
+  </script>
+</body>
+</html>
