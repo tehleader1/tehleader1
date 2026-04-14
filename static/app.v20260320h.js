@@ -6998,6 +6998,12 @@ ${line}`
   const shellV2ProfileRefresh = qs("#shellV2ProfileRefresh")
   const shellV2ProfileExportPdf = qs("#shellV2ProfileExportPdf")
   const shellV2ProfileExportDocx = qs("#shellV2ProfileExportDocx")
+  const shellV2DiaryFeedList = qs("#shellV2DiaryFeedList")
+  const shellV2StudioStatusList = qs("#shellV2StudioStatusList")
+  const shellV2ProfileFactList = qs("#shellV2ProfileFactList")
+  const shellV2VoiceAria = qs("#shellV2VoiceAria")
+  const shellV2VoiceJake = qs("#shellV2VoiceJake")
+  const shellV2VoiceSequence = qs("#shellV2VoiceSequence")
   function isSupportRDShellV2Active(){
     return !!shell?.querySelector?.(".supportrd-shell-v2")
   }
@@ -7026,6 +7032,15 @@ ${line}`
       const shopifyMeta = diarySignal.shopify_reader?.sessions || diarySignal.shopify_reader?.summary || "Guest support + comments ready"
       shellV2DiaryMetricSecondary.textContent = String(shopifyMeta)
     }
+    if(shellV2DiaryFeedList){
+      const feeds = Array.isArray(remoteState.diaryLobbyItems) ? remoteState.diaryLobbyItems.slice(0, 3) : []
+      shellV2DiaryFeedList.innerHTML = feeds.length
+        ? feeds.map((feed)=>{
+            const summary = feed.summary || {}
+            return `<div class="supportrd-shell-v2__mini-item"><strong>${summary.display_name || "SupportRD Feed"}</strong><span>${summary.profile_tag || "^^ support"} · ${summary.live_slug || "live feed"}<\/span><\/div>`
+          }).join("")
+        : `<div class="supportrd-shell-v2__mini-item"><strong>Lobby watch</strong><span>The latest 7 diary feeds will stack here once the lobby finishes refreshing.<\/span><\/div>`
+    }
 
     if(shellV2StudioTitle){
       shellV2StudioTitle.textContent = localStorage.getItem("loggedIn") === "true"
@@ -7041,6 +7056,14 @@ ${line}`
     if(shellV2StudioMetricSecondary){
       shellV2StudioMetricSecondary.textContent = "Mic + camera + exports + Jake Premium"
     }
+    if(shellV2StudioStatusList){
+      const statusItems = [
+        { label:"Recorder", value: remoteState.recorder?.state || "inactive" },
+        { label:"Recording Kind", value: remoteState.recordKind || "voice" },
+        { label:"Preview", value: remoteState.previewUrl ? "loaded" : "waiting" }
+      ]
+      shellV2StudioStatusList.innerHTML = statusItems.map((item)=>`<div class="supportrd-shell-v2__mini-item"><strong>${item.label}</strong><span>${item.value}<\/span><\/div>`).join("")
+    }
 
     const profileSummary = remoteState.profileAccessSummary || {}
     if(shellV2ProfileTitle){
@@ -7055,6 +7078,25 @@ ${line}`
     if(shellV2ProfileMetricSecondary){
       const latestAt = profileSummary?.hair_analysis?.latest_export_at
       shellV2ProfileMetricSecondary.textContent = latestAt ? `Latest export ${formatSupportRDStamp(latestAt)}` : "PDF / DOCX exports ready"
+    }
+    if(shellV2ProfileFactList){
+      const hair = profileSummary.hair_analysis || {}
+      const profileItems = [
+        { label:"Identity", value: profileSummary.identity_confirmed || "waiting" },
+        { label:"Texture", value: hair.texture || "waiting" },
+        { label:"Damage", value: hair.damage || "waiting" }
+      ]
+      shellV2ProfileFactList.innerHTML = profileItems.map((item)=>`<div class="supportrd-shell-v2__mini-item"><strong>${item.label}</strong><span>${item.value}<\/span><\/div>`).join("")
+    }
+    if(shellV2VoiceSequence){
+      const stageMap = {
+        idle: "Greeting queued · Mic Ready · Listening · Transcribing · Response",
+        greeting: "Greeting live · Mic opens next · Listening after 2s pause",
+        listening: "Greeting complete · Mic Ready · Listening live",
+        processing: "Transcribing now · Historical intelligence check · Response next",
+        speaking: "Response live · Voice output active · Close sound after response"
+      }
+      shellV2VoiceSequence.textContent = stageMap[assistantTrackerState.voiceState] || stageMap.idle
     }
   }
     function setRemoteStatus(text){
@@ -10319,6 +10361,7 @@ ${line}`
       refreshSupportRDScannerState(true)
       renderAssistantTracker()
       startAssistantTrackerLoop()
+      syncSupportRDShellV2Panels()
       setAssistantPixelState(assistantTrackerState.activeAssistant || "aria", {
         stage: assistantTrackerState.voiceState || "idle",
         text: assistantTrackerState.liveTranscript || assistantTrackerState.voiceText || assistantTrackerState.status || "Stand by",
@@ -10812,6 +10855,7 @@ ${line}`
         </button>
       `
     }).join("")
+    syncSupportRDShellV2Panels()
   }
 
   async function fetchDiaryLobby(options = {}){
@@ -13528,7 +13572,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     renderRemoteRoute("diary", { openShell:true, force:true })
   })
   shellV2DiaryOpenViewer?.addEventListener("click", ()=>{
-    const candidate = remoteState.diaryLobbyEntries?.[0]
+    const candidate = remoteState.diaryLobbyItems?.[0]
     if(candidate) openDiaryViewer(candidate)
     else renderRemoteRoute("diary", { openShell:true, force:true })
   })
@@ -13553,6 +13597,16 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   shellV2ProfileRefresh?.addEventListener("click", ()=>refreshProfileAccessScanner(true))
   shellV2ProfileExportPdf?.addEventListener("click", ()=>exportProfileAnalysis("pdf"))
   shellV2ProfileExportDocx?.addEventListener("click", ()=>exportProfileAnalysis("docx"))
+  shellV2VoiceAria?.addEventListener("click", ()=>{
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("icon", { assistantId:"aria", route: remoteState.currentRoute || "home", persistentMic:false })
+    }
+  })
+  shellV2VoiceJake?.addEventListener("click", ()=>{
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("icon", { assistantId:"projake", route: remoteState.currentRoute || "home", persistentMic:false })
+    }
+  })
   remoteStageGpsBtn?.addEventListener("click", ()=>renderRemoteRoute("map"))
   remoteStageStudioBtn?.addEventListener("click", ()=>renderRemoteRoute("studio"))
   remoteStagePaymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())

@@ -3670,6 +3670,34 @@ body.competition-world .bg-layers::before{
 .supportrd-shell-v2__bullet-list li + li{
   margin-top:8px;
 }
+.supportrd-shell-v2__mini-list{
+  margin-top:16px;
+  display:grid;
+  gap:10px;
+}
+.supportrd-shell-v2__mini-item{
+  padding:12px 14px;
+  border-radius:18px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);
+  color:#ddecff;
+  font-size:13px;
+}
+.supportrd-shell-v2__mini-item strong{
+  display:block;
+  color:#f4f9ff;
+  margin-bottom:4px;
+}
+.supportrd-shell-v2__voice-sequence{
+  margin-top:14px;
+  padding:12px 14px;
+  border-radius:18px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);
+  color:#d8ecff;
+  font-size:13px;
+  line-height:1.5;
+}
 .supportrd-shell-v2__sidebar{
   position:sticky;
   top:18px;
