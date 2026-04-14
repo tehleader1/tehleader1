@@ -8002,7 +8002,19 @@ ${line}`
       event?.stopPropagation?.()
       event?.stopImmediatePropagation?.()
       const route = remoteState.currentRoute || "home"
+      if(typeof window.activateSupportRDWebsiteVoice === "function"){
+        await window.activateSupportRDWebsiteVoice("icon", { assistantId, route })
+        return
+      }
       if(typeof window.startSupportRDVoiceMode === "function"){
+        updateAssistantTracker({
+          activeAssistant: assistantId,
+          route,
+          focusLabel: getAssistantTrackerFocusLabel(route, assistantId),
+          voiceState: "arming",
+          voiceText: `${getAssistantDisplayName(assistantId)} is opening the live website voice.`,
+          anchorSelector: getAssistantAnchorSelector(route)
+        })
         await window.startSupportRDVoiceMode("icon", { assistantId, route })
         return
       }
@@ -8069,14 +8081,19 @@ ${line}`
         launchAssistantLiveSession(assistantId, event)
       }
       document.addEventListener("click", handle, true)
+      document.addEventListener("pointerdown", handle, true)
       document.addEventListener("pointerup", handle, true)
+      document.addEventListener("touchstart", handle, { capture:true, passive:false })
       document.addEventListener("touchend", handle, { capture:true, passive:false })
       const bindDirect = (node, assistantId)=>{
         if(!node || node.dataset.liveBound === "true") return
         node.dataset.liveBound = "true"
         const directHandler = (event)=>launchAssistantLiveSession(assistantId, event)
+        node.onclick = directHandler
         node.addEventListener("click", directHandler)
+        node.addEventListener("pointerdown", directHandler)
         node.addEventListener("pointerup", directHandler)
+        node.addEventListener("touchstart", directHandler, { passive:false })
         node.addEventListener("touchend", directHandler, { passive:false })
         node.addEventListener("keydown", (event)=>{
           if(event.key === "Enter" || event.key === " "){
@@ -13567,6 +13584,29 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
           if(remoteEditsMenu.classList.contains("is-collapsed")){
             e.preventDefault()
             editsPager.expand()
+          }
+        })
+        const syncDiaryLobbyPanelState = (expanded)=>{
+          if(!diaryLobby) return
+          diaryLobby.classList.toggle("is-collapsed", !expanded)
+          if(diaryLobbyToggle) diaryLobbyToggle.textContent = expanded ? "Hide" : "Open"
+          diaryLobbyToggle?.setAttribute("aria-expanded", expanded ? "true" : "false")
+        }
+        syncDiaryLobbyPanelState(window.innerWidth >= 1180)
+        diaryLobbyToggle?.addEventListener("click", e=>{
+          e.stopPropagation()
+          syncDiaryLobbyPanelState(diaryLobby.classList.contains("is-collapsed"))
+        })
+        diaryLobbyRefresh?.addEventListener("click", e=>{
+          e.stopPropagation()
+          syncDiaryLobbyPanelState(true)
+          refreshDiaryLobby?.()
+          refreshDiaryLobbySignal?.()
+        })
+        diaryLobby?.addEventListener("click", e=>{
+          if(diaryLobby.classList.contains("is-collapsed")){
+            e.preventDefault()
+            syncDiaryLobbyPanelState(true)
           }
         })
         remoteColorPrevBtn?.addEventListener("click", ()=>applyRemoteThemeByIndex(-1))
