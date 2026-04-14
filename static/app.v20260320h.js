@@ -7502,6 +7502,58 @@ function setupFloatMode(){
         clearAssistantSequence()
       }, 15000))
     }
+    let liveAssistantTapAt = 0
+    async function launchAssistantLiveSession(assistantId, event){
+      const now = Date.now()
+      if(now - liveAssistantTapAt < 420) return
+      liveAssistantTapAt = now
+      event?.preventDefault?.()
+      event?.stopPropagation?.()
+      event?.stopImmediatePropagation?.()
+      const route = remoteState.currentRoute || "home"
+      const help = getAssistantHelp(route, assistantId)
+      const assistantName = assistantId === "projake" ? "Jake Studio Specialist" : "Aria Hair Advisor"
+      state.activeAssistant = assistantId
+      applyAssistantUI(true)
+      syncProfile()
+      applyAssistantDemoScene(route, help.greeting)
+      moveAssistantNodeToFocus(assistantId === "projake" ? assistantJakeOrb : assistantAriaOrb, help.focus)
+      moveAssistantNodeToFocus(assistantId === "projake" ? guardianJakeBtn : guardianAriaBtn, help.focus)
+      updateAssistantTracker({
+        activeAssistant: assistantId,
+        route,
+        focusLabel: getAssistantTrackerFocusLabel(route, assistantId),
+        voiceState: "listening",
+        voiceText: `${assistantName} is opening the live mic now.`,
+        liveTranscript: "",
+        anchorSelector: getAssistantAnchorSelector(route)
+      })
+      if(typeof window.startAriaListening === "function"){
+        window.startAriaListening({ assistantId, assistantName, thinkDelay: 1800 })
+      }else if(typeof startOpenAIListening === "function"){
+        startOpenAIListening({ assistantId, assistantName, thinkDelay: 1800 })
+      }
+      showSpeechPopup(assistantName, `${help.listening} Speak now.`)
+    }
+    function bindAssistantLiveInterceptor(){
+      const selectorMap = {
+        "#floatAriaBtn": "aria",
+        "#remoteGuardianAria": "aria",
+        "#floatJakeBtn": "projake",
+        "#remoteGuardianJake": "projake"
+      }
+      const handle = (event)=>{
+        const target = event.target?.closest?.("#floatAriaBtn, #remoteGuardianAria, #floatJakeBtn, #remoteGuardianJake")
+        if(!target) return
+        const assistantId = selectorMap[`#${target.id}`]
+        if(!assistantId) return
+        launchAssistantLiveSession(assistantId, event)
+      }
+      document.addEventListener("click", handle, true)
+      document.addEventListener("pointerup", handle, true)
+      document.addEventListener("touchend", handle, { capture:true, passive:false })
+    }
+    bindAssistantLiveInterceptor()
     handleAssistantHover(assistantAriaOrb, "aria")
     handleAssistantHover(assistantJakeOrb, "projake")
     handleAssistantHover(guardianAriaBtn, "aria")
