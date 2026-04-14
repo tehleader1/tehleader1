@@ -6304,3 +6304,57 @@ body.competition-world.world-view-tower::before{
   margin-top:8px;
 }
 
+.assistant-pixel-rail{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  z-index:64;
+}
+.assistant-pixel-chip{
+  width:min(260px,calc(100vw - 36px));
+  display:grid;
+  gap:4px;
+  padding:12px 14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.18);
+  background:linear-gradient(160deg, rgba(7,16,34,.92), rgba(14,31,57,.86));
+  box-shadow:0 18px 40px rgba(2,8,20,.35);
+  color:#eef5ff;
+  text-align:left;
+  cursor:pointer;
+  backdrop-filter:blur(16px);
+}
+.assistant-pixel-chip .assistant-pixel-name{
+  font-size:11px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:rgba(214,231,255,.78);
+}
+.assistant-pixel-chip .assistant-pixel-stage{
+  font-size:21px;
+  font-weight:800;
+  line-height:1;
+}
+.assistant-pixel-chip .assistant-pixel-copy{
+  font-size:12px;
+  line-height:1.35;
+  color:rgba(236,244,255,.9);
+}
+.assistant-pixel-chip[data-stage="listening"],
+.assistant-pixel-chip[data-stage="mic-ready"]{
+  border-color:rgba(110,233,255,.5);
+  box-shadow:0 18px 40px rgba(27,120,170,.28);
+}
+.assistant-pixel-chip[data-stage="processing"]{
+  border-color:rgba(255,215,115,.5);
+  box-shadow:0 18px 40px rgba(170,131,27,.28);
+}
+.assistant-pixel-chip[data-stage="speaking"],
+.assistant-pixel-chip[data-stage="greeting"]{
+  border-color:rgba(161,135,255,.5);
+  box-shadow:0 18px 40px rgba(86,49,168,.28);
+}
+

@@ -423,7 +423,8 @@ const state = {
     shopifyProductsLoaded: false,
     shopifyStorefrontBase: "",
     shopifyStorefrontHost: "",
-    shopifyStorefrontToken: ""
+    shopifyStorefrontToken: "",
+    voiceSessions: {}
 }
 
 const ASSISTANTS = [
@@ -562,6 +563,143 @@ function getActiveAssistantName(){
 
 function getAssistantDisplayName(assistantId = state.activeAssistant){
   return assistantId === "projake" ? "Jake Studio Specialist" : "Aria Hair Advisor"
+}
+
+const voiceSessionRuntime = {
+  activeSessionId: "",
+  byAssistant: {},
+  pixelState: {
+    aria: { stage: "idle", mode: "greeting", text: "Stand by" },
+    projake: { stage: "idle", mode: "greeting", text: "Stand by" }
+  }
+}
+
+function getVoiceSessionKey(assistantId = state.activeAssistant, route = (remoteState?.currentRoute || "home")){
+  return `${assistantId}:${route || "home"}`
+}
+
+function ensureAssistantPixelRail(){
+  let rail = qs("#assistantPixelRail")
+  if(rail) return rail
+  rail = document.createElement("section")
+  rail.id = "assistantPixelRail"
+  rail.className = "assistant-pixel-rail"
+  rail.innerHTML = `
+    <button type="button" class="assistant-pixel-chip is-aria" data-assistant-chip="aria">
+      <span class="assistant-pixel-name">Aria</span>
+      <span class="assistant-pixel-stage" data-chip-stage>Idle</span>
+      <span class="assistant-pixel-copy" data-chip-copy>Waiting for the next hair question.</span>
+    </button>
+    <button type="button" class="assistant-pixel-chip is-jake" data-assistant-chip="projake">
+      <span class="assistant-pixel-name">Jake</span>
+      <span class="assistant-pixel-stage" data-chip-stage>Idle</span>
+      <span class="assistant-pixel-copy" data-chip-copy>Standing by for the next studio lane.</span>
+    </button>
+  `
+  rail.addEventListener("click", (event)=>{
+    const chip = event.target?.closest?.("[data-assistant-chip]")
+    if(!chip) return
+    const assistantId = chip.getAttribute("data-assistant-chip")
+    if(assistantId === "projake"){
+      qs("#floatJakeBtn")?.click()
+    }else{
+      qs("#floatAriaBtn")?.click()
+    }
+  })
+  document.body.appendChild(rail)
+  return rail
+}
+
+function setAssistantPixelState(assistantId = state.activeAssistant, patch = {}){
+  const key = assistantId === "projake" ? "projake" : "aria"
+  voiceSessionRuntime.pixelState[key] = {
+    ...voiceSessionRuntime.pixelState[key],
+    ...patch
+  }
+  const rail = ensureAssistantPixelRail()
+  const chip = rail?.querySelector?.(`[data-assistant-chip="${key}"]`)
+  if(!chip) return
+  const stage = String(voiceSessionRuntime.pixelState[key].stage || "idle")
+  const stageLabel = stage === "processing"
+    ? "Thinking"
+    : stage === "speaking"
+      ? "Talking"
+      : stage === "listening"
+        ? "Listening"
+        : stage === "greeting"
+          ? "Greeting"
+          : stage === "mic-ready"
+            ? "Mic Ready"
+            : "Idle"
+  chip.dataset.stage = stage
+  chip.dataset.mode = String(voiceSessionRuntime.pixelState[key].mode || "greeting")
+  const stageNode = chip.querySelector("[data-chip-stage]")
+  const copyNode = chip.querySelector("[data-chip-copy]")
+  if(stageNode) stageNode.textContent = stageLabel
+  if(copyNode) copyNode.textContent = String(voiceSessionRuntime.pixelState[key].text || "Stand by")
+}
+
+async function bootstrapVoiceAssistantSession(assistantId = state.activeAssistant, route = (remoteState?.currentRoute || "home"), mode = "greeting"){
+  const key = getVoiceSessionKey(assistantId, route)
+  const existing = voiceSessionRuntime.byAssistant[key]
+  if(existing?.session_id) return existing
+  const response = await fetch("/api/voice/session/bootstrap", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      assistant_id: assistantId,
+      route,
+      mode,
+      session_id: state.voiceSessions?.[key] || ""
+    })
+  })
+  if(!response.ok) throw new Error("voice_bootstrap_failed")
+  const data = await response.json()
+  if(data?.session_id){
+    voiceSessionRuntime.byAssistant[key] = data
+    voiceSessionRuntime.activeSessionId = data.session_id
+    state.voiceSessions = { ...(state.voiceSessions || {}), [key]: data.session_id }
+    setAssistantPixelState(assistantId, {
+      stage: "greeting",
+      mode: data.mode || mode,
+      text: data.greeting || `${getAssistantDisplayName(assistantId)} is online.`
+    })
+  }
+  return data
+}
+
+async function requestVoiceAssistantReply(message, options = {}){
+  const assistantId = options.assistantId || state.activeAssistant || "aria"
+  const route = options.route || remoteState?.currentRoute || "home"
+  const key = getVoiceSessionKey(assistantId, route)
+  const bootstrap = voiceSessionRuntime.byAssistant[key] || await bootstrapVoiceAssistantSession(assistantId, route)
+  const response = await fetch("/api/voice/respond", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: bootstrap?.session_id || state.voiceSessions?.[key] || "",
+      assistant_id: assistantId,
+      route,
+      mode: options.mode || bootstrap?.mode || "greeting",
+      message
+    })
+  })
+  if(!response.ok) throw new Error("voice_reply_failed")
+  const data = await response.json()
+  if(data?.session_id){
+    voiceSessionRuntime.byAssistant[key] = {
+      ...(voiceSessionRuntime.byAssistant[key] || {}),
+      ...data
+    }
+    voiceSessionRuntime.activeSessionId = data.session_id
+    state.voiceSessions = { ...(state.voiceSessions || {}), [key]: data.session_id }
+    setAssistantPixelState(assistantId, {
+      stage: "speaking",
+      mode: data.mode || "greeting",
+      text: data.reply || `${getAssistantDisplayName(assistantId)} is answering now.`
+    })
+  }
+  return data
 }
 
 function inferVisitorLaneFromMessage(msg){
@@ -1193,23 +1331,48 @@ function bumpHairScore(delta){
   const isPremium = state.subscription === 'premium' || state.subscription === 'bingo100' || state.subscription === 'pro' || state.subscription === 'studio100' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600'
       const shortMode = 'Reply in 1-2 sentences maximum.'
       const ariaLevelPrompt = isPremium ? (levelMap[state.ariaLevel] || levelMap.thorough) : shortMode
-      const r = await fetch("/api/aria",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          message: msg + '\n\n' + personaPrompt + '\n\nResponse level: ' + ariaLevelPrompt,
-          membership_tier: state.subscription || "free",
-          adult_mode: !!state.adult21,
-          family_theme: (state.socialLinks && state.socialLinks.familyFantasyTheme) ? state.socialLinks.familyFantasyTheme : "",
-          muslim_greeting: !!(state.socialLinks && state.socialLinks.muslimGreeting),
-          custom_greeting: (state.socialLinks && state.socialLinks.customGreeting) ? state.socialLinks.customGreeting : "",
-          same_feel_voice: !!(state.socialLinks && state.socialLinks.sameFeelVoice),
-          thought_style: (state.socialLinks && state.socialLinks.thoughtStyle) ? state.socialLinks.thoughtStyle : "",
-          resolver_context: state.resolverContext || {}
+      let d = null
+      let reply = ""
+      try{
+        d = await requestVoiceAssistantReply(
+          msg + '\n\n' + personaPrompt + '\n\nResponse level: ' + ariaLevelPrompt,
+          {
+            assistantId: assistant?.id || "aria",
+            route: routeContext,
+            mode: voiceSessionRuntime.byAssistant[getVoiceSessionKey(assistant?.id || "aria", routeContext)]?.mode || "greeting"
+          }
+        )
+        reply = d?.reply || ""
+      }catch{}
+      if(!reply){
+        const r = await fetch("/api/aria",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            message: msg + '\n\n' + personaPrompt + '\n\nResponse level: ' + ariaLevelPrompt,
+            membership_tier: state.subscription || "free",
+            adult_mode: !!state.adult21,
+            family_theme: (state.socialLinks && state.socialLinks.familyFantasyTheme) ? state.socialLinks.familyFantasyTheme : "",
+            muslim_greeting: !!(state.socialLinks && state.socialLinks.muslimGreeting),
+            custom_greeting: (state.socialLinks && state.socialLinks.customGreeting) ? state.socialLinks.customGreeting : "",
+            same_feel_voice: !!(state.socialLinks && state.socialLinks.sameFeelVoice),
+            thought_style: (state.socialLinks && state.socialLinks.thoughtStyle) ? state.socialLinks.thoughtStyle : "",
+            resolver_context: state.resolverContext || {}
+          })
         })
-      })
-      const d = await r.json()
-      const reply = d.reply || "AI unavailable"
+        d = await r.json()
+        reply = d.reply || "AI unavailable"
+      }
+      if(d?.mode){
+        const nextLevel = d.mode === "professional"
+          ? "pro"
+          : d.mode === "inner_circle"
+            ? "inner"
+            : d.mode === "advanced"
+              ? "thorough"
+              : "greeting"
+        state.ariaLevel = nextLevel
+      }
       appendAria(`${assistant.name}: ${reply}`)
       appendConversation("aria", reply)
       showSpeechPopup(assistant.name, reply)
@@ -1350,6 +1513,7 @@ function setAriaFlow(state){
   const transcriptEl = qs("#ariaTranscript")
   const nowPlaying = qs("#audioNowPlaying")
   const gpsActive = qs("#tab-gps")?.classList.contains("active")
+  const currentAssistant = window.__supportrdListeningAssistant || (typeof getActiveAssistantId === "function" ? getActiveAssistantId() : "aria")
   document.body.classList.toggle("gps-active", !!gpsActive)
   document.body.classList.toggle("aria-speaking", state === "speaking")
   if(!overlay || !textEl) return
@@ -1375,11 +1539,16 @@ function setAriaFlow(state){
     if(nowPlaying){ nowPlaying.textContent = "Currently Playing Audio Feedback: Idle" }
   }
   updateAssistantTracker({
-    activeAssistant: window.__supportrdListeningAssistant || state.activeAssistant || "aria",
+    activeAssistant: currentAssistant,
     voiceState: state,
     voiceText: textEl.textContent || "",
     liveTranscript: transcriptEl?.textContent || "",
     anchorSelector: getAssistantAnchorSelector(remoteState.currentRoute || "home")
+  })
+  setAssistantPixelState(currentAssistant, {
+    stage: state,
+    text: transcriptEl?.textContent || textEl.textContent || `${getAssistantDisplayName(currentAssistant)} is ready.`,
+    mode: voiceSessionRuntime.byAssistant[getVoiceSessionKey(currentAssistant, remoteState?.currentRoute || "home")]?.mode || "greeting"
   })
 }
 
@@ -1394,6 +1563,11 @@ async function speakReply(text, options = {}){
     const profile = getAssistantVoiceProfile(assistantId, state.subscription || "free")
     try{
       setAriaFlow("speaking")
+      setAssistantPixelState(assistantId, {
+        stage: "speaking",
+        mode: voiceSessionRuntime.byAssistant[getVoiceSessionKey(assistantId, remoteState?.currentRoute || "home")]?.mode || "greeting",
+        text: text || `${getAssistantDisplayName(assistantId)} is talking now.`
+      })
       const prefs = state.socialLinks || {}
       const r = await fetch("/api/aria/speech", {
         method: "POST",
@@ -1416,12 +1590,20 @@ async function speakReply(text, options = {}){
       const blob = await r.blob()
       const url = URL.createObjectURL(blob)
       const audio = new Audio(url)
-      audio.onended = ()=>{
-        playDoneChime()
-        setAriaFlow("idle")
-        URL.revokeObjectURL(url)
-      }
-      await audio.play()
+      await new Promise(async (resolve)=>{
+        audio.onended = ()=>{
+          if(!options.skipDoneChime) playDoneChime()
+          setAriaFlow("idle")
+          URL.revokeObjectURL(url)
+          resolve()
+        }
+        audio.onerror = ()=>{
+          setAriaFlow("idle")
+          URL.revokeObjectURL(url)
+          resolve()
+        }
+        await audio.play().catch(()=>resolve())
+      })
       return
     }catch(e){
       if(transcriptEl){ transcriptEl.textContent = "Using device voice…" }
@@ -1436,12 +1618,19 @@ async function speakReply(text, options = {}){
       const selectedVoice = pickAssistantSpeechVoice(assistantId, lang)
       if(selectedVoice){ utter.voice = selectedVoice }
       utter.onstart = ()=>setAriaFlow("speaking")
-      utter.onend = ()=>{
-        playDoneChime()
-        setAriaFlow("idle")
-      }
-      window.speechSynthesis.cancel()
-      window.speechSynthesis.speak(utter)
+      await new Promise((resolve)=>{
+        utter.onend = ()=>{
+          if(!options.skipDoneChime) playDoneChime()
+          setAriaFlow("idle")
+          resolve()
+        }
+        utter.onerror = ()=>{
+          setAriaFlow("idle")
+          resolve()
+        }
+        window.speechSynthesis.cancel()
+        window.speechSynthesis.speak(utter)
+      })
     }catch{
       transcribeFailures += 1
       if(transcribeFailures >= 3){
@@ -6301,7 +6490,7 @@ function setupStudioMode(){
   const blogBtn = qs("#studioBlogBtn")
   let studioBootTimer = null
   if(!shell) return
-  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260414a"
+  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260414c"
 
   const promptStudioLogin = ()=>{
     if(typeof window.openLoginGateSticky === "function"){
@@ -7582,22 +7771,40 @@ function setupFloatMode(){
       state.activeAssistant = assistantId
       applyAssistantUI(true)
       syncProfile()
-      applyAssistantDemoScene(route, help.greeting)
+      let boot = null
+      try{
+        boot = await bootstrapVoiceAssistantSession(assistantId, route, "greeting")
+      }catch{}
+      const greetingLine = boot?.greeting || "Hello how may I help you."
+      const greetingPauseMs = Number(boot?.profile?.greeting_pause_ms || 2000)
+      const thinkDelayMs = Number(boot?.profile?.think_delay_ms || 2400)
+      applyAssistantDemoScene(route, greetingLine)
       moveAssistantNodeToFocus(assistantId === "projake" ? assistantJakeOrb : assistantAriaOrb, help.focus)
       moveAssistantNodeToFocus(assistantId === "projake" ? guardianJakeBtn : guardianAriaBtn, help.focus)
       updateAssistantTracker({
         activeAssistant: assistantId,
         route,
         focusLabel: getAssistantTrackerFocusLabel(route, assistantId),
-        voiceState: "listening",
-        voiceText: `${assistantName} is opening the live mic now.`,
+        voiceState: "greeting",
+        voiceText: greetingLine,
         liveTranscript: "",
         anchorSelector: getAssistantAnchorSelector(route)
       })
+      showSpeechPopup(assistantName, greetingLine)
+      try{
+        playAssistantCue("intro")
+        await speakReply(greetingLine, { assistantId, skipDoneChime: true })
+      }catch{}
+      await new Promise(resolve => setTimeout(resolve, greetingPauseMs))
+      setAssistantPixelState(assistantId, {
+        stage: "listening",
+        mode: boot?.mode || "greeting",
+        text: `${help.listening} Speak now.`
+      })
       if(typeof window.startAriaListening === "function"){
-        window.startAriaListening({ assistantId, assistantName, thinkDelay: 1800 })
+        window.startAriaListening({ assistantId, assistantName, thinkDelay: thinkDelayMs })
       }else if(typeof startOpenAIListening === "function"){
-        startOpenAIListening({ assistantId, assistantName, thinkDelay: 1800 })
+        startOpenAIListening({ assistantId, assistantName, thinkDelay: thinkDelayMs })
       }
       showSpeechPopup(assistantName, `${help.listening} Speak now.`)
     }
@@ -9312,6 +9519,11 @@ function setupFloatMode(){
       }
       renderAssistantTracker()
       startAssistantTrackerLoop()
+      setAssistantPixelState(assistantTrackerState.activeAssistant || "aria", {
+        stage: assistantTrackerState.voiceState || "idle",
+        text: assistantTrackerState.liveTranscript || assistantTrackerState.voiceText || assistantTrackerState.status || "Stand by",
+        mode: voiceSessionRuntime.byAssistant[getVoiceSessionKey(assistantTrackerState.activeAssistant || "aria", assistantTrackerState.route || "home")]?.mode || "greeting"
+      })
     }
   const floatPanelKey = "supportrdFloatPanel"
   const floatPrimeSeenKey = "supportrdPrimeSeen"

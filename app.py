@@ -1597,6 +1597,249 @@ def studio_jake_access_for_plan(plan):
     return normalized in STUDIO_JAKE_ALLOWED_PLANS
 
 
+VOICE_ALLOWED_MODES = {"greeting", "advanced", "inner_circle", "professional"}
+VOICE_ALLOWED_ASSISTANTS = {"aria", "projake"}
+VOICE_PRODUCT_MAP = {
+    "dryness": {"title": "Laciador Crece", "price": "$40", "reason": "moisture support and smoother styling"},
+    "frizz": {"title": "Formula Exclusiva", "price": "$35", "reason": "seal the strand and calm flyaways"},
+    "damage": {"title": "Mascarilla", "price": "$25", "reason": "repair-first support for stressed hair"},
+    "scalp": {"title": "Gotero", "price": "$28", "reason": "lighter scalp support without heavy buildup"},
+    "studio": {"title": "Jake Premium Studio", "price": "$100", "reason": "full booth, extra FX, and Premium Jake guidance"},
+    "default": {"title": "Shampoo SupportRD", "price": "$40", "reason": "steady hair-care support while we learn more"}
+}
+
+
+def normalize_voice_mode(mode):
+    normalized = (mode or "greeting").strip().lower()
+    return normalized if normalized in VOICE_ALLOWED_MODES else "greeting"
+
+
+def normalize_voice_assistant(assistant_id):
+    normalized = (assistant_id or "aria").strip().lower()
+    return normalized if normalized in VOICE_ALLOWED_ASSISTANTS else "aria"
+
+
+def pick_voice_product_lane(text):
+    t = (text or "").strip().lower()
+    if any(token in t for token in ["dry", "dryness", "moisture", "frizz", "smooth"]):
+        return "dryness"
+    if any(token in t for token in ["damage", "burn", "breakage", "split end", "repair"]):
+        return "damage"
+    if any(token in t for token in ["scalp", "oily", "greasy", "itch", "flakes"]):
+        return "scalp"
+    if any(token in t for token in ["studio", "record", "mix", "beat", "motherboard", "export"]):
+        return "studio"
+    return "default"
+
+
+def infer_voice_mode(text, current_mode="greeting"):
+    t = (text or "").strip().lower()
+    if any(token in t for token in ["package deal", "special treatment", "making money", "ready for real", "real package", "finance", "money"]):
+        return "professional"
+    if "family matters" in t or any(token in t for token in ["family", "kids", "daughter", "son", "husband", "wife", "mom", "dad"]):
+        return "inner_circle"
+    if any(token in t for token in ["give me more information", "more information", "advanced", "details", "uses", "ingredients", "how do i use"]):
+        return "advanced"
+    return normalize_voice_mode(current_mode)
+
+
+def get_voice_profile_for(assistant_id, membership_tier):
+    assistant_id = normalize_voice_assistant(assistant_id)
+    tier = (membership_tier or "free").strip().lower()
+    base = {
+        "intro_sound": "harmonic_spread",
+        "outro_sound": "conversation_end",
+        "intro_ms": 500,
+        "greeting_pause_ms": 2000,
+        "think_delay_ms": 2400,
+        "listen_timeout_ms": 12000,
+    }
+    if assistant_id == "projake":
+        base.update({
+            "voice": "onyx" if tier in ("pro", "studio100") else "ash",
+            "assistant_name": "Jake Studio Specialist",
+            "tone": "premium studio director, grounded, smooth, never robotic",
+        })
+    else:
+        base.update({
+            "voice": "coral" if tier in ("premium", "fantasy300", "fantasy600") else "shimmer",
+            "assistant_name": "Aria Hair Advisor",
+            "tone": "beauty-tech concierge, warm, intelligent, never robotic",
+        })
+    if tier in ("pro", "studio100"):
+        base["think_delay_ms"] = 1800
+    return base
+
+
+def init_voice_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS voice_sessions ("
+            "session_id TEXT PRIMARY KEY,"
+            "owner_email TEXT,"
+            "assistant_id TEXT,"
+            "mode TEXT,"
+            "route TEXT,"
+            "payload_json TEXT,"
+            "updated_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS voice_turns ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "session_id TEXT,"
+            "speaker TEXT,"
+            "mode TEXT,"
+            "text TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def load_voice_session_payload(session_id):
+    if not session_id:
+        return {}
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT payload_json FROM voice_sessions WHERE session_id = ? LIMIT 1", (session_id,))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return {}
+        return json.loads(row[0] or "{}")
+    except:
+        return {}
+
+
+def save_voice_session_payload(session_id, owner_email, assistant_id, mode, route, payload):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO voice_sessions (session_id, owner_email, assistant_id, mode, route, payload_json, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(session_id) DO UPDATE SET owner_email=excluded.owner_email, assistant_id=excluded.assistant_id, mode=excluded.mode, route=excluded.route, payload_json=excluded.payload_json, updated_at=excluded.updated_at",
+            (session_id, owner_email or "", assistant_id, mode, route, json.dumps(payload, ensure_ascii=False), _studio_now()),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def append_voice_turn(session_id, speaker, mode, text):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO voice_turns (session_id, speaker, mode, text, created_at) VALUES (?, ?, ?, ?, ?)",
+            (session_id, speaker, mode, text[:4000], _studio_now()),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def get_recent_voice_turns(session_id, limit=8):
+    if not session_id:
+        return []
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT speaker, mode, text, created_at FROM voice_turns WHERE session_id = ? ORDER BY id DESC LIMIT ?",
+            (session_id, max(1, min(20, int(limit)))),
+        )
+        rows = cur.fetchall() or []
+        conn.close()
+        return [{"speaker": row[0], "mode": row[1], "text": row[2], "created_at": row[3]} for row in reversed(rows)]
+    except:
+        return []
+
+
+def build_voice_mode_instruction(assistant_id, mode):
+    assistant_name = "Jake Studio Specialist" if assistant_id == "projake" else "Aria Hair Advisor"
+    if mode == "advanced":
+        return f"{assistant_name} is in Advanced mode. Give in-depth product use, steps, and the reason each product matters."
+    if mode == "inner_circle":
+        return f"{assistant_name} is in Inner Circle mode. Respond with warm memory-aware family sensitivity while staying hair-related and emotionally steady."
+    if mode == "professional":
+        return f"{assistant_name} is in Professional / Making Money mode. Talk about hair-related finances, premium service packages, product bundles, and confident next steps."
+    return f"{assistant_name} is in Greeting mode. Be welcoming, short, clear, and hair-focused."
+
+
+def voice_topic_understood(text, assistant_id):
+    cleaned = (text or "").strip().lower()
+    if not cleaned:
+        return False
+    if is_hair_topic(cleaned):
+        return True
+    if assistant_id == "projake":
+        return any(token in cleaned for token in [
+            "studio", "record", "recording", "mix", "motherboard", "export", "beat",
+            "fx", "effect", "waveform", "video", "audio", "vocals", "track"
+        ])
+    return False
+
+
+def build_voice_fallback_reply(message, assistant_id, mode, membership_tier, memory_notes=None):
+    assistant_id = normalize_voice_assistant(assistant_id)
+    mode = normalize_voice_mode(mode)
+    lane = pick_voice_product_lane(message)
+    product = VOICE_PRODUCT_MAP.get(lane, VOICE_PRODUCT_MAP["default"])
+    tier = (membership_tier or "free").strip().lower()
+    memory_notes = memory_notes or []
+    if not voice_topic_understood(message, assistant_id):
+        return (
+            "I didn't understand. Say something hair related."
+            if assistant_id != "projake"
+            else "I didn't understand. Say something hair or studio related."
+        )
+    if assistant_id == "projake":
+        base = (
+            f"Jake here. The clean next move is {product['title']} at {product['price']}. "
+            f"It fits because it brings {product['reason']}."
+        )
+    else:
+        base = (
+            f"Aria here. The first SupportRD lane I would point you to is {product['title']} at {product['price']}. "
+            f"It fits because it brings {product['reason']}."
+        )
+    if mode == "advanced":
+        base += " Use it with steady sequencing, track the result over a week, and let me know the exact change you want next."
+    elif mode == "inner_circle":
+        memory_line = f" I remember this family lane too: {memory_notes[-1]}." if memory_notes else ""
+        base += f" I will stay gentle and family-aware while we build the routine.{memory_line}"
+    elif mode == "professional":
+        base += " If you are ready for special treatment, I can turn this into a premium package conversation with product, timing, and money talk."
+    if tier in ("premium", "pro", "studio100", "bingo100", "family200", "fantasy300", "fantasy600", "yoda"):
+        base += " Your upgraded lane lets me stay deeper and more tailored."
+    return base
+
+
+def create_realtime_instruction(assistant_id, mode, membership_tier, route, memory_notes=None):
+    profile = get_voice_profile_for(assistant_id, membership_tier)
+    memory_notes = memory_notes or []
+    memory_line = ""
+    if memory_notes:
+        memory_line = f" Recent family/personal memory notes to respect: {' | '.join(memory_notes[-3:])}."
+    return (
+        f"{build_voice_mode_instruction(assistant_id, mode)} "
+        f"Current route: {(route or 'home')[:40]}. "
+        f"Voice tone: {profile.get('tone','natural, premium, never robotic')}. "
+        f"Stay within SupportRD hair help unless Jake is asked about studio work. "
+        f"If you do not understand, say: I didn't understand. Say something hair related. "
+        f"{memory_line}"
+    ).strip()
+
+
 def _require_studio_jake_api_access():
     user = session.get("user") or {}
     email = (user.get("email") or "").strip().lower()
@@ -3586,7 +3829,7 @@ def studio_jake_enter():
         "subscription": plan,
         "assistant": "projake",
         "assistant_title": "Jake Studio Specialist",
-        "studio_url": "/static/studio/index.html?v=20260414a",
+        "studio_url": "/static/studio/index.html?v=20260414c",
         "message": "Jake Premium Studio is live and logged in cleanly.",
     }
 
@@ -4468,6 +4711,224 @@ def publish_shopify_blog():
 def products():
     return jsonify(get_products())
 
+@app.route("/api/voice/session/bootstrap", methods=["POST"])
+def voice_session_bootstrap():
+    body = request.json if request.is_json else {}
+    assistant_id = normalize_voice_assistant(body.get("assistant_id"))
+    route = (body.get("route") or "home").strip().lower()[:40]
+    requested_mode = normalize_voice_mode(body.get("mode") or "greeting")
+    owner_email = _studio_owner_email()
+    membership_tier = get_subscription_for_email(owner_email) if owner_email and owner_email != "guest" else "free"
+    session_id = (body.get("session_id") or "").strip() or f"voice-{uuid.uuid4().hex}"
+    payload = load_voice_session_payload(session_id)
+    mode = normalize_voice_mode(payload.get("mode") or requested_mode)
+    memory_notes = payload.get("family_memory") or []
+    profile = get_voice_profile_for(assistant_id, membership_tier)
+    greeting = "Hello how may I help you." if assistant_id != "projake" else "Hello, Jake here. What part of the studio or hair work should we handle?"
+    intro_copy = f"{profile.get('assistant_name', 'SupportRD Assistant')} is online."
+    save_voice_session_payload(
+        session_id,
+        owner_email,
+        assistant_id,
+        mode,
+        route,
+        {
+            **payload,
+            "session_id": session_id,
+            "route": route,
+            "assistant_id": assistant_id,
+            "mode": mode,
+            "membership_tier": membership_tier,
+            "family_memory": memory_notes,
+            "last_bootstrap_at": _studio_now(),
+        },
+    )
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "assistant_id": assistant_id,
+        "membership_tier": membership_tier,
+        "mode": mode,
+        "profile": profile,
+        "greeting": greeting,
+        "intro_copy": intro_copy,
+        "realtime_ready": bool(OPENAI_KEY),
+        "realtime_path": "/api/voice/realtime/session",
+        "history": get_recent_voice_turns(session_id, limit=6),
+    }
+
+
+@app.route("/api/voice/realtime/session", methods=["POST"])
+def voice_realtime_session():
+    if not OPENAI_KEY:
+        return {"ok": False, "error": "openai_key_missing"}, 503
+    body = request.json if request.is_json else {}
+    assistant_id = normalize_voice_assistant(body.get("assistant_id"))
+    requested_mode = normalize_voice_mode(body.get("mode") or "greeting")
+    route = (body.get("route") or "home").strip().lower()[:40]
+    owner_email = _studio_owner_email()
+    membership_tier = get_subscription_for_email(owner_email) if owner_email and owner_email != "guest" else "free"
+    session_id = (body.get("session_id") or "").strip()
+    payload = load_voice_session_payload(session_id)
+    memory_notes = payload.get("family_memory") or []
+    profile = get_voice_profile_for(assistant_id, membership_tier)
+    realtime_model = os.environ.get("OPENAI_REALTIME_MODEL", "gpt-4o-realtime-preview")
+    request_payload = {
+        "model": realtime_model,
+        "voice": profile.get("voice") or os.environ.get("OPENAI_TTS_VOICE", "shimmer"),
+        "instructions": create_realtime_instruction(assistant_id, requested_mode, membership_tier, route, memory_notes),
+        "input_audio_transcription": {
+            "model": os.environ.get("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe")
+        }
+    }
+    try:
+        resp = requests.post(
+            "https://api.openai.com/v1/realtime/sessions",
+            headers={
+                "Authorization": f"Bearer {OPENAI_KEY}",
+                "Content-Type": "application/json",
+            },
+            json=request_payload,
+            timeout=20,
+        )
+        if resp.status_code >= 400:
+            return {
+                "ok": False,
+                "error": "realtime_session_failed",
+                "status": resp.status_code,
+                "detail": resp.text[:300],
+            }, 502
+        data = resp.json()
+        return {
+            "ok": True,
+            "session": data,
+            "profile": profile,
+            "mode": requested_mode,
+            "assistant_id": assistant_id,
+        }
+    except Exception as exc:
+        return {"ok": False, "error": "realtime_session_exception", "detail": str(exc)[:220]}, 500
+
+
+@app.route("/api/voice/respond", methods=["POST"])
+def voice_respond():
+    body = request.json if request.is_json else {}
+    message = (body.get("message") or "").strip()
+    session_id = (body.get("session_id") or "").strip() or f"voice-{uuid.uuid4().hex}"
+    assistant_id = normalize_voice_assistant(body.get("assistant_id"))
+    route = (body.get("route") or "home").strip().lower()[:40]
+    owner_email = _studio_owner_email()
+    membership_tier = get_subscription_for_email(owner_email) if owner_email and owner_email != "guest" else "free"
+    payload = load_voice_session_payload(session_id)
+    current_mode = normalize_voice_mode(body.get("mode") or payload.get("mode") or "greeting")
+    mode = infer_voice_mode(message, current_mode)
+    memory_notes = list(payload.get("family_memory") or [])
+    if mode == "inner_circle" and message:
+        memory_notes.append(message[:220])
+        memory_notes = memory_notes[-4:]
+    if not message:
+        reply = "I didn't understand. Say something hair related."
+        return {
+            "ok": True,
+            "session_id": session_id,
+            "assistant_id": assistant_id,
+            "mode": mode,
+            "reply": reply,
+            "understood": False,
+            "profile": get_voice_profile_for(assistant_id, membership_tier),
+        }
+    product_lane_key = pick_voice_product_lane(message)
+    product_lane = VOICE_PRODUCT_MAP.get(product_lane_key, VOICE_PRODUCT_MAP["default"])
+    understood = voice_topic_understood(message, assistant_id)
+    profile = get_voice_profile_for(assistant_id, membership_tier)
+    history = get_recent_voice_turns(session_id, limit=8)
+    if not understood:
+        reply = build_voice_fallback_reply(message, assistant_id, mode, membership_tier, memory_notes)
+    else:
+        reply = ""
+        if client:
+            try:
+                history_summary = " | ".join(
+                    f"{turn.get('speaker','user')}: {str(turn.get('text',''))[:180]}"
+                    for turn in history[-6:]
+                )
+                memory_summary = " | ".join(memory_notes[-3:])
+                response = client.chat.completions.create(
+                    model=OPENAI_MODEL,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                HAIR_SYSTEM + " " +
+                                build_voice_mode_instruction(assistant_id, mode) + " " +
+                                f"Current route: {route}. "
+                                f"Assistant tone: {profile.get('tone','natural, premium, never robotic')}. "
+                                f"Membership tier: {membership_tier}. "
+                                f"Related SupportRD lane to reference when helpful: {product_lane['title']} at {product_lane['price']} because {product_lane['reason']}. "
+                                f"Recent history: {history_summary or 'none yet'}. "
+                                f"Family/personal memory notes: {memory_summary or 'none yet'}."
+                            ).strip()
+                        },
+                        {"role": "user", "content": message}
+                    ],
+                    temperature=0.45,
+                    max_tokens=250
+                )
+                reply = (response.choices[0].message.content or "").strip()
+            except Exception:
+                reply = ""
+        if not reply:
+            reply = build_voice_fallback_reply(message, assistant_id, mode, membership_tier, memory_notes)
+    append_voice_turn(session_id, "user", mode, message)
+    append_voice_turn(session_id, assistant_id, mode, reply)
+    save_voice_session_payload(
+        session_id,
+        owner_email,
+        assistant_id,
+        mode,
+        route,
+        {
+            **payload,
+            "session_id": session_id,
+            "route": route,
+            "assistant_id": assistant_id,
+            "mode": mode,
+            "membership_tier": membership_tier,
+            "family_memory": memory_notes,
+            "product_lane_key": product_lane_key,
+            "product_lane": product_lane,
+            "last_reply": reply,
+            "last_message": message,
+            "updated_at": _studio_now(),
+        },
+    )
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "assistant_id": assistant_id,
+        "mode": mode,
+        "reply": reply,
+        "understood": understood,
+        "product_lane": product_lane,
+        "profile": profile,
+        "history": get_recent_voice_turns(session_id, limit=8),
+    }
+
+
+@app.route("/api/voice/session/history")
+def voice_session_history():
+    session_id = (request.args.get("session_id") or "").strip()
+    if not session_id:
+        return {"ok": False, "error": "session_id_required"}, 400
+    payload = load_voice_session_payload(session_id)
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "payload": payload,
+        "history": get_recent_voice_turns(session_id, limit=12),
+    }
+
+
 #################################################
 # ARIA AI
 #################################################
@@ -4640,7 +5101,7 @@ def aria_transcribe():
         files = {
             "file": (audio.filename or "audio.webm", audio_bytes, audio.mimetype or "audio/webm")
         }
-        model = "whisper-1"
+        model = os.environ.get("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe")
         data = {"model": model}
         if language:
             data["language"] = language
@@ -4825,6 +5286,7 @@ init_subscription_db()
 init_app_settings_db()
 init_security_db()
 init_studio_db()
+init_voice_db()
 set_setting("money_guard_enabled", "1")
 try:
     run_trade_bots()
