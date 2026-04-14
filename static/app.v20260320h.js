@@ -7011,6 +7011,25 @@ ${line}`
   const supportrdOSApiGrid = qs("#supportrdOSApiGrid")
   const supportrdOSBackendGrid = qs("#supportrdOSBackendGrid")
   const supportrdOSBoundaryMap = qs("#supportrdOSBoundaryMap")
+  const supportrdOSDiaryTitle = qs("#supportrdOSDiaryTitle")
+  const supportrdOSDiaryBody = qs("#supportrdOSDiaryBody")
+  const supportrdOSDiaryList = qs("#supportrdOSDiaryList")
+  const supportrdOSRefreshDiary = qs("#supportrdOSRefreshDiary")
+  const supportrdOSOpenDiary = qs("#supportrdOSOpenDiary")
+  const supportrdOSStudioTitle = qs("#supportrdOSStudioTitle")
+  const supportrdOSStudioBody = qs("#supportrdOSStudioBody")
+  const supportrdOSStudioList = qs("#supportrdOSStudioList")
+  const supportrdOSOpenStudio = qs("#supportrdOSOpenStudio")
+  const supportrdOSPrimeStudioVoice = qs("#supportrdOSPrimeStudioVoice")
+  const supportrdOSProfileTitle = qs("#supportrdOSProfileTitle")
+  const supportrdOSProfileBody = qs("#supportrdOSProfileBody")
+  const supportrdOSProfileList = qs("#supportrdOSProfileList")
+  const supportrdOSOpenProfile = qs("#supportrdOSOpenProfile")
+  const supportrdOSRefreshProfile = qs("#supportrdOSRefreshProfile")
+  const supportrdOSVoiceSequence = qs("#supportrdOSVoiceSequence")
+  const supportrdOSVoiceAria = qs("#supportrdOSVoiceAria")
+  const supportrdOSVoiceJake = qs("#supportrdOSVoiceJake")
+  const supportrdOSVoiceHandsfree = qs("#supportrdOSVoiceHandsfree")
   function isSupportRDShellV2Active(){
     return !!shell?.querySelector?.(".supportrd-shell-v2")
   }
@@ -7065,6 +7084,67 @@ ${line}`
         { title:"Boundaries", meta:"connected", body:"No dead buttons, no floating leftovers, no isolated panels — every action leads somewhere real." }
       ]
       supportrdOSBoundaryMap.innerHTML = boundaryCards.map((card)=>`<article class="supportrd-os-shell__boundary-card"><span>${card.meta}</span><strong>${card.title}</strong><p>${card.body}<\/p><\/article>`).join("")
+    }
+    const diaryFeeds = Array.isArray(remoteState.diaryLobbyItems) ? remoteState.diaryLobbyItems.slice(0, 3) : []
+    if(supportrdOSDiaryTitle){
+      supportrdOSDiaryTitle.textContent = diaryFeeds[0]?.display_name ? `${diaryFeeds[0].display_name} is the current lead diary feed.` : "Diary live module is loading..."
+    }
+    if(supportrdOSDiaryBody){
+      supportrdOSDiaryBody.textContent = remoteState.diaryLiveActive
+        ? "Live session is active. The diary lobby, viewer, comments, and guest support should stay connected."
+        : "Latest sessions, comments, lobby search, and guest support should all feel like one live diary app."
+    }
+    if(supportrdOSDiaryList){
+      supportrdOSDiaryList.innerHTML = diaryFeeds.length
+        ? diaryFeeds.map((feed)=>`<div class="supportrd-os-shell__mini-item"><strong>${feed.display_name || "SupportRD Feed"}</strong><span>${feed.profile_tag || "^^ support"} · ${feed.live_slug || "live"}<\/span><\/div>`).join("")
+        : `<div class="supportrd-os-shell__mini-item"><strong>Diary lobby</strong><span>Latest sessions will stack here when the feed refresh lands.<\/span><\/div>`
+    }
+
+    if(supportrdOSStudioTitle){
+      supportrdOSStudioTitle.textContent = remoteState.recorder?.state && remoteState.recorder.state !== "inactive"
+        ? "Studio module is actively recording."
+        : "Studio module is ready for recording and edits."
+    }
+    if(supportrdOSStudioBody){
+      supportrdOSStudioBody.textContent = `Recorder: ${remoteState.recorder?.state || "inactive"} · Preview: ${remoteState.previewUrl ? "loaded" : "waiting"} · Return view: ${localStorage.getItem("supportrdStudioReturnView") || "remote"}`
+    }
+    if(supportrdOSStudioList){
+      const studioFacts = [
+        { title:"Mic / Camera", value:"Prime before recording" },
+        { title:"Motherboard", value:getBoard?.()?.label || "Ready" },
+        { title:"Exports", value:"Shell-controlled studio lane" }
+      ]
+      supportrdOSStudioList.innerHTML = studioFacts.map((item)=>`<div class="supportrd-os-shell__mini-item"><strong>${item.title}</strong><span>${item.value}<\/span><\/div>`).join("")
+    }
+
+    const profileSummary = remoteState.profileAccessSummary || {}
+    if(supportrdOSProfileTitle){
+      supportrdOSProfileTitle.textContent = profileSummary.identity_confirmed || "Profile verification module is loading..."
+    }
+    if(supportrdOSProfileBody){
+      supportrdOSProfileBody.textContent = profileSummary.general_status || "Identity, credentials, hair analysis, exports, and scanner access should all read like one premium verification lane."
+    }
+    if(supportrdOSProfileList){
+      const hair = profileSummary.hair_analysis || {}
+      const profileFacts = [
+        { title:"Texture", value:hair.texture || "waiting" },
+        { title:"Hair Type", value:hair.hair_type || "waiting" },
+        { title:"Damage", value:hair.damage || "waiting" }
+      ]
+      supportrdOSProfileList.innerHTML = profileFacts.map((item)=>`<div class="supportrd-os-shell__mini-item"><strong>${item.title}</strong><span>${item.value}<\/span><\/div>`).join("")
+    }
+
+    if(supportrdOSVoiceSequence){
+      const sequenceMap = {
+        idle: "Cue sound → Greeting → Mic ready → Listening → Transcribing → Response → Close sound",
+        arming: "Voice lane arming → cue sound next → microphone preparation",
+        greeting: "Greeting live → 2 second pause → mic opens",
+        "mic-ready": "Mic ready → speak now → listening begins",
+        listening: "Listening live → transcribing on stop → response next",
+        processing: "Transcribing → historical intelligence → response building",
+        speaking: "Response live → close sound when the turn ends"
+      }
+      supportrdOSVoiceSequence.textContent = sequenceMap[assistantTrackerState.voiceState] || sequenceMap.idle
     }
   }
   function setSupportRDShellV2Route(route = "home"){
@@ -13609,6 +13689,50 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     setSupportRDOSLayer(button.dataset.osLayer || "foundation")
     renderSupportRDOSCards()
   }))
+  supportrdOSOpenDiary?.addEventListener("click", ()=>renderRemoteRoute("diary", { openShell:true, force:true }))
+  supportrdOSRefreshDiary?.addEventListener("click", ()=>{
+    fetchDiaryLobby({
+      sort: remoteState.diaryLobbySort || "recent",
+      search: diaryLobbySearch?.value || "",
+      searchBy: remoteState.diaryLobbySearchBy || "name"
+    }).catch(()=>{})
+    refreshDiaryLobbySignal(true).catch(()=>{})
+    setSupportRDOSLayer("frontend")
+  })
+  supportrdOSOpenStudio?.addEventListener("click", ()=>{
+    localStorage.setItem("supportrdStudioReturnView", "remote")
+    if(typeof window.openStudioMode === "function"){
+      closeFloat()
+      window.openStudioMode()
+      return
+    }
+    renderRemoteRoute("studio", { openShell:true, force:true })
+  })
+  supportrdOSPrimeStudioVoice?.addEventListener("click", ()=>{
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("icon", { assistantId:"projake", route:"studio", persistentMic:false })
+    }
+  })
+  supportrdOSOpenProfile?.addEventListener("click", ()=>renderRemoteRoute("profile", { openShell:true, force:true }))
+  supportrdOSRefreshProfile?.addEventListener("click", ()=>refreshProfileAccessScanner(true))
+  supportrdOSVoiceAria?.addEventListener("click", ()=>{
+    setSupportRDOSLayer("frontend")
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("icon", { assistantId:"aria", route: remoteState.currentRoute || "home", persistentMic:false })
+    }
+  })
+  supportrdOSVoiceJake?.addEventListener("click", ()=>{
+    setSupportRDOSLayer("frontend")
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("icon", { assistantId:"projake", route: remoteState.currentRoute || "home", persistentMic:false })
+    }
+  })
+  supportrdOSVoiceHandsfree?.addEventListener("click", ()=>{
+    setSupportRDOSLayer("frontend")
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("handsfree", { assistantId: state.activeAssistant || "aria", route:"diary", persistentMic:true })
+    }
+  })
   shellV2GoDiary?.addEventListener("click", ()=>renderRemoteRoute("diary", { openShell:true }))
   shellV2GoStudio?.addEventListener("click", ()=>{
     localStorage.setItem("supportrdStudioReturnView", "remote")

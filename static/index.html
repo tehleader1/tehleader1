@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414r">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414s">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -1520,7 +1520,7 @@ body .float-launch-btn {
     </div>
   </div>
   <div class="studio-mode-frame-wrap glass">
-<iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414r" title="SupportRD Studio"></iframe>
+<iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414s" title="SupportRD Studio"></iframe>
   </div>
 </div>
 
@@ -1654,6 +1654,55 @@ body .float-launch-btn {
                 <strong>Settings, accessibility, language, layout behavior, sticky widgets, route actions.</strong>
                 <p>The shell should feel controlled and intentional from the first click.</p>
               </article>
+            </div>
+            <div class="supportrd-os-shell__module-grid">
+              <article class="supportrd-os-shell__module supportrd-os-shell__module--diary">
+                <div class="supportrd-os-shell__eyebrow">Diary Module</div>
+                <h3 id="supportrdOSDiaryTitle">Diary live module is loading...</h3>
+                <p id="supportrdOSDiaryBody">Latest sessions, comments, lobby search, and guest support should all feel like one live diary app.</p>
+                <div class="supportrd-os-shell__module-actions">
+                  <button class="btn" id="supportrdOSOpenDiary">Open Diary Module</button>
+                  <button class="btn ghost" id="supportrdOSRefreshDiary">Refresh Feed</button>
+                </div>
+                <div class="supportrd-os-shell__mini-list" id="supportrdOSDiaryList"></div>
+              </article>
+              <article class="supportrd-os-shell__module supportrd-os-shell__module--studio">
+                <div class="supportrd-os-shell__eyebrow">Studio Module</div>
+                <h3 id="supportrdOSStudioTitle">Studio module is loading...</h3>
+                <p id="supportrdOSStudioBody">Recording, waveform, camera, motherboard, and exports should feel like their own creation product.</p>
+                <div class="supportrd-os-shell__module-actions">
+                  <button class="btn" id="supportrdOSOpenStudio">Open Studio Module</button>
+                  <button class="btn ghost" id="supportrdOSPrimeStudioVoice">Prime Jake Voice</button>
+                </div>
+                <div class="supportrd-os-shell__mini-list" id="supportrdOSStudioList"></div>
+              </article>
+              <article class="supportrd-os-shell__module supportrd-os-shell__module--profile">
+                <div class="supportrd-os-shell__eyebrow">Profile Module</div>
+                <h3 id="supportrdOSProfileTitle">Profile verification module is loading...</h3>
+                <p id="supportrdOSProfileBody">Identity, credentials, hair analysis, exports, and scanner access should all read like one premium verification lane.</p>
+                <div class="supportrd-os-shell__module-actions">
+                  <button class="btn" id="supportrdOSOpenProfile">Open Profile Module</button>
+                  <button class="btn ghost" id="supportrdOSRefreshProfile">Refresh Scanner</button>
+                </div>
+                <div class="supportrd-os-shell__mini-list" id="supportrdOSProfileList"></div>
+              </article>
+            </div>
+            <div class="supportrd-os-shell__voice-lane glass">
+              <div class="supportrd-os-shell__panel-head">
+                <div>
+                  <div class="supportrd-os-shell__eyebrow">Website Voice</div>
+                  <h2>Aria / Jake shell-native voice lane.</h2>
+                </div>
+                <span class="supportrd-os-shell__pill">OpenAI Ready</span>
+              </div>
+              <div class="supportrd-os-shell__voice-sequence" id="supportrdOSVoiceSequence">
+                Cue sound → Greeting → Mic ready → Listening → Transcribing → Response → Close sound
+              </div>
+              <div class="supportrd-os-shell__module-actions">
+                <button class="btn" id="supportrdOSVoiceAria">Launch Aria</button>
+                <button class="btn ghost" id="supportrdOSVoiceJake">Launch Jake</button>
+                <button class="btn ghost" id="supportrdOSVoiceHandsfree">Hands Free</button>
+              </div>
             </div>
           </section>
 
@@ -2915,7 +2964,7 @@ body .float-launch-btn {
   
   <script>
 (function(){
-const BUILD = "20260414r";
+const BUILD = "20260414s";
   const KEY = "sr_force_build";
   try {
     const last = localStorage.getItem(KEY);
@@ -2942,8 +2991,8 @@ const BUILD = "20260414r";
 })();
 </script>
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260414r"></script>
-<script src="/static/remote-rebuild.v20260408c.js?v=20260414r"></script>
+<script src="/static/app.v20260320h.js?v=20260414s"></script>
+<script src="/static/remote-rebuild.v20260408c.js?v=20260414s"></script>
 <footer class="launch-footer-links">
   <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>

@@ -4171,7 +4171,7 @@ def studio_jake_enter():
         "subscription": plan,
         "assistant": "projake",
         "assistant_title": "Jake Studio Specialist",
-    "studio_url": "/static/studio/index.html?v=20260414r",
+    "studio_url": "/static/studio/index.html?v=20260414s",
         "message": "Jake Premium Studio is live and logged in cleanly.",
     }
 

@@ -3936,6 +3936,69 @@ body.float-mode-active .float-mode-sticky-bottom{
   color:rgba(220,236,255,.78);
   line-height:1.5;
 }
+.supportrd-os-shell__module-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:16px;
+  margin-top:18px;
+}
+.supportrd-os-shell__module{
+  padding:20px;
+  border-radius:26px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border:1px solid rgba(174,223,255,.12);
+}
+.supportrd-os-shell__module h3{
+  margin:0 0 10px;
+  color:#f4f9ff;
+  font-family:"Cormorant Garamond", Georgia, serif;
+  font-size:30px;
+}
+.supportrd-os-shell__module p{
+  margin:0;
+  color:rgba(220,236,255,.8);
+  line-height:1.55;
+}
+.supportrd-os-shell__module-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:16px;
+}
+.supportrd-os-shell__mini-list{
+  margin-top:16px;
+  display:grid;
+  gap:10px;
+}
+.supportrd-os-shell__mini-item{
+  padding:12px 14px;
+  border-radius:18px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);
+  color:#dcebff;
+  font-size:13px;
+}
+.supportrd-os-shell__mini-item strong{
+  display:block;
+  color:#f4f9ff;
+  margin-bottom:4px;
+}
+.supportrd-os-shell__voice-lane{
+  margin-top:18px;
+  padding:20px;
+  border-radius:28px;
+  background:linear-gradient(180deg, rgba(9,19,34,.92), rgba(8,17,31,.84));
+  border:1px solid rgba(176,224,255,.12);
+}
+.supportrd-os-shell__voice-sequence{
+  padding:14px 16px;
+  border-radius:18px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);
+  color:#daecff;
+  line-height:1.6;
+}
 @keyframes supportRDOSRise{
   from{opacity:0;transform:translateY(12px) scale(.992);}
   to{opacity:1;transform:translateY(0) scale(1);}
@@ -3946,6 +4009,7 @@ body.float-mode-active .float-mode-sticky-bottom{
   .supportrd-os-shell__grid,
   .supportrd-os-shell__service-grid,
   .supportrd-os-shell__boundary-map,
+  .supportrd-os-shell__module-grid,
   .supportrd-shell-v2__hero,
   .supportrd-shell-v2__layout,
   .supportrd-shell-v2__grid,
