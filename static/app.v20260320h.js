@@ -6974,6 +6974,23 @@ ${line}`
   const diaryViewerGuestPay = qs("#remoteDiaryViewerGuestPay")
   const diaryViewerSupportNow = qs("#remoteDiaryViewerSupportNow")
   const diaryViewerOpenRemote = qs("#remoteDiaryViewerOpenRemote")
+  const shellV2Panels = qsa("[data-shell-v2-panel]")
+  const shellV2RouteButtons = qsa("[data-shell-v2-route]")
+  const shellV2GoDiary = qs("#shellV2GoDiary")
+  const shellV2GoStudio = qs("#shellV2GoStudio")
+  const shellV2StartVoice = qs("#shellV2StartVoice")
+  function isSupportRDShellV2Active(){
+    return !!shell?.querySelector?.(".supportrd-shell-v2")
+  }
+  function setSupportRDShellV2Route(route = "home"){
+    const normalized = REMOTE_ROUTE_META[route] ? route : "home"
+    shellV2Panels.forEach((panel)=>panel.classList.toggle("active", panel.dataset.shellV2Panel === normalized))
+    shellV2RouteButtons.forEach((button)=>button.classList.toggle("active", button.dataset.shellV2Route === normalized))
+    if(shell){
+      shell.dataset.remoteRoute = normalized
+      shell.classList.add("supportrd-shell-v2-active")
+    }
+  }
     function setRemoteStatus(text){
       if(text && liveStatus) liveStatus.textContent = text
       if(text){
@@ -12136,6 +12153,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         const normalized = REMOTE_ROUTE_META[route] ? route : "home"
         if(!options.force && !remoteIntentAllowed(`route:${normalized}`)) return
         updateRemoteDocumentMeta(normalized)
+        setSupportRDShellV2Route(normalized)
         applyAssistantDemoScene(normalized, false)
         updateAssistantTracker({
           route: normalized,
@@ -12151,6 +12169,12 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         x: window.innerWidth * 0.68,
         y: Math.max(160, window.innerHeight * 0.28)
       }, normalized)
+      if(isSupportRDShellV2Active()){
+        remoteState.currentRoute = normalized
+        setRemoteStatus(REMOTE_ROUTE_META[normalized]?.description || "SupportRD route updated.")
+        if(!options.skipHistory) syncRemoteHistory(normalized, !!options.replace)
+        return
+      }
       if(normalized === "home"){
         setFloatHome("Remote home is ready. Pick any route and the page fills smoothly underneath.")
       }else if(normalized === "payments"){
@@ -12230,6 +12254,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         shell.classList.remove("panel-open")
         shell.classList.add("touch-optimized")
         remoteState.currentRoute = "home"
+        setSupportRDShellV2Route("home")
         remoteState.currentPanel = defaultFloatPanel
         localStorage.setItem(floatPanelKey, defaultFloatPanel)
         launchButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.floatTarget === defaultFloatPanel))
@@ -13334,6 +13359,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     shell.hidden = false
     shell.setAttribute("aria-hidden","false")
     shell.classList.toggle("preview-mode", !!options.previewOnly)
+    shell.classList.add("supportrd-shell-v2-active")
     document.body.classList.add("float-mode-active")
     document.body.classList.add("remote-home-active")
     hideTGuide()
@@ -13363,6 +13389,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     if(!options.previewOnly){
       if(!options.preserveHome) setRemoteStatus("SupportRD Personal Remote is open in on-the-go mode. Use one tap for GPS, studio, payment, diary, profile, and FAQ while the rest of the site stays out of the way.")
     }
+    setSupportRDShellV2Route(remoteState.currentRoute || "home")
     const activeRoute = getRemoteRouteFromLocation()
     if(activeRoute && activeRoute !== "home"){
       setTimeout(()=>renderRemoteRoute(activeRoute, { skipHistory:true }), 0)
@@ -13377,6 +13404,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     shell.hidden = true
     shell.setAttribute("aria-hidden","true")
     shell.classList.remove("preview-mode")
+    shell.classList.remove("supportrd-shell-v2-active")
     document.body.classList.remove("float-mode-active")
     document.body.classList.remove("remote-home-active")
   }
@@ -13393,6 +13421,32 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
   remoteSheetBack?.addEventListener("click", ()=>closeRemoteSheet())
   remoteSheetClose?.addEventListener("click", ()=>closeRemoteSheet())
   openStudioBtn?.addEventListener("click", ()=>showAllFloatPanels("All Remote panels are open together now."))
+  shellV2RouteButtons.forEach((button)=>button.addEventListener("click", ()=>{
+    const route = button.dataset.shellV2Route || "home"
+    renderRemoteRoute(route, { openShell:true })
+  }))
+  shellV2GoDiary?.addEventListener("click", ()=>renderRemoteRoute("diary", { openShell:true }))
+  shellV2GoStudio?.addEventListener("click", ()=>{
+    localStorage.setItem("supportrdStudioReturnView", "remote")
+    if(typeof window.openStudioMode === "function"){
+      closeFloat()
+      window.openStudioMode()
+      return
+    }
+    renderRemoteRoute("studio", { openShell:true })
+  })
+  shellV2StartVoice?.addEventListener("click", ()=>{
+    const preferredAssistant = state.activeAssistant === "projake" ? "projake" : "aria"
+    if(typeof window.activateSupportRDWebsiteVoice === "function"){
+      window.activateSupportRDWebsiteVoice("icon", {
+        assistantId: preferredAssistant,
+        entryMode: "icon",
+        persistentMic: false
+      })
+      return
+    }
+    qs(preferredAssistant === "projake" ? "#remoteGuardianJake" : "#remoteGuardianAria")?.click()
+  })
   remoteStageGpsBtn?.addEventListener("click", ()=>renderRemoteRoute("map"))
   remoteStageStudioBtn?.addEventListener("click", ()=>renderRemoteRoute("studio"))
   remoteStagePaymentBtn?.addEventListener("click", ()=>window.openRemoteFastPay?.())

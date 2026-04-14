@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414m">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414n">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -1520,12 +1520,228 @@ body .float-launch-btn {
     </div>
   </div>
   <div class="studio-mode-frame-wrap glass">
-        <iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414m" title="SupportRD Studio"></iframe>
+<iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414n" title="SupportRD Studio"></iframe>
   </div>
 </div>
 
 <div id="floatModeShell" class="float-mode-shell" hidden aria-hidden="true">
   <div class="float-mode-backdrop"></div>
+    <div class="supportrd-shell-v2" aria-label="SupportRD App Shell">
+      <header class="supportrd-shell-v2__hero glass">
+        <div class="supportrd-shell-v2__hero-copy">
+          <div class="supportrd-shell-v2__eyebrow">SupportRD App Shell</div>
+          <h2>One Remote. Real app pages. No old panel underneath.</h2>
+          <p>SupportRD now opens like a route-based app shell for Diary, Studio, Profile, Payments, and the Website Voice instead of dropping you into the old float panel world.</p>
+          <div class="supportrd-shell-v2__hero-actions">
+            <button class="btn" id="shellV2GoDiary">Open Diary Live</button>
+            <button class="btn ghost" id="shellV2GoStudio">Launch Studio</button>
+            <button class="btn ghost" id="shellV2StartVoice">Website Voice</button>
+          </div>
+        </div>
+        <div class="supportrd-shell-v2__hero-status">
+          <article class="supportrd-shell-v2__signal">
+            <span>Shell</span>
+            <strong>Reset Build Active</strong>
+            <small>Route-led layout with controlled widgets and motion staging.</small>
+          </article>
+          <article class="supportrd-shell-v2__signal">
+            <span>Voice</span>
+            <strong>Aria / Jake</strong>
+            <small>Queued for click, cue sound, greeting, mic, transcription, and response.</small>
+          </article>
+          <article class="supportrd-shell-v2__signal">
+            <span>Pages</span>
+            <strong>Diary / Studio / Profile</strong>
+            <small>Built like dedicated app surfaces instead of buried panels.</small>
+          </article>
+        </div>
+      </header>
+
+      <div class="supportrd-shell-v2__nav glass" role="navigation" aria-label="SupportRD routes">
+        <button class="supportrd-shell-v2__nav-btn active" type="button" data-shell-v2-route="home">Remote</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="diary">Diary</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="studio">Studio</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="profile">Profile</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="settings">Settings</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="map">Map Change</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="faq">FAQ Lounge</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="payments">Payments</button>
+      </div>
+
+      <div class="supportrd-shell-v2__layout">
+        <main class="supportrd-shell-v2__main">
+          <section class="supportrd-shell-v2__panel active" data-shell-v2-panel="home">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">SupportRD Remote</div>
+                <h3>Modern home base for the whole product.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Remote-first</span>
+            </div>
+            <div class="supportrd-shell-v2__grid">
+              <article class="supportrd-shell-v2__card">
+                <span>Diary App</span>
+                <strong>Live feed discovery, comments, guest support, and direct session links.</strong>
+                <p>The Diary lane is being reset into a live app with lobby, sessions, and direct URL entrances.</p>
+              </article>
+              <article class="supportrd-shell-v2__card">
+                <span>Studio App</span>
+                <strong>Standalone API booth feel for recording, waveform, edits, and exports.</strong>
+                <p>The Studio lane now has to read like its own creation product, not a tucked-away panel.</p>
+              </article>
+              <article class="supportrd-shell-v2__card">
+                <span>Website Voice</span>
+                <strong>Aria and Jake live on the shell, not inside broken click chains.</strong>
+                <p>Click, cue sound, greeting, mic, transcription, response, and close sound all route through one voice path.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="diary">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Diary Live App</div>
+                <h3>Live sessions, direct feed URLs, comments, and guest support.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">API Surface</span>
+            </div>
+            <div class="supportrd-shell-v2__feature-list">
+              <article class="supportrd-shell-v2__feature">
+                <strong>Lobby + Feed Routing</strong>
+                <p>Latest sessions, tags, names, URLs, and sticky lobby discovery all live in one system.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Recording + Live Session</strong>
+                <p>Diary mode is becoming its own record-and-go experience with history and comments tied to the account system.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Support Revenue</strong>
+                <p>Guest payment and paid live support belong directly inside the feed viewer, not outside the Remote.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="studio">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Studio API App</div>
+                <h3>Recording, waveform, video, motherboard, and exports.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Premium Booth</span>
+            </div>
+            <div class="supportrd-shell-v2__feature-list">
+              <article class="supportrd-shell-v2__feature">
+                <strong>Prime devices first</strong>
+                <p>Mic and camera are prepared before recording so the booth behaves like a real studio product.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Waveform motherboard</strong>
+                <p>Live visuals, highlights, trims, and exports need to feel immediate and professional.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Jake Premium lane</strong>
+                <p>Studio premium gating stays connected to the account system and payment unlock memory.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="profile">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Profile Verification App</div>
+                <h3>Identity, hair credentials, scanner access, and report exports.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Identity</span>
+            </div>
+            <div class="supportrd-shell-v2__feature-list">
+              <article class="supportrd-shell-v2__feature">
+                <strong>Identity Confirmed</strong>
+                <p>Normal-person account confidence, profile image presence, and account continuity all surface here.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>General Status Reading</strong>
+                <p>History-aware wellness and account status notes belong in the profile, not hidden in random panels.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Hair Analysis Export</strong>
+                <p>PDF and DOCX exports turn scans into a real account artifact that can be revisited later.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="settings">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Settings Control</div>
+                <h3>Push notifications, URL entrances, passwords, and assistant presets.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Control deck</span>
+            </div>
+            <p class="supportrd-shell-v2__panel-copy">Settings has to feel like a calm pit-stop for account setup, not a leftover menu. That means stronger bot menus, route-aware guidance, and easy scanner visibility.</p>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="map">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Map Change Pit Stop</div>
+                <h3>General info, ads, actual map change, and perks around the route.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Pit stop</span>
+            </div>
+            <p class="supportrd-shell-v2__panel-copy">Map Change is the trail-side adjustment lane. It should hold the map switch itself while still surfacing perks, ads, and general SupportRD route help.</p>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="faq">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">FAQ Lounge</div>
+                <h3>The social-world view into SupportRD.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Trail relax</span>
+            </div>
+            <p class="supportrd-shell-v2__panel-copy">FAQ Lounge should carry the 10-second reel, quick configuration help, and direct FAQ answers without breaking the laid-back SupportRD mood.</p>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="payments">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Payments + Account Unlocks</div>
+                <h3>Checkout, account memory, remote buttons, and premium features.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Revenue</span>
+            </div>
+            <div class="supportrd-shell-v2__feature-list">
+              <article class="supportrd-shell-v2__feature">
+                <strong>Shopify + Remote</strong>
+                <p>Every payment lane should feel native to SupportRD while still landing on the real checkout flow.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Account Unlock Memory</strong>
+                <p>What gets bought should immediately change what the Remote, Studio, and voice assistants can do.</p>
+              </article>
+            </div>
+          </section>
+        </main>
+
+        <aside class="supportrd-shell-v2__sidebar glass">
+          <section class="supportrd-shell-v2__widget">
+            <div class="supportrd-shell-v2__eyebrow">Website Voice</div>
+            <h4>Aria / Jake floor plan</h4>
+            <p>Four-corner home positions. They move into focus only for Diary live display, Studio edits, Settings bot controls, Map trails, Profile scans, and FAQ reels.</p>
+          </section>
+          <section class="supportrd-shell-v2__widget">
+            <div class="supportrd-shell-v2__eyebrow">Sticky Widgets</div>
+            <h4>Controlled, not floating everywhere</h4>
+            <p>Widgets stay tucked to the shell edges so the core app view stays readable while still keeping support close.</p>
+          </section>
+          <section class="supportrd-shell-v2__widget">
+            <div class="supportrd-shell-v2__eyebrow">SEO Engine</div>
+            <h4>Every URL points back to SupportRD</h4>
+            <p>Remote, Diary, Studio, Profile, Settings, Map, FAQ, and Payments all become proper entrance pages with SupportRD identity built in.</p>
+          </section>
+        </aside>
+      </div>
+    </div>
     <div class="float-mode-top glass">
       <div>
         <div class="float-mode-kicker">SupportRD Personal Remote</div>
@@ -2475,7 +2691,7 @@ body .float-launch-btn {
   
   <script>
 (function(){
-const BUILD = "20260414m";
+const BUILD = "20260414n";
   const KEY = "sr_force_build";
   try {
     const last = localStorage.getItem(KEY);
@@ -2502,8 +2718,8 @@ const BUILD = "20260414m";
 })();
 </script>
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260414m"></script>
-<script src="/static/remote-rebuild.v20260408c.js?v=20260414m"></script>
+<script src="/static/app.v20260320h.js?v=20260414n"></script>
+<script src="/static/remote-rebuild.v20260408c.js?v=20260414n"></script>
 <footer class="launch-footer-links">
   <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>
