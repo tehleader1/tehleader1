@@ -6937,6 +6937,32 @@ ${line}`
   const diaryLiveComment = qs("#floatDiaryLiveComment")
   const diaryLiveCommentBtn = qs("#floatDiaryLiveCommentBtn")
   const diaryLiveComments = qs("#floatDiaryLiveComments")
+  const diaryTagInput = qs("#floatDiaryTagInput")
+  const diaryTagSaveBtn = qs("#floatDiaryTagSaveBtn")
+  const diaryLobbyPanel = qs("#remoteDiaryLobby")
+  const diaryLobbyCount = qs("#remoteDiaryLobbyCount")
+  const diaryLobbyList = qs("#remoteDiaryLobbyList")
+  const diaryLobbySort = qs("#remoteDiaryLobbySort")
+  const diaryLobbySearch = qs("#remoteDiaryLobbySearch")
+  const diaryLobbySearchBy = qs("#remoteDiaryLobbySearchBy")
+  const diaryLobbyApply = qs("#remoteDiaryLobbyApply")
+  const diaryLobbyRefresh = qs("#remoteDiaryLobbyRefresh")
+  const diaryLobbyToggle = qs("#remoteDiaryLobbyToggle")
+  const diaryViewer = qs("#remoteDiaryViewer")
+  const diaryViewerClose = qs("#remoteDiaryViewerClose")
+  const diaryViewerAvatar = qs("#remoteDiaryViewerAvatar")
+  const diaryViewerOverlay = qs("#remoteDiaryViewerOverlay")
+  const diaryViewerTag = qs("#remoteDiaryViewerTag")
+  const diaryViewerName = qs("#remoteDiaryViewerName")
+  const diaryViewerUrl = qs("#remoteDiaryViewerUrl")
+  const diaryViewerComments = qs("#remoteDiaryViewerComments")
+  const diaryViewerTranscript = qs("#remoteDiaryViewerTranscript")
+  const diaryViewerGuestName = qs("#remoteDiaryViewerGuestName")
+  const diaryViewerGuestComment = qs("#remoteDiaryViewerGuestComment")
+  const diaryViewerPostComment = qs("#remoteDiaryViewerPostComment")
+  const diaryViewerGuestPay = qs("#remoteDiaryViewerGuestPay")
+  const diaryViewerSupportNow = qs("#remoteDiaryViewerSupportNow")
+  const diaryViewerOpenRemote = qs("#remoteDiaryViewerOpenRemote")
     function setRemoteStatus(text){
       if(text && liveStatus) liveStatus.textContent = text
       if(text){
@@ -9526,6 +9552,12 @@ ${line}`
     diarySessionId: localStorage.getItem("supportrdDiarySessionId") || "",
     diaryFeedBootPromise: null,
     diaryFeedSyncTimer: null,
+    diaryLobbySort: localStorage.getItem("supportrdDiaryLobbySort") || "recent",
+    diaryLobbySearchBy: localStorage.getItem("supportrdDiaryLobbySearchBy") || "name",
+    diaryLobbySearch: "",
+    diaryLobbyHidden: localStorage.getItem("supportrdDiaryLobbyHidden") === "true",
+    diaryLobbyItems: [],
+    activeDiaryLobbySessionId: "",
     currentPanel: "floatSettingsBox",
     guideTimer: null,
       guideIndex: 0,
@@ -9963,6 +9995,8 @@ ${line}`
         session_id: remoteState.diarySessionId || "",
         display_name: ownerName,
         username: ownerName,
+        profile_tag: getDiaryProfileTagValue(),
+        avatar_url: state.userAvatar || "",
         live_active: !!remoteState.diaryLiveActive,
         voice_session_id: state.voiceSessions?.[getVoiceSessionKey(state.activeAssistant || "aria", "diary")] || ""
       })
@@ -9993,6 +10027,8 @@ ${line}`
       voice_session_id: state.voiceSessions?.[getVoiceSessionKey(state.activeAssistant || "aria", "diary")] || "",
       display_name: (state.socialLinks?.username || state.socialLinks?.name || "").trim(),
       username: (state.socialLinks?.username || state.socialLinks?.name || "").trim(),
+      profile_tag: getDiaryProfileTagValue(),
+      avatar_url: state.userAvatar || "",
       ...extra
     }
     try{
@@ -10026,6 +10062,169 @@ ${line}`
     }
   }
 
+  function getDiaryProfileTagValue(){
+    const raw = (diaryTagInput?.value || localStorage.getItem("supportrdDiaryProfileTag") || "").trim()
+    if(!raw) return ""
+    const cleaned = raw.replace(/\^+/g, "").trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
+    return cleaned ? `^^${cleaned.slice(0, 24)}` : ""
+  }
+
+  function getDiaryLobbyAvatar(entry){
+    return entry?.avatar_url || state.userAvatar || "/static/images/woman-waking-up12.jpg"
+  }
+
+  function renderDiaryLobby(feeds = []){
+    remoteState.diaryLobbyItems = Array.isArray(feeds) ? feeds : []
+    if(diaryLobbyCount){
+      diaryLobbyCount.textContent = remoteState.diaryLobbyItems.length
+        ? `Showing ${remoteState.diaryLobbyItems.length} of the latest diary feeds`
+        : "Latest 7 diary feeds"
+    }
+    if(!diaryLobbyList) return
+    if(!remoteState.diaryLobbyItems.length){
+      diaryLobbyList.innerHTML = `<div class="remote-diary-lobby-empty">No diary feeds are live yet. Turn on Live Session in Diary Mode and the newest 7 feeds will land here with tag, name, email, and URL sorting.</div>`
+      return
+    }
+    diaryLobbyList.innerHTML = remoteState.diaryLobbyItems.map((entry)=>{
+      const avatar = escapeHtml(getDiaryLobbyAvatar(entry))
+      const name = escapeHtml(entry.display_name || "SupportRD Member")
+      const tag = escapeHtml(entry.profile_tag || "^^ support")
+      const url = escapeHtml(`supportrd.com/?diary-live=${entry.live_slug || ""}`)
+      const email = escapeHtml(entry.owner_email || "guest@supportrd.com")
+      const preview = escapeHtml(entry.preview_text || "Hair support session ready in the lobby.")
+      const updated = escapeHtml((entry.updated_at || "").replace("T", " ").slice(0, 16) || "recent")
+      return `
+        <button class="remote-diary-lobby-card" type="button" data-diary-lobby-card data-session-id="${escapeHtml(entry.session_id || "")}" data-live-slug="${escapeHtml(entry.live_slug || "")}">
+          <div class="remote-diary-lobby-avatar" style="background-image:url('${avatar}')"></div>
+          <div class="remote-diary-lobby-copy">
+            <div class="remote-diary-lobby-topline">
+              <strong class="remote-diary-lobby-name">${name}</strong>
+              <span class="remote-diary-lobby-tag">${tag}</span>
+            </div>
+            <div class="remote-diary-lobby-meta">
+              <span class="remote-diary-lobby-url">${url}</span>
+              <span class="remote-diary-lobby-email">${updated}</span>
+            </div>
+            <div class="remote-diary-lobby-email">${email}</div>
+            <div class="remote-diary-lobby-preview">${preview}</div>
+          </div>
+        </button>
+      `
+    }).join("")
+  }
+
+  async function fetchDiaryLobby(options = {}){
+    const sort = options.sort || remoteState.diaryLobbySort || "recent"
+    const search = (options.search ?? remoteState.diaryLobbySearch ?? "").trim()
+    const searchBy = options.searchBy || remoteState.diaryLobbySearchBy || "name"
+    try{
+      const query = new URLSearchParams({
+        sort,
+        limit: "7",
+        search,
+        search_by: searchBy
+      })
+      const response = await fetch(`/api/diary/lobby?${query.toString()}`)
+      if(!response.ok) throw new Error("diary_lobby_failed")
+      const data = await response.json()
+      if(data?.ok){
+        renderDiaryLobby(data.feeds || [])
+      }
+      return data
+    }catch{
+      renderDiaryLobby([])
+      return null
+    }
+  }
+
+  function closeDiaryLobbyViewer(){
+    if(!diaryViewer) return
+    diaryViewer.hidden = true
+    document.body.classList.remove("diary-viewer-open")
+  }
+
+  function renderDiaryViewer(feed){
+    if(!feed?.summary || !diaryViewer) return
+    const summary = feed.summary || {}
+    remoteState.activeDiaryLobbySessionId = summary.session_id || ""
+    diaryViewer.hidden = false
+    document.body.classList.add("diary-viewer-open")
+    if(diaryViewerAvatar){
+      diaryViewerAvatar.style.backgroundImage = `linear-gradient(145deg, rgba(10,22,42,.16), rgba(10,22,42,.06)), url("${getDiaryLobbyAvatar(summary)}")`
+    }
+    if(diaryViewerTag) diaryViewerTag.textContent = summary.profile_tag || "^^ support"
+    if(diaryViewerName) diaryViewerName.textContent = summary.display_name || "SupportRD Diary Live"
+    if(diaryViewerUrl) diaryViewerUrl.textContent = summary.live_url || `${window.location.origin}/?diary-live=${summary.live_slug || ""}`
+    if(diaryViewerOverlay){
+      diaryViewerOverlay.textContent = (feed.payload?.social_post || feed.payload?.entry_text || feed.payload?.transcript || "This diary feed is ready. Live comments and guest support stay inside this panel.") || "This diary feed is ready."
+    }
+    if(diaryViewerComments){
+      const comments = Array.isArray(feed.comments) ? feed.comments : []
+      diaryViewerComments.textContent = comments.length
+        ? comments.map((entry)=> entry.comment_kind === "support"
+            ? `${entry.author_name} · ${entry.comment_text}${entry.amount_label ? ` ${entry.amount_label}` : ""}`
+            : `${entry.author_name}: ${entry.comment_text}`
+          ).join("\n")
+        : "No live comments yet. This feed is ready for the first guest."
+    }
+    if(diaryViewerTranscript){
+      const turns = Array.isArray(feed.voice_history) ? feed.voice_history : []
+      diaryViewerTranscript.textContent = turns.length
+        ? turns.map((turn)=>{
+            const who = turn.speaker === "projake" ? "Jake" : turn.speaker === "aria" ? "Aria" : "You"
+            return `${who}: ${turn.text}`
+          }).join("\n")
+        : "Voice history is getting ready for this feed."
+    }
+  }
+
+  async function openDiaryLobbyViewer(options = {}){
+    const sessionId = options.sessionId || ""
+    const liveSlug = options.liveSlug || ""
+    if(!sessionId && !liveSlug) return
+    try{
+      const query = new URLSearchParams()
+      if(sessionId) query.set("session_id", sessionId)
+      if(liveSlug) query.set("slug", liveSlug)
+      const response = await fetch(`/api/diary/session/public?${query.toString()}`)
+      if(!response.ok) throw new Error("diary_public_feed_failed")
+      const data = await response.json()
+      if(data?.ok){
+        renderDiaryViewer(data)
+      }
+    }catch{
+      openMiniWindow("Diary Feed", "SupportRD could not load that diary feed yet. Refresh the lobby and try again.")
+    }
+  }
+
+  async function postDiaryViewerComment(){
+    const sessionId = remoteState.activeDiaryLobbySessionId || ""
+    const guest = (diaryViewerGuestName?.value || "Guest").trim()
+    const comment = (diaryViewerGuestComment?.value || "").trim()
+    if(!sessionId || !comment){
+      openMiniWindow("Diary Comment", "Pick a diary feed and write a comment first.")
+      return
+    }
+    try{
+      const response = await fetch("/api/diary/comment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          author_name: guest,
+          comment_text: comment,
+          comment_kind: "comment"
+        })
+      })
+      if(!response.ok) throw new Error("diary_viewer_comment_failed")
+      if(diaryViewerGuestComment) diaryViewerGuestComment.value = ""
+      await openDiaryLobbyViewer({ sessionId })
+      await fetchDiaryLobby()
+    }catch{
+      openMiniWindow("Diary Comment", "SupportRD could not post that comment yet.")
+    }
+  }
+
   function loadDiarySessionSlugFallback(){
     const owner = (state.socialLinks?.username || state.socialLinks?.name || "supportrd-live").toLowerCase().replace(/\s+/g, "-")
     return owner || "supportrd-live"
@@ -10042,6 +10241,9 @@ ${line}`
     }
     if(diarySocialPost && !diarySocialPost.matches(":focus")){
       diarySocialPost.value = payload.social_post || diarySocialPost.value || ""
+    }
+    if(diaryTagInput && !diaryTagInput.matches(":focus")){
+      diaryTagInput.value = payload.profile_tag || diaryTagInput.value || localStorage.getItem("supportrdDiaryProfileTag") || ""
     }
     if(diaryLiveComments){
       const comments = Array.isArray(feed.comments) ? feed.comments : []
@@ -10063,6 +10265,7 @@ ${line}`
     if(diaryLiveStatus && payload.live_slug && remoteState.diaryLiveActive){
       diaryLiveStatus.textContent = `Live mode is on. Session link: ${window.location.origin}/?diary-live=${encodeURIComponent(payload.live_slug)}`
     }
+    fetchDiaryLobby()
   }
 
   function queueDiaryApiSync(extra = {}){
@@ -10075,10 +10278,20 @@ ${line}`
 
   function syncDiaryAndProfileExtras(){
     remoteState.diaryLiveActive = localStorage.getItem("supportrdDiaryLive") === "true" || !!remoteState.diaryLiveActive
+    remoteState.diaryLobbySort = localStorage.getItem("supportrdDiaryLobbySort") || remoteState.diaryLobbySort || "recent"
+    remoteState.diaryLobbySearchBy = localStorage.getItem("supportrdDiaryLobbySearchBy") || remoteState.diaryLobbySearchBy || "name"
+    remoteState.diaryLobbyHidden = localStorage.getItem("supportrdDiaryLobbyHidden") === "true"
     const diarySaved = JSON.parse(localStorage.getItem("supportrdDiaryEntry") || "{}")
     if(qs("#floatDiaryInput") && !qs("#floatDiaryInput").value) qs("#floatDiaryInput").value = diarySaved.text || ""
     if(diarySocialPost && !diarySocialPost.value) diarySocialPost.value = diarySaved.socialPost || ""
     if(handsfreeTranscript && !handsfreeTranscript.value) handsfreeTranscript.value = diarySaved.transcript || ""
+    if(diaryTagInput && !diaryTagInput.value){
+      diaryTagInput.value = localStorage.getItem("supportrdDiaryProfileTag") || ""
+    }
+    if(diaryLobbyPanel) diaryLobbyPanel.hidden = !!remoteState.diaryLobbyHidden
+    if(diaryLobbySort) diaryLobbySort.value = remoteState.diaryLobbySort || "recent"
+    if(diaryLobbySearchBy) diaryLobbySearchBy.value = remoteState.diaryLobbySearchBy || "name"
+    if(diaryLobbyToggle) diaryLobbyToggle.textContent = remoteState.diaryLobbyHidden ? "Show" : "Hide"
     renderDiaryPagePreview(remoteState.diaryPageIndex || 0)
     if(diaryPanels) diaryPanels.hidden = !!remoteState.diaryLiveActive
     if(diaryLiveStage) diaryLiveStage.hidden = !remoteState.diaryLiveActive
@@ -10121,6 +10334,11 @@ ${line}`
     ensureDiarySessionBoot().then((data)=>{
       if(data) renderDiaryApiFeed(data)
       else return fetchDiaryFeed().then((feed)=>{ if(feed) renderDiaryApiFeed(feed) })
+    }).catch(()=>{})
+    fetchDiaryLobby({
+      sort: remoteState.diaryLobbySort,
+      search: diaryLobbySearch?.value || "",
+      searchBy: remoteState.diaryLobbySearchBy
     }).catch(()=>{})
     if(faqPromptSelect && !faqPromptSelect.dataset.boundInitial){
       faqPromptSelect.dataset.boundInitial = "true"
@@ -13259,6 +13477,18 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     localStorage.setItem("supportrdDiaryHistoryScope", diaryHistoryScope.value)
     syncDiaryAndProfileExtras()
   })
+  diaryTagSaveBtn?.addEventListener("click", ()=>{
+    const normalized = getDiaryProfileTagValue()
+    if(diaryTagInput) diaryTagInput.value = normalized
+    localStorage.setItem("supportrdDiaryProfileTag", normalized)
+    queueDiaryApiSync({ profile_tag: normalized })
+    if(diaryLiveStatus){
+      diaryLiveStatus.textContent = normalized
+        ? `Live tag saved. Clients can look for ${normalized} in the Diary Live Lobby and at ${window.location.origin}/?diary-live=${encodeURIComponent(normalized.replace(/\^+/g, "").trim().replace(/\s+/g, "-").toLowerCase())}`
+        : "Live tag cleared. Diary Lobby can still sort by your feed URL and account name."
+    }
+    fetchDiaryLobby()
+  })
   diaryLiveBtn?.addEventListener("click", ()=>{
     remoteState.diaryLiveActive = !remoteState.diaryLiveActive
     localStorage.setItem("supportrdDiaryLive", remoteState.diaryLiveActive ? "true" : "false")
@@ -13345,6 +13575,67 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }).then(r=>r.ok ? r.json() : null).then(data=>{ if(data){ renderDiaryApiFeed({ payload:{ live_slug: loadDiarySessionSlugFallback() }, comments:data.comments, voice_history:[] }) } }).catch(()=>{}))
     syncDiaryAndProfileExtras()
   })
+  diaryLobbyApply?.addEventListener("click", ()=>{
+    remoteState.diaryLobbySort = diaryLobbySort?.value || "recent"
+    remoteState.diaryLobbySearchBy = diaryLobbySearchBy?.value || "name"
+    remoteState.diaryLobbySearch = (diaryLobbySearch?.value || "").trim()
+    localStorage.setItem("supportrdDiaryLobbySort", remoteState.diaryLobbySort)
+    localStorage.setItem("supportrdDiaryLobbySearchBy", remoteState.diaryLobbySearchBy)
+    fetchDiaryLobby({
+      sort: remoteState.diaryLobbySort,
+      searchBy: remoteState.diaryLobbySearchBy,
+      search: remoteState.diaryLobbySearch
+    })
+  })
+  diaryLobbyRefresh?.addEventListener("click", ()=>fetchDiaryLobby({
+    sort: diaryLobbySort?.value || remoteState.diaryLobbySort || "recent",
+    searchBy: diaryLobbySearchBy?.value || remoteState.diaryLobbySearchBy || "name",
+    search: diaryLobbySearch?.value || ""
+  }))
+  diaryLobbyToggle?.addEventListener("click", ()=>{
+    remoteState.diaryLobbyHidden = !remoteState.diaryLobbyHidden
+    localStorage.setItem("supportrdDiaryLobbyHidden", remoteState.diaryLobbyHidden ? "true" : "false")
+    if(diaryLobbyPanel) diaryLobbyPanel.hidden = !!remoteState.diaryLobbyHidden
+    if(diaryLobbyToggle) diaryLobbyToggle.textContent = remoteState.diaryLobbyHidden ? "Show" : "Hide"
+  })
+  diaryLobbySearch?.addEventListener("keydown", (event)=>{
+    if(event.key === "Enter"){
+      event.preventDefault()
+      diaryLobbyApply?.click()
+    }
+  })
+  diaryLobbyList?.addEventListener("click", (event)=>{
+    const card = event.target.closest("[data-diary-lobby-card]")
+    if(!card) return
+    openDiaryLobbyViewer({
+      sessionId: card.getAttribute("data-session-id") || "",
+      liveSlug: card.getAttribute("data-live-slug") || ""
+    })
+  })
+  diaryViewerClose?.addEventListener("click", closeDiaryLobbyViewer)
+  diaryViewerOpenRemote?.addEventListener("click", closeDiaryLobbyViewer)
+  diaryViewerPostComment?.addEventListener("click", ()=>postDiaryViewerComment())
+  diaryViewerGuestPay?.addEventListener("click", ()=>{
+    const feedId = remoteState.activeDiaryLobbySessionId || ""
+    const target = `${LINKS.donate}?ref=diary-feed&session=${encodeURIComponent(feedId)}`
+    if(typeof openLinkModal === "function") openLinkModal(target, "Support This Feed")
+    else window.open(target, "_blank", "noopener")
+  })
+  diaryViewerSupportNow?.addEventListener("click", ()=>{
+    const feedId = remoteState.activeDiaryLobbySessionId || ""
+    const target = `${LINKS.donate}?ref=diary-feed&session=${encodeURIComponent(feedId)}`
+    if(typeof openLinkModal === "function") openLinkModal(target, "Support This Feed")
+    else window.open(target, "_blank", "noopener")
+  })
+  setTimeout(()=>{
+    try{
+      const params = new URLSearchParams(window.location.search)
+      const liveSlug = (params.get("diary-live") || "").trim()
+      if(liveSlug){
+        openDiaryLobbyViewer({ liveSlug })
+      }
+    }catch{}
+  }, 280)
   handsfreeBtn?.addEventListener("click", toggleHandsfreeMode)
   diaryAriaFixed?.addEventListener("click", ()=>window.startSupportRDVoiceMode ? window.startSupportRDVoiceMode("diary", { assistantId:"aria", route:"diary" }) : qs("#floatAriaBtn")?.click())
   diaryJakeFixed?.addEventListener("click", ()=>window.startSupportRDVoiceMode ? window.startSupportRDVoiceMode("diary", { assistantId:"projake", route:"diary" }) : qs("#floatJakeBtn")?.click())

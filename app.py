@@ -1805,9 +1805,121 @@ def get_diary_comments(session_id, limit=25):
 
 def build_diary_live_slug(owner_email, payload=None):
     payload = payload or {}
-    seed = (payload.get("display_name") or payload.get("username") or owner_email or "supportrd-live").strip().lower()
+    seed = (payload.get("profile_tag") or payload.get("display_name") or payload.get("username") or owner_email or "supportrd-live").strip().lower()
+    seed = seed.replace("^", " ")
     slug = re.sub(r"[^a-z0-9]+", "-", seed).strip("-") or "supportrd-live"
     return slug[:60]
+
+
+def normalize_diary_profile_tag(raw_tag):
+    tag = (raw_tag or "").strip()
+    if not tag:
+        return ""
+    tag = tag.replace("^", " ")
+    tag = re.sub(r"[^a-z0-9_-]+", "-", tag.lower()).strip("-_")
+    if not tag:
+        return ""
+    return f"^^{tag[:24]}"
+
+
+def diary_payload_preview(payload):
+    payload = payload or {}
+    for key in ("social_post", "entry_text", "transcript"):
+        value = (payload.get(key) or "").strip()
+        if value:
+            return value[:180]
+    return "Hair support session ready in the lobby."
+
+
+def build_diary_lobby_entry(session_id, owner_email, live_slug, payload, updated_at):
+    payload = payload or {}
+    display_name = (
+        payload.get("display_name")
+        or payload.get("username")
+        or (owner_email.split("@")[0] if owner_email and "@" in owner_email else owner_email)
+        or "SupportRD Member"
+    ).strip()
+    profile_tag = normalize_diary_profile_tag(payload.get("profile_tag"))
+    avatar_url = (payload.get("avatar_url") or "").strip() or "/static/images/woman-waking-up12.jpg"
+    return {
+        "session_id": session_id,
+        "owner_email": owner_email or "guest@supportrd.com",
+        "live_slug": live_slug or build_diary_live_slug(owner_email, payload),
+        "display_name": display_name[:80] or "SupportRD Member",
+        "profile_tag": profile_tag,
+        "avatar_url": avatar_url[:4000],
+        "live_active": bool(payload.get("live_active")),
+        "updated_at": updated_at or payload.get("updated_at") or "",
+        "preview_text": diary_payload_preview(payload),
+        "headline": (payload.get("social_post") or payload.get("entry_text") or "").strip()[:120],
+    }
+
+
+def list_diary_lobby_sessions(sort_key="recent", limit=7):
+    sort_key = (sort_key or "recent").strip().lower()
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT session_id, owner_email, live_slug, payload_json, updated_at "
+            "FROM diary_sessions ORDER BY updated_at DESC LIMIT 80"
+        )
+        rows = cur.fetchall() or []
+        conn.close()
+    except:
+        rows = []
+    entries = []
+    for row in rows:
+        try:
+            payload = json.loads(row[3] or "{}")
+        except:
+            payload = {}
+        entries.append(build_diary_lobby_entry(row[0], row[1], row[2], payload, row[4]))
+    if sort_key == "email":
+        entries.sort(key=lambda item: ((item.get("owner_email") or "zzzz").lower(), -int(bool(item.get("live_active"))), item.get("updated_at") or ""), reverse=False)
+    elif sort_key == "url":
+        entries.sort(key=lambda item: ((item.get("live_slug") or "zzzz").lower(), item.get("updated_at") or ""), reverse=False)
+    elif sort_key == "tag":
+        entries.sort(key=lambda item: ((item.get("profile_tag") or "zzzz").lower(), item.get("updated_at") or ""), reverse=False)
+    else:
+        entries.sort(key=lambda item: item.get("updated_at") or "", reverse=True)
+    return entries[: max(1, min(21, int(limit or 7)))]
+
+
+def load_diary_public_session(session_id="", live_slug=""):
+    session_id = (session_id or "").strip()
+    live_slug = (live_slug or "").strip()
+    if not session_id and not live_slug:
+        return None
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        if session_id:
+            cur.execute(
+                "SELECT session_id, owner_email, live_slug, payload_json, updated_at FROM diary_sessions WHERE session_id = ? LIMIT 1",
+                (session_id,),
+            )
+        else:
+            cur.execute(
+                "SELECT session_id, owner_email, live_slug, payload_json, updated_at FROM diary_sessions WHERE live_slug = ? LIMIT 1",
+                (live_slug,),
+            )
+        row = cur.fetchone()
+        conn.close()
+    except:
+        row = None
+    if not row:
+        return None
+    try:
+        payload = json.loads(row[3] or "{}")
+    except:
+        payload = {}
+    return {
+        "summary": build_diary_lobby_entry(row[0], row[1], row[2], payload, row[4]),
+        "payload": payload,
+        "comments": get_diary_comments(row[0], limit=40),
+        "voice_history": get_recent_voice_turns((payload or {}).get("voice_session_id"), limit=12),
+    }
 
 
 def load_voice_session_payload(session_id):
@@ -5046,6 +5158,8 @@ def diary_session_bootstrap():
     payload = {**payload}
     payload["display_name"] = (body.get("display_name") or payload.get("display_name") or "").strip()
     payload["username"] = (body.get("username") or payload.get("username") or "").strip()
+    payload["profile_tag"] = normalize_diary_profile_tag(body.get("profile_tag") or payload.get("profile_tag") or "")
+    payload["avatar_url"] = (body.get("avatar_url") or payload.get("avatar_url") or "").strip()[:4000]
     payload["live_active"] = bool(body.get("live_active")) if "live_active" in body else bool(payload.get("live_active"))
     payload["entry_text"] = payload.get("entry_text") or ""
     payload["transcript"] = payload.get("transcript") or ""
@@ -5084,6 +5198,8 @@ def diary_session_save():
     payload["voice_session_id"] = (body.get("voice_session_id") or payload.get("voice_session_id") or "").strip()
     payload["display_name"] = (body.get("display_name") or payload.get("display_name") or "").strip()
     payload["username"] = (body.get("username") or payload.get("username") or "").strip()
+    payload["profile_tag"] = normalize_diary_profile_tag(body.get("profile_tag") or payload.get("profile_tag") or "")
+    payload["avatar_url"] = (body.get("avatar_url") or payload.get("avatar_url") or "").strip()[:4000]
     payload["updated_at"] = _studio_now()
     live_slug = build_diary_live_slug(owner_email, payload)
     payload["live_slug"] = live_slug
@@ -5110,6 +5226,52 @@ def diary_session_feed():
         "payload": payload,
         "comments": get_diary_comments(session_id, limit=25),
         "voice_history": get_recent_voice_turns((payload or {}).get("voice_session_id"), limit=12),
+    }
+
+
+@app.route("/api/diary/lobby")
+def diary_lobby_feed():
+    sort_key = (request.args.get("sort") or "recent").strip().lower()
+    search = (request.args.get("search") or "").strip().lower()
+    search_by = (request.args.get("search_by") or "name").strip().lower()
+    entries = list_diary_lobby_sessions(sort_key=sort_key, limit=request.args.get("limit") or 7)
+    if search:
+        def _match(entry):
+            lookup = {
+                "email": entry.get("owner_email") or "",
+                "tag": entry.get("profile_tag") or "",
+                "url": entry.get("live_slug") or "",
+                "name": entry.get("display_name") or "",
+            }
+            haystack = lookup.get(search_by, lookup.get("name", ""))
+            return search in haystack.lower()
+        entries = [entry for entry in entries if _match(entry)]
+    return {
+        "ok": True,
+        "sort": sort_key,
+        "search": search,
+        "search_by": search_by,
+        "feeds": entries,
+    }
+
+
+@app.route("/api/diary/session/public")
+def diary_public_session():
+    public_feed = load_diary_public_session(
+        session_id=request.args.get("session_id"),
+        live_slug=request.args.get("slug") or request.args.get("live_slug"),
+    )
+    if not public_feed:
+        return {"ok": False, "error": "session_not_found"}, 404
+    summary = public_feed["summary"]
+    summary["live_url"] = f"{request.host_url.rstrip('/')}/?diary-live={summary.get('live_slug', '')}"
+    return {
+        "ok": True,
+        "session_id": summary.get("session_id"),
+        "summary": summary,
+        "payload": public_feed["payload"],
+        "comments": public_feed["comments"],
+        "voice_history": public_feed["voice_history"],
     }
 
 

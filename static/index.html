@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/images/woman-waking-up12.jpg">
-<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414f">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414g">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -2124,6 +2124,10 @@ body .float-launch-btn {
                 </select>
                 <button class="btn ghost" id="floatDiaryLiveBtn">Live Session</button>
               </div>
+              <div class="float-config-grid">
+                <input id="floatDiaryTagInput" class="input" placeholder="^^ URL tag / diary lobby tag">
+                <button class="btn ghost" id="floatDiaryTagSaveBtn">Save Tag</button>
+              </div>
               <div class="float-profile-history float-diary-history" id="floatDiaryHistory">Chat history is empty and ready to hear everything the person needs to say.</div>
               <textarea id="floatHandsfreeTranscript" class="input float-handsfree-transcript" placeholder="Hands-free conversation appears here."></textarea>
               <div class="float-box-copy" id="floatDiaryLiveStatus">Live mode is off. When activated, SupportRD prepares a shareable live session link and easy turn-off.</div>
@@ -2169,6 +2173,49 @@ body .float-launch-btn {
         <div class="float-box-copy" id="floatSettingsStatus">Diary Mode keeps social posting, hands-free hair conversation, chat history, and a real page-flip diary in one place.</div>
       </section>
   </div>
+  <section class="remote-diary-viewer" id="remoteDiaryViewer" hidden>
+    <div class="remote-diary-viewer-shell glass">
+      <button class="btn ghost remote-diary-viewer-close" id="remoteDiaryViewerClose" type="button">X</button>
+      <div class="remote-diary-viewer-stage" id="remoteDiaryViewerStage">
+        <div class="remote-diary-viewer-avatar" id="remoteDiaryViewerAvatar"></div>
+        <div class="remote-diary-viewer-overlay" id="remoteDiaryViewerOverlay">Pick a diary feed in the lobby to load the live panel here.</div>
+      </div>
+      <div class="remote-diary-viewer-meta">
+        <div>
+          <div class="float-mode-kicker" id="remoteDiaryViewerTag">^^ support</div>
+          <strong id="remoteDiaryViewerName">Diary Live Feed</strong>
+          <div class="remote-diary-viewer-url" id="remoteDiaryViewerUrl">supportrd.com</div>
+        </div>
+        <div class="remote-diary-viewer-actions">
+          <button class="btn ghost" id="remoteDiaryViewerGuestPay" type="button">Pay Feed Money</button>
+          <button class="btn ghost" id="remoteDiaryViewerOpenRemote" type="button">Back To Remote</button>
+        </div>
+      </div>
+      <div class="remote-diary-viewer-grid">
+        <div class="remote-diary-viewer-column">
+          <div class="remote-diary-viewer-card">
+            <div class="remote-diary-viewer-card-head">Live Comments</div>
+            <div class="remote-diary-viewer-comments" id="remoteDiaryViewerComments">Live comments will show here.</div>
+          </div>
+          <div class="remote-diary-viewer-card">
+            <div class="remote-diary-viewer-card-head">Guest Payment + Comment</div>
+            <div class="float-config-grid">
+              <input id="remoteDiaryViewerGuestName" class="input" placeholder="Guest name">
+              <input id="remoteDiaryViewerGuestComment" class="input" placeholder="Comment for the live feed">
+            </div>
+            <div class="remote-diary-viewer-actions remote-diary-viewer-actions-tight">
+              <button class="btn ghost" id="remoteDiaryViewerPostComment" type="button">Post Comment</button>
+              <button class="btn" id="remoteDiaryViewerSupportNow" type="button">Support This Feed</button>
+            </div>
+          </div>
+        </div>
+        <div class="remote-diary-viewer-card">
+          <div class="remote-diary-viewer-card-head">Session Voice + Feed</div>
+          <div class="remote-diary-viewer-transcript" id="remoteDiaryViewerTranscript">The latest diary voice and feed turns will show here.</div>
+        </div>
+      </div>
+    </div>
+  </section>
   <div class="brochure-float" id="brochureFloat">
     <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
   </div>
@@ -2257,6 +2304,35 @@ body .float-launch-btn {
     <button class="btn ghost remote-purchase-item" id="remotePurchaseOrders">My Orders / Cart</button>
     <button class="btn ghost remote-purchase-item" id="remotePurchaseSolid">Solid State Project</button>
   </div>
+  <div class="remote-diary-lobby glass" id="remoteDiaryLobby">
+    <div class="remote-sticky-head">
+      <div class="float-mode-kicker">Diary Live Lobby</div>
+      <div class="remote-sticky-controls">
+        <button class="btn ghost remote-sticky-mini" id="remoteDiaryLobbyRefresh" type="button">Refresh</button>
+        <button class="btn ghost remote-sticky-mini" id="remoteDiaryLobbyToggle" type="button">Hide</button>
+      </div>
+    </div>
+    <div class="remote-sticky-count" id="remoteDiaryLobbyCount">Latest 7 diary feeds</div>
+    <div class="remote-diary-lobby-search">
+      <select id="remoteDiaryLobbySearchBy" class="input">
+        <option value="name">Search Name</option>
+        <option value="email">Search Email</option>
+        <option value="tag">Search Tag ^^</option>
+        <option value="url">Search URL</option>
+      </select>
+      <input id="remoteDiaryLobbySearch" class="input" placeholder="Search diary lobby">
+    </div>
+    <div class="remote-diary-lobby-search">
+      <select id="remoteDiaryLobbySort" class="input">
+        <option value="recent">Sort · Recent</option>
+        <option value="email">Sort · Email</option>
+        <option value="url">Sort · URL</option>
+        <option value="tag">Sort · Tag ^^</option>
+      </select>
+      <button class="btn ghost remote-diary-lobby-apply" id="remoteDiaryLobbyApply" type="button">Apply</button>
+    </div>
+    <div class="remote-diary-lobby-list" id="remoteDiaryLobbyList"></div>
+  </div>
   <div class="remote-edits-menu glass" id="remoteEditsMenu">
     <div class="remote-edits-label">Edit Menu</div>
     <div class="remote-sticky-head remote-sticky-head-edits">
@@ -2292,7 +2368,7 @@ body .float-launch-btn {
   
   <script>
 (function(){
-      const BUILD = "20260414f";
+      const BUILD = "20260414g";
   const KEY = "sr_force_build";
   try {
     const last = localStorage.getItem(KEY);
@@ -2319,8 +2395,8 @@ body .float-launch-btn {
 })();
 </script>
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260414f"></script>
-<script src="/static/remote-rebuild.v20260408c.js?v=20260414f"></script>
+<script src="/static/app.v20260320h.js?v=20260414g"></script>
+<script src="/static/remote-rebuild.v20260408c.js?v=20260414g"></script>
 <footer class="launch-footer-links">
   <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>

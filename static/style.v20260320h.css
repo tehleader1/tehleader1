@@ -3749,6 +3749,218 @@ body.competition-world .bg-layers::before{
   }
 .remote-purchase-editor .btn{min-height:48px;justify-content:flex-start;text-align:left;}
 .remote-purchase-editor .float-mode-kicker{color:#eef7ff;}
+.remote-diary-lobby{
+    position:fixed;
+    left:10px;
+    bottom:10px;
+    z-index:544;
+    width:min(338px, calc(100vw - 24px));
+    padding:16px;
+    border-radius:24px;
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 26px 44px rgba(5,18,38,.24);
+    display:grid;
+    gap:10px;
+    background:linear-gradient(180deg, rgba(11,25,46,.94), rgba(19,39,69,.88));
+}
+.remote-diary-lobby-search{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) auto;
+  gap:8px;
+}
+.remote-diary-lobby-search .input{
+  min-height:44px;
+}
+.remote-diary-lobby-apply{
+  min-height:44px !important;
+}
+.remote-diary-lobby-list{
+  display:grid;
+  gap:10px;
+  max-height:420px;
+  overflow:auto;
+  padding-right:4px;
+}
+.remote-diary-lobby-card{
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  padding:12px;
+  display:grid;
+  grid-template-columns:56px minmax(0, 1fr);
+  gap:10px;
+  cursor:pointer;
+}
+.remote-diary-lobby-card:hover{
+  transform:translateY(-1px);
+  box-shadow:0 14px 26px rgba(5,18,38,.18);
+}
+.remote-diary-lobby-avatar{
+  width:56px;
+  height:56px;
+  border-radius:18px;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  border:1px solid rgba(255,255,255,.16);
+}
+.remote-diary-lobby-copy{
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+.remote-diary-lobby-topline,
+.remote-diary-lobby-meta{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:space-between;
+}
+.remote-diary-lobby-name{
+  font-weight:800;
+  color:#f5f9ff;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.remote-diary-lobby-tag{
+  font-size:12px;
+  font-weight:800;
+  color:#8cd7ff;
+}
+.remote-diary-lobby-url,
+.remote-diary-lobby-email{
+  font-size:11px;
+  color:rgba(232,242,255,.74);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.remote-diary-lobby-preview{
+  font-size:12px;
+  line-height:1.45;
+  color:rgba(241,247,255,.86);
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.remote-diary-lobby-empty{
+  padding:14px;
+  border-radius:18px;
+  border:1px dashed rgba(255,255,255,.18);
+  color:rgba(232,242,255,.76);
+  font-size:12px;
+  line-height:1.5;
+}
+.remote-diary-viewer{
+  position:fixed;
+  inset:0;
+  z-index:760;
+  padding:28px 18px;
+  background:rgba(5,18,38,.56);
+  backdrop-filter:blur(8px);
+}
+.remote-diary-viewer-shell{
+  width:min(1080px, calc(100vw - 36px));
+  max-height:calc(100vh - 56px);
+  margin:0 auto;
+  overflow:auto;
+  padding:24px;
+  border-radius:28px;
+  border:1px solid rgba(255,255,255,.16);
+  background:linear-gradient(180deg, rgba(9,20,40,.96), rgba(17,34,63,.92));
+  position:relative;
+  display:grid;
+  gap:18px;
+}
+.remote-diary-viewer-close{
+  position:absolute;
+  top:16px;
+  right:16px;
+  min-width:54px;
+}
+.remote-diary-viewer-stage{
+  min-height:320px;
+  border-radius:26px;
+  border:1px solid rgba(255,255,255,.12);
+  background:radial-gradient(circle at 18% 22%, rgba(124,215,255,.26), transparent 36%), linear-gradient(145deg, rgba(13,28,52,.96), rgba(10,20,38,.88));
+  position:relative;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+}
+.remote-diary-viewer-avatar{
+  width:220px;
+  height:220px;
+  border-radius:30px;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  box-shadow:0 24px 48px rgba(5,18,38,.24);
+}
+.remote-diary-viewer-overlay{
+  position:absolute;
+  inset:auto 18px 18px 18px;
+  padding:16px 18px;
+  border-radius:20px;
+  background:rgba(6,14,28,.58);
+  color:#f5f9ff;
+  line-height:1.5;
+}
+.remote-diary-viewer-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.remote-diary-viewer-url{
+  font-size:12px;
+  color:rgba(232,242,255,.7);
+  margin-top:4px;
+}
+.remote-diary-viewer-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.remote-diary-viewer-actions-tight{
+  justify-content:flex-start;
+}
+.remote-diary-viewer-grid{
+  display:grid;
+  grid-template-columns:minmax(280px, 380px) minmax(0, 1fr);
+  gap:16px;
+}
+.remote-diary-viewer-column{
+  display:grid;
+  gap:16px;
+}
+.remote-diary-viewer-card{
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+  padding:16px;
+  display:grid;
+  gap:12px;
+}
+.remote-diary-viewer-card-head{
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.06em;
+  color:#8cd7ff;
+  text-transform:uppercase;
+}
+.remote-diary-viewer-comments,
+.remote-diary-viewer-transcript{
+  min-height:220px;
+  max-height:360px;
+  overflow:auto;
+  white-space:pre-wrap;
+  color:#f5f9ff;
+  line-height:1.5;
+  font-size:13px;
+}
 .remote-sticky-head{
   display:flex;
   align-items:center;
@@ -5696,6 +5908,7 @@ body.assistant-static .remote-guardian-btn.demo-active{
   .remote-content-stage{min-height:calc(100vh - 180px);padding:14px;}
   .remote-stage-quickbar{display:grid;grid-template-columns:1fr;}
   .remote-purchase-editor{right:10px;left:10px;bottom:10px;width:auto;}
+  .remote-diary-lobby{left:10px;right:10px;bottom:290px;width:auto;}
   .remote-edits-menu{left:10px;right:10px;top:auto;bottom:194px;width:auto;grid-template-columns:1fr;}
   .remote-edits-menu::before{display:none;}
   .remote-edits-label{display:none;}
@@ -5705,6 +5918,13 @@ body.assistant-static .remote-guardian-btn.demo-active{
   .remote-important-info{left:10px;right:10px;bottom:104px;width:auto;}
   .remote-display-toolbar{justify-content:stretch;flex-wrap:wrap;}
   .remote-display-toolbar .btn{flex:1 1 180px;}
+  .remote-diary-viewer{padding:16px 10px;}
+  .remote-diary-viewer-shell{width:auto;max-height:calc(100vh - 22px);padding:18px;}
+  .remote-diary-viewer-meta,
+  .remote-diary-viewer-grid,
+  .remote-diary-lobby-search{grid-template-columns:1fr;display:grid;}
+  .remote-diary-viewer-actions{justify-content:stretch;}
+  .remote-diary-viewer-actions .btn{flex:1 1 auto;}
   .float-mode-grid{grid-template-columns:1fr;padding:0 10px 10px;}
   .float-box{min-height:auto;}
   .float-map-hero{grid-template-columns:1fr;}
