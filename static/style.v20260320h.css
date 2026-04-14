@@ -3418,6 +3418,19 @@ body.competition-world .bg-layers::before{
 .float-mode-shell{
   --supportrd-shell-gap:18px;
 }
+.float-mode-shell.supportrd-shell-v2-active .float-mode-backdrop{
+  background:
+    radial-gradient(900px 500px at 0% 0%, rgba(76,182,255,.18), transparent 60%),
+    radial-gradient(760px 420px at 100% 0%, rgba(255,214,124,.14), transparent 58%),
+    radial-gradient(920px 560px at 50% 100%, rgba(34,94,182,.18), transparent 64%),
+    linear-gradient(180deg, rgba(3,11,24,.98), rgba(8,18,34,.96));
+  filter:none;
+}
+.float-mode-shell.supportrd-shell-v2-active::after{
+  background:
+    radial-gradient(820px 260px at 12% 12%, rgba(255,255,255,.08), transparent 68%),
+    radial-gradient(760px 220px at 88% 0%, rgba(93,171,255,.1), transparent 64%);
+}
 .supportrd-shell-v2{
   position:relative;
   z-index:2;
@@ -3430,8 +3443,26 @@ body.competition-world .bg-layers::before{
 .float-mode-shell .supportrd-shell-v2{
   pointer-events:auto;
 }
+.float-mode-shell.supportrd-shell-v2-active{
+  background:linear-gradient(180deg, rgba(2,8,18,.94), rgba(5,13,26,.98));
+}
 .float-mode-shell > :not(.float-mode-backdrop):not(.supportrd-shell-v2){
   display:none !important;
+}
+body.float-mode-active #conversationPanel,
+body.float-mode-active #appsDock,
+body.float-mode-active #remotePurchaseEditor,
+body.float-mode-active #remoteDiaryLobby,
+body.float-mode-active #remoteEditsMenu,
+body.float-mode-active #assistantTrackerHud,
+body.float-mode-active #assistantMapOverlay,
+body.float-mode-active #assistantRecorderAnchor,
+body.float-mode-active .theme-side,
+body.float-mode-active .float-mode-sticky-bottom{
+  display:none !important;
+}
+.float-mode-shell.supportrd-shell-v2-active .supportrd-shell-v2{
+  animation:supportRDShellTakeover .38s ease;
 }
 .supportrd-shell-v2__hero,
 .supportrd-shell-v2__nav,
@@ -3710,6 +3741,10 @@ body.competition-world .bg-layers::before{
 }
 @keyframes supportRDShellRise{
   from{opacity:0;transform:translateY(10px) scale(.992);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+@keyframes supportRDShellTakeover{
+  from{opacity:0;transform:translateY(14px) scale(.99);}
   to{opacity:1;transform:translateY(0) scale(1);}
 }
 @media (max-width: 980px){
