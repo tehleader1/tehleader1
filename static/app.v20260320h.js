@@ -901,7 +901,7 @@ function setupInfoTray(){
 function setupLevelSelect(){
   const sel = qs('#ariaLevelSelect')
   if(!sel) return
-function isPremium(){ return state.subscription === 'premium' || state.subscription === 'bingo100' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600' || isProOverride() }
+function isPremium(){ return state.subscription === 'premium' || state.subscription === 'bingo100' || state.subscription === 'pro' || state.subscription === 'studio100' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600' || isProOverride() }
   function sync(){
     const val = isPremium() ? state.ariaLevel : 'greeting'
     sel.value = val
@@ -1190,7 +1190,7 @@ function bumpHairScore(delta){
         inner: 'Give insider tips, product usage details, and sequencing.',
         pro: 'Give professional guidance and ways to monetize or upsell services.'
       }
-  const isPremium = state.subscription === 'premium' || state.subscription === 'bingo100' || state.subscription === 'pro' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600'
+  const isPremium = state.subscription === 'premium' || state.subscription === 'bingo100' || state.subscription === 'pro' || state.subscription === 'studio100' || state.subscription === 'yoda' || state.subscription === 'fantasy300' || state.subscription === 'fantasy600'
       const shortMode = 'Reply in 1-2 sentences maximum.'
       const ariaLevelPrompt = isPremium ? (levelMap[state.ariaLevel] || levelMap.thorough) : shortMode
       const r = await fetch("/api/aria",{
@@ -1223,7 +1223,7 @@ function bumpHairScore(delta){
       bumpHairScore(1)
       speakReply(reply, { assistantId: assistant?.id || "aria" })
       state.ariaCount += 1
-  const limit = (state.subscription === "pro" || state.subscription === "yoda" || state.subscription === "fantasy300" || state.subscription === "fantasy600" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
+  const limit = (state.subscription === "pro" || state.subscription === "studio100" || state.subscription === "yoda" || state.subscription === "fantasy300" || state.subscription === "fantasy600" || isProOverride()) ? 1e9 : (state.subscription === "premium" ? 8 : 2)
     if(state.ariaCount >= limit){
       state.ariaBlocked = true
       openModal("puzzleModal")
@@ -6301,22 +6301,75 @@ function setupStudioMode(){
   const blogBtn = qs("#studioBlogBtn")
   let studioBootTimer = null
   if(!shell) return
-  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260323i"
+  const studioSrc = frame?.dataset?.src || "/static/studio/index.html?v=20260413a"
 
-  const isLoggedIn = ()=>localStorage.getItem("loggedIn") === "true"
   const promptStudioLogin = ()=>{
-    const gate = qs("#loginGate")
-    if(gate){ gate.style.display = "flex" }
-    document.body.classList.add("login-active")
+    if(typeof window.openLoginGateSticky === "function"){
+      window.openLoginGateSticky({
+        title: "Sign In To Open Jake Premium Studio",
+        message: "Log in to SupportRD first so Jake can attach the Studio lane to your account."
+      })
+    }else{
+      const gate = qs("#loginGate")
+      if(gate){ gate.style.display = "flex" }
+      document.body.classList.add("login-active")
+    }
     uiToast("Sign in required before entering In the Booth.")
   }
+  const openStudioUpgrade = (message)=>{
+    openMiniWindow("Jake Premium Studio", message || "Upgrade to Jake Premium Studio or Pro to open the booth with Jake attending live.")
+    try{
+      if(typeof window.openSupportRDPaymentModal === "function"){
+        window.openSupportRDPaymentModal({ productKey: "studio100" })
+        return
+      }
+    }catch{}
+    try{ openModal("subscriptionModal") }catch{}
+  }
+  const fetchJakeStudioEntry = async ()=>{
+    const res = await fetch("/api/studio/jake/enter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        route: "studio",
+        source: "supportdr-remote"
+      })
+    })
+    let data = {}
+    try{ data = await res.json() }catch{}
+    return { status: res.status, data }
+  }
 
-  const openStudio = ()=>{
+  const openStudio = async ()=>{
     const returnView = localStorage.getItem("supportrdStudioReturnView")
       || (document.body.classList.contains("float-mode-active") ? "remote" : "main")
-    if(!isLoggedIn()){
+    const { status, data } = await fetchJakeStudioEntry().catch(()=>({ status: 0, data: {} }))
+    if(status === 401 || data?.error === "login_required"){
       promptStudioLogin()
       return
+    }
+    if(status === 402 || data?.error === "premium_jake_required" || !data?.access){
+      openStudioUpgrade(data?.message)
+      return
+    }
+    if(!data?.ok){
+      openMiniWindow("Studio Jake", "Jake Premium Studio did not finish the API login handshake yet. Try again in a moment.")
+      return
+    }
+    localStorage.setItem("loggedIn","true")
+    if(data?.email){
+      state.socialLinks = state.socialLinks || {}
+      state.socialLinks.email = data.email
+      localStorage.setItem("socialLinks", JSON.stringify({ ...state.socialLinks }))
+    }
+    if(data?.subscription){
+      state.subscription = data.subscription
+      try{ setDefaultLevelBySubscription() }catch{}
+      try{ refreshDealUnlock() }catch{}
+    }
+    if(data?.session_id){
+      remoteState.studioSessionId = data.session_id
+      localStorage.setItem("supportrdStudioSessionId", data.session_id)
     }
     try{ window.__mainRadio?.stop?.() }catch{}
     const launch = qs("#launchMenu")
@@ -6330,9 +6383,21 @@ function setupStudioMode(){
     shell.classList.remove("ready")
     shell.setAttribute("aria-hidden", "false")
     shell.dataset.returnView = returnView
-    if(frame && frame.getAttribute("src") !== studioSrc){ frame.setAttribute("src", studioSrc) }
+    const studioUrl = data?.studio_url || studioSrc
+    if(frame && frame.getAttribute("src") !== studioUrl){ frame.setAttribute("src", studioUrl) }
     state.activeAssistant = "projake"
     applyAssistantUI(true)
+    if(typeof window.updateAssistantTracker === "function"){
+      try{
+        window.updateAssistantTracker({
+          route: "studio",
+          activeAssistant: "projake",
+          voiceState: "idle",
+          voiceText: data?.message || "Jake logged into Studio cleanly and is standing by.",
+          focusLabel: "Jake Premium Studio"
+        })
+      }catch{}
+    }
     if(studioBootTimer){ clearTimeout(studioBootTimer) }
     try{
       frame?.contentWindow?.postMessage({ type: "studio-enter", micProfile: "audiology-fast", autoplay: true }, "*")

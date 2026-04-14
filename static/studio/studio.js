@@ -1,6 +1,7 @@
 const qs = (s) => document.querySelector(s);
 const qsa = (s) => Array.from(document.querySelectorAll(s));
-const STUDIO_PREMIUM_URL = "https://supportrd.com/products/jake-premium-100";
+const STUDIO_PREMIUM_URL = "https://shop.supportrd.com/products/jake-premium-studio";
+const STUDIO_LOGIN_URL = "/login";
 
 let currentSessionId = localStorage.getItem("studioSessionId") || "";
 let placements = [];
@@ -39,6 +40,14 @@ let selectedWaveRegion = null;
 let studioTransportAudio = null;
 let activeCameraStream = null;
 let currentGuideTimer = null;
+let studioAccessState = {
+  locked: true,
+  authenticated: false,
+  access: false,
+  checking: true,
+  email: "",
+  subscription: "free"
+};
 
 function playUiClickSound(type = "soft") {
   try {
@@ -86,6 +95,21 @@ function deepClone(value) {
 function setStatus(id, message) {
   const el = qs(id);
   if (el) el.textContent = message;
+}
+function setStudioLocked(locked, options = {}) {
+  studioAccessState.locked = !!locked;
+  document.body.classList.toggle("studio-api-locked", !!locked);
+  const gate = qs("#studioAccessGate");
+  if (!gate) return;
+  gate.hidden = !locked;
+  const copy = qs("#studioAccessCopy");
+  const meta = qs("#studioAccessMeta");
+  const loginBtn = qs("#studioAccessLoginBtn");
+  const upgradeBtn = qs("#studioAccessUpgradeBtn");
+  if (copy && options.copy) copy.textContent = options.copy;
+  if (meta && options.meta) meta.textContent = options.meta;
+  if (loginBtn) loginBtn.hidden = !!options.hideLogin;
+  if (upgradeBtn) upgradeBtn.hidden = !!options.hideUpgrade;
 }
 function getSelectedTrack() {
   return trackState.find((track) => track.id === selectedTrackId) || null;
@@ -759,9 +783,10 @@ async function loadPlan() {
     const response = await fetch("/api/studio/plan");
     const data = await response.json();
     if (!(data && data.ok)) throw new Error("plan_error");
-    badge.textContent = `Plan: ${data.tier} · Public Beta`;
+    const tierLabel = data.tier === "pro500" ? "Jake Premium Studio" : data.tier === "premium100" ? "Premium" : "Free";
+    badge.textContent = `Plan: ${tierLabel} · API Live`;
   } catch {
-    badge.textContent = "Plan: free · Public Beta";
+    badge.textContent = "Plan: free · API waiting";
   }
 }
 
@@ -779,7 +804,7 @@ async function loadExtensions() {
 }
 
 function playIntroVoice() {
-  const line = "Introducing SupportRD Studio. The motherboard is centered, the FX board is the brain, and Pro Jake is ready to help you build.";
+  const line = "Jake Premium Studio is live. The motherboard is centered, the API is attached to your SupportRD login, and Jake is standing by in the booth.";
   if ("speechSynthesis" in window) {
     const utterance = new SpeechSynthesisUtterance(line);
     utterance.rate = 0.94;
@@ -789,6 +814,119 @@ function playIntroVoice() {
   } else {
     alert(line);
   }
+}
+
+async function refreshStudioJakeAccess({ bootstrap = true } = {}) {
+  setStudioLocked(true, {
+    copy: "Checking SupportRD login and Jake Premium Studio payment access...",
+    meta: "Studio API is verifying your account.",
+    hideLogin: true,
+    hideUpgrade: true
+  });
+  studioAccessState.checking = true;
+  try {
+    const accessResponse = await fetch("/api/studio/jake/access", { credentials: "same-origin" });
+    let accessData = {};
+    try { accessData = await accessResponse.json(); } catch {}
+    if (accessResponse.status === 401 || accessData?.error === "login_required") {
+      studioAccessState = { ...studioAccessState, checking: false, authenticated: false, access: false, subscription: "free" };
+      setStudioLocked(true, {
+        copy: "Log in to SupportRD to open Jake Premium Studio.",
+        meta: "Your booth, boards, and exports attach to the account that signs in.",
+        hideLogin: false,
+        hideUpgrade: false
+      });
+      return false;
+    }
+    if (accessResponse.status === 402 || accessData?.error === "premium_jake_required" || !accessData?.access) {
+      studioAccessState = {
+        ...studioAccessState,
+        checking: false,
+        authenticated: true,
+        access: false,
+        email: accessData?.email || "",
+        subscription: accessData?.subscription || "free"
+      };
+      setStudioLocked(true, {
+        copy: accessData?.message || "Jake Premium Studio is locked until the $100 package is active.",
+        meta: "Premium Jake + Studio Features · $100",
+        hideLogin: false,
+        hideUpgrade: false
+      });
+      return false;
+    }
+    if (!bootstrap) {
+      studioAccessState = {
+        ...studioAccessState,
+        checking: false,
+        authenticated: true,
+        access: true,
+        email: accessData?.email || "",
+        subscription: accessData?.subscription || "studio100"
+      };
+      setStudioLocked(false);
+      return true;
+    }
+    const enterResponse = await fetch("/api/studio/jake/enter", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source: "studio-api", route: "studio-front" })
+    });
+    let enterData = {};
+    try { enterData = await enterResponse.json(); } catch {}
+    if (!(enterResponse.ok && enterData?.ok && enterData?.session_id)) {
+      throw new Error(enterData?.error || "enter_failed");
+    }
+    currentSessionId = enterData.session_id;
+    localStorage.setItem("studioSessionId", currentSessionId);
+    studioAccessState = {
+      ...studioAccessState,
+      checking: false,
+      authenticated: true,
+      access: true,
+      email: enterData?.email || accessData?.email || "",
+      subscription: enterData?.subscription || accessData?.subscription || "studio100"
+    };
+    if (studioAccessState.email) {
+      setStatus("#sessionStatus", `Studio API linked to ${studioAccessState.email}.`);
+    }
+    setStudioLocked(false);
+    return true;
+  } catch {
+    studioAccessState = { ...studioAccessState, checking: false, access: false };
+    setStudioLocked(true, {
+      copy: "Jake Premium Studio could not finish the API login handshake just yet.",
+      meta: "Use Refresh Access to try again without leaving the booth.",
+      hideLogin: false,
+      hideUpgrade: false
+    });
+    return false;
+  }
+}
+
+function setupStudioAccessGate() {
+  qs("#studioAccessLoginBtn")?.addEventListener("click", () => {
+    try {
+      if (window.top) {
+        window.top.location.href = STUDIO_LOGIN_URL;
+        return;
+      }
+    } catch {}
+    window.location.href = STUDIO_LOGIN_URL;
+  });
+  qs("#studioAccessUpgradeBtn")?.addEventListener("click", () => {
+    try {
+      if (window.top) {
+        window.top.location.href = STUDIO_PREMIUM_URL;
+        return;
+      }
+    } catch {}
+    window.location.href = STUDIO_PREMIUM_URL;
+  });
+  qs("#studioAccessRefreshBtn")?.addEventListener("click", () => {
+    refreshStudioJakeAccess({ bootstrap: true });
+  });
 }
 
 function audioBufferToWavBlob(buffer) {
@@ -1819,7 +1957,7 @@ function setupUtilityButtons() {
   qs("#soundProfile")?.addEventListener("change", () => setStatus("#transportStatus", `Sound profile switched to ${qs("#soundProfile")?.selectedOptions?.[0]?.textContent || "Normal"}.`));
   qs("#closePurchasePanelBtn")?.addEventListener("click", () => qs("#studioPurchaseOverlay")?.setAttribute("hidden", "hidden"));
   qs("#purchasePremium100Btn")?.addEventListener("click", () => {
-    setStatus("#purchasePremiumStatus", "Jake Premium Studio $100/month selected. Opening Shopify checkout now.");
+    setStatus("#purchasePremiumStatus", "Jake Premium Studio $100 selected. Opening the live Shopify product lane now.");
     try {
       if(window.top){
         window.top.location.href = STUDIO_PREMIUM_URL;
@@ -1831,6 +1969,13 @@ function setupUtilityButtons() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  setupStudioAccessGate();
+  setStudioLocked(true, {
+    copy: "Checking SupportRD login and Jake Premium Studio access...",
+    meta: "Studio API is waking up.",
+    hideLogin: true,
+    hideUpgrade: true
+  });
   try {
     recentSessionSaves = JSON.parse(localStorage.getItem("studioRecentSessionSaves") || "[]");
     if (!Array.isArray(recentSessionSaves)) recentSessionSaves = [];
@@ -1856,6 +2001,7 @@ window.addEventListener("DOMContentLoaded", () => {
   renderUndoHistory();
   updateDbQuickLabel();
   applyStudioMicProfile();
+  refreshStudioJakeAccess({ bootstrap: true });
   qs("#voiceIntroBtn")?.addEventListener("click", playIntroVoice);
   qs("#backMainBtn")?.addEventListener("click", () => {
     if (window.parent && window.parent !== window && typeof window.parent.closeStudioMode === "function") {

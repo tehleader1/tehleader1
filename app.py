@@ -49,6 +49,19 @@ SHOPIFY_WEBHOOK_SECRET = os.environ.get("SHOPIFY_WEBHOOK_SECRET", "")
 SHOPIFY_PLAN_VARIANT_MAP_JSON = os.environ.get("SHOPIFY_PLAN_VARIANT_MAP_JSON", "")
 SHOPIFY_PLAN_SKU_MAP_JSON = os.environ.get("SHOPIFY_PLAN_SKU_MAP_JSON", "")
 STUDIO_STORAGE_DIR = os.environ.get("STUDIO_STORAGE_DIR", os.path.join(app.root_path, "studio_data"))
+VALID_SUBSCRIPTION_PLANS = {
+    "free",
+    "premium",
+    "pro",
+    "studio100",
+    "yoda",
+    "bingo100",
+    "family200",
+    "fantasy300",
+    "fantasy600",
+}
+PREMIUM_SUBSCRIPTION_PLANS = {"premium", "bingo100", "family200", "fantasy300", "fantasy600"}
+STUDIO_JAKE_ALLOWED_PLANS = {"pro", "studio100"}
 
 def normalize_shopify_store_domain(raw_store):
     value = (raw_store or "").strip()
@@ -1399,7 +1412,7 @@ def get_subscription_for_email(email):
         if not row:
             return "free"
         plan = (row[0] or "free").lower().strip()
-        if plan not in ("free", "premium", "pro", "yoda", "bingo100", "family200", "fantasy300", "fantasy600"):
+        if plan not in VALID_SUBSCRIPTION_PLANS:
             return "free"
         return plan
     except:
@@ -1426,7 +1439,7 @@ def get_subscription_details_for_email(email):
         if not row:
             return details
         plan = (row[0] or "free").lower().strip()
-        if plan not in ("free", "premium", "pro", "yoda", "bingo100", "family200", "fantasy300", "fantasy600"):
+        if plan not in VALID_SUBSCRIPTION_PLANS:
             plan = "free"
         details["plan"] = plan
         details["source"] = row[1] or ""
@@ -1440,7 +1453,7 @@ def set_subscription_for_email(email, plan, source="manual", order_id=""):
     if not email:
         return False
     normalized = (plan or "free").lower().strip()
-    if normalized not in ("free", "premium", "pro", "yoda", "bingo100", "family200", "fantasy300", "fantasy600"):
+    if normalized not in VALID_SUBSCRIPTION_PLANS:
         normalized = "free"
     try:
         conn = sqlite3.connect(CREDIT_DB_PATH)
@@ -1573,11 +1586,45 @@ def _studio_owner_email():
 def _studio_plan_for_email(email):
     plan = get_subscription_for_email((email or "").strip().lower()) if email and email != "guest" else "free"
     tier = "free"
-    if plan in ("premium", "bingo100", "family200", "fantasy300", "fantasy600"):
+    if plan in PREMIUM_SUBSCRIPTION_PLANS:
         tier = "premium"
-    elif plan == "pro":
+    elif plan in ("pro", "studio100"):
         tier = "pro"
     return plan, tier
+
+def studio_jake_access_for_plan(plan):
+    normalized = (plan or "free").strip().lower()
+    return normalized in STUDIO_JAKE_ALLOWED_PLANS
+
+
+def _require_studio_jake_api_access():
+    user = session.get("user") or {}
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        return None, None, None, ({
+            "ok": False,
+            "authenticated": False,
+            "access": False,
+            "error": "login_required",
+            "login_url": "/login",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "message": "Log in to SupportRD to open Jake Premium Studio.",
+        }, 401)
+    details = get_subscription_details_for_email(email)
+    plan = (details.get("plan") or "free").strip().lower()
+    if not studio_jake_access_for_plan(plan):
+        return email, details, plan, ({
+            "ok": False,
+            "authenticated": True,
+            "access": False,
+            "error": "premium_jake_required",
+            "subscription": plan,
+            "product_key": "studio100",
+            "product_title": "Jake Premium Studio",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "message": "Jake Premium Studio is locked until the $100 Studio / Pro package is active.",
+        }, 402)
+    return email, details, plan, None
 
 def _studio_safe_payload(payload):
     if isinstance(payload, dict):
@@ -3431,9 +3478,9 @@ def studio_plan():
     email = (user.get("email") or "").strip().lower()
     plan = get_subscription_for_email(email) if email else "free"
     tier = "free"
-    if plan in ("premium", "bingo100", "family200", "fantasy300", "fantasy600"):
+    if plan in PREMIUM_SUBSCRIPTION_PLANS:
         tier = "premium100"
-    if plan == "pro":
+    if plan in ("pro", "studio100"):
         tier = "pro500"
     return {
         "ok": True,
@@ -3448,11 +3495,106 @@ def studio_plan():
             "echo_placement_2026": True,
             "edit_bot": tier in ("premium100", "pro500"),
             "technical_bot": tier == "pro500",
+            "premium_jake": studio_jake_access_for_plan(plan),
         },
+    }
+
+@app.route("/api/studio/jake/access")
+def studio_jake_access():
+    user = session.get("user") or {}
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        return {
+            "ok": False,
+            "authenticated": False,
+            "access": False,
+            "error": "login_required",
+            "login_url": "/login",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+        }, 401
+    details = get_subscription_details_for_email(email)
+    plan = (details.get("plan") or "free").strip().lower()
+    access = studio_jake_access_for_plan(plan)
+    return {
+        "ok": access,
+        "authenticated": True,
+        "access": access,
+        "email": email,
+        "subscription": plan,
+        "source": details.get("source") or "",
+        "order_id": details.get("order_id") or "",
+        "updated_at": details.get("updated_at") or "",
+        "product_key": "studio100",
+        "product_title": "Jake Premium Studio",
+        "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+        "login_url": "/login",
+        "message": "Jake Premium Studio is ready." if access else "Jake Premium Studio needs a Studio / Pro package before entering the booth.",
+    }, (200 if access else 402)
+
+@app.route("/api/studio/jake/enter", methods=["POST"])
+def studio_jake_enter():
+    user = session.get("user") or {}
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        return {
+            "ok": False,
+            "authenticated": False,
+            "access": False,
+            "error": "login_required",
+            "login_url": "/login",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+        }, 401
+    details = get_subscription_details_for_email(email)
+    plan = (details.get("plan") or "free").strip().lower()
+    if not studio_jake_access_for_plan(plan):
+        return {
+            "ok": False,
+            "authenticated": True,
+            "access": False,
+            "error": "premium_jake_required",
+            "subscription": plan,
+            "product_key": "studio100",
+            "product_title": "Jake Premium Studio",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "message": "Upgrade to Jake Premium Studio or Pro to open the Studio with Jake attending.",
+        }, 402
+    session_id = f"SES-{uuid.uuid4().hex[:10].upper()}"
+    payload = {
+        "session_id": session_id,
+        "owner_email": email,
+        "plan": plan,
+        "tier": "pro500",
+        "route": "studio",
+        "boards": [],
+        "updated_at": _studio_now(),
+        "assistant": "projake",
+        "assistant_title": "Jake Studio Specialist",
+        "entry_mode": "premium_jake",
+    }
+    _studio_upsert_session(session_id, email, payload)
+    _studio_append_action(session_id, 0, "jake_enter", {
+        "email": email,
+        "subscription": plan,
+        "entry_mode": "premium_jake",
+    })
+    return {
+        "ok": True,
+        "authenticated": True,
+        "access": True,
+        "session_id": session_id,
+        "email": email,
+        "subscription": plan,
+        "assistant": "projake",
+        "assistant_title": "Jake Studio Specialist",
+        "studio_url": "/static/studio/index.html?v=20260413a",
+        "message": "Jake Premium Studio is live and logged in cleanly.",
     }
 
 @app.route("/api/studio/echo/place", methods=["POST"])
 def studio_echo_place():
+    _, _, _, access_error = _require_studio_jake_api_access()
+    if access_error:
+        return access_error
     data = request.json or {}
     transcript = (data.get("transcript") or "").strip()[:4000]
     duration_sec = data.get("duration_sec") or 60
@@ -3467,11 +3609,13 @@ def studio_echo_place():
 
 @app.route("/api/studio/session/save", methods=["POST"])
 def studio_session_save():
+    email, _, _, access_error = _require_studio_jake_api_access()
+    if access_error:
+        return access_error
     data = request.json or {}
     session_id = (data.get("session_id") or f"SES-{uuid.uuid4().hex[:10].upper()}").strip()[:40]
     payload = data.get("payload") or {}
-    user = session.get("user") or {}
-    owner_email = (user.get("email") or "").strip().lower()
+    owner_email = email
     try:
         payload_json = json.dumps(payload, ensure_ascii=False)
         conn = sqlite3.connect(CREDIT_DB_PATH)
@@ -3489,29 +3633,41 @@ def studio_session_save():
 
 @app.route("/api/studio/session/load")
 def studio_session_load():
+    email, _, _, access_error = _require_studio_jake_api_access()
+    if access_error:
+        return access_error
     session_id = (request.args.get("session_id") or "").strip()
     if not session_id:
         return {"ok": False, "error": "session_id_required"}, 400
     try:
         conn = sqlite3.connect(CREDIT_DB_PATH)
         cur = conn.cursor()
-        cur.execute("SELECT payload_json, updated_at FROM studio_sessions WHERE session_id = ? LIMIT 1", (session_id,))
+        cur.execute("SELECT owner_email, payload_json, updated_at FROM studio_sessions WHERE session_id = ? LIMIT 1", (session_id,))
         row = cur.fetchone()
         conn.close()
         if not row:
             return {"ok": False, "error": "not_found"}, 404
-        payload = json.loads(row[0] or "{}")
-        return {"ok": True, "session_id": session_id, "payload": payload, "updated_at": row[1]}
+        owner_email = (row[0] or "").strip().lower()
+        if owner_email and owner_email != email:
+            return {"ok": False, "error": "forbidden"}, 403
+        payload = json.loads(row[1] or "{}")
+        return {"ok": True, "session_id": session_id, "payload": payload, "updated_at": row[2]}
     except Exception as e:
         return {"ok": False, "error": str(e)[:120]}, 500
 
 @app.route("/api/studio/session/bootstrap", methods=["POST"])
 def studio_session_bootstrap():
+    email, _, plan, access_error = _require_studio_jake_api_access()
+    if access_error:
+        return access_error
     data = request.json or {}
     session_id = (data.get("session_id") or f"SES-{uuid.uuid4().hex[:10].upper()}").strip()[:40]
-    owner_email = _studio_owner_email()
+    owner_email = email
     plan, tier = _studio_plan_for_email(owner_email)
     payload = _studio_load_session_payload(session_id)
+    existing_owner = (payload.get("owner_email") or "").strip().lower() if payload else ""
+    if existing_owner and existing_owner != owner_email:
+        return {"ok": False, "error": "forbidden"}, 403
     if not payload:
         payload = {
             "session_id": session_id,
@@ -3534,6 +3690,9 @@ def studio_session_bootstrap():
 
 @app.route("/api/studio/board/commit", methods=["POST"])
 def studio_board_commit():
+    email, _, _, access_error = _require_studio_jake_api_access()
+    if access_error:
+        return access_error
     data = request.json or {}
     session_id = (data.get("session_id") or "").strip()
     if not session_id:
@@ -3541,6 +3700,9 @@ def studio_board_commit():
     board_index = int(data.get("board_index") or 0)
     board = _studio_safe_payload(data.get("board") or {})
     payload = _studio_load_session_payload(session_id)
+    existing_owner = (payload.get("owner_email") or "").strip().lower() if payload else ""
+    if existing_owner and existing_owner != email:
+        return {"ok": False, "error": "forbidden"}, 403
     boards = payload.get("boards") or []
     while len(boards) <= board_index:
         boards.append({})
@@ -3548,8 +3710,7 @@ def studio_board_commit():
     payload["boards"] = boards
     payload["updated_at"] = _studio_now()
     payload["active_board"] = int(data.get("active_board") or board_index)
-    owner_email = _studio_owner_email()
-    _studio_upsert_session(session_id, owner_email, payload)
+    _studio_upsert_session(session_id, email, payload)
     _studio_append_action(session_id, board_index, data.get("action_type") or "commit", {
         "board_name": board.get("name"),
         "kind": board.get("kind"),
@@ -3569,6 +3730,9 @@ def studio_board_commit():
 
 @app.route("/api/studio/trim", methods=["POST"])
 def studio_trim():
+    email, _, _, access_error = _require_studio_jake_api_access()
+    if access_error:
+        return access_error
     data = request.json or {}
     session_id = (data.get("session_id") or "").strip()
     if not session_id:
@@ -3577,6 +3741,9 @@ def studio_trim():
     start = max(0, min(99, int(float(data.get("trim_start") or 0))))
     end = max(start + 1, min(100, int(float(data.get("trim_end") or 100))))
     payload = _studio_load_session_payload(session_id)
+    existing_owner = (payload.get("owner_email") or "").strip().lower() if payload else ""
+    if existing_owner and existing_owner != email:
+        return {"ok": False, "error": "forbidden"}, 403
     boards = payload.get("boards") or []
     while len(boards) <= board_index:
         boards.append({})
@@ -3587,18 +3754,24 @@ def studio_trim():
     boards[board_index] = board
     payload["boards"] = boards
     payload["updated_at"] = _studio_now()
-    _studio_upsert_session(session_id, _studio_owner_email(), payload)
+    _studio_upsert_session(session_id, email, payload)
     _studio_append_action(session_id, board_index, "trim", {"trimStart": start, "trimEnd": end, "highlighted": board["highlighted"]})
     return {"ok": True, "session_id": session_id, "board_index": board_index, "trim_start": start, "trim_end": end}
 
 @app.route("/api/studio/fx/apply", methods=["POST"])
 def studio_fx_apply():
+    email, _, _, access_error = _require_studio_jake_api_access()
+    if access_error:
+        return access_error
     data = request.json or {}
     session_id = (data.get("session_id") or "").strip()
     if not session_id:
         return {"ok": False, "error": "session_id_required"}, 400
     board_index = int(data.get("board_index") or 0)
     payload = _studio_load_session_payload(session_id)
+    existing_owner = (payload.get("owner_email") or "").strip().lower() if payload else ""
+    if existing_owner and existing_owner != email:
+        return {"ok": False, "error": "forbidden"}, 403
     boards = payload.get("boards") or []
     while len(boards) <= board_index:
         boards.append({})
@@ -3616,12 +3789,15 @@ def studio_fx_apply():
     boards[board_index] = board
     payload["boards"] = boards
     payload["updated_at"] = _studio_now()
-    _studio_upsert_session(session_id, _studio_owner_email(), payload)
+    _studio_upsert_session(session_id, email, payload)
     _studio_append_action(session_id, board_index, "fx", fx_patch)
     return {"ok": True, "session_id": session_id, "board_index": board_index, "fx": fx_patch}
 
 @app.route("/api/studio/export", methods=["POST"])
 def studio_export():
+    email, _, _, access_error = _require_studio_jake_api_access()
+    if access_error:
+        return access_error
     data = request.json or {}
     session_id = (data.get("session_id") or "").strip()
     if not session_id:
@@ -3629,6 +3805,9 @@ def studio_export():
     board_index = int(data.get("board_index") or 0)
     destination = (data.get("destination") or "Main Studio").strip()[:60]
     payload = _studio_load_session_payload(session_id)
+    existing_owner = (payload.get("owner_email") or "").strip().lower() if payload else ""
+    if existing_owner and existing_owner != email:
+        return {"ok": False, "error": "forbidden"}, 403
     boards = payload.get("boards") or []
     board = boards[board_index] if len(boards) > board_index else {}
     summary = {
@@ -3652,6 +3831,9 @@ def studio_export():
 
 @app.route("/api/studio/session/history")
 def studio_session_history():
+    email, _, _, access_error = _require_studio_jake_api_access()
+    if access_error:
+        return access_error
     session_id = (request.args.get("session_id") or "").strip()
     if not session_id:
         return {"ok": False, "error": "session_id_required"}, 400
@@ -3659,13 +3841,18 @@ def studio_session_history():
     conn = sqlite3.connect(CREDIT_DB_PATH)
     cur = conn.cursor()
     cur.execute(
-        "SELECT board_index, action_type, payload_json, created_at FROM studio_board_actions WHERE session_id = ? ORDER BY id DESC LIMIT ?",
+        "SELECT s.owner_email, a.board_index, a.action_type, a.payload_json, a.created_at "
+        "FROM studio_board_actions a "
+        "LEFT JOIN studio_sessions s ON s.session_id = a.session_id "
+        "WHERE a.session_id = ? ORDER BY a.id DESC LIMIT ?",
         (session_id, limit),
     )
     rows = cur.fetchall() or []
     conn.close()
     history = []
-    for board_index, action_type, payload_json, created_at in rows:
+    for owner_email, board_index, action_type, payload_json, created_at in rows:
+        if owner_email and owner_email.strip().lower() != email:
+            continue
         try:
             payload = json.loads(payload_json or "{}")
         except:
