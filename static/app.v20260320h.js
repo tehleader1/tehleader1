@@ -7189,26 +7189,26 @@ ${line}`
     interactionBiasRight: 0.58,
     pointerLeftThreshold: 0.34,
     pointerRightThreshold: 0.66,
-    interactionLeadX: 150,
-    interactionSupportX: 92,
-    interactionLeadYOffset: -54,
-    interactionSupportYOffset: 42,
-    centerLeadX: 96,
-    centerLeadYOffset: -66,
-    centerSupportX: 92,
-    centerSupportYOffset: 28,
-    interactionRecencyMs: 2200,
-    roamSkipRecencyMs: 1600,
-    mouseMoveThrottleMs: 900,
+    interactionLeadX: 166,
+    interactionSupportX: 104,
+    interactionLeadYOffset: -64,
+    interactionSupportYOffset: 38,
+    centerLeadX: 108,
+    centerLeadYOffset: -72,
+    centerSupportX: 98,
+    centerSupportYOffset: 22,
+    interactionRecencyMs: 2600,
+    roamSkipRecencyMs: 2100,
+    mouseMoveThrottleMs: 480,
     mouseMoveFollowYOffsetThreshold: 110,
-    mouseMoveRecentOffsetMs: 1300,
+    mouseMoveRecentOffsetMs: 1500,
     interactionBubbleOffsetX: 26,
     interactionBubbleOffsetY: -26,
     scrollTopProgress: 0.18,
     scrollBottomProgress: 0.72,
-    roamIntervalMs: 2100,
-    roamVerticalLift: 54,
-    roamVerticalDrop: 58,
+    roamIntervalMs: 1500,
+    roamVerticalLift: 48,
+    roamVerticalDrop: 50,
     bottomDockX: 154,
     topDockX: 162,
     centerDockX: 178,
@@ -7217,7 +7217,8 @@ ${line}`
     centerDockYRatio: 0.44,
     tapBurstWindowMs: 2800,
     tapBurstCount: 3,
-    tapMomentDurationMs: 3200
+    tapMomentDurationMs: 3200,
+    precisionZoneLockMs: 2400
   }
   window.SupportRDAssistantMotionTuning = assistantMovementTuning
   const assistantMotionState = {
@@ -8087,22 +8088,26 @@ ${line}`
       registerTapPattern(event.clientX, event.clientY)
       moveAssistantPairToInteraction(event.clientX + assistantMovementTuning.interactionBubbleOffsetX, event.clientY + assistantMovementTuning.interactionBubbleOffsetY)
       if(target?.closest?.("[data-faq-topic], [data-faq-next], [data-open-help-reel]")){
+        registerRemoteIntent("hotspot:faq", "FAQ help reel hotspot", { x: event.clientX, y: Math.max(150, event.clientY - 16) }, "faq")
         triggerAssistantMoment("reel_bun", {
           point: { x: Math.max(160, event.clientX), y: Math.max(160, event.clientY - 34) },
           assistantName: "Aria"
         })
       }else if(target?.closest?.("[data-feedback-submit], [data-feedback-sort], [data-feedback-heart], [data-feedback-thumb], [data-open-developer-feedback], [data-family-submit]")){
+        registerRemoteIntent("hotspot:feedback", "Developer feed hotspot", { x: event.clientX, y: Math.max(156, event.clientY - 18) }, "faq")
         triggerAssistantMoment("developer_feed", {
           point: { x: Math.max(170, event.clientX), y: Math.max(170, event.clientY - 28) },
           assistantName: "Jake"
         })
       }else if(target?.closest?.("[data-open-fastpay], [data-open-product-page], [data-pay-product], .product-buy-btn, [data-fastpay-shopify], [data-fastpay-checkout], [data-product-shopify]")){
+        registerRemoteIntent("hotspot:payments", "Payments hotspot", { x: Math.min(window.innerWidth - 150, event.clientX + 48), y: Math.max(160, event.clientY) }, "payments")
         triggerAssistantMoment("purchase_checkout", {
           point: { x: Math.min(window.innerWidth - 170, event.clientX + 90), y: Math.max(168, event.clientY) },
           bubble: false,
           duration: 4200
         })
       }else if(target?.closest?.("[data-profile-action=\"scan\"], #startHairScan, [data-aria-scenario-prompt]")){
+        registerRemoteIntent("hotspot:profile-scan", "Profile scan hotspot", { x: window.innerWidth / 2, y: Math.max(172, event.clientY - 14) }, "profile")
         const prompt = target?.closest?.("[data-aria-scenario-prompt]")?.getAttribute("data-aria-scenario-prompt") || ""
         const statusLine = /damage|damaged|burn|frizz|oily|color|bounce/i.test(prompt)
           ? "Hair condition scenario detected. Aria and Jake moved into serious scan timing."
@@ -8112,10 +8117,12 @@ ${line}`
           status: statusLine
         })
       }else if(target?.closest?.("[data-open-panel=\"floatSettingsBox\"], [data-open-diary], [data-diary-submit], [data-diary-schedule], [data-diary-social]")){
+        registerRemoteIntent("hotspot:diary", "Diary hotspot", { x: window.innerWidth / 2, y: Math.max(170, event.clientY - 20) }, "diary")
         triggerAssistantMoment("diary_schedule", {
           point: { x: window.innerWidth / 2, y: Math.max(178, event.clientY - 24) }
         })
       }else if(target?.closest?.("[data-open-panel], [data-guide-start]")){
+        registerRemoteIntent("hotspot:panel", "Remote panel hotspot", { x: event.clientX, y: Math.max(154, event.clientY - 20) }, remoteState.currentRoute || "home")
         nudgeAssistantPresence("center", { x: event.clientX, y: Math.max(158, event.clientY - 32) })
       }
     }, true)
@@ -8167,6 +8174,7 @@ ${line}`
     window.addEventListener("resize", ()=>syncAssistantViewportMotion(true))
     setTimeout(()=>syncAssistantViewportMotion(true), 220)
     startAssistantRoam()
+    setTimeout(()=>refreshSupportRDLayerMap(true), 420)
     const REMOTE_ROUTE_META = {
     home: { path: "/remote", title: "SupportRD Remote", description: "SupportRD Remote keeps hair help, profile, studio, maps, and support together in one premium shell." },
     diary: { path: "/remote/diary", title: "SupportRD Diary", description: "Diary Mode is the emotional center for posting, guidance, booth routing, map routing, and payment handoff." },
@@ -9581,8 +9589,100 @@ ${line}`
       anchorSelector: "",
       rafId: 0
     }
+    const assistantScannerState = {
+      route: "home",
+      panel: "floatSettingsBox",
+      panelLabel: "Diary Mode",
+      intentKey: "",
+      intentLabel: "Remote home ready",
+      liveZone: "Remote hero",
+      visibleControls: [],
+      visibleAnchors: [],
+      liveButtons: [],
+      apiSummary: {
+        openai: "watch",
+        shopify: "watch",
+        account: "watch",
+        diary: "watch",
+        studio: "watch",
+        voice: "watch",
+        pocketbase: "not wired",
+        cloud: "watch"
+      },
+      seoEntries: [],
+      layersLoaded: false,
+      lastScanAt: 0,
+      lastConfigAt: 0
+    }
     let assistantTrackerHud = null
     let assistantRecorderAnchor = null
+    const remoteIntentState = {
+      lastKey: "",
+      lastAt: 0,
+      lockMs: 340
+    }
+
+    const SUPPORT_RD_SYSTEM_MAP = {
+      endpoints: {
+        map: "/api/system-map",
+        shopifyHealth: "/api/shopify/connector-health",
+        shopifyPublic: "/api/shopify/public-config"
+      },
+      controlFiles: {
+        frontend: "/static/app.v20260320h.js",
+        styles: "/static/style.v20260320h.css",
+        studio: "/static/studio/studio.js",
+        backend: "/app.py"
+      },
+      routes: {
+        home: {
+          panelLabel: "Float Mode",
+          anchors: ["#floatAriaBtn", "#floatJakeBtn", "#remoteGuardianAria", "#remoteGuardianJake"],
+          controls: ["#closeRemoteBtn", "#voiceToggle", "#ariaSphere", "#floatFooterGuide", "#floatFooterSettings", "#floatFooterPayments"]
+        },
+        diary: {
+          panelLabel: "Diary Mode",
+          anchors: ["#floatDiaryPanels", "#floatDiaryRecordBtn", "#floatHandsfreeBtn", "#diaryLiveToggle"],
+          controls: ["#floatDiaryRecordBtn", "#floatHandsfreeBtn", "#diaryLiveToggle", "#floatDiaryTagInput", "#remoteDiaryLobby", "#diaryLiveFastPay"]
+        },
+        studio: {
+          panelLabel: "Studio Quick Panel",
+          anchors: ["#floatQuickEditStatus", "#floatRecordVoiceBtn", "#floatPauseRecordBtn", "#floatStopRecordBtn", "#studioModeFrame"],
+          controls: ["#floatRecordVoiceBtn", "#floatPauseRecordBtn", "#floatStopRecordBtn", "#floatRecordVideoBtn", "#fxPreset", "#gigFilter"]
+        },
+        settings: {
+          panelLabel: "Configuration",
+          anchors: ["#floatProfileBox", "#fullSettingsBtn", "#settingsPushBtn"],
+          controls: ["#fullSettingsBtn", "#settingsPushBtn", "#settingsPasswordBtn", "#settingsGoogleLoginBtn", "#settingsAppleLoginBtn"]
+        },
+        profile: {
+          panelLabel: "Profile",
+          anchors: ["#floatAssistantBox", "#startHairScan", "#profileImage"],
+          controls: ["#startHairScan", "#profileSaveBtn", "#profileGenerateBtn", "#profileVerifyBtn"]
+        },
+        payments: {
+          panelLabel: "Payments",
+          anchors: ["#remotePurchaseEditor", "#checkoutPremiumBtn", "#checkoutProBtn"],
+          controls: ["#openFastPayBtn", "#checkoutPremiumBtn", "#checkoutProBtn", "#checkoutDonateBtn", "#checkoutCartBtn"]
+        },
+        map: {
+          panelLabel: "Map Change",
+          anchors: ["#floatThemeCardRail", "#themePrev", "#themeNext"],
+          controls: ["#floatThemeCardRail", "#themePrev", "#themeNext", "#themeReset"]
+        },
+        faq: {
+          panelLabel: "FAQ Lounge",
+          anchors: ["#floatFaqReelHost", "#faqSearchInput"],
+          controls: ["#faqSearchInput", "#faqNextBtn", "#faqSeeMoreBtn", "#faqReelSubjectBtn"]
+        },
+        official: {
+          panelLabel: "Official SupportRD",
+          anchors: ["#floatFooterOfficial", "#floatFooterOfficialBottom"],
+          controls: ["#floatFooterOfficial", "#floatFooterOfficialBottom", "#floatFooterBlog", "#floatFooterSubscribe"]
+        }
+      }
+    }
+    window.getSupportRDSystemMap = ()=>JSON.parse(JSON.stringify(SUPPORT_RD_SYSTEM_MAP))
 
     function getAssistantTrackerName(id){
       return id === "projake" ? "Jake" : "Aria"
@@ -9626,6 +9726,133 @@ ${line}`
       return routeAnchors[route] || ((assistantTrackerState.activeAssistant || state.activeAssistant || "aria") === "projake" ? "#floatJakeBtn" : "#floatAriaBtn")
     }
 
+    function isVisibleScannerNode(node){
+      if(!node || node.hidden) return false
+      const rect = node.getBoundingClientRect?.()
+      if(!rect) return false
+      const style = window.getComputedStyle ? window.getComputedStyle(node) : null
+      if(style && (style.display === "none" || style.visibility === "hidden" || Number(style.opacity || 1) === 0)) return false
+      return rect.width > 10 && rect.height > 10 && rect.bottom > 0 && rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth
+    }
+
+    function describeScannerNode(node){
+      if(!node) return ""
+      return (node.getAttribute("data-assistant-track-label")
+        || node.getAttribute("aria-label")
+        || node.textContent
+        || node.id
+        || node.className
+        || "").replace(/\s+/g, " ").trim().slice(0, 58)
+    }
+
+    function collectVisibleScannerItems(selectors = [], limit = 6){
+      const seen = new Set()
+      const out = []
+      selectors.forEach((selector)=>{
+        qsa(selector).forEach((node)=>{
+          if(!isVisibleScannerNode(node)) return
+          const label = describeScannerNode(node)
+          if(!label) return
+          const key = `${selector}::${label}`
+          if(seen.has(key)) return
+          seen.add(key)
+          out.push(label)
+        })
+      })
+      return out.slice(0, limit)
+    }
+
+    function summarizeLayerState(layer = {}, key = ""){
+      if(!layer || typeof layer !== "object") return assistantScannerState.apiSummary[key] || "watch"
+      if(layer.configured === false) return "not wired"
+      if(layer.realtime_ready || layer.session_api || layer.bootstrap_api || layer.live_feed_ready || layer.premium_gate) return "live"
+      if(layer.storefront_configured || layer.admin_configured || layer.db_ready) return "ready"
+      if(layer.https || layer.origin || layer.host) return "online"
+      return "watch"
+    }
+
+    function refreshSupportRDScannerState(force = false){
+      const now = Date.now()
+      if(!force && now - assistantScannerState.lastScanAt < 420) return
+      assistantScannerState.lastScanAt = now
+      const route = assistantTrackerState.route || remoteState.currentRoute || "home"
+      const config = SUPPORT_RD_SYSTEM_MAP.routes[route] || SUPPORT_RD_SYSTEM_MAP.routes.home
+      const visibleControls = collectVisibleScannerItems(config.controls)
+      const visibleAnchors = collectVisibleScannerItems(config.anchors)
+      const hotIntent = assistantScannerState.intentLabel || `${config.panelLabel} focus`
+      assistantScannerState.route = route
+      assistantScannerState.panel = remoteState.currentPanel || assistantScannerState.panel || "floatSettingsBox"
+      assistantScannerState.panelLabel = config.panelLabel || getAssistantTrackerRouteLabel(route)
+      assistantScannerState.visibleControls = visibleControls
+      assistantScannerState.visibleAnchors = visibleAnchors
+      assistantScannerState.liveButtons = visibleControls.slice(0, 3)
+      assistantScannerState.liveZone = visibleAnchors[0] || visibleControls[0] || assistantScannerState.liveZone || "Remote hero"
+      if(!assistantScannerState.intentLabel) assistantScannerState.intentLabel = hotIntent
+    }
+
+    async function refreshSupportRDLayerMap(force = false){
+      const now = Date.now()
+      if(!force && assistantScannerState.layersLoaded && (now - assistantScannerState.lastConfigAt) < 30000) return
+      assistantScannerState.lastConfigAt = now
+      try{
+        const response = await fetch(SUPPORT_RD_SYSTEM_MAP.endpoints.map, { cache:"no-store" })
+        if(!response.ok) throw new Error("system_map_unavailable")
+        const data = await response.json()
+        const layers = data?.layers || {}
+        assistantScannerState.apiSummary = {
+          openai: summarizeLayerState(layers.openai, "openai"),
+          shopify: summarizeLayerState(layers.shopify, "shopify"),
+          account: summarizeLayerState(layers.account, "account"),
+          diary: summarizeLayerState(layers.diary, "diary"),
+          studio: summarizeLayerState(layers.studio, "studio"),
+          voice: summarizeLayerState(layers.voice, "voice"),
+          pocketbase: summarizeLayerState(layers.pocketbase, "pocketbase"),
+          cloud: summarizeLayerState(layers.cloud, "cloud")
+        }
+        assistantScannerState.seoEntries = Array.isArray(data?.seo?.routes) ? data.seo.routes.slice(0, 7) : []
+        assistantScannerState.layersLoaded = true
+        renderAssistantTracker()
+      }catch{
+        assistantScannerState.layersLoaded = false
+      }
+    }
+
+    function registerRemoteIntent(intentKey, label, point = null, route = remoteState.currentRoute || "home"){
+      assistantScannerState.intentKey = intentKey || ""
+      assistantScannerState.intentLabel = label || "Remote action"
+      assistantScannerState.route = route
+      if(point){
+        assistantMotionState.lastInteraction = { x: point.x, y: point.y, at: Date.now() - 120 }
+        holdSingleAssistantTeleport(state.activeAssistant || "aria", point, assistantMovementTuning.precisionZoneLockMs, {
+          mood: "focus",
+          status: `${getAssistantTrackerName(state.activeAssistant || "aria")} cut straight into ${label || "the active zone"}.`
+        })
+      }
+      refreshSupportRDScannerState(true)
+      renderAssistantTracker()
+    }
+
+    function remoteIntentAllowed(intentKey){
+      const now = Date.now()
+      if(intentKey && remoteIntentState.lastKey === intentKey && (now - remoteIntentState.lastAt) < remoteIntentState.lockMs){
+        return false
+      }
+      remoteIntentState.lastKey = intentKey || ""
+      remoteIntentState.lastAt = now
+      return true
+    }
+
+    window.getSupportRDScannerState = ()=>JSON.parse(JSON.stringify({
+      scanner: assistantScannerState,
+      tracker: assistantTrackerState,
+      motion: window.getSupportRDAssistantMotion ? window.getSupportRDAssistantMotion() : null
+    }))
+    window.refreshSupportRDScanner = (force = true)=>{
+      refreshSupportRDScannerState(!!force)
+      refreshSupportRDLayerMap(!!force)
+      return window.getSupportRDScannerState()
+    }
+
     function ensureAssistantTrackerUI(){
       if(!assistantTrackerHud){
         assistantTrackerHud = document.createElement("aside")
@@ -9662,6 +9889,39 @@ ${line}`
             <div><span>Jake</span><strong data-track="jakePos">--</strong></div>
           </div>
           <div class="assistant-tracker-live" data-track="liveText">Tracking where the assistants are going in real time.</div>
+          <div class="assistant-scanner-shell">
+            <div class="assistant-scanner-head">
+              <div class="assistant-scanner-title">System Scanner</div>
+              <div class="assistant-scanner-chip" data-track="layersLoaded">Watching</div>
+            </div>
+            <div class="assistant-scanner-grid">
+              <div class="assistant-tracker-cell">
+                <span>Panel</span>
+                <strong data-track="panelLabel">Diary Mode</strong>
+              </div>
+              <div class="assistant-tracker-cell">
+                <span>Intent</span>
+                <strong data-track="intentLabel">Remote home ready</strong>
+              </div>
+              <div class="assistant-tracker-cell">
+                <span>Zone</span>
+                <strong data-track="liveZone">Remote hero</strong>
+              </div>
+              <div class="assistant-tracker-cell">
+                <span>SEO</span>
+                <strong data-track="seoRoutes">/remote</strong>
+              </div>
+            </div>
+            <div class="assistant-scanner-layers" data-track="layerSummary">OpenAI watch · Diary watch · Studio watch</div>
+            <div class="assistant-scanner-list">
+              <span>Live Controls</span>
+              <strong data-track="visibleControls">Waiting for route controls.</strong>
+            </div>
+            <div class="assistant-scanner-list">
+              <span>Movement Zones</span>
+              <strong data-track="visibleAnchors">Waiting for assistant anchors.</strong>
+            </div>
+          </div>
         `
         document.body.appendChild(assistantTrackerHud)
       }
@@ -9703,13 +9963,33 @@ ${line}`
         || assistantTrackerState.voiceText
         || assistantTrackerState.status
         || "Tracking where the assistants are going in real time."
+      refreshSupportRDScannerState()
+      const layerSummary = [
+        `OpenAI ${assistantScannerState.apiSummary.openai}`,
+        `Voice ${assistantScannerState.apiSummary.voice}`,
+        `Diary ${assistantScannerState.apiSummary.diary}`,
+        `Studio ${assistantScannerState.apiSummary.studio}`,
+        `Account ${assistantScannerState.apiSummary.account}`,
+        `Shopify ${assistantScannerState.apiSummary.shopify}`
+      ].join(" · ")
+      const seoRoutes = assistantScannerState.seoEntries.length
+        ? assistantScannerState.seoEntries.slice(0, 3).map(entry=>entry.path || entry.route).join(" · ")
+        : "/remote"
       const mappings = {
         routeLabel,
         assistantName,
         focusLabel,
         recordingLabel,
         voiceState,
-        liveText
+        liveText,
+        panelLabel: assistantScannerState.panelLabel || "Diary Mode",
+        intentLabel: assistantScannerState.intentLabel || "Remote home ready",
+        liveZone: assistantScannerState.liveZone || "Remote hero",
+        visibleControls: assistantScannerState.visibleControls.join(" · ") || "Waiting for route controls.",
+        visibleAnchors: assistantScannerState.visibleAnchors.join(" · ") || "Waiting for assistant anchors.",
+        layerSummary,
+        seoRoutes,
+        layersLoaded: assistantScannerState.layersLoaded ? "Live" : "Watching"
       }
       Object.entries(mappings).forEach(([key, value])=>{
         const node = assistantTrackerHud?.querySelector?.(`[data-track="${key}"]`)
@@ -9729,6 +10009,7 @@ ${line}`
       }
       updatePos("#floatAriaBtn", "ariaPos")
       updatePos("#floatJakeBtn", "jakePos")
+      refreshSupportRDScannerState()
       const anchorSelector = assistantTrackerState.anchorSelector || getAssistantAnchorSelector(assistantTrackerState.route)
       const anchorTarget = anchorSelector ? qs(anchorSelector) : null
       const anchorText = assistantRecorderAnchor?.querySelector?.('[data-track="anchorText"]')
@@ -9750,6 +10031,7 @@ ${line}`
 
     function startAssistantTrackerLoop(){
       ensureAssistantTrackerUI()
+      refreshSupportRDLayerMap()
       if(assistantTrackerState.rafId) return
       assistantTrackerState.rafId = window.requestAnimationFrame(syncAssistantTrackerFrame)
     }
@@ -9763,6 +10045,8 @@ ${line}`
       if(!assistantTrackerState.anchorSelector){
         assistantTrackerState.anchorSelector = getAssistantAnchorSelector(assistantTrackerState.route)
       }
+      assistantScannerState.route = assistantTrackerState.route
+      refreshSupportRDScannerState(true)
       renderAssistantTracker()
       startAssistantTrackerLoop()
       setAssistantPixelState(assistantTrackerState.activeAssistant || "aria", {
@@ -10866,6 +11150,7 @@ ${line}`
     `
   }
   function openLaunchMenuSheet(targetId, label, options = {}){
+    if(!remoteIntentAllowed(`panel:${targetId}`)) return
     const menus = {
       floatBoardsBox: {
         title: "Studio Quick Panel",
@@ -10903,6 +11188,11 @@ ${line}`
       setActiveTouchPanel(targetId, `${label} is ready in Remote.`)
       return
     }
+    remoteState.currentPanel = targetId
+    registerRemoteIntent(`panel:${targetId}`, `${menu.title} armed`, getRouteFocusPoint() || {
+      x: window.innerWidth * 0.72,
+      y: Math.max(160, window.innerHeight * 0.34)
+    }, menu.route)
     openRemoteSheet(menu.title, menu.body, { message: `${menu.title} is open inside Remote.`, route: menu.route, replaceRoute: !!options.replaceRoute, skipRoute: !!options.skipRoute })
   }
     function openGuardianSheet(name){
@@ -10976,6 +11266,7 @@ ${line}`
     })
   }
     function openRemoteSheet(title, html, options = {}){
+        if(!remoteIntentAllowed(`sheet:${options.route || title}`)) return
         if(!remoteSheet || !remoteSheetBody || !remoteSheetTitle) return
         stopRemoteGuide()
         remoteSheet.className = "float-remote-sheet glass"
@@ -10986,9 +11277,24 @@ ${line}`
       remoteSheet.setAttribute("aria-hidden", "false")
       shell.classList.add("sheet-open")
       if(remoteStageHome) remoteStageHome.hidden = true
+      if(options.route){
+        remoteState.currentPanel = {
+          diary: "floatSettingsBox",
+          studio: "floatBoardsBox",
+          settings: "floatProfileBox",
+          map: "floatDeviceBox",
+          faq: "floatLiveBox",
+          profile: "floatAssistantBox",
+          payments: "floatPaymentsBox"
+        }[options.route] || remoteState.currentPanel
+      }
       if(options.route && !options.skipRoute) syncRemoteHistory(options.route, !!options.replaceRoute)
       revealRemoteStage()
       applyAssistantDemoScene(options.route || remoteState.currentRoute || "home", false)
+      registerRemoteIntent(`sheet:${options.route || title}`, `${title} opened`, getRouteFocusPoint() || {
+        x: window.innerWidth * 0.76,
+        y: Math.max(160, window.innerHeight * 0.36)
+      }, options.route || remoteState.currentRoute || "home")
       trackAcquisitionSignal(`open_${options.route || remoteState.currentRoute || "home"}`, {
         guestPost: title === "Blog Party" ? "Fresh guest-post angle opened from Blog Party" : undefined,
         guestSource: title === "Blog Party" ? "Remote content route" : undefined
@@ -11443,6 +11749,27 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         document.head.appendChild(desc)
       }
       desc.setAttribute("content", meta.description)
+      let canonical = document.querySelector('link[rel="canonical"]')
+      if(!canonical){
+        canonical = document.createElement("link")
+        canonical.rel = "canonical"
+        document.head.appendChild(canonical)
+      }
+      canonical.setAttribute("href", `${window.location.origin}${meta.path}`)
+      let ogTitle = document.querySelector('meta[property="og:title"]')
+      if(!ogTitle){
+        ogTitle = document.createElement("meta")
+        ogTitle.setAttribute("property", "og:title")
+        document.head.appendChild(ogTitle)
+      }
+      ogTitle.setAttribute("content", meta.title)
+      let ogUrl = document.querySelector('meta[property="og:url"]')
+      if(!ogUrl){
+        ogUrl = document.createElement("meta")
+        ogUrl.setAttribute("property", "og:url")
+        document.head.appendChild(ogUrl)
+      }
+      ogUrl.setAttribute("content", `${window.location.origin}${meta.path}`)
     }
     function syncRemoteHistory(route = "home", replace = false){
       const meta = REMOTE_ROUTE_META[route] || REMOTE_ROUTE_META.home
@@ -11465,6 +11792,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
     function renderRemoteRoute(route = "home", options = {}){
         const normalized = REMOTE_ROUTE_META[route] ? route : "home"
+        if(!options.force && !remoteIntentAllowed(`route:${normalized}`)) return
         updateRemoteDocumentMeta(normalized)
         applyAssistantDemoScene(normalized, false)
         updateAssistantTracker({
@@ -11477,6 +11805,10 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         if(options.openShell && shell.hidden){
           openFloat({ preserveHome:true, preserveRoute:true })
         }
+      registerRemoteIntent(`route:${normalized}`, `${REMOTE_ROUTE_META[normalized]?.title || "Remote"} routed`, getRouteFocusPoint() || {
+        x: window.innerWidth * 0.68,
+        y: Math.max(160, window.innerHeight * 0.28)
+      }, normalized)
       if(normalized === "home"){
         setFloatHome("Remote home is ready. Pick any route and the page fills smoothly underneath.")
       }else if(normalized === "payments"){
@@ -11549,7 +11881,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         ` : ""}
       `, { message:`${config.title} is open inside the Remote stage.`, route:"official" })
     }
-    function setFloatHome(message){
+  function setFloatHome(message){
         closeRemoteSheet()
         hideTGuide()
         shell.classList.add("touch-home")
@@ -11564,6 +11896,10 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
         syncRemoteLaunchVisual("default")
         syncMapHero(shell?.dataset?.remoteTheme || "default")
         applyAssistantDemoScene("home", false)
+        registerRemoteIntent("route:home", "Remote shell sealed and ready", {
+          x: window.innerWidth * 0.52,
+          y: Math.max(152, window.innerHeight * 0.24)
+        }, "home")
         if(message) setRemoteStatus(message)
     }
 

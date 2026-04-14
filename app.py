@@ -4438,6 +4438,115 @@ def shopify_public_config():
         "checkout_map_loaded": bool(SHOPIFY_PLAN_VARIANT_MAP),
     }
 
+@app.route("/api/system-map")
+def system_map_status():
+    counts = {
+        "accounts": 0,
+        "voice_sessions": 0,
+        "diary_sessions": 0,
+        "studio_sessions": 0,
+    }
+    db_ready = True
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM users")
+        counts["accounts"] = int((cur.fetchone() or [0])[0] or 0)
+        cur.execute("SELECT COUNT(*) FROM voice_sessions")
+        counts["voice_sessions"] = int((cur.fetchone() or [0])[0] or 0)
+        cur.execute("SELECT COUNT(*) FROM diary_sessions")
+        counts["diary_sessions"] = int((cur.fetchone() or [0])[0] or 0)
+        cur.execute("SELECT COUNT(*) FROM studio_sessions")
+        counts["studio_sessions"] = int((cur.fetchone() or [0])[0] or 0)
+        conn.close()
+    except Exception:
+        db_ready = False
+    storefront_domain = resolve_shopify_storefront_domain()
+    api_domain = resolve_shopify_api_domain()
+    seo_routes = [
+        {"route": "home", "path": "/remote", "title": "SupportRD Remote"},
+        {"route": "diary", "path": "/remote/diary", "title": "SupportRD Diary"},
+        {"route": "studio", "path": "/remote/studio", "title": "SupportRD Studio Quick"},
+        {"route": "settings", "path": "/remote/settings", "title": "SupportRD Configuration"},
+        {"route": "map", "path": "/remote/map", "title": "SupportRD Map Change"},
+        {"route": "faq", "path": "/remote/faq", "title": "SupportRD FAQ Lounge"},
+        {"route": "profile", "path": "/remote/profile", "title": "SupportRD Profile"},
+        {"route": "payments", "path": "/remote/payments", "title": "SupportRD Payments"},
+        {"route": "official", "path": "/remote/official", "title": "SupportRD Official Info"},
+    ]
+    return {
+        "ok": True,
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "layers": {
+            "openai": {
+                "configured": bool(OPENAI_KEY and client),
+                "model": OPENAI_MODEL,
+                "realtime_ready": bool(OPENAI_KEY),
+                "speech_ready": bool(OPENAI_KEY),
+                "transcribe_ready": bool(OPENAI_KEY),
+            },
+            "shopify": {
+                "storefront_configured": bool(SHOPIFY_STORE and SHOPIFY_TOKEN),
+                "admin_configured": bool(SHOPIFY_STORE and SHOPIFY_ADMIN_TOKEN),
+                "webhook_configured": bool(SHOPIFY_WEBHOOK_SECRET),
+                "variant_map_loaded": bool(SHOPIFY_PLAN_VARIANT_MAP),
+                "sku_map_loaded": bool(SHOPIFY_PLAN_SKU_MAP),
+                "storefront_domain": storefront_domain,
+                "api_domain": api_domain,
+            },
+            "account": {
+                "db_ready": db_ready,
+                "settings_db_ready": db_ready,
+                "login_gate": True,
+                "profile_memory": True,
+                "user_count": counts["accounts"],
+            },
+            "diary": {
+                "db_ready": db_ready,
+                "session_api": True,
+                "lobby_api": True,
+                "comments_api": True,
+                "live_feed_ready": True,
+                "session_count": counts["diary_sessions"],
+            },
+            "studio": {
+                "db_ready": db_ready,
+                "session_api": True,
+                "exports_api": True,
+                "premium_gate": True,
+                "storage_ready": bool(STUDIO_STORAGE_DIR),
+                "session_count": counts["studio_sessions"],
+            },
+            "voice": {
+                "db_ready": db_ready,
+                "bootstrap_api": True,
+                "respond_api": True,
+                "history_api": True,
+                "realtime_api": bool(OPENAI_KEY),
+                "session_count": counts["voice_sessions"],
+            },
+            "pocketbase": {
+                "configured": False,
+                "note": "PocketBase is not wired yet in this build.",
+            },
+            "cloud": {
+                "host": request.host,
+                "origin": request.host_url.rstrip("/"),
+                "https": request.is_secure or request.headers.get("X-Forwarded-Proto", "") == "https",
+            },
+        },
+        "remote": {
+            "sealed_shell": True,
+            "default_path": "/remote",
+            "on_the_go_ready": True,
+            "assistant_free_roam": True,
+        },
+        "seo": {
+            "routes": seo_routes,
+            "origin": request.host_url.rstrip("/"),
+        },
+    }
+
 @app.route("/products/<path:slug>")
 def shopify_product_redirect(slug):
     store = resolve_shopify_storefront_domain()
