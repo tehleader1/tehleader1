@@ -1196,6 +1196,33 @@
       });
     }
 
+    async function speakPremiumLine(text, who){
+      try{
+        const response = await fetch("/api/aria/speech", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text,
+            requested_voice: who === "Jake" ? "onyx" : "shimmer",
+            membership_tier: who === "Jake" ? "premium" : "premium"
+          })
+        });
+        if(!response.ok) throw new Error(`speech_failed_${response.status}`);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        await new Promise((resolve)=>{
+          audio.onended = ()=>{ URL.revokeObjectURL(url); resolve(); };
+          audio.onerror = ()=>{ URL.revokeObjectURL(url); resolve(); };
+          audio.play().catch(()=>resolve());
+        });
+        return true;
+      }catch{
+        return false;
+      }
+    }
+
     function getDiaryVoiceHistory(){
       try{
         return JSON.parse(window.localStorage.getItem("supportrdDiaryVoiceHistory") || "[]");
@@ -1329,7 +1356,10 @@
       voiceConsoleTitle.textContent = `${who} response`;
       voiceConsoleText.textContent = response;
       voiceBubbleText.textContent = response;
-      await speakLine(response, { kind: who, rate: who === "Jake" ? 0.94 : 1, pitch: who === "Jake" ? 0.78 : 1.02 });
+      const usedPremiumVoice = await speakPremiumLine(response, who);
+      if(!usedPremiumVoice){
+        await speakLine(response, { kind: who, rate: who === "Jake" ? 0.94 : 1, pitch: who === "Jake" ? 0.78 : 1.02 });
+      }
       cueTone("close");
       setTimeout(()=>voiceBubble.classList.remove("active"), 900);
     }
