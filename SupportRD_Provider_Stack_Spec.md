@@ -142,3 +142,131 @@
 - those surfaces can load from dedicated local routes during development, but the shell should present them as one connected trail
 - each surface owns its own frontend behavior and button set
 - SupportRD backend owns account, session, persistence, and route continuity
+
+## Current Priority Rebuilds
+
+### 1. SupportRD Studio v2
+
+- Decision:
+  - do not use `Audacity` as the web app backend
+  - use `FFmpeg` as the media engine
+  - optionally use `Mux` for hosted live/on-demand video playback
+- Why:
+  - `FFmpeg` is the serious route for import, transcode, trim, mux, export, filters, and audio/video assembly
+  - `Audacity` is not the right web-service backbone for SupportRD Studio
+- Studio v2 core UX:
+  - record vocal takes
+  - import `.mp3`, `.m4a`, `.mp4`
+  - hook instrument / soundboard style sources into the same session
+  - select a motherboard piece and play that exact piece
+  - stop, rewind, forward, pause
+  - apply `clean`, `panoramic`, `zoom`, and `sway` style FX
+  - export the session
+- Studio v2 provider split:
+  - `SupportRD`:
+    - account/session ownership
+    - motherboard model
+    - board selection
+    - package access
+    - UI shell
+  - `FFmpeg`:
+    - trim
+    - transcode
+    - join pieces
+    - audio/video export
+    - filter graph
+  - `Mux` optional:
+    - hosted video playback
+    - live-to-VOD support
+    - cleaner video delivery
+- Studio v2 required buttons:
+  - `Record`
+  - `Stop`
+  - `Play`
+  - `Pause`
+  - `Rewind`
+  - `Forward`
+  - `Import`
+  - `Commit Motherboard`
+  - `Apply FX`
+  - `Export`
+
+### 2. SupportRD Diary Command Center
+
+- Decision:
+  - use `Dacast` as the real live stream/channel layer
+  - keep SupportRD comments, payments, Aria history, and lobby logic in-house
+- Diary command center layout:
+  - main screen at top by default:
+    - live video first
+    - presentation/doc mode allowed
+  - under main screen:
+    - real comments from Diary Lobby viewers
+  - side rail:
+    - likes / hearts / paid support / transaction record
+  - under side rail:
+    - direct Aria history lane
+- Presentation mode requirements:
+  - font
+  - shapes
+  - bullet points
+  - bold
+  - italic
+  - `.docx` editing/export path
+- Diary provider split:
+  - `SupportRD`:
+    - owner identity
+    - comments
+    - transactions
+    - paid likes/hearts
+    - diary history
+    - diary lobby presence
+    - Aria history lane
+  - `Dacast`:
+    - live stream channel
+    - playback URL / embed lane
+    - live video infrastructure
+  - `docx`:
+    - document output / editing lane
+  - `PptxGenJS` optional:
+    - presentation-style export if SupportRD wants a stronger deck mode later
+- Important behavior:
+  - Aria does not live inside Diary as a floating icon
+  - Diary shows the `history of Aria`, not moving-orb Aria itself
+  - moving-orb Aria stays in Website Voice mode
+
+### 3. SupportRD FAQ Hair Reel
+
+- Decision:
+  - build an owned vertical hair reel first
+  - use TikTok embed/display only as an optional later layer
+- FAQ Hair Reel core UX:
+  - 10-second reel clips
+  - vertical feed feel
+  - topics:
+    - hair video
+    - hair problem
+    - hair day
+  - FAQ answer lane beside or beneath it
+- FAQ provider split:
+  - `SupportRD`:
+    - reel UI
+    - FAQ answer engine
+    - Developers Feed
+  - `TikTok` optional later:
+    - authorized creator videos
+    - embedded post playback
+  - `Mux` optional later:
+    - SupportRD-owned short-form video hosting if the reel grows
+- Required FAQ buttons:
+  - `Play Reel`
+  - `Next Reel`
+  - `Shuffle`
+  - `Ask SupportRD`
+  - `Post To Developers Feed`
+
+## Immediate Build Order
+
+1. `Studio v2 shell + FFmpeg-backed export plan`
+2. `Diary command center layout + Dacast integration path`
+3. `FAQ owned hair reel with 10-second clip behavior`
