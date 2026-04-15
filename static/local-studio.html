@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SupportRD Local Studio</title>
+  <style>
+    :root{--bg:#07111f;--bg2:#0b1930;--panel:rgba(9,19,35,.84);--line:rgba(180,222,255,.14);--text:#eef7ff;--muted:rgba(228,240,255,.72);--shadow:0 24px 70px rgba(0,0,0,.34)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Georgia,"Times New Roman",serif;background:radial-gradient(820px 420px at 0% 0%, rgba(121,184,255,.15), transparent 55%),radial-gradient(720px 420px at 100% 0%, rgba(255,208,134,.12), transparent 55%),linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}body{padding:20px}
+    .shell{max-width:1540px;margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}.glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.08);box-shadow:var(--shadow);border-radius:28px}.rail,.stage{padding:20px}.stage{display:grid;gap:16px}
+    .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}h1,h2,h3,p{margin:0}.hero h1{font-size:48px;line-height:.94}.hero p,.panel p,.action p{color:var(--muted);margin-top:10px;line-height:1.6}
+    .stack,.history-list,.clip-list{display:grid;gap:12px}.card,.history-item,.clip-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}.card strong,.history-item strong,.clip-item strong{display:block}.card span,.history-item span,.clip-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.45}
+    .hero-card,.action,.panel,.player{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}.hero-card h2,.action h3,.panel h3,.player h3{font-size:34px;font-family:"Cormorant Garamond",Georgia,serif}.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    input,select,button{font:inherit}input,select{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.buttons button,.buttons label{min-height:42px;padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer;display:inline-flex;align-items:center}.buttons input[type=file]{display:none}.status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}audio,video{width:100%;margin-top:14px;border-radius:18px;background:#02070f;border:1px solid var(--line)}
+    @media (max-width:1200px){.shell,.grid,.action-grid,.columns{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail glass">
+      <div class="hero">
+        <div class="eyebrow">Embedded App Surface</div>
+        <h1>SupportRD Studio</h1>
+        <p>Studio is the clean API booth now: record a track, import a track, play a track, export a track, and keep motherboard history in one place.</p>
+      </div>
+      <div class="stack" style="margin-top:18px">
+        <div class="card"><strong>Session</strong><span id="sessionCard">Waiting for studio bootstrap.</span></div>
+        <div class="card"><strong>Selected Clip</strong><span id="clipCard">No clip loaded.</span></div>
+        <div class="card"><strong>Export Lane</strong><span id="exportCard">No export yet.</span></div>
+      </div>
+    </aside>
+    <main class="stage glass">
+      <section class="hero-card">
+        <div class="eyebrow">Studio Takeover</div>
+        <h2>Full studio API front and back layer with record, import, play, motherboard commit, and export.</h2>
+        <p>This is the cleaner rebuild path for Studio while keeping the real SupportRD studio APIs underneath.</p>
+      </section>
+      <section class="grid">
+        <div class="player">
+          <div class="eyebrow">Track Player</div>
+          <h3>Recorder + imported track</h3>
+          <audio id="audioPlayer" controls></audio>
+          <video id="videoPlayer" controls style="display:none;height:240px;object-fit:cover"></video>
+          <div class="buttons">
+            <button id="bootstrapBtn" type="button">Bootstrap Studio</button>
+            <button id="recordBtn" type="button">Record Track</button>
+            <button id="stopBtn" type="button">Stop</button>
+            <button id="playBtn" type="button">Play</button>
+            <button id="pauseBtn" type="button">Pause</button>
+            <label>Import Track<input id="fileInput" type="file" accept="audio/*,video/mp4,video/webm,.mp3,.m4a,.mp4"></label>
+            <button id="commitBtn" type="button">Commit Motherboard</button>
+            <button id="exportBtn" type="button">Export Track</button>
+          </div>
+          <div class="status" id="statusBox">Studio app is ready.</div>
+        </div>
+        <div class="action">
+          <div class="eyebrow">Board Controls</div>
+          <h3>Studio board</h3>
+          <div class="action-grid">
+            <input id="boardName" placeholder="Board name" value="Main Track">
+            <select id="kindSelect">
+              <option value="audio">Audio</option>
+              <option value="video">Video</option>
+            </select>
+            <select id="fxPreset">
+              <option value="clean">FX · clean</option>
+              <option value="panoramic">FX · panoramic</option>
+              <option value="zoom">FX · zoom</option>
+              <option value="sway">FX · sway</option>
+            </select>
+            <input id="destination" placeholder="Export destination" value="Main Studio">
+          </div>
+          <div class="buttons">
+            <button id="applyFxBtn" type="button">Apply FX</button>
+            <button id="historyBtn" type="button">Load History</button>
+            <button id="downloadBtn" type="button">Download Local File</button>
+          </div>
+        </div>
+      </section>
+      <section class="columns">
+        <div class="panel">
+          <div class="eyebrow">Studio Clips</div>
+          <h3>Motherboard clips</h3>
+          <div class="clip-list" id="clipList"></div>
+        </div>
+        <div class="panel">
+          <div class="eyebrow">Studio History</div>
+          <h3>Recent actions</h3>
+          <div class="history-list" id="historyList"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script>
+    const qs = '?localSandbox=1';
+    const els = { audioPlayer:document.getElementById('audioPlayer'), videoPlayer:document.getElementById('videoPlayer'), statusBox:document.getElementById('statusBox'), boardName:document.getElementById('boardName'), kindSelect:document.getElementById('kindSelect'), fxPreset:document.getElementById('fxPreset'), destination:document.getElementById('destination'), fileInput:document.getElementById('fileInput'), clipList:document.getElementById('clipList'), historyList:document.getElementById('historyList'), sessionCard:document.getElementById('sessionCard'), clipCard:document.getElementById('clipCard'), exportCard:document.getElementById('exportCard') };
+    let sessionId = ''; let history = []; let clips = []; let selectedClip = null; let mediaStream = null; let mediaRecorder = null; let recordedChunks = [];
+    function setStatus(message){ els.statusBox.textContent = message; }
+    async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{ 'Content-Type':'application/json', 'X-SupportRD-Local-Sandbox':'1', ...(options.headers||{}) }, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
+    function render(){ els.sessionCard.textContent = sessionId || 'Waiting for studio bootstrap.'; els.clipCard.textContent = selectedClip?.name || 'No clip loaded.'; els.clipList.innerHTML = clips.length ? clips.map((clip, index)=>`<button type="button" class="clip-item" data-index="${index}"><strong>${clip.name}</strong><span>${clip.kind} · ${clip.fileName || 'local recording'}</span></button>`).join('') : `<div class="clip-item"><strong>No clips yet</strong><span>Record or import the first track.</span></div>`; els.clipList.querySelectorAll('[data-index]').forEach(btn=>btn.addEventListener('click', ()=>selectClip(Number(btn.dataset.index)))); els.historyList.innerHTML = history.length ? history.map(item=>`<div class="history-item"><strong>${item.action_type}</strong><span>${item.created_at || 'recent'} · board ${Number(item.board_index || 0) + 1}</span></div>`).join('') : `<div class="history-item"><strong>No history yet</strong><span>Bootstrap the session and commit a motherboard piece.</span></div>`; }
+    function selectClip(index){ selectedClip = clips[index] || null; if(!selectedClip) return; els.kindSelect.value = selectedClip.kind || 'audio'; els.boardName.value = selectedClip.name || 'Main Track'; if(selectedClip.kind === 'video'){ els.videoPlayer.style.display = 'block'; els.audioPlayer.style.display = 'none'; els.videoPlayer.src = selectedClip.url; } else { els.audioPlayer.style.display = 'block'; els.videoPlayer.style.display = 'none'; els.audioPlayer.src = selectedClip.url; } render(); }
+    async function bootstrap(){ const data = await fetchJson(`/api/studio/session/bootstrap${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, route:'local-studio' }) }); sessionId = data.session_id; render(); setStatus(`Studio session ${sessionId} ready.`); }
+    async function record(){ if(!sessionId) await bootstrap(); mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false }); recordedChunks = []; mediaRecorder = new MediaRecorder(mediaStream); mediaRecorder.ondataavailable = (event)=>{ if(event.data?.size) recordedChunks.push(event.data); }; mediaRecorder.onstop = ()=>{ const blob = new Blob(recordedChunks,{ type: recordedChunks[0]?.type || 'audio/webm' }); const clip = { name:`Recorded ${new Date().toLocaleTimeString()}`, kind:'audio', url: URL.createObjectURL(blob), blob, fileName:'recording.webm' }; clips.unshift(clip); selectClip(0); mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; setStatus('Track recorded locally and loaded into Studio.'); }; mediaRecorder.start(); setStatus('Recording track...'); }
+    function stopPlayback(){ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } if(!els.audioPlayer.paused) els.audioPlayer.pause(); if(!els.videoPlayer.paused) els.videoPlayer.pause(); }
+    function playSelected(){ if(!selectedClip) return setStatus('Load a clip first.'); if(selectedClip.kind === 'video'){ els.videoPlayer.play(); } else { els.audioPlayer.play(); } setStatus(`Playing ${selectedClip.name}.`); }
+    function pauseSelected(){ els.audioPlayer.pause(); els.videoPlayer.pause(); setStatus('Playback paused.'); }
+    async function commitBoard(){ if(!sessionId) await bootstrap(); if(!selectedClip) throw new Error('select_clip_first'); const board = { name: els.boardName.value || selectedClip.name || 'Main Track', kind: els.kindSelect.value, fileName: selectedClip.fileName || selectedClip.name, url: selectedClip.url, fxPreset: els.fxPreset.value, highlighted:true }; await fetchJson(`/api/studio/board/commit${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, board_index: 0, active_board: 0, action_type:'commit', board }) }); setStatus('Motherboard committed.'); }
+    async function applyFx(){ if(!sessionId) await bootstrap(); const data = await fetchJson(`/api/studio/fx/apply${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, board_index: 0, fxPreset: els.fxPreset.value, gigFilter: els.fxPreset.value, gigPan:'center', gigZoom: els.fxPreset.value === 'zoom' ? '1.2x' : '1x', gigSlowMotion:'off' }) }); setStatus(`FX applied: ${data.fx.fxPreset}.`); }
+    async function exportTrack(){ if(!sessionId) await bootstrap(); const data = await fetchJson(`/api/studio/export${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, board_index: 0, destination: els.destination.value || 'Main Studio' }) }); els.exportCard.textContent = `${data.summary.board_name} → ${data.destination}`; setStatus('Studio export registered.'); }
+    async function loadHistory(){ if(!sessionId) await bootstrap(); const data = await fetchJson(`/api/studio/session/history${qs}&session_id=${encodeURIComponent(sessionId)}`); history = data.history || []; render(); setStatus('Studio history loaded.'); }
+    function downloadLocal(){ if(!selectedClip?.blob) return setStatus('The selected clip does not have a downloadable local blob yet.'); const a = document.createElement('a'); a.href = selectedClip.url; a.download = selectedClip.fileName || 'studio-track.webm'; document.body.appendChild(a); a.click(); a.remove(); setStatus('Local file download started.'); }
+    els.fileInput.addEventListener('change', ()=>{ const file = els.fileInput.files?.[0]; if(!file) return; const clip = { name:file.name, kind: file.type.startsWith('video') ? 'video' : 'audio', url: URL.createObjectURL(file), blob:file, fileName:file.name }; clips.unshift(clip); selectClip(0); setStatus(`${file.name} imported into Studio.`); });
+    document.getElementById('bootstrapBtn').addEventListener('click', ()=>bootstrap().catch(error=>setStatus(`Error: ${error.message}`)));
+    document.getElementById('recordBtn').addEventListener('click', ()=>record().catch(error=>setStatus(`Error: ${error.message}`)));
+    document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+    document.getElementById('playBtn').addEventListener('click', playSelected);
+    document.getElementById('pauseBtn').addEventListener('click', pauseSelected);
+    document.getElementById('commitBtn').addEventListener('click', ()=>commitBoard().catch(error=>setStatus(`Error: ${error.message}`)));
+    document.getElementById('applyFxBtn').addEventListener('click', ()=>applyFx().catch(error=>setStatus(`Error: ${error.message}`)));
+    document.getElementById('exportBtn').addEventListener('click', ()=>exportTrack().catch(error=>setStatus(`Error: ${error.message}`)));
+    document.getElementById('historyBtn').addEventListener('click', ()=>loadHistory().catch(error=>setStatus(`Error: ${error.message}`)));
+    document.getElementById('downloadBtn').addEventListener('click', downloadLocal);
+    render(); setStatus('Studio app loaded.');
+  </script>
+</body>
+</html>

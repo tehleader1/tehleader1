@@ -6266,6 +6266,11 @@ def local_faq_shell():
     return send_from_directory("static", "local-faq.html")
 
 
+@app.route("/local-studio")
+def local_studio_shell():
+    return send_from_directory("static", "local-studio.html")
+
+
 @app.route("/api/local-remote/bootstrap")
 def local_remote_bootstrap():
     user = session.get("user") or {}
