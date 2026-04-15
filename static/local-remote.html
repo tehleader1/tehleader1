@@ -51,7 +51,7 @@
     .sub{color:var(--muted);line-height:1.55;margin-top:12px}
     .left-rail{display:grid;grid-template-rows:auto auto 1fr;gap:18px}
     .badge-grid,.stack-list{display:grid;gap:12px}
-    .badge,.stack-card,.sticky-card,.panel-card,.menu-chip,.voice-bubble{
+    .badge,.stack-card,.sticky-card,.panel-card,.menu-chip,.voice-bubble,.live-app-stage{
       border-radius:20px;
       border:1px solid var(--line);
       background:var(--panel-soft);
@@ -59,7 +59,7 @@
     .badge,.stack-card,.sticky-card,.panel-card{padding:14px}
     .badge strong,.stack-card strong,.panel-card strong{display:block;color:var(--text)}
     .badge small,.stack-card small,.panel-card small{color:var(--muted)}
-    .center-stage{padding:16px;display:grid;grid-template-rows:auto auto auto 1fr;gap:14px;position:relative;overflow:visible}
+    .center-stage{padding:16px;display:grid;grid-template-rows:auto auto auto auto 1fr;gap:14px;position:relative;overflow:visible}
     .catalog-strip{
       display:grid;
       grid-template-columns:repeat(3,minmax(0,1fr));
@@ -106,6 +106,22 @@
     .feature-list{display:grid;gap:10px;margin-top:16px}
     .feature-item{padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted)}
     .feature-item strong{display:block;color:var(--text);margin-bottom:4px}
+    .launch-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+    .launch-row button{
+      min-height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line);cursor:pointer;
+      background:rgba(255,255,255,.08);color:var(--text);font-weight:700
+    }
+    .live-app-stage{padding:14px;background:rgba(7,15,29,.72)}
+    .live-app-stage__head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .live-app-stage__meta{color:var(--muted);max-width:720px;line-height:1.55}
+    .live-app-stage__actions{display:flex;gap:10px;flex-wrap:wrap}
+    .live-app-stage__actions button,.live-app-stage__actions a{
+      min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);
+      color:var(--text);font-weight:700;text-decoration:none;display:inline-flex;align-items:center
+    }
+    .live-app-frame{
+      width:100%;height:760px;margin-top:14px;border:none;border-radius:18px;background:#06101b;box-shadow:inset 0 0 0 1px rgba(181,224,255,.1)
+    }
     .sticky-wrap{display:grid;gap:14px}
     .right-rail{
       padding:0;
@@ -159,10 +175,11 @@
     .voice-bubble strong{display:block;margin-bottom:6px}
     .voice-bubble span{color:var(--muted)}
     @media (max-width: 1280px){
-      .local-shell{grid-template-columns:1fr;grid-template-rows:auto auto auto;overflow:auto;height:100vh}
+      .local-shell{grid-template-columns:1fr;grid-template-rows:auto auto auto;overflow:auto;height:auto}
       .panel-stack,.button-grid,.catalog-strip{grid-template-columns:1fr}
       .assistant-layer{position:fixed;inset:0}
       .right-rail{position:static}
+      .live-app-frame{height:620px}
     }
   </style>
 </head>
@@ -232,6 +249,10 @@
           <h2 id="panelTitle">Diary Mode</h2>
           <p id="panelBody">The diary workspace is the emotional and live-social center for SupportRD. This local page lets us rebuild that shell without fighting the live site.</p>
           <div class="feature-list" id="panelFeatures"></div>
+          <div class="launch-row">
+            <button id="openLiveModuleBtn" type="button">Open working module here</button>
+            <button id="reloadLiveModuleBtn" type="button">Reload module</button>
+          </div>
         </article>
         <article class="panel-card glass">
           <div class="eyebrow">Local Direction</div>
@@ -242,6 +263,21 @@
             <div class="feature-item"><strong>Keep roaming assistants</strong><span>Aria and Jake move around this sandbox and can be tuned here.</span></div>
           </div>
         </article>
+      </section>
+
+      <section class="live-app-stage glass">
+        <div class="live-app-stage__head">
+          <div>
+            <div class="eyebrow">Working Module Stage</div>
+            <h2 id="liveAppTitle" style="margin:0;font-size:30px;font-family:'Cormorant Garamond', Georgia, serif">Diary module live stage</h2>
+            <p class="live-app-stage__meta" id="liveAppMeta">This panel loads the real SupportRD module inside the sandbox so Diary, Studio, and Profile actually function here while we edit the floor plan.</p>
+          </div>
+          <div class="live-app-stage__actions">
+            <button id="liveAppOpenBtn" type="button">Open current module</button>
+            <a id="liveAppNewTab" href="/remote" target="_blank" rel="noreferrer">Open in new tab</a>
+          </div>
+        </div>
+        <iframe class="live-app-frame" id="liveAppFrame" title="SupportRD live module stage" loading="lazy"></iframe>
       </section>
 
       <div class="assistant-layer">
@@ -311,6 +347,10 @@
         eyebrow: "SupportRD Diary",
         title: "Diary Mode",
         body: "Diary is the live feed and recording lane. In this local sandbox, it keeps the old big button feel while we rebuild comments, sessions, and the lobby cleanly.",
+        appTitle: "Diary module live stage",
+        appMeta: "Loads the real SupportRD Remote and opens the Diary lane so lobby, comments, and session tools stay functional while we edit locally.",
+        appSrc: "/remote",
+        appSelector: "#floatLaunchDiary",
         features: [
           ["Live sessions", "Diary lobby, comments, guest support, and direct links."],
           ["Recording lane", "Hands-free, diary record, and live session flow."],
@@ -321,6 +361,10 @@
         eyebrow: "SupportRD Studio",
         title: "Studio Quick Panel",
         body: "Studio should feel like its own app. Here we keep the six-button remote feel while giving it a dedicated recording and waveform staging area.",
+        appTitle: "Studio module live stage",
+        appMeta: "Loads the real Studio app directly so recording, waveform, and booth behavior are available inside the sandbox.",
+        appSrc: "/studio",
+        appSelector: "",
         features: [
           ["Record", "Mic, camera, waveform, motherboard, and exports."],
           ["Jake lane", "Jake is tied to the studio voice and editing booth."],
@@ -331,6 +375,10 @@
         eyebrow: "SupportRD Configuration",
         title: "Configuration",
         body: "Settings stays as the calm pit-stop: notifications, URL entrances, scanner visibility, and route control without the live site getting messy.",
+        appTitle: "Settings module live stage",
+        appMeta: "Loads the real Remote and opens the Settings lane so configuration work is live while we keep editing the sandbox shell.",
+        appSrc: "/remote",
+        appSelector: "#floatLaunchSettings",
         features: [
           ["Push notifications", "Clear toggles and route guidance."],
           ["URL entrances", "SupportRD links and route entry points."],
@@ -341,6 +389,10 @@
         eyebrow: "SupportRD Map",
         title: "Map Change",
         body: "Map Change is the pit stop button. It should hold general information, ads, the map itself, and perks details on the side.",
+        appTitle: "Map Change module live stage",
+        appMeta: "Loads the real Remote and opens the map lane so we can keep perks, ads, and trail switching tied to the working app.",
+        appSrc: "/remote",
+        appSelector: "#floatLaunchMap",
         features: [
           ["General info", "Where the route is headed and why."],
           ["Ads / perks", "Promos and feature support without clutter."],
@@ -351,6 +403,10 @@
         eyebrow: "SupportRD FAQ Lounge",
         title: "FAQ Lounge",
         body: "FAQ Lounge is the social-world view. It should stay relaxing with a reel feel while still helping configure fast support details.",
+        appTitle: "FAQ Lounge live stage",
+        appMeta: "Loads the real Remote and opens FAQ Lounge so the reel, answers, and configuration help stay live inside the sandbox.",
+        appSrc: "/remote",
+        appSelector: "#floatLaunchFaq",
         features: [
           ["TV reel feel", "Quick relaxed support clips and direct FAQ answers."],
           ["Trail support", "URL and push changes without stress."],
@@ -361,6 +417,10 @@
         eyebrow: "SupportRD Profile",
         title: "Profile",
         body: "Profile is the identity and hair credential lane. It should hold verification, analysis, and exports in one polished place.",
+        appTitle: "Profile module live stage",
+        appMeta: "Loads the real Remote and opens the Profile lane so identity, scanner, and export tools actually work inside this local build page.",
+        appSrc: "/remote",
+        appSelector: "#floatLaunchProfile",
         features: [
           ["Identity", "Real person, profile picture, and account confidence."],
           ["Hair credentials", "Texture, damage, type, and summary."],
@@ -382,11 +442,54 @@
     const voiceBubbleText = document.getElementById("voiceBubbleText");
     const localAria = document.getElementById("localAria");
     const localJake = document.getElementById("localJake");
+    const liveAppTitle = document.getElementById("liveAppTitle");
+    const liveAppMeta = document.getElementById("liveAppMeta");
+    const liveAppFrame = document.getElementById("liveAppFrame");
+    const liveAppOpenBtn = document.getElementById("liveAppOpenBtn");
+    const liveAppNewTab = document.getElementById("liveAppNewTab");
+    const openLiveModuleBtn = document.getElementById("openLiveModuleBtn");
+    const reloadLiveModuleBtn = document.getElementById("reloadLiveModuleBtn");
 
     let activePanel = "diary";
     let roamTick = 0;
+    let panelBootToken = 0;
 
-    function renderPanel(panelKey){
+    function triggerFramePanel(meta, token, tries = 0){
+      if(!meta?.appSelector || token !== panelBootToken) return;
+      let doc;
+      try{
+        doc = liveAppFrame.contentDocument || liveAppFrame.contentWindow?.document;
+      }catch{
+        return;
+      }
+      const target = doc?.querySelector(meta.appSelector);
+      if(target){
+        target.click();
+        return;
+      }
+      if(tries < 18){
+        setTimeout(()=>triggerFramePanel(meta, token, tries + 1), 350);
+      }
+    }
+
+    function syncLiveApp(meta, forceReload = false){
+      const targetSrc = meta.appSrc;
+      liveAppTitle.textContent = meta.appTitle;
+      liveAppMeta.textContent = meta.appMeta;
+      liveAppNewTab.href = targetSrc;
+      if(forceReload || !liveAppFrame.dataset.currentSrc || liveAppFrame.dataset.currentSrc !== targetSrc){
+        liveAppFrame.dataset.currentSrc = targetSrc;
+        panelBootToken += 1;
+        const token = panelBootToken;
+        liveAppFrame.onload = ()=>triggerFramePanel(meta, token, 0);
+        liveAppFrame.src = targetSrc;
+        return;
+      }
+      panelBootToken += 1;
+      triggerFramePanel(meta, panelBootToken, 0);
+    }
+
+    function renderPanel(panelKey, forceReload = false){
       activePanel = panelKey;
       const meta = panelMeta[panelKey];
       buttonGrid.querySelectorAll(".shell-btn").forEach((button)=>button.classList.toggle("active", button.dataset.panel === panelKey));
@@ -395,6 +498,7 @@
       panelBody.textContent = meta.body;
       activePanelName.textContent = meta.title;
       panelFeatures.innerHTML = meta.features.map(([title, copy])=>`<div class="feature-item"><strong>${title}</strong><span>${copy}</span></div>`).join("");
+      syncLiveApp(meta, forceReload);
       roamAssistants(true);
     }
 
@@ -403,6 +507,10 @@
       if(!button) return;
       renderPanel(button.dataset.panel);
     });
+
+    liveAppOpenBtn.addEventListener("click", ()=>renderPanel(activePanel, true));
+    openLiveModuleBtn.addEventListener("click", ()=>renderPanel(activePanel, true));
+    reloadLiveModuleBtn.addEventListener("click", ()=>liveAppFrame.contentWindow?.location.reload());
 
     function cueTone(type){
       try{
@@ -490,7 +598,7 @@
 
     window.addEventListener("resize", ()=>roamAssistants(true));
     setInterval(()=>roamAssistants(false), 2400);
-    renderPanel("diary");
+    renderPanel("diary", true);
   </script>
 </body>
 </html>
