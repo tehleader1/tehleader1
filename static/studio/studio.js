@@ -1173,6 +1173,16 @@ function setupStudioRadio() {
   audio.loop = false;
 
   const hasConstructedSession = () => placements.some((item) => item.audioId && Number.isFinite(Number(item.timeSec)));
+  const getSelectedPlacementSource = () => {
+    const placement = getSelectedPlacement();
+    const source = getPlacementAudioSource(placement);
+    if (!placement || !source?.url) return null;
+    return {
+      title: placement.audioName || source.name || "Selected placement",
+      src: source.url,
+      placementId: placement.id
+    };
+  };
 
   const revokeMixObjectUrl = () => {
     if (!mixObjectUrl) return;
@@ -1240,7 +1250,16 @@ function setupStudioRadio() {
 
   const play = async () => {
     try {
-      if (hasConstructedSession()) {
+      const selectedSource = getSelectedPlacementSource();
+      if (selectedSource) {
+        revokeMixObjectUrl();
+        audio.pause();
+        audio.src = selectedSource.src;
+        audio.currentTime = 0;
+        playBtn.textContent = "Play";
+        track.textContent = `Selected Clip: ${selectedSource.title}`;
+        status.textContent = "Playing the selected motherboard clip."
+      } else if (hasConstructedSession()) {
         const built = await buildConstructedMix();
         if (built?.blob) {
           revokeMixObjectUrl();
@@ -1256,7 +1275,9 @@ function setupStudioRadio() {
       }
       await audio.play();
       playBtn.textContent = "Pause";
-      if (hasConstructedSession()) {
+      if (selectedSource) {
+        status.textContent = `Now playing selected clip: ${selectedSource.title}`
+      } else if (hasConstructedSession()) {
         status.textContent = "Now playing the combined motherboard mix."
       } else {
         const activeList = getSessionPlaylist();
@@ -1271,6 +1292,10 @@ function setupStudioRadio() {
     audio.pause();
     audio.currentTime = 0;
     playBtn.textContent = "Play";
+    if (getSelectedPlacementSource()) {
+      status.textContent = "Stopped the selected motherboard clip."
+      return;
+    }
     if (hasConstructedSession()) {
       status.textContent = "Stopped the full motherboard mix."
       return;
@@ -1280,6 +1305,11 @@ function setupStudioRadio() {
   };
 
   const stepTrack = async (delta) => {
+    if (getSelectedPlacementSource()) {
+      audio.currentTime = Math.max(0, (audio.currentTime || 0) + (delta < 0 ? -5 : 5));
+      status.textContent = `${delta < 0 ? "Rewound" : "Moved forward"} 5 seconds on the selected clip.`
+      return;
+    }
     if (hasConstructedSession()) {
       audio.currentTime = 0;
       if (!audio.paused) await play();
@@ -1308,6 +1338,10 @@ function setupStudioRadio() {
   prevBtn.addEventListener("click", async () => { await stepTrack(-1); });
   nextBtn.addEventListener("click", async () => { await stepTrack(1); });
   audio.addEventListener("ended", async () => {
+    if (getSelectedPlacementSource()) {
+      stop();
+      return;
+    }
     if (hasConstructedSession()) {
       stop();
       return;
@@ -1462,6 +1496,7 @@ async function startRecording() {
   if (isRecording) return;
   try {
     currentMicStream = await ensureStudioDeviceReady({ audio: true, source: "studio" });
+    const micLabel = currentMicStream?.getAudioTracks?.()[0]?.label || studioDeviceState.micLabel || "your microphone";
     currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
     const source = currentAudioContext.createMediaStreamSource(currentMicStream);
     currentAnalyser = currentAudioContext.createAnalyser();
@@ -1471,7 +1506,12 @@ async function startRecording() {
     source.connect(currentAnalyser);
 
     recordingChunks = [];
-    mediaRecorder = new MediaRecorder(currentMicStream);
+    const mimeType = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4"
+    ].find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || "";
+    mediaRecorder = mimeType ? new MediaRecorder(currentMicStream, { mimeType }) : new MediaRecorder(currentMicStream);
     mediaRecorder.ondataavailable = (event) => {
       if (event.data && event.data.size > 0) recordingChunks.push(event.data);
     };
@@ -1504,6 +1544,7 @@ async function startRecording() {
       currentWaveProbe = null;
       renderPlacementAudioOptions();
       renderPlacements();
+      window.__studioRadio?.loadPlacement?.(placement?.id || 0);
       window.__studioRadio?.refresh?.();
       renderProfileStats();
       setStatus("#placementStatus", `Recording saved to ${placement?.trackId || "the selected motherboard"}.`);
@@ -1524,7 +1565,7 @@ async function startRecording() {
     qs("#recordMainBtn")?.classList.add("is-recording");
     qs("#timelineRecordBtn")?.classList.add("is-recording");
     recordingTick = setInterval(updateLiveWaveFromMic, 220);
-    setStatus("#placementStatus", "Recording ON · live waveform is drawing now.");
+    setStatus("#placementStatus", `Recording ON · ${micLabel} is live and the waveform is drawing now.`);
   } catch {
     setStatus("#placementStatus", "Recording needs browser microphone permission before the booth can go live.");
   }

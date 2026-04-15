@@ -176,9 +176,32 @@
       box-shadow:0 18px 42px rgba(0,0,0,.32);pointer-events:auto;cursor:pointer;transition:left .55s ease,top .55s ease,transform .2s ease
     }
     .assistant:hover{transform:translateY(-2px)}
-    .orb{width:54px;height:54px;border-radius:50%}
+    .orb{
+      width:54px;height:54px;border-radius:50%;position:relative;overflow:visible;
+      animation:orbPulse 2.7s ease-in-out infinite;
+      box-shadow:0 0 0 0 rgba(121,184,255,.25), 0 0 32px rgba(121,184,255,.22)
+    }
+    .orb::before,.orb::after{
+      content:"";position:absolute;inset:-7px;border-radius:50%;pointer-events:none
+    }
+    .orb::before{
+      border:1px solid rgba(255,255,255,.22);
+      animation:orbHalo 2.3s ease-in-out infinite
+    }
+    .orb::after{
+      inset:-12px;
+      background:
+        radial-gradient(circle at 22% 22%, rgba(255,255,255,.55), transparent 18%),
+        radial-gradient(circle at 72% 34%, rgba(255,255,255,.35), transparent 14%),
+        radial-gradient(circle at 44% 76%, rgba(255,255,255,.28), transparent 12%);
+      mix-blend-mode:screen;opacity:.7;
+      animation:orbGlitter 1.9s linear infinite
+    }
     .aria-orb{background:radial-gradient(circle at 35% 35%, #a7fbff, #53a7ff 55%, #253f6f)}
-    .jake-orb{background:radial-gradient(circle at 35% 35%, #ffecc1, #d5a96d 55%, #5a3e1f)}
+    .jake-orb{background:radial-gradient(circle at 35% 35%, #ffecc1, #d5a96d 55%, #5a3e1f);box-shadow:0 0 0 0 rgba(255,208,134,.2), 0 0 32px rgba(255,208,134,.18)}
+    .assistant:nth-child(2) .orb{animation-duration:2.2s}
+    .assistant:nth-child(2) .orb::before{animation-duration:2.6s}
+    .assistant:nth-child(2) .orb::after{animation-duration:1.6s}
     .assistant-copy strong{display:block;font-size:16px}
     .assistant-copy small{color:var(--muted)}
     .voice-bubble{
@@ -188,6 +211,21 @@
     .voice-bubble.active{display:block}
     .voice-bubble strong{display:block;margin-bottom:6px}
     .voice-bubble span{color:var(--muted)}
+    @keyframes orbPulse{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.06)}
+    }
+    @keyframes orbHalo{
+      0%,100%{transform:scale(1);opacity:.45}
+      50%{transform:scale(1.15);opacity:.9}
+    }
+    @keyframes orbGlitter{
+      0%{transform:translate(0,0) rotate(0deg);opacity:.35;filter:hue-rotate(0deg)}
+      25%{transform:translate(2px,-1px) rotate(5deg);opacity:.7}
+      50%{transform:translate(-2px,2px) rotate(-6deg);opacity:.42;filter:hue-rotate(12deg)}
+      75%{transform:translate(1px,-2px) rotate(4deg);opacity:.72}
+      100%{transform:translate(0,0) rotate(0deg);opacity:.35;filter:hue-rotate(0deg)}
+    }
     @media (max-width: 1280px){
       .local-shell{grid-template-columns:1fr;grid-template-rows:auto auto auto;overflow:auto;height:auto}
       .panel-stack,.button-grid,.catalog-strip{grid-template-columns:1fr}
@@ -508,8 +546,93 @@
     let currentDiarySessionId = "";
     let currentStudioSessionId = "";
 
+    const voiceKnowledge = {
+      Aria: {
+        diary: [
+          "Aria here. Diary Mode is open, and I can help with the hair problem, the live session, or the account history behind it.",
+          "Diary live is on my side now. Tell me the real hair issue and I will cut straight to the answer, the support lane, and the right package."
+        ],
+        studio: [
+          "Aria here. Studio is open, and I can help connect the recording, the motherboard, the FX lane, and the product support behind it.",
+          "Studio support is live. Tell me whether you need recording, playback, motherboard cleanup, or the premium lane behind Jake."
+        ],
+        settings: [
+          "Aria here. Settings is the pit stop for account changes, push details, saved tags, and the route memory behind your profile.",
+          "Settings is open. I can help with notifications, saved links, account flow, and the profile changes tied to the person."
+        ],
+        map: [
+          "Aria here. Map Change is open. Tell me the route, the mood, or the last map memory you want me to hold for the account.",
+          "Map Change is listening now. I can guide the trail, the remembered route, and the side perks tied to the same person."
+        ],
+        faq: [
+          "Aria here. FAQ Lounge is open, and I can move between relaxed answers, Developer Feed support, and direct SupportRD setup help.",
+          "FAQ Lounge is active. Ask the question, drop the developer note, or let me route you into the exact support lane."
+        ],
+        profile: [
+          "Aria here. Profile is open. I can confirm identity, status, hair scan memory, exports, and the right care lane from account history.",
+          "Profile scanner is active. Tell me if you want identity confirmation, hair texture help, damage review, or the more advanced package talk."
+        ]
+      },
+      Jake: {
+        diary: [
+          "Jake here. Diary Mode is ready. I can help with live support, account continuity, family memory, and the direct hair issue in front of you.",
+          "Diary is active now. Give me the exact problem and I will answer directly with advanced, inner-circle, or professional SupportRD logic."
+        ],
+        studio: [
+          "Jake here. Studio is live. I can guide recording, playback, motherboard building, instrument hookup, and the money-making studio lane.",
+          "Studio support is ready. Tell me if you need the recorded file to play, the motherboard aligned, or the next premium move for the booth."
+        ],
+        settings: [
+          "Jake here. Settings is open. I can help tie account changes, route saves, push state, and profile continuity into one clean system.",
+          "Configuration is listening. Tell me what should change in the account, the route memory, or the voice profile."
+        ],
+        map: [
+          "Jake here. Map Change is open. I can help remember the route, move the theme, and keep the whole remote focused on the right stop.",
+          "Map lane is active. Tell me what trail or remembered route you want locked in for the next session."
+        ],
+        faq: [
+          "Jake here. FAQ Lounge is open. I can answer directly, open Developer Feed thinking, and keep the support world social without losing precision.",
+          "FAQ is active. Ask the question, push a developer note, or let me route you into the exact SupportRD lane."
+        ],
+        profile: [
+          "Jake here. Profile is open. I can work through identity, hair credentials, texture, damage, exports, and the advanced support path.",
+          "Profile verification is live. Tell me if you want the scanner read, the hair summary, or the professional lane behind the account."
+        ]
+      }
+    };
+
     function focusFrameTarget(meta, doc){
       if(!meta?.appFocusSelector || !doc) return;
+      if(!doc.getElementById("localRemoteIframeFocusStyle")){
+        const injectedFrameStyle = doc.createElement("style");
+        injectedFrameStyle.id = "localRemoteIframeFocusStyle";
+        injectedFrameStyle.textContent = `
+          .supportrd-os-shell,
+          .supportrd-shell-v2,
+          #remotePurchaseEditor,
+          #remoteDiaryLobby,
+          #remoteEditsMenu,
+          .float-mode-bottom,
+          .float-mode-sticky-bottom,
+          #scannerHud,
+          #supportRDMapOverlay,
+          .remote-fastpay-processing,
+          .remote-purchase-editor,
+          .remote-diary-lobby,
+          .remote-edits-menu {
+            display:none !important;
+          }
+          body{
+            overflow:auto !important;
+            background:#091423 !important;
+          }
+          #floatModeShell{
+            padding:0 !important;
+            background:transparent !important;
+          }
+        `;
+        doc.head?.appendChild(injectedFrameStyle);
+      }
       const focusNode = doc.querySelector(meta.appFocusSelector);
       if(focusNode && typeof focusNode.scrollIntoView === "function"){
         focusNode.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1061,9 +1184,9 @@
 
     async function runVoiceSequence(who){
       cueTone("intro");
-      const greeting = who === "Jake"
-        ? "Jake here. Studio support is ready. How may I help you?"
-        : "Aria here. How may I help you?";
+      const options = voiceKnowledge[who]?.[activePanel] || voiceKnowledge[who]?.diary || ["SupportRD voice is ready."];
+      const rotationIndex = Math.floor(Date.now() / 4000) % options.length;
+      const greeting = options[rotationIndex];
       voiceConsoleTitle.textContent = `${who} greeting`;
       voiceConsoleText.textContent = greeting;
       voiceBubbleTitle.textContent = `${who} Website Voice`;
@@ -1079,9 +1202,28 @@
       voiceConsoleText.textContent = "Transcribing, checking history, and preparing the response.";
       voiceBubbleText.textContent = "Transcribing and preparing the response now.";
       await new Promise((resolve)=>setTimeout(resolve, 1400));
-      const response = who === "Jake"
-        ? "Studio response complete. I am ready for the next studio command."
-        : "Hair support response complete. I am ready for the next hair question.";
+      const response = (() => {
+        if(activePanel === "diary"){
+          return who === "Jake"
+            ? "I can move from greeting into advanced, inner circle, or professional money-making support as soon as you tell me the real hair pressure."
+            : "Tell me the hair problem and I can rotate between greeting, advanced detail, inner circle family support, payments, or the professional lane."
+        }
+        if(activePanel === "studio"){
+          return who === "Jake"
+            ? "I can help you record, play back the selected motherboard clip, shape the FX lane, and connect the studio package to the account."
+            : "I can support the booth, the recording lane, the motherboard, and the product/account side behind the studio."
+        }
+        if(activePanel === "profile"){
+          return "I can confirm identity, status, texture, damage, color, and the next SupportRD lane from the stored account history."
+        }
+        if(activePanel === "settings"){
+          return "I can help with push settings, saved routes, voice profile, and account continuity without losing the person behind the profile."
+        }
+        if(activePanel === "map"){
+          return "I can remember the last map used, shift the route, and keep the perks and support lanes connected to the same account."
+        }
+        return "I can answer directly, open the developer feed lane, and route you into the exact SupportRD support path you need."
+      })();
       voiceConsoleTitle.textContent = `${who} response`;
       voiceConsoleText.textContent = response;
       voiceBubbleText.textContent = response;
