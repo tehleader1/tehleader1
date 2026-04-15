@@ -51,7 +51,7 @@
     .sub{color:var(--muted);line-height:1.55;margin-top:12px}
     .left-rail{display:grid;grid-template-rows:auto auto 1fr;gap:18px}
     .badge-grid,.stack-list{display:grid;gap:12px}
-    .badge,.stack-card,.sticky-card,.panel-card,.menu-chip,.voice-bubble,.live-app-stage{
+    .badge,.stack-card,.sticky-card,.panel-card,.menu-chip,.voice-bubble,.live-app-stage,.api-action-board{
       border-radius:20px;
       border:1px solid var(--line);
       background:var(--panel-soft);
@@ -122,6 +122,20 @@
     .live-app-frame{
       width:100%;height:760px;margin-top:14px;border:none;border-radius:18px;background:#06101b;box-shadow:inset 0 0 0 1px rgba(181,224,255,.1)
     }
+    .api-action-board{padding:16px;background:rgba(8,18,33,.78)}
+    .api-action-board__head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .api-action-board__meta{color:var(--muted);max-width:760px;line-height:1.55}
+    .api-action-board__status{margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted)}
+    .api-action-board__controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+    .api-action-board__controls input,.api-action-board__controls select,.api-action-board__controls textarea{
+      width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);font:inherit
+    }
+    .api-action-board__controls textarea{min-height:120px;resize:vertical}
+    .api-action-board__buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .api-action-board__buttons button{
+      min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer
+    }
+    .api-action-board__feed{display:grid;gap:10px;margin-top:14px}
     .sticky-wrap{display:grid;gap:14px}
     .right-rail{
       padding:0;
@@ -278,6 +292,25 @@
           </div>
         </div>
         <iframe class="live-app-frame" id="liveAppFrame" title="SupportRD live module stage" loading="lazy"></iframe>
+      </section>
+
+      <section class="api-action-board glass">
+        <div class="api-action-board__head">
+          <div>
+            <div class="eyebrow">API Action Board</div>
+            <h2 id="apiActionTitle" style="margin:0;font-size:30px;font-family:'Cormorant Garamond', Georgia, serif">Diary API controls</h2>
+            <p class="api-action-board__meta" id="apiActionMeta">Use these local controls to hit the real APIs for the active panel instead of only looking at summaries.</p>
+          </div>
+        </div>
+        <div class="api-action-board__status" id="apiActionStatus">Action board is ready.</div>
+        <div class="api-action-board__controls">
+          <input id="apiFieldOne" placeholder="Primary field">
+          <input id="apiFieldTwo" placeholder="Secondary field">
+          <textarea id="apiFieldBody" placeholder="Main payload text"></textarea>
+          <textarea id="apiResultBody" placeholder="API results will appear here" readonly></textarea>
+        </div>
+        <div class="api-action-board__buttons" id="apiActionButtons"></div>
+        <div class="api-action-board__feed" id="apiActionFeed"></div>
       </section>
 
       <div class="assistant-layer">
@@ -458,11 +491,22 @@
     const diaryLobbyList = document.getElementById("diaryLobbyList");
     const editsMenuList = document.getElementById("editsMenuList");
     const paymentsMenuList = document.getElementById("paymentsMenuList");
+    const apiActionTitle = document.getElementById("apiActionTitle");
+    const apiActionMeta = document.getElementById("apiActionMeta");
+    const apiActionStatus = document.getElementById("apiActionStatus");
+    const apiActionButtons = document.getElementById("apiActionButtons");
+    const apiActionFeed = document.getElementById("apiActionFeed");
+    const apiFieldOne = document.getElementById("apiFieldOne");
+    const apiFieldTwo = document.getElementById("apiFieldTwo");
+    const apiFieldBody = document.getElementById("apiFieldBody");
+    const apiResultBody = document.getElementById("apiResultBody");
 
     let activePanel = "diary";
     let roamTick = 0;
     let panelBootToken = 0;
     let bootstrapData = null;
+    let currentDiarySessionId = "";
+    let currentStudioSessionId = "";
 
     function focusFrameTarget(meta, doc){
       if(!meta?.appFocusSelector || !doc) return;
@@ -598,9 +642,352 @@
         const data = await response.json();
         if(!data?.ok) return;
         bootstrapData = data;
+        currentDiarySessionId = data.diary?.recent_sessions?.[0]?.session_id || currentDiarySessionId;
+        currentStudioSessionId = data.studio?.recent_sessions?.[0]?.session_id || currentStudioSessionId;
         renderStickyLists();
         renderPanel(activePanel);
       }catch{}
+    }
+
+    function setActionStatus(message){
+      apiActionStatus.textContent = message;
+    }
+
+    function setActionResult(value){
+      apiResultBody.value = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    }
+
+    function renderFeedItems(items, formatter){
+      apiActionFeed.innerHTML = (items || []).length
+        ? items.map(formatter).join("")
+        : `<div class="mini-item"><strong>Waiting</strong><span>No API items yet for this panel.</span></div>`;
+    }
+
+    async function callJson(url, options = {}){
+      const response = await fetch(url, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+      const data = await response.json().catch(()=>({ ok: false, error: "invalid_json" }));
+      if(!response.ok || data?.ok === false){
+        throw new Error(data?.error || `request_failed_${response.status}`);
+      }
+      return data;
+    }
+
+    async function exportProfileFile(format){
+      const payload = {
+        display_name: bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || "SupportRD Host",
+        texture: apiFieldOne.value || bootstrapData?.profile?.hair_analysis?.texture || "waiting",
+        damage: apiFieldTwo.value || bootstrapData?.profile?.hair_analysis?.damage || "waiting",
+        color: bootstrapData?.profile?.hair_analysis?.color || "waiting",
+        hair_type: bootstrapData?.profile?.hair_analysis?.hair_type || "waiting",
+        summary_text: apiFieldBody.value || bootstrapData?.profile?.hair_analysis?.summary || "No summary yet.",
+        format,
+      };
+      const response = await fetch("/api/profile/analysis/export", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if(!response.ok) throw new Error(`export_failed_${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = format === "pdf" ? "supportrd-profile.pdf" : "supportrd-profile.docx";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    const panelActions = {
+      diary: {
+        title: "Diary API controls",
+        meta: "Start or save a diary session, toggle live mode, and pull diary history directly from the real diary APIs.",
+        fieldOne: { placeholder: "^^ diary tag", value: ()=>bootstrapData?.settings?.saved_tag || "" },
+        fieldTwo: { placeholder: "Live mode: on or off", value: ()=>bootstrapData?.diary?.recent_sessions?.[0]?.live_active ? "on" : "off" },
+        body: { placeholder: "Diary entry / transcript text", value: ()=>bootstrapData?.diary?.recent_sessions?.[0]?.entry_text || bootstrapData?.diary?.recent_sessions?.[0]?.transcript || "" },
+        actions: [
+          {
+            label: "Bootstrap Diary",
+            run: async ()=>{
+              const data = await callJson("/api/diary/session/bootstrap", {
+                method: "POST",
+                body: JSON.stringify({
+                  session_id: currentDiarySessionId,
+                  profile_tag: apiFieldOne.value,
+                  live_active: apiFieldTwo.value.toLowerCase().includes("on"),
+                  entry_text: apiFieldBody.value,
+                }),
+              });
+              currentDiarySessionId = data.session_id;
+              setActionResult(data);
+              setActionStatus(`Diary session ${data.session_id} bootstrapped.`);
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Save Diary Record",
+            run: async ()=>{
+              if(!currentDiarySessionId) throw new Error("bootstrap_diary_first");
+              const data = await callJson("/api/diary/session/save", {
+                method: "POST",
+                body: JSON.stringify({
+                  session_id: currentDiarySessionId,
+                  profile_tag: apiFieldOne.value,
+                  live_active: apiFieldTwo.value.toLowerCase().includes("on"),
+                  entry_text: apiFieldBody.value,
+                  transcript: apiFieldBody.value,
+                }),
+              });
+              setActionResult(data);
+              setActionStatus("Diary record saved.");
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Load Diary Feed",
+            run: async ()=>{
+              if(!currentDiarySessionId) throw new Error("bootstrap_diary_first");
+              const data = await callJson(`/api/diary/session/feed?session_id=${encodeURIComponent(currentDiarySessionId)}`);
+              setActionResult(data);
+              renderFeedItems(data.comments || [], (item)=>`<div class="mini-item"><strong>${item.author_name || "Guest"}</strong><span>${item.comment_text || item.comment_kind || "Diary comment"}</span></div>`);
+              setActionStatus("Diary feed loaded.");
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems(bootstrapData?.diary?.recent_sessions || [], (item)=>`<div class="mini-item"><strong>${item.profile_tag || item.session_id}</strong><span>${item.entry_text || item.transcript || "Diary history waiting."}</span></div>`),
+      },
+      studio: {
+        title: "Studio API controls",
+        meta: "Bootstrap studio sessions, commit a motherboard piece, apply FX, and inspect the last 3 studio sessions through the real studio APIs.",
+        fieldOne: { placeholder: "Board name", value: ()=>"Motherboard Alpha" },
+        fieldTwo: { placeholder: "Board type: audio / video / recording", value: ()=>"audio" },
+        body: { placeholder: "FX notes / session notes", value: ()=>"Panoramic sway + clean zoom profile." },
+        actions: [
+          {
+            label: "Bootstrap Studio",
+            run: async ()=>{
+              const data = await callJson("/api/studio/session/bootstrap", {
+                method: "POST",
+                body: JSON.stringify({ session_id: currentStudioSessionId || "", route: "studio" }),
+              });
+              currentStudioSessionId = data.session_id;
+              setActionResult(data);
+              setActionStatus(`Studio session ${data.session_id} bootstrapped.`);
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Commit Motherboard",
+            run: async ()=>{
+              if(!currentStudioSessionId) throw new Error("bootstrap_studio_first");
+              const data = await callJson("/api/studio/board/commit", {
+                method: "POST",
+                body: JSON.stringify({
+                  session_id: currentStudioSessionId,
+                  board_index: 0,
+                  action_type: "commit",
+                  board: {
+                    name: apiFieldOne.value || "Motherboard Alpha",
+                    kind: apiFieldTwo.value || "audio",
+                    fileName: `${(apiFieldOne.value || "motherboard-alpha").toLowerCase().replace(/\\s+/g, "-")}.${(apiFieldTwo.value || "audio").includes("video") ? "mp4" : "mp3"}`,
+                    trimStart: 0,
+                    trimEnd: 100,
+                    fxPreset: "clean",
+                  },
+                }),
+              });
+              setActionResult(data);
+              setActionStatus("Motherboard piece committed.");
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Apply FX + History",
+            run: async ()=>{
+              if(!currentStudioSessionId) throw new Error("bootstrap_studio_first");
+              await callJson("/api/studio/fx/apply", {
+                method: "POST",
+                body: JSON.stringify({
+                  session_id: currentStudioSessionId,
+                  board_index: 0,
+                  fxPreset: "panoramic",
+                  gigFilter: "sway",
+                  gigZoom: "1.2x",
+                  fxAppliedRange: apiFieldBody.value || "whole-board",
+                }),
+              });
+              const history = await callJson(`/api/studio/session/history?session_id=${encodeURIComponent(currentStudioSessionId)}`);
+              setActionResult(history);
+              renderFeedItems(history.history || [], (item)=>`<div class="mini-item"><strong>${item.action_type}</strong><span>${JSON.stringify(item.payload || {})}</span></div>`);
+              setActionStatus("Studio FX applied and history loaded.");
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems(bootstrapData?.studio?.recent_sessions || [], (item)=>`<div class="mini-item"><strong>${item.session_id}</strong><span>${item.board_count} boards · ${item.has_audio ? "audio" : "no audio"} · ${item.has_video ? "video" : "no video"}</span></div>`),
+      },
+      settings: {
+        title: "Settings API controls",
+        meta: "Save actual account-facing preferences like display name, voice profile, saved tag, and push notification state.",
+        fieldOne: { placeholder: "Display name", value: ()=>bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || "" },
+        fieldTwo: { placeholder: "Voice profile / push: shimmer / enabled", value: ()=>`${bootstrapData?.settings?.voice_profile || "shimmer"} / ${bootstrapData?.settings?.push_notifications || "browser-driven"}` },
+        body: { placeholder: "Saved tag or settings note", value: ()=>bootstrapData?.settings?.saved_tag || "" },
+        actions: [
+          {
+            label: "Save Settings",
+            run: async ()=>{
+              const [voiceProfile, pushState] = (apiFieldTwo.value || "").split("/").map((part)=>part.trim());
+              const data = await callJson("/api/local-remote/preferences", {
+                method: "POST",
+                body: JSON.stringify({
+                  display_name: apiFieldOne.value,
+                  saved_tag: apiFieldBody.value,
+                  voice_profile: voiceProfile || "shimmer",
+                  push_notifications: /on|enabled|true/i.test(pushState || ""),
+                }),
+              });
+              setActionResult(data);
+              setActionStatus("Settings saved into local remote preferences.");
+              await loadBootstrap();
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems([{ title: "Settings", body: `${bootstrapData?.settings?.display_name || "Guest"} · ${bootstrapData?.settings?.push_notifications || "browser-driven"}` }], (item)=>`<div class="mini-item"><strong>${item.title}</strong><span>${item.body}</span></div>`),
+      },
+      map: {
+        title: "Map API controls",
+        meta: "Remember the last map used and tie the map lane back into real account-facing preferences.",
+        fieldOne: { placeholder: "Map key", value: ()=>bootstrapData?.settings?.last_map_used || "aurora" },
+        fieldTwo: { placeholder: "Saved tag", value: ()=>bootstrapData?.settings?.saved_tag || "" },
+        body: { placeholder: "Map note", value: ()=>"Remember this route for the next visit." },
+        actions: [
+          {
+            label: "Remember Map",
+            run: async ()=>{
+              const data = await callJson("/api/local-remote/preferences", {
+                method: "POST",
+                body: JSON.stringify({
+                  last_map_used: apiFieldOne.value,
+                  saved_tag: apiFieldTwo.value,
+                }),
+              });
+              setActionResult(data);
+              setActionStatus(`Map ${apiFieldOne.value || "route"} saved to account preferences.`);
+              await loadBootstrap();
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems([{ title: "Last map used", body: bootstrapData?.settings?.last_map_used || "none" }], (item)=>`<div class="mini-item"><strong>${item.title}</strong><span>${item.body}</span></div>`),
+      },
+      faq: {
+        title: "FAQ Lounge API controls",
+        meta: "Post to the Developers Feed from FAQ Lounge and load the latest social-world posts from the backend.",
+        fieldOne: { placeholder: "Display name", value: ()=>bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || "SupportRD Guest" },
+        fieldTwo: { placeholder: "Feed lane", value: ()=>"Developers Feed" },
+        body: { placeholder: "Post to Developers Feed", value: ()=>"" },
+        actions: [
+          {
+            label: "Post To Developers Feed",
+            run: async ()=>{
+              const data = await callJson("/api/local-remote/faq/posts", {
+                method: "POST",
+                body: JSON.stringify({
+                  display_name: apiFieldOne.value,
+                  message: apiFieldBody.value,
+                }),
+              });
+              setActionResult(data);
+              renderFeedItems(data.posts || [], (item)=>`<div class="mini-item"><strong>${item.display_name}</strong><span>${item.message}</span></div>`);
+              setActionStatus("Developers Feed updated.");
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Load Developers Feed",
+            run: async ()=>{
+              const data = await callJson("/api/local-remote/faq/posts");
+              setActionResult(data);
+              renderFeedItems(data.posts || [], (item)=>`<div class="mini-item"><strong>${item.display_name}</strong><span>${item.message}</span></div>`);
+              setActionStatus("Developers Feed loaded.");
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems(bootstrapData?.faq?.developer_posts || [], (item)=>`<div class="mini-item"><strong>${item.display_name}</strong><span>${item.message}</span></div>`),
+      },
+      profile: {
+        title: "Profile API controls",
+        meta: "Refresh identity + hair scan reads and export PDF/DOCX records directly from the profile APIs.",
+        fieldOne: { placeholder: "Texture", value: ()=>bootstrapData?.profile?.hair_analysis?.texture || "" },
+        fieldTwo: { placeholder: "Damage", value: ()=>bootstrapData?.profile?.hair_analysis?.damage || "" },
+        body: { placeholder: "Profile summary", value: ()=>bootstrapData?.profile?.hair_analysis?.summary || "" },
+        actions: [
+          {
+            label: "Refresh Profile Scanner",
+            run: async ()=>{
+              const query = new URLSearchParams({
+                hair_texture: apiFieldOne.value,
+                hair_damage: apiFieldTwo.value,
+              });
+              const data = await callJson(`/api/profile/access-scanner?${query.toString()}`);
+              bootstrapData = { ...bootstrapData, profile: { ...data, hair_analysis: { ...data.hair_analysis, summary: data.hair_analysis?.latest_summary || bootstrapData?.profile?.hair_analysis?.summary || "" } } };
+              setActionResult(data);
+              setActionStatus("Profile scanner refreshed.");
+              renderPanel("profile");
+            },
+          },
+          {
+            label: "Export PDF",
+            run: async ()=>{
+              await exportProfileFile("pdf");
+              setActionStatus("Profile PDF export downloaded.");
+            },
+          },
+          {
+            label: "Export DOCX",
+            run: async ()=>{
+              await exportProfileFile("docx");
+              setActionStatus("Profile DOCX export downloaded.");
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems([{ title: "Profile scan", body: bootstrapData?.profile?.general_status || "Profile scanner waiting." }], (item)=>`<div class="mini-item"><strong>${item.title}</strong><span>${item.body}</span></div>`),
+      }
+    };
+
+    function renderActionBoard(panelKey){
+      const config = panelActions[panelKey];
+      if(!config) return;
+      apiActionTitle.textContent = config.title;
+      apiActionMeta.textContent = config.meta;
+      apiFieldOne.placeholder = config.fieldOne.placeholder;
+      apiFieldTwo.placeholder = config.fieldTwo.placeholder;
+      apiFieldBody.placeholder = config.body.placeholder;
+      apiFieldOne.value = config.fieldOne.value();
+      apiFieldTwo.value = config.fieldTwo.value();
+      apiFieldBody.value = config.body.value();
+      apiActionButtons.innerHTML = "";
+      config.actions.forEach((action)=>{
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = action.label;
+        button.addEventListener("click", async ()=>{
+          try{
+            setActionStatus(`${action.label} is running...`);
+            await action.run();
+            config.feed();
+          }catch(error){
+            setActionStatus(`Error: ${error.message}`);
+            setActionResult({ ok: false, error: error.message });
+          }
+        });
+        apiActionButtons.appendChild(button);
+      });
+      config.feed();
     }
 
     function renderPanel(panelKey, forceReload = false){
@@ -612,6 +999,7 @@
       panelBody.textContent = meta.body;
       activePanelName.textContent = meta.title;
       panelFeatures.innerHTML = getPanelRuntimeFeatures(panelKey).map(([title, copy])=>`<div class="feature-item"><strong>${title}</strong><span>${copy}</span></div>`).join("");
+      renderActionBoard(panelKey);
       syncLiveApp(meta, forceReload);
       roamAssistants(true);
     }

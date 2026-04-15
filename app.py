@@ -1758,6 +1758,132 @@ def init_profile_analysis_db():
         pass
 
 
+def init_local_remote_db():
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS local_remote_preferences ("
+            "email TEXT PRIMARY KEY,"
+            "display_name TEXT,"
+            "saved_tag TEXT,"
+            "last_map_used TEXT,"
+            "push_notifications INTEGER DEFAULT 0,"
+            "voice_profile TEXT,"
+            "updated_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS faq_developer_posts ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "owner_email TEXT,"
+            "display_name TEXT,"
+            "message TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def load_local_remote_preferences(email):
+    owner_email = (email or "guest").strip().lower() or "guest"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at "
+            "FROM local_remote_preferences WHERE email = ? LIMIT 1",
+            (owner_email,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return {}
+        return {
+            "display_name": row[0] or "",
+            "saved_tag": row[1] or "",
+            "last_map_used": row[2] or "",
+            "push_notifications": bool(row[3]),
+            "voice_profile": row[4] or "",
+            "updated_at": row[5] or "",
+        }
+    except:
+        return {}
+
+
+def save_local_remote_preferences(email, prefs):
+    owner_email = (email or "guest").strip().lower() or "guest"
+    safe = prefs or {}
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO local_remote_preferences (email, display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(email) DO UPDATE SET display_name=excluded.display_name, saved_tag=excluded.saved_tag, "
+            "last_map_used=excluded.last_map_used, push_notifications=excluded.push_notifications, "
+            "voice_profile=excluded.voice_profile, updated_at=excluded.updated_at",
+            (
+                owner_email,
+                (safe.get("display_name") or "")[:160],
+                normalize_diary_profile_tag(safe.get("saved_tag") or ""),
+                (safe.get("last_map_used") or "")[:80],
+                1 if safe.get("push_notifications") else 0,
+                (safe.get("voice_profile") or "")[:80],
+                _studio_now(),
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def list_faq_developer_posts(limit=7):
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT owner_email, display_name, message, created_at FROM faq_developer_posts ORDER BY id DESC LIMIT ?",
+            (max(1, min(25, int(limit or 7))),),
+        )
+        rows = cur.fetchall() or []
+        conn.close()
+        return [
+            {
+                "owner_email": row[0] or "",
+                "display_name": row[1] or "SupportRD Guest",
+                "message": row[2] or "",
+                "created_at": row[3] or "",
+            }
+            for row in rows
+        ]
+    except:
+        return []
+
+
+def append_faq_developer_post(email, display_name, message):
+    owner_email = (email or "guest").strip().lower() or "guest"
+    clean_message = (message or "").strip()[:2000]
+    if not clean_message:
+        return False
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO faq_developer_posts (owner_email, display_name, message, created_at) VALUES (?, ?, ?, ?)",
+            (owner_email, (display_name or "SupportRD Guest")[:120], clean_message, _studio_now()),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
+
+
 def load_diary_session_payload(session_id):
     if not session_id:
         return {}
@@ -6049,6 +6175,7 @@ init_studio_db()
 init_voice_db()
 init_diary_db()
 init_profile_analysis_db()
+init_local_remote_db()
 set_setting("money_guard_enabled", "1")
 try:
     run_trade_bots()
@@ -6176,6 +6303,14 @@ def local_remote_bootstrap():
         "push_notifications": "browser-driven",
         "connected_routes": [route.get("path") for route in (system.get("seo") or {}).get("routes", [])[:6]],
     }
+    preferences = load_local_remote_preferences(email or "guest")
+    if preferences:
+        settings_summary["display_name"] = preferences.get("display_name") or settings_summary["display_name"]
+        settings_summary["saved_tag"] = preferences.get("saved_tag") or settings_summary["saved_tag"]
+        settings_summary["last_map_used"] = preferences.get("last_map_used") or settings_summary["last_map_used"]
+        settings_summary["push_notifications"] = "enabled" if preferences.get("push_notifications") else "browser-driven"
+        settings_summary["voice_profile"] = preferences.get("voice_profile") or ""
+    faq_posts = list_faq_developer_posts(limit=7)
 
     studio_access = {
         "authenticated": bool(email),
@@ -6208,7 +6343,43 @@ def local_remote_bootstrap():
         },
         "profile": profile_summary,
         "settings": settings_summary,
+        "faq": {
+            "developer_posts": faq_posts,
+        },
     }
+
+
+@app.route("/api/local-remote/preferences", methods=["POST"])
+def local_remote_preferences_save():
+    body = request.json if request.is_json else {}
+    owner_email = _studio_owner_email()
+    existing = load_local_remote_preferences(owner_email)
+    prefs = {
+        "display_name": body.get("display_name") or existing.get("display_name") or "",
+        "saved_tag": body.get("saved_tag") or existing.get("saved_tag") or "",
+        "last_map_used": body.get("last_map_used") or existing.get("last_map_used") or "",
+        "push_notifications": bool(body.get("push_notifications")) if "push_notifications" in body else bool(existing.get("push_notifications")),
+        "voice_profile": body.get("voice_profile") or existing.get("voice_profile") or "",
+    }
+    save_local_remote_preferences(owner_email, prefs)
+    return {"ok": True, "email": owner_email, "preferences": load_local_remote_preferences(owner_email)}
+
+
+@app.route("/api/local-remote/faq/posts")
+def local_remote_faq_posts():
+    return {"ok": True, "posts": list_faq_developer_posts(limit=request.args.get("limit") or 7)}
+
+
+@app.route("/api/local-remote/faq/posts", methods=["POST"])
+def local_remote_faq_posts_create():
+    body = request.json if request.is_json else {}
+    owner_email = _studio_owner_email()
+    display_name = (body.get("display_name") or (session.get("user") or {}).get("name") or (session.get("user") or {}).get("username") or "SupportRD Guest").strip()
+    message = (body.get("message") or "").strip()
+    if not message:
+        return {"ok": False, "error": "message_required"}, 400
+    append_faq_developer_post(owner_email, display_name, message)
+    return {"ok": True, "posts": list_faq_developer_posts(limit=7)}
 
 @app.route("/studio")
 def studio_home():
