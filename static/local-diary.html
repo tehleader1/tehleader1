@@ -190,6 +190,7 @@
 
     function setStatus(message){ els.statusBox.textContent = message; }
     function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='feed-item'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
+    function getRemoteVoiceHistory(){ try{ return JSON.parse(window.localStorage.getItem('supportrdDiaryVoiceHistory') || '[]'); }catch{ return []; } }
     async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
 
     function buildHairResponse(name, problem){
@@ -253,9 +254,14 @@
         { title:'Comments', body: state.comments[0]?.comment_text || 'Live comments will pin here.' },
         { title:'Notifications', body: payload.live_active ? 'Followers can be notified when this feed goes live.' : 'Turn Live on to arm notifications.' }
       ], 'No notifications yet', 'Live actions will pin here.', item=>`<div class="assistant-bubble"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'assistant-bubble');
+      const remoteVoiceHistory = getRemoteVoiceHistory().map((item)=>({
+        title: `${item.assistant || 'Aria'} · ${item.panel || 'diary'} listening`,
+        body: item.transcript ? `${item.transcript} -> ${item.response}` : item.response
+      }));
       renderList(els.assistantHistoryList, [
         state.response ? { title:`${els.assistantSelect.value} · ${state.response.lane}`, body: state.response.body } : null,
         state.history[0] ? { title:'Hair history', body: state.history[0].entry_text || state.history[0].transcript || 'Latest diary note.' } : null,
+        ...remoteVoiceHistory.slice(0, 3),
         { title:'Fixed lane', body:'Aria / Jake stay pinned here so the feed reads like a support history reed, not floating noise.' }
       ].filter(Boolean), 'No assistant history yet', 'Generate a hair response to pin it here.', item=>`<div class="assistant-bubble"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'assistant-bubble');
       syncMainScreen();

@@ -1165,11 +1165,13 @@
       }catch{}
     }
 
+    const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
     function pickPreferredVoice(kind = "aria"){
       if(!("speechSynthesis" in window)) return null;
       const voices = window.speechSynthesis.getVoices() || [];
-      const ariaPreferred = ["aria", "zira", "samantha", "ava", "alloy", "nova", "serena", "female"];
-      const jakePreferred = ["jake", "david", "daniel", "matthew", "echo", "onyx", "male"];
+      const ariaPreferred = ["ava", "samantha", "zira", "susan", "serena", "nova", "female", "aria"];
+      const jakePreferred = ["david", "guy", "daniel", "matthew", "mark", "male", "onyx", "jake"];
       const preferred = kind === "Jake" ? jakePreferred : ariaPreferred;
       for(const hint of preferred){
         const match = voices.find((voice)=>`${voice.name} ${voice.voiceURI}`.toLowerCase().includes(hint));
@@ -1194,52 +1196,140 @@
       });
     }
 
+    function getDiaryVoiceHistory(){
+      try{
+        return JSON.parse(window.localStorage.getItem("supportrdDiaryVoiceHistory") || "[]");
+      }catch{
+        return [];
+      }
+    }
+
+    function saveDiaryVoiceHistory(entry){
+      const history = getDiaryVoiceHistory();
+      history.unshift({ ...entry, created_at: new Date().toISOString() });
+      window.localStorage.setItem("supportrdDiaryVoiceHistory", JSON.stringify(history.slice(0, 12)));
+    }
+
+    function buildHairSupportResponse(who, transcript){
+      const heard = (transcript || "").toLowerCase();
+      const productLane = /(dry|dryness|moisture|frizz|soft|hydration)/.test(heard)
+        ? "For dryness and frizz, I would start with a moisture shampoo, a repair mask, and a light sealant so the hair stays soft without getting heavy."
+        : /(break|breakage|damage|split|weak|brittle)/.test(heard)
+          ? "That sounds like a repair lane. I would move you toward a strengthening cleanser, bond support, and a low-heat styling plan so the breakage stops stacking up."
+          : /(color|blonde|bleach|brass|tone|toner)/.test(heard)
+            ? "For color-treated hair, I would protect the tone first, then add hydration and a color-safe mask so the shade stays clean without drying the hair out."
+            : /(growth|thin|thinning|edges|edge|alopecia|shed)/.test(heard)
+              ? "For thinning or growth pressure, I would slow down tension, support the scalp, and build a simple care routine before we start adding more products."
+              : "I can guide the right SupportRD product lane once you tell me whether the pressure is dryness, damage, color, growth, or styling.";
+
+      if(/family|kids|daughter|son|mother|mom|father|dad|husband|wife/.test(heard)){
+        return `${who === "Jake" ? "Jake" : "Aria"} is taking this into Inner Circle. ${productLane} I am also marking this as a family care lane so the history stays personal and easier to continue later.`;
+      }
+      if(/money|package|deal|special treatment|premium|professional|business|sell|income/.test(heard)){
+        return `${who === "Jake" ? "Jake" : "Aria"} is moving this into Professional. ${productLane} From there I can also connect the package, payment, or special-treatment lane without losing the hair goal.`;
+      }
+      if(/price|payment|pay|cost|subscription|account|login|email|password/.test(heard)){
+        return `${productLane} I can also walk you through the account and payment lane if you want pricing, subscription details, or help unlocking the next SupportRD feature.`;
+      }
+      if(/advanced|detail|ingredients|how|why|explain/.test(heard)){
+        return `${who === "Jake" ? "Jake" : "Aria"} is opening Advanced mode. ${productLane} If you want, keep talking and I will break down the product use, order, and why it fits this hair condition.`;
+      }
+      return `${productLane} Keep going if you want the advanced lane, the family lane, or the professional package lane next.`;
+    }
+
+    function listenForHairPrompt(who){
+      if(!SpeechRecognitionApi){
+        return Promise.resolve({ transcript: "", heard: false, error: "speech_recognition_unavailable" });
+      }
+      return new Promise((resolve)=>{
+        let settled = false;
+        let finalTranscript = "";
+        const recognition = new SpeechRecognitionApi();
+        recognition.lang = "en-US";
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+        recognition.continuous = true;
+        const finish = (payload)=>{
+          if(settled) return;
+          settled = true;
+          try{ recognition.stop(); }catch{}
+          resolve(payload);
+        };
+        let silenceTimer = null;
+        const armSilenceTimer = ()=>{
+          clearTimeout(silenceTimer);
+          silenceTimer = setTimeout(()=>{
+            finish({ transcript: finalTranscript.trim(), heard: Boolean(finalTranscript.trim()) });
+          }, 2000);
+        };
+        recognition.onstart = ()=>{
+          voiceConsoleTitle.textContent = `${who} listening`;
+          voiceConsoleText.textContent = "Mic is open. Speak now and stop when you are done.";
+          voiceBubbleText.textContent = "Listening now. Tell me the hair issue, product goal, or account question.";
+        };
+        recognition.onresult = (event)=>{
+          let interim = "";
+          for(let i = event.resultIndex; i < event.results.length; i += 1){
+            const piece = event.results[i][0]?.transcript || "";
+            if(event.results[i].isFinal){
+              finalTranscript = `${finalTranscript} ${piece}`.trim();
+            }else{
+              interim = `${interim} ${piece}`.trim();
+            }
+          }
+          const liveTranscript = [finalTranscript, interim].filter(Boolean).join(" ").trim();
+          if(liveTranscript){
+            voiceConsoleText.textContent = liveTranscript;
+            voiceBubbleText.textContent = `Listening: ${liveTranscript}`;
+            armSilenceTimer();
+          }
+        };
+        recognition.onerror = (event)=>{
+          finish({ transcript: finalTranscript.trim(), heard: Boolean(finalTranscript.trim()), error: event.error || "recognition_error" });
+        };
+        recognition.onend = ()=>{
+          if(!settled){
+            finish({ transcript: finalTranscript.trim(), heard: Boolean(finalTranscript.trim()) });
+          }
+        };
+        try{
+          recognition.start();
+          setTimeout(()=>{
+            if(!settled && !finalTranscript.trim()){
+              finish({ transcript: "", heard: false, error: "no_speech_timeout" });
+            }
+          }, 10000);
+        }catch(error){
+          finish({ transcript: "", heard: false, error: error.message || "recognition_start_failed" });
+        }
+      });
+    }
+
     async function runVoiceSequence(who){
       cueTone("intro");
-      const options = voiceKnowledge[who]?.[activePanel] || voiceKnowledge[who]?.diary || ["SupportRD voice is ready."];
-      const rotationIndex = Math.floor(Date.now() / 4000) % options.length;
-      const greeting = options[rotationIndex];
-      voiceConsoleTitle.textContent = `${who} greeting`;
-      voiceConsoleText.textContent = greeting;
       voiceBubbleTitle.textContent = `${who} Website Voice`;
-      voiceBubbleText.textContent = greeting;
+      voiceConsoleTitle.textContent = `${who} mic open`;
+      voiceConsoleText.textContent = "Intro cue sent. Mic is opening now.";
+      voiceBubbleText.textContent = "Mic opening now. Tell me the hair issue when you are ready.";
       voiceBubble.classList.add("active");
-      await speakLine(greeting, { kind: who, rate: who === "Jake" ? 0.96 : 1.01, pitch: who === "Jake" ? 0.88 : 1.12 });
-      await new Promise((resolve)=>setTimeout(resolve, 2000));
-      voiceConsoleTitle.textContent = `${who} mic ready`;
-      voiceConsoleText.textContent = "Mic opens now. Listening for your response.";
-      voiceBubbleText.textContent = "Mic ready. Listening and transcribing the next hair-related response.";
-      await new Promise((resolve)=>setTimeout(resolve, 1200));
+      const heard = await listenForHairPrompt(who);
       voiceConsoleTitle.textContent = `${who} transcribing`;
-      voiceConsoleText.textContent = "Transcribing, checking history, and preparing the response.";
-      voiceBubbleText.textContent = "Transcribing and preparing the response now.";
-      await new Promise((resolve)=>setTimeout(resolve, 1400));
-      const response = (() => {
-        if(activePanel === "diary"){
-          return who === "Jake"
-            ? "I can move from greeting into advanced, inner circle, or professional money-making support as soon as you tell me the real hair pressure."
-            : "Tell me the hair problem and I can rotate between greeting, advanced detail, inner circle family support, payments, or the professional lane."
-        }
-        if(activePanel === "studio"){
-          return who === "Jake"
-            ? "I can help you record, play back the selected motherboard clip, shape the FX lane, and connect the studio package to the account."
-            : "I can support the booth, the recording lane, the motherboard, and the product/account side behind the studio."
-        }
-        if(activePanel === "profile"){
-          return "I can confirm identity, status, texture, damage, color, and the next SupportRD lane from the stored account history."
-        }
-        if(activePanel === "settings"){
-          return "I can help with push settings, saved routes, voice profile, and account continuity without losing the person behind the profile."
-        }
-        if(activePanel === "map"){
-          return "I can remember the last map used, shift the route, and keep the perks and support lanes connected to the same account."
-        }
-        return "I can answer directly, open the developer feed lane, and route you into the exact SupportRD support path you need."
-      })();
+      voiceConsoleText.textContent = heard.heard ? `Transcribing: ${heard.transcript}` : "No clear speech captured. Preparing a fallback response.";
+      voiceBubbleText.textContent = heard.heard ? `Transcribing: ${heard.transcript}` : "I did not catch that clearly, so I am preparing a fallback hair response.";
+      await new Promise((resolve)=>setTimeout(resolve, 700));
+      const response = heard.heard
+        ? buildHairSupportResponse(who, heard.transcript)
+        : "I did not catch the full hair issue. Say the problem like dryness, breakage, color, growth, payment, or package deal, and I will answer directly.";
+      saveDiaryVoiceHistory({
+        assistant: who,
+        panel: activePanel,
+        transcript: heard.transcript || "",
+        response,
+      });
       voiceConsoleTitle.textContent = `${who} response`;
       voiceConsoleText.textContent = response;
       voiceBubbleText.textContent = response;
-      await speakLine(response, { kind: who, rate: who === "Jake" ? 0.96 : 1.01, pitch: who === "Jake" ? 0.88 : 1.1 });
+      await speakLine(response, { kind: who, rate: who === "Jake" ? 0.94 : 1, pitch: who === "Jake" ? 0.78 : 1.02 });
       cueTone("close");
       setTimeout(()=>voiceBubble.classList.remove("active"), 900);
     }
