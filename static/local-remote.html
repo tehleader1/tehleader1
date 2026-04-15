@@ -1165,6 +1165,19 @@
       }catch{}
     }
 
+    function pickPreferredVoice(kind = "aria"){
+      if(!("speechSynthesis" in window)) return null;
+      const voices = window.speechSynthesis.getVoices() || [];
+      const ariaPreferred = ["aria", "zira", "samantha", "ava", "alloy", "nova", "serena", "female"];
+      const jakePreferred = ["jake", "david", "daniel", "matthew", "echo", "onyx", "male"];
+      const preferred = kind === "Jake" ? jakePreferred : ariaPreferred;
+      for(const hint of preferred){
+        const match = voices.find((voice)=>`${voice.name} ${voice.voiceURI}`.toLowerCase().includes(hint));
+        if(match) return match;
+      }
+      return voices[0] || null;
+    }
+
     function speakLine(text, options = {}){
       if(!("speechSynthesis" in window)) return Promise.resolve();
       window.speechSynthesis.cancel();
@@ -1175,8 +1188,7 @@
         utterance.volume = 1;
         utterance.onend = ()=>resolve();
         utterance.onerror = ()=>resolve();
-        const voices = window.speechSynthesis.getVoices();
-        const match = voices.find((voice)=>options.voiceHint && voice.name.toLowerCase().includes(options.voiceHint));
+        const match = pickPreferredVoice(options.kind || "aria");
         if(match) utterance.voice = match;
         window.speechSynthesis.speak(utterance);
       });
@@ -1192,7 +1204,7 @@
       voiceBubbleTitle.textContent = `${who} Website Voice`;
       voiceBubbleText.textContent = greeting;
       voiceBubble.classList.add("active");
-      await speakLine(greeting, { voiceHint: who === "Jake" ? "david" : "zira", rate: who === "Jake" ? 0.98 : 1.03, pitch: who === "Jake" ? 0.94 : 1.06 });
+      await speakLine(greeting, { kind: who, rate: who === "Jake" ? 0.96 : 1.01, pitch: who === "Jake" ? 0.88 : 1.12 });
       await new Promise((resolve)=>setTimeout(resolve, 2000));
       voiceConsoleTitle.textContent = `${who} mic ready`;
       voiceConsoleText.textContent = "Mic opens now. Listening for your response.";
@@ -1227,7 +1239,7 @@
       voiceConsoleTitle.textContent = `${who} response`;
       voiceConsoleText.textContent = response;
       voiceBubbleText.textContent = response;
-      await speakLine(response, { voiceHint: who === "Jake" ? "david" : "zira", rate: who === "Jake" ? 0.98 : 1.02, pitch: who === "Jake" ? 0.94 : 1.05 });
+      await speakLine(response, { kind: who, rate: who === "Jake" ? 0.96 : 1.01, pitch: who === "Jake" ? 0.88 : 1.1 });
       cueTone("close");
       setTimeout(()=>voiceBubble.classList.remove("active"), 900);
     }
