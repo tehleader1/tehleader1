@@ -107,7 +107,7 @@
   </div>
   <script>
     const els = { displayName: document.getElementById('displayName'), hairTexture: document.getElementById('hairTexture'), hairDamage: document.getElementById('hairDamage'), hairColor: document.getElementById('hairColor'), hairType: document.getElementById('hairType'), moodSelect: document.getElementById('moodSelect'), hairSummary: document.getElementById('hairSummary'), statusBox: document.getElementById('statusBox'), factsList: document.getElementById('factsList'), apiGrid: document.getElementById('apiGrid'), analysisList: document.getElementById('analysisList'), exportsList: document.getElementById('exportsList'), identityCard: document.getElementById('identityCard'), statusCard: document.getElementById('statusCard'), verifiedCard: document.getElementById('verifiedCard'), faceBadge: document.getElementById('faceBadge'), textureBadge: document.getElementById('textureBadge'), statusBadge: document.getElementById('statusBadge'), profileVideo: document.getElementById('profileVideo'), profileCanvas: document.getElementById('profileCanvas') };
-    let bootstrap = null; let scanner = null; let mediaStream = null; let snapshotTaken = false;
+    let bootstrap = null; let scanner = null; let mediaStream = null; let snapshotTaken = false; let lastScan = null;
     function setStatus(message){ els.statusBox.textContent = message; }
     function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='fact'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
     async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
@@ -122,10 +122,68 @@
     async function primeCamera(){ if(mediaStream) return mediaStream; mediaStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false }); els.profileVideo.srcObject = mediaStream; setStatus('Profile scanner camera is armed.'); return mediaStream; }
     function stopCamera(){ if(mediaStream){ mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; els.profileVideo.srcObject = null; setStatus('Profile scanner camera released.'); } }
     function captureFrame(){ const canvas = els.profileCanvas; const video = els.profileVideo; const width = video.videoWidth || 640; const height = video.videoHeight || 360; canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(video, 0, 0, width, height); snapshotTaken = true; render(); setStatus('Profile picture captured for the hair scanner.'); }
+    function analyzeCanvas(){
+      const canvas = els.profileCanvas;
+      const context = canvas.getContext('2d', { willReadFrequently:true });
+      const width = canvas.width;
+      const height = canvas.height;
+      if(!width || !height) throw new Error('capture_profile_picture_first');
+      const pixels = context.getImageData(0, 0, width, height).data;
+      let red = 0; let green = 0; let blue = 0; let brightness = 0; let contrast = 0;
+      const sampleCount = Math.max(1, Math.floor(pixels.length / 64));
+      for(let index = 0; index < pixels.length; index += 64){
+        const r = pixels[index];
+        const g = pixels[index + 1];
+        const b = pixels[index + 2];
+        red += r; green += g; blue += b;
+        const light = (0.299 * r) + (0.587 * g) + (0.114 * b);
+        brightness += light;
+      }
+      const avgRed = red / sampleCount;
+      const avgGreen = green / sampleCount;
+      const avgBlue = blue / sampleCount;
+      const avgBrightness = brightness / sampleCount;
+      for(let index = 0; index < pixels.length; index += 64){
+        const r = pixels[index];
+        const g = pixels[index + 1];
+        const b = pixels[index + 2];
+        const light = (0.299 * r) + (0.587 * g) + (0.114 * b);
+        contrast += Math.abs(light - avgBrightness);
+      }
+      const avgContrast = contrast / sampleCount;
+      const texture = avgContrast > 42 ? 'defined curl pattern' : avgContrast > 26 ? 'balanced texture' : 'smooth low-frizz texture';
+      const damage = avgBrightness < 88 ? 'dryness watch' : avgContrast > 48 ? 'minor edge stress' : 'healthy shine';
+      const color = avgRed > avgBlue + 24 ? 'warm brunette' : avgBlue > avgRed + 18 ? 'cool dark tone' : avgBrightness > 154 ? 'bright blonde tone' : 'balanced natural tone';
+      const hairType = avgContrast > 46 ? 'coily / high texture' : avgContrast > 31 ? 'wavy / mixed texture' : 'straight / smooth texture';
+      return {
+        texture,
+        damage,
+        color,
+        hair_type: hairType,
+        summary: `Scan confirmed ${texture}, ${damage}, and a ${color} profile. SupportRD can now store this look against the account history.`,
+        confidence: avgContrast > 28 ? 'high' : 'medium'
+      };
+    }
+    async function runHairScan(){
+      if(!snapshotTaken){
+        await primeCamera();
+        captureFrame();
+      }
+      lastScan = analyzeCanvas();
+      els.hairTexture.value = lastScan.texture;
+      els.hairDamage.value = lastScan.damage;
+      els.hairColor.value = lastScan.color;
+      els.hairType.value = lastScan.hair_type;
+      els.hairSummary.value = lastScan.summary;
+      scanner = await fetchJson(`/api/profile/access-scanner?display_name=${encodeURIComponent(els.displayName.value)}&hair_texture=${encodeURIComponent(lastScan.texture)}&hair_damage=${encodeURIComponent(lastScan.damage)}&hair_type=${encodeURIComponent(lastScan.hair_type)}&avatar_set=1`);
+      scanner.hair_analysis = { ...(scanner.hair_analysis || {}), ...lastScan };
+      render();
+      setStatus(`Hair scan complete. Confidence ${lastScan.confidence}.`);
+    }
     document.getElementById('primeCameraBtn').addEventListener('click', async ()=>{ try{ await primeCamera(); }catch(error){ setStatus(`Error: ${error.message}`); } });
     document.getElementById('captureBtn').addEventListener('click', ()=>{ try{ captureFrame(); }catch(error){ setStatus(`Error: ${error.message}`); } });
     document.getElementById('stopCameraBtn').addEventListener('click', stopCamera);
-    document.getElementById('refreshScannerBtn').addEventListener('click', async ()=>{ try{ scanner = await fetchJson(`/api/profile/access-scanner?display_name=${encodeURIComponent(els.displayName.value)}&hair_texture=${encodeURIComponent(els.hairTexture.value)}&hair_damage=${encodeURIComponent(els.hairDamage.value)}&hair_type=${encodeURIComponent(els.hairType.value)}&avatar_set=${snapshotTaken ? '1' : '0'}`); scanner.hair_analysis = { ...(scanner.hair_analysis || {}), color: els.hairColor.value || scanner.hair_analysis?.color || 'natural', summary: els.hairSummary.value || scanner.hair_analysis?.latest_summary || 'Hair profile is verified and ready.' }; render(); setStatus('Profile scanner refreshed.'); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    document.getElementById('refreshScannerBtn').addEventListener('click', async ()=>{ try{ await runHairScan(); }catch(error){ setStatus(`Error: ${error.message}`); } });
     document.getElementById('exportPdfBtn').addEventListener('click', async ()=>{ try{ await exportProfile('pdf'); setStatus('Profile PDF export downloaded.'); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
     document.getElementById('exportDocxBtn').addEventListener('click', async ()=>{ try{ await exportProfile('docx'); setStatus('Profile DOCX export downloaded.'); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
     loadBootstrap().then(()=>setStatus('Profile app loaded.')).catch((error)=>setStatus(`Error: ${error.message}`));

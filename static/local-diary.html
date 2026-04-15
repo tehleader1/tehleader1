@@ -15,6 +15,7 @@
     .hero-card,.action-board,.panel,.screen{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}.hero-card h2,.action-board h3,.panel h3,.screen h2{font-size:34px;font-family:"Cormorant Garamond",Georgia,serif}
     .hero-card p{color:var(--muted);margin-top:10px;line-height:1.6}.grid{display:grid;grid-template-columns:1.15fr .95fr;gap:16px}.columns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
     .video-shell{position:relative;overflow:hidden;min-height:360px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03)),url('/static/images/brochure-social.jpg') center/cover no-repeat}.video-shell video{width:100%;height:260px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line)}.video-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.live-badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.live-badge{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.07);font-weight:700}
+    .command-center{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start}.center-rail{display:grid;gap:12px}.command-card{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(121,184,255,.14),rgba(255,255,255,.04))}.assistant-fixed{display:grid;gap:10px;max-height:360px;overflow:auto;padding-right:4px}.assistant-bubble{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:rgba(7,16,30,.74)}.assistant-bubble strong{display:block}.assistant-bubble span{display:block;color:var(--muted);margin-top:6px}
     input,textarea,select,button{font:inherit}input,textarea,select{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}textarea{min-height:110px;resize:vertical}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}.buttons button:hover{background:rgba(121,184,255,.18)}
     .status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}.accent{color:var(--green)}.social-item{background:linear-gradient(180deg,rgba(121,184,255,.10),rgba(255,255,255,.04))}
     @media (max-width:1280px){.shell,.grid,.columns,.action-grid,.video-meta{grid-template-columns:1fr}}
@@ -45,27 +46,46 @@
       <section class="grid">
         <div class="screen video-shell">
           <div class="eyebrow">Live Video Panel</div>
-          <video id="diaryVideo" playsinline muted autoplay></video>
-          <div class="video-meta">
+          <div class="command-center">
             <div>
-              <h2 id="liveScreenTitle">Diary live screen is ready.</h2>
-              <p id="liveScreenMeta">Prime the camera, bootstrap a session, then save or post the live diary lane.</p>
+              <video id="diaryVideo" playsinline muted autoplay></video>
+              <div class="video-meta">
+                <div>
+                  <h2 id="liveScreenTitle">Diary live screen is ready.</h2>
+                  <p id="liveScreenMeta">Prime the camera, bootstrap a session, then save or post the live diary lane.</p>
+                </div>
+                <div class="response-list" id="socialFeed"></div>
+              </div>
+              <div class="live-badges">
+                <span class="live-badge" id="liveBadgeMode">Live: off</span>
+                <span class="live-badge" id="liveBadgeTag">Tag: waiting</span>
+                <span class="live-badge" id="liveBadgeOwner">Owner: guest</span>
+                <span class="live-badge" id="recordBadge">Camera: idle</span>
+              </div>
+              <div class="buttons">
+                <button id="primeCameraBtn" type="button">Prime Video</button>
+                <button id="recordVideoBtn" type="button">Record Clip</button>
+                <button id="stopVideoBtn" type="button">Stop Clip</button>
+                <button id="postLiveBtn" type="button">Post To Feed</button>
+              </div>
+              <video id="diaryPlayback" controls style="width:100%;height:160px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line);margin-top:14px"></video>
             </div>
-            <div class="response-list" id="socialFeed"></div>
+            <aside class="center-rail">
+              <div class="command-card">
+                <div class="eyebrow">Command Center</div>
+                <strong id="commandCenterTitle">Live control ready</strong>
+                <span id="commandCenterBody">Camera, comments, payments, notifications, and Aria/Jake stay pinned here.</span>
+              </div>
+              <div class="command-card">
+                <div class="eyebrow">Notifications</div>
+                <div class="assistant-fixed" id="notificationList"></div>
+              </div>
+              <div class="command-card">
+                <div class="eyebrow">Aria / Jake History Reed</div>
+                <div class="assistant-fixed" id="assistantHistoryList"></div>
+              </div>
+            </aside>
           </div>
-          <div class="live-badges">
-            <span class="live-badge" id="liveBadgeMode">Live: off</span>
-            <span class="live-badge" id="liveBadgeTag">Tag: waiting</span>
-            <span class="live-badge" id="liveBadgeOwner">Owner: guest</span>
-            <span class="live-badge" id="recordBadge">Camera: idle</span>
-          </div>
-          <div class="buttons">
-            <button id="primeCameraBtn" type="button">Prime Video</button>
-            <button id="recordVideoBtn" type="button">Record Clip</button>
-            <button id="stopVideoBtn" type="button">Stop Clip</button>
-            <button id="postLiveBtn" type="button">Post To Feed</button>
-          </div>
-          <video id="diaryPlayback" controls style="width:100%;height:160px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line);margin-top:14px"></video>
         </div>
 
         <div class="action-board">
@@ -132,7 +152,7 @@
   <script>
     const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[] };
     const els = {
-      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback') };
+      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList') };
 
     function setStatus(message){ els.statusBox.textContent = message; }
     function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='feed-item'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
@@ -160,12 +180,24 @@
       els.diaryLiveLink.textContent = state.liveSlug ? `${window.location.origin}/?diary-live=${state.liveSlug}` : 'No live link yet.';
       els.diaryHistoryCard.textContent = state.history[0]?.entry_text || state.history[0]?.transcript || 'Diary history will appear after the first saved session.';
       els.assistantLaneCard.textContent = state.response?.body || 'Aria and Jake are ready to read hair problems.';
+      els.commandCenterTitle.textContent = payload.live_active ? 'Live feed is armed' : 'Live control ready';
+      els.commandCenterBody.textContent = payload.live_active ? 'Comments, payments, and fixed Aria/Jake guidance are attached to this session.' : 'Turn live on, record the camera, and let Aria or Jake answer the actual hair problem.';
       renderList(els.historyList, state.history, 'No diary history yet', 'Save a diary record to start history.', item=>`<div class="history-item"><strong>${item.profile_tag || item.session_id}</strong><span>${item.entry_text || item.transcript || 'Saved diary entry.'}</span></div>`, 'history-item');
       renderList(els.commentsList, state.comments, 'No comments yet', 'Public comments will show up here.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
       renderList(els.lobbyList, state.lobby, 'Lobby is empty', 'Start a live diary session to appear here.', item=>`<div class="feed-item"><strong>${item.profile_tag || item.display_name || item.owner_email}</strong><span>${item.preview_text || item.owner_email || 'Diary feed ready.'}</span></div>`);
       renderList(els.socialList, state.socialPosts, 'No social posts yet', 'Use Post To Feed after you save a diary entry.', item=>`<div class="social-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'social-item');
       renderList(els.socialFeed, state.socialPosts.slice(0,2), 'Live feed lane', 'Social posting cards will appear here.', item=>`<div class="response-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'response-item');
       renderList(els.responseList, state.response ? [state.response] : [], 'Waiting for hair problem', 'Use Generate Hair Response after entering the issue.', item=>`<div class="response-item"><strong>${item.lane.toUpperCase()} · ${els.assistantSelect.value}</strong><span>${item.body}</span></div>`, 'response-item');
+      renderList(els.notificationList, [
+        { title:'Payments', body: els.guestSupport.value ? `Guest support queued: ${els.guestSupport.value}` : 'No support payment entered yet.' },
+        { title:'Comments', body: state.comments[0]?.comment_text || 'Live comments will pin here.' },
+        { title:'Notifications', body: payload.live_active ? 'Followers can be notified when this feed goes live.' : 'Turn Live on to arm notifications.' }
+      ], 'No notifications yet', 'Live actions will pin here.', item=>`<div class="assistant-bubble"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'assistant-bubble');
+      renderList(els.assistantHistoryList, [
+        state.response ? { title:`${els.assistantSelect.value} · ${state.response.lane}`, body: state.response.body } : null,
+        state.history[0] ? { title:'Hair history', body: state.history[0].entry_text || state.history[0].transcript || 'Latest diary note.' } : null,
+        { title:'Fixed lane', body:'Aria / Jake stay pinned here so the feed reads like a support history reed, not floating noise.' }
+      ].filter(Boolean), 'No assistant history yet', 'Generate a hair response to pin it here.', item=>`<div class="assistant-bubble"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'assistant-bubble');
     }
 
     async function bootstrapData(){
