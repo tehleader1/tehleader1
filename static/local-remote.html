@@ -1204,8 +1204,11 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             text,
-            requested_voice: who === "Jake" ? "onyx" : "shimmer",
-            membership_tier: who === "Jake" ? "premium" : "premium"
+            voice_preference: who === "Jake" ? "onyx" : "shimmer",
+            assistant_id: who === "Jake" ? "projake" : "aria",
+            membership_tier: "premium",
+            same_feel_voice: true,
+            thought_style: who === "Jake" ? "grounded, smooth, premium studio guide" : "warm, polished, premium siri-like beauty-tech guide"
           })
         });
         if(!response.ok) throw new Error(`speech_failed_${response.status}`);

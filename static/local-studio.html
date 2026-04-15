@@ -211,6 +211,11 @@
       drawWave(0.42, els.boardWaveCanvas);
     }
     function ensureAudioContext(){ if(!audioContext){ const Ctx = window.AudioContext || window.webkitAudioContext; if(Ctx) audioContext = new Ctx(); } return audioContext; }
+    function enhanceWaveform(points = []){
+      const safe = (points || []).filter((value)=>Number.isFinite(value));
+      const max = Math.max(...safe, 0.001);
+      return safe.map((value)=>Number(Math.max(0.12, Math.pow(value / max, 0.55)).toFixed(3)));
+    }
     function buildWaveformFromArray(samples, steps = 96){
       if(!samples?.length) return [];
       const size = Math.max(1, Math.floor(samples.length / steps));
@@ -224,16 +229,37 @@
         }
         waveform.push(Number(peak.toFixed(3)));
       }
-      const max = Math.max(...waveform, 0.001);
-      return waveform.map((value)=>Number((value / max).toFixed(3)));
+      return enhanceWaveform(waveform);
+    }
+    function buildWaveformFromBytes(buffer, steps = 96){
+      const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
+      if(!bytes.length) return [];
+      const size = Math.max(1, Math.floor(bytes.length / steps));
+      const waveform = [];
+      for(let index = 0; index < steps; index += 1){
+        const start = index * size;
+        const end = Math.min(bytes.length, start + size);
+        let total = 0;
+        for(let cursor = start; cursor < end; cursor += 1){
+          total += Math.abs((bytes[cursor] - 128) / 128);
+        }
+        waveform.push(total / Math.max(1, end - start));
+      }
+      return enhanceWaveform(waveform);
     }
     async function buildWaveformForFile(blobOrFile){
       try{
-        const context = ensureAudioContext();
-        if(!context) return [];
         const buffer = await blobOrFile.arrayBuffer();
-        const audioBuffer = await context.decodeAudioData(buffer.slice(0));
-        return buildWaveformFromArray(audioBuffer.getChannelData(0), 96);
+        const context = ensureAudioContext();
+        if(!context) return buildWaveformFromBytes(buffer, 96);
+        try{
+          const audioBuffer = await context.decodeAudioData(buffer.slice(0));
+          const channel = audioBuffer.getChannelData(0);
+          if(channel?.length){
+            return buildWaveformFromArray(channel, 96);
+          }
+        }catch{}
+        return buildWaveformFromBytes(buffer, 96);
       }catch{
         return [];
       }
@@ -303,8 +329,7 @@
           const sample = dataArray[Math.min(dataArray.length - 1, Math.floor((index / 72) * dataArray.length))];
           return Math.abs((sample - 128) / 128);
         });
-        const max = Math.max(...rawWave, 0.001);
-        liveWaveform = rawWave.map((value)=>Number((value / max).toFixed(3)));
+        liveWaveform = enhanceWaveform(rawWave);
       }, 70);
     }
     function stopLiveWaveCapture(){
