@@ -1781,6 +1781,7 @@ def init_local_remote_db():
             ("account_username", "TEXT"),
             ("account_email", "TEXT"),
             ("account_address", "TEXT"),
+            ("account_zipcode", "TEXT"),
             ("account_phone", "TEXT"),
             ("password_hash", "TEXT"),
             ("aria_response_level", "TEXT"),
@@ -1809,7 +1810,7 @@ def load_local_remote_preferences(email):
         cur = conn.cursor()
         cur.execute(
             "SELECT display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at, "
-            "account_username, account_email, account_address, account_phone, password_hash, aria_response_level "
+            "account_username, account_email, account_address, account_zipcode, account_phone, password_hash, aria_response_level "
             "FROM local_remote_preferences WHERE email = ? LIMIT 1",
             (owner_email,),
         )
@@ -1827,9 +1828,10 @@ def load_local_remote_preferences(email):
             "account_username": row[6] or "",
             "account_email": row[7] or owner_email,
             "account_address": row[8] or "",
-            "account_phone": row[9] or "",
-            "password_set": bool(row[10]),
-            "aria_response_level": row[11] or "balanced",
+            "account_zipcode": row[9] or "",
+            "account_phone": row[10] or "",
+            "password_set": bool(row[11]),
+            "aria_response_level": row[12] or "balanced",
         }
     except:
         return {}
@@ -1848,13 +1850,13 @@ def save_local_remote_preferences(email, prefs):
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO local_remote_preferences (email, display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at, "
-            "account_username, account_email, account_address, account_phone, password_hash, aria_response_level) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "account_username, account_email, account_address, account_zipcode, account_phone, password_hash, aria_response_level) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(email) DO UPDATE SET display_name=excluded.display_name, saved_tag=excluded.saved_tag, "
             "last_map_used=excluded.last_map_used, push_notifications=excluded.push_notifications, "
             "voice_profile=excluded.voice_profile, updated_at=excluded.updated_at, "
             "account_username=excluded.account_username, account_email=excluded.account_email, "
-            "account_address=excluded.account_address, account_phone=excluded.account_phone, "
+            "account_address=excluded.account_address, account_zipcode=excluded.account_zipcode, account_phone=excluded.account_phone, "
             "password_hash=CASE WHEN excluded.password_hash <> '' THEN excluded.password_hash ELSE local_remote_preferences.password_hash END, "
             "aria_response_level=excluded.aria_response_level",
             (
@@ -1868,6 +1870,7 @@ def save_local_remote_preferences(email, prefs):
                 (safe.get("account_username") or "")[:120],
                 (safe.get("account_email") or owner_email)[:160],
                 (safe.get("account_address") or "")[:240],
+                (safe.get("account_zipcode") or "")[:20],
                 (safe.get("account_phone") or "")[:40],
                 password_hash,
                 (safe.get("aria_response_level") or "balanced")[:80],
@@ -6438,6 +6441,7 @@ def local_remote_preferences_save():
         "account_username": body.get("account_username") or existing.get("account_username") or "",
         "account_email": body.get("account_email") or existing.get("account_email") or owner_email,
         "account_address": body.get("account_address") or existing.get("account_address") or "",
+        "account_zipcode": body.get("account_zipcode") or existing.get("account_zipcode") or "",
         "account_phone": body.get("account_phone") or existing.get("account_phone") or "",
         "aria_response_level": body.get("aria_response_level") or existing.get("aria_response_level") or "balanced",
     }

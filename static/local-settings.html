@@ -42,13 +42,15 @@
           <h3>Account board</h3>
           <p>Save actual account-facing settings here.</p>
           <div class="action-grid">
-            <input id="displayName" placeholder="Display name">
+            <input id="displayName" placeholder="Name">
             <input id="accountUsername" placeholder="Username">
             <input id="accountEmail" placeholder="Email">
             <input id="accountPhone" placeholder="Phone number">
             <input id="accountAddress" placeholder="Address">
+            <input id="accountZipcode" placeholder="Zip code">
             <input id="savedTag" placeholder="^^ diary tag">
             <input id="newPassword" type="password" placeholder="New password">
+            <input id="confirmPassword" type="password" placeholder="Confirm new password">
             <select id="voiceProfile">
               <option value="shimmer">Voice Profile · shimmer</option>
               <option value="alloy">Voice Profile · alloy</option>
@@ -83,7 +85,7 @@
     </main>
   </div>
   <script>
-    const els = { displayName: document.getElementById('displayName'), accountUsername: document.getElementById('accountUsername'), accountEmail: document.getElementById('accountEmail'), accountPhone: document.getElementById('accountPhone'), accountAddress: document.getElementById('accountAddress'), savedTag: document.getElementById('savedTag'), newPassword: document.getElementById('newPassword'), voiceProfile: document.getElementById('voiceProfile'), ariaResponseLevel: document.getElementById('ariaResponseLevel'), pushNotifications: document.getElementById('pushNotifications'), statusBox: document.getElementById('statusBox'), routeList: document.getElementById('routeList'), factList: document.getElementById('factList'), accountCard: document.getElementById('accountCard'), urlCard: document.getElementById('urlCard'), passwordCard: document.getElementById('passwordCard'), mapCard: document.getElementById('mapCard') };
+    const els = { displayName: document.getElementById('displayName'), accountUsername: document.getElementById('accountUsername'), accountEmail: document.getElementById('accountEmail'), accountPhone: document.getElementById('accountPhone'), accountAddress: document.getElementById('accountAddress'), accountZipcode: document.getElementById('accountZipcode'), savedTag: document.getElementById('savedTag'), newPassword: document.getElementById('newPassword'), confirmPassword: document.getElementById('confirmPassword'), voiceProfile: document.getElementById('voiceProfile'), ariaResponseLevel: document.getElementById('ariaResponseLevel'), pushNotifications: document.getElementById('pushNotifications'), statusBox: document.getElementById('statusBox'), routeList: document.getElementById('routeList'), factList: document.getElementById('factList'), accountCard: document.getElementById('accountCard'), urlCard: document.getElementById('urlCard'), passwordCard: document.getElementById('passwordCard'), mapCard: document.getElementById('mapCard') };
     let bootstrap = null;
     function setStatus(message){ els.statusBox.textContent = message; }
     async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{ 'Content-Type':'application/json', ...(options.headers||{}) }, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
@@ -94,11 +96,13 @@
       els.accountEmail.value = settings.account_email || email;
       els.accountPhone.value = settings.account_phone || '';
       els.accountAddress.value = settings.account_address || '';
+      els.accountZipcode.value = settings.account_zipcode || '';
       els.savedTag.value = tag;
       els.voiceProfile.value = settings.voice_profile || 'shimmer';
       els.ariaResponseLevel.value = settings.aria_response_level || 'balanced';
       els.pushNotifications.value = settings.push_notifications ? 'on' : 'off';
       els.newPassword.value = '';
+      els.confirmPassword.value = '';
       els.accountCard.textContent = `${settings.account_username || settings.display_name || 'guest'} · ${email}`;
       els.urlCard.textContent = diaryUrl;
       els.passwordCard.textContent = settings.password_set ? 'Password secured in settings memory.' : 'Password not set yet.';
@@ -109,6 +113,7 @@
         { title:'Diary URL', body: diaryUrl },
         { title:'Push notifications', body: settings.push_notifications ? 'enabled' : 'off' },
         { title:'Aria response level', body: settings.aria_response_level || 'balanced' },
+        { title:'Zip code', body: settings.account_zipcode || 'waiting' },
         { title:'Saved tag', body: tag || 'waiting' },
       ];
       els.factList.innerHTML = facts.map(item=>`<div class="fact-item"><strong>${item.title}</strong><span>${item.body}</span></div>`).join('');
@@ -116,7 +121,10 @@
     async function loadBootstrap(){ bootstrap = await fetchJson('/api/local-remote/bootstrap'); render(); }
     document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
       try{
-        await fetchJson('/api/local-remote/preferences', { method:'POST', body: JSON.stringify({ display_name: els.displayName.value, account_username: els.accountUsername.value, account_email: els.accountEmail.value, account_phone: els.accountPhone.value, account_address: els.accountAddress.value, saved_tag: els.savedTag.value, password_plain: els.newPassword.value, voice_profile: els.voiceProfile.value, aria_response_level: els.ariaResponseLevel.value, push_notifications: els.pushNotifications.value === 'on' }) });
+        if(els.newPassword.value && els.newPassword.value !== els.confirmPassword.value){
+          throw new Error('password_confirmation_mismatch');
+        }
+        await fetchJson('/api/local-remote/preferences', { method:'POST', body: JSON.stringify({ display_name: els.displayName.value, account_username: els.accountUsername.value, account_email: els.accountEmail.value, account_phone: els.accountPhone.value, account_address: els.accountAddress.value, account_zipcode: els.accountZipcode.value, saved_tag: els.savedTag.value, password_plain: els.newPassword.value, voice_profile: els.voiceProfile.value, aria_response_level: els.ariaResponseLevel.value, push_notifications: els.pushNotifications.value === 'on' }) });
         await loadBootstrap();
         setStatus('Settings saved into account preferences.');
       }catch(error){ setStatus(`Error: ${error.message}`); }

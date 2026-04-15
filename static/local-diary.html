@@ -11,7 +11,7 @@
     *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Georgia,"Times New Roman",serif;background:radial-gradient(820px 420px at 0% 0%, rgba(121,184,255,.15), transparent 55%),radial-gradient(720px 420px at 100% 0%, rgba(255,208,134,.12), transparent 55%),linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}body{padding:20px}
     .shell{max-width:1540px;margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}.glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.08);box-shadow:var(--shadow);border-radius:28px}.rail,.stage{padding:20px}.stage{display:grid;gap:16px}
     .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}h1,h2,h3,p{margin:0}.hero h1{font-size:48px;line-height:.94}.hero p,.panel p,.action p{color:var(--muted);line-height:1.6;margin-top:10px}
-    .stack,.comments,.history,.feed-list,.response-list,.social-list{display:grid;gap:12px}.card,.comment,.history-item,.feed-item,.response-item,.social-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}.card strong,.comment strong,.history-item strong,.feed-item strong,.response-item strong,.social-item strong{display:block}.card span,.comment span,.history-item span,.feed-item span,.response-item span,.social-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.5}
+    .stack,.comments,.history,.feed-list,.response-list,.social-list,.chat-list{display:grid;gap:12px}.card,.comment,.history-item,.feed-item,.response-item,.social-item,.chat-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}.card strong,.comment strong,.history-item strong,.feed-item strong,.response-item strong,.social-item strong,.chat-item strong{display:block}.card span,.comment span,.history-item span,.feed-item span,.response-item span,.social-item span,.chat-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.5}
     .hero-card,.action-board,.panel,.screen{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}.hero-card h2,.action-board h3,.panel h3,.screen h2{font-size:34px;font-family:"Cormorant Garamond",Georgia,serif}
     .hero-card p{color:var(--muted);margin-top:10px;line-height:1.6}.grid{display:grid;grid-template-columns:1.15fr .95fr;gap:16px}.columns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
     .video-shell{position:relative;overflow:hidden;min-height:360px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03)),url('/static/images/brochure-social.jpg') center/cover no-repeat}.video-shell video{width:100%;height:260px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line)}.video-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.live-badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.live-badge{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.07);font-weight:700}
@@ -96,6 +96,11 @@
                 <h3 style="font-size:26px">Live comments rail</h3>
                 <div class="screen-comments" id="screenComments"></div>
               </div>
+              <div class="panel" style="margin-top:14px;padding:14px">
+                <div class="eyebrow">Guest Webcam Room</div>
+                <h3 style="font-size:26px">Oncoming guest chat</h3>
+                <div class="chat-list" id="chatList"></div>
+              </div>
             </div>
             <aside class="center-rail">
               <div class="command-card">
@@ -134,12 +139,14 @@
             <input id="guestSupport" placeholder="Guest support amount e.g. $20">
             <textarea id="entryText" placeholder="Diary entry / transcript / live post"></textarea>
             <textarea id="hairProblem" placeholder="Hair problem lane: dryness, breakage, color, family matters, package deal, etc."></textarea>
+            <textarea id="guestChatText" placeholder="Chat to the guest room like a webcam lane: welcome people in, answer, and keep the room active."></textarea>
           </div>
           <div class="buttons">
             <button id="bootstrapBtn" type="button">Bootstrap Diary</button>
             <button id="saveBtn" type="button">Save Diary Record</button>
             <button id="refreshBtn" type="button">Refresh Feed</button>
             <button id="commentBtn" type="button">Post Comment</button>
+            <button id="chatBtn" type="button">Send Guest Chat</button>
             <button id="respondBtn" type="button">Generate Hair Response</button>
           </div>
           <div class="status" id="statusBox">Diary app is ready.</div>
@@ -179,7 +186,7 @@
   <script>
     const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[] };
     const els = {
-      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments') };
+      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), guestChatText: document.getElementById('guestChatText'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments'), chatList: document.getElementById('chatList') };
 
     function setStatus(message){ els.statusBox.textContent = message; }
     function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='feed-item'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
@@ -216,6 +223,8 @@
 
     function render(){
       const payload = state.payload || {};
+      const publicComments = state.comments.filter(item => (item.comment_kind || 'comment') !== 'chat');
+      const chatMessages = state.comments.filter(item => item.comment_kind === 'chat');
       els.liveScreenTitle.textContent = payload.display_name ? `${payload.display_name}'s diary live feed` : 'Diary live screen is ready.';
       els.liveScreenMeta.textContent = payload.entry_text || payload.transcript || 'Prime the camera, bootstrap a session, then save or post the live diary lane.';
       els.liveBadgeMode.textContent = `Live: ${payload.live_active ? 'on' : 'off'}`;
@@ -231,8 +240,9 @@
         els.screenEditor.innerHTML = `<h2>${els.profileTag.value || 'Diary Live Screen'}</h2><p>${els.entryText.value || 'Write the live presentation, hair problem note, or docx-style summary here.'}</p>`;
       }
       renderList(els.historyList, state.history, 'No diary history yet', 'Save a diary record to start history.', item=>`<div class="history-item"><strong>${item.profile_tag || item.session_id}</strong><span>${item.entry_text || item.transcript || 'Saved diary entry.'}</span></div>`, 'history-item');
-      renderList(els.commentsList, state.comments, 'No comments yet', 'Public comments will show up here.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
-      renderList(els.screenComments, state.comments.slice(0,3), 'No comments under screen yet', 'Live viewer comments will pin directly under the main screen.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
+      renderList(els.commentsList, publicComments, 'No comments yet', 'Public comments will show up here.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
+      renderList(els.screenComments, publicComments.slice(0,3), 'No comments under screen yet', 'Live viewer comments will pin directly under the main screen.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
+      renderList(els.chatList, chatMessages, 'No guest chat yet', 'This webcam-room lane will hold the back-and-forth with oncoming guests.', item=>`<div class="chat-item"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || 'Chat message'}</span></div>`, 'chat-item');
       renderList(els.lobbyList, state.lobby, 'Lobby is empty', 'Start a live diary session to appear here.', item=>`<div class="feed-item"><strong>${item.profile_tag || item.display_name || item.owner_email}</strong><span>${item.preview_text || item.owner_email || 'Diary feed ready.'}</span></div>`);
       renderList(els.socialList, state.socialPosts, 'No social posts yet', 'Use Post To Feed after you save a diary entry.', item=>`<div class="social-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'social-item');
       renderList(els.socialFeed, state.socialPosts.slice(0,2), 'Live feed lane', 'Social posting cards will appear here.', item=>`<div class="response-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'response-item');
@@ -313,6 +323,17 @@
           .join(' · ') || 'Guest support';
         const data = await fetchJson('/api/diary/comment', { method:'POST', body: JSON.stringify({ session_id: state.sessionId, author_name: els.guestName.value || 'Guest', comment_text: commentText, comment_kind:'comment' })});
         state.comments = data.comments || []; setStatus('Comment posted.'); render();
+      }catch(error){ setStatus(`Error: ${error.message}`); }
+    });
+    document.getElementById('chatBtn').addEventListener('click', async ()=>{
+      try{
+        if(!state.sessionId) throw new Error('bootstrap_first');
+        const chatText = els.guestChatText.value.trim() || `Welcome in ${els.guestName.value || 'guest'}, tell me the hair issue and I will keep the room moving.`;
+        const data = await fetchJson('/api/diary/comment', { method:'POST', body: JSON.stringify({ session_id: state.sessionId, author_name: els.guestName.value || 'Host', comment_text: chatText, comment_kind:'chat' })});
+        state.comments = data.comments || [];
+        els.guestChatText.value = '';
+        setStatus('Guest webcam chat sent.');
+        render();
       }catch(error){ setStatus(`Error: ${error.message}`); }
     });
     document.getElementById('postLiveBtn').addEventListener('click', ()=>{
