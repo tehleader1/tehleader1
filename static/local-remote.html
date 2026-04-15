@@ -1212,12 +1212,14 @@
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
-        await new Promise((resolve)=>{
-          audio.onended = ()=>{ URL.revokeObjectURL(url); resolve(); };
-          audio.onerror = ()=>{ URL.revokeObjectURL(url); resolve(); };
-          audio.play().catch(()=>resolve());
+        const played = await new Promise((resolve)=>{
+          let started = false;
+          audio.onplay = ()=>{ started = true; };
+          audio.onended = ()=>{ URL.revokeObjectURL(url); resolve(started); };
+          audio.onerror = ()=>{ URL.revokeObjectURL(url); resolve(false); };
+          audio.play().catch(()=>resolve(false));
         });
-        return true;
+        return played;
       }catch{
         return false;
       }
@@ -1357,6 +1359,7 @@
       voiceConsoleText.textContent = response;
       voiceBubbleText.textContent = response;
       const usedPremiumVoice = await speakPremiumLine(response, who);
+      voiceConsoleText.textContent = usedPremiumVoice ? response : `${response} (premium voice fallback used browser speech on this device)`;
       if(!usedPremiumVoice){
         await speakLine(response, { kind: who, rate: who === "Jake" ? 0.94 : 1, pitch: who === "Jake" ? 0.78 : 1.02 });
       }

@@ -224,7 +224,8 @@
         }
         waveform.push(Number(peak.toFixed(3)));
       }
-      return waveform;
+      const max = Math.max(...waveform, 0.001);
+      return waveform.map((value)=>Number((value / max).toFixed(3)));
     }
     async function buildWaveformForFile(blobOrFile){
       try{
@@ -250,7 +251,12 @@
       const endX = (trimEnd / 100) * width;
       context.fillStyle = 'rgba(119,224,199,.12)';
       context.fillRect(startX, 0, endX - startX, height);
-      const waveform = (mediaRecorder && mediaRecorder.state !== 'inactive' ? liveWaveform : selectedClip?.waveform) || [];
+      const boardWaveform = boardSlots[activeBoardIndex]?.clip?.waveform || [];
+      const waveform = (mediaRecorder && mediaRecorder.state !== 'inactive'
+        ? liveWaveform
+        : canvas === els.boardWaveCanvas
+          ? boardWaveform
+          : (selectedClip?.waveform || boardWaveform)) || [];
       if(waveform.length){
         const barWidth = width / waveform.length;
         waveform.forEach((value, index)=>{
@@ -293,10 +299,12 @@
       waveformTimer = setInterval(()=>{
         if(!analyserNode) return;
         analyserNode.getByteTimeDomainData(dataArray);
-        liveWaveform = Array.from({ length: 72 }, (_, index)=>{
+        const rawWave = Array.from({ length: 72 }, (_, index)=>{
           const sample = dataArray[Math.min(dataArray.length - 1, Math.floor((index / 72) * dataArray.length))];
           return Math.abs((sample - 128) / 128);
         });
+        const max = Math.max(...rawWave, 0.001);
+        liveWaveform = rawWave.map((value)=>Number((value / max).toFixed(3)));
       }, 70);
     }
     function stopLiveWaveCapture(){
