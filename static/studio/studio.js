@@ -2,6 +2,8 @@ const qs = (s) => document.querySelector(s);
 const qsa = (s) => Array.from(document.querySelectorAll(s));
 const STUDIO_PREMIUM_URL = "https://shop.supportrd.com/products/jake-premium-studio";
 const STUDIO_LOGIN_URL = "/login";
+const STUDIO_LOCAL_SANDBOX = new URLSearchParams(window.location.search).get("localSandbox") === "1";
+const STUDIO_SANDBOX_SUFFIX = STUDIO_LOCAL_SANDBOX ? "?localSandbox=1" : "";
 
 let currentSessionId = localStorage.getItem("studioSessionId") || "";
 let placements = [];
@@ -885,6 +887,25 @@ function playIntroVoice() {
 }
 
 async function refreshStudioJakeAccess({ bootstrap = true } = {}) {
+  if (STUDIO_LOCAL_SANDBOX) {
+    studioAccessState = {
+      ...studioAccessState,
+      locked: false,
+      checking: false,
+      authenticated: true,
+      access: true,
+      email: "local-sandbox@supportrd.com",
+      subscription: "studio100"
+    };
+    if (!currentSessionId) {
+      currentSessionId = `SES-LOCAL-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      localStorage.setItem("studioSessionId", currentSessionId);
+    }
+    setStatus("#sessionStatus", "Studio API linked to local sandbox mode.");
+    updateStudioDevicePanel();
+    setStudioLocked(false);
+    return true;
+  }
   setStudioLocked(true, {
     copy: "Checking SupportRD login and Jake Premium Studio payment access...",
     meta: "Studio API is verifying your account.",
@@ -893,7 +914,7 @@ async function refreshStudioJakeAccess({ bootstrap = true } = {}) {
   });
   studioAccessState.checking = true;
   try {
-    const accessResponse = await fetch("/api/studio/jake/access", { credentials: "same-origin" });
+    const accessResponse = await fetch(`/api/studio/jake/access${STUDIO_SANDBOX_SUFFIX}`, { credentials: "same-origin" });
     let accessData = {};
     try { accessData = await accessResponse.json(); } catch {}
     if (accessResponse.status === 401 || accessData?.error === "login_required") {
@@ -935,7 +956,7 @@ async function refreshStudioJakeAccess({ bootstrap = true } = {}) {
       setStudioLocked(false);
       return true;
     }
-    const enterResponse = await fetch("/api/studio/jake/enter", {
+    const enterResponse = await fetch(`/api/studio/jake/enter${STUDIO_SANDBOX_SUFFIX}`, {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },

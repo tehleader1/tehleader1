@@ -397,7 +397,7 @@
         body: "Studio should feel like its own app. Here we keep the six-button remote feel while giving it a dedicated recording and waveform staging area.",
         appTitle: "Studio module live stage",
         appMeta: "Loads the real Studio app directly so recording, waveform, and booth behavior are available inside the sandbox.",
-        appSrc: "/studio",
+        appSrc: "/studio?localSandbox=1",
         appSelector: "",
         appFocusSelector: "body",
         features: [
@@ -676,6 +676,11 @@
       return data;
     }
 
+    function withStudioSandbox(url){
+      if(activePanel !== "studio") return url;
+      return url.includes("?") ? `${url}&localSandbox=1` : `${url}?localSandbox=1`;
+    }
+
     async function exportProfileFile(format){
       const payload = {
         display_name: bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || "SupportRD Host",
@@ -772,7 +777,7 @@
           {
             label: "Bootstrap Studio",
             run: async ()=>{
-              const data = await callJson("/api/studio/session/bootstrap", {
+              const data = await callJson(withStudioSandbox("/api/studio/session/bootstrap"), {
                 method: "POST",
                 body: JSON.stringify({ session_id: currentStudioSessionId || "", route: "studio" }),
               });
@@ -786,7 +791,7 @@
             label: "Commit Motherboard",
             run: async ()=>{
               if(!currentStudioSessionId) throw new Error("bootstrap_studio_first");
-              const data = await callJson("/api/studio/board/commit", {
+              const data = await callJson(withStudioSandbox("/api/studio/board/commit"), {
                 method: "POST",
                 body: JSON.stringify({
                   session_id: currentStudioSessionId,
@@ -811,7 +816,7 @@
             label: "Apply FX + History",
             run: async ()=>{
               if(!currentStudioSessionId) throw new Error("bootstrap_studio_first");
-              await callJson("/api/studio/fx/apply", {
+              await callJson(withStudioSandbox("/api/studio/fx/apply"), {
                 method: "POST",
                 body: JSON.stringify({
                   session_id: currentStudioSessionId,
@@ -822,7 +827,7 @@
                   fxAppliedRange: apiFieldBody.value || "whole-board",
                 }),
               });
-              const history = await callJson(`/api/studio/session/history?session_id=${encodeURIComponent(currentStudioSessionId)}`);
+              const history = await callJson(withStudioSandbox(`/api/studio/session/history?session_id=${encodeURIComponent(currentStudioSessionId)}`));
               setActionResult(history);
               renderFeedItems(history.history || [], (item)=>`<div class="mini-item"><strong>${item.action_type}</strong><span>${JSON.stringify(item.payload || {})}</span></div>`);
               setActionStatus("Studio FX applied and history loaded.");
