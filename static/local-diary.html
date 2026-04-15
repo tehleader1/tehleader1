@@ -6,110 +6,72 @@
   <title>SupportRD Local Diary</title>
   <style>
     :root{
-      --bg:#07111f;
-      --bg2:#0b1930;
-      --panel:rgba(9,19,35,.84);
-      --line:rgba(180,222,255,.14);
-      --text:#eef7ff;
-      --muted:rgba(228,240,255,.72);
-      --blue:#79b8ff;
-      --green:#77e0c7;
-      --gold:#ffd086;
-      --shadow:0 24px 70px rgba(0,0,0,.34);
+      --bg:#07111f;--bg2:#0b1930;--panel:rgba(9,19,35,.84);--line:rgba(180,222,255,.14);--text:#eef7ff;--muted:rgba(228,240,255,.74);--blue:#79b8ff;--green:#77e0c7;--gold:#ffd086;--shadow:0 24px 70px rgba(0,0,0,.34)
     }
-    *{box-sizing:border-box}
-    html,body{margin:0;min-height:100%;font-family:Georgia, "Times New Roman", serif;background:
-      radial-gradient(820px 420px at 0% 0%, rgba(121,184,255,.15), transparent 55%),
-      radial-gradient(720px 420px at 100% 0%, rgba(255,208,134,.12), transparent 55%),
-      linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}
-    body{padding:20px}
-    .shell{max-width:1480px;margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}
-    .glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.08);box-shadow:var(--shadow);border-radius:28px}
-    .rail,.stage{padding:20px}
-    .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-    h1,h2,h3,p{margin:0}
-    .hero h1{font-size:48px;line-height:.94}
-    .hero p{color:var(--muted);line-height:1.6;margin-top:12px}
-    .stack,.comments,.history,.feed-list,.action-grid{display:grid;gap:12px}
-    .card,.comment,.history-item,.feed-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}
-    .card strong,.comment strong,.history-item strong,.feed-item strong{display:block}
-    .card span,.comment span,.history-item span,.feed-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.45}
-    .stage{display:grid;gap:16px}
-    .hero-card{padding:18px;border-radius:24px;border:1px solid var(--line);background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03))}
-    .hero-card p{color:var(--muted);margin-top:10px;line-height:1.6}
-    .grid{display:grid;grid-template-columns:1.25fr .95fr;gap:16px}
-    .screen{min-height:260px;padding:18px;border-radius:24px;border:1px solid var(--line);background:
-      radial-gradient(circle at 12% 18%, rgba(119,224,199,.14), transparent 28%),
-      linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03))}
-    .screen h2{font-size:34px;font-family:"Cormorant Garamond", Georgia, serif}
-    .screen p{color:var(--muted);margin-top:10px;line-height:1.55}
-    .live-badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
-    .live-badge{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.06);font-weight:700}
-    .action-board{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
-    .action-board h3{font-size:28px;font-family:"Cormorant Garamond", Georgia, serif}
-    .action-board p{color:var(--muted);margin-top:8px;line-height:1.55}
-    .action-grid{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}
-    input,textarea,select,button{
-      font:inherit
-    }
-    input,textarea,select{
-      width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)
-    }
-    textarea{min-height:120px;resize:vertical}
-    .buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
-    .buttons button{
-      min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer
-    }
-    .status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}
-    .columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-    .panel{padding:16px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
-    .panel h3{font-size:28px;font-family:"Cormorant Garamond", Georgia, serif}
-    .panel p{color:var(--muted);margin-top:8px;line-height:1.55}
-    @media (max-width:1200px){
-      .shell{grid-template-columns:1fr}
-      .grid,.columns,.action-grid{grid-template-columns:1fr}
-    }
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Georgia,"Times New Roman",serif;background:radial-gradient(820px 420px at 0% 0%, rgba(121,184,255,.15), transparent 55%),radial-gradient(720px 420px at 100% 0%, rgba(255,208,134,.12), transparent 55%),linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}body{padding:20px}
+    .shell{max-width:1540px;margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}.glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.08);box-shadow:var(--shadow);border-radius:28px}.rail,.stage{padding:20px}.stage{display:grid;gap:16px}
+    .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}h1,h2,h3,p{margin:0}.hero h1{font-size:48px;line-height:.94}.hero p,.panel p,.action p{color:var(--muted);line-height:1.6;margin-top:10px}
+    .stack,.comments,.history,.feed-list,.response-list,.social-list{display:grid;gap:12px}.card,.comment,.history-item,.feed-item,.response-item,.social-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}.card strong,.comment strong,.history-item strong,.feed-item strong,.response-item strong,.social-item strong{display:block}.card span,.comment span,.history-item span,.feed-item span,.response-item span,.social-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.5}
+    .hero-card,.action-board,.panel,.screen{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}.hero-card h2,.action-board h3,.panel h3,.screen h2{font-size:34px;font-family:"Cormorant Garamond",Georgia,serif}
+    .hero-card p{color:var(--muted);margin-top:10px;line-height:1.6}.grid{display:grid;grid-template-columns:1.15fr .95fr;gap:16px}.columns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+    .video-shell{position:relative;overflow:hidden;min-height:360px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03)),url('/static/images/brochure-social.jpg') center/cover no-repeat}.video-shell video{width:100%;height:260px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line)}.video-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.live-badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.live-badge{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.07);font-weight:700}
+    input,textarea,select,button{font:inherit}input,textarea,select{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}textarea{min-height:110px;resize:vertical}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}.buttons button:hover{background:rgba(121,184,255,.18)}
+    .status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}.accent{color:var(--green)}.social-item{background:linear-gradient(180deg,rgba(121,184,255,.10),rgba(255,255,255,.04))}
+    @media (max-width:1280px){.shell,.grid,.columns,.action-grid,.video-meta{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <div class="shell">
     <aside class="rail glass">
       <div class="hero">
-        <div class="eyebrow">Standalone Local App</div>
+        <div class="eyebrow">Embedded App Surface</div>
         <h1>SupportRD Diary</h1>
-        <p>This is the first standalone rebuild surface. It uses the real diary APIs directly instead of opening the old Remote diary panel.</p>
+        <p>Diary is now the live session, livestream video, social posting, and AI hair-problem response lane. This is the same trail shell feel, just with the actual diary controls brought forward.</p>
       </div>
       <div class="stack" style="margin-top:18px">
-        <div class="card"><strong>Provider</strong><span>Dacast-ready live diary lane with SupportRD session ownership, lobby discovery, comments, and guest support.</span></div>
-        <div class="card"><strong>Current Session</strong><span id="diarySessionCard">Waiting for session bootstrap.</span></div>
-        <div class="card"><strong>Live Link</strong><span id="diaryLiveLink">No live link yet.</span></div>
+        <div class="card"><strong>Live Session</strong><span id="diarySessionCard">Waiting for session bootstrap.</span></div>
+        <div class="card"><strong>Paid Feed Link</strong><span id="diaryLiveLink">No live link yet.</span></div>
+        <div class="card"><strong>AI Filter</strong><span id="assistantLaneCard">Aria and Jake are ready to read hair problems.</span></div>
         <div class="card"><strong>History</strong><span id="diaryHistoryCard">Diary history will appear after the first saved session.</span></div>
       </div>
     </aside>
-
     <main class="stage glass">
       <section class="hero-card">
-        <div class="eyebrow">Diary Live App</div>
-        <h2 style="font-size:42px;font-family:'Cormorant Garamond', Georgia, serif">Live sessions, record history, comments, and public feed routing.</h2>
-        <p>We are using the real SupportRD diary APIs here, and this page is meant to become the true Diary standalone app instead of another old Remote panel.</p>
+        <div class="eyebrow">Diary Live Feed</div>
+        <h2>Livestream video panel, editable social posting, paid feed routing, and hair-problem assistant responses.</h2>
+        <p>The goal here is simple: when someone opens Diary, it should look alive immediately and every button should clearly belong to live video, posting, comments, and hair support.</p>
       </section>
 
       <section class="grid">
-        <div class="screen">
-          <div class="eyebrow">Live Screen</div>
-          <h2 id="liveScreenTitle">Diary live screen is ready.</h2>
-          <p id="liveScreenMeta">Bootstrap a session, save a tag, and switch live mode on to prepare the diary feed, comments, and public route.</p>
+        <div class="screen video-shell">
+          <div class="eyebrow">Live Video Panel</div>
+          <video id="diaryVideo" playsinline muted autoplay></video>
+          <div class="video-meta">
+            <div>
+              <h2 id="liveScreenTitle">Diary live screen is ready.</h2>
+              <p id="liveScreenMeta">Prime the camera, bootstrap a session, then save or post the live diary lane.</p>
+            </div>
+            <div class="response-list" id="socialFeed"></div>
+          </div>
           <div class="live-badges">
             <span class="live-badge" id="liveBadgeMode">Live: off</span>
             <span class="live-badge" id="liveBadgeTag">Tag: waiting</span>
             <span class="live-badge" id="liveBadgeOwner">Owner: guest</span>
+            <span class="live-badge" id="recordBadge">Camera: idle</span>
           </div>
+          <div class="buttons">
+            <button id="primeCameraBtn" type="button">Prime Video</button>
+            <button id="recordVideoBtn" type="button">Record Clip</button>
+            <button id="stopVideoBtn" type="button">Stop Clip</button>
+            <button id="postLiveBtn" type="button">Post To Feed</button>
+          </div>
+          <video id="diaryPlayback" controls style="width:100%;height:160px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line);margin-top:14px"></video>
         </div>
 
         <div class="action-board">
           <div class="eyebrow">Diary Controls</div>
-          <h3>Real Diary API board</h3>
-          <p>Use this board to bootstrap, save, refresh, and comment without touching the old console.</p>
+          <h3>Paid feed + hair response board</h3>
+          <p>Bootstrap the session, save the diary record, then use Aria or Jake to respond to the actual hair problem in front of you.</p>
           <div class="action-grid">
             <input id="displayName" placeholder="Display name">
             <input id="profileTag" placeholder="^^ diary tag">
@@ -117,17 +79,28 @@
               <option value="off">Live off</option>
               <option value="on">Live on</option>
             </select>
-            <input id="guestName" placeholder="Guest name">
-            <textarea id="entryText" placeholder="Diary entry / transcript"></textarea>
-            <textarea id="guestComment" placeholder="Guest comment"></textarea>
+            <input id="guestName" placeholder="Guest / follower name">
+            <select id="assistantSelect">
+              <option value="Aria">Aria</option>
+              <option value="Jake">Jake</option>
+            </select>
+            <input id="guestSupport" placeholder="Guest support amount e.g. $20">
+            <textarea id="entryText" placeholder="Diary entry / transcript / live post"></textarea>
+            <textarea id="hairProblem" placeholder="Hair problem lane: dryness, breakage, color, family matters, package deal, etc."></textarea>
           </div>
           <div class="buttons">
             <button id="bootstrapBtn" type="button">Bootstrap Diary</button>
             <button id="saveBtn" type="button">Save Diary Record</button>
             <button id="refreshBtn" type="button">Refresh Feed</button>
             <button id="commentBtn" type="button">Post Comment</button>
+            <button id="respondBtn" type="button">Generate Hair Response</button>
           </div>
           <div class="status" id="statusBox">Diary app is ready.</div>
+          <div class="panel" style="margin-top:14px;padding:14px">
+            <div class="eyebrow">Assistant Response</div>
+            <h3 style="font-size:28px">Aria / Jake readout</h3>
+            <div class="response-list" id="responseList"></div>
+          </div>
         </div>
       </section>
 
@@ -135,200 +108,142 @@
         <div class="panel">
           <div class="eyebrow">Latest Sessions</div>
           <h3>Diary history</h3>
-          <p>These are the latest saved diary sessions for the current account.</p>
           <div class="history" id="historyList"></div>
         </div>
         <div class="panel">
           <div class="eyebrow">Public Comments</div>
           <h3>Live comments</h3>
-          <p>Guest support and public discussion stay here.</p>
           <div class="comments" id="commentsList"></div>
         </div>
         <div class="panel">
           <div class="eyebrow">Lobby Discovery</div>
           <h3>Latest lobby feeds</h3>
-          <p>The sticky lobby should eventually point into this standalone diary app.</p>
           <div class="feed-list" id="lobbyList"></div>
+        </div>
+        <div class="panel">
+          <div class="eyebrow">Social Posting</div>
+          <h3>Feed snapshots</h3>
+          <div class="social-list" id="socialList"></div>
         </div>
       </section>
     </main>
   </div>
 
   <script>
-    const state = {
-      sessionId: "",
-      liveSlug: "",
-      ownerEmail: "guest",
-      payload: {},
-      comments: [],
-      lobby: [],
-      history: []
-    };
-
+    const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[] };
     const els = {
-      displayName: document.getElementById("displayName"),
-      profileTag: document.getElementById("profileTag"),
-      liveToggle: document.getElementById("liveToggle"),
-      guestName: document.getElementById("guestName"),
-      entryText: document.getElementById("entryText"),
-      guestComment: document.getElementById("guestComment"),
-      statusBox: document.getElementById("statusBox"),
-      historyList: document.getElementById("historyList"),
-      commentsList: document.getElementById("commentsList"),
-      lobbyList: document.getElementById("lobbyList"),
-      liveScreenTitle: document.getElementById("liveScreenTitle"),
-      liveScreenMeta: document.getElementById("liveScreenMeta"),
-      liveBadgeMode: document.getElementById("liveBadgeMode"),
-      liveBadgeTag: document.getElementById("liveBadgeTag"),
-      liveBadgeOwner: document.getElementById("liveBadgeOwner"),
-      diarySessionCard: document.getElementById("diarySessionCard"),
-      diaryLiveLink: document.getElementById("diaryLiveLink"),
-      diaryHistoryCard: document.getElementById("diaryHistoryCard")
-    };
+      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback') };
 
-    function setStatus(message){
-      els.statusBox.textContent = message;
-    }
+    function setStatus(message){ els.statusBox.textContent = message; }
+    function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='feed-item'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
+    async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
 
-    function renderList(target, items, emptyTitle, emptyCopy, formatter){
-      target.innerHTML = (items || []).length
-        ? items.map(formatter).join("")
-        : `<div class="feed-item"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`;
+    function buildHairResponse(name, problem){
+      const text = (problem || '').toLowerCase();
+      let lane = 'greeting';
+      let body = 'Tell me the real hair problem and I will route you into the right SupportRD lane.';
+      if(/family|mother|daughter|kids|husband|wife/.test(text)){ lane = 'inner circle'; body = `${name} here. I hear the family lane in this. Let us hold the people involved, the hair issue, and the care routine together instead of treating it like a one-off fix.`; }
+      else if(/package|special treatment|make money|professional|finance|sell/.test(text)){ lane = 'professional'; body = `${name} here. This sounds like the professional lane. I can move this into package logic, account value, studio support, and the SupportRD making-money conversation instead of a basic answer.`; }
+      else if(/color|bleach|damage|breakage|shedding|dry|heat|frizz|texture/.test(text)){ lane = 'advanced'; body = `${name} here. I picked up a real hair problem: ${problem}. I would route this through texture, damage level, product fit, price lane, and the diary history so the answer stays specific.`; }
+      else if(text.trim()){ lane = 'guided'; body = `${name} here. I heard you clearly. I can keep this in Diary Mode, post the concern socially, and still turn it into a direct hair-care answer with product support and paid live follow-up.`; }
+      return { lane, body };
     }
 
     function render(){
       const payload = state.payload || {};
-      els.liveScreenTitle.textContent = payload.display_name
-        ? `${payload.display_name}'s diary live lane`
-        : "Diary live screen is ready.";
-      els.liveScreenMeta.textContent = payload.entry_text || payload.transcript || "Bootstrap a session, save a tag, and switch live mode on to prepare the diary feed, comments, and public route.";
-      els.liveBadgeMode.textContent = `Live: ${payload.live_active ? "on" : "off"}`;
-      els.liveBadgeTag.textContent = `Tag: ${payload.profile_tag || "waiting"}`;
-      els.liveBadgeOwner.textContent = `Owner: ${state.ownerEmail || "guest"}`;
-      els.diarySessionCard.textContent = state.sessionId ? `${state.sessionId} · ${payload.updated_at || "session active"}` : "Waiting for session bootstrap.";
-      els.diaryLiveLink.textContent = state.liveSlug ? `${window.location.origin}/?diary-live=${state.liveSlug}` : "No live link yet.";
-      els.diaryHistoryCard.textContent = state.history[0]?.entry_text || state.history[0]?.transcript || "Diary history will appear after the first saved session.";
-      renderList(els.historyList, state.history, "No diary history yet", "Save a diary record to start history.", (item)=>`<div class="history-item"><strong>${item.profile_tag || item.session_id}</strong><span>${item.entry_text || item.transcript || "Saved diary entry."}</span></div>`);
-      renderList(els.commentsList, state.comments, "No comments yet", "Public comments will show up here.", (item)=>`<div class="comment"><strong>${item.author_name || "Guest"}</strong><span>${item.comment_text || item.comment_kind || "Comment"}</span></div>`);
-      renderList(els.lobbyList, state.lobby, "Lobby is empty", "Start a live diary session to appear here.", (item)=>`<div class="feed-item"><strong>${item.profile_tag || item.display_name || item.owner_email}</strong><span>${item.preview_text || item.owner_email || "Diary feed ready."}</span></div>`);
-    }
-
-    async function fetchJson(url, options = {}){
-      const response = await fetch(url, {
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-        ...options
-      });
-      const data = await response.json().catch(()=>({ ok:false, error:"invalid_json" }));
-      if(!response.ok || data?.ok === false) throw new Error(data?.error || `request_failed_${response.status}`);
-      return data;
+      els.liveScreenTitle.textContent = payload.display_name ? `${payload.display_name}'s diary live feed` : 'Diary live screen is ready.';
+      els.liveScreenMeta.textContent = payload.entry_text || payload.transcript || 'Prime the camera, bootstrap a session, then save or post the live diary lane.';
+      els.liveBadgeMode.textContent = `Live: ${payload.live_active ? 'on' : 'off'}`;
+      els.liveBadgeTag.textContent = `Tag: ${payload.profile_tag || 'waiting'}`;
+      els.liveBadgeOwner.textContent = `Owner: ${state.ownerEmail || 'guest'}`;
+      els.diarySessionCard.textContent = state.sessionId ? `${state.sessionId} · ${payload.updated_at || 'session active'}` : 'Waiting for session bootstrap.';
+      els.diaryLiveLink.textContent = state.liveSlug ? `${window.location.origin}/?diary-live=${state.liveSlug}` : 'No live link yet.';
+      els.diaryHistoryCard.textContent = state.history[0]?.entry_text || state.history[0]?.transcript || 'Diary history will appear after the first saved session.';
+      els.assistantLaneCard.textContent = state.response?.body || 'Aria and Jake are ready to read hair problems.';
+      renderList(els.historyList, state.history, 'No diary history yet', 'Save a diary record to start history.', item=>`<div class="history-item"><strong>${item.profile_tag || item.session_id}</strong><span>${item.entry_text || item.transcript || 'Saved diary entry.'}</span></div>`, 'history-item');
+      renderList(els.commentsList, state.comments, 'No comments yet', 'Public comments will show up here.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
+      renderList(els.lobbyList, state.lobby, 'Lobby is empty', 'Start a live diary session to appear here.', item=>`<div class="feed-item"><strong>${item.profile_tag || item.display_name || item.owner_email}</strong><span>${item.preview_text || item.owner_email || 'Diary feed ready.'}</span></div>`);
+      renderList(els.socialList, state.socialPosts, 'No social posts yet', 'Use Post To Feed after you save a diary entry.', item=>`<div class="social-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'social-item');
+      renderList(els.socialFeed, state.socialPosts.slice(0,2), 'Live feed lane', 'Social posting cards will appear here.', item=>`<div class="response-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'response-item');
+      renderList(els.responseList, state.response ? [state.response] : [], 'Waiting for hair problem', 'Use Generate Hair Response after entering the issue.', item=>`<div class="response-item"><strong>${item.lane.toUpperCase()} · ${els.assistantSelect.value}</strong><span>${item.body}</span></div>`, 'response-item');
     }
 
     async function bootstrapData(){
-      const bootstrap = await fetchJson("/api/local-remote/bootstrap");
-      state.ownerEmail = bootstrap.account?.email || "guest";
+      const bootstrap = await fetchJson('/api/local-remote/bootstrap');
+      state.ownerEmail = bootstrap.account?.email || 'guest';
       state.history = bootstrap.diary?.recent_sessions || [];
       state.lobby = bootstrap.diary?.lobby || [];
       const latest = state.history[0] || {};
-      els.displayName.value = bootstrap.settings?.display_name || bootstrap.account?.display_name || "";
-      els.profileTag.value = latest.profile_tag || bootstrap.settings?.saved_tag || "";
-      els.liveToggle.value = latest.live_active ? "on" : "off";
-      els.entryText.value = latest.entry_text || latest.transcript || "";
-      state.sessionId = latest.session_id || "";
-      state.liveSlug = latest.live_slug || "";
-      if (state.sessionId) {
-        await refreshFeed();
-      }
+      els.displayName.value = bootstrap.settings?.display_name || bootstrap.account?.display_name || '';
+      els.profileTag.value = latest.profile_tag || bootstrap.settings?.saved_tag || '';
+      els.liveToggle.value = latest.live_active ? 'on' : 'off';
+      els.entryText.value = latest.entry_text || latest.transcript || '';
+      state.sessionId = latest.session_id || state.sessionId;
+      state.liveSlug = latest.live_slug || state.liveSlug;
+      if(state.sessionId){ await refreshFeed(); }
       render();
     }
 
-    async function refreshFeed(){
-      if (!state.sessionId) return;
-      const data = await fetchJson(`/api/diary/session/feed?session_id=${encodeURIComponent(state.sessionId)}`);
-      state.payload = data.payload || {};
-      state.comments = data.comments || [];
-      state.liveSlug = state.payload.live_slug || state.liveSlug;
-      render();
+    async function refreshFeed(){ if(!state.sessionId) return; const data = await fetchJson(`/api/diary/session/feed?session_id=${encodeURIComponent(state.sessionId)}`); state.payload = data.payload || {}; state.comments = data.comments || []; state.liveSlug = state.payload.live_slug || state.liveSlug; render(); }
+
+    async function primeCamera(){
+      if(state.mediaStream) return state.mediaStream;
+      const stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+      state.mediaStream = stream; els.diaryVideo.srcObject = stream; els.recordBadge.textContent = 'Camera: armed'; return stream;
     }
+    function stopCamera(){ if(state.mediaStream){ state.mediaStream.getTracks().forEach(track=>track.stop()); state.mediaStream = null; els.diaryVideo.srcObject = null; els.recordBadge.textContent = 'Camera: idle'; } }
+    function pickRecorderMime(){ return ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(type=>window.MediaRecorder?.isTypeSupported?.(type)) || ''; }
 
-    document.getElementById("bootstrapBtn").addEventListener("click", async ()=>{
+    document.getElementById('primeCameraBtn').addEventListener('click', async ()=>{ try{ await primeCamera(); setStatus('Diary video panel is armed.'); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    document.getElementById('recordVideoBtn').addEventListener('click', async ()=>{
       try{
-        const data = await fetchJson("/api/diary/session/bootstrap", {
-          method: "POST",
-          body: JSON.stringify({
-            session_id: state.sessionId,
-            display_name: els.displayName.value,
-            profile_tag: els.profileTag.value,
-            live_active: els.liveToggle.value === "on",
-            entry_text: els.entryText.value
-          })
-        });
-        state.sessionId = data.session_id;
-        state.liveSlug = data.live_slug;
-        state.payload = data.payload || {};
-        state.comments = data.comments || [];
-        setStatus(`Diary session ${data.session_id} bootstrapped.`);
-        await bootstrapData();
-      }catch(error){
-        setStatus(`Error: ${error.message}`);
-      }
+        await primeCamera();
+        if(state.mediaRecorder && state.mediaRecorder.state !== 'inactive') return;
+        state.recordedChunks = [];
+        state.mediaRecorder = new MediaRecorder(state.mediaStream, pickRecorderMime() ? { mimeType: pickRecorderMime() } : undefined);
+        state.mediaRecorder.ondataavailable = (event)=>{ if(event.data?.size) state.recordedChunks.push(event.data); };
+        state.mediaRecorder.onstop = ()=>{ const blob = new Blob(state.recordedChunks, { type: state.recordedChunks[0]?.type || 'video/webm' }); els.diaryPlayback.src = URL.createObjectURL(blob); els.recordBadge.textContent = 'Camera: clip ready'; };
+        state.mediaRecorder.start(); els.recordBadge.textContent = 'Camera: recording'; setStatus('Diary live clip recording.');
+      }catch(error){ setStatus(`Error: ${error.message}`); }
     });
+    document.getElementById('stopVideoBtn').addEventListener('click', ()=>{ if(state.mediaRecorder && state.mediaRecorder.state !== 'inactive'){ state.mediaRecorder.stop(); setStatus('Diary clip stopped.'); } else { stopCamera(); setStatus('Diary camera released.'); } });
 
-    document.getElementById("saveBtn").addEventListener("click", async ()=>{
+    document.getElementById('bootstrapBtn').addEventListener('click', async ()=>{
       try{
-        if (!state.sessionId) throw new Error("bootstrap_first");
-        const data = await fetchJson("/api/diary/session/save", {
-          method: "POST",
-          body: JSON.stringify({
-            session_id: state.sessionId,
-            display_name: els.displayName.value,
-            profile_tag: els.profileTag.value,
-            live_active: els.liveToggle.value === "on",
-            entry_text: els.entryText.value,
-            transcript: els.entryText.value
-          })
-        });
-        state.payload = data.payload || {};
-        state.comments = data.comments || [];
-        state.liveSlug = data.live_slug || "";
-        setStatus("Diary record saved.");
-        await bootstrapData();
-      }catch(error){
-        setStatus(`Error: ${error.message}`);
-      }
+        const data = await fetchJson('/api/diary/session/bootstrap', { method:'POST', body: JSON.stringify({ session_id: state.sessionId, display_name: els.displayName.value, profile_tag: els.profileTag.value, live_active: els.liveToggle.value === 'on', entry_text: els.entryText.value })});
+        state.sessionId = data.session_id; state.liveSlug = data.live_slug; state.payload = data.payload || {}; state.comments = data.comments || []; setStatus(`Diary session ${data.session_id} bootstrapped.`); await bootstrapData();
+      }catch(error){ setStatus(`Error: ${error.message}`); }
     });
-
-    document.getElementById("refreshBtn").addEventListener("click", async ()=>{
+    document.getElementById('saveBtn').addEventListener('click', async ()=>{
       try{
-        await bootstrapData();
-        setStatus("Diary feed refreshed.");
-      }catch(error){
-        setStatus(`Error: ${error.message}`);
-      }
+        if(!state.sessionId) throw new Error('bootstrap_first');
+        const data = await fetchJson('/api/diary/session/save', { method:'POST', body: JSON.stringify({ session_id: state.sessionId, display_name: els.displayName.value, profile_tag: els.profileTag.value, live_active: els.liveToggle.value === 'on', entry_text: els.entryText.value, transcript: els.entryText.value })});
+        state.payload = data.payload || {}; state.comments = data.comments || []; state.liveSlug = data.live_slug || ''; setStatus('Diary record saved.'); await bootstrapData();
+      }catch(error){ setStatus(`Error: ${error.message}`); }
     });
-
-    document.getElementById("commentBtn").addEventListener("click", async ()=>{
+    document.getElementById('refreshBtn').addEventListener('click', async ()=>{ try{ await bootstrapData(); setStatus('Diary feed refreshed.'); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    document.getElementById('commentBtn').addEventListener('click', async ()=>{
       try{
-        if (!state.sessionId) throw new Error("bootstrap_first");
-        const data = await fetchJson("/api/diary/comment", {
-          method: "POST",
-          body: JSON.stringify({
-            session_id: state.sessionId,
-            author_name: els.guestName.value || "Guest",
-            comment_text: els.guestComment.value,
-            comment_kind: "comment"
-          })
-        });
-        state.comments = data.comments || [];
-        els.guestComment.value = "";
-        setStatus("Comment posted.");
-        render();
-      }catch(error){
-        setStatus(`Error: ${error.message}`);
-      }
+        if(!state.sessionId) throw new Error('bootstrap_first');
+        const commentText = [els.entryText.value, els.guestSupport.value ? `Support ${els.guestSupport.value}` : '']
+          .filter(Boolean)
+          .join(' · ') || 'Guest support';
+        const data = await fetchJson('/api/diary/comment', { method:'POST', body: JSON.stringify({ session_id: state.sessionId, author_name: els.guestName.value || 'Guest', comment_text: commentText, comment_kind:'comment' })});
+        state.comments = data.comments || []; setStatus('Comment posted.'); render();
+      }catch(error){ setStatus(`Error: ${error.message}`); }
     });
+    document.getElementById('postLiveBtn').addEventListener('click', ()=>{
+      const title = `${els.profileTag.value || 'Diary Live'} · ${els.liveToggle.value === 'on' ? 'Live' : 'Draft'}`;
+      const body = els.entryText.value || 'Hair diary lane is ready for posting.';
+      state.socialPosts.unshift({ title, body });
+      state.socialPosts = state.socialPosts.slice(0,6);
+      setStatus('Diary live post added to the social feed lane.');
+      render();
+    });
+    document.getElementById('respondBtn').addEventListener('click', ()=>{ state.response = buildHairResponse(els.assistantSelect.value, els.hairProblem.value); render(); setStatus(`${els.assistantSelect.value} built a ${state.response.lane} response.`); });
 
-    bootstrapData().then(()=>setStatus("Diary app loaded.")).catch((error)=>setStatus(`Error: ${error.message}`));
+    bootstrapData().then(()=>setStatus('Diary app loaded.')).catch((error)=>setStatus(`Error: ${error.message}`));
+    window.addEventListener('beforeunload', stopCamera);
   </script>
 </body>
 </html>

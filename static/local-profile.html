@@ -5,60 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SupportRD Local Profile</title>
   <style>
-    :root{
-      --bg:#07111f;--bg2:#0b1930;--panel:rgba(9,19,35,.84);--line:rgba(180,222,255,.14);
-      --text:#eef7ff;--muted:rgba(228,240,255,.72);--shadow:0 24px 70px rgba(0,0,0,.34);
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;min-height:100%;font-family:Georgia,"Times New Roman",serif;background:
-      radial-gradient(820px 420px at 0% 0%, rgba(121,184,255,.15), transparent 55%),
-      radial-gradient(720px 420px at 100% 0%, rgba(255,208,134,.12), transparent 55%),
-      linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}
-    body{padding:20px}
-    .shell{max-width:1480px;margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}
-    .glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.08);box-shadow:var(--shadow);border-radius:28px}
-    .rail,.stage{padding:20px}.eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-    h1,h2,h3,p{margin:0}.hero h1{font-size:48px;line-height:.94}.hero p,.panel p,.action p{color:var(--muted);margin-top:10px;line-height:1.6}
-    .stack,.facts,.exports,.api-grid{display:grid;gap:12px}.card,.fact,.export-item,.api-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}
-    .card strong,.fact strong,.export-item strong,.api-item strong{display:block}.card span,.fact span,.export-item span,.api-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.45}
-    .stage{display:grid;gap:16px}.hero-card,.action,.panel{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
-    .hero-card h2,.action h3,.panel h3{font-size:34px;font-family:"Cormorant Garamond", Georgia, serif}
-    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
-    input,textarea,button{font:inherit} input,textarea{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}
-    textarea{min-height:110px;resize:vertical}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
-    .buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}
-    .status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}
-    .columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-    @media (max-width:1200px){.shell{grid-template-columns:1fr}.grid,.columns,.action-grid{grid-template-columns:1fr}}
+    :root{--bg:#07111f;--bg2:#0b1930;--panel:rgba(9,19,35,.84);--line:rgba(180,222,255,.14);--text:#eef7ff;--muted:rgba(228,240,255,.72);--green:#77e0c7;--gold:#ffd086;--shadow:0 24px 70px rgba(0,0,0,.34)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Georgia,"Times New Roman",serif;background:radial-gradient(820px 420px at 0% 0%, rgba(121,184,255,.15), transparent 55%),radial-gradient(720px 420px at 100% 0%, rgba(255,208,134,.12), transparent 55%),linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}body{padding:20px}
+    .shell{max-width:1540px;margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}.glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.08);box-shadow:var(--shadow);border-radius:28px}.rail,.stage{padding:20px}.stage{display:grid;gap:16px}
+    .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}h1,h2,h3,p{margin:0}.hero h1{font-size:48px;line-height:.94}.hero p,.panel p,.action p{color:var(--muted);line-height:1.6;margin-top:10px}
+    .stack,.facts,.exports,.api-grid{display:grid;gap:12px}.card,.fact,.export-item,.api-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}.card strong,.fact strong,.export-item strong,.api-item strong{display:block}.card span,.fact span,.export-item span,.api-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.45}
+    .hero-card,.action,.panel,.scanner-panel{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}.hero-card h2,.action h3,.panel h3,.scanner-panel h3{font-size:34px;font-family:"Cormorant Garamond",Georgia,serif}
+    .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+    .camera-stage{display:grid;grid-template-columns:1fr 220px;gap:16px;align-items:start}.preview{display:grid;gap:12px}.preview video,.preview canvas{width:100%;height:280px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line)}.verification-badges{display:flex;flex-wrap:wrap;gap:10px}.verification-badge{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.06);font-weight:700}
+    input,textarea,select,button{font:inherit}input,textarea,select{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}textarea{min-height:110px;resize:vertical}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}.buttons button:hover{background:rgba(119,224,199,.14)}.status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}
+    .cheer{background:linear-gradient(135deg, rgba(119,224,199,.18), rgba(255,208,134,.10));border:1px solid rgba(119,224,199,.25)}
+    @media (max-width:1280px){.shell,.grid,.columns,.action-grid,.camera-stage{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <div class="shell">
     <aside class="rail glass">
       <div class="hero">
-        <div class="eyebrow">Standalone Local App</div>
+        <div class="eyebrow">Embedded App Surface</div>
         <h1>SupportRD Profile</h1>
-        <p>This is the standalone verification lane for identity, general status, hair scan memory, API access, and export history.</p>
+        <p>Profile is now the camera scanner, verified hair profile, and export lane. It should cheer the person up while still confirming real qualities and hair direction.</p>
       </div>
       <div class="stack" style="margin-top:18px">
-        <div class="card"><strong>Provider Stack</strong><span>SupportRD scanner + Interzoid-style professional identity enrichment direction.</span></div>
+        <div class="card"><strong>Provider Stack</strong><span>Banuba-style live scan flow + Interzoid professional identity enrichment + SupportRD hair history.</span></div>
         <div class="card"><strong>Identity</strong><span id="identityCard">Waiting for profile scanner.</span></div>
         <div class="card"><strong>Status</strong><span id="statusCard">General status will appear here.</span></div>
-        <div class="card"><strong>Latest Export</strong><span id="exportCard">No export yet.</span></div>
+        <div class="card"><strong>Hair Profile</strong><span id="verifiedCard">Verified hair profile is waiting for the first scan.</span></div>
       </div>
     </aside>
     <main class="stage glass">
-      <section class="hero-card">
+      <section class="hero-card cheer">
         <div class="eyebrow">Profile Verification App</div>
-        <h2>Identity, texture, damage, color, and account continuity in one premium lane.</h2>
-        <p>This page talks directly to the real scanner and export APIs instead of hiding Profile inside the old Remote panel.</p>
+        <h2>Camera hair scan, cheerful verification, texture confirmation, and profile exports in one premium lane.</h2>
+        <p>The person should feel seen here. This is where SupportRD confirms the profile picture, the visible hair condition, and the account-connected profile story.</p>
       </section>
       <section class="grid">
-        <div class="panel">
-          <div class="eyebrow">Profile Facts</div>
-          <h3>Confirmation deck</h3>
-          <p>These are the professional confirmation reads for the person and the hair profile.</p>
-          <div class="facts" id="factsList"></div>
+        <div class="scanner-panel">
+          <div class="eyebrow">Live Hair Scanner</div>
+          <h3>Camera scan lane</h3>
+          <div class="camera-stage">
+            <div class="preview">
+              <video id="profileVideo" playsinline autoplay muted poster="/static/images/have-healthy-hair.jpeg"></video>
+              <canvas id="profileCanvas"></canvas>
+              <div class="verification-badges">
+                <span class="verification-badge" id="faceBadge">Face: waiting</span>
+                <span class="verification-badge" id="textureBadge">Texture: waiting</span>
+                <span class="verification-badge" id="statusBadge">Status: waiting</span>
+              </div>
+            </div>
+            <div class="facts" id="factsList"></div>
+          </div>
+          <div class="buttons">
+            <button id="primeCameraBtn" type="button">Prime Scanner Camera</button>
+            <button id="captureBtn" type="button">Capture Profile Picture</button>
+            <button id="refreshScannerBtn" type="button">Run Hair Scan</button>
+            <button id="stopCameraBtn" type="button">Release Camera</button>
+          </div>
+          <div class="status" id="statusBox">Profile app is ready.</div>
         </div>
         <div class="action">
           <div class="eyebrow">Profile Controls</div>
@@ -70,139 +73,63 @@
             <input id="hairDamage" placeholder="Damage">
             <input id="hairColor" placeholder="Color">
             <input id="hairType" placeholder="Hair type">
+            <select id="moodSelect">
+              <option value="cheered">Mood · cheered up</option>
+              <option value="calm">Mood · calm</option>
+              <option value="premium">Mood · premium</option>
+            </select>
             <textarea id="hairSummary" placeholder="Hair summary"></textarea>
           </div>
           <div class="buttons">
-            <button id="refreshScannerBtn" type="button">Refresh Scanner</button>
             <button id="exportPdfBtn" type="button">Export PDF</button>
             <button id="exportDocxBtn" type="button">Export DOCX</button>
           </div>
-          <div class="status" id="statusBox">Profile app is ready.</div>
         </div>
       </section>
       <section class="columns">
         <div class="panel">
           <div class="eyebrow">API Access</div>
           <h3>Access deck</h3>
-          <p>These switches tell us which layers are armed.</p>
           <div class="api-grid" id="apiGrid"></div>
         </div>
         <div class="panel">
           <div class="eyebrow">Hair Scan</div>
           <h3>Hair analysis</h3>
-          <p>The latest stored analysis lives here.</p>
           <div class="facts" id="analysisList"></div>
         </div>
         <div class="panel">
           <div class="eyebrow">Export History</div>
           <h3>Recent export lane</h3>
-          <p>This updates when the profile export path is used.</p>
           <div class="exports" id="exportsList"></div>
         </div>
       </section>
     </main>
   </div>
   <script>
-    const els = {
-      displayName: document.getElementById("displayName"),
-      hairTexture: document.getElementById("hairTexture"),
-      hairDamage: document.getElementById("hairDamage"),
-      hairColor: document.getElementById("hairColor"),
-      hairType: document.getElementById("hairType"),
-      hairSummary: document.getElementById("hairSummary"),
-      statusBox: document.getElementById("statusBox"),
-      factsList: document.getElementById("factsList"),
-      apiGrid: document.getElementById("apiGrid"),
-      analysisList: document.getElementById("analysisList"),
-      exportsList: document.getElementById("exportsList"),
-      identityCard: document.getElementById("identityCard"),
-      statusCard: document.getElementById("statusCard"),
-      exportCard: document.getElementById("exportCard")
-    };
-    let bootstrap = null;
-    let scanner = null;
-
+    const els = { displayName: document.getElementById('displayName'), hairTexture: document.getElementById('hairTexture'), hairDamage: document.getElementById('hairDamage'), hairColor: document.getElementById('hairColor'), hairType: document.getElementById('hairType'), moodSelect: document.getElementById('moodSelect'), hairSummary: document.getElementById('hairSummary'), statusBox: document.getElementById('statusBox'), factsList: document.getElementById('factsList'), apiGrid: document.getElementById('apiGrid'), analysisList: document.getElementById('analysisList'), exportsList: document.getElementById('exportsList'), identityCard: document.getElementById('identityCard'), statusCard: document.getElementById('statusCard'), verifiedCard: document.getElementById('verifiedCard'), faceBadge: document.getElementById('faceBadge'), textureBadge: document.getElementById('textureBadge'), statusBadge: document.getElementById('statusBadge'), profileVideo: document.getElementById('profileVideo'), profileCanvas: document.getElementById('profileCanvas') };
+    let bootstrap = null; let scanner = null; let mediaStream = null; let snapshotTaken = false;
     function setStatus(message){ els.statusBox.textContent = message; }
-    function renderList(target, items, emptyTitle, emptyCopy, formatter){
-      target.innerHTML = (items || []).length ? items.map(formatter).join("") : `<div class="fact"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`;
+    function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='fact'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
+    async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
+    async function exportProfile(format){ const payload = { display_name: els.displayName.value, texture: els.hairTexture.value, damage: els.hairDamage.value, color: els.hairColor.value, hair_type: els.hairType.value, summary_text: els.hairSummary.value, format }; const response = await fetch('/api/profile/analysis/export',{ method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); if(!response.ok) throw new Error(`export_failed_${response.status}`); const blob = await response.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = format === 'pdf' ? 'supportrd-profile.pdf' : 'supportrd-profile.docx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+    function render(){ const hair = scanner?.hair_analysis || bootstrap?.profile?.hair_analysis || {}; const identity = scanner?.identity_confirmed || bootstrap?.profile?.identity_confirmed || 'Waiting for profile scanner.'; const status = scanner?.general_status || bootstrap?.profile?.general_status || 'General status will appear here.'; const summary = hair.summary || hair.latest_summary || 'No saved summary yet.'; els.identityCard.textContent = identity; els.statusCard.textContent = status; els.verifiedCard.textContent = summary; els.faceBadge.textContent = `Face: ${snapshotTaken ? 'captured' : 'waiting'}`; els.textureBadge.textContent = `Texture: ${hair.texture || 'waiting'}`; els.statusBadge.textContent = `Status: ${status.includes('fine') ? 'confirmed' : 'reading'}`;
+      renderList(els.factsList, [{ title:'Identity Confirmed', body: identity }, { title:'General Status Reading', body: status }, { title:'Profile Mood', body: `Mood lane: ${els.moodSelect.value}` }, { title:'Texture Confirmed', body: hair.texture || 'waiting' }], 'Profile facts waiting', 'Refresh the scanner to see profile facts.', item=>`<div class="fact"><strong>${item.title}</strong><span>${item.body}</span></div>`);
+      const apiAccess = scanner?.api_access || bootstrap?.profile?.api_access || {}; renderList(els.apiGrid, Object.entries(apiAccess).map(([key, value])=>({ title:key, body:value ? 'armed' : 'waiting' })), 'API deck waiting', 'Scanner access deck will appear here.', item=>`<div class="api-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'api-item');
+      renderList(els.analysisList, [{ title:'Texture', body: hair.texture || 'waiting' }, { title:'Damage', body: hair.damage || 'waiting' }, { title:'Color', body: hair.color || 'waiting' }, { title:'Type', body: hair.hair_type || 'waiting' }, { title:'Summary', body: summary }], 'Analysis waiting', 'Hair analysis will appear here.', item=>`<div class="fact"><strong>${item.title}</strong><span>${item.body}</span></div>`);
+      renderList(els.exportsList, [{ title:'Latest export', body: hair.created_at || 'No export yet.' }, { title:'Password lane', body: bootstrap?.settings?.password_set ? 'Password saved in account settings.' : 'Password not set yet.' }], 'No exports yet', 'Export PDF or DOCX to populate this lane.', item=>`<div class="export-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'export-item');
     }
-    async function fetchJson(url, options = {}){
-      const response = await fetch(url, { credentials:"same-origin", headers:{ "Content-Type":"application/json", ...(options.headers || {}) }, ...options });
-      const data = await response.json().catch(()=>({ ok:false, error:"invalid_json" }));
-      if(!response.ok || data?.ok === false) throw new Error(data?.error || `request_failed_${response.status}`);
-      return data;
-    }
-    async function exportProfile(format){
-      const payload = {
-        display_name: els.displayName.value,
-        texture: els.hairTexture.value,
-        damage: els.hairDamage.value,
-        color: els.hairColor.value,
-        hair_type: els.hairType.value,
-        summary_text: els.hairSummary.value,
-        format
-      };
-      const response = await fetch("/api/profile/analysis/export", {
-        method:"POST",
-        credentials:"same-origin",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify(payload)
-      });
-      if(!response.ok) throw new Error(`export_failed_${response.status}`);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = format === "pdf" ? "supportrd-profile.pdf" : "supportrd-profile.docx";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-    function render(){
-      const hair = scanner?.hair_analysis || bootstrap?.profile?.hair_analysis || {};
-      els.identityCard.textContent = scanner?.identity_confirmed || bootstrap?.profile?.identity_confirmed || "Waiting for profile scanner.";
-      els.statusCard.textContent = scanner?.general_status || bootstrap?.profile?.general_status || "General status will appear here.";
-      els.exportCard.textContent = hair.created_at || "No export yet.";
-      renderList(els.factsList, [
-        { title: "Identity Confirmed", body: scanner?.identity_confirmed || bootstrap?.profile?.identity_confirmed || "Waiting." },
-        { title: "General Status", body: scanner?.general_status || bootstrap?.profile?.general_status || "Waiting." }
-      ], "Profile facts waiting", "Refresh the scanner to see profile facts.", (item)=>`<div class="fact"><strong>${item.title}</strong><span>${item.body}</span></div>`);
-      const apiAccess = scanner?.api_access || bootstrap?.profile?.api_access || {};
-      renderList(els.apiGrid, Object.entries(apiAccess).map(([key, value])=>({ title:key, body:value ? "armed" : "waiting" })), "API deck waiting", "Scanner access deck will appear here.", (item)=>`<div class="api-item"><strong>${item.title}</strong><span>${item.body}</span></div>`);
-      renderList(els.analysisList, [
-        { title: "Texture", body: hair.texture || "waiting" },
-        { title: "Damage", body: hair.damage || "waiting" },
-        { title: "Color", body: hair.color || "waiting" },
-        { title: "Type", body: hair.hair_type || "waiting" },
-        { title: "Summary", body: hair.summary || hair.latest_summary || "No saved summary yet." }
-      ], "Analysis waiting", "Hair analysis will appear here.", (item)=>`<div class="fact"><strong>${item.title}</strong><span>${item.body}</span></div>`);
-      renderList(els.exportsList, [
-        { title: "Latest export", body: hair.created_at || "No export yet." }
-      ], "No exports yet", "Export PDF or DOCX to populate this lane.", (item)=>`<div class="export-item"><strong>${item.title}</strong><span>${item.body}</span></div>`);
-    }
-    async function loadBootstrap(){
-      bootstrap = await fetchJson("/api/local-remote/bootstrap");
-      const hair = bootstrap.profile?.hair_analysis || {};
-      els.displayName.value = bootstrap.settings?.display_name || bootstrap.account?.display_name || "";
-      els.hairTexture.value = hair.texture || "";
-      els.hairDamage.value = hair.damage || "";
-      els.hairColor.value = hair.color || "";
-      els.hairType.value = hair.hair_type || "";
-      els.hairSummary.value = hair.summary || "";
-      scanner = bootstrap.profile || null;
-      render();
-    }
-    document.getElementById("refreshScannerBtn").addEventListener("click", async ()=>{
-      try{
-        scanner = await fetchJson(`/api/profile/access-scanner?display_name=${encodeURIComponent(els.displayName.value)}&hair_texture=${encodeURIComponent(els.hairTexture.value)}&hair_damage=${encodeURIComponent(els.hairDamage.value)}&hair_type=${encodeURIComponent(els.hairType.value)}`);
-        render();
-        setStatus("Profile scanner refreshed.");
-      }catch(error){ setStatus(`Error: ${error.message}`); }
-    });
-    document.getElementById("exportPdfBtn").addEventListener("click", async ()=>{ try{ await exportProfile("pdf"); setStatus("Profile PDF export downloaded."); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
-    document.getElementById("exportDocxBtn").addEventListener("click", async ()=>{ try{ await exportProfile("docx"); setStatus("Profile DOCX export downloaded."); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
-    loadBootstrap().then(()=>setStatus("Profile app loaded.")).catch((error)=>setStatus(`Error: ${error.message}`));
+    async function loadBootstrap(){ bootstrap = await fetchJson('/api/local-remote/bootstrap'); const hair = bootstrap.profile?.hair_analysis || {}; els.displayName.value = bootstrap.settings?.display_name || bootstrap.account?.display_name || ''; els.hairTexture.value = hair.texture || ''; els.hairDamage.value = hair.damage || ''; els.hairColor.value = hair.color || ''; els.hairType.value = hair.hair_type || ''; els.hairSummary.value = hair.summary || hair.latest_summary || ''; scanner = bootstrap.profile || null; render(); }
+    async function primeCamera(){ if(mediaStream) return mediaStream; mediaStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false }); els.profileVideo.srcObject = mediaStream; setStatus('Profile scanner camera is armed.'); return mediaStream; }
+    function stopCamera(){ if(mediaStream){ mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; els.profileVideo.srcObject = null; setStatus('Profile scanner camera released.'); } }
+    function captureFrame(){ const canvas = els.profileCanvas; const video = els.profileVideo; const width = video.videoWidth || 640; const height = video.videoHeight || 360; canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(video, 0, 0, width, height); snapshotTaken = true; render(); setStatus('Profile picture captured for the hair scanner.'); }
+    document.getElementById('primeCameraBtn').addEventListener('click', async ()=>{ try{ await primeCamera(); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    document.getElementById('captureBtn').addEventListener('click', ()=>{ try{ captureFrame(); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    document.getElementById('stopCameraBtn').addEventListener('click', stopCamera);
+    document.getElementById('refreshScannerBtn').addEventListener('click', async ()=>{ try{ scanner = await fetchJson(`/api/profile/access-scanner?display_name=${encodeURIComponent(els.displayName.value)}&hair_texture=${encodeURIComponent(els.hairTexture.value)}&hair_damage=${encodeURIComponent(els.hairDamage.value)}&hair_type=${encodeURIComponent(els.hairType.value)}&avatar_set=${snapshotTaken ? '1' : '0'}`); scanner.hair_analysis = { ...(scanner.hair_analysis || {}), color: els.hairColor.value || scanner.hair_analysis?.color || 'natural', summary: els.hairSummary.value || scanner.hair_analysis?.latest_summary || 'Hair profile is verified and ready.' }; render(); setStatus('Profile scanner refreshed.'); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    document.getElementById('exportPdfBtn').addEventListener('click', async ()=>{ try{ await exportProfile('pdf'); setStatus('Profile PDF export downloaded.'); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    document.getElementById('exportDocxBtn').addEventListener('click', async ()=>{ try{ await exportProfile('docx'); setStatus('Profile DOCX export downloaded.'); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    loadBootstrap().then(()=>setStatus('Profile app loaded.')).catch((error)=>setStatus(`Error: ${error.message}`));
+    window.addEventListener('beforeunload', stopCamera);
   </script>
 </body>
 </html>

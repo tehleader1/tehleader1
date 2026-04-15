@@ -1773,6 +1773,20 @@ def init_local_remote_db():
             "updated_at TEXT"
             ")"
         )
+        existing_cols = {
+            row[1]
+            for row in (cur.execute("PRAGMA table_info(local_remote_preferences)").fetchall() or [])
+        }
+        for name, ddl in [
+            ("account_username", "TEXT"),
+            ("account_email", "TEXT"),
+            ("account_address", "TEXT"),
+            ("account_phone", "TEXT"),
+            ("password_hash", "TEXT"),
+            ("aria_response_level", "TEXT"),
+        ]:
+            if name not in existing_cols:
+                cur.execute(f"ALTER TABLE local_remote_preferences ADD COLUMN {name} {ddl}")
         cur.execute(
             "CREATE TABLE IF NOT EXISTS faq_developer_posts ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -1794,7 +1808,8 @@ def load_local_remote_preferences(email):
         conn = sqlite3.connect(CREDIT_DB_PATH)
         cur = conn.cursor()
         cur.execute(
-            "SELECT display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at "
+            "SELECT display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at, "
+            "account_username, account_email, account_address, account_phone, password_hash, aria_response_level "
             "FROM local_remote_preferences WHERE email = ? LIMIT 1",
             (owner_email,),
         )
@@ -1809,6 +1824,12 @@ def load_local_remote_preferences(email):
             "push_notifications": bool(row[3]),
             "voice_profile": row[4] or "",
             "updated_at": row[5] or "",
+            "account_username": row[6] or "",
+            "account_email": row[7] or owner_email,
+            "account_address": row[8] or "",
+            "account_phone": row[9] or "",
+            "password_set": bool(row[10]),
+            "aria_response_level": row[11] or "balanced",
         }
     except:
         return {}
@@ -1818,14 +1839,24 @@ def save_local_remote_preferences(email, prefs):
     owner_email = (email or "guest").strip().lower() or "guest"
     safe = prefs or {}
     try:
+        password_hash = ""
+        if safe.get("password_hash"):
+            password_hash = (safe.get("password_hash") or "")[:160]
+        elif safe.get("password_plain"):
+            password_hash = hashlib.sha256((safe.get("password_plain") or "").encode("utf-8")).hexdigest()
         conn = sqlite3.connect(CREDIT_DB_PATH)
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO local_remote_preferences (email, display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "INSERT INTO local_remote_preferences (email, display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at, "
+            "account_username, account_email, account_address, account_phone, password_hash, aria_response_level) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(email) DO UPDATE SET display_name=excluded.display_name, saved_tag=excluded.saved_tag, "
             "last_map_used=excluded.last_map_used, push_notifications=excluded.push_notifications, "
-            "voice_profile=excluded.voice_profile, updated_at=excluded.updated_at",
+            "voice_profile=excluded.voice_profile, updated_at=excluded.updated_at, "
+            "account_username=excluded.account_username, account_email=excluded.account_email, "
+            "account_address=excluded.account_address, account_phone=excluded.account_phone, "
+            "password_hash=CASE WHEN excluded.password_hash <> '' THEN excluded.password_hash ELSE local_remote_preferences.password_hash END, "
+            "aria_response_level=excluded.aria_response_level",
             (
                 owner_email,
                 (safe.get("display_name") or "")[:160],
@@ -1834,6 +1865,12 @@ def save_local_remote_preferences(email, prefs):
                 1 if safe.get("push_notifications") else 0,
                 (safe.get("voice_profile") or "")[:80],
                 _studio_now(),
+                (safe.get("account_username") or "")[:120],
+                (safe.get("account_email") or owner_email)[:160],
+                (safe.get("account_address") or "")[:240],
+                (safe.get("account_phone") or "")[:40],
+                password_hash,
+                (safe.get("aria_response_level") or "balanced")[:80],
             ),
         )
         conn.commit()
@@ -6224,6 +6261,11 @@ def local_map_shell():
     return send_from_directory("static", "local-map.html")
 
 
+@app.route("/local-faq")
+def local_faq_shell():
+    return send_from_directory("static", "local-faq.html")
+
+
 @app.route("/api/local-remote/bootstrap")
 def local_remote_bootstrap():
     user = session.get("user") or {}
@@ -6377,13 +6419,25 @@ def local_remote_preferences_save():
     body = request.json if request.is_json else {}
     owner_email = _studio_owner_email()
     existing = load_local_remote_preferences(owner_email)
+    push_value = body.get("push_notifications")
+    if "push_notifications" in body:
+        push_enabled = str(push_value).strip().lower() in ("1", "true", "yes", "on", "enabled")
+    else:
+        push_enabled = bool(existing.get("push_notifications"))
     prefs = {
         "display_name": body.get("display_name") or existing.get("display_name") or "",
         "saved_tag": body.get("saved_tag") or existing.get("saved_tag") or "",
         "last_map_used": body.get("last_map_used") or existing.get("last_map_used") or "",
-        "push_notifications": bool(body.get("push_notifications")) if "push_notifications" in body else bool(existing.get("push_notifications")),
+        "push_notifications": push_enabled,
         "voice_profile": body.get("voice_profile") or existing.get("voice_profile") or "",
+        "account_username": body.get("account_username") or existing.get("account_username") or "",
+        "account_email": body.get("account_email") or existing.get("account_email") or owner_email,
+        "account_address": body.get("account_address") or existing.get("account_address") or "",
+        "account_phone": body.get("account_phone") or existing.get("account_phone") or "",
+        "aria_response_level": body.get("aria_response_level") or existing.get("aria_response_level") or "balanced",
     }
+    if body.get("password_plain"):
+        prefs["password_plain"] = body.get("password_plain")
     save_local_remote_preferences(owner_email, prefs)
     return {"ok": True, "email": owner_email, "preferences": load_local_remote_preferences(owner_email)}
 

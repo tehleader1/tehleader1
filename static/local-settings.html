@@ -6,15 +6,12 @@
   <title>SupportRD Local Settings</title>
   <style>
     :root{--bg:#07111f;--bg2:#0b1930;--panel:rgba(9,19,35,.84);--line:rgba(180,222,255,.14);--text:#eef7ff;--muted:rgba(228,240,255,.72);--shadow:0 24px 70px rgba(0,0,0,.34)}
-    *{box-sizing:border-box} html,body{margin:0;min-height:100%;font-family:Georgia,"Times New Roman",serif;background:radial-gradient(820px 420px at 0% 0%, rgba(121,184,255,.15), transparent 55%),radial-gradient(720px 420px at 100% 0%, rgba(255,208,134,.12), transparent 55%),linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)} body{padding:20px}
-    .shell{max-width:1480px;margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}.glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.08);box-shadow:var(--shadow);border-radius:28px}.rail,.stage{padding:20px}
-    .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px} h1,h2,h3,p{margin:0}.hero h1{font-size:48px;line-height:.94}.hero p,.panel p,.action p{color:var(--muted);margin-top:10px;line-height:1.6}
-    .stack,.cards,.route-list{display:grid;gap:12px}.card,.route-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)} .card strong,.route-item strong{display:block}.card span,.route-item span{display:block;color:var(--muted);margin-top:4px}
-    .stage{display:grid;gap:16px}.hero-card,.action,.panel{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)} .hero-card h2,.action h3,.panel h3{font-size:34px;font-family:"Cormorant Garamond", Georgia, serif}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
-    input,select,button{font:inherit} input,select{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)} .buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-    .buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}
-    .status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Georgia,"Times New Roman",serif;background:radial-gradient(820px 420px at 0% 0%, rgba(121,184,255,.15), transparent 55%),radial-gradient(720px 420px at 100% 0%, rgba(255,208,134,.12), transparent 55%),linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}body{padding:20px}
+    .shell{max-width:1540px;margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}.glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.08);box-shadow:var(--shadow);border-radius:28px}.rail,.stage{padding:20px}.stage{display:grid;gap:16px}
+    .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}h1,h2,h3,p{margin:0}.hero h1{font-size:48px;line-height:.94}.hero p,.panel p,.action p{color:var(--muted);margin-top:10px;line-height:1.6}
+    .stack,.cards,.route-list,.fact-list{display:grid;gap:12px}.card,.route-item,.fact-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}.card strong,.route-item strong,.fact-item strong{display:block}.card span,.route-item span,.fact-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.45}
+    .hero-card,.action,.panel{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}.hero-card h2,.action h3,.panel h3{font-size:34px;font-family:"Cormorant Garamond",Georgia,serif}
+    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}input,select,button{font:inherit}input,select{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}.status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}
     @media (max-width:1200px){.shell,.grid,.action-grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -22,36 +19,47 @@
   <div class="shell">
     <aside class="rail glass">
       <div class="hero">
-        <div class="eyebrow">Standalone Local App</div>
+        <div class="eyebrow">Embedded App Surface</div>
         <h1>SupportRD Settings</h1>
-        <p>This is the standalone settings pit stop for account display, tag memory, push preference, voice profile, and route continuity.</p>
+        <p>Settings is the trail-side pit stop for account information, diary posting URL, push notifications, and Aria response level.</p>
       </div>
       <div class="stack" style="margin-top:18px">
-        <div class="card"><strong>Config Model</strong><span>SupportRD settings with Drupal-style configuration thinking, not leftover menu behavior.</span></div>
         <div class="card"><strong>Current Account</strong><span id="accountCard">Waiting for settings bootstrap.</span></div>
-        <div class="card"><strong>Saved Tag</strong><span id="tagCard">No tag yet.</span></div>
+        <div class="card"><strong>Diary Route</strong><span id="urlCard">No diary link yet.</span></div>
+        <div class="card"><strong>Password Lane</strong><span id="passwordCard">Password not set yet.</span></div>
         <div class="card"><strong>Last Map</strong><span id="mapCard">No remembered map yet.</span></div>
       </div>
     </aside>
     <main class="stage glass">
       <section class="hero-card">
         <div class="eyebrow">Settings Control App</div>
-        <h2>Account identity, push state, tags, routes, and remembered map behavior.</h2>
-        <p>This page writes directly to the local-remote preference APIs so settings become real state instead of copy.</p>
+        <h2>All buttons that route diary posting URL, password, email, address, phone, push notifications, and Aria response level.</h2>
+        <p>This is the control surface that should make account changes feel real instead of decorative.</p>
       </section>
       <section class="grid">
         <div class="action">
           <div class="eyebrow">Settings Controls</div>
-          <h3>Preference board</h3>
+          <h3>Account board</h3>
           <p>Save actual account-facing settings here.</p>
           <div class="action-grid">
             <input id="displayName" placeholder="Display name">
-            <input id="savedTag" placeholder="^^ tag">
+            <input id="accountUsername" placeholder="Username">
+            <input id="accountEmail" placeholder="Email">
+            <input id="accountPhone" placeholder="Phone number">
+            <input id="accountAddress" placeholder="Address">
+            <input id="savedTag" placeholder="^^ diary tag">
+            <input id="newPassword" type="password" placeholder="New password">
             <select id="voiceProfile">
               <option value="shimmer">Voice Profile · shimmer</option>
               <option value="alloy">Voice Profile · alloy</option>
               <option value="nova">Voice Profile · nova</option>
               <option value="echo">Voice Profile · echo</option>
+            </select>
+            <select id="ariaResponseLevel">
+              <option value="balanced">Aria response · balanced</option>
+              <option value="gentle">Aria response · gentle</option>
+              <option value="advanced">Aria response · advanced</option>
+              <option value="professional">Aria response · professional</option>
             </select>
             <select id="pushNotifications">
               <option value="off">Push notifications off</option>
@@ -67,65 +75,54 @@
         <div class="panel">
           <div class="eyebrow">Connected Routes</div>
           <h3>Route memory</h3>
-          <p>These are the current connected SupportRD entrances attached to the account state.</p>
+          <p>These are the connected SupportRD entrances and account facts attached to the settings state.</p>
           <div class="route-list" id="routeList"></div>
+          <div class="fact-list" id="factList" style="margin-top:14px"></div>
         </div>
       </section>
     </main>
   </div>
   <script>
-    const els = {
-      displayName: document.getElementById("displayName"),
-      savedTag: document.getElementById("savedTag"),
-      voiceProfile: document.getElementById("voiceProfile"),
-      pushNotifications: document.getElementById("pushNotifications"),
-      statusBox: document.getElementById("statusBox"),
-      routeList: document.getElementById("routeList"),
-      accountCard: document.getElementById("accountCard"),
-      tagCard: document.getElementById("tagCard"),
-      mapCard: document.getElementById("mapCard")
-    };
+    const els = { displayName: document.getElementById('displayName'), accountUsername: document.getElementById('accountUsername'), accountEmail: document.getElementById('accountEmail'), accountPhone: document.getElementById('accountPhone'), accountAddress: document.getElementById('accountAddress'), savedTag: document.getElementById('savedTag'), newPassword: document.getElementById('newPassword'), voiceProfile: document.getElementById('voiceProfile'), ariaResponseLevel: document.getElementById('ariaResponseLevel'), pushNotifications: document.getElementById('pushNotifications'), statusBox: document.getElementById('statusBox'), routeList: document.getElementById('routeList'), factList: document.getElementById('factList'), accountCard: document.getElementById('accountCard'), urlCard: document.getElementById('urlCard'), passwordCard: document.getElementById('passwordCard'), mapCard: document.getElementById('mapCard') };
     let bootstrap = null;
     function setStatus(message){ els.statusBox.textContent = message; }
+    async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{ 'Content-Type':'application/json', ...(options.headers||{}) }, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
     function render(){
-      const settings = bootstrap?.settings || {};
-      els.displayName.value = settings.display_name || bootstrap?.account?.display_name || "";
-      els.savedTag.value = settings.saved_tag || "";
-      els.voiceProfile.value = settings.voice_profile || "shimmer";
-      els.pushNotifications.value = settings.push_notifications === "enabled" ? "on" : "off";
-      els.accountCard.textContent = settings.account_email || "guest";
-      els.tagCard.textContent = settings.saved_tag || "No tag yet.";
-      els.mapCard.textContent = settings.last_map_used || "No remembered map yet.";
+      const settings = bootstrap?.settings || {}; const email = settings.account_email || bootstrap?.account?.email || 'guest'; const tag = settings.saved_tag || ''; const diaryUrl = tag ? `${window.location.origin}/?diary-live=${tag.replace(/^\^+/, '')}` : 'Set a ^^ tag to generate the diary posting URL.';
+      els.displayName.value = settings.display_name || bootstrap?.account?.display_name || '';
+      els.accountUsername.value = settings.account_username || '';
+      els.accountEmail.value = settings.account_email || email;
+      els.accountPhone.value = settings.account_phone || '';
+      els.accountAddress.value = settings.account_address || '';
+      els.savedTag.value = tag;
+      els.voiceProfile.value = settings.voice_profile || 'shimmer';
+      els.ariaResponseLevel.value = settings.aria_response_level || 'balanced';
+      els.pushNotifications.value = settings.push_notifications ? 'on' : 'off';
+      els.newPassword.value = '';
+      els.accountCard.textContent = `${settings.account_username || settings.display_name || 'guest'} · ${email}`;
+      els.urlCard.textContent = diaryUrl;
+      els.passwordCard.textContent = settings.password_set ? 'Password secured in settings memory.' : 'Password not set yet.';
+      els.mapCard.textContent = settings.last_map_used || 'No remembered map yet.';
       const routes = settings.connected_routes || [];
-      els.routeList.innerHTML = routes.length ? routes.map((route)=>`<div class="route-item"><strong>${route}</strong><span>Connected SupportRD route</span></div>`).join("") : `<div class="route-item"><strong>No routes yet</strong><span>Connected routes will appear here.</span></div>`;
+      els.routeList.innerHTML = routes.length ? routes.map(route=>`<div class="route-item"><strong>${route}</strong><span>Connected SupportRD route</span></div>`).join('') : `<div class="route-item"><strong>No routes yet</strong><span>Connected routes will appear here.</span></div>`;
+      const facts = [
+        { title:'Diary URL', body: diaryUrl },
+        { title:'Push notifications', body: settings.push_notifications ? 'enabled' : 'off' },
+        { title:'Aria response level', body: settings.aria_response_level || 'balanced' },
+        { title:'Saved tag', body: tag || 'waiting' },
+      ];
+      els.factList.innerHTML = facts.map(item=>`<div class="fact-item"><strong>${item.title}</strong><span>${item.body}</span></div>`).join('');
     }
-    async function fetchJson(url, options = {}){
-      const response = await fetch(url, { credentials:"same-origin", headers:{ "Content-Type":"application/json", ...(options.headers || {}) }, ...options });
-      const data = await response.json().catch(()=>({ ok:false, error:"invalid_json" }));
-      if(!response.ok || data?.ok === false) throw new Error(data?.error || `request_failed_${response.status}`);
-      return data;
-    }
-    async function loadBootstrap(){
-      bootstrap = await fetchJson("/api/local-remote/bootstrap");
-      render();
-    }
-    document.getElementById("saveSettingsBtn").addEventListener("click", async ()=>{
+    async function loadBootstrap(){ bootstrap = await fetchJson('/api/local-remote/bootstrap'); render(); }
+    document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
       try{
-        await fetchJson("/api/local-remote/preferences", {
-          method:"POST",
-          body: JSON.stringify({
-            display_name: els.displayName.value,
-            saved_tag: els.savedTag.value,
-            voice_profile: els.voiceProfile.value,
-            push_notifications: els.pushNotifications.value === "on"
-          })
-        });
+        await fetchJson('/api/local-remote/preferences', { method:'POST', body: JSON.stringify({ display_name: els.displayName.value, account_username: els.accountUsername.value, account_email: els.accountEmail.value, account_phone: els.accountPhone.value, account_address: els.accountAddress.value, saved_tag: els.savedTag.value, password_plain: els.newPassword.value, voice_profile: els.voiceProfile.value, aria_response_level: els.ariaResponseLevel.value, push_notifications: els.pushNotifications.value === 'on' }) });
         await loadBootstrap();
-        setStatus("Settings saved.");
+        setStatus('Settings saved into account preferences.');
       }catch(error){ setStatus(`Error: ${error.message}`); }
     });
-    document.getElementById("refreshSettingsBtn").addEventListener("click", async ()=>{ try{ await loadBootstrap(); setStatus("Settings refreshed."); }catch(error){ setStatus(`Error: ${error.message}`); } });
-    loadBootstrap().then(()=>setStatus("Settings app loaded.")).catch((error)=>setStatus(`Error: ${error.message}`));
+    document.getElementById('refreshSettingsBtn').addEventListener('click', async ()=>{ try{ await loadBootstrap(); setStatus('Settings refreshed.'); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    loadBootstrap().then(()=>setStatus('Settings app loaded.')).catch((error)=>setStatus(`Error: ${error.message}`));
   </script>
 </body>
 </html>
