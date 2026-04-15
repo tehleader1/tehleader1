@@ -350,7 +350,8 @@
         appTitle: "Diary module live stage",
         appMeta: "Loads the real SupportRD Remote and opens the Diary lane so lobby, comments, and session tools stay functional while we edit locally.",
         appSrc: "/remote",
-        appSelector: "#floatLaunchDiary",
+        appSelector: "#floatNavDiary",
+        appFocusSelector: "#floatDiaryShell",
         features: [
           ["Live sessions", "Diary lobby, comments, guest support, and direct links."],
           ["Recording lane", "Hands-free, diary record, and live session flow."],
@@ -365,6 +366,7 @@
         appMeta: "Loads the real Studio app directly so recording, waveform, and booth behavior are available inside the sandbox.",
         appSrc: "/studio",
         appSelector: "",
+        appFocusSelector: "body",
         features: [
           ["Record", "Mic, camera, waveform, motherboard, and exports."],
           ["Jake lane", "Jake is tied to the studio voice and editing booth."],
@@ -378,7 +380,8 @@
         appTitle: "Settings module live stage",
         appMeta: "Loads the real Remote and opens the Settings lane so configuration work is live while we keep editing the sandbox shell.",
         appSrc: "/remote",
-        appSelector: "#floatLaunchSettings",
+        appSelector: "#floatNavSettings",
+        appFocusSelector: "#floatProfileBox",
         features: [
           ["Push notifications", "Clear toggles and route guidance."],
           ["URL entrances", "SupportRD links and route entry points."],
@@ -393,6 +396,7 @@
         appMeta: "Loads the real Remote and opens the map lane so we can keep perks, ads, and trail switching tied to the working app.",
         appSrc: "/remote",
         appSelector: "#floatLaunchMap",
+        appFocusSelector: "#floatDeviceBox",
         features: [
           ["General info", "Where the route is headed and why."],
           ["Ads / perks", "Promos and feature support without clutter."],
@@ -407,6 +411,7 @@
         appMeta: "Loads the real Remote and opens FAQ Lounge so the reel, answers, and configuration help stay live inside the sandbox.",
         appSrc: "/remote",
         appSelector: "#floatLaunchFaq",
+        appFocusSelector: "#floatLiveBox",
         features: [
           ["TV reel feel", "Quick relaxed support clips and direct FAQ answers."],
           ["Trail support", "URL and push changes without stress."],
@@ -420,7 +425,8 @@
         appTitle: "Profile module live stage",
         appMeta: "Loads the real Remote and opens the Profile lane so identity, scanner, and export tools actually work inside this local build page.",
         appSrc: "/remote",
-        appSelector: "#floatLaunchProfile",
+        appSelector: "#floatNavProfile",
+        appFocusSelector: "#floatAssistantBox",
         features: [
           ["Identity", "Real person, profile picture, and account confidence."],
           ["Hair credentials", "Texture, damage, type, and summary."],
@@ -454,18 +460,40 @@
     let roamTick = 0;
     let panelBootToken = 0;
 
+    function focusFrameTarget(meta, doc){
+      if(!meta?.appFocusSelector || !doc) return;
+      const focusNode = doc.querySelector(meta.appFocusSelector);
+      if(focusNode && typeof focusNode.scrollIntoView === "function"){
+        focusNode.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
     function triggerFramePanel(meta, token, tries = 0){
-      if(!meta?.appSelector || token !== panelBootToken) return;
+      if(token !== panelBootToken) return;
       let doc;
       try{
         doc = liveAppFrame.contentDocument || liveAppFrame.contentWindow?.document;
       }catch{
         return;
       }
-      const target = doc?.querySelector(meta.appSelector);
+      if(!doc){
+        if(tries < 18){
+          setTimeout(()=>triggerFramePanel(meta, token, tries + 1), 350);
+        }
+        return;
+      }
+      const target = meta?.appSelector ? doc.querySelector(meta.appSelector) : null;
       if(target){
         target.click();
+        setTimeout(()=>focusFrameTarget(meta, doc), 260);
         return;
+      }
+      if(meta?.appFocusSelector){
+        const focusNode = doc.querySelector(meta.appFocusSelector);
+        if(focusNode){
+          focusFrameTarget(meta, doc);
+          return;
+        }
       }
       if(tries < 18){
         setTimeout(()=>triggerFramePanel(meta, token, tries + 1), 350);
@@ -535,7 +563,24 @@
       }catch{}
     }
 
-    function runVoiceSequence(who){
+    function speakLine(text, options = {}){
+      if(!("speechSynthesis" in window)) return Promise.resolve();
+      window.speechSynthesis.cancel();
+      return new Promise((resolve)=>{
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = options.rate || 1.02;
+        utterance.pitch = options.pitch || 1;
+        utterance.volume = 1;
+        utterance.onend = ()=>resolve();
+        utterance.onerror = ()=>resolve();
+        const voices = window.speechSynthesis.getVoices();
+        const match = voices.find((voice)=>options.voiceHint && voice.name.toLowerCase().includes(options.voiceHint));
+        if(match) utterance.voice = match;
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+
+    async function runVoiceSequence(who){
       cueTone("intro");
       const greeting = who === "Jake"
         ? "Jake here. Studio support is ready. How may I help you?"
@@ -545,25 +590,25 @@
       voiceBubbleTitle.textContent = `${who} Website Voice`;
       voiceBubbleText.textContent = greeting;
       voiceBubble.classList.add("active");
-      setTimeout(()=>{
-        voiceConsoleTitle.textContent = `${who} mic ready`;
-        voiceConsoleText.textContent = "2 second pause... mic opens... listening for your response.";
-        voiceBubbleText.textContent = "Mic ready. Listening and transcribing the next hair-related response.";
-      }, 1400);
-      setTimeout(()=>{
-        voiceConsoleTitle.textContent = `${who} transcribing`;
-        voiceConsoleText.textContent = "Transcribing, checking history, and preparing the response.";
-        voiceBubbleText.textContent = "Transcribing and preparing the response now.";
-      }, 3400);
-      setTimeout(()=>{
-        voiceConsoleTitle.textContent = `${who} response`;
-        voiceConsoleText.textContent = who === "Jake"
-          ? "Studio response complete. Close cue ready."
-          : "Hair support response complete. Close cue ready.";
-        voiceBubbleText.textContent = "Response delivered. Close cue played for the end of the conversation.";
-        cueTone("close");
-      }, 5200);
-      setTimeout(()=>voiceBubble.classList.remove("active"), 7000);
+      await speakLine(greeting, { voiceHint: who === "Jake" ? "david" : "zira", rate: who === "Jake" ? 0.98 : 1.03, pitch: who === "Jake" ? 0.94 : 1.06 });
+      await new Promise((resolve)=>setTimeout(resolve, 2000));
+      voiceConsoleTitle.textContent = `${who} mic ready`;
+      voiceConsoleText.textContent = "Mic opens now. Listening for your response.";
+      voiceBubbleText.textContent = "Mic ready. Listening and transcribing the next hair-related response.";
+      await new Promise((resolve)=>setTimeout(resolve, 1200));
+      voiceConsoleTitle.textContent = `${who} transcribing`;
+      voiceConsoleText.textContent = "Transcribing, checking history, and preparing the response.";
+      voiceBubbleText.textContent = "Transcribing and preparing the response now.";
+      await new Promise((resolve)=>setTimeout(resolve, 1400));
+      const response = who === "Jake"
+        ? "Studio response complete. I am ready for the next studio command."
+        : "Hair support response complete. I am ready for the next hair question.";
+      voiceConsoleTitle.textContent = `${who} response`;
+      voiceConsoleText.textContent = response;
+      voiceBubbleText.textContent = response;
+      await speakLine(response, { voiceHint: who === "Jake" ? "david" : "zira", rate: who === "Jake" ? 0.98 : 1.02, pitch: who === "Jake" ? 0.94 : 1.05 });
+      cueTone("close");
+      setTimeout(()=>voiceBubble.classList.remove("active"), 900);
     }
 
     localAria.addEventListener("click", ()=>runVoiceSequence("Aria"));
@@ -602,3 +647,5 @@
   </script>
 </body>
 </html>
+
+
