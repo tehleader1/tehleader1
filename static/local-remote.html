@@ -302,7 +302,7 @@
               <button class="sticky-btn" type="button">Hide</button>
             </div>
           </div>
-          <div class="mini-list">
+          <div class="mini-list" id="diaryLobbyList">
             <div class="mini-item"><strong>^^ silky-route</strong><span>Latest 7 diary feeds will stack here for local editing.</span></div>
             <div class="mini-item"><strong>Search / Sort</strong><span>Name · Email · Tag ^^ · URL</span></div>
           </div>
@@ -317,7 +317,7 @@
               <button class="sticky-btn" type="button">Next</button>
             </div>
           </div>
-          <div class="mini-list">
+          <div class="mini-list" id="editsMenuList">
             <button class="menu-chip" type="button">Product / Premium Purchase</button>
             <button class="menu-chip" type="button">Functionality Virtual</button>
           </div>
@@ -332,7 +332,7 @@
               <button class="sticky-btn" type="button">Next</button>
             </div>
           </div>
-          <div class="mini-list">
+          <div class="mini-list" id="paymentsMenuList">
             <button class="menu-chip" type="button">Product Page</button>
             <button class="menu-chip" type="button">Purchase Premium / Pro</button>
           </div>
@@ -455,10 +455,14 @@
     const liveAppNewTab = document.getElementById("liveAppNewTab");
     const openLiveModuleBtn = document.getElementById("openLiveModuleBtn");
     const reloadLiveModuleBtn = document.getElementById("reloadLiveModuleBtn");
+    const diaryLobbyList = document.getElementById("diaryLobbyList");
+    const editsMenuList = document.getElementById("editsMenuList");
+    const paymentsMenuList = document.getElementById("paymentsMenuList");
 
     let activePanel = "diary";
     let roamTick = 0;
     let panelBootToken = 0;
+    let bootstrapData = null;
 
     function focusFrameTarget(meta, doc){
       if(!meta?.appFocusSelector || !doc) return;
@@ -517,6 +521,88 @@
       triggerFramePanel(meta, panelBootToken, 0);
     }
 
+    function getPanelRuntimeFeatures(panelKey){
+      if(!bootstrapData) return panelMeta[panelKey].features;
+      if(panelKey === "diary"){
+        const feeds = bootstrapData.diary?.recent_sessions || [];
+        const lobby = bootstrapData.diary?.lobby || [];
+        return [
+          ["Live sessions", `${lobby.length} latest lobby feeds are loaded into the sticky Diary Lobby.`],
+          ["Diary record history", feeds[0]?.entry_text || feeds[0]?.transcript || "No saved diary record yet."],
+          ["Latest tag / link", feeds[0]?.profile_tag || feeds[0]?.live_slug || "Waiting for a saved ^^ tag or live diary link."]
+        ];
+      }
+      if(panelKey === "studio"){
+        const recent = bootstrapData.studio?.recent_sessions || [];
+        const access = bootstrapData.studio?.access || {};
+        return [
+          ["Recording / motherboard", recent[0] ? `${recent[0].board_count} boards in the latest studio session.` : "No studio session saved yet."],
+          ["Premium Jake access", access.message || "Studio access is waiting."],
+          ["Last 3 sessions", recent.length ? recent.map((item)=>`${item.session_id} (${item.board_count} boards)`).join(" · ") : "No studio history yet."]
+        ];
+      }
+      if(panelKey === "settings"){
+        const settings = bootstrapData.settings || {};
+        return [
+          ["Account state", settings.account_email || "Guest mode is active."],
+          ["Saved map memory", settings.last_map_used || "No map memory saved yet."],
+          ["Connected routes", (settings.connected_routes || []).join(" · ") || "Routes will appear here."]
+        ];
+      }
+      if(panelKey === "map"){
+        const settings = bootstrapData.settings || {};
+        return [
+          ["Last map used", settings.last_map_used || "No remembered map yet."],
+          ["Trail routes", (settings.connected_routes || []).slice(0, 3).join(" · ") || "Route memory is waiting."],
+          ["Perks lane", "Keep general information, ads, and map switching attached to the same remembered route."]
+        ];
+      }
+      if(panelKey === "faq"){
+        return [
+          ["Developers Feed", "This lane is next: posting from FAQ Lounge still needs its dedicated API/post surface."],
+          ["Quick relaxed help", "The FAQ stage can already load, but the social/dev feed post workflow is not rebuilt yet."],
+          ["Trail support", "Use this sandbox to keep the reel feel while we wire the actual posting path."]
+        ];
+      }
+      if(panelKey === "profile"){
+        const profile = bootstrapData.profile || {};
+        const hair = profile.hair_analysis || {};
+        return [
+          ["Identity", profile.identity_confirmed || "Identity confirmation is waiting."],
+          ["Hair scan summary", `Texture: ${hair.texture || "waiting"} · Damage: ${hair.damage || "waiting"} · Color: ${hair.color || "waiting"}`],
+          ["Latest profile export", hair.created_at || "No saved profile export yet."]
+        ];
+      }
+      return panelMeta[panelKey].features;
+    }
+
+    function renderStickyLists(){
+      if(!bootstrapData) return;
+      const lobby = bootstrapData.diary?.lobby || [];
+      diaryLobbyList.innerHTML = (lobby.length ? lobby.slice(0, 3).map((feed)=>`<div class="mini-item"><strong>${feed.profile_tag || feed.display_name || feed.owner_email || "SupportRD feed"}</strong><span>${feed.preview_text || feed.owner_email || "Diary live session ready."}</span></div>`).join("") : `<div class="mini-item"><strong>Diary Lobby</strong><span>No diary feeds yet. Start a diary live session to populate this lobby.</span></div>`) + `<div class="mini-item"><strong>Search / Sort</strong><span>Name · Email · Tag ^^ · URL</span></div>`;
+      const settings = bootstrapData.settings || {};
+      editsMenuList.innerHTML = `
+        <button class="menu-chip" type="button">Saved Tag: ${settings.saved_tag || "waiting"}</button>
+        <button class="menu-chip" type="button">Last Map: ${settings.last_map_used || "none"}</button>
+      `;
+      const studio = bootstrapData.studio?.access || {};
+      paymentsMenuList.innerHTML = `
+        <button class="menu-chip" type="button">Plan: ${(bootstrapData.account?.subscription || "free").toUpperCase()}</button>
+        <button class="menu-chip" type="button">${studio.access ? "Studio Access Ready" : "Unlock Studio Access"}</button>
+      `;
+    }
+
+    async function loadBootstrap(){
+      try{
+        const response = await fetch("/api/local-remote/bootstrap", { credentials: "same-origin" });
+        const data = await response.json();
+        if(!data?.ok) return;
+        bootstrapData = data;
+        renderStickyLists();
+        renderPanel(activePanel);
+      }catch{}
+    }
+
     function renderPanel(panelKey, forceReload = false){
       activePanel = panelKey;
       const meta = panelMeta[panelKey];
@@ -525,7 +611,7 @@
       panelTitle.textContent = meta.title;
       panelBody.textContent = meta.body;
       activePanelName.textContent = meta.title;
-      panelFeatures.innerHTML = meta.features.map(([title, copy])=>`<div class="feature-item"><strong>${title}</strong><span>${copy}</span></div>`).join("");
+      panelFeatures.innerHTML = getPanelRuntimeFeatures(panelKey).map(([title, copy])=>`<div class="feature-item"><strong>${title}</strong><span>${copy}</span></div>`).join("");
       syncLiveApp(meta, forceReload);
       roamAssistants(true);
     }
@@ -644,6 +730,7 @@
     window.addEventListener("resize", ()=>roamAssistants(true));
     setInterval(()=>roamAssistants(false), 2400);
     renderPanel("diary", true);
+    loadBootstrap();
   </script>
 </body>
 </html>

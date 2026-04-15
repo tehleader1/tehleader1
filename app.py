@@ -6073,6 +6073,143 @@ def remote_shell(section=None):
 def local_remote_shell():
     return send_from_directory("static", "local-remote.html")
 
+
+@app.route("/api/local-remote/bootstrap")
+def local_remote_bootstrap():
+    user = session.get("user") or {}
+    email = (user.get("email") or "").strip().lower()
+    display_name = (user.get("name") or user.get("username") or email.split("@")[0] if email else "Guest").strip()
+    subscription = get_subscription_details_for_email(email) if email else {}
+    plan = (subscription.get("plan") or "free").strip().lower()
+    system = system_map_status()
+    diary_lobby = list_diary_lobby_sessions("recent", limit=7)
+    diary_recent = []
+    studio_recent = []
+    profile_recent = {}
+    saved_tag = ""
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        if email:
+            cur.execute(
+                "SELECT session_id, payload_json, updated_at FROM diary_sessions WHERE owner_email = ? ORDER BY updated_at DESC LIMIT 3",
+                (email,),
+            )
+            diary_rows = cur.fetchall() or []
+            for session_id, payload_json, updated_at in diary_rows:
+                try:
+                    payload = json.loads(payload_json or "{}")
+                except Exception:
+                    payload = {}
+                saved_tag = saved_tag or (payload.get("profile_tag") or "")
+                diary_recent.append({
+                    "session_id": session_id,
+                    "updated_at": updated_at,
+                    "live_active": bool(payload.get("live_active")),
+                    "entry_text": (payload.get("entry_text") or "")[:180],
+                    "transcript": (payload.get("transcript") or "")[:180],
+                    "profile_tag": payload.get("profile_tag") or "",
+                    "live_slug": payload.get("live_slug") or "",
+                })
+            cur.execute(
+                "SELECT session_id, payload_json, updated_at FROM studio_sessions WHERE owner_email = ? ORDER BY updated_at DESC LIMIT 3",
+                (email,),
+            )
+            studio_rows = cur.fetchall() or []
+            for session_id, payload_json, updated_at in studio_rows:
+                try:
+                    payload = json.loads(payload_json or "{}")
+                except Exception:
+                    payload = {}
+                boards = payload.get("boards") or []
+                active_board = int(payload.get("active_board") or 0)
+                studio_recent.append({
+                    "session_id": session_id,
+                    "updated_at": updated_at,
+                    "route": payload.get("route") or "studio",
+                    "board_count": len(boards),
+                    "active_board": active_board,
+                    "has_audio": any((board or {}).get("kind") in ("audio", "recording") for board in boards),
+                    "has_video": any((board or {}).get("kind") == "video" for board in boards),
+                })
+            cur.execute(
+                "SELECT summary_text, texture, color, damage, hair_type, created_at FROM profile_analysis_reports WHERE email = ? ORDER BY id DESC LIMIT 1",
+                (email,),
+            )
+            row = cur.fetchone()
+            if row:
+                profile_recent = {
+                    "summary_text": row[0] or "",
+                    "texture": row[1] or "waiting",
+                    "color": row[2] or "waiting",
+                    "damage": row[3] or "waiting",
+                    "hair_type": row[4] or "waiting",
+                    "created_at": row[5] or "",
+                }
+        conn.close()
+    except Exception:
+        pass
+
+    profile_summary = {
+        "identity_confirmed": f"{display_name} is recognized inside SupportRD with account-aware continuity." if email else "Guest mode is active until login confirms identity.",
+        "general_status": (
+            f"Plan: {plan or 'free'} · Diary records: {len(diary_recent)} · Studio sessions: {len(studio_recent)}."
+            if email else
+            "Account status is waiting for login. Profile confirmation and history sync will appear here after sign-in."
+        ),
+        "hair_analysis": {
+            "texture": profile_recent.get("texture") or "waiting",
+            "damage": profile_recent.get("damage") or "waiting",
+            "color": profile_recent.get("color") or "waiting",
+            "hair_type": profile_recent.get("hair_type") or "waiting",
+            "summary": profile_recent.get("summary_text") or "",
+            "created_at": profile_recent.get("created_at") or "",
+        },
+    }
+
+    settings_summary = {
+        "account_email": email,
+        "display_name": display_name,
+        "subscription": plan,
+        "saved_tag": saved_tag,
+        "last_map_used": (user.get("theme") or ""),
+        "push_notifications": "browser-driven",
+        "connected_routes": [route.get("path") for route in (system.get("seo") or {}).get("routes", [])[:6]],
+    }
+
+    studio_access = {
+        "authenticated": bool(email),
+        "access": studio_jake_access_for_plan(plan) if email else False,
+        "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+        "message": (
+            "Studio access is ready."
+            if email and studio_jake_access_for_plan(plan)
+            else ("Login is required for studio session memory." if not email else "Premium Jake access is still locked until the Studio package is active.")
+        ),
+    }
+
+    return {
+        "ok": True,
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "account": {
+            "authenticated": bool(email),
+            "email": email,
+            "display_name": display_name,
+            "subscription": plan,
+        },
+        "system": system,
+        "diary": {
+            "lobby": diary_lobby,
+            "recent_sessions": diary_recent,
+        },
+        "studio": {
+            "access": studio_access,
+            "recent_sessions": studio_recent,
+        },
+        "profile": profile_summary,
+        "settings": settings_summary,
+    }
+
 @app.route("/studio")
 def studio_home():
     return send_from_directory("static/studio", "index.html")
