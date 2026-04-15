@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SupportRD Local Profile</title>
+  <style>
+    :root{
+      --bg:#07111f;--bg2:#0b1930;--panel:rgba(9,19,35,.84);--line:rgba(180,222,255,.14);
+      --text:#eef7ff;--muted:rgba(228,240,255,.72);--shadow:0 24px 70px rgba(0,0,0,.34);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Georgia,"Times New Roman",serif;background:
+      radial-gradient(820px 420px at 0% 0%, rgba(121,184,255,.15), transparent 55%),
+      radial-gradient(720px 420px at 100% 0%, rgba(255,208,134,.12), transparent 55%),
+      linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}
+    body{padding:20px}
+    .shell{max-width:1480px;margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}
+    .glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.08);box-shadow:var(--shadow);border-radius:28px}
+    .rail,.stage{padding:20px}.eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+    h1,h2,h3,p{margin:0}.hero h1{font-size:48px;line-height:.94}.hero p,.panel p,.action p{color:var(--muted);margin-top:10px;line-height:1.6}
+    .stack,.facts,.exports,.api-grid{display:grid;gap:12px}.card,.fact,.export-item,.api-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}
+    .card strong,.fact strong,.export-item strong,.api-item strong{display:block}.card span,.fact span,.export-item span,.api-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.45}
+    .stage{display:grid;gap:16px}.hero-card,.action,.panel{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+    .hero-card h2,.action h3,.panel h3{font-size:34px;font-family:"Cormorant Garamond", Georgia, serif}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+    input,textarea,button{font:inherit} input,textarea{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}
+    textarea{min-height:110px;resize:vertical}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}
+    .status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}
+    .columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+    @media (max-width:1200px){.shell{grid-template-columns:1fr}.grid,.columns,.action-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail glass">
+      <div class="hero">
+        <div class="eyebrow">Standalone Local App</div>
+        <h1>SupportRD Profile</h1>
+        <p>This is the standalone verification lane for identity, general status, hair scan memory, API access, and export history.</p>
+      </div>
+      <div class="stack" style="margin-top:18px">
+        <div class="card"><strong>Provider Stack</strong><span>SupportRD scanner + Interzoid-style professional identity enrichment direction.</span></div>
+        <div class="card"><strong>Identity</strong><span id="identityCard">Waiting for profile scanner.</span></div>
+        <div class="card"><strong>Status</strong><span id="statusCard">General status will appear here.</span></div>
+        <div class="card"><strong>Latest Export</strong><span id="exportCard">No export yet.</span></div>
+      </div>
+    </aside>
+    <main class="stage glass">
+      <section class="hero-card">
+        <div class="eyebrow">Profile Verification App</div>
+        <h2>Identity, texture, damage, color, and account continuity in one premium lane.</h2>
+        <p>This page talks directly to the real scanner and export APIs instead of hiding Profile inside the old Remote panel.</p>
+      </section>
+      <section class="grid">
+        <div class="panel">
+          <div class="eyebrow">Profile Facts</div>
+          <h3>Confirmation deck</h3>
+          <p>These are the professional confirmation reads for the person and the hair profile.</p>
+          <div class="facts" id="factsList"></div>
+        </div>
+        <div class="action">
+          <div class="eyebrow">Profile Controls</div>
+          <h3>Scanner + Export board</h3>
+          <p>Refresh the profile scanner and export the latest summary without touching the old panel system.</p>
+          <div class="action-grid">
+            <input id="displayName" placeholder="Display name">
+            <input id="hairTexture" placeholder="Texture">
+            <input id="hairDamage" placeholder="Damage">
+            <input id="hairColor" placeholder="Color">
+            <input id="hairType" placeholder="Hair type">
+            <textarea id="hairSummary" placeholder="Hair summary"></textarea>
+          </div>
+          <div class="buttons">
+            <button id="refreshScannerBtn" type="button">Refresh Scanner</button>
+            <button id="exportPdfBtn" type="button">Export PDF</button>
+            <button id="exportDocxBtn" type="button">Export DOCX</button>
+          </div>
+          <div class="status" id="statusBox">Profile app is ready.</div>
+        </div>
+      </section>
+      <section class="columns">
+        <div class="panel">
+          <div class="eyebrow">API Access</div>
+          <h3>Access deck</h3>
+          <p>These switches tell us which layers are armed.</p>
+          <div class="api-grid" id="apiGrid"></div>
+        </div>
+        <div class="panel">
+          <div class="eyebrow">Hair Scan</div>
+          <h3>Hair analysis</h3>
+          <p>The latest stored analysis lives here.</p>
+          <div class="facts" id="analysisList"></div>
+        </div>
+        <div class="panel">
+          <div class="eyebrow">Export History</div>
+          <h3>Recent export lane</h3>
+          <p>This updates when the profile export path is used.</p>
+          <div class="exports" id="exportsList"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script>
+    const els = {
+      displayName: document.getElementById("displayName"),
+      hairTexture: document.getElementById("hairTexture"),
+      hairDamage: document.getElementById("hairDamage"),
+      hairColor: document.getElementById("hairColor"),
+      hairType: document.getElementById("hairType"),
+      hairSummary: document.getElementById("hairSummary"),
+      statusBox: document.getElementById("statusBox"),
+      factsList: document.getElementById("factsList"),
+      apiGrid: document.getElementById("apiGrid"),
+      analysisList: document.getElementById("analysisList"),
+      exportsList: document.getElementById("exportsList"),
+      identityCard: document.getElementById("identityCard"),
+      statusCard: document.getElementById("statusCard"),
+      exportCard: document.getElementById("exportCard")
+    };
+    let bootstrap = null;
+    let scanner = null;
+
+    function setStatus(message){ els.statusBox.textContent = message; }
+    function renderList(target, items, emptyTitle, emptyCopy, formatter){
+      target.innerHTML = (items || []).length ? items.map(formatter).join("") : `<div class="fact"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`;
+    }
+    async function fetchJson(url, options = {}){
+      const response = await fetch(url, { credentials:"same-origin", headers:{ "Content-Type":"application/json", ...(options.headers || {}) }, ...options });
+      const data = await response.json().catch(()=>({ ok:false, error:"invalid_json" }));
+      if(!response.ok || data?.ok === false) throw new Error(data?.error || `request_failed_${response.status}`);
+      return data;
+    }
+    async function exportProfile(format){
+      const payload = {
+        display_name: els.displayName.value,
+        texture: els.hairTexture.value,
+        damage: els.hairDamage.value,
+        color: els.hairColor.value,
+        hair_type: els.hairType.value,
+        summary_text: els.hairSummary.value,
+        format
+      };
+      const response = await fetch("/api/profile/analysis/export", {
+        method:"POST",
+        credentials:"same-origin",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      });
+      if(!response.ok) throw new Error(`export_failed_${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = format === "pdf" ? "supportrd-profile.pdf" : "supportrd-profile.docx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+    function render(){
+      const hair = scanner?.hair_analysis || bootstrap?.profile?.hair_analysis || {};
+      els.identityCard.textContent = scanner?.identity_confirmed || bootstrap?.profile?.identity_confirmed || "Waiting for profile scanner.";
+      els.statusCard.textContent = scanner?.general_status || bootstrap?.profile?.general_status || "General status will appear here.";
+      els.exportCard.textContent = hair.created_at || "No export yet.";
+      renderList(els.factsList, [
+        { title: "Identity Confirmed", body: scanner?.identity_confirmed || bootstrap?.profile?.identity_confirmed || "Waiting." },
+        { title: "General Status", body: scanner?.general_status || bootstrap?.profile?.general_status || "Waiting." }
+      ], "Profile facts waiting", "Refresh the scanner to see profile facts.", (item)=>`<div class="fact"><strong>${item.title}</strong><span>${item.body}</span></div>`);
+      const apiAccess = scanner?.api_access || bootstrap?.profile?.api_access || {};
+      renderList(els.apiGrid, Object.entries(apiAccess).map(([key, value])=>({ title:key, body:value ? "armed" : "waiting" })), "API deck waiting", "Scanner access deck will appear here.", (item)=>`<div class="api-item"><strong>${item.title}</strong><span>${item.body}</span></div>`);
+      renderList(els.analysisList, [
+        { title: "Texture", body: hair.texture || "waiting" },
+        { title: "Damage", body: hair.damage || "waiting" },
+        { title: "Color", body: hair.color || "waiting" },
+        { title: "Type", body: hair.hair_type || "waiting" },
+        { title: "Summary", body: hair.summary || hair.latest_summary || "No saved summary yet." }
+      ], "Analysis waiting", "Hair analysis will appear here.", (item)=>`<div class="fact"><strong>${item.title}</strong><span>${item.body}</span></div>`);
+      renderList(els.exportsList, [
+        { title: "Latest export", body: hair.created_at || "No export yet." }
+      ], "No exports yet", "Export PDF or DOCX to populate this lane.", (item)=>`<div class="export-item"><strong>${item.title}</strong><span>${item.body}</span></div>`);
+    }
+    async function loadBootstrap(){
+      bootstrap = await fetchJson("/api/local-remote/bootstrap");
+      const hair = bootstrap.profile?.hair_analysis || {};
+      els.displayName.value = bootstrap.settings?.display_name || bootstrap.account?.display_name || "";
+      els.hairTexture.value = hair.texture || "";
+      els.hairDamage.value = hair.damage || "";
+      els.hairColor.value = hair.color || "";
+      els.hairType.value = hair.hair_type || "";
+      els.hairSummary.value = hair.summary || "";
+      scanner = bootstrap.profile || null;
+      render();
+    }
+    document.getElementById("refreshScannerBtn").addEventListener("click", async ()=>{
+      try{
+        scanner = await fetchJson(`/api/profile/access-scanner?display_name=${encodeURIComponent(els.displayName.value)}&hair_texture=${encodeURIComponent(els.hairTexture.value)}&hair_damage=${encodeURIComponent(els.hairDamage.value)}&hair_type=${encodeURIComponent(els.hairType.value)}`);
+        render();
+        setStatus("Profile scanner refreshed.");
+      }catch(error){ setStatus(`Error: ${error.message}`); }
+    });
+    document.getElementById("exportPdfBtn").addEventListener("click", async ()=>{ try{ await exportProfile("pdf"); setStatus("Profile PDF export downloaded."); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    document.getElementById("exportDocxBtn").addEventListener("click", async ()=>{ try{ await exportProfile("docx"); setStatus("Profile DOCX export downloaded."); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
+    loadBootstrap().then(()=>setStatus("Profile app loaded.")).catch((error)=>setStatus(`Error: ${error.message}`));
+  </script>
+</body>
+</html>

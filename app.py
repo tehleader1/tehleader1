@@ -6209,6 +6209,21 @@ def local_diary_shell():
     return send_from_directory("static", "local-diary.html")
 
 
+@app.route("/local-profile")
+def local_profile_shell():
+    return send_from_directory("static", "local-profile.html")
+
+
+@app.route("/local-settings")
+def local_settings_shell():
+    return send_from_directory("static", "local-settings.html")
+
+
+@app.route("/local-map")
+def local_map_shell():
+    return send_from_directory("static", "local-map.html")
+
+
 @app.route("/api/local-remote/bootstrap")
 def local_remote_bootstrap():
     user = session.get("user") or {}
