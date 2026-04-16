@@ -230,6 +230,7 @@
             ? 'paused'
             : 'playing';
       els.transportReadout.textContent = `${currentLabel} / ${durationLabel} · ${stateLabel}`;
+      refreshPlaybackSurfaces();
     }
     function renderWavePreview(points = [], trimStart = 0, trimEnd = 100){
       const values = (points && points.length ? points : []);
@@ -338,8 +339,17 @@
       els.clipCard.textContent = selectedClip?.name || activeBoard?.clip?.name || 'No clip loaded.';
       els.clipList.innerHTML = clips.length ? clips.map((clip, index)=>`<button type="button" class="clip-item" data-index="${index}"><strong>${clip.name}</strong><span>${clip.kind} · ${clip.sourceType || 'source'} · position ${clip.position ?? 0}%</span>${renderWavePreview(clip.waveform, clip.trimStart ?? 0, clip.trimEnd ?? 100)}</button>`).join('') : `<div class="clip-item"><strong>No clips yet</strong><span>Record or import the first track.</span></div>`;
       els.clipList.querySelectorAll('[data-index]').forEach(btn=>btn.addEventListener('click', ()=>selectClip(Number(btn.dataset.index))));
-      els.boardGrid.innerHTML = boardSlots.map(board=>{ const timelineBoard = timeline.boards.find(item=>item.index === board.index) || { ...board, start:0, end:getClipDuration(board.clip) }; return `<button type="button" class="board-card ${board.index === activeBoardIndex ? 'active' : ''}" data-board-index="${board.index}"><strong>${board.title}</strong><span>${board.clip?.name || 'Empty lane'}</span>${renderBoardScanPreview(timelineBoard, timeline)}</button>`; }).join('');
-      els.boardGrid.querySelectorAll('[data-board-index]').forEach(btn=>btn.addEventListener('click', ()=>selectBoard(Number(btn.dataset.boardIndex))));
+      els.boardGrid.innerHTML = boardSlots.map(board=>{ const timelineBoard = timeline.boards.find(item=>item.index === board.index) || { ...board, start:0, end:getClipDuration(board.clip) }; return `<button type="button" class="board-card ${board.index === activeBoardIndex ? 'active' : ''}" data-board-index="${board.index}"><strong>${board.title}</strong><span>${board.clip?.name || 'Empty lane'}</span><div class="board-scan-slot" data-board-wave="${board.index}">${renderBoardScanPreview(timelineBoard, timeline)}</div></button>`; }).join('');
+      els.boardGrid.querySelectorAll('[data-board-index]').forEach(btn=>btn.addEventListener('click', (event)=>{
+        const boardIndex = Number(event.currentTarget.dataset.boardIndex);
+        if(boardIndex === activeBoardIndex && boardSlots[boardIndex]?.clip){
+          const rect = event.currentTarget.getBoundingClientRect();
+          const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+          seekBoardAtIndexFromRatio(boardIndex, ratio, true);
+          return;
+        }
+        selectBoard(boardIndex);
+      }));
       els.historyList.innerHTML = history.length ? history.map(item=>`<div class="history-item"><strong>${item.action_type}</strong><span>${item.created_at || 'recent'} · board ${Number(item.board_index || 0) + 1}</span></div>`).join('') : `<div class="history-item"><strong>No history yet</strong><span>Bootstrap the session and commit a motherboard piece.</span></div>`;
       const recentSessions = history.slice(0,6).map(item=>({ title:item.action_type, body:`${item.created_at || 'recent'} · board ${Number(item.board_index || 0) + 1}` }));
       const localSessionTraffic = clips.slice(0,4).map((clip)=>({ title:`file · ${clip.name}`, body:`${clip.fileName || clip.name} · ${clip.sourceType || clip.kind || 'audio'}${clip.fxStack?.length ? ` · fx ${clip.fxStack.join(', ')}` : ''}` }));
@@ -400,6 +410,22 @@
       syncTransport();
       drawWave(0.42, els.arrangementWaveCanvas);
       drawWave(0.42, els.boardWaveCanvas);
+      refreshPlaybackSurfaces();
+    }
+    function refreshPlaybackSurfaces(){
+      const timeline = getMotherboardTimelineData();
+      document.querySelectorAll('[data-board-wave]').forEach((slot)=>{
+        const boardIndex = Number(slot.getAttribute('data-board-wave'));
+        const board = boardSlots[boardIndex];
+        const timelineBoard = timeline.boards.find(item=>item.index === boardIndex) || { ...board, start:0, end:getClipDuration(board?.clip) };
+        slot.innerHTML = renderBoardScanPreview(timelineBoard, timeline);
+      });
+      const boardFocusPlayback = document.getElementById('boardFocusPlayback');
+      if(boardFocusPlayback){
+        const activeBoard = boardSlots[activeBoardIndex];
+        const activeTimelineBoard = timeline.boards.find(item=>item.index === activeBoardIndex) || { ...activeBoard, start:0, end:getClipDuration(activeBoard?.clip) };
+        boardFocusPlayback.innerHTML = renderBoardScanPreview(activeTimelineBoard, timeline, 300, 72);
+      }
     }
     function applyNamedFx(name){
       if(!selectedClip && !boardSlots[activeBoardIndex]?.clip){
@@ -950,7 +976,7 @@
       waveformTimer = null;
       analyserNode = null;
     }
-    function animateWave(){ cancelAnimationFrame(animationFrame); const start = performance.now(); const step = (now)=>{ drawWave(((now - start) / 260), els.waveCanvas); drawWave(((now - start) / 260), els.arrangementWaveCanvas); drawWave(((now - start) / 260), els.boardWaveCanvas); animationFrame = requestAnimationFrame(step); }; animationFrame = requestAnimationFrame(step); }
+    function animateWave(){ cancelAnimationFrame(animationFrame); const start = performance.now(); const step = (now)=>{ drawWave(((now - start) / 260), els.waveCanvas); drawWave(((now - start) / 260), els.arrangementWaveCanvas); drawWave(((now - start) / 260), els.boardWaveCanvas); syncTransport(); animationFrame = requestAnimationFrame(step); }; animationFrame = requestAnimationFrame(step); }
     function startTransportTimer(){ stopTransportTimer(); transportTimer = setInterval(syncTransport, 250); }
     function stopStackPlayback(resetOffset = false){
       stackPlayback.sources.forEach((source)=>{
@@ -1111,6 +1137,39 @@
       drawWave(0.42, els.boardWaveCanvas);
       if(autoplay){
         playCurrentClipOnly();
+      }
+    }
+    function seekBoardAtIndexFromRatio(boardIndex, ratio, autoplay = false){
+      const previousBoardIndex = activeBoardIndex;
+      activeBoardIndex = Math.max(0, Math.min(boardSlots.length - 1, boardIndex));
+      const timeline = getMotherboardTimelineData();
+      const targetBoard = timeline.boards.find((board)=>board.index === activeBoardIndex);
+      if(!targetBoard){
+        activeBoardIndex = previousBoardIndex;
+        return;
+      }
+      if(!selectedClip || selectedClip.name !== targetBoard.clip?.name){
+        const clipIndex = clips.findIndex((clip)=>clip.name === targetBoard.clip?.name);
+        if(clipIndex >= 0){
+          selectClip(clipIndex);
+        }else if(targetBoard.clip){
+          selectedClip = targetBoard.clip;
+        }
+      }
+      const player = currentPlayer();
+      if(!player){
+        activeBoardIndex = previousBoardIndex;
+        return;
+      }
+      const duration = Number(player.duration || selectedClip?.duration || targetBoard.duration || 0);
+      const localSeconds = Math.max(0, Math.min(duration, ratio * duration));
+      player.currentTime = localSeconds;
+      stackPlayback.offsetSeconds = (targetBoard.start || 0) + localSeconds;
+      render();
+      if(autoplay){
+        playCurrentClipOnly();
+      }else{
+        syncTransport();
       }
     }
     els.fileInput.addEventListener('change', async ()=>{ const file = els.fileInput.files?.[0]; if(!file) return; const clip = { name:file.name, kind: file.type.startsWith('video') ? 'video' : 'audio', sourceType: els.sourceType.value, url: URL.createObjectURL(file), blob:file, fileName:file.name, position:Number(els.clipPosition.value || 0), trimStart:0, trimEnd:100, waveform: [], duration: await getMediaDuration(file, file.type.startsWith('video') ? 'video' : 'audio') }; if(clip.kind === 'audio'){ clip.waveform = await buildWaveformForFile(file); } clips.unshift(clip); selectClip(0); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], clip:{ ...clip }, title: els.boardName.value || clip.name, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; render(); setStatus(`${file.name} imported into Studio with waveform ready on board ${activeBoardIndex + 1}.`); });
