@@ -1259,7 +1259,7 @@
     });
     window.addEventListener('keydown', (event)=>{
       const tag = String(document.activeElement?.tagName || '').toUpperCase();
-      const isEditable = /INPUT|TEXTAREA|SELECT|BUTTON/.test(tag) || document.activeElement?.isContentEditable;
+      const isEditable = /INPUT|TEXTAREA|SELECT/.test(tag) || document.activeElement?.isContentEditable;
       if(event.code === 'Space'){
         if(isEditable) return;
         event.preventDefault();
