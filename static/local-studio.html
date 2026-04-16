@@ -182,6 +182,7 @@
     const els = { audioPlayer:document.getElementById('audioPlayer'), videoPlayer:document.getElementById('videoPlayer'), statusBox:document.getElementById('statusBox'), studioDock:document.getElementById('studioDock'), studioDockShell:document.getElementById('studioDockShell'), playerShell:document.getElementById('playerShell'), motherboardZone:document.getElementById('motherboardZone'), addBoardBtn:document.getElementById('addBoardBtn'), toggleFxBtn:document.getElementById('toggleFxBtn'), deleteClipBtn:document.getElementById('deleteClipBtn'), fxPanel:document.getElementById('fxPanel'), boardName:document.getElementById('boardName'), kindSelect:document.getElementById('kindSelect'), sourceType:document.getElementById('sourceType'), fxPreset:document.getElementById('fxPreset'), exportFormat:document.getElementById('exportFormat'), clipPosition:document.getElementById('clipPosition'), destination:document.getElementById('destination'), fileInput:document.getElementById('fileInput'), clipList:document.getElementById('clipList'), historyList:document.getElementById('historyList'), sessionCard:document.getElementById('sessionCard'), clipCard:document.getElementById('clipCard'), exportCard:document.getElementById('exportCard'), waveCanvas:document.getElementById('waveCanvas'), arrangementWaveCanvas:document.getElementById('arrangementWaveCanvas'), boardWaveCanvas:document.getElementById('boardWaveCanvas'), boardMeta:document.getElementById('boardMeta'), trimModeStart:document.getElementById('trimModeStart'), trimModeEnd:document.getElementById('trimModeEnd'), positionSlider:document.getElementById('positionSlider'), transportReadout:document.getElementById('transportReadout'), statsGrid:document.getElementById('statsGrid'), sessionList:document.getElementById('sessionList'), boardGrid:document.getElementById('boardGrid'), arrangementList:document.getElementById('arrangementList'), boardFocusList:document.getElementById('boardFocusList'), trimStart:document.getElementById('trimStart'), trimEnd:document.getElementById('trimEnd') };
     let sessionId = ''; let history = []; let clips = []; let selectedClip = null; let mediaStream = null; let mediaRecorder = null; let recordedChunks = []; let animationFrame = null; let transportTimer = null; let activeBoardIndex = 0; let liveWaveform = []; let liveWaveHistory = []; let audioContext = null; let analyserNode = null; let waveformTimer = null; let activeTrimHandle = 'start';
     const stackPlayback = { active:false, offsetSeconds:0, duration:0, startedAt:0, sources:[] };
+    const dragSelection = { dragging:false, moved:false, startRatio:0, endRatio:0, boardIndex:null };
     const boardSlots = Array.from({ length: 4 }, (_, index) => ({ index, title:`Board ${index + 1}`, clip:null, fxPreset:'clean', position:0, sourceType:'vocal', trimStart:0, trimEnd:100 }));
     function setStatus(message){ els.statusBox.textContent = message; }
     function updateDockVisibility(){
@@ -279,6 +280,22 @@
       }).join('');
       return `<svg class="mini-wave" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"><rect width="${width}" height="${height}" rx="16" fill="rgba(2,7,15,.9)"></rect><rect x="${boardStartX.toFixed(2)}" y="8" width="${boardWidth.toFixed(2)}" height="${(height - 16).toFixed(2)}" rx="14" fill="${isActive ? 'rgba(119,224,199,.12)' : 'rgba(121,184,255,.08)'}"></rect><rect x="${trimStartX.toFixed(2)}" y="8" width="${Math.max(6, trimEndX - trimStartX).toFixed(2)}" height="${(height - 16).toFixed(2)}" rx="12" fill="rgba(255,255,255,.04)"></rect>${bars}<line x1="${scanX.toFixed(2)}" y1="0" x2="${scanX.toFixed(2)}" y2="${height}" stroke="rgba(255,255,255,.9)" stroke-width="1.5"></line><rect x="${Math.max(0, scanX - 8).toFixed(2)}" y="0" width="16" height="${height}" fill="rgba(121,184,255,.10)"></rect><text x="${Math.max(10, boardStartX + 8).toFixed(2)}" y="18" fill="rgba(255,255,255,.82)" font-size="10.5" font-family="Georgia">${board.title}</text></svg>`;
     }
+    function getSelectionForBoard(boardIndex){
+      if(dragSelection.boardIndex !== boardIndex) return null;
+      const start = Math.min(dragSelection.startRatio, dragSelection.endRatio);
+      const end = Math.max(dragSelection.startRatio, dragSelection.endRatio);
+      if(end - start < 0.01) return null;
+      return { start, end };
+    }
+    function clearBoardSelection(boardIndex = null){
+      if(boardIndex === null || dragSelection.boardIndex === boardIndex){
+        dragSelection.dragging = false;
+        dragSelection.moved = false;
+        dragSelection.startRatio = 0;
+        dragSelection.endRatio = 0;
+        dragSelection.boardIndex = null;
+      }
+    }
     function renderBoardScanPreview(board, timeline, width = 240, height = 56){
       if(!board?.clip?.waveform?.length){
         return renderWavePreview(board?.clip?.waveform, board?.trimStart ?? 0, board?.trimEnd ?? 100);
@@ -287,11 +304,15 @@
       const currentTime = Math.max(0, timeline?.currentTime || 0);
       const boardStart = Number(board.start || 0);
       const boardEnd = Number(board.end || getClipDuration(board.clip));
+      const boardDuration = Math.max(0.1, boardEnd - boardStart);
       const localProgress = currentTime <= boardStart ? 0 : currentTime >= boardEnd ? 1 : (currentTime - boardStart) / Math.max(0.01, boardEnd - boardStart);
       const scanX = localProgress * width;
       const isActive = currentTime >= boardStart && currentTime <= boardEnd;
       const trimStartX = (Math.max(0, Math.min(100, Number(board.trimStart ?? 0))) / 100) * width;
       const trimEndX = (Math.max(1, Math.min(100, Number(board.trimEnd ?? 100))) / 100) * width;
+      const selection = getSelectionForBoard(board.index);
+      const selectionStartX = selection ? selection.start * width : 0;
+      const selectionEndX = selection ? selection.end * width : 0;
       const gradientId = `boardScanGrad-${Math.random().toString(36).slice(2,8)}`;
       const glowId = `boardScanGlow-${Math.random().toString(36).slice(2,8)}`;
       const bars = waveform.map((value, index)=>{
@@ -302,7 +323,13 @@
         const activeGlow = isActive ? 'rgba(119,224,199,.58)' : 'rgba(121,184,255,.36)';
         return `<g filter="url(#${glowId})"><rect x="${(x-0.5).toFixed(2)}" y="${(y+2).toFixed(2)}" width="4.2" height="${(depth-4).toFixed(2)}" rx="2" fill="rgba(20,36,60,.6)"></rect><rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="3.4" height="${depth.toFixed(2)}" rx="1.7" fill="url(#${gradientId})"></rect><rect x="${(x+0.4).toFixed(2)}" y="${(y+1.5).toFixed(2)}" width="1" height="${Math.max(6, depth-3).toFixed(2)}" rx="0.5" fill="rgba(255,255,255,.42)"></rect><rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="3.4" height="${depth.toFixed(2)}" rx="1.7" fill="none" stroke="${activeGlow}" stroke-width="0.6"></rect></g>`;
       }).join('');
-      return `<svg class="mini-wave" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${isActive ? 'rgba(240,255,248,1)' : 'rgba(198,231,255,1)'}"></stop><stop offset="42%" stop-color="${isActive ? 'rgba(119,224,199,.98)' : 'rgba(121,184,255,.95)'}"></stop><stop offset="100%" stop-color="${isActive ? 'rgba(23,140,108,.98)' : 'rgba(43,104,204,.95)'}"></stop></linearGradient><filter id="${glowId}"><feGaussianBlur stdDeviation="${isActive ? '2.1' : '1.6'}" result="blur"></feGaussianBlur><feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter></defs><rect width="${width}" height="${height}" rx="14" fill="rgba(2,7,15,.84)"></rect><rect x="${trimStartX.toFixed(2)}" y="0" width="${Math.max(0, trimEndX - trimStartX).toFixed(2)}" height="${height}" fill="${isActive ? 'rgba(119,224,199,.14)' : 'rgba(119,224,199,.08)'}"></rect><ellipse cx="${(width*0.5).toFixed(2)}" cy="${(height*0.82).toFixed(2)}" rx="${(width*0.48).toFixed(2)}" ry="${(height*0.28).toFixed(2)}" fill="rgba(26,82,64,.24)"></ellipse>${bars}<rect x="${Math.max(0, scanX - 7).toFixed(2)}" y="0" width="14" height="${height}" fill="${isActive ? 'rgba(119,224,199,.14)' : 'rgba(121,184,255,.08)'}"></rect><line x1="${scanX.toFixed(2)}" y1="0" x2="${scanX.toFixed(2)}" y2="${height}" stroke="rgba(255,255,255,.92)" stroke-width="1.4"></line></svg>`;
+      const rulerY = height - 8;
+      const ticks = Array.from({ length: 5 }, (_, index)=>{
+        const seconds = (boardDuration / 4) * index;
+        const x = (index / 4) * width;
+        return `<line x1="${x.toFixed(2)}" y1="${(rulerY - 6).toFixed(2)}" x2="${x.toFixed(2)}" y2="${(rulerY + 1).toFixed(2)}" stroke="rgba(255,255,255,.24)" stroke-width="1"></line><text x="${Math.max(3, x - 10).toFixed(2)}" y="${(height - 1).toFixed(2)}" fill="rgba(255,255,255,.58)" font-size="8.8" font-family="Georgia">${formatTime(seconds)}</text>`;
+      }).join('');
+      return `<svg class="mini-wave" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${isActive ? 'rgba(240,255,248,1)' : 'rgba(198,231,255,1)'}"></stop><stop offset="42%" stop-color="${isActive ? 'rgba(119,224,199,.98)' : 'rgba(121,184,255,.95)'}"></stop><stop offset="100%" stop-color="${isActive ? 'rgba(23,140,108,.98)' : 'rgba(43,104,204,.95)'}"></stop></linearGradient><filter id="${glowId}"><feGaussianBlur stdDeviation="${isActive ? '2.1' : '1.6'}" result="blur"></feGaussianBlur><feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter></defs><rect width="${width}" height="${height}" rx="14" fill="rgba(2,7,15,.84)"></rect><rect x="${trimStartX.toFixed(2)}" y="0" width="${Math.max(0, trimEndX - trimStartX).toFixed(2)}" height="${height}" fill="${isActive ? 'rgba(119,224,199,.14)' : 'rgba(119,224,199,.08)'}"></rect>${selection ? `<rect x="${selectionStartX.toFixed(2)}" y="0" width="${Math.max(3, selectionEndX - selectionStartX).toFixed(2)}" height="${height}" fill="rgba(255,108,145,.16)"></rect><line x1="${selectionStartX.toFixed(2)}" y1="0" x2="${selectionStartX.toFixed(2)}" y2="${height}" stroke="rgba(255,158,182,.86)" stroke-width="1.2"></line><line x1="${selectionEndX.toFixed(2)}" y1="0" x2="${selectionEndX.toFixed(2)}" y2="${height}" stroke="rgba(255,158,182,.86)" stroke-width="1.2"></line>` : ''}<ellipse cx="${(width*0.5).toFixed(2)}" cy="${(height*0.72).toFixed(2)}" rx="${(width*0.48).toFixed(2)}" ry="${(height*0.22).toFixed(2)}" fill="rgba(26,82,64,.24)"></ellipse>${bars}<rect x="${Math.max(0, scanX - 7).toFixed(2)}" y="0" width="14" height="${(height - 12).toFixed(2)}" fill="${isActive ? 'rgba(119,224,199,.14)' : 'rgba(121,184,255,.08)'}"></rect><line x1="${scanX.toFixed(2)}" y1="0" x2="${scanX.toFixed(2)}" y2="${(height - 12).toFixed(2)}" stroke="rgba(255,255,255,.92)" stroke-width="1.4"></line><line x1="0" y1="${rulerY.toFixed(2)}" x2="${width}" y2="${rulerY.toFixed(2)}" stroke="rgba(255,255,255,.18)" stroke-width="1"></line>${ticks}</svg>`;
     }
     function render(){
       const activeBoard = boardSlots[activeBoardIndex];
@@ -321,11 +348,49 @@
       els.arrangementList.innerHTML = boardSlots.map(board=>{ const timelineBoard = timeline.boards.find(item=>item.index === board.index) || { ...board, start:0, end:getClipDuration(board.clip) }; return `<div class="arrangement-item"><strong>${board.title}</strong><span>${board.clip ? `${board.clip.name} · ${board.position}% · ${board.fxPreset} · cut ${board.trimStart ?? 0}-${board.trimEnd ?? 100}%` : 'No clip assigned yet.'}</span>${renderArrangementLane(timelineBoard, timeline)}</div>`; }).join('');
       const activeTimelineBoard = timeline.boards.find(item=>item.index === activeBoard.index) || { ...activeBoard, start:0, end:getClipDuration(activeBoard.clip) };
       els.boardFocusList.innerHTML = `<div class="board-card active"><strong>${activeBoard.title}</strong><span>${activeBoard.clip ? `${activeBoard.clip.name} · ${activeBoard.sourceType} · ${activeBoard.position}% · trim ${activeBoard.trimStart ?? 0}-${activeBoard.trimEnd ?? 100}%` : 'Load or record a clip, then commit it into this board.'}</span><button type="button" class="board-focus-playback" id="boardFocusPlayback">${renderBoardScanPreview(activeTimelineBoard, timeline, 300, 72)}</button></div>`;
-      document.getElementById('boardFocusPlayback')?.addEventListener('click', (event)=>{
-        const rect = event.currentTarget.getBoundingClientRect();
-        const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
-        seekActiveBoardFromRatio(ratio, true);
-      });
+      const boardFocusPlayback = document.getElementById('boardFocusPlayback');
+      if(boardFocusPlayback){
+        boardFocusPlayback.addEventListener('pointerdown', (event)=>{
+          const rect = event.currentTarget.getBoundingClientRect();
+          const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+          dragSelection.dragging = true;
+          dragSelection.moved = false;
+          dragSelection.startRatio = ratio;
+          dragSelection.endRatio = ratio;
+          dragSelection.boardIndex = activeBoardIndex;
+          event.currentTarget.setPointerCapture?.(event.pointerId);
+        });
+        boardFocusPlayback.addEventListener('pointermove', (event)=>{
+          if(!dragSelection.dragging || dragSelection.boardIndex !== activeBoardIndex) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+          dragSelection.endRatio = ratio;
+          dragSelection.moved = Math.abs(dragSelection.endRatio - dragSelection.startRatio) > 0.012;
+          const nextTimeline = getMotherboardTimelineData();
+          const nextBoard = nextTimeline.boards.find(item=>item.index === activeBoardIndex) || activeTimelineBoard;
+          event.currentTarget.innerHTML = renderBoardScanPreview(nextBoard, nextTimeline, 300, 72);
+        });
+        const finishBoardGesture = (event)=>{
+          if(!dragSelection.dragging || dragSelection.boardIndex !== activeBoardIndex) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+          dragSelection.endRatio = ratio;
+          const moved = dragSelection.moved || Math.abs(dragSelection.endRatio - dragSelection.startRatio) > 0.012;
+          dragSelection.dragging = false;
+          if(moved){
+            render();
+            setStatus(`Highlighted ${Math.round(Math.min(dragSelection.startRatio, dragSelection.endRatio) * 100)}% - ${Math.round(Math.max(dragSelection.startRatio, dragSelection.endRatio) * 100)}% on ${activeBoard.title}. Use Delete Selected Clip to remove it.`);
+          }else{
+            clearBoardSelection(activeBoardIndex);
+            seekActiveBoardFromRatio(ratio, true);
+          }
+        };
+        boardFocusPlayback.addEventListener('pointerup', finishBoardGesture);
+        boardFocusPlayback.addEventListener('pointercancel', ()=>{
+          dragSelection.dragging = false;
+          render();
+        });
+      }
       els.boardMeta.innerHTML = [
         `<span class="board-chip">${activeBoard.title}</span>`,
         `<span class="board-chip">${activeBoard.clip?.name || 'No file on board yet'}</span>`,
@@ -375,9 +440,36 @@
         setStatus('No selected clip to delete.');
         return;
       }
+      const selection = getSelectionForBoard(activeBoardIndex);
+      if(selection && boardClip?.waveform?.length){
+        const waveform = [...boardClip.waveform];
+        const startIndex = Math.max(0, Math.floor(selection.start * waveform.length));
+        const endIndex = Math.max(startIndex + 1, Math.ceil(selection.end * waveform.length));
+        const trimmedWaveform = [...waveform.slice(0, startIndex), ...waveform.slice(endIndex)];
+        if(trimmedWaveform.length >= 8){
+          const ratioRemoved = (endIndex - startIndex) / Math.max(1, waveform.length);
+          const nextDuration = Math.max(0.25, Number(boardClip.duration || getClipDuration(boardClip)) * (1 - ratioRemoved));
+          const updatedClip = {
+            ...boardClip,
+            waveform: trimmedWaveform,
+            duration: nextDuration
+          };
+          boardSlots[activeBoardIndex] = {
+            ...boardSlots[activeBoardIndex],
+            clip: updatedClip
+          };
+          selectedClip = updatedClip;
+          clips = clips.map((clip)=>clip.name === targetName ? { ...clip, waveform: trimmedWaveform, duration: nextDuration } : clip);
+          clearBoardSelection(activeBoardIndex);
+          render();
+          setStatus(`Deleted highlighted section from ${targetName}.`);
+          return;
+        }
+      }
       clips = clips.filter((clip)=>clip.name !== targetName);
       boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], clip:null, trimStart:0, trimEnd:100, fxPreset:'clean' };
       selectedClip = clips[0] || null;
+      clearBoardSelection(activeBoardIndex);
       render();
       setStatus(`Removed ${targetName} from the motherboard lane.`);
     }
