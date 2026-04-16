@@ -473,6 +473,25 @@
       const progress = timelineDuration ? currentTime / timelineDuration : 0;
       return { duration: timelineDuration, boards, activeTimelineIndex, currentTime, progress };
     }
+    function buildCombinedSongWaveform(timeline, steps = 240){
+      if(!timeline?.boards?.length || !timeline.duration) return [];
+      const combined = Array.from({ length: steps }, () => 0);
+      timeline.boards.forEach((board)=>{
+        const waveform = board.clip?.waveform || [];
+        if(!waveform.length) return;
+        const startStep = Math.max(0, Math.floor((board.start / timeline.duration) * steps));
+        const endStep = Math.max(startStep + 1, Math.ceil((board.end / timeline.duration) * steps));
+        const length = Math.max(1, endStep - startStep);
+        for(let step = startStep; step < endStep && step < steps; step += 1){
+          const localProgress = (step - startStep) / length;
+          const waveformIndex = Math.min(waveform.length - 1, Math.floor(localProgress * waveform.length));
+          const value = Number(waveform[waveformIndex] || 0);
+          combined[step] += value;
+        }
+      });
+      const max = Math.max(...combined, 0.001);
+      return combined.map((value)=>Number(Math.min(1, value / max).toFixed(4)));
+    }
     function renderMotherboardTimeline(context, width, height){
       const timeline = getMotherboardTimelineData();
       const trimStart = Math.max(0, Math.min(100, Number(els.trimStart.value || 0)));
@@ -495,9 +514,41 @@
         context.fillText('Waiting for actual file waveform', 16, height / 2);
         return;
       }
-      const laneHeight = Math.max(36, height / timeline.boards.length);
+      const combinedWave = buildCombinedSongWaveform(timeline, 240);
+      const mixHeight = Math.min(72, Math.max(58, height * 0.28));
+      context.fillStyle = 'rgba(121,184,255,.06)';
+      context.fillRect(0, 0, width, mixHeight);
+      if(combinedWave.length){
+        const barWidth = width / combinedWave.length;
+        combinedWave.forEach((value, index)=>{
+          const safe = Math.max(0.02, Math.min(1, value));
+          const barHeight = Math.max(6, safe * (mixHeight * 0.82));
+          const x = index * barWidth;
+          const y = (mixHeight - barHeight) / 2;
+          const fill = context.createLinearGradient(0, y, 0, y + barHeight);
+          fill.addColorStop(0, 'rgba(250,255,254,.95)');
+          fill.addColorStop(0.42, 'rgba(119,224,199,.96)');
+          fill.addColorStop(1, 'rgba(36,154,122,.94)');
+          context.shadowColor = 'rgba(119,224,199,.34)';
+          context.shadowBlur = 8;
+          context.fillStyle = fill;
+          context.fillRect(x, y, Math.max(1.2, barWidth - 0.5), barHeight);
+        });
+        context.shadowBlur = 0;
+      }
+      context.fillStyle = 'rgba(255,255,255,.84)';
+      context.font = 'bold 11px Georgia';
+      context.fillText('Combined song read', 12, 16);
+      context.fillText(`overlap ${timeline.boards.length} board${timeline.boards.length === 1 ? '' : 's'}`, 12, 32);
+      context.strokeStyle = 'rgba(255,255,255,.08)';
+      context.beginPath();
+      context.moveTo(0, mixHeight + 6);
+      context.lineTo(width, mixHeight + 6);
+      context.stroke();
+      const lanesTop = mixHeight + 12;
+      const laneHeight = Math.max(30, (height - lanesTop) / timeline.boards.length);
       timeline.boards.forEach((board, laneIndex)=>{
-        const laneTop = laneIndex * laneHeight;
+        const laneTop = lanesTop + (laneIndex * laneHeight);
         const laneBottom = Math.min(height, laneTop + laneHeight - 6);
         const bandHeight = laneBottom - laneTop;
         const startX = (board.start / timeline.duration) * width;
