@@ -181,6 +181,7 @@
     const qs = '?localSandbox=1';
     const els = { audioPlayer:document.getElementById('audioPlayer'), videoPlayer:document.getElementById('videoPlayer'), statusBox:document.getElementById('statusBox'), studioDock:document.getElementById('studioDock'), studioDockShell:document.getElementById('studioDockShell'), playerShell:document.getElementById('playerShell'), motherboardZone:document.getElementById('motherboardZone'), addBoardBtn:document.getElementById('addBoardBtn'), toggleFxBtn:document.getElementById('toggleFxBtn'), deleteClipBtn:document.getElementById('deleteClipBtn'), fxPanel:document.getElementById('fxPanel'), boardName:document.getElementById('boardName'), kindSelect:document.getElementById('kindSelect'), sourceType:document.getElementById('sourceType'), fxPreset:document.getElementById('fxPreset'), exportFormat:document.getElementById('exportFormat'), clipPosition:document.getElementById('clipPosition'), destination:document.getElementById('destination'), fileInput:document.getElementById('fileInput'), clipList:document.getElementById('clipList'), historyList:document.getElementById('historyList'), sessionCard:document.getElementById('sessionCard'), clipCard:document.getElementById('clipCard'), exportCard:document.getElementById('exportCard'), waveCanvas:document.getElementById('waveCanvas'), arrangementWaveCanvas:document.getElementById('arrangementWaveCanvas'), boardWaveCanvas:document.getElementById('boardWaveCanvas'), boardMeta:document.getElementById('boardMeta'), trimModeStart:document.getElementById('trimModeStart'), trimModeEnd:document.getElementById('trimModeEnd'), positionSlider:document.getElementById('positionSlider'), transportReadout:document.getElementById('transportReadout'), statsGrid:document.getElementById('statsGrid'), sessionList:document.getElementById('sessionList'), boardGrid:document.getElementById('boardGrid'), arrangementList:document.getElementById('arrangementList'), boardFocusList:document.getElementById('boardFocusList'), trimStart:document.getElementById('trimStart'), trimEnd:document.getElementById('trimEnd') };
     let sessionId = ''; let history = []; let clips = []; let selectedClip = null; let mediaStream = null; let mediaRecorder = null; let recordedChunks = []; let animationFrame = null; let transportTimer = null; let activeBoardIndex = 0; let liveWaveform = []; let liveWaveHistory = []; let audioContext = null; let analyserNode = null; let waveformTimer = null; let activeTrimHandle = 'start';
+    const stackPlayback = { active:false, offsetSeconds:0, duration:0, startedAt:0, sources:[] };
     const boardSlots = Array.from({ length: 4 }, (_, index) => ({ index, title:`Board ${index + 1}`, clip:null, fxPreset:'clean', position:0, sourceType:'vocal', trimStart:0, trimEnd:100 }));
     function setStatus(message){ els.statusBox.textContent = message; }
     function updateDockVisibility(){
@@ -198,22 +199,36 @@
     async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{ 'Content-Type':'application/json', 'X-SupportRD-Local-Sandbox':'1', ...(options.headers||{}) }, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
     function formatTime(seconds){ const safe = Math.max(0, Number(seconds || 0)); const mins = String(Math.floor(safe / 60)).padStart(2,'0'); const secs = String(Math.floor(safe % 60)).padStart(2,'0'); return `${mins}:${secs}`; }
     function currentPlayer(){ return selectedClip?.kind === 'video' ? els.videoPlayer : els.audioPlayer; }
+    function getStackCurrentTime(){
+      if(!stackPlayback.active || !audioContext){
+        return Math.max(0, stackPlayback.offsetSeconds || 0);
+      }
+      return Math.max(0, Math.min(stackPlayback.duration || 0, stackPlayback.offsetSeconds + (audioContext.currentTime - stackPlayback.startedAt)));
+    }
     function stopTransportTimer(){ if(transportTimer){ clearInterval(transportTimer); transportTimer = null; } }
     function syncTransport(){
       const player = currentPlayer();
       const duration = Number.isFinite(player.duration) ? player.duration : 0;
       const current = Number.isFinite(player.currentTime) ? player.currentTime : 0;
       const timeline = getMotherboardTimelineData();
+      const stackCurrent = getStackCurrentTime();
       const usingTimeline = timeline.boards.length > 0;
       const percent = usingTimeline
-        ? Math.min(100, Math.max(0, timeline.progress * 100))
+        ? Math.min(100, Math.max(0, ((stackPlayback.active ? stackCurrent : timeline.currentTime) / Math.max(0.1, timeline.duration)) * 100))
         : duration
           ? Math.min(100, (current / duration) * 100)
           : Number(els.positionSlider.value || 0);
       els.positionSlider.value = String(percent);
-      const currentLabel = usingTimeline ? formatTime(timeline.currentTime) : formatTime(current);
+      const currentLabel = usingTimeline ? formatTime(stackPlayback.active ? stackCurrent : timeline.currentTime) : formatTime(current);
       const durationLabel = usingTimeline ? formatTime(timeline.duration) : formatTime(duration);
-      els.transportReadout.textContent = `${currentLabel} / ${durationLabel} · ${mediaRecorder && mediaRecorder.state !== 'inactive' ? 'recording' : player.paused ? 'paused' : 'playing'}`;
+      const stateLabel = mediaRecorder && mediaRecorder.state !== 'inactive'
+        ? 'recording'
+        : stackPlayback.active
+          ? 'stack playing'
+          : player.paused
+            ? 'paused'
+            : 'playing';
+      els.transportReadout.textContent = `${currentLabel} / ${durationLabel} · ${stateLabel}`;
     }
     function renderWavePreview(points = [], trimStart = 0, trimEnd = 100){
       const values = (points && points.length ? points : []);
@@ -482,6 +497,15 @@
         }
       });
     }
+    async function getClipAudioBuffer(clip){
+      if(clip?.audioBuffer) return clip.audioBuffer;
+      const context = ensureAudioContext();
+      if(!context || !clip?.blob) return null;
+      const arrayBuffer = await clip.blob.arrayBuffer();
+      const decoded = await context.decodeAudioData(arrayBuffer.slice(0));
+      clip.audioBuffer = decoded;
+      return decoded;
+    }
     function getClipDuration(clip){
       const explicit = Number(clip?.duration || 0);
       if(Number.isFinite(explicit) && explicit > 0.05) return explicit;
@@ -515,7 +539,9 @@
       const player = currentPlayer();
       const playerCurrent = Number(player?.currentTime || 0);
       const activeBoard = boards[Math.max(0, activeTimelineIndex)] || boards[0];
-      const currentTime = Math.max(0, Math.min(timelineDuration, (activeBoard?.start || 0) + playerCurrent));
+      const currentTime = stackPlayback.active
+        ? Math.max(0, Math.min(timelineDuration, getStackCurrentTime()))
+        : Math.max(0, Math.min(timelineDuration, (activeBoard?.start || 0) + playerCurrent));
       const progress = timelineDuration ? currentTime / timelineDuration : 0;
       return { duration: timelineDuration, boards, activeTimelineIndex, currentTime, progress };
     }
@@ -834,6 +860,68 @@
     }
     function animateWave(){ cancelAnimationFrame(animationFrame); const start = performance.now(); const step = (now)=>{ drawWave(((now - start) / 260), els.waveCanvas); drawWave(((now - start) / 260), els.arrangementWaveCanvas); drawWave(((now - start) / 260), els.boardWaveCanvas); animationFrame = requestAnimationFrame(step); }; animationFrame = requestAnimationFrame(step); }
     function startTransportTimer(){ stopTransportTimer(); transportTimer = setInterval(syncTransport, 250); }
+    function stopStackPlayback(resetOffset = false){
+      stackPlayback.sources.forEach((source)=>{
+        try{ source.stop(); }catch{}
+      });
+      stackPlayback.sources = [];
+      if(resetOffset){
+        stackPlayback.offsetSeconds = 0;
+      }else if(stackPlayback.active){
+        stackPlayback.offsetSeconds = getStackCurrentTime();
+      }
+      stackPlayback.active = false;
+      syncTransport();
+      drawWave(0.42, els.arrangementWaveCanvas);
+      drawWave(0.42, els.boardWaveCanvas);
+    }
+    async function playMotherboardStack(offsetSeconds = null){
+      const timeline = getMotherboardTimelineData();
+      if(!timeline.boards.length){
+        return false;
+      }
+      const context = ensureAudioContext();
+      if(!context){
+        return false;
+      }
+      await context.resume();
+      stopStackPlayback(false);
+      const startOffset = Math.max(0, Math.min(timeline.duration, Number(offsetSeconds ?? stackPlayback.offsetSeconds ?? 0)));
+      const playableBoards = [];
+      for(const board of timeline.boards){
+        if(!board.clip?.blob || board.clip.kind === 'video') continue;
+        try{
+          const buffer = await getClipAudioBuffer(board.clip);
+          if(buffer){
+            playableBoards.push({ board, buffer });
+          }
+        }catch{}
+      }
+      if(!playableBoards.length){
+        return false;
+      }
+      const now = context.currentTime + 0.04;
+      playableBoards.forEach(({ board, buffer })=>{
+        const source = context.createBufferSource();
+        source.buffer = buffer;
+        source.connect(context.destination);
+        const boardStart = Number(board.start || 0);
+        const localOffset = Math.max(0, startOffset - boardStart);
+        const scheduleDelay = Math.max(0, boardStart - startOffset);
+        const playableDuration = Math.max(0.01, Math.min(buffer.duration - localOffset, timeline.duration - Math.max(startOffset, boardStart)));
+        if(playableDuration <= 0.01) return;
+        source.start(now + scheduleDelay, localOffset, playableDuration);
+        stackPlayback.sources.push(source);
+      });
+      stackPlayback.duration = timeline.duration;
+      stackPlayback.offsetSeconds = startOffset;
+      stackPlayback.startedAt = context.currentTime;
+      stackPlayback.active = true;
+      startTransportTimer();
+      animateWave();
+      setStatus(`Playing motherboard stack across ${timeline.boards.length} board${timeline.boards.length === 1 ? '' : 's'}.`);
+      return true;
+    }
     function selectBoard(index){
       activeBoardIndex = Math.max(0, Math.min(boardSlots.length - 1, index));
       const activeBoard = boardSlots[activeBoardIndex];
@@ -852,8 +940,21 @@
     function selectClip(index){ selectedClip = clips[index] || null; if(!selectedClip) return; els.kindSelect.value = selectedClip.kind || 'audio'; els.sourceType.value = selectedClip.sourceType || (selectedClip.kind === 'audio' ? 'mp3' : 'instrument'); els.boardName.value = selectedClip.name || 'Main Track'; els.clipPosition.value = String(selectedClip.position ?? 0); els.trimStart.value = String(selectedClip.trimStart ?? 0); els.trimEnd.value = String(selectedClip.trimEnd ?? 100); els.positionSlider.value = String(selectedClip.position ?? 0); if(selectedClip.kind === 'video'){ els.videoPlayer.style.display = 'block'; els.audioPlayer.style.display = 'none'; els.videoPlayer.src = selectedClip.url; } else { els.audioPlayer.style.display = 'block'; els.videoPlayer.style.display = 'none'; els.audioPlayer.src = selectedClip.url; } render(); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); }
     async function bootstrap(){ const data = await fetchJson(`/api/studio/session/bootstrap${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, route:'local-studio' }) }); sessionId = data.session_id; await loadHistory(false); render(); setStatus(`Studio session ${sessionId} ready.`); }
     async function record(){ if(!sessionId) await bootstrap(); mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false }); startLiveWaveCapture(mediaStream); recordedChunks = []; liveWaveform = []; mediaRecorder = new MediaRecorder(mediaStream); mediaRecorder.ondataavailable = (event)=>{ if(event.data?.size) recordedChunks.push(event.data); }; mediaRecorder.onstop = async ()=>{ const blob = new Blob(recordedChunks,{ type: recordedChunks[0]?.type || 'audio/webm' }); const extension = els.sourceType.value === 'mp3' ? 'm4a' : 'webm'; const clip = { name:`Recorded ${new Date().toLocaleTimeString()}`, kind:'audio', sourceType:els.sourceType.value, url: URL.createObjectURL(blob), blob, fileName:`recording.${extension}`, trimStart:Number(els.trimStart.value || 0), trimEnd:Number(els.trimEnd.value || 100), position:Number(els.clipPosition.value || 0), waveform: liveWaveHistory.length ? compressWaveHistory(liveWaveHistory, 180) : await buildWaveformForFile(blob), duration: await getMediaDuration(blob, 'audio') }; clips.unshift(clip); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], title: els.boardName.value || clip.name, clip:{ ...clip }, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; stopLiveWaveCapture(); selectClip(0); mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; liveWaveform = []; liveWaveHistory = []; setStatus(`Track recorded locally and loaded into Studio (${els.sourceType.value}) on board ${activeBoardIndex + 1}.`); }; mediaRecorder.start(); animateWave(); setStatus('Recording track...'); }
-    function stopPlayback(){ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } if(!els.audioPlayer.paused) els.audioPlayer.pause(); if(!els.videoPlayer.paused) els.videoPlayer.pause(); stopTransportTimer(); stopLiveWaveCapture(); cancelAnimationFrame(animationFrame); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); syncTransport(); }
-    function playSelected(){
+    function stopPlayback(){ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } stopStackPlayback(true); if(!els.audioPlayer.paused) els.audioPlayer.pause(); if(!els.videoPlayer.paused) els.videoPlayer.pause(); stopTransportTimer(); stopLiveWaveCapture(); cancelAnimationFrame(animationFrame); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); syncTransport(); }
+    function playCurrentClipOnly(){
+      if(!selectedClip) return setStatus('Load a clip first.');
+      stopStackPlayback(true);
+      if(selectedClip.kind === 'video'){ els.videoPlayer.play(); } else { els.audioPlayer.play(); }
+      startTransportTimer();
+      animateWave();
+      setStatus(`Playing ${selectedClip.name}.`);
+    }
+    async function playSelected(){
+      const timeline = getMotherboardTimelineData();
+      if(timeline.boards.length > 1){
+        const played = await playMotherboardStack(stackPlayback.offsetSeconds || 0);
+        if(played) return;
+      }
       if(!selectedClip && boardSlots[activeBoardIndex]?.clip){
         const clipIndex = clips.findIndex((clip)=>clip.name === boardSlots[activeBoardIndex].clip.name);
         if(clipIndex >= 0){
@@ -863,13 +964,19 @@
         }
       }
       if(!selectedClip) return setStatus('Load a clip first.');
-      if(selectedClip.kind === 'video'){ els.videoPlayer.play(); } else { els.audioPlayer.play(); }
-      startTransportTimer();
-      animateWave();
-      setStatus(`Playing ${selectedClip.name}.`);
+      playCurrentClipOnly();
     }
-    function pauseSelected(){ els.audioPlayer.pause(); els.videoPlayer.pause(); stopTransportTimer(); cancelAnimationFrame(animationFrame); drawWave(); syncTransport(); setStatus('Playback paused.'); }
+    function pauseSelected(){ stopStackPlayback(false); els.audioPlayer.pause(); els.videoPlayer.pause(); stopTransportTimer(); cancelAnimationFrame(animationFrame); drawWave(); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); syncTransport(); setStatus('Playback paused.'); }
     function toggleStackPlayback(){
+      const timeline = getMotherboardTimelineData();
+      if(timeline.boards.length > 1){
+        if(stackPlayback.active){
+          pauseSelected();
+        }else{
+          playSelected();
+        }
+        return;
+      }
       const activeBoard = boardSlots[activeBoardIndex];
       if(!selectedClip && activeBoard?.clip){
         const clipIndex = clips.findIndex((clip)=>clip.name === activeBoard.clip.name);
@@ -881,11 +988,7 @@
       }
       const player = currentPlayer();
       if(!selectedClip || !player) return;
-      if(player.paused){
-        playSelected();
-      }else{
-        pauseSelected();
-      }
+      if(player.paused){ playSelected(); } else { pauseSelected(); }
     }
     async function commitBoard(){ if(!sessionId) await bootstrap(); if(!selectedClip) throw new Error('select_clip_first'); selectedClip.position = Number(els.clipPosition.value || 0); selectedClip.trimStart = Number(els.trimStart.value || 0); selectedClip.trimEnd = Number(els.trimEnd.value || 100); const board = { name: els.boardName.value || selectedClip.name || `Board ${activeBoardIndex + 1}`, kind: els.kindSelect.value, sourceType: els.sourceType.value, fileName: selectedClip.fileName || selectedClip.name, url: selectedClip.url, fxPreset: els.fxPreset.value, position: selectedClip.position, trimStart:selectedClip.trimStart, trimEnd:selectedClip.trimEnd, exportFormat: els.exportFormat.value, highlighted:true }; boardSlots[activeBoardIndex] = { index:activeBoardIndex, title:board.name, clip:{ ...selectedClip }, fxPreset:els.fxPreset.value, position:selectedClip.position, trimStart:selectedClip.trimStart, trimEnd:selectedClip.trimEnd, sourceType:els.sourceType.value }; await fetchJson(`/api/studio/board/commit${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, board_index: activeBoardIndex, active_board: activeBoardIndex, action_type:'commit', board }) }); await loadHistory(false); render(); setStatus(`Motherboard committed to board ${activeBoardIndex + 1} for ${els.sourceType.value} at ${selectedClip.position}% with cut ${selectedClip.trimStart}-${selectedClip.trimEnd}%.`); }
     async function applyFx(){ if(!sessionId) await bootstrap(); const data = await fetchJson(`/api/studio/fx/apply${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, board_index: activeBoardIndex, fxPreset: els.fxPreset.value, gigFilter: els.fxPreset.value, gigPan:'center', gigZoom: els.fxPreset.value === 'zoom' ? '1.2x' : '1x', gigSlowMotion:'off' }) }); boardSlots[activeBoardIndex].fxPreset = els.fxPreset.value; render(); setStatus(`FX applied on board ${activeBoardIndex + 1}: ${data.fx.fxPreset}.`); }
@@ -910,11 +1013,12 @@
       const duration = Number(player.duration || selectedClip?.duration || activeBoard.duration || 0);
       const localSeconds = Math.max(0, Math.min(duration, ratio * duration));
       player.currentTime = localSeconds;
+      stackPlayback.offsetSeconds = (activeBoard.start || 0) + localSeconds;
       syncTransport();
       drawWave(0.42, els.arrangementWaveCanvas);
       drawWave(0.42, els.boardWaveCanvas);
       if(autoplay){
-        playSelected();
+        playCurrentClipOnly();
       }
     }
     els.fileInput.addEventListener('change', async ()=>{ const file = els.fileInput.files?.[0]; if(!file) return; const clip = { name:file.name, kind: file.type.startsWith('video') ? 'video' : 'audio', sourceType: els.sourceType.value, url: URL.createObjectURL(file), blob:file, fileName:file.name, position:Number(els.clipPosition.value || 0), trimStart:0, trimEnd:100, waveform: [], duration: await getMediaDuration(file, file.type.startsWith('video') ? 'video' : 'audio') }; if(clip.kind === 'audio'){ clip.waveform = await buildWaveformForFile(file); } clips.unshift(clip); selectClip(0); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], clip:{ ...clip }, title: els.boardName.value || clip.name, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; render(); setStatus(`${file.name} imported into Studio with waveform ready on board ${activeBoardIndex + 1}.`); });
@@ -972,6 +1076,10 @@
         const timelineSeconds = (Number(els.positionSlider.value || 0) / 100) * timeline.duration;
         const localSeconds = Math.max(0, Math.min(duration, timelineSeconds - (activeBoard?.start || 0)));
         player.currentTime = localSeconds;
+        stackPlayback.offsetSeconds = timelineSeconds;
+        if(stackPlayback.active){
+          playMotherboardStack(timelineSeconds);
+        }
       }else if(duration){
         player.currentTime = (Number(els.positionSlider.value || 0) / 100) * duration;
       }
