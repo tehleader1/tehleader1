@@ -374,6 +374,7 @@
         dragSelection.dragging = false;
         activeBoardIndex = boardIndex;
         if(moved){
+          element.focus?.();
           render();
           setStatus(`Highlighted ${Math.round(Math.min(dragSelection.startRatio, dragSelection.endRatio) * 100)}% - ${Math.round(Math.max(dragSelection.startRatio, dragSelection.endRatio) * 100)}% on ${boardSlots[boardIndex].title}. Use Delete Selected Clip to cut that motherboard section.`);
         }else{
@@ -1191,6 +1192,16 @@
         syncTransport();
       }
     }
+    function handleMotherboardDeleteKey(event){
+      const tag = String(document.activeElement?.tagName || '').toUpperCase();
+      const isEditable = /INPUT|TEXTAREA|SELECT/.test(tag) || document.activeElement?.isContentEditable;
+      const isDeleteKey = event.key === 'Backspace' || event.code === 'Backspace' || event.key === 'Delete' || event.code === 'Delete';
+      if(!isDeleteKey || isEditable || !getSelectionForBoard(activeBoardIndex)) return false;
+      event.preventDefault();
+      event.stopPropagation();
+      deleteSelectedClip();
+      return true;
+    }
     els.fileInput.addEventListener('change', async ()=>{ const file = els.fileInput.files?.[0]; if(!file) return; const clip = { name:file.name, kind: file.type.startsWith('video') ? 'video' : 'audio', sourceType: els.sourceType.value, url: URL.createObjectURL(file), blob:file, fileName:file.name, position:Number(els.clipPosition.value || 0), trimStart:0, trimEnd:100, waveform: [], duration: await getMediaDuration(file, file.type.startsWith('video') ? 'video' : 'audio') }; if(clip.kind === 'audio'){ clip.waveform = await buildWaveformForFile(file); } clips.unshift(clip); selectClip(0); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], clip:{ ...clip }, title: els.boardName.value || clip.name, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; render(); setStatus(`${file.name} imported into Studio with waveform ready on board ${activeBoardIndex + 1}.`); });
     els.addBoardBtn.addEventListener('click', ()=>{ const nextIndex = boardSlots.length; boardSlots.push({ index:nextIndex, title:`Board ${nextIndex + 1}`, clip:null, fxPreset:'clean', position:0, sourceType:'vocal', trimStart:0, trimEnd:100 }); render(); setStatus(`Added motherboard lane ${nextIndex + 1}.`); });
     els.toggleFxBtn.addEventListener('click', ()=>{ els.fxPanel.hidden = !els.fxPanel.hidden; setStatus(els.fxPanel.hidden ? 'FX panel collapsed.' : 'FX panel opened.'); });
@@ -1266,12 +1277,9 @@
         toggleStackPlayback();
         return;
       }
-      if(event.key === 'Backspace'){
-        if(isEditable || !getSelectionForBoard(activeBoardIndex)) return;
-        event.preventDefault();
-        deleteSelectedClip();
-      }
+      handleMotherboardDeleteKey(event);
     });
+    document.addEventListener('keydown', handleMotherboardDeleteKey, true);
     [els.audioPlayer, els.videoPlayer].forEach(player=>player.addEventListener('loadedmetadata', ()=>{
       const duration = Number(player.duration || 0);
       if(selectedClip && Number.isFinite(duration) && duration > 0.05){
