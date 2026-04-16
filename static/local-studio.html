@@ -44,6 +44,8 @@
           <div class="lane-actions">
             <button id="addBoardBtn" type="button">Add Motherboard Lane</button>
             <button id="toggleFxBtn" type="button">FX Feature</button>
+            <button id="copySelectionBtn" type="button">Copy Selection</button>
+            <button id="pasteSelectionBtn" type="button">Paste To Board</button>
             <button id="deleteClipBtn" type="button">Delete Selected Clip</button>
           </div>
           <div class="fx-panel" id="fxPanel" hidden>
@@ -179,8 +181,8 @@
   </div>
   <script>
     const qs = '?localSandbox=1';
-    const els = { audioPlayer:document.getElementById('audioPlayer'), videoPlayer:document.getElementById('videoPlayer'), statusBox:document.getElementById('statusBox'), studioDock:document.getElementById('studioDock'), studioDockShell:document.getElementById('studioDockShell'), playerShell:document.getElementById('playerShell'), motherboardZone:document.getElementById('motherboardZone'), addBoardBtn:document.getElementById('addBoardBtn'), toggleFxBtn:document.getElementById('toggleFxBtn'), deleteClipBtn:document.getElementById('deleteClipBtn'), fxPanel:document.getElementById('fxPanel'), boardName:document.getElementById('boardName'), kindSelect:document.getElementById('kindSelect'), sourceType:document.getElementById('sourceType'), fxPreset:document.getElementById('fxPreset'), exportFormat:document.getElementById('exportFormat'), clipPosition:document.getElementById('clipPosition'), destination:document.getElementById('destination'), fileInput:document.getElementById('fileInput'), clipList:document.getElementById('clipList'), historyList:document.getElementById('historyList'), sessionCard:document.getElementById('sessionCard'), clipCard:document.getElementById('clipCard'), exportCard:document.getElementById('exportCard'), waveCanvas:document.getElementById('waveCanvas'), arrangementWaveCanvas:document.getElementById('arrangementWaveCanvas'), boardWaveCanvas:document.getElementById('boardWaveCanvas'), boardMeta:document.getElementById('boardMeta'), trimModeStart:document.getElementById('trimModeStart'), trimModeEnd:document.getElementById('trimModeEnd'), positionSlider:document.getElementById('positionSlider'), transportReadout:document.getElementById('transportReadout'), statsGrid:document.getElementById('statsGrid'), sessionList:document.getElementById('sessionList'), boardGrid:document.getElementById('boardGrid'), arrangementList:document.getElementById('arrangementList'), boardFocusList:document.getElementById('boardFocusList'), trimStart:document.getElementById('trimStart'), trimEnd:document.getElementById('trimEnd') };
-    let sessionId = ''; let history = []; let clips = []; let selectedClip = null; let mediaStream = null; let mediaRecorder = null; let recordedChunks = []; let animationFrame = null; let transportTimer = null; let activeBoardIndex = 0; let liveWaveform = []; let liveWaveHistory = []; let audioContext = null; let analyserNode = null; let waveformTimer = null; let activeTrimHandle = 'start';
+    const els = { audioPlayer:document.getElementById('audioPlayer'), videoPlayer:document.getElementById('videoPlayer'), statusBox:document.getElementById('statusBox'), studioDock:document.getElementById('studioDock'), studioDockShell:document.getElementById('studioDockShell'), playerShell:document.getElementById('playerShell'), motherboardZone:document.getElementById('motherboardZone'), addBoardBtn:document.getElementById('addBoardBtn'), toggleFxBtn:document.getElementById('toggleFxBtn'), copySelectionBtn:document.getElementById('copySelectionBtn'), pasteSelectionBtn:document.getElementById('pasteSelectionBtn'), deleteClipBtn:document.getElementById('deleteClipBtn'), fxPanel:document.getElementById('fxPanel'), boardName:document.getElementById('boardName'), kindSelect:document.getElementById('kindSelect'), sourceType:document.getElementById('sourceType'), fxPreset:document.getElementById('fxPreset'), exportFormat:document.getElementById('exportFormat'), clipPosition:document.getElementById('clipPosition'), destination:document.getElementById('destination'), fileInput:document.getElementById('fileInput'), clipList:document.getElementById('clipList'), historyList:document.getElementById('historyList'), sessionCard:document.getElementById('sessionCard'), clipCard:document.getElementById('clipCard'), exportCard:document.getElementById('exportCard'), waveCanvas:document.getElementById('waveCanvas'), arrangementWaveCanvas:document.getElementById('arrangementWaveCanvas'), boardWaveCanvas:document.getElementById('boardWaveCanvas'), boardMeta:document.getElementById('boardMeta'), trimModeStart:document.getElementById('trimModeStart'), trimModeEnd:document.getElementById('trimModeEnd'), positionSlider:document.getElementById('positionSlider'), transportReadout:document.getElementById('transportReadout'), statsGrid:document.getElementById('statsGrid'), sessionList:document.getElementById('sessionList'), boardGrid:document.getElementById('boardGrid'), arrangementList:document.getElementById('arrangementList'), boardFocusList:document.getElementById('boardFocusList'), trimStart:document.getElementById('trimStart'), trimEnd:document.getElementById('trimEnd') };
+    let sessionId = ''; let history = []; let clips = []; let selectedClip = null; let copiedClipSelection = null; let mediaStream = null; let mediaRecorder = null; let recordedChunks = []; let animationFrame = null; let transportTimer = null; let activeBoardIndex = 0; let liveWaveform = []; let liveWaveHistory = []; let audioContext = null; let analyserNode = null; let waveformTimer = null; let activeTrimHandle = 'start';
     const stackPlayback = { active:false, offsetSeconds:0, duration:0, startedAt:0, sources:[] };
     const dragSelection = { dragging:false, moved:false, startRatio:0, endRatio:0, boardIndex:null };
     const boardSlots = Array.from({ length: 4 }, (_, index) => ({ index, title:`Board ${index + 1}`, clip:null, fxPreset:'clean', position:0, sourceType:'vocal', trimStart:0, trimEnd:100 }));
@@ -200,6 +202,18 @@
     async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{ 'Content-Type':'application/json', 'X-SupportRD-Local-Sandbox':'1', ...(options.headers||{}) }, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
     function formatTime(seconds){ const safe = Math.max(0, Number(seconds || 0)); const mins = String(Math.floor(safe / 60)).padStart(2,'0'); const secs = String(Math.floor(safe % 60)).padStart(2,'0'); return `${mins}:${secs}`; }
     function currentPlayer(){ return selectedClip?.kind === 'video' ? els.videoPlayer : els.audioPlayer; }
+    function syncSelectedClipPlayer(loadOnly = false){
+      if(!selectedClip) return;
+      const player = currentPlayer();
+      if(!player) return;
+      if(player.src !== selectedClip.url){
+        player.src = selectedClip.url || '';
+      }
+      player.load?.();
+      if(!loadOnly){
+        syncTransport();
+      }
+    }
     function getStackCurrentTime(){
       if(!stackPlayback.active || !audioContext){
         return Math.max(0, stackPlayback.offsetSeconds || 0);
@@ -511,6 +525,7 @@
           selectedClip = updatedClip;
           clips = clips.map((clip)=>clip.name === targetName ? { ...clip, ...updatedClip } : clip);
           clearBoardSelection(activeBoardIndex);
+          syncSelectedClipPlayer(true);
           render();
           setStatus(`Deleted highlighted section from ${targetName}.`);
           return;
@@ -520,6 +535,7 @@
       boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], clip:null, trimStart:0, trimEnd:100, fxPreset:'clean' };
       selectedClip = clips[0] || null;
       clearBoardSelection(activeBoardIndex);
+      syncSelectedClipPlayer(true);
       render();
       setStatus(`Removed ${targetName} from the motherboard lane.`);
     }
@@ -683,6 +699,83 @@
       }catch{
         return null;
       }
+    }
+    async function extractClipAudio(clip, startRatio, endRatio){
+      if(!clip?.blob) return null;
+      try{
+        const context = ensureAudioContext();
+        if(!context) return null;
+        const sourceBuffer = await clip.blob.arrayBuffer();
+        const decoded = await context.decodeAudioData(sourceBuffer.slice(0));
+        const fromFrame = Math.max(0, Math.floor(Math.min(startRatio, endRatio) * decoded.length));
+        const toFrame = Math.max(fromFrame + 1, Math.ceil(Math.max(startRatio, endRatio) * decoded.length));
+        const nextLength = Math.max(1, toFrame - fromFrame);
+        const extracted = context.createBuffer(decoded.numberOfChannels, nextLength, decoded.sampleRate);
+        for(let channel = 0; channel < decoded.numberOfChannels; channel += 1){
+          const input = decoded.getChannelData(channel);
+          const output = extracted.getChannelData(channel);
+          output.set(input.subarray(fromFrame, toFrame), 0);
+        }
+        const blob = audioBufferToWavBlob(extracted);
+        return {
+          blob,
+          url: URL.createObjectURL(blob),
+          fileName: ((clip.fileName || clip.name || 'copied-piece').replace(/\.[^.]+$/, '')) + '-piece.wav',
+          duration: extracted.duration,
+          waveform: buildWaveformFromArray(extracted.getChannelData(0), 180)
+        };
+      }catch{
+        return null;
+      }
+    }
+    async function copySelectedSection(){
+      const boardClip = boardSlots[activeBoardIndex]?.clip;
+      const selection = getSelectionForBoard(activeBoardIndex);
+      if(!boardClip || !selection){
+        setStatus('Highlight a motherboard section first so we can copy it.');
+        return;
+      }
+      const copiedAudio = await extractClipAudio(boardClip, selection.start, selection.end).catch(()=>null);
+      const waveform = [...(boardClip.waveform || [])];
+      const startIndex = Math.max(0, Math.floor(selection.start * waveform.length));
+      const endIndex = Math.max(startIndex + 1, Math.ceil(selection.end * waveform.length));
+      copiedClipSelection = {
+        ...boardClip,
+        name: `${boardClip.name || 'Clip'} piece`,
+        waveform: copiedAudio?.waveform || waveform.slice(startIndex, endIndex),
+        duration: copiedAudio?.duration || Math.max(0.2, Number(boardClip.duration || getClipDuration(boardClip)) * (selection.end - selection.start)),
+        blob: copiedAudio?.blob || boardClip.blob,
+        url: copiedAudio?.url || boardClip.url,
+        fileName: copiedAudio?.fileName || boardClip.fileName
+      };
+      setStatus(`Copied ${Math.round(selection.start * 100)}% - ${Math.round(selection.end * 100)}% from ${boardSlots[activeBoardIndex].title}.`);
+    }
+    function pasteCopiedSection(){
+      if(!copiedClipSelection){
+        setStatus('Copy a motherboard section first.');
+        return;
+      }
+      const pastedClip = {
+        ...copiedClipSelection,
+        name: `${copiedClipSelection.name || 'Copied piece'} · board ${activeBoardIndex + 1}`,
+        position:Number(els.clipPosition.value || 0),
+        trimStart:0,
+        trimEnd:100
+      };
+      clips.unshift(pastedClip);
+      boardSlots[activeBoardIndex] = {
+        ...boardSlots[activeBoardIndex],
+        title: els.boardName.value || boardSlots[activeBoardIndex].title,
+        clip: pastedClip,
+        sourceType: pastedClip.sourceType || 'vocal',
+        position: pastedClip.position,
+        trimStart: pastedClip.trimStart,
+        trimEnd: pastedClip.trimEnd
+      };
+      selectedClip = pastedClip;
+      syncSelectedClipPlayer(true);
+      render();
+      setStatus(`Pasted copied section onto ${boardSlots[activeBoardIndex].title}.`);
     }
     async function getMediaDuration(blobOrFile, kind = 'audio'){
       return await new Promise((resolve)=>{
@@ -1145,13 +1238,14 @@
       }
       render();
     }
-    function selectClip(index){ selectedClip = clips[index] || null; if(!selectedClip) return; els.kindSelect.value = selectedClip.kind || 'audio'; els.sourceType.value = selectedClip.sourceType || (selectedClip.kind === 'audio' ? 'mp3' : 'instrument'); els.boardName.value = selectedClip.name || 'Main Track'; els.clipPosition.value = String(selectedClip.position ?? 0); els.trimStart.value = String(selectedClip.trimStart ?? 0); els.trimEnd.value = String(selectedClip.trimEnd ?? 100); els.positionSlider.value = String(selectedClip.position ?? 0); if(selectedClip.kind === 'video'){ els.videoPlayer.style.display = 'block'; els.audioPlayer.style.display = 'none'; els.videoPlayer.src = selectedClip.url; } else { els.audioPlayer.style.display = 'block'; els.videoPlayer.style.display = 'none'; els.audioPlayer.src = selectedClip.url; } render(); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); }
+    function selectClip(index){ selectedClip = clips[index] || null; if(!selectedClip) return; els.kindSelect.value = selectedClip.kind || 'audio'; els.sourceType.value = selectedClip.sourceType || (selectedClip.kind === 'audio' ? 'mp3' : 'instrument'); els.boardName.value = selectedClip.name || 'Main Track'; els.clipPosition.value = String(selectedClip.position ?? 0); els.trimStart.value = String(selectedClip.trimStart ?? 0); els.trimEnd.value = String(selectedClip.trimEnd ?? 100); els.positionSlider.value = String(selectedClip.position ?? 0); if(selectedClip.kind === 'video'){ els.videoPlayer.style.display = 'block'; els.audioPlayer.style.display = 'none'; els.videoPlayer.src = selectedClip.url; } else { els.audioPlayer.style.display = 'block'; els.videoPlayer.style.display = 'none'; els.audioPlayer.src = selectedClip.url; } syncSelectedClipPlayer(true); render(); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); }
     async function bootstrap(){ const data = await fetchJson(`/api/studio/session/bootstrap${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, route:'local-studio' }) }); sessionId = data.session_id; await loadHistory(false); render(); setStatus(`Studio session ${sessionId} ready.`); }
     async function record(){ if(!sessionId) await bootstrap(); mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false }); startLiveWaveCapture(mediaStream); recordedChunks = []; liveWaveform = []; mediaRecorder = new MediaRecorder(mediaStream); mediaRecorder.ondataavailable = (event)=>{ if(event.data?.size) recordedChunks.push(event.data); }; mediaRecorder.onstop = async ()=>{ const blob = new Blob(recordedChunks,{ type: recordedChunks[0]?.type || 'audio/webm' }); const extension = els.sourceType.value === 'mp3' ? 'm4a' : 'webm'; const clip = { name:`Recorded ${new Date().toLocaleTimeString()}`, kind:'audio', sourceType:els.sourceType.value, url: URL.createObjectURL(blob), blob, fileName:`recording.${extension}`, trimStart:Number(els.trimStart.value || 0), trimEnd:Number(els.trimEnd.value || 100), position:Number(els.clipPosition.value || 0), waveform: liveWaveHistory.length ? compressWaveHistory(liveWaveHistory, 180) : await buildWaveformForFile(blob), duration: await getMediaDuration(blob, 'audio') }; clips.unshift(clip); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], title: els.boardName.value || clip.name, clip:{ ...clip }, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; stopLiveWaveCapture(); selectClip(0); mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; liveWaveform = []; liveWaveHistory = []; setStatus(`Track recorded locally and loaded into Studio (${els.sourceType.value}) on board ${activeBoardIndex + 1}.`); }; mediaRecorder.start(); animateWave(); setStatus('Recording track...'); }
     function stopPlayback(){ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } stopStackPlayback(true); if(!els.audioPlayer.paused) els.audioPlayer.pause(); if(!els.videoPlayer.paused) els.videoPlayer.pause(); stopTransportTimer(); stopLiveWaveCapture(); cancelAnimationFrame(animationFrame); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); syncTransport(); }
     function playCurrentClipOnly(){
       if(!selectedClip) return setStatus('Load a clip first.');
       stopStackPlayback(true);
+      syncSelectedClipPlayer(true);
       if(selectedClip.kind === 'video'){ els.videoPlayer.play(); } else { els.audioPlayer.play(); }
       startTransportTimer();
       animateWave();
@@ -1275,7 +1369,9 @@
     els.fileInput.addEventListener('change', async ()=>{ const file = els.fileInput.files?.[0]; if(!file) return; const clip = { name:file.name, kind: file.type.startsWith('video') ? 'video' : 'audio', sourceType: els.sourceType.value, url: URL.createObjectURL(file), blob:file, fileName:file.name, position:Number(els.clipPosition.value || 0), trimStart:0, trimEnd:100, waveform: [], duration: await getMediaDuration(file, file.type.startsWith('video') ? 'video' : 'audio') }; if(clip.kind === 'audio'){ clip.waveform = await buildWaveformForFile(file); } clips.unshift(clip); selectClip(0); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], clip:{ ...clip }, title: els.boardName.value || clip.name, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; render(); setStatus(`${file.name} imported into Studio with waveform ready on board ${activeBoardIndex + 1}.`); });
     els.addBoardBtn.addEventListener('click', ()=>{ const nextIndex = boardSlots.length; boardSlots.push({ index:nextIndex, title:`Board ${nextIndex + 1}`, clip:null, fxPreset:'clean', position:0, sourceType:'vocal', trimStart:0, trimEnd:100 }); render(); setStatus(`Added motherboard lane ${nextIndex + 1}.`); });
     els.toggleFxBtn.addEventListener('click', ()=>{ els.fxPanel.hidden = !els.fxPanel.hidden; setStatus(els.fxPanel.hidden ? 'FX panel collapsed.' : 'FX panel opened.'); });
-    els.deleteClipBtn.addEventListener('click', deleteSelectedClip);
+    els.copySelectionBtn.addEventListener('click', ()=>copySelectedSection().catch(()=>setStatus('Could not copy that motherboard piece yet.')));
+    els.pasteSelectionBtn.addEventListener('click', pasteCopiedSection);
+    els.deleteClipBtn.addEventListener('click', ()=>deleteSelectedClip());
     els.fxPanel.querySelectorAll('[data-fx]').forEach((button)=>button.addEventListener('click', ()=>applyNamedFx(button.dataset.fx)));
     document.getElementById('bootstrapBtn').addEventListener('click', ()=>bootstrap().catch(error=>setStatus(`Error: ${error.message}`)));
     document.getElementById('recordBtn').addEventListener('click', ()=>record().catch(error=>setStatus(`Error: ${error.message}`)));
@@ -1345,6 +1441,18 @@
         if(isEditable) return;
         event.preventDefault();
         toggleStackPlayback();
+        return;
+      }
+      if((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c'){
+        if(isEditable || !getSelectionForBoard(activeBoardIndex)) return;
+        event.preventDefault();
+        copySelectedSection().catch(()=>setStatus('Could not copy that motherboard piece yet.'));
+        return;
+      }
+      if((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v'){
+        if(isEditable || !copiedClipSelection) return;
+        event.preventDefault();
+        pasteCopiedSection();
         return;
       }
       handleMotherboardDeleteKey(event);
