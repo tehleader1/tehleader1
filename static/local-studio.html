@@ -177,7 +177,7 @@
   <script>
     const qs = '?localSandbox=1';
     const els = { audioPlayer:document.getElementById('audioPlayer'), videoPlayer:document.getElementById('videoPlayer'), statusBox:document.getElementById('statusBox'), studioDock:document.getElementById('studioDock'), studioDockShell:document.getElementById('studioDockShell'), playerShell:document.getElementById('playerShell'), motherboardZone:document.getElementById('motherboardZone'), addBoardBtn:document.getElementById('addBoardBtn'), toggleFxBtn:document.getElementById('toggleFxBtn'), deleteClipBtn:document.getElementById('deleteClipBtn'), fxPanel:document.getElementById('fxPanel'), boardName:document.getElementById('boardName'), kindSelect:document.getElementById('kindSelect'), sourceType:document.getElementById('sourceType'), fxPreset:document.getElementById('fxPreset'), exportFormat:document.getElementById('exportFormat'), clipPosition:document.getElementById('clipPosition'), destination:document.getElementById('destination'), fileInput:document.getElementById('fileInput'), clipList:document.getElementById('clipList'), historyList:document.getElementById('historyList'), sessionCard:document.getElementById('sessionCard'), clipCard:document.getElementById('clipCard'), exportCard:document.getElementById('exportCard'), waveCanvas:document.getElementById('waveCanvas'), boardWaveCanvas:document.getElementById('boardWaveCanvas'), boardMeta:document.getElementById('boardMeta'), trimModeStart:document.getElementById('trimModeStart'), trimModeEnd:document.getElementById('trimModeEnd'), positionSlider:document.getElementById('positionSlider'), transportReadout:document.getElementById('transportReadout'), statsGrid:document.getElementById('statsGrid'), sessionList:document.getElementById('sessionList'), boardGrid:document.getElementById('boardGrid'), arrangementList:document.getElementById('arrangementList'), boardFocusList:document.getElementById('boardFocusList'), trimStart:document.getElementById('trimStart'), trimEnd:document.getElementById('trimEnd') };
-    let sessionId = ''; let history = []; let clips = []; let selectedClip = null; let mediaStream = null; let mediaRecorder = null; let recordedChunks = []; let animationFrame = null; let transportTimer = null; let activeBoardIndex = 0; let liveWaveform = []; let audioContext = null; let analyserNode = null; let waveformTimer = null; let activeTrimHandle = 'start';
+    let sessionId = ''; let history = []; let clips = []; let selectedClip = null; let mediaStream = null; let mediaRecorder = null; let recordedChunks = []; let animationFrame = null; let transportTimer = null; let activeBoardIndex = 0; let liveWaveform = []; let liveWaveHistory = []; let audioContext = null; let analyserNode = null; let waveformTimer = null; let activeTrimHandle = 'start';
     const boardSlots = Array.from({ length: 4 }, (_, index) => ({ index, title:`Board ${index + 1}`, clip:null, fxPreset:'clean', position:0, sourceType:'vocal', trimStart:0, trimEnd:100 }));
     function setStatus(message){ els.statusBox.textContent = message; }
     function updateDockVisibility(){
@@ -288,11 +288,40 @@
     }
     function ensureAudioContext(){ if(!audioContext){ const Ctx = window.AudioContext || window.webkitAudioContext; if(Ctx) audioContext = new Ctx(); } return audioContext; }
     function enhanceWaveform(points = []){
-      const safe = (points || []).filter((value)=>Number.isFinite(value));
-      const max = Math.max(...safe, 0.001);
-      return safe.map((value)=>Number(Math.max(0.18, Math.pow(value / max, 0.42)).toFixed(3)));
+      const safe = (points || []).filter((value)=>Number.isFinite(value) && value >= 0);
+      if(!safe.length) return [];
+      const sorted = [...safe].sort((a,b)=>a-b);
+      const floor = sorted[Math.floor(sorted.length * 0.12)] ?? 0;
+      const ceiling = sorted[Math.floor(sorted.length * 0.97)] ?? Math.max(...sorted, 0.001);
+      const span = Math.max(0.0001, ceiling - floor);
+      return safe.map((value, index, all)=>{
+        const normalized = Math.max(0, (value - floor) / span);
+        const lifted = Math.pow(normalized, 0.68);
+        const shimmer = index > 0 ? Math.abs(value - all[index - 1]) * 0.85 : value * 0.2;
+        return Number(Math.min(1, Math.max(normalized > 0.015 ? 0.028 : 0, lifted * 0.82 + normalized * 0.28 + shimmer * 0.34)).toFixed(4));
+      });
     }
-    function buildWaveformFromArray(samples, steps = 96){
+    function compressWaveHistory(points = [], steps = 180){
+      if(!points?.length) return [];
+      if(points.length <= steps) return enhanceWaveform(points);
+      const size = Math.max(1, Math.floor(points.length / steps));
+      const waveform = [];
+      for(let index = 0; index < steps; index += 1){
+        const start = index * size;
+        const end = Math.min(points.length, start + size);
+        let peak = 0;
+        let total = 0;
+        for(let cursor = start; cursor < end; cursor += 1){
+          const value = Math.max(0, Number(points[cursor] || 0));
+          peak = Math.max(peak, value);
+          total += value;
+        }
+        const avg = total / Math.max(1, end - start);
+        waveform.push(peak * 0.72 + avg * 0.48);
+      }
+      return enhanceWaveform(waveform);
+    }
+    function buildWaveformFromArray(samples, steps = 180){
       if(!samples?.length) return [];
       const size = Math.max(1, Math.floor(samples.length / steps));
       const waveform = [];
@@ -300,14 +329,23 @@
         const start = index * size;
         const end = Math.min(samples.length, start + size);
         let peak = 0;
+        let totalSquares = 0;
+        let flux = 0;
         for(let cursor = start; cursor < end; cursor += 1){
-          peak = Math.max(peak, Math.abs(samples[cursor] || 0));
+          const current = Math.abs(samples[cursor] || 0);
+          const previous = Math.abs(samples[Math.max(0, cursor - 1)] || 0);
+          peak = Math.max(peak, current);
+          totalSquares += current * current;
+          flux += Math.abs(current - previous);
         }
-        waveform.push(Number(peak.toFixed(3)));
+        const count = Math.max(1, end - start);
+        const rms = Math.sqrt(totalSquares / count);
+        const transient = flux / count;
+        waveform.push(Number((peak * 0.72 + rms * 0.95 + transient * 0.85).toFixed(4)));
       }
       return enhanceWaveform(waveform);
     }
-    function buildWaveformFromBytes(buffer, steps = 96){
+    function buildWaveformFromBytes(buffer, steps = 180){
       const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
       if(!bytes.length) return [];
       const size = Math.max(1, Math.floor(bytes.length / steps));
@@ -316,10 +354,13 @@
         const start = index * size;
         const end = Math.min(bytes.length, start + size);
         let total = 0;
+        let peak = 0;
         for(let cursor = start; cursor < end; cursor += 1){
-          total += Math.abs((bytes[cursor] - 128) / 128);
+          const value = Math.abs((bytes[cursor] - 128) / 128);
+          total += value;
+          peak = Math.max(peak, value);
         }
-        waveform.push(total / Math.max(1, end - start));
+        waveform.push((peak * 0.75) + ((total / Math.max(1, end - start)) * 0.55));
       }
       return enhanceWaveform(waveform);
     }
@@ -327,15 +368,15 @@
       try{
         const buffer = await blobOrFile.arrayBuffer();
         const context = ensureAudioContext();
-        if(!context) return buildWaveformFromBytes(buffer, 96);
+        if(!context) return buildWaveformFromBytes(buffer, 180);
         try{
           const audioBuffer = await context.decodeAudioData(buffer.slice(0));
           const channel = audioBuffer.getChannelData(0);
           if(channel?.length){
-            return buildWaveformFromArray(channel, 96);
+            return buildWaveformFromArray(channel, 180);
           }
         }catch{}
-        return buildWaveformFromBytes(buffer, 96);
+        return buildWaveformFromBytes(buffer, 180);
       }catch{
         return [];
       }
@@ -433,18 +474,41 @@
       if(!context) return;
       const source = context.createMediaStreamSource(stream);
       analyserNode = context.createAnalyser();
-      analyserNode.fftSize = 256;
+      analyserNode.fftSize = 2048;
+      analyserNode.smoothingTimeConstant = 0.18;
       source.connect(analyserNode);
-      const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+      const timeData = new Uint8Array(analyserNode.fftSize);
+      const freqData = new Uint8Array(analyserNode.frequencyBinCount);
+      liveWaveHistory = [];
       clearInterval(waveformTimer);
       waveformTimer = setInterval(()=>{
         if(!analyserNode) return;
-        analyserNode.getByteTimeDomainData(dataArray);
-        const rawWave = Array.from({ length: 72 }, (_, index)=>{
-          const sample = dataArray[Math.min(dataArray.length - 1, Math.floor((index / 72) * dataArray.length))];
-          return Math.abs((sample - 128) / 128);
-        });
-        liveWaveform = enhanceWaveform(rawWave);
+        analyserNode.getByteTimeDomainData(timeData);
+        analyserNode.getByteFrequencyData(freqData);
+        let peak = 0;
+        let totalSquares = 0;
+        let flux = 0;
+        for(let index = 0; index < timeData.length; index += 1){
+          const current = Math.abs((timeData[index] - 128) / 128);
+          const previous = index > 0 ? Math.abs((timeData[index - 1] - 128) / 128) : current;
+          peak = Math.max(peak, current);
+          totalSquares += current * current;
+          flux += Math.abs(current - previous);
+        }
+        let spectral = 0;
+        for(let index = 0; index < freqData.length; index += 1){
+          const weighted = (freqData[index] / 255) * (0.28 + (index / Math.max(1, freqData.length - 1)) * 0.72);
+          spectral += weighted;
+        }
+        const rms = Math.sqrt(totalSquares / Math.max(1, timeData.length));
+        const transient = flux / Math.max(1, timeData.length);
+        const spectralAvg = spectral / Math.max(1, freqData.length);
+        const frameValue = (peak * 0.95) + (rms * 1.15) + (transient * 1.25) + (spectralAvg * 0.9);
+        liveWaveHistory.push(frameValue);
+        if(liveWaveHistory.length > 720){
+          liveWaveHistory = liveWaveHistory.slice(-720);
+        }
+        liveWaveform = compressWaveHistory(liveWaveHistory, 180);
         const recordingClip = {
           name:`Recording live on ${boardSlots[activeBoardIndex].title}`,
           kind:'audio',
@@ -491,7 +555,7 @@
     }
     function selectClip(index){ selectedClip = clips[index] || null; if(!selectedClip) return; els.kindSelect.value = selectedClip.kind || 'audio'; els.sourceType.value = selectedClip.sourceType || (selectedClip.kind === 'audio' ? 'mp3' : 'instrument'); els.boardName.value = selectedClip.name || 'Main Track'; els.clipPosition.value = String(selectedClip.position ?? 0); els.trimStart.value = String(selectedClip.trimStart ?? 0); els.trimEnd.value = String(selectedClip.trimEnd ?? 100); els.positionSlider.value = String(selectedClip.position ?? 0); if(selectedClip.kind === 'video'){ els.videoPlayer.style.display = 'block'; els.audioPlayer.style.display = 'none'; els.videoPlayer.src = selectedClip.url; } else { els.audioPlayer.style.display = 'block'; els.videoPlayer.style.display = 'none'; els.audioPlayer.src = selectedClip.url; } render(); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.boardWaveCanvas); }
     async function bootstrap(){ const data = await fetchJson(`/api/studio/session/bootstrap${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, route:'local-studio' }) }); sessionId = data.session_id; await loadHistory(false); render(); setStatus(`Studio session ${sessionId} ready.`); }
-    async function record(){ if(!sessionId) await bootstrap(); mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false }); startLiveWaveCapture(mediaStream); recordedChunks = []; liveWaveform = []; mediaRecorder = new MediaRecorder(mediaStream); mediaRecorder.ondataavailable = (event)=>{ if(event.data?.size) recordedChunks.push(event.data); }; mediaRecorder.onstop = async ()=>{ const blob = new Blob(recordedChunks,{ type: recordedChunks[0]?.type || 'audio/webm' }); const extension = els.sourceType.value === 'mp3' ? 'm4a' : 'webm'; const clip = { name:`Recorded ${new Date().toLocaleTimeString()}`, kind:'audio', sourceType:els.sourceType.value, url: URL.createObjectURL(blob), blob, fileName:`recording.${extension}`, trimStart:Number(els.trimStart.value || 0), trimEnd:Number(els.trimEnd.value || 100), position:Number(els.clipPosition.value || 0), waveform: liveWaveform.length ? [...liveWaveform] : await buildWaveformForFile(blob) }; clips.unshift(clip); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], title: els.boardName.value || clip.name, clip:{ ...clip }, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; stopLiveWaveCapture(); selectClip(0); mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; liveWaveform = []; setStatus(`Track recorded locally and loaded into Studio (${els.sourceType.value}) on board ${activeBoardIndex + 1}.`); }; mediaRecorder.start(); animateWave(); setStatus('Recording track...'); }
+    async function record(){ if(!sessionId) await bootstrap(); mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false }); startLiveWaveCapture(mediaStream); recordedChunks = []; liveWaveform = []; mediaRecorder = new MediaRecorder(mediaStream); mediaRecorder.ondataavailable = (event)=>{ if(event.data?.size) recordedChunks.push(event.data); }; mediaRecorder.onstop = async ()=>{ const blob = new Blob(recordedChunks,{ type: recordedChunks[0]?.type || 'audio/webm' }); const extension = els.sourceType.value === 'mp3' ? 'm4a' : 'webm'; const clip = { name:`Recorded ${new Date().toLocaleTimeString()}`, kind:'audio', sourceType:els.sourceType.value, url: URL.createObjectURL(blob), blob, fileName:`recording.${extension}`, trimStart:Number(els.trimStart.value || 0), trimEnd:Number(els.trimEnd.value || 100), position:Number(els.clipPosition.value || 0), waveform: liveWaveHistory.length ? compressWaveHistory(liveWaveHistory, 180) : await buildWaveformForFile(blob) }; clips.unshift(clip); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], title: els.boardName.value || clip.name, clip:{ ...clip }, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; stopLiveWaveCapture(); selectClip(0); mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; liveWaveform = []; liveWaveHistory = []; setStatus(`Track recorded locally and loaded into Studio (${els.sourceType.value}) on board ${activeBoardIndex + 1}.`); }; mediaRecorder.start(); animateWave(); setStatus('Recording track...'); }
     function stopPlayback(){ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } if(!els.audioPlayer.paused) els.audioPlayer.pause(); if(!els.videoPlayer.paused) els.videoPlayer.pause(); stopTransportTimer(); stopLiveWaveCapture(); cancelAnimationFrame(animationFrame); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.boardWaveCanvas); syncTransport(); }
     function playSelected(){ if(!selectedClip) return setStatus('Load a clip first.'); if(selectedClip.kind === 'video'){ els.videoPlayer.play(); } else { els.audioPlayer.play(); } startTransportTimer(); animateWave(); setStatus(`Playing ${selectedClip.name}.`); }
     function pauseSelected(){ els.audioPlayer.pause(); els.videoPlayer.pause(); stopTransportTimer(); cancelAnimationFrame(animationFrame); drawWave(); syncTransport(); setStatus('Playback paused.'); }
