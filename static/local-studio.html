@@ -57,6 +57,10 @@
                 <option value="reverb">Reverb</option>
                 <option value="bass">+ Bass</option>
                 <option value="opera">Opera Voice</option>
+                <option value="chorus">Chorus</option>
+                <option value="compressor">Compressor</option>
+                <option value="brightener">Brightener</option>
+                <option value="lowpass">Low Pass</option>
                 <option value="distortion">Distortion</option>
                 <option value="phaser">Phaser</option>
                 <option value="tremolo">Tremolo</option>
@@ -102,6 +106,10 @@
               <option value="wav">Export · wav</option>
               <option value="mp3">Export · mp3</option>
               <option value="m4a">Export · m4a</option>
+              <option value="mpeg">Export · mpeg</option>
+              <option value="aac">Export · aac</option>
+              <option value="ogg">Export · ogg</option>
+              <option value="flac">Export · flac</option>
               <option value="mp4">Export · mp4</option>
             </select>
             <input id="clipPosition" type="range" min="0" max="100" value="0">
@@ -765,6 +773,30 @@
         }
         return output;
       }
+      if(effectName === 'compressor'){
+        for(let i = 0; i < length; i += 1){
+          const sample = source[i] || 0;
+          const sign = sample < 0 ? -1 : 1;
+          output[i] = sign * Math.pow(Math.abs(sample), 0.72);
+        }
+        return output;
+      }
+      if(effectName === 'brightener'){
+        for(let i = 0; i < length; i += 1){
+          const sample = source[i] || 0;
+          const prev = i > 0 ? source[i - 1] || 0 : 0;
+          output[i] = Math.max(-1, Math.min(1, sample + ((sample - prev) * 0.42)));
+        }
+        return output;
+      }
+      if(effectName === 'lowpass'){
+        let low = 0;
+        for(let i = 0; i < length; i += 1){
+          low = low * 0.82 + (source[i] || 0) * 0.18;
+          output[i] = low;
+        }
+        return output;
+      }
       if(effectName === 'distortion'){
         for(let i = 0; i < length; i += 1){
           output[i] = Math.tanh(source[i] * 2.4) * 0.92;
@@ -791,6 +823,8 @@
           output[i] = sample * 0.58 - delayed * 0.22 + low * 0.46;
         }else if(effectName === 'phaser'){
           output[i] = sample * 0.7 + delayed * (0.18 + ((Math.sin(i / 95) + 1) * 0.11));
+        }else if(effectName === 'chorus'){
+          output[i] = sample + delayed * 0.2 + delayedTwo * (0.14 + ((Math.sin(i / 120) + 1) * 0.07));
         }else{
           output[i] = sample;
         }

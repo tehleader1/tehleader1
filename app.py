@@ -6231,13 +6231,16 @@ except:
 
 @app.route("/")
 def home():
-    return send_from_directory("static", "index.html")
+    return send_from_directory("static", "local-remote.html")
 
 @app.route("/remote")
 @app.route("/remote/<path:section>")
 def remote_shell(section=None):
-    target = f"/?remote={section}" if section else "/?remote=home"
-    return redirect(target, code=302)
+    return send_from_directory("static", "local-remote.html")
+
+@app.route("/legacy")
+def legacy_home():
+    return send_from_directory("static", "index.html")
 
 @app.route("/local-remote")
 def local_remote_shell():
