@@ -330,7 +330,62 @@
         const x = (index / 4) * width;
         return `<line x1="${x.toFixed(2)}" y1="${(rulerY - 6).toFixed(2)}" x2="${x.toFixed(2)}" y2="${(rulerY + 1).toFixed(2)}" stroke="rgba(255,255,255,.24)" stroke-width="1"></line><text x="${Math.max(3, x - 10).toFixed(2)}" y="${(height - 1).toFixed(2)}" fill="rgba(255,255,255,.58)" font-size="8.8" font-family="Georgia">${formatTime(seconds)}</text>`;
       }).join('');
-      return `<svg class="mini-wave" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${isActive ? 'rgba(240,255,248,1)' : 'rgba(198,231,255,1)'}"></stop><stop offset="42%" stop-color="${isActive ? 'rgba(119,224,199,.98)' : 'rgba(121,184,255,.95)'}"></stop><stop offset="100%" stop-color="${isActive ? 'rgba(23,140,108,.98)' : 'rgba(43,104,204,.95)'}"></stop></linearGradient><filter id="${glowId}"><feGaussianBlur stdDeviation="${isActive ? '2.1' : '1.6'}" result="blur"></feGaussianBlur><feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter></defs><rect width="${width}" height="${height}" rx="14" fill="rgba(2,7,15,.84)"></rect><rect x="${trimStartX.toFixed(2)}" y="0" width="${Math.max(0, trimEndX - trimStartX).toFixed(2)}" height="${height}" fill="${isActive ? 'rgba(119,224,199,.14)' : 'rgba(119,224,199,.08)'}"></rect>${selection ? `<rect x="${selectionStartX.toFixed(2)}" y="0" width="${Math.max(3, selectionEndX - selectionStartX).toFixed(2)}" height="${height}" fill="rgba(255,108,145,.16)"></rect><line x1="${selectionStartX.toFixed(2)}" y1="0" x2="${selectionStartX.toFixed(2)}" y2="${height}" stroke="rgba(255,158,182,.86)" stroke-width="1.2"></line><line x1="${selectionEndX.toFixed(2)}" y1="0" x2="${selectionEndX.toFixed(2)}" y2="${height}" stroke="rgba(255,158,182,.86)" stroke-width="1.2"></line>` : ''}<ellipse cx="${(width*0.5).toFixed(2)}" cy="${(height*0.72).toFixed(2)}" rx="${(width*0.48).toFixed(2)}" ry="${(height*0.22).toFixed(2)}" fill="rgba(26,82,64,.24)"></ellipse>${bars}<rect x="${Math.max(0, scanX - 7).toFixed(2)}" y="0" width="14" height="${(height - 12).toFixed(2)}" fill="${isActive ? 'rgba(119,224,199,.14)' : 'rgba(121,184,255,.08)'}"></rect><line x1="${scanX.toFixed(2)}" y1="0" x2="${scanX.toFixed(2)}" y2="${(height - 12).toFixed(2)}" stroke="rgba(255,255,255,.92)" stroke-width="1.4"></line><line x1="0" y1="${rulerY.toFixed(2)}" x2="${width}" y2="${rulerY.toFixed(2)}" stroke="rgba(255,255,255,.18)" stroke-width="1"></line>${ticks}</svg>`;
+      return `<svg class="mini-wave" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${isActive ? 'rgba(240,255,248,1)' : 'rgba(198,231,255,1)'}"></stop><stop offset="42%" stop-color="${isActive ? 'rgba(119,224,199,.98)' : 'rgba(121,184,255,.95)'}"></stop><stop offset="100%" stop-color="${isActive ? 'rgba(23,140,108,.98)' : 'rgba(43,104,204,.95)'}"></stop></linearGradient><filter id="${glowId}"><feGaussianBlur stdDeviation="${isActive ? '2.1' : '1.6'}" result="blur"></feGaussianBlur><feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter></defs><rect width="${width}" height="${height}" rx="14" fill="rgba(2,7,15,.84)"></rect><rect x="${trimStartX.toFixed(2)}" y="0" width="${Math.max(0, trimEndX - trimStartX).toFixed(2)}" height="${height}" fill="${isActive ? 'rgba(119,224,199,.14)' : 'rgba(119,224,199,.08)'}"></rect>${selection ? `<rect x="${selectionStartX.toFixed(2)}" y="0" width="${Math.max(3, selectionEndX - selectionStartX).toFixed(2)}" height="${height}" fill="rgba(88,178,255,.22)"></rect><line x1="${selectionStartX.toFixed(2)}" y1="0" x2="${selectionStartX.toFixed(2)}" y2="${height}" stroke="rgba(140,210,255,.96)" stroke-width="1.2"></line><line x1="${selectionEndX.toFixed(2)}" y1="0" x2="${selectionEndX.toFixed(2)}" y2="${height}" stroke="rgba(140,210,255,.96)" stroke-width="1.2"></line>` : ''}<ellipse cx="${(width*0.5).toFixed(2)}" cy="${(height*0.72).toFixed(2)}" rx="${(width*0.48).toFixed(2)}" ry="${(height*0.22).toFixed(2)}" fill="rgba(26,82,64,.24)"></ellipse>${bars}<rect x="${Math.max(0, scanX - 5).toFixed(2)}" y="0" width="10" height="${(height - 12).toFixed(2)}" fill="${isActive ? 'rgba(173,241,233,.12)' : 'rgba(175,215,255,.06)'}"></rect><line x1="${scanX.toFixed(2)}" y1="0" x2="${scanX.toFixed(2)}" y2="${(height - 12).toFixed(2)}" stroke="rgba(244,255,255,.98)" stroke-width="1.15"></line><line x1="${(scanX - 1.2).toFixed(2)}" y1="0" x2="${(scanX - 1.2).toFixed(2)}" y2="${(height - 12).toFixed(2)}" stroke="rgba(121,184,255,.42)" stroke-width="0.55"></line><line x1="${(scanX + 1.2).toFixed(2)}" y1="0" x2="${(scanX + 1.2).toFixed(2)}" y2="${(height - 12).toFixed(2)}" stroke="rgba(121,184,255,.42)" stroke-width="0.55"></line><polygon points="${scanX.toFixed(2)},2 ${(scanX - 4).toFixed(2)},10 ${(scanX + 4).toFixed(2)},10" fill="rgba(255,255,255,.94)"></polygon><line x1="0" y1="${rulerY.toFixed(2)}" x2="${width}" y2="${rulerY.toFixed(2)}" stroke="rgba(255,255,255,.18)" stroke-width="1"></line>${ticks}</svg>`;
+    }
+    function bindBoardPlaybackSurface(element, boardIndex, width = 240, height = 56){
+      if(!element) return;
+      const getRatio = (event)=>{
+        const rect = element.getBoundingClientRect();
+        return Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+      };
+      element.addEventListener('click', (event)=>{
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      element.addEventListener('pointerdown', (event)=>{
+        event.preventDefault();
+        event.stopPropagation();
+        const ratio = getRatio(event);
+        dragSelection.dragging = true;
+        dragSelection.moved = false;
+        dragSelection.startRatio = ratio;
+        dragSelection.endRatio = ratio;
+        dragSelection.boardIndex = boardIndex;
+        element.setPointerCapture?.(event.pointerId);
+      });
+      element.addEventListener('pointermove', (event)=>{
+        if(!dragSelection.dragging || dragSelection.boardIndex !== boardIndex) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const ratio = getRatio(event);
+        dragSelection.endRatio = ratio;
+        dragSelection.moved = Math.abs(dragSelection.endRatio - dragSelection.startRatio) > 0.012;
+        const nextTimeline = getMotherboardTimelineData();
+        const nextBoard = nextTimeline.boards.find(item=>item.index === boardIndex) || boardSlots[boardIndex];
+        element.innerHTML = renderBoardScanPreview(nextBoard, nextTimeline, width, height);
+      });
+      const finishGesture = (event)=>{
+        if(!dragSelection.dragging || dragSelection.boardIndex !== boardIndex) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const ratio = getRatio(event);
+        dragSelection.endRatio = ratio;
+        const moved = dragSelection.moved || Math.abs(dragSelection.endRatio - dragSelection.startRatio) > 0.012;
+        dragSelection.dragging = false;
+        activeBoardIndex = boardIndex;
+        if(moved){
+          render();
+          setStatus(`Highlighted ${Math.round(Math.min(dragSelection.startRatio, dragSelection.endRatio) * 100)}% - ${Math.round(Math.max(dragSelection.startRatio, dragSelection.endRatio) * 100)}% on ${boardSlots[boardIndex].title}. Use Delete Selected Clip to cut that motherboard section.`);
+        }else{
+          clearBoardSelection(boardIndex);
+          seekBoardAtIndexFromRatio(boardIndex, ratio, true);
+        }
+      };
+      element.addEventListener('pointerup', finishGesture);
+      element.addEventListener('pointercancel', ()=>{
+        dragSelection.dragging = false;
+        render();
+      });
     }
     function render(){
       const activeBoard = boardSlots[activeBoardIndex];
@@ -350,6 +405,9 @@
         }
         selectBoard(boardIndex);
       }));
+      els.boardGrid.querySelectorAll('[data-board-wave]').forEach((slot)=>{
+        bindBoardPlaybackSurface(slot, Number(slot.getAttribute('data-board-wave')));
+      });
       els.historyList.innerHTML = history.length ? history.map(item=>`<div class="history-item"><strong>${item.action_type}</strong><span>${item.created_at || 'recent'} · board ${Number(item.board_index || 0) + 1}</span></div>`).join('') : `<div class="history-item"><strong>No history yet</strong><span>Bootstrap the session and commit a motherboard piece.</span></div>`;
       const recentSessions = history.slice(0,6).map(item=>({ title:item.action_type, body:`${item.created_at || 'recent'} · board ${Number(item.board_index || 0) + 1}` }));
       const localSessionTraffic = clips.slice(0,4).map((clip)=>({ title:`file · ${clip.name}`, body:`${clip.fileName || clip.name} · ${clip.sourceType || clip.kind || 'audio'}${clip.fxStack?.length ? ` · fx ${clip.fxStack.join(', ')}` : ''}` }));
@@ -360,46 +418,7 @@
       els.boardFocusList.innerHTML = `<div class="board-card active"><strong>${activeBoard.title}</strong><span>${activeBoard.clip ? `${activeBoard.clip.name} · ${activeBoard.sourceType} · ${activeBoard.position}% · trim ${activeBoard.trimStart ?? 0}-${activeBoard.trimEnd ?? 100}%` : 'Load or record a clip, then commit it into this board.'}</span><button type="button" class="board-focus-playback" id="boardFocusPlayback">${renderBoardScanPreview(activeTimelineBoard, timeline, 300, 72)}</button></div>`;
       const boardFocusPlayback = document.getElementById('boardFocusPlayback');
       if(boardFocusPlayback){
-        boardFocusPlayback.addEventListener('pointerdown', (event)=>{
-          const rect = event.currentTarget.getBoundingClientRect();
-          const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
-          dragSelection.dragging = true;
-          dragSelection.moved = false;
-          dragSelection.startRatio = ratio;
-          dragSelection.endRatio = ratio;
-          dragSelection.boardIndex = activeBoardIndex;
-          event.currentTarget.setPointerCapture?.(event.pointerId);
-        });
-        boardFocusPlayback.addEventListener('pointermove', (event)=>{
-          if(!dragSelection.dragging || dragSelection.boardIndex !== activeBoardIndex) return;
-          const rect = event.currentTarget.getBoundingClientRect();
-          const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
-          dragSelection.endRatio = ratio;
-          dragSelection.moved = Math.abs(dragSelection.endRatio - dragSelection.startRatio) > 0.012;
-          const nextTimeline = getMotherboardTimelineData();
-          const nextBoard = nextTimeline.boards.find(item=>item.index === activeBoardIndex) || activeTimelineBoard;
-          event.currentTarget.innerHTML = renderBoardScanPreview(nextBoard, nextTimeline, 300, 72);
-        });
-        const finishBoardGesture = (event)=>{
-          if(!dragSelection.dragging || dragSelection.boardIndex !== activeBoardIndex) return;
-          const rect = event.currentTarget.getBoundingClientRect();
-          const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
-          dragSelection.endRatio = ratio;
-          const moved = dragSelection.moved || Math.abs(dragSelection.endRatio - dragSelection.startRatio) > 0.012;
-          dragSelection.dragging = false;
-          if(moved){
-            render();
-            setStatus(`Highlighted ${Math.round(Math.min(dragSelection.startRatio, dragSelection.endRatio) * 100)}% - ${Math.round(Math.max(dragSelection.startRatio, dragSelection.endRatio) * 100)}% on ${activeBoard.title}. Use Delete Selected Clip to remove it.`);
-          }else{
-            clearBoardSelection(activeBoardIndex);
-            seekActiveBoardFromRatio(ratio, true);
-          }
-        };
-        boardFocusPlayback.addEventListener('pointerup', finishBoardGesture);
-        boardFocusPlayback.addEventListener('pointercancel', ()=>{
-          dragSelection.dragging = false;
-          render();
-        });
+        bindBoardPlaybackSurface(boardFocusPlayback, activeBoardIndex, 300, 72);
       }
       els.boardMeta.innerHTML = [
         `<span class="board-chip">${activeBoard.title}</span>`,
@@ -1239,10 +1258,19 @@
       drawWave(0.42, els.boardWaveCanvas);
     });
     window.addEventListener('keydown', (event)=>{
-      const tag = document.activeElement?.tagName || '';
-      if(event.code !== 'Space' || /INPUT|TEXTAREA|SELECT|BUTTON/.test(tag)) return;
-      event.preventDefault();
-      toggleStackPlayback();
+      const tag = String(document.activeElement?.tagName || '').toUpperCase();
+      const isEditable = /INPUT|TEXTAREA|SELECT|BUTTON/.test(tag) || document.activeElement?.isContentEditable;
+      if(event.code === 'Space'){
+        if(isEditable) return;
+        event.preventDefault();
+        toggleStackPlayback();
+        return;
+      }
+      if(event.key === 'Backspace'){
+        if(isEditable || !getSelectionForBoard(activeBoardIndex)) return;
+        event.preventDefault();
+        deleteSelectedClip();
+      }
     });
     [els.audioPlayer, els.videoPlayer].forEach(player=>player.addEventListener('loadedmetadata', ()=>{
       const duration = Number(player.duration || 0);
