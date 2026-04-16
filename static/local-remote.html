@@ -62,19 +62,92 @@
     .center-stage{padding:16px;display:grid;grid-template-rows:auto auto auto auto 1fr;gap:14px;position:relative;overflow:visible}
     .catalog-strip{
       display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
+      grid-template-columns:1.2fr 1fr 1fr;
       gap:12px;
+      position:relative;
     }
     .catalog-card{
-      min-height:120px;padding:12px;border-radius:22px;border:1px solid rgba(196,228,255,.18);
+      min-height:152px;
+      padding:16px;
+      border-radius:26px;
+      border:1px solid rgba(213,235,255,.22);
       background:
-        linear-gradient(180deg, rgba(6,15,29,.14), rgba(6,15,29,.34)),
+        linear-gradient(180deg, rgba(6,15,29,.1), rgba(6,15,29,.44)),
         var(--bg-image) center/cover no-repeat,
         rgba(255,255,255,.04);
-      display:flex;align-items:flex-end;box-shadow:0 16px 34px rgba(0,0,0,.2)
+      display:flex;
+      align-items:flex-end;
+      box-shadow:0 18px 36px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.14);
+      overflow:hidden;
+      position:relative;
+      isolation:isolate;
     }
-    .catalog-card strong{display:block;font-size:22px;font-family:"Cormorant Garamond", Georgia, serif}
-    .catalog-card span{display:block;color:rgba(236,244,255,.82);font-size:13px}
+    .catalog-card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(120deg, rgba(255,255,255,.18), transparent 26%, transparent 62%, rgba(255,255,255,.08));
+      mix-blend-mode:screen;
+      pointer-events:none;
+    }
+    .catalog-card::after{
+      content:"";
+      position:absolute;
+      inset:auto -18% -30% auto;
+      width:180px;
+      height:180px;
+      background:radial-gradient(circle, rgba(121,184,255,.34), transparent 68%);
+      pointer-events:none;
+    }
+    .catalog-copy{display:grid;gap:8px;max-width:72%;position:relative;z-index:1}
+    .catalog-card strong{display:block;font-size:28px;font-family:"Cormorant Garamond", Georgia, serif;line-height:.94}
+    .catalog-card span{display:block;color:rgba(236,244,255,.84);font-size:13px;line-height:1.45}
+    .promo-chip{
+      display:inline-flex;
+      align-items:center;
+      width:max-content;
+      min-height:26px;
+      padding:0 12px;
+      border-radius:999px;
+      font-size:10px;
+      letter-spacing:.24em;
+      text-transform:uppercase;
+      background:rgba(6,15,29,.62);
+      border:1px solid rgba(213,235,255,.22);
+      color:rgba(244,250,255,.84);
+      box-shadow:0 10px 20px rgba(0,0,0,.16);
+    }
+    .price-flash{
+      position:absolute;
+      right:14px;
+      top:14px;
+      min-width:110px;
+      padding:12px 14px;
+      border-radius:18px;
+      text-align:center;
+      background:linear-gradient(180deg, rgba(255,214,146,.98), rgba(212,130,44,.92));
+      color:#07111f;
+      border:1px solid rgba(255,245,216,.78);
+      box-shadow:0 18px 28px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.6);
+      animation:priceFlash 1.25s steps(2,end) infinite;
+      z-index:1;
+    }
+    .price-flash strong{display:block;font-size:23px;font-family:"Cormorant Garamond", Georgia, serif;line-height:.9}
+    .price-flash small{display:block;margin-top:4px;font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+    .buy-now{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:max-content;
+      min-height:34px;
+      padding:0 16px;
+      border-radius:999px;
+      background:linear-gradient(180deg, rgba(130,188,255,.98), rgba(46,94,175,.92));
+      border:1px solid rgba(224,240,255,.34);
+      color:var(--text);
+      font-weight:700;
+      box-shadow:0 12px 24px rgba(0,0,0,.22);
+    }
     .top-bar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
     .voice-console{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
     .voice-pill{
@@ -137,6 +210,50 @@
     }
     .api-action-board__feed{display:grid;gap:10px;margin-top:14px}
     .sticky-wrap{display:grid;gap:14px}
+    .ad-rail{display:grid;gap:14px;margin-bottom:14px}
+    .ad-card{
+      position:relative;
+      overflow:hidden;
+      min-height:170px;
+      padding:18px;
+      border-radius:24px;
+      border:1px solid rgba(213,235,255,.22);
+      background:
+        linear-gradient(180deg, rgba(6,15,29,.12), rgba(6,15,29,.52)),
+        var(--bg-image) center/cover no-repeat,
+        rgba(255,255,255,.05);
+      box-shadow:0 18px 34px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.12);
+      display:grid;
+      align-content:space-between;
+    }
+    .ad-card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(135deg, rgba(255,255,255,.18), transparent 30%, transparent 65%, rgba(255,255,255,.06));
+      pointer-events:none;
+    }
+    .ad-copy{position:relative;z-index:1;display:grid;gap:8px;padding-right:116px}
+    .ad-copy h3{margin:0;font-size:30px;font-family:"Cormorant Garamond", Georgia, serif;line-height:.9}
+    .ad-copy p{margin:0;color:rgba(238,246,255,.82);line-height:1.5}
+    .ad-actions{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap}
+    .ad-price{
+      position:absolute;
+      top:16px;
+      right:16px;
+      min-width:92px;
+      padding:12px 10px;
+      border-radius:18px;
+      text-align:center;
+      background:linear-gradient(180deg, rgba(255,227,164,.98), rgba(229,150,56,.92));
+      color:#07111f;
+      border:1px solid rgba(255,245,216,.76);
+      box-shadow:0 16px 28px rgba(0,0,0,.22);
+      animation:priceFlash 1.18s steps(2,end) infinite;
+      z-index:1;
+    }
+    .ad-price strong{display:block;font-size:22px;line-height:.9}
+    .ad-price small{display:block;margin-top:4px;font-size:10px;letter-spacing:.18em;text-transform:uppercase}
     .right-rail{
       padding:0;
       background:transparent;
@@ -226,6 +343,10 @@
       75%{transform:translate(1px,-2px) rotate(4deg);opacity:.72}
       100%{transform:translate(0,0) rotate(0deg);opacity:.35;filter:hue-rotate(0deg)}
     }
+    @keyframes priceFlash{
+      0%,100%{transform:scale(1);filter:brightness(1)}
+      50%{transform:scale(1.06);filter:brightness(1.15)}
+    }
     @media (max-width: 1280px){
       .local-shell{grid-template-columns:1fr;grid-template-rows:auto auto auto;overflow:auto;height:auto}
       .panel-stack,.button-grid,.catalog-strip{grid-template-columns:1fr}
@@ -262,13 +383,31 @@
 
       <section class="catalog-strip">
         <article class="catalog-card" style="--bg-image:url('/static/images/jake-studio-premium.jpg')">
-          <div><strong>Jake Studio Premium</strong><span>Studio booth hero</span></div>
+          <div class="price-flash"><strong>$100</strong><small>Buy Now</small></div>
+          <div class="catalog-copy">
+            <span class="promo-chip">Studio Upgrade</span>
+            <strong>Jake Studio Premium</strong>
+            <span>Late-2000s glossy booth energy with real motherboard editing and premium studio lane access.</span>
+            <span class="buy-now">Buy Studio Access</span>
+          </div>
         </article>
         <article class="catalog-card" style="--bg-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
-          <div><strong>Premium / Pro</strong><span>SupportRD upgrade lane</span></div>
+          <div class="price-flash"><strong>$50</strong><small>Pro / Premium</small></div>
+          <div class="catalog-copy">
+            <span class="promo-chip">Professional Lane</span>
+            <strong>Premium / Pro</strong>
+            <span>Professional identity, faster routes, polished voice, and a cleaner SupportRD ownership package.</span>
+            <span class="buy-now">Upgrade Now</span>
+          </div>
         </article>
         <article class="catalog-card" style="--bg-image:url('/static/images/brochure-contacts-remote.jpg')">
-          <div><strong>Representatives</strong><span>SupportRD support faces</span></div>
+          <div class="price-flash"><strong>$200</strong><small>Family / Team</small></div>
+          <div class="catalog-copy">
+            <span class="promo-chip">Support Network</span>
+            <strong>Representatives</strong>
+            <span>Professional hair-support faces, concierge feel, and a direct lane into SupportRD help and guided setup.</span>
+            <span class="buy-now">Meet SupportRD</span>
+          </div>
         </article>
       </section>
 
@@ -365,6 +504,30 @@
 
     <aside class="right-rail glass">
       <div class="sticky-wrap">
+        <section class="ad-rail">
+          <article class="ad-card" style="--bg-image:url('/static/images/jake-studio-premium.jpg')">
+            <div class="ad-price"><strong>$100</strong><small>Flash</small></div>
+            <div class="ad-copy">
+              <span class="promo-chip">Studio Hero</span>
+              <h3>Jake Studio Premium</h3>
+              <p>Professional booth power with polished editing, stacked playback, and premium studio style.</p>
+            </div>
+            <div class="ad-actions">
+              <span class="buy-now">Buy Now</span>
+            </div>
+          </article>
+          <article class="ad-card" style="--bg-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
+            <div class="ad-price"><strong>$50</strong><small>Pro</small></div>
+            <div class="ad-copy">
+              <span class="promo-chip">Professional Access</span>
+              <h3>SupportRD Pro</h3>
+              <p>Professional profile lanes, polished SupportRD routes, and a cleaner account-plus-payments package.</p>
+            </div>
+            <div class="ad-actions">
+              <span class="buy-now">Go Pro</span>
+            </div>
+          </article>
+        </section>
         <section class="sticky-card">
           <div class="sticky-head">
             <h3>Diary Lobby</h3>
