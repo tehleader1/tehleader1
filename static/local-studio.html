@@ -199,7 +199,22 @@
     function formatTime(seconds){ const safe = Math.max(0, Number(seconds || 0)); const mins = String(Math.floor(safe / 60)).padStart(2,'0'); const secs = String(Math.floor(safe % 60)).padStart(2,'0'); return `${mins}:${secs}`; }
     function currentPlayer(){ return selectedClip?.kind === 'video' ? els.videoPlayer : els.audioPlayer; }
     function stopTransportTimer(){ if(transportTimer){ clearInterval(transportTimer); transportTimer = null; } }
-    function syncTransport(){ const player = currentPlayer(); const duration = Number.isFinite(player.duration) ? player.duration : 0; const current = Number.isFinite(player.currentTime) ? player.currentTime : 0; const percent = duration ? Math.min(100, (current / duration) * 100) : Number(els.positionSlider.value || 0); els.positionSlider.value = String(percent); els.transportReadout.textContent = `${formatTime(current)} / ${formatTime(duration)} · ${mediaRecorder && mediaRecorder.state !== 'inactive' ? 'recording' : player.paused ? 'paused' : 'playing'}`; }
+    function syncTransport(){
+      const player = currentPlayer();
+      const duration = Number.isFinite(player.duration) ? player.duration : 0;
+      const current = Number.isFinite(player.currentTime) ? player.currentTime : 0;
+      const timeline = getMotherboardTimelineData();
+      const usingTimeline = timeline.boards.length > 0;
+      const percent = usingTimeline
+        ? Math.min(100, Math.max(0, timeline.progress * 100))
+        : duration
+          ? Math.min(100, (current / duration) * 100)
+          : Number(els.positionSlider.value || 0);
+      els.positionSlider.value = String(percent);
+      const currentLabel = usingTimeline ? formatTime(timeline.currentTime) : formatTime(current);
+      const durationLabel = usingTimeline ? formatTime(timeline.duration) : formatTime(duration);
+      els.transportReadout.textContent = `${currentLabel} / ${durationLabel} · ${mediaRecorder && mediaRecorder.state !== 'inactive' ? 'recording' : player.paused ? 'paused' : 'playing'}`;
+    }
     function renderWavePreview(points = [], trimStart = 0, trimEnd = 100){
       const values = (points && points.length ? points : []);
       const width = 240;
@@ -631,6 +646,26 @@
       context.fillStyle = 'rgba(255,255,255,.82)';
       context.font = 'bold 12px Georgia';
       context.fillText(`song ${formatTime(timeline.currentTime)} / ${formatTime(timeline.duration)}`, Math.min(width - 170, scanX + 10), 18);
+      const rulerY = height - 10;
+      context.strokeStyle = 'rgba(255,255,255,.18)';
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(0, rulerY);
+      context.lineTo(width, rulerY);
+      context.stroke();
+      const tickCount = Math.max(2, Math.min(10, Math.ceil(timeline.duration / 3)));
+      for(let tick = 0; tick <= tickCount; tick += 1){
+        const seconds = (timeline.duration / tickCount) * tick;
+        const x = (seconds / Math.max(0.1, timeline.duration)) * width;
+        context.strokeStyle = 'rgba(255,255,255,.22)';
+        context.beginPath();
+        context.moveTo(x, rulerY - 8);
+        context.lineTo(x, rulerY + 2);
+        context.stroke();
+        context.fillStyle = 'rgba(255,255,255,.62)';
+        context.font = '10px Georgia';
+        context.fillText(formatTime(seconds), Math.min(width - 34, Math.max(4, x - 10)), height - 1);
+      }
     }
     function drawWave(seed = 0.42, canvas = els.waveCanvas){
       if(canvas === els.boardWaveCanvas || canvas === els.arrangementWaveCanvas){
@@ -813,7 +848,21 @@
     async function bootstrap(){ const data = await fetchJson(`/api/studio/session/bootstrap${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, route:'local-studio' }) }); sessionId = data.session_id; await loadHistory(false); render(); setStatus(`Studio session ${sessionId} ready.`); }
     async function record(){ if(!sessionId) await bootstrap(); mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false }); startLiveWaveCapture(mediaStream); recordedChunks = []; liveWaveform = []; mediaRecorder = new MediaRecorder(mediaStream); mediaRecorder.ondataavailable = (event)=>{ if(event.data?.size) recordedChunks.push(event.data); }; mediaRecorder.onstop = async ()=>{ const blob = new Blob(recordedChunks,{ type: recordedChunks[0]?.type || 'audio/webm' }); const extension = els.sourceType.value === 'mp3' ? 'm4a' : 'webm'; const clip = { name:`Recorded ${new Date().toLocaleTimeString()}`, kind:'audio', sourceType:els.sourceType.value, url: URL.createObjectURL(blob), blob, fileName:`recording.${extension}`, trimStart:Number(els.trimStart.value || 0), trimEnd:Number(els.trimEnd.value || 100), position:Number(els.clipPosition.value || 0), waveform: liveWaveHistory.length ? compressWaveHistory(liveWaveHistory, 180) : await buildWaveformForFile(blob), duration: await getMediaDuration(blob, 'audio') }; clips.unshift(clip); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], title: els.boardName.value || clip.name, clip:{ ...clip }, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; stopLiveWaveCapture(); selectClip(0); mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; liveWaveform = []; liveWaveHistory = []; setStatus(`Track recorded locally and loaded into Studio (${els.sourceType.value}) on board ${activeBoardIndex + 1}.`); }; mediaRecorder.start(); animateWave(); setStatus('Recording track...'); }
     function stopPlayback(){ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } if(!els.audioPlayer.paused) els.audioPlayer.pause(); if(!els.videoPlayer.paused) els.videoPlayer.pause(); stopTransportTimer(); stopLiveWaveCapture(); cancelAnimationFrame(animationFrame); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); syncTransport(); }
-    function playSelected(){ if(!selectedClip) return setStatus('Load a clip first.'); if(selectedClip.kind === 'video'){ els.videoPlayer.play(); } else { els.audioPlayer.play(); } startTransportTimer(); animateWave(); setStatus(`Playing ${selectedClip.name}.`); }
+    function playSelected(){
+      if(!selectedClip && boardSlots[activeBoardIndex]?.clip){
+        const clipIndex = clips.findIndex((clip)=>clip.name === boardSlots[activeBoardIndex].clip.name);
+        if(clipIndex >= 0){
+          selectClip(clipIndex);
+        }else{
+          selectedClip = boardSlots[activeBoardIndex].clip;
+        }
+      }
+      if(!selectedClip) return setStatus('Load a clip first.');
+      if(selectedClip.kind === 'video'){ els.videoPlayer.play(); } else { els.audioPlayer.play(); }
+      startTransportTimer();
+      animateWave();
+      setStatus(`Playing ${selectedClip.name}.`);
+    }
     function pauseSelected(){ els.audioPlayer.pause(); els.videoPlayer.pause(); stopTransportTimer(); cancelAnimationFrame(animationFrame); drawWave(); syncTransport(); setStatus('Playback paused.'); }
     function toggleStackPlayback(){
       const activeBoard = boardSlots[activeBoardIndex];
@@ -862,7 +911,22 @@
     els.trimModeStart.addEventListener('click', ()=>{ activeTrimHandle = 'start'; els.trimModeStart.classList.add('active'); els.trimModeEnd.classList.remove('active'); });
     els.trimModeEnd.addEventListener('click', ()=>{ activeTrimHandle = 'end'; els.trimModeEnd.classList.add('active'); els.trimModeStart.classList.remove('active'); });
     els.boardWaveCanvas.addEventListener('click', (event)=>{ const rect = els.boardWaveCanvas.getBoundingClientRect(); const percent = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)); if(activeTrimHandle === 'start'){ els.trimStart.value = String(Math.min(percent, Number(els.trimEnd.value || 100) - 1)); } else { els.trimEnd.value = String(Math.max(percent, Number(els.trimStart.value || 0) + 1)); } if(selectedClip){ selectedClip.trimStart = Number(els.trimStart.value || 0); selectedClip.trimEnd = Number(els.trimEnd.value || 100); } drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); render(); setStatus(`Board ${activeBoardIndex + 1} cut updated from the waveform surface.`); });
-    els.positionSlider.addEventListener('input', ()=>{ const player = currentPlayer(); const duration = Number.isFinite(player.duration) ? player.duration : 0; if(duration){ player.currentTime = (Number(els.positionSlider.value || 0) / 100) * duration; } syncTransport(); });
+    els.positionSlider.addEventListener('input', ()=>{
+      const player = currentPlayer();
+      const duration = Number.isFinite(player.duration) ? player.duration : 0;
+      const timeline = getMotherboardTimelineData();
+      if(timeline.boards.length && duration){
+        const activeBoard = timeline.boards.find((board)=>board.index === activeBoardIndex) || timeline.boards[0];
+        const timelineSeconds = (Number(els.positionSlider.value || 0) / 100) * timeline.duration;
+        const localSeconds = Math.max(0, Math.min(duration, timelineSeconds - (activeBoard?.start || 0)));
+        player.currentTime = localSeconds;
+      }else if(duration){
+        player.currentTime = (Number(els.positionSlider.value || 0) / 100) * duration;
+      }
+      syncTransport();
+      drawWave(0.42, els.arrangementWaveCanvas);
+      drawWave(0.42, els.boardWaveCanvas);
+    });
     window.addEventListener('keydown', (event)=>{
       const tag = document.activeElement?.tagName || '';
       if(event.code !== 'Space' || /INPUT|TEXTAREA|SELECT|BUTTON/.test(tag)) return;
