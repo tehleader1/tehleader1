@@ -249,6 +249,31 @@
       }).join('');
       return `<svg class="mini-wave" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"><rect width="${width}" height="${height}" rx="16" fill="rgba(2,7,15,.9)"></rect><rect x="${boardStartX.toFixed(2)}" y="8" width="${boardWidth.toFixed(2)}" height="${(height - 16).toFixed(2)}" rx="14" fill="${isActive ? 'rgba(119,224,199,.12)' : 'rgba(121,184,255,.08)'}"></rect><rect x="${trimStartX.toFixed(2)}" y="8" width="${Math.max(6, trimEndX - trimStartX).toFixed(2)}" height="${(height - 16).toFixed(2)}" rx="12" fill="rgba(255,255,255,.04)"></rect>${bars}<line x1="${scanX.toFixed(2)}" y1="0" x2="${scanX.toFixed(2)}" y2="${height}" stroke="rgba(255,255,255,.9)" stroke-width="1.5"></line><rect x="${Math.max(0, scanX - 8).toFixed(2)}" y="0" width="16" height="${height}" fill="rgba(121,184,255,.10)"></rect><text x="${Math.max(10, boardStartX + 8).toFixed(2)}" y="18" fill="rgba(255,255,255,.82)" font-size="10.5" font-family="Georgia">${board.title}</text></svg>`;
     }
+    function renderBoardScanPreview(board, timeline, width = 240, height = 56){
+      if(!board?.clip?.waveform?.length){
+        return renderWavePreview(board?.clip?.waveform, board?.trimStart ?? 0, board?.trimEnd ?? 100);
+      }
+      const waveform = board.clip.waveform || [];
+      const currentTime = Math.max(0, timeline?.currentTime || 0);
+      const boardStart = Number(board.start || 0);
+      const boardEnd = Number(board.end || getClipDuration(board.clip));
+      const localProgress = currentTime <= boardStart ? 0 : currentTime >= boardEnd ? 1 : (currentTime - boardStart) / Math.max(0.01, boardEnd - boardStart);
+      const scanX = localProgress * width;
+      const isActive = currentTime >= boardStart && currentTime <= boardEnd;
+      const trimStartX = (Math.max(0, Math.min(100, Number(board.trimStart ?? 0))) / 100) * width;
+      const trimEndX = (Math.max(1, Math.min(100, Number(board.trimEnd ?? 100))) / 100) * width;
+      const gradientId = `boardScanGrad-${Math.random().toString(36).slice(2,8)}`;
+      const glowId = `boardScanGlow-${Math.random().toString(36).slice(2,8)}`;
+      const bars = waveform.map((value, index)=>{
+        const x = ((index + 0.5) / waveform.length) * width;
+        const safe = Math.max(0.03, Math.min(1, Number(value || 0)));
+        const depth = Math.max(8, height * 0.84 * safe);
+        const y = (height / 2) - (depth / 2);
+        const activeGlow = isActive ? 'rgba(119,224,199,.58)' : 'rgba(121,184,255,.36)';
+        return `<g filter="url(#${glowId})"><rect x="${(x-0.5).toFixed(2)}" y="${(y+2).toFixed(2)}" width="4.2" height="${(depth-4).toFixed(2)}" rx="2" fill="rgba(20,36,60,.6)"></rect><rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="3.4" height="${depth.toFixed(2)}" rx="1.7" fill="url(#${gradientId})"></rect><rect x="${(x+0.4).toFixed(2)}" y="${(y+1.5).toFixed(2)}" width="1" height="${Math.max(6, depth-3).toFixed(2)}" rx="0.5" fill="rgba(255,255,255,.42)"></rect><rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="3.4" height="${depth.toFixed(2)}" rx="1.7" fill="none" stroke="${activeGlow}" stroke-width="0.6"></rect></g>`;
+      }).join('');
+      return `<svg class="mini-wave" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${isActive ? 'rgba(240,255,248,1)' : 'rgba(198,231,255,1)'}"></stop><stop offset="42%" stop-color="${isActive ? 'rgba(119,224,199,.98)' : 'rgba(121,184,255,.95)'}"></stop><stop offset="100%" stop-color="${isActive ? 'rgba(23,140,108,.98)' : 'rgba(43,104,204,.95)'}"></stop></linearGradient><filter id="${glowId}"><feGaussianBlur stdDeviation="${isActive ? '2.1' : '1.6'}" result="blur"></feGaussianBlur><feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter></defs><rect width="${width}" height="${height}" rx="14" fill="rgba(2,7,15,.84)"></rect><rect x="${trimStartX.toFixed(2)}" y="0" width="${Math.max(0, trimEndX - trimStartX).toFixed(2)}" height="${height}" fill="${isActive ? 'rgba(119,224,199,.14)' : 'rgba(119,224,199,.08)'}"></rect><ellipse cx="${(width*0.5).toFixed(2)}" cy="${(height*0.82).toFixed(2)}" rx="${(width*0.48).toFixed(2)}" ry="${(height*0.28).toFixed(2)}" fill="rgba(26,82,64,.24)"></ellipse>${bars}<rect x="${Math.max(0, scanX - 7).toFixed(2)}" y="0" width="14" height="${height}" fill="${isActive ? 'rgba(119,224,199,.14)' : 'rgba(121,184,255,.08)'}"></rect><line x1="${scanX.toFixed(2)}" y1="0" x2="${scanX.toFixed(2)}" y2="${height}" stroke="rgba(255,255,255,.92)" stroke-width="1.4"></line></svg>`;
+    }
     function render(){
       const activeBoard = boardSlots[activeBoardIndex];
       const timeline = getMotherboardTimelineData();
@@ -256,7 +281,7 @@
       els.clipCard.textContent = selectedClip?.name || activeBoard?.clip?.name || 'No clip loaded.';
       els.clipList.innerHTML = clips.length ? clips.map((clip, index)=>`<button type="button" class="clip-item" data-index="${index}"><strong>${clip.name}</strong><span>${clip.kind} · ${clip.sourceType || 'source'} · position ${clip.position ?? 0}%</span>${renderWavePreview(clip.waveform, clip.trimStart ?? 0, clip.trimEnd ?? 100)}</button>`).join('') : `<div class="clip-item"><strong>No clips yet</strong><span>Record or import the first track.</span></div>`;
       els.clipList.querySelectorAll('[data-index]').forEach(btn=>btn.addEventListener('click', ()=>selectClip(Number(btn.dataset.index))));
-      els.boardGrid.innerHTML = boardSlots.map(board=>`<button type="button" class="board-card ${board.index === activeBoardIndex ? 'active' : ''}" data-board-index="${board.index}"><strong>${board.title}</strong><span>${board.clip?.name || 'Empty lane'}</span>${renderWavePreview(board.clip?.waveform, board.trimStart ?? 0, board.trimEnd ?? 100)}</button>`).join('');
+      els.boardGrid.innerHTML = boardSlots.map(board=>{ const timelineBoard = timeline.boards.find(item=>item.index === board.index) || { ...board, start:0, end:getClipDuration(board.clip) }; return `<button type="button" class="board-card ${board.index === activeBoardIndex ? 'active' : ''}" data-board-index="${board.index}"><strong>${board.title}</strong><span>${board.clip?.name || 'Empty lane'}</span>${renderBoardScanPreview(timelineBoard, timeline)}</button>`; }).join('');
       els.boardGrid.querySelectorAll('[data-board-index]').forEach(btn=>btn.addEventListener('click', ()=>selectBoard(Number(btn.dataset.boardIndex))));
       els.historyList.innerHTML = history.length ? history.map(item=>`<div class="history-item"><strong>${item.action_type}</strong><span>${item.created_at || 'recent'} · board ${Number(item.board_index || 0) + 1}</span></div>`).join('') : `<div class="history-item"><strong>No history yet</strong><span>Bootstrap the session and commit a motherboard piece.</span></div>`;
       const recentSessions = history.slice(0,6).map(item=>({ title:item.action_type, body:`${item.created_at || 'recent'} · board ${Number(item.board_index || 0) + 1}` }));
@@ -264,7 +289,8 @@
       const combinedSessionItems = [...localSessionTraffic, ...recentSessions].slice(0, 8);
       els.sessionList.innerHTML = combinedSessionItems.length ? combinedSessionItems.map(item=>`<div class="session-item"><strong>${item.title}</strong><span>${item.body}</span></div>`).join('') : `<div class="session-item"><strong>No recent sessions</strong><span>Bootstrap and work a track to populate this lane.</span></div>`;
       els.arrangementList.innerHTML = boardSlots.map(board=>{ const timelineBoard = timeline.boards.find(item=>item.index === board.index) || { ...board, start:0, end:getClipDuration(board.clip) }; return `<div class="arrangement-item"><strong>${board.title}</strong><span>${board.clip ? `${board.clip.name} · ${board.position}% · ${board.fxPreset} · cut ${board.trimStart ?? 0}-${board.trimEnd ?? 100}%` : 'No clip assigned yet.'}</span>${renderArrangementLane(timelineBoard, timeline)}</div>`; }).join('');
-      els.boardFocusList.innerHTML = `<div class="board-card active"><strong>${activeBoard.title}</strong><span>${activeBoard.clip ? `${activeBoard.clip.name} · ${activeBoard.sourceType} · ${activeBoard.position}% · trim ${activeBoard.trimStart ?? 0}-${activeBoard.trimEnd ?? 100}%` : 'Load or record a clip, then commit it into this board.'}</span>${renderWavePreview(activeBoard.clip?.waveform, activeBoard.trimStart ?? 0, activeBoard.trimEnd ?? 100)}</div>`;
+      const activeTimelineBoard = timeline.boards.find(item=>item.index === activeBoard.index) || { ...activeBoard, start:0, end:getClipDuration(activeBoard.clip) };
+      els.boardFocusList.innerHTML = `<div class="board-card active"><strong>${activeBoard.title}</strong><span>${activeBoard.clip ? `${activeBoard.clip.name} · ${activeBoard.sourceType} · ${activeBoard.position}% · trim ${activeBoard.trimStart ?? 0}-${activeBoard.trimEnd ?? 100}%` : 'Load or record a clip, then commit it into this board.'}</span>${renderBoardScanPreview(activeTimelineBoard, timeline, 300, 72)}</div>`;
       els.boardMeta.innerHTML = [
         `<span class="board-chip">${activeBoard.title}</span>`,
         `<span class="board-chip">${activeBoard.clip?.name || 'No file on board yet'}</span>`,
@@ -789,6 +815,24 @@
     function stopPlayback(){ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } if(!els.audioPlayer.paused) els.audioPlayer.pause(); if(!els.videoPlayer.paused) els.videoPlayer.pause(); stopTransportTimer(); stopLiveWaveCapture(); cancelAnimationFrame(animationFrame); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); syncTransport(); }
     function playSelected(){ if(!selectedClip) return setStatus('Load a clip first.'); if(selectedClip.kind === 'video'){ els.videoPlayer.play(); } else { els.audioPlayer.play(); } startTransportTimer(); animateWave(); setStatus(`Playing ${selectedClip.name}.`); }
     function pauseSelected(){ els.audioPlayer.pause(); els.videoPlayer.pause(); stopTransportTimer(); cancelAnimationFrame(animationFrame); drawWave(); syncTransport(); setStatus('Playback paused.'); }
+    function toggleStackPlayback(){
+      const activeBoard = boardSlots[activeBoardIndex];
+      if(!selectedClip && activeBoard?.clip){
+        const clipIndex = clips.findIndex((clip)=>clip.name === activeBoard.clip.name);
+        if(clipIndex >= 0){
+          selectClip(clipIndex);
+        }else{
+          selectedClip = activeBoard.clip;
+        }
+      }
+      const player = currentPlayer();
+      if(!selectedClip || !player) return;
+      if(player.paused){
+        playSelected();
+      }else{
+        pauseSelected();
+      }
+    }
     async function commitBoard(){ if(!sessionId) await bootstrap(); if(!selectedClip) throw new Error('select_clip_first'); selectedClip.position = Number(els.clipPosition.value || 0); selectedClip.trimStart = Number(els.trimStart.value || 0); selectedClip.trimEnd = Number(els.trimEnd.value || 100); const board = { name: els.boardName.value || selectedClip.name || `Board ${activeBoardIndex + 1}`, kind: els.kindSelect.value, sourceType: els.sourceType.value, fileName: selectedClip.fileName || selectedClip.name, url: selectedClip.url, fxPreset: els.fxPreset.value, position: selectedClip.position, trimStart:selectedClip.trimStart, trimEnd:selectedClip.trimEnd, exportFormat: els.exportFormat.value, highlighted:true }; boardSlots[activeBoardIndex] = { index:activeBoardIndex, title:board.name, clip:{ ...selectedClip }, fxPreset:els.fxPreset.value, position:selectedClip.position, trimStart:selectedClip.trimStart, trimEnd:selectedClip.trimEnd, sourceType:els.sourceType.value }; await fetchJson(`/api/studio/board/commit${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, board_index: activeBoardIndex, active_board: activeBoardIndex, action_type:'commit', board }) }); await loadHistory(false); render(); setStatus(`Motherboard committed to board ${activeBoardIndex + 1} for ${els.sourceType.value} at ${selectedClip.position}% with cut ${selectedClip.trimStart}-${selectedClip.trimEnd}%.`); }
     async function applyFx(){ if(!sessionId) await bootstrap(); const data = await fetchJson(`/api/studio/fx/apply${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, board_index: activeBoardIndex, fxPreset: els.fxPreset.value, gigFilter: els.fxPreset.value, gigPan:'center', gigZoom: els.fxPreset.value === 'zoom' ? '1.2x' : '1x', gigSlowMotion:'off' }) }); boardSlots[activeBoardIndex].fxPreset = els.fxPreset.value; render(); setStatus(`FX applied on board ${activeBoardIndex + 1}: ${data.fx.fxPreset}.`); }
     async function exportTrack(){ if(!sessionId) await bootstrap(); const destination = `${els.destination.value || 'Main Studio'} · ${els.exportFormat.value}`; const data = await fetchJson(`/api/studio/export${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, board_index: activeBoardIndex, destination }) }); els.exportCard.textContent = `${data.summary.board_name} → ${data.destination}`; setStatus(`Studio export registered from board ${activeBoardIndex + 1} as ${els.exportFormat.value}.`); }
@@ -819,6 +863,12 @@
     els.trimModeEnd.addEventListener('click', ()=>{ activeTrimHandle = 'end'; els.trimModeEnd.classList.add('active'); els.trimModeStart.classList.remove('active'); });
     els.boardWaveCanvas.addEventListener('click', (event)=>{ const rect = els.boardWaveCanvas.getBoundingClientRect(); const percent = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)); if(activeTrimHandle === 'start'){ els.trimStart.value = String(Math.min(percent, Number(els.trimEnd.value || 100) - 1)); } else { els.trimEnd.value = String(Math.max(percent, Number(els.trimStart.value || 0) + 1)); } if(selectedClip){ selectedClip.trimStart = Number(els.trimStart.value || 0); selectedClip.trimEnd = Number(els.trimEnd.value || 100); } drawWave(0.42, els.waveCanvas); drawWave(0.42, els.arrangementWaveCanvas); drawWave(0.42, els.boardWaveCanvas); render(); setStatus(`Board ${activeBoardIndex + 1} cut updated from the waveform surface.`); });
     els.positionSlider.addEventListener('input', ()=>{ const player = currentPlayer(); const duration = Number.isFinite(player.duration) ? player.duration : 0; if(duration){ player.currentTime = (Number(els.positionSlider.value || 0) / 100) * duration; } syncTransport(); });
+    window.addEventListener('keydown', (event)=>{
+      const tag = document.activeElement?.tagName || '';
+      if(event.code !== 'Space' || /INPUT|TEXTAREA|SELECT|BUTTON/.test(tag)) return;
+      event.preventDefault();
+      toggleStackPlayback();
+    });
     [els.audioPlayer, els.videoPlayer].forEach(player=>player.addEventListener('loadedmetadata', ()=>{
       const duration = Number(player.duration || 0);
       if(selectedClip && Number.isFinite(duration) && duration > 0.05){
