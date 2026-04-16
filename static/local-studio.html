@@ -479,7 +479,7 @@
       render();
       setStatus(`${name} FX applied to the selected motherboard clip.`);
     }
-    function deleteSelectedClip(){
+    async function deleteSelectedClip(){
       const boardClip = boardSlots[activeBoardIndex]?.clip;
       const targetName = selectedClip?.name || boardClip?.name;
       if(!targetName){
@@ -495,17 +495,21 @@
         if(trimmedWaveform.length >= 8){
           const ratioRemoved = (endIndex - startIndex) / Math.max(1, waveform.length);
           const nextDuration = Math.max(0.25, Number(boardClip.duration || getClipDuration(boardClip)) * (1 - ratioRemoved));
+          const trimmedAudio = await trimClipAudio(boardClip, selection.start, selection.end);
           const updatedClip = {
             ...boardClip,
-            waveform: trimmedWaveform,
-            duration: nextDuration
+            waveform: trimmedAudio?.waveform || trimmedWaveform,
+            duration: trimmedAudio?.duration || nextDuration,
+            blob: trimmedAudio?.blob || boardClip.blob,
+            url: trimmedAudio?.url || boardClip.url,
+            fileName: trimmedAudio?.fileName || boardClip.fileName
           };
           boardSlots[activeBoardIndex] = {
             ...boardSlots[activeBoardIndex],
             clip: updatedClip
           };
           selectedClip = updatedClip;
-          clips = clips.map((clip)=>clip.name === targetName ? { ...clip, waveform: trimmedWaveform, duration: nextDuration } : clip);
+          clips = clips.map((clip)=>clip.name === targetName ? { ...clip, ...updatedClip } : clip);
           clearBoardSelection(activeBoardIndex);
           render();
           setStatus(`Deleted highlighted section from ${targetName}.`);
@@ -612,6 +616,72 @@
         return buildWaveformFromBytes(buffer, 180);
       }catch{
         return [];
+      }
+    }
+    function audioBufferToWavBlob(audioBuffer){
+      const numberOfChannels = audioBuffer.numberOfChannels;
+      const sampleRate = audioBuffer.sampleRate;
+      const frameCount = audioBuffer.length;
+      const bytesPerSample = 2;
+      const blockAlign = numberOfChannels * bytesPerSample;
+      const buffer = new ArrayBuffer(44 + frameCount * blockAlign);
+      const view = new DataView(buffer);
+      let offset = 0;
+      const writeString = (value)=>{
+        for(let index = 0; index < value.length; index += 1){
+          view.setUint8(offset++, value.charCodeAt(index));
+        }
+      };
+      writeString('RIFF');
+      view.setUint32(offset, 36 + frameCount * blockAlign, true); offset += 4;
+      writeString('WAVE');
+      writeString('fmt ');
+      view.setUint32(offset, 16, true); offset += 4;
+      view.setUint16(offset, 1, true); offset += 2;
+      view.setUint16(offset, numberOfChannels, true); offset += 2;
+      view.setUint32(offset, sampleRate, true); offset += 4;
+      view.setUint32(offset, sampleRate * blockAlign, true); offset += 4;
+      view.setUint16(offset, blockAlign, true); offset += 2;
+      view.setUint16(offset, bytesPerSample * 8, true); offset += 2;
+      writeString('data');
+      view.setUint32(offset, frameCount * blockAlign, true); offset += 4;
+      const channels = Array.from({ length: numberOfChannels }, (_, index)=>audioBuffer.getChannelData(index));
+      for(let frame = 0; frame < frameCount; frame += 1){
+        for(let channel = 0; channel < numberOfChannels; channel += 1){
+          const sample = Math.max(-1, Math.min(1, channels[channel][frame] || 0));
+          view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+          offset += 2;
+        }
+      }
+      return new Blob([buffer], { type:'audio/wav' });
+    }
+    async function trimClipAudio(clip, startRatio, endRatio){
+      if(!clip?.blob) return null;
+      try{
+        const context = ensureAudioContext();
+        if(!context) return null;
+        const sourceBuffer = await clip.blob.arrayBuffer();
+        const decoded = await context.decodeAudioData(sourceBuffer.slice(0));
+        const fromFrame = Math.max(0, Math.floor(Math.min(startRatio, endRatio) * decoded.length));
+        const toFrame = Math.max(fromFrame + 1, Math.ceil(Math.max(startRatio, endRatio) * decoded.length));
+        const nextLength = Math.max(1, decoded.length - (toFrame - fromFrame));
+        const trimmed = context.createBuffer(decoded.numberOfChannels, nextLength, decoded.sampleRate);
+        for(let channel = 0; channel < decoded.numberOfChannels; channel += 1){
+          const input = decoded.getChannelData(channel);
+          const output = trimmed.getChannelData(channel);
+          output.set(input.subarray(0, fromFrame), 0);
+          output.set(input.subarray(toFrame), fromFrame);
+        }
+        const blob = audioBufferToWavBlob(trimmed);
+        return {
+          blob,
+          url: URL.createObjectURL(blob),
+          fileName: ((clip.fileName || clip.name || 'edited-track').replace(/\.[^.]+$/, '')) + '.wav',
+          duration: trimmed.duration,
+          waveform: buildWaveformFromArray(trimmed.getChannelData(0), 180)
+        };
+      }catch{
+        return null;
       }
     }
     async function getMediaDuration(blobOrFile, kind = 'audio'){
