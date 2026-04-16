@@ -381,7 +381,152 @@
         return [];
       }
     }
+    async function getMediaDuration(blobOrFile, kind = 'audio'){
+      return await new Promise((resolve)=>{
+        try{
+          const element = document.createElement(kind === 'video' ? 'video' : 'audio');
+          const objectUrl = URL.createObjectURL(blobOrFile);
+          element.preload = 'metadata';
+          element.src = objectUrl;
+          element.onloadedmetadata = ()=>{
+            const duration = Number(element.duration || 0);
+            URL.revokeObjectURL(objectUrl);
+            resolve(Number.isFinite(duration) && duration > 0.05 ? duration : 8);
+          };
+          element.onerror = ()=>{
+            URL.revokeObjectURL(objectUrl);
+            resolve(8);
+          };
+        }catch{
+          resolve(8);
+        }
+      });
+    }
+    function getClipDuration(clip){
+      const explicit = Number(clip?.duration || 0);
+      if(Number.isFinite(explicit) && explicit > 0.05) return explicit;
+      if(selectedClip?.name && clip?.name === selectedClip.name){
+        const player = currentPlayer();
+        const playerDuration = Number(player?.duration || 0);
+        if(Number.isFinite(playerDuration) && playerDuration > 0.05) return playerDuration;
+      }
+      return 8;
+    }
+    function getMotherboardTimelineData(){
+      const committedBoards = boardSlots
+        .filter((board)=>board?.clip?.waveform?.length)
+        .map((board)=>({
+          ...board,
+          duration: getClipDuration(board.clip)
+        }));
+      if(!committedBoards.length){
+        return { duration: 0, boards: [], activeTimelineIndex: -1, currentTime: 0, progress: 0 };
+      }
+      let timelineDuration = Math.max(...committedBoards.map((board)=>board.duration), 8);
+      for(let pass = 0; pass < 6; pass += 1){
+        timelineDuration = Math.max(...committedBoards.map((board)=>((Number(board.position || 0) / 100) * timelineDuration) + board.duration), timelineDuration);
+      }
+      const boards = committedBoards.map((board, index)=>{
+        const start = (Number(board.position || 0) / 100) * timelineDuration;
+        const end = start + board.duration;
+        return { ...board, start, end, laneIndex:index };
+      });
+      const activeTimelineIndex = boards.findIndex((board)=>board.index === activeBoardIndex);
+      const player = currentPlayer();
+      const playerCurrent = Number(player?.currentTime || 0);
+      const activeBoard = boards[Math.max(0, activeTimelineIndex)] || boards[0];
+      const currentTime = Math.max(0, Math.min(timelineDuration, (activeBoard?.start || 0) + playerCurrent));
+      const progress = timelineDuration ? currentTime / timelineDuration : 0;
+      return { duration: timelineDuration, boards, activeTimelineIndex, currentTime, progress };
+    }
+    function renderMotherboardTimeline(context, width, height){
+      const timeline = getMotherboardTimelineData();
+      const trimStart = Math.max(0, Math.min(100, Number(els.trimStart.value || 0)));
+      const trimEnd = Math.max(trimStart + 1, Math.min(100, Number(els.trimEnd.value || 100)));
+      const scanX = timeline.progress * width;
+      context.clearRect(0,0,width,height);
+      context.fillStyle = '#02070f';
+      context.fillRect(0,0,width,height);
+      if(!timeline.boards.length){
+        context.strokeStyle = 'rgba(121,184,255,.12)';
+        context.lineWidth = 1;
+        for(let x = 0; x <= width; x += 18){
+          context.beginPath();
+          context.moveTo(x, 0);
+          context.lineTo(x, height);
+          context.stroke();
+        }
+        context.fillStyle = 'rgba(228,240,255,.46)';
+        context.font = '12px Georgia';
+        context.fillText('Waiting for actual file waveform', 16, height / 2);
+        return;
+      }
+      const laneHeight = Math.max(36, height / timeline.boards.length);
+      timeline.boards.forEach((board, laneIndex)=>{
+        const laneTop = laneIndex * laneHeight;
+        const laneBottom = Math.min(height, laneTop + laneHeight - 6);
+        const bandHeight = laneBottom - laneTop;
+        const startX = (board.start / timeline.duration) * width;
+        const endX = (board.end / timeline.duration) * width;
+        const trimStartX = startX + ((trimStart / 100) * (endX - startX));
+        const trimEndX = startX + ((trimEnd / 100) * (endX - startX));
+        const isActive = board.index === activeBoardIndex || (timeline.currentTime >= board.start && timeline.currentTime <= board.end);
+        context.fillStyle = isActive ? 'rgba(119,224,199,.12)' : 'rgba(121,184,255,.08)';
+        context.fillRect(startX, laneTop + 3, Math.max(10, endX - startX), Math.max(20, bandHeight - 6));
+        context.fillStyle = 'rgba(255,255,255,.04)';
+        context.fillRect(trimStartX, laneTop + 3, Math.max(6, trimEndX - trimStartX), Math.max(20, bandHeight - 6));
+        const waveform = board.clip?.waveform || [];
+        if(waveform.length){
+          const barWidth = Math.max(1.6, (endX - startX) / waveform.length);
+          waveform.forEach((value, index)=>{
+            const safe = Math.max(0.02, Math.min(1, value || 0));
+            const barHeight = Math.max(6, safe * (bandHeight * 0.88));
+            const x = startX + index * barWidth;
+            const y = laneTop + ((bandHeight - barHeight) / 2);
+            const fill = context.createLinearGradient(0, y, 0, y + barHeight);
+            fill.addColorStop(0, isActive ? 'rgba(245,255,252,.96)' : 'rgba(230,244,255,.9)');
+            fill.addColorStop(0.45, isActive ? 'rgba(119,224,199,.98)' : 'rgba(121,184,255,.96)');
+            fill.addColorStop(1, isActive ? 'rgba(21,128,100,.98)' : 'rgba(34,92,198,.94)');
+            context.shadowColor = isActive ? 'rgba(119,224,199,.42)' : 'rgba(121,184,255,.32)';
+            context.shadowBlur = isActive ? 12 : 7;
+            context.fillStyle = fill;
+            context.fillRect(x, y, Math.max(1.4, barWidth - 1), barHeight);
+          });
+          context.shadowBlur = 0;
+        }
+        context.strokeStyle = isActive ? 'rgba(119,224,199,.75)' : 'rgba(121,184,255,.34)';
+        context.lineWidth = isActive ? 2 : 1;
+        context.strokeRect(startX, laneTop + 3, Math.max(10, endX - startX), Math.max(20, bandHeight - 6));
+        context.fillStyle = 'rgba(255,255,255,.8)';
+        context.font = 'bold 11px Georgia';
+        context.fillText(board.title, Math.max(8, startX + 8), Math.min(height - 10, laneTop + 16));
+      });
+      const scanGradient = context.createLinearGradient(Math.max(0, scanX - 18), 0, Math.min(width, scanX + 18), 0);
+      scanGradient.addColorStop(0, 'rgba(121,184,255,0)');
+      scanGradient.addColorStop(0.5, 'rgba(121,184,255,.28)');
+      scanGradient.addColorStop(1, 'rgba(121,184,255,0)');
+      context.fillStyle = scanGradient;
+      context.fillRect(Math.max(0, scanX - 18), 0, 36, height);
+      context.strokeStyle = 'rgba(255,255,255,.88)';
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(scanX, 0);
+      context.lineTo(scanX, height);
+      context.stroke();
+      context.fillStyle = '#79b8ff';
+      context.beginPath();
+      context.arc(scanX, 12, 5, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = 'rgba(255,255,255,.82)';
+      context.font = 'bold 12px Georgia';
+      context.fillText(`song ${formatTime(timeline.currentTime)} / ${formatTime(timeline.duration)}`, Math.min(width - 170, scanX + 10), 18);
+    }
     function drawWave(seed = 0.42, canvas = els.waveCanvas){
+      if(canvas === els.boardWaveCanvas){
+        const context = canvas.getContext('2d');
+        renderMotherboardTimeline(context, canvas.width, canvas.height);
+        return;
+      }
       const context = canvas.getContext('2d');
       const width = canvas.width;
       const height = canvas.height;
@@ -555,7 +700,7 @@
     }
     function selectClip(index){ selectedClip = clips[index] || null; if(!selectedClip) return; els.kindSelect.value = selectedClip.kind || 'audio'; els.sourceType.value = selectedClip.sourceType || (selectedClip.kind === 'audio' ? 'mp3' : 'instrument'); els.boardName.value = selectedClip.name || 'Main Track'; els.clipPosition.value = String(selectedClip.position ?? 0); els.trimStart.value = String(selectedClip.trimStart ?? 0); els.trimEnd.value = String(selectedClip.trimEnd ?? 100); els.positionSlider.value = String(selectedClip.position ?? 0); if(selectedClip.kind === 'video'){ els.videoPlayer.style.display = 'block'; els.audioPlayer.style.display = 'none'; els.videoPlayer.src = selectedClip.url; } else { els.audioPlayer.style.display = 'block'; els.videoPlayer.style.display = 'none'; els.audioPlayer.src = selectedClip.url; } render(); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.boardWaveCanvas); }
     async function bootstrap(){ const data = await fetchJson(`/api/studio/session/bootstrap${qs}`, { method:'POST', body: JSON.stringify({ session_id: sessionId, route:'local-studio' }) }); sessionId = data.session_id; await loadHistory(false); render(); setStatus(`Studio session ${sessionId} ready.`); }
-    async function record(){ if(!sessionId) await bootstrap(); mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false }); startLiveWaveCapture(mediaStream); recordedChunks = []; liveWaveform = []; mediaRecorder = new MediaRecorder(mediaStream); mediaRecorder.ondataavailable = (event)=>{ if(event.data?.size) recordedChunks.push(event.data); }; mediaRecorder.onstop = async ()=>{ const blob = new Blob(recordedChunks,{ type: recordedChunks[0]?.type || 'audio/webm' }); const extension = els.sourceType.value === 'mp3' ? 'm4a' : 'webm'; const clip = { name:`Recorded ${new Date().toLocaleTimeString()}`, kind:'audio', sourceType:els.sourceType.value, url: URL.createObjectURL(blob), blob, fileName:`recording.${extension}`, trimStart:Number(els.trimStart.value || 0), trimEnd:Number(els.trimEnd.value || 100), position:Number(els.clipPosition.value || 0), waveform: liveWaveHistory.length ? compressWaveHistory(liveWaveHistory, 180) : await buildWaveformForFile(blob) }; clips.unshift(clip); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], title: els.boardName.value || clip.name, clip:{ ...clip }, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; stopLiveWaveCapture(); selectClip(0); mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; liveWaveform = []; liveWaveHistory = []; setStatus(`Track recorded locally and loaded into Studio (${els.sourceType.value}) on board ${activeBoardIndex + 1}.`); }; mediaRecorder.start(); animateWave(); setStatus('Recording track...'); }
+    async function record(){ if(!sessionId) await bootstrap(); mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false }); startLiveWaveCapture(mediaStream); recordedChunks = []; liveWaveform = []; mediaRecorder = new MediaRecorder(mediaStream); mediaRecorder.ondataavailable = (event)=>{ if(event.data?.size) recordedChunks.push(event.data); }; mediaRecorder.onstop = async ()=>{ const blob = new Blob(recordedChunks,{ type: recordedChunks[0]?.type || 'audio/webm' }); const extension = els.sourceType.value === 'mp3' ? 'm4a' : 'webm'; const clip = { name:`Recorded ${new Date().toLocaleTimeString()}`, kind:'audio', sourceType:els.sourceType.value, url: URL.createObjectURL(blob), blob, fileName:`recording.${extension}`, trimStart:Number(els.trimStart.value || 0), trimEnd:Number(els.trimEnd.value || 100), position:Number(els.clipPosition.value || 0), waveform: liveWaveHistory.length ? compressWaveHistory(liveWaveHistory, 180) : await buildWaveformForFile(blob), duration: await getMediaDuration(blob, 'audio') }; clips.unshift(clip); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], title: els.boardName.value || clip.name, clip:{ ...clip }, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; stopLiveWaveCapture(); selectClip(0); mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; liveWaveform = []; liveWaveHistory = []; setStatus(`Track recorded locally and loaded into Studio (${els.sourceType.value}) on board ${activeBoardIndex + 1}.`); }; mediaRecorder.start(); animateWave(); setStatus('Recording track...'); }
     function stopPlayback(){ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } if(!els.audioPlayer.paused) els.audioPlayer.pause(); if(!els.videoPlayer.paused) els.videoPlayer.pause(); stopTransportTimer(); stopLiveWaveCapture(); cancelAnimationFrame(animationFrame); drawWave(0.42, els.waveCanvas); drawWave(0.42, els.boardWaveCanvas); syncTransport(); }
     function playSelected(){ if(!selectedClip) return setStatus('Load a clip first.'); if(selectedClip.kind === 'video'){ els.videoPlayer.play(); } else { els.audioPlayer.play(); } startTransportTimer(); animateWave(); setStatus(`Playing ${selectedClip.name}.`); }
     function pauseSelected(){ els.audioPlayer.pause(); els.videoPlayer.pause(); stopTransportTimer(); cancelAnimationFrame(animationFrame); drawWave(); syncTransport(); setStatus('Playback paused.'); }
@@ -565,7 +710,7 @@
     async function loadHistory(notify = true){ if(!sessionId) return; const data = await fetchJson(`/api/studio/session/history${qs}&session_id=${encodeURIComponent(sessionId)}`); history = data.history || []; render(); if(notify) setStatus('Studio history loaded.'); }
     function downloadLocal(){ if(!selectedClip?.blob) return setStatus('The selected clip does not have a downloadable local blob yet.'); const a = document.createElement('a'); a.href = selectedClip.url; a.download = selectedClip.fileName || 'studio-track.webm'; document.body.appendChild(a); a.click(); a.remove(); setStatus('Local file download started.'); }
     function seekBy(deltaSeconds){ const player = currentPlayer(); if(!player) return; player.currentTime = Math.max(0, (player.currentTime || 0) + deltaSeconds); syncTransport(); }
-    els.fileInput.addEventListener('change', async ()=>{ const file = els.fileInput.files?.[0]; if(!file) return; const clip = { name:file.name, kind: file.type.startsWith('video') ? 'video' : 'audio', sourceType: els.sourceType.value, url: URL.createObjectURL(file), blob:file, fileName:file.name, position:Number(els.clipPosition.value || 0), trimStart:0, trimEnd:100, waveform: [] }; if(clip.kind === 'audio'){ clip.waveform = await buildWaveformForFile(file); } clips.unshift(clip); selectClip(0); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], clip:{ ...clip }, title: els.boardName.value || clip.name, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; render(); setStatus(`${file.name} imported into Studio with waveform ready on board ${activeBoardIndex + 1}.`); });
+    els.fileInput.addEventListener('change', async ()=>{ const file = els.fileInput.files?.[0]; if(!file) return; const clip = { name:file.name, kind: file.type.startsWith('video') ? 'video' : 'audio', sourceType: els.sourceType.value, url: URL.createObjectURL(file), blob:file, fileName:file.name, position:Number(els.clipPosition.value || 0), trimStart:0, trimEnd:100, waveform: [], duration: await getMediaDuration(file, file.type.startsWith('video') ? 'video' : 'audio') }; if(clip.kind === 'audio'){ clip.waveform = await buildWaveformForFile(file); } clips.unshift(clip); selectClip(0); boardSlots[activeBoardIndex] = { ...boardSlots[activeBoardIndex], clip:{ ...clip }, title: els.boardName.value || clip.name, sourceType: clip.sourceType, position: clip.position, trimStart: clip.trimStart, trimEnd: clip.trimEnd }; render(); setStatus(`${file.name} imported into Studio with waveform ready on board ${activeBoardIndex + 1}.`); });
     els.addBoardBtn.addEventListener('click', ()=>{ const nextIndex = boardSlots.length; boardSlots.push({ index:nextIndex, title:`Board ${nextIndex + 1}`, clip:null, fxPreset:'clean', position:0, sourceType:'vocal', trimStart:0, trimEnd:100 }); render(); setStatus(`Added motherboard lane ${nextIndex + 1}.`); });
     els.toggleFxBtn.addEventListener('click', ()=>{ els.fxPanel.hidden = !els.fxPanel.hidden; setStatus(els.fxPanel.hidden ? 'FX panel collapsed.' : 'FX panel opened.'); });
     els.deleteClipBtn.addEventListener('click', deleteSelectedClip);
@@ -589,7 +734,17 @@
     els.trimModeEnd.addEventListener('click', ()=>{ activeTrimHandle = 'end'; els.trimModeEnd.classList.add('active'); els.trimModeStart.classList.remove('active'); });
     els.boardWaveCanvas.addEventListener('click', (event)=>{ const rect = els.boardWaveCanvas.getBoundingClientRect(); const percent = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)); if(activeTrimHandle === 'start'){ els.trimStart.value = String(Math.min(percent, Number(els.trimEnd.value || 100) - 1)); } else { els.trimEnd.value = String(Math.max(percent, Number(els.trimStart.value || 0) + 1)); } if(selectedClip){ selectedClip.trimStart = Number(els.trimStart.value || 0); selectedClip.trimEnd = Number(els.trimEnd.value || 100); } drawWave(0.42, els.waveCanvas); drawWave(0.42, els.boardWaveCanvas); render(); setStatus(`Board ${activeBoardIndex + 1} cut updated from the waveform surface.`); });
     els.positionSlider.addEventListener('input', ()=>{ const player = currentPlayer(); const duration = Number.isFinite(player.duration) ? player.duration : 0; if(duration){ player.currentTime = (Number(els.positionSlider.value || 0) / 100) * duration; } syncTransport(); });
-    [els.audioPlayer, els.videoPlayer].forEach(player=>player.addEventListener('loadedmetadata', syncTransport));
+    [els.audioPlayer, els.videoPlayer].forEach(player=>player.addEventListener('loadedmetadata', ()=>{
+      const duration = Number(player.duration || 0);
+      if(selectedClip && Number.isFinite(duration) && duration > 0.05){
+        selectedClip.duration = duration;
+        if(boardSlots[activeBoardIndex]?.clip?.name === selectedClip.name){
+          boardSlots[activeBoardIndex].clip.duration = duration;
+        }
+      }
+      syncTransport();
+      drawWave(0.42, els.boardWaveCanvas);
+    }));
     [els.audioPlayer, els.videoPlayer].forEach(player=>player.addEventListener('timeupdate', syncTransport));
     window.addEventListener('scroll', updateDockVisibility, { passive:true });
     window.addEventListener('resize', updateDockVisibility);
