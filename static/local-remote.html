@@ -169,11 +169,58 @@
         linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)),
         radial-gradient(circle at 12% 18%, rgba(121,184,255,.16), transparent 30%);
       color:var(--text);text-align:left;cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+      position:relative;
+      overflow:hidden;
     }
     .shell-btn:hover,.shell-btn.active{transform:translateY(-2px);border-color:rgba(207,235,255,.38);box-shadow:0 16px 34px rgba(0,0,0,.22)}
     .shell-btn span{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
     .shell-btn strong{display:block;font-size:24px;font-family:"Cormorant Garamond", Georgia, serif}
     .shell-btn p{margin:10px 0 0;color:var(--muted);line-height:1.5}
+    .shell-btn-media{
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg, rgba(5,14,26,.18), rgba(5,14,26,.74)),
+        var(--media-image) center/cover no-repeat;
+      opacity:.92;
+      pointer-events:none;
+    }
+    .shell-btn::after{
+      content:"";
+      position:absolute;
+      inset:auto -18% -35% auto;
+      width:170px;
+      height:170px;
+      background:radial-gradient(circle, rgba(121,184,255,.28), transparent 68%);
+      pointer-events:none;
+    }
+    .shell-btn-copy{
+      position:relative;
+      z-index:1;
+      max-width:82%;
+    }
+    .shell-btn-flag{
+      position:absolute;
+      right:14px;
+      top:14px;
+      z-index:1;
+      min-width:86px;
+      min-height:48px;
+      padding:6px 8px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.35);
+      background:
+        linear-gradient(90deg, #002d62 0 25%, #ffffff 25% 50%, #ce1126 50% 75%, #ffffff 75% 100%);
+      box-shadow:0 12px 24px rgba(0,0,0,.24);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#07111f;
+      font-weight:700;
+      font-size:10px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
     .panel-stack{position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);gap:18px}
     .panel-card{min-height:360px}
     .panel-card h2{margin:0 0 10px;font-size:30px;font-family:"Cormorant Garamond", Georgia, serif}
@@ -540,13 +587,32 @@
       </div>
 
       <section class="button-grid" id="buttonGrid">
-        <button class="shell-btn active" data-panel="diary"><span>Panel 1</span><strong>Diary Mode</strong><p>Live sessions, lobby, comments, and shareable feed links.</p></button>
-        <button class="shell-btn" data-panel="studio"><span>Panel 2</span><strong>Studio Quick Panel</strong><p>Recording, waveform, motherboard, and exports.</p></button>
-        <button class="shell-btn" data-panel="settings"><span>Panel 3</span><strong>Configuration</strong><p>Notifications, links, access, and route controls.</p></button>
-        <button class="shell-btn" data-panel="map"><span>Panel 4</span><strong>Map Change</strong><p>General info, ads, map switch, and perks.</p></button>
-        <button class="shell-btn" data-panel="faq"><span>Panel 5</span><strong>FAQ Lounge</strong><p>Social-world reel, quick answers, and relaxed support.</p></button>
-        <button class="shell-btn" data-panel="profile"><span>Panel 6</span><strong>Profile</strong><p>Identity, hair credentials, scanner, and exports.</p></button>
-      </section>
+        <button class="shell-btn active" data-panel="diary">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-dayparty.jpg')"></span>
+          <span class="shell-btn-flag" aria-hidden="true"><i></i><em></em><b></b><small>DOM REP</small></span>
+          <span class="shell-btn-copy"><span>Panel 1</span><strong>Diary Mode</strong><p>Live sessions, lobby, comments, and shareable feed links.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="studio">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-artists.jpg')"></span>
+          <span class="shell-btn-copy"><span>Panel 2</span><strong>Studio Quick Panel</strong><p>Recording, waveform, motherboard, and exports.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="settings">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-healthy-hair.jpeg')"></span>
+          <span class="shell-btn-copy"><span>Panel 3</span><strong>Configuration</strong><p>Notifications, links, access, and route controls.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="map">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-hija-felix.jpeg')"></span>
+          <span class="shell-btn-copy"><span>Panel 4</span><strong>Map Change</strong><p>General info, ads, map switch, and perks.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="faq">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-lezawli.jpeg')"></span>
+          <span class="shell-btn-copy"><span>Panel 5</span><strong>FAQ Lounge</strong><p>Social-world reel, quick answers, and relaxed support.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="profile">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-healthy-hair.jpeg')"></span>
+          <span class="shell-btn-copy"><span>Panel 6</span><strong>Profile</strong><p>Identity, hair credentials, scanner, and exports.</p></span>
+        </button>
+        </section>
 
       <section class="panel-stack">
         <article class="panel-card glass">
