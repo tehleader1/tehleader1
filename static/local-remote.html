@@ -600,7 +600,12 @@
             <div class="login-copy">Confirm logged in through your provider or type your email and password so SupportRD stays attached while you move around the site.</div>
             <div class="provider-row">
               <a class="provider-btn" href="/login" target="_blank" rel="noreferrer">Provider Login</a>
+              <a class="provider-btn" href="/login?mode=signup" target="_blank" rel="noreferrer">Create Account</a>
               <button class="provider-btn" type="button" id="providerConfirmBtn">Confirm Provider</button>
+            </div>
+            <div class="provider-row">
+              <a class="provider-btn" href="/login?provider=google-oauth2&mode=signup" target="_blank" rel="noreferrer">Google Login</a>
+              <a class="provider-btn" href="/login?provider=windowslive&mode=signup" target="_blank" rel="noreferrer">Microsoft Login</a>
             </div>
             <div class="login-grid">
               <input id="loginEmail" type="email" placeholder="Email address">
@@ -691,6 +696,8 @@
       <button type="button" data-mini-panel="studio">Studio</button>
       <button type="button" data-mini-panel="profile">Profile</button>
       <button type="button" data-mini-panel="faq">FAQ</button>
+      <button type="button" data-mini-panel="settings">Settings</button>
+      <button type="button" data-mini-panel="map">Map</button>
       <a href="/login" target="_blank" rel="noreferrer">Login</a>
       <button type="button" id="miniVoiceBtn">Talk To Aria</button>
     </div>

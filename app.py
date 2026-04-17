@@ -6086,10 +6086,11 @@ def aria_speech():
         thought_style = (body.get("thought_style") or "").strip() if isinstance(body, dict) else ""
         assistant_id = (body.get("assistant_id") or "aria").strip().lower() if isinstance(body, dict) else "aria"
         membership_tier = (body.get("membership_tier") or "free").strip().lower() if isinstance(body, dict) else "free"
-        voice = requested_voice if requested_voice in TTS_ALLOWED_VOICES else os.environ.get("OPENAI_TTS_VOICE", "shimmer")
+        preferred_voice = requested_voice if requested_voice in TTS_ALLOWED_VOICES else os.environ.get("OPENAI_TTS_VOICE", "shimmer")
+        primary_model = (os.environ.get("OPENAI_TTS_MODEL", "") or "").strip() or "gpt-4o-mini-tts"
         payload = {
-            "model": os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),
-            "voice": voice,
+            "model": primary_model,
+            "voice": preferred_voice,
             "input": text,
             "response_format": "mp3"
         }
@@ -6126,20 +6127,42 @@ def aria_speech():
             instructions.append("Keep the delivery intimate, cinematic, and confidence-building while staying non-explicit and emotionally warm.")
         if instructions:
             payload["instructions"] = " ".join(instructions)
-        r = requests.post(
-            "https://api.openai.com/v1/audio/speech",
-            headers={
-                "Authorization": f"Bearer {OPENAI_KEY}",
-                "Content-Type": "application/json"
-            },
-            json=payload,
-            timeout=30
-        )
-        if r.status_code >= 400:
-            return {"error": "Speech failed"}, 500
-        return Response(r.content, mimetype="audio/mpeg")
-    except:
-        return {"error": "Speech error"}, 500
+        attempt_models = []
+        for candidate in (primary_model, "gpt-4o-mini-tts", "tts-1-hd"):
+            clean = (candidate or "").strip()
+            if clean and clean not in attempt_models:
+                attempt_models.append(clean)
+        fallback_voices = []
+        if assistant_id == "projake":
+            fallback_voices = [preferred_voice, "onyx", "ash"]
+        else:
+            fallback_voices = [preferred_voice, "coral", "shimmer"]
+        deduped_voices = []
+        for candidate_voice in fallback_voices:
+            clean_voice = (candidate_voice or "").strip().lower()
+            if clean_voice in TTS_ALLOWED_VOICES and clean_voice not in deduped_voices:
+                deduped_voices.append(clean_voice)
+        last_error = ""
+        for model_name in attempt_models:
+            for voice_name in deduped_voices:
+                trial_payload = dict(payload)
+                trial_payload["model"] = model_name
+                trial_payload["voice"] = voice_name
+                r = requests.post(
+                    "https://api.openai.com/v1/audio/speech",
+                    headers={
+                        "Authorization": f"Bearer {OPENAI_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    json=trial_payload,
+                    timeout=30
+                )
+                if r.status_code < 400:
+                    return Response(r.content, mimetype="audio/mpeg")
+                last_error = (r.text or "")[:300]
+        return {"error": "Speech failed", "detail": last_error or "tts_request_failed"}, 500
+    except Exception as exc:
+        return {"error": "Speech error", "detail": str(exc)[:300]}, 500
 
 #################################################
 # MARKETING ENGINE
