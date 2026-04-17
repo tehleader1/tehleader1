@@ -208,6 +208,7 @@
     const qs = '?localSandbox=1';
     const els = { audioPlayer:document.getElementById('audioPlayer'), videoPlayer:document.getElementById('videoPlayer'), statusBox:document.getElementById('statusBox'), studioDock:document.getElementById('studioDock'), studioDockShell:document.getElementById('studioDockShell'), playerShell:document.getElementById('playerShell'), motherboardZone:document.getElementById('motherboardZone'), addBoardBtn:document.getElementById('addBoardBtn'), toggleFxBtn:document.getElementById('toggleFxBtn'), copySelectionBtn:document.getElementById('copySelectionBtn'), pasteSelectionBtn:document.getElementById('pasteSelectionBtn'), deleteClipBtn:document.getElementById('deleteClipBtn'), playAllBoardsBtn:document.getElementById('playAllBoardsBtn'), pauseAllBoardsBtn:document.getElementById('pauseAllBoardsBtn'), playSelectedBoardBtn:document.getElementById('playSelectedBoardBtn'), pauseSelectedBoardBtn:document.getElementById('pauseSelectedBoardBtn'), applySelectedFxBtn:document.getElementById('applySelectedFxBtn'), fxSelect:document.getElementById('fxSelect'), fxPanel:document.getElementById('fxPanel'), boardName:document.getElementById('boardName'), kindSelect:document.getElementById('kindSelect'), sourceType:document.getElementById('sourceType'), fxPreset:document.getElementById('fxPreset'), exportFormat:document.getElementById('exportFormat'), clipPosition:document.getElementById('clipPosition'), destination:document.getElementById('destination'), fileInput:document.getElementById('fileInput'), clipList:document.getElementById('clipList'), historyList:document.getElementById('historyList'), sessionCard:document.getElementById('sessionCard'), clipCard:document.getElementById('clipCard'), exportCard:document.getElementById('exportCard'), waveCanvas:document.getElementById('waveCanvas'), arrangementWaveCanvas:document.getElementById('arrangementWaveCanvas'), boardWaveCanvas:document.getElementById('boardWaveCanvas'), boardMeta:document.getElementById('boardMeta'), trimModeStart:document.getElementById('trimModeStart'), trimModeEnd:document.getElementById('trimModeEnd'), positionSlider:document.getElementById('positionSlider'), transportReadout:document.getElementById('transportReadout'), statsGrid:document.getElementById('statsGrid'), sessionList:document.getElementById('sessionList'), boardGrid:document.getElementById('boardGrid'), arrangementList:document.getElementById('arrangementList'), boardFocusList:document.getElementById('boardFocusList'), trimStart:document.getElementById('trimStart'), trimEnd:document.getElementById('trimEnd') };
     let sessionId = ''; let history = []; let clips = []; let selectedClip = null; let copiedClipSelection = null; let mediaStream = null; let mediaRecorder = null; let recordedChunks = []; let animationFrame = null; let transportTimer = null; let activeBoardIndex = 0; let liveWaveform = []; let liveWaveHistory = []; let audioContext = null; let analyserNode = null; let waveformTimer = null; let activeTrimHandle = 'start';
+    const MOTHERBOARD_LANE_SECONDS = 24;
     const stackPlayback = { active:false, offsetSeconds:0, duration:0, startedAt:0, sources:[] };
     const dragSelection = { dragging:false, moved:false, startRatio:0, endRatio:0, boardIndex:null };
     const boardSlots = Array.from({ length: 4 }, (_, index) => ({ index, title:`Board ${index + 1}`, clip:null, fxPreset:'clean', position:0, sourceType:'vocal', trimStart:0, trimEnd:100 }));
@@ -961,15 +962,13 @@
       if(!committedBoards.length){
         return { duration: 0, boards: [], activeTimelineIndex: -1, currentTime: 0, progress: 0 };
       }
-      let timelineDuration = Math.max(...committedBoards.map((board)=>board.duration), 8);
-      for(let pass = 0; pass < 6; pass += 1){
-        timelineDuration = Math.max(...committedBoards.map((board)=>((Number(board.position || 0) / 100) * timelineDuration) + board.duration), timelineDuration);
-      }
+      const laneDuration = Math.max(MOTHERBOARD_LANE_SECONDS, ...committedBoards.map((board)=>board.duration || 0), 8);
       const boards = committedBoards.map((board, index)=>{
-        const start = (Number(board.position || 0) / 100) * timelineDuration;
+        const start = (Number(board.position || 0) / 100) * laneDuration;
         const end = start + board.duration;
         return { ...board, start, end, laneIndex:index };
       });
+      const timelineDuration = Math.max(laneDuration, ...boards.map((board)=>board.end));
       const activeTimelineIndex = boards.findIndex((board)=>board.index === activeBoardIndex);
       const player = currentPlayer();
       const playerCurrent = Number(player?.currentTime || 0);

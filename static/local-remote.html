@@ -225,6 +225,17 @@
     }
     .login-card h3{margin:0;font-size:30px;font-family:"Cormorant Garamond", Georgia, serif}
     .login-copy{color:var(--muted);line-height:1.5}
+    .login-shell{display:grid;gap:12px}
+    .signed-in-card{display:grid;gap:10px}
+    .signed-in-card[hidden],.login-shell[hidden]{display:none}
+    .signed-in-line{
+      padding:12px 14px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      font-weight:700;
+    }
     .login-grid{display:grid;gap:10px}
     .login-grid input{
       width:100%;
@@ -257,6 +268,20 @@
       background:rgba(255,255,255,.05);
       color:var(--muted);
       line-height:1.45;
+    }
+    .logout-link{
+      min-height:40px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:max-content;
     }
     .mini-remote{
       position:fixed;
@@ -374,7 +399,7 @@
     .mini-item span{color:var(--muted);font-size:14px}
     .menu-chip{width:100%;padding:14px 16px;border-radius:18px;background:linear-gradient(180deg, rgba(89,151,235,.34), rgba(43,80,132,.42));border:1px solid rgba(195,228,255,.2);text-align:left}
     .assistant-layer{
-      position:absolute;inset:0;pointer-events:none
+      position:fixed;inset:0;pointer-events:none;z-index:8
     }
     .assistant{
       position:absolute;width:228px;padding:12px 14px;border-radius:999px;background:rgba(12,23,40,.94);
@@ -598,22 +623,30 @@
             <div class="eyebrow">Account Access</div>
             <h3>Login Panel</h3>
             <div class="login-copy">Confirm logged in through your provider or type your email and password so SupportRD stays attached while you move around the site.</div>
-            <div class="provider-row">
-              <a class="provider-btn" href="/login" target="_blank" rel="noreferrer">Provider Login</a>
-              <a class="provider-btn" href="/login?mode=signup" target="_blank" rel="noreferrer">Create Account</a>
-              <button class="provider-btn" type="button" id="providerConfirmBtn">Confirm Provider</button>
+            <div class="signed-in-card" id="signedInCard" hidden>
+              <div class="signed-in-line" id="signedInSummary">Signed in.</div>
+              <div class="provider-row">
+                <a class="logout-link" href="/logout">Logout?</a>
+              </div>
             </div>
-            <div class="provider-row">
-              <a class="provider-btn" href="/login?provider=google-oauth2&mode=signup" target="_blank" rel="noreferrer">Google Login</a>
-              <a class="provider-btn" href="/login?provider=windowslive&mode=signup" target="_blank" rel="noreferrer">Microsoft Login</a>
-            </div>
-            <div class="login-grid">
-              <input id="loginEmail" type="email" placeholder="Email address">
-              <input id="loginPassword" type="password" placeholder="Password">
-            </div>
-            <div class="login-actions">
-              <button type="button" id="loginSaveBtn">Save Login</button>
-              <button type="button" id="loginOpenAccountBtn">Open Login Page</button>
+            <div class="login-shell" id="loginShell">
+              <div class="provider-row">
+                <a class="provider-btn" href="/login" target="_blank" rel="noreferrer">Provider Login</a>
+                <a class="provider-btn" href="/login?mode=signup" target="_blank" rel="noreferrer">Create Account</a>
+                <button class="provider-btn" type="button" id="providerConfirmBtn">Confirm Provider</button>
+              </div>
+              <div class="provider-row">
+                <a class="provider-btn" href="/login?provider=google-oauth2&mode=signup" target="_blank" rel="noreferrer">Google Login</a>
+                <a class="provider-btn" href="/login?provider=windowslive&mode=signup" target="_blank" rel="noreferrer">Microsoft Login</a>
+              </div>
+              <div class="login-grid">
+                <input id="loginEmail" type="email" placeholder="Email address">
+                <input id="loginPassword" type="password" placeholder="Password">
+              </div>
+              <div class="login-actions">
+                <button type="button" id="loginSaveBtn">Save Login</button>
+                <button type="button" id="loginOpenAccountBtn">Open Login Page</button>
+              </div>
             </div>
             <div class="login-status" id="loginStatusBox">Login panel is attached and waiting for provider confirmation.</div>
           </section>
@@ -832,6 +865,9 @@
     const loginEmail = document.getElementById("loginEmail");
     const loginPassword = document.getElementById("loginPassword");
     const loginStatusBox = document.getElementById("loginStatusBox");
+    const loginShell = document.getElementById("loginShell");
+    const signedInCard = document.getElementById("signedInCard");
+    const signedInSummary = document.getElementById("signedInSummary");
     const providerConfirmBtn = document.getElementById("providerConfirmBtn");
     const loginSaveBtn = document.getElementById("loginSaveBtn");
     const loginOpenAccountBtn = document.getElementById("loginOpenAccountBtn");
@@ -1079,8 +1115,13 @@
     function renderLoginPanel(message = ""){
       const settings = bootstrapData?.settings || {};
       const account = bootstrapData?.account || {};
+      const savedPassword = Boolean(loginPassword.value.trim() || settings.password_set);
+      const signedIn = providerConfirmed || (Boolean(loginEmail.value || settings.account_email || account.email) && savedPassword);
       const sourceLabel = providerConfirmed ? "provider confirmed" : "manual email login";
       const confirmedEmail = loginEmail.value || settings.account_email || account.email || "guest@supportrd.com";
+      loginShell.hidden = signedIn;
+      signedInCard.hidden = !signedIn;
+      signedInSummary.textContent = `Signed in: ${confirmedEmail} · ${providerConfirmed ? "provider" : "email/password"}`;
       loginStatusBox.textContent = message || `Account route: ${confirmedEmail} · ${sourceLabel}. ${providerConfirmed ? "Provider lane is attached." : "Use provider confirm or save email/password."}`;
     }
 
@@ -1105,6 +1146,9 @@
       if(options.providerConfirmed){
         providerConfirmed = true;
         window.localStorage.setItem("supportrdProviderConfirmed", "yes");
+      }
+      if(password){
+        loginPassword.value = password;
       }
       renderLoginPanel(options.providerConfirmed ? "Provider login confirmed and attached to the shell." : "Email/password login saved into the attached SupportRD account panel.");
     }
@@ -1560,6 +1604,14 @@
       }
     }
 
+    async function primeVoiceMic(){
+      if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      window.setTimeout(()=>{
+        stream.getTracks().forEach((track)=>track.stop());
+      }, 160);
+    }
+
     async function speakPremiumLine(text, who){
       try{
         await unlockPremiumVoice();
@@ -1665,8 +1717,8 @@
         };
         recognition.onstart = ()=>{
           voiceConsoleTitle.textContent = `${who} listening`;
-          voiceConsoleText.textContent = "Mic is open. Speak now and stop when you are done.";
-          voiceBubbleText.textContent = "Listening now. Tell me the hair issue, product goal, or account question.";
+          voiceConsoleText.textContent = "Mic is open. You have a moment to speak, then I will wait for 2 seconds of silence before responding.";
+          voiceBubbleText.textContent = "Listening now. Speak your hair question, then pause for 2 seconds when you are done.";
         };
         recognition.onresult = (event)=>{
           let interim = "";
@@ -1711,9 +1763,13 @@
       cueTone("intro");
       voiceBubbleTitle.textContent = `${who} Website Voice`;
       voiceConsoleTitle.textContent = `${who} mic open`;
-      voiceConsoleText.textContent = "Intro cue sent. Mic is opening now.";
-      voiceBubbleText.textContent = "Mic opening now. Tell me the hair issue when you are ready.";
+      voiceConsoleText.textContent = "Intro cue sent. Opening the mic and giving you a moment before listening starts.";
+      voiceBubbleText.textContent = "Mic opening now. You have a quick moment to start speaking.";
       voiceBubble.classList.add("active");
+      try{
+        await primeVoiceMic();
+      }catch{}
+      await new Promise((resolve)=>setTimeout(resolve, 850));
       const heard = await listenForHairPrompt(who);
       voiceConsoleTitle.textContent = `${who} transcribing`;
       voiceConsoleText.textContent = heard.heard ? `Transcribing: ${heard.transcript}` : "No clear speech captured. Preparing a fallback response.";
@@ -1805,6 +1861,12 @@
       button.addEventListener("click", ()=>{
         renderPanel(button.dataset.miniPanel, true);
         window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    });
+    document.querySelectorAll(".logout-link").forEach((link)=>{
+      link.addEventListener("click", ()=>{
+        providerConfirmed = false;
+        window.localStorage.removeItem("supportrdProviderConfirmed");
       });
     });
     updateMiniRemoteVisibility();
