@@ -147,6 +147,8 @@
       color:var(--text);
       font-weight:700;
       box-shadow:0 12px 24px rgba(0,0,0,.22);
+      text-decoration:none;
+      cursor:pointer;
     }
     .top-bar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
     .voice-console{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
@@ -210,6 +212,93 @@
     }
     .api-action-board__feed{display:grid;gap:10px;margin-top:14px}
     .sticky-wrap{display:grid;gap:14px}
+    .login-card{
+      position:relative;
+      padding:18px;
+      border-radius:24px;
+      border:1px solid rgba(213,235,255,.22);
+      background:
+        linear-gradient(180deg, rgba(18,30,52,.94), rgba(8,16,30,.92));
+      box-shadow:0 18px 36px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+      display:grid;
+      gap:12px;
+    }
+    .login-card h3{margin:0;font-size:30px;font-family:"Cormorant Garamond", Georgia, serif}
+    .login-copy{color:var(--muted);line-height:1.5}
+    .login-grid{display:grid;gap:10px}
+    .login-grid input{
+      width:100%;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      font:inherit;
+    }
+    .provider-row,.login-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .provider-btn,.login-actions button{
+      min-height:40px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .login-status{
+      padding:12px 14px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      line-height:1.45;
+    }
+    .mini-remote{
+      position:fixed;
+      left:22px;
+      bottom:22px;
+      width:min(280px, calc(100vw - 32px));
+      padding:16px;
+      border-radius:22px;
+      border:1px solid rgba(213,235,255,.22);
+      background:rgba(10,19,34,.92);
+      box-shadow:0 22px 46px rgba(0,0,0,.34);
+      backdrop-filter:blur(20px) saturate(1.08);
+      z-index:9;
+      display:grid;
+      gap:10px;
+      opacity:0;
+      transform:translateY(18px);
+      pointer-events:none;
+      transition:opacity .25s ease, transform .25s ease;
+    }
+    .mini-remote.active{
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
+    .mini-remote h3{margin:0;font-size:24px;font-family:"Cormorant Garamond", Georgia, serif}
+    .mini-remote p{margin:0;color:var(--muted);line-height:1.45}
+    .mini-remote-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .mini-remote-grid button,.mini-remote-grid a{
+      min-height:38px;
+      padding:0 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      text-decoration:none;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
     .ad-rail{display:grid;gap:14px;margin-bottom:14px}
     .ad-card{
       position:relative;
@@ -290,7 +379,7 @@
     .assistant{
       position:absolute;width:228px;padding:12px 14px;border-radius:999px;background:rgba(12,23,40,.94);
       border:1px solid rgba(171,220,255,.18);display:flex;align-items:center;gap:14px;color:var(--text);
-      box-shadow:0 18px 42px rgba(0,0,0,.32);pointer-events:auto;cursor:pointer;transition:left .55s ease,top .55s ease,transform .2s ease
+      box-shadow:0 18px 42px rgba(0,0,0,.32);pointer-events:auto;cursor:pointer;transition:transform .2s ease
     }
     .assistant:hover{transform:translateY(-2px)}
     .orb{
@@ -388,7 +477,7 @@
             <span class="promo-chip">Studio Upgrade</span>
             <strong>Jake Studio Premium</strong>
             <span>Late-2000s glossy booth energy with real motherboard editing and premium studio lane access.</span>
-            <span class="buy-now">Buy Studio Access</span>
+            <a class="buy-now" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Studio Access</a>
           </div>
         </article>
         <article class="catalog-card" style="--bg-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
@@ -397,7 +486,7 @@
             <span class="promo-chip">Professional Lane</span>
             <strong>Premium / Pro</strong>
             <span>Professional identity, faster routes, polished voice, and a cleaner SupportRD ownership package.</span>
-            <span class="buy-now">Upgrade Now</span>
+            <a class="buy-now" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Upgrade Now</a>
           </div>
         </article>
         <article class="catalog-card" style="--bg-image:url('/static/images/brochure-contacts-remote.jpg')">
@@ -406,7 +495,7 @@
             <span class="promo-chip">Support Network</span>
             <strong>Representatives</strong>
             <span>Professional hair-support faces, concierge feel, and a direct lane into SupportRD help and guided setup.</span>
-            <span class="buy-now">Meet SupportRD</span>
+            <a class="buy-now" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Meet SupportRD</a>
           </div>
         </article>
       </section>
@@ -505,6 +594,24 @@
     <aside class="right-rail glass">
       <div class="sticky-wrap">
         <section class="ad-rail">
+          <section class="login-card">
+            <div class="eyebrow">Account Access</div>
+            <h3>Login Panel</h3>
+            <div class="login-copy">Confirm logged in through your provider or type your email and password so SupportRD stays attached while you move around the site.</div>
+            <div class="provider-row">
+              <a class="provider-btn" href="/login" target="_blank" rel="noreferrer">Provider Login</a>
+              <button class="provider-btn" type="button" id="providerConfirmBtn">Confirm Provider</button>
+            </div>
+            <div class="login-grid">
+              <input id="loginEmail" type="email" placeholder="Email address">
+              <input id="loginPassword" type="password" placeholder="Password">
+            </div>
+            <div class="login-actions">
+              <button type="button" id="loginSaveBtn">Save Login</button>
+              <button type="button" id="loginOpenAccountBtn">Open Login Page</button>
+            </div>
+            <div class="login-status" id="loginStatusBox">Login panel is attached and waiting for provider confirmation.</div>
+          </section>
           <article class="ad-card" style="--bg-image:url('/static/images/jake-studio-premium.jpg')">
             <div class="ad-price"><strong>$100</strong><small>Flash</small></div>
             <div class="ad-copy">
@@ -513,7 +620,7 @@
               <p>Professional booth power with polished editing, stacked playback, and premium studio style.</p>
             </div>
             <div class="ad-actions">
-              <span class="buy-now">Buy Now</span>
+              <a class="buy-now" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Now</a>
             </div>
           </article>
           <article class="ad-card" style="--bg-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
@@ -524,7 +631,7 @@
               <p>Professional profile lanes, polished SupportRD routes, and a cleaner account-plus-payments package.</p>
             </div>
             <div class="ad-actions">
-              <span class="buy-now">Go Pro</span>
+              <a class="buy-now" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Go Pro</a>
             </div>
           </article>
         </section>
@@ -574,6 +681,20 @@
       </div>
     </aside>
   </div>
+
+  <aside class="mini-remote" id="miniRemotePopup">
+    <div class="eyebrow">Mini Remote</div>
+    <h3>SupportRD Quick Route</h3>
+    <p>Follow the page and jump into the main buttons, account, or voice lane while you scroll.</p>
+    <div class="mini-remote-grid">
+      <button type="button" data-mini-panel="diary">Diary</button>
+      <button type="button" data-mini-panel="studio">Studio</button>
+      <button type="button" data-mini-panel="profile">Profile</button>
+      <button type="button" data-mini-panel="faq">FAQ</button>
+      <a href="/login" target="_blank" rel="noreferrer">Login</a>
+      <button type="button" id="miniVoiceBtn">Talk To Aria</button>
+    </div>
+  </aside>
 
   <script>
     const panelMeta = {
@@ -701,13 +822,23 @@
     const apiFieldTwo = document.getElementById("apiFieldTwo");
     const apiFieldBody = document.getElementById("apiFieldBody");
     const apiResultBody = document.getElementById("apiResultBody");
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const loginStatusBox = document.getElementById("loginStatusBox");
+    const providerConfirmBtn = document.getElementById("providerConfirmBtn");
+    const loginSaveBtn = document.getElementById("loginSaveBtn");
+    const loginOpenAccountBtn = document.getElementById("loginOpenAccountBtn");
+    const miniRemotePopup = document.getElementById("miniRemotePopup");
+    const miniVoiceBtn = document.getElementById("miniVoiceBtn");
 
     let activePanel = "diary";
-    let roamTick = 0;
     let panelBootToken = 0;
     let bootstrapData = null;
     let currentDiarySessionId = "";
     let currentStudioSessionId = "";
+    let premiumVoicePlayer = null;
+    let unlockedAudioContext = null;
+    let providerConfirmed = false;
 
     const voiceKnowledge = {
       Aria: {
@@ -930,9 +1061,53 @@
         bootstrapData = data;
         currentDiarySessionId = data.diary?.recent_sessions?.[0]?.session_id || currentDiarySessionId;
         currentStudioSessionId = data.studio?.recent_sessions?.[0]?.session_id || currentStudioSessionId;
+        loginEmail.value = data.settings?.account_email || data.account?.email || "";
+        providerConfirmed = window.localStorage.getItem("supportrdProviderConfirmed") === "yes";
+        renderLoginPanel();
         renderStickyLists();
         renderPanel(activePanel);
       }catch{}
+    }
+
+    function renderLoginPanel(message = ""){
+      const settings = bootstrapData?.settings || {};
+      const account = bootstrapData?.account || {};
+      const sourceLabel = providerConfirmed ? "provider confirmed" : "manual email login";
+      const confirmedEmail = loginEmail.value || settings.account_email || account.email || "guest@supportrd.com";
+      loginStatusBox.textContent = message || `Account route: ${confirmedEmail} · ${sourceLabel}. ${providerConfirmed ? "Provider lane is attached." : "Use provider confirm or save email/password."}`;
+    }
+
+    async function saveLoginPanel(options = {}){
+      const email = (loginEmail.value || bootstrapData?.settings?.account_email || bootstrapData?.account?.email || "guest@supportrd.com").trim();
+      const password = loginPassword.value.trim();
+      if(!email){
+        renderLoginPanel("Add an email first so the sticky login panel has an account owner.");
+        return;
+      }
+      const data = await callJson("/api/local-remote/preferences", {
+        method: "POST",
+        body: JSON.stringify({
+          display_name: bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || "SupportRD Member",
+          account_email: email,
+          account_username: email.split("@")[0],
+          password_plain: password,
+          voice_profile: bootstrapData?.settings?.voice_profile || "coral / onyx premium",
+        }),
+      });
+      bootstrapData = { ...(bootstrapData || {}), settings: { ...(bootstrapData?.settings || {}), ...(data.preferences || {}) } };
+      if(options.providerConfirmed){
+        providerConfirmed = true;
+        window.localStorage.setItem("supportrdProviderConfirmed", "yes");
+      }
+      renderLoginPanel(options.providerConfirmed ? "Provider login confirmed and attached to the shell." : "Email/password login saved into the attached SupportRD account panel.");
+    }
+
+    function updateMiniRemoteVisibility(){
+      if(window.scrollY > 260){
+        miniRemotePopup.classList.add("active");
+      }else{
+        miniRemotePopup.classList.remove("active");
+      }
     }
 
     function setActionStatus(message){
@@ -1359,27 +1534,51 @@
       });
     }
 
+    async function unlockPremiumVoice(){
+      if(!unlockedAudioContext){
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(Ctx){
+          unlockedAudioContext = new Ctx();
+        }
+      }
+      if(unlockedAudioContext && unlockedAudioContext.state === "suspended"){
+        try{ await unlockedAudioContext.resume(); }catch{}
+      }
+      if(!premiumVoicePlayer){
+        premiumVoicePlayer = document.createElement("audio");
+        premiumVoicePlayer.preload = "auto";
+        premiumVoicePlayer.playsInline = true;
+        premiumVoicePlayer.style.display = "none";
+        document.body.appendChild(premiumVoicePlayer);
+      }
+    }
+
     async function speakPremiumLine(text, who){
       try{
+        await unlockPremiumVoice();
         const response = await fetch("/api/aria/speech", {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             text,
-            voice_preference: who === "Jake" ? "onyx" : "shimmer",
+            voice_preference: who === "Jake" ? "onyx" : "coral",
             assistant_id: who === "Jake" ? "projake" : "aria",
             membership_tier: "premium",
             same_feel_voice: true,
-            thought_style: who === "Jake" ? "grounded, smooth, premium studio guide" : "warm, polished, premium siri-like beauty-tech guide"
+            thought_style: who === "Jake" ? "grounded, smooth, premium studio guide with natural pauses and human warmth" : "warm, polished, premium siri-like beauty-tech guide with human cadence and natural warmth"
           })
         });
         if(!response.ok) throw new Error(`speech_failed_${response.status}`);
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
         const played = await new Promise((resolve)=>{
           let started = false;
+          const audio = premiumVoicePlayer || new Audio();
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = url;
+          audio.load();
           audio.onplay = ()=>{ started = true; };
           audio.onended = ()=>{ URL.revokeObjectURL(url); resolve(started); };
           audio.onerror = ()=>{ URL.revokeObjectURL(url); resolve(false); };
@@ -1501,6 +1700,7 @@
     }
 
     async function runVoiceSequence(who){
+      await unlockPremiumVoice();
       cueTone("intro");
       voiceBubbleTitle.textContent = `${who} Website Voice`;
       voiceConsoleTitle.textContent = `${who} mic open`;
@@ -1537,34 +1737,70 @@
     localJake.addEventListener("click", ()=>runVoiceSequence("Jake"));
 
     const roamTargets = {
-      diary: [{x:40,y:130},{x:window.innerWidth-320,y:110},{x:80,y:window.innerHeight-190},{x:window.innerWidth-340,y:window.innerHeight-210}],
-      studio: [{x:60,y:150},{x:window.innerWidth-330,y:120},{x:window.innerWidth*0.56,y:170},{x:90,y:window.innerHeight-220}],
-      settings: [{x:60,y:120},{x:window.innerWidth-330,y:120},{x:window.innerWidth*0.58,y:window.innerHeight*0.3},{x:140,y:window.innerHeight-210}],
-      map: [{x:70,y:140},{x:window.innerWidth-320,y:150},{x:window.innerWidth*0.5,y:window.innerHeight*0.36},{x:100,y:window.innerHeight-190}],
-      faq: [{x:70,y:110},{x:window.innerWidth-340,y:140},{x:window.innerWidth*0.48,y:window.innerHeight*0.34},{x:120,y:window.innerHeight-190}],
-      profile: [{x:70,y:120},{x:window.innerWidth-330,y:110},{x:window.innerWidth*0.62,y:window.innerHeight*0.33},{x:130,y:window.innerHeight-180}]
+      diary: [{x:.55,y:134},{x:.77,y:182},{x:.67,y:292},{x:.48,y:238}],
+      studio: [{x:.56,y:146},{x:.78,y:190},{x:.66,y:314},{x:.5,y:254}],
+      settings: [{x:.54,y:130},{x:.77,y:178},{x:.63,y:286},{x:.46,y:232}],
+      map: [{x:.55,y:142},{x:.77,y:188},{x:.64,y:302},{x:.48,y:246}],
+      faq: [{x:.54,y:124},{x:.78,y:176},{x:.63,y:278},{x:.47,y:224}],
+      profile: [{x:.57,y:136},{x:.79,y:186},{x:.68,y:296},{x:.5,y:238}]
+    };
+    const assistantMotion = {
+      Aria: { node: localAria, x: 0, y: 0, targetX: 0, targetY: 0, phase: 0, step: 0 },
+      Jake: { node: localJake, x: 0, y: 0, targetX: 0, targetY: 0, phase: Math.PI / 2, step: 2 }
     };
 
-    function setAssistantPosition(node, x, y){
-      node.style.left = `${Math.max(16, Math.min(window.innerWidth - 280, x))}px`;
-      node.style.top = `${Math.max(16, Math.min(window.innerHeight - 110, y))}px`;
+    function clampAssistant(x, y){
+      return {
+        x: Math.max(16, Math.min(window.innerWidth - 280, x)),
+        y: Math.max(24, Math.min(window.innerHeight - 110, y))
+      };
     }
 
-    function roamAssistants(forceCenter = false){
+    function chooseAssistantTargets(forceReset = false){
       const targets = roamTargets[activePanel] || roamTargets.diary;
-      roamTick = (roamTick + 1) % targets.length;
-      const ariaTarget = targets[roamTick];
-      const jakeTarget = targets[(roamTick + 2) % targets.length];
-      setAssistantPosition(localAria, ariaTarget.x, ariaTarget.y);
-      setAssistantPosition(localJake, jakeTarget.x, jakeTarget.y);
-      if(forceCenter && (activePanel === "diary" || activePanel === "studio" || activePanel === "settings" || activePanel === "map" || activePanel === "profile" || activePanel === "faq")){
-        setAssistantPosition(localAria, window.innerWidth * 0.58, 120);
-        setAssistantPosition(localJake, window.innerWidth * 0.66, 210);
-      }
+      Object.values(assistantMotion).forEach((motion)=>{
+        motion.step = forceReset ? motion.step % targets.length : (motion.step + 1) % targets.length;
+        const target = targets[motion.step];
+        const next = clampAssistant(window.innerWidth * target.x, target.y);
+        motion.targetX = next.x;
+        motion.targetY = next.y;
+        if(forceReset && !motion.x && !motion.y){
+          motion.x = next.x;
+          motion.y = next.y;
+        }
+      });
     }
 
-    window.addEventListener("resize", ()=>roamAssistants(true));
-    setInterval(()=>roamAssistants(false), 2400);
+    function animateAssistants(){
+      const now = performance.now() / 1000;
+      Object.values(assistantMotion).forEach((motion, index)=>{
+        motion.x += (motion.targetX - motion.x) * 0.035;
+        motion.y += (motion.targetY - motion.y) * 0.035;
+        const driftX = Math.cos(now * 0.78 + motion.phase) * 8;
+        const driftY = Math.sin(now * 0.92 + motion.phase) * 10;
+        motion.node.style.left = `${motion.x + driftX}px`;
+        motion.node.style.top = `${motion.y + driftY}px`;
+        motion.node.style.transform = `translate3d(0,0,0) rotate(${Math.sin(now * 0.5 + index) * 1.4}deg)`;
+      });
+      window.requestAnimationFrame(animateAssistants);
+    }
+
+    window.addEventListener("resize", ()=>chooseAssistantTargets(true));
+    chooseAssistantTargets(true);
+    setInterval(()=>chooseAssistantTargets(false), 3200);
+    window.requestAnimationFrame(animateAssistants);
+    window.addEventListener("scroll", updateMiniRemoteVisibility, { passive: true });
+    providerConfirmBtn.addEventListener("click", ()=>saveLoginPanel({ providerConfirmed: true }).catch((error)=>renderLoginPanel(`Provider confirmation error: ${error.message}`)));
+    loginSaveBtn.addEventListener("click", ()=>saveLoginPanel().catch((error)=>renderLoginPanel(`Login save error: ${error.message}`)));
+    loginOpenAccountBtn.addEventListener("click", ()=>window.open("/login", "_blank", "noopener,noreferrer"));
+    miniVoiceBtn.addEventListener("click", ()=>runVoiceSequence("Aria"));
+    miniRemotePopup.querySelectorAll("[data-mini-panel]").forEach((button)=>{
+      button.addEventListener("click", ()=>{
+        renderPanel(button.dataset.miniPanel, true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    });
+    updateMiniRemoteVisibility();
     renderPanel("diary", true);
     loadBootstrap();
   </script>

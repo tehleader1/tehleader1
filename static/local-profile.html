@@ -119,7 +119,15 @@
       renderList(els.exportsList, [{ title:'Latest export', body: hair.created_at || 'No export yet.' }, { title:'Password lane', body: bootstrap?.settings?.password_set ? 'Password saved in account settings.' : 'Password not set yet.' }], 'No exports yet', 'Export PDF or DOCX to populate this lane.', item=>`<div class="export-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'export-item');
     }
     async function loadBootstrap(){ bootstrap = await fetchJson('/api/local-remote/bootstrap'); const hair = bootstrap.profile?.hair_analysis || {}; els.displayName.value = bootstrap.settings?.display_name || bootstrap.account?.display_name || ''; els.hairTexture.value = hair.texture || ''; els.hairDamage.value = hair.damage || ''; els.hairColor.value = hair.color || ''; els.hairType.value = hair.hair_type || ''; els.hairSummary.value = hair.summary || hair.latest_summary || ''; scanner = bootstrap.profile || null; render(); }
-    async function primeCamera(){ if(mediaStream) return mediaStream; mediaStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false }); els.profileVideo.srcObject = mediaStream; setStatus('Profile scanner camera is armed.'); return mediaStream; }
+    async function primeCamera(){
+      if(mediaStream) return mediaStream;
+      if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) throw new Error('camera_api_unavailable');
+      setStatus('Requesting camera access so the actual hair scan can begin.');
+      mediaStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
+      els.profileVideo.srcObject = mediaStream;
+      setStatus('Profile scanner camera is armed and ready for the actual hair scan.');
+      return mediaStream;
+    }
     function stopCamera(){ if(mediaStream){ mediaStream.getTracks().forEach(track=>track.stop()); mediaStream = null; els.profileVideo.srcObject = null; setStatus('Profile scanner camera released.'); } }
     function captureFrame(){ const canvas = els.profileCanvas; const video = els.profileVideo; const width = video.videoWidth || 640; const height = video.videoHeight || 360; canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(video, 0, 0, width, height); snapshotTaken = true; render(); setStatus('Profile picture captured for the hair scanner.'); }
     function analyzeCanvas(){
@@ -186,7 +194,16 @@
     document.getElementById('refreshScannerBtn').addEventListener('click', async ()=>{ try{ await runHairScan(); }catch(error){ setStatus(`Error: ${error.message}`); } });
     document.getElementById('exportPdfBtn').addEventListener('click', async ()=>{ try{ await exportProfile('pdf'); setStatus('Profile PDF export downloaded.'); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
     document.getElementById('exportDocxBtn').addEventListener('click', async ()=>{ try{ await exportProfile('docx'); setStatus('Profile DOCX export downloaded.'); await loadBootstrap(); }catch(error){ setStatus(`Error: ${error.message}`); } });
-    loadBootstrap().then(()=>setStatus('Profile app loaded.')).catch((error)=>setStatus(`Error: ${error.message}`));
+    loadBootstrap()
+      .then(async ()=>{
+        setStatus('Profile app loaded. Requesting camera access for the actual hair scan.');
+        try{
+          await primeCamera();
+        }catch(error){
+          setStatus(`Camera permission is needed to start the actual hair scan. ${error.message}`);
+        }
+      })
+      .catch((error)=>setStatus(`Error: ${error.message}`));
     window.addEventListener('beforeunload', stopCamera);
   </script>
 </body>
