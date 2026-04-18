@@ -511,6 +511,42 @@
       background:rgba(12,22,39,.82);
       box-shadow:0 20px 40px rgba(0,0,0,.28);
     }
+    .inbox-card{
+      padding:16px;
+      border-radius:24px;
+      border:1px solid rgba(213,235,255,.22);
+      background:linear-gradient(180deg, rgba(15,24,41,.92), rgba(8,15,28,.96));
+      box-shadow:0 22px 40px rgba(0,0,0,.28);
+      display:grid;
+      gap:12px;
+    }
+    .inbox-meta{color:var(--muted);line-height:1.45}
+    .inbox-list{display:grid;gap:10px}
+    .inbox-item{
+      padding:12px 14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--line);
+      display:grid;
+      gap:8px;
+    }
+    .inbox-item strong{display:block}
+    .inbox-item span{color:var(--muted);font-size:14px;line-height:1.45}
+    .inbox-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .inbox-actions button,.inbox-actions a{
+      min-height:34px;
+      padding:0 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+    }
     .sticky-card:nth-child(1){transform:translateX(-8px)}
     .sticky-card:nth-child(2){transform:translateX(8px)}
     .sticky-card:nth-child(3){transform:translateX(-4px)}
@@ -876,6 +912,15 @@
             </div>
           </article>
         </section>
+        <section class="inbox-card">
+          <div class="eyebrow">Offer Inbox</div>
+          <h3 style="margin:0;font-size:30px;font-family:'Cormorant Garamond', Georgia, serif">Confirm Integrations</h3>
+          <div class="inbox-meta" id="inboxMeta">Only coding-help offers that route tips, donations, or support back into SupportRD auto-approve. Rights, legal, and change requests stay manual.</div>
+          <div class="inbox-list" id="offerInboxList">
+            <div class="inbox-item"><strong>No offers yet</strong><span>When websites, systems, computers, or organizations want in, they will be flagged here first.</span></div>
+          </div>
+          <div class="inbox-meta" id="conversionMeta">Conversion watch is loading.</div>
+        </section>
         <section class="sticky-card">
           <div class="sticky-head">
             <h3>Diary Lobby</h3>
@@ -1101,6 +1146,9 @@
     const premiumPopupBuy = document.getElementById("premiumPopupBuy");
     const premiumPopupNote = document.getElementById("premiumPopupNote");
     const premiumPopupClose = document.getElementById("premiumPopupClose");
+    const offerInboxList = document.getElementById("offerInboxList");
+    const inboxMeta = document.getElementById("inboxMeta");
+    const conversionMeta = document.getElementById("conversionMeta");
 
     let activePanel = "diary";
     let panelBootToken = 0;
@@ -1339,6 +1387,72 @@
       }
     }
 
+    function renderOfferInbox(){
+      const offers = bootstrapData?.inbox?.offers || [];
+      const pending = offers.filter((offer)=>String(offer.status || "pending").toLowerCase() === "pending").length;
+      inboxMeta.textContent = pending
+        ? `${pending} offer${pending === 1 ? "" : "s"} waiting for manual confirmation before any outside system touches SupportRD. Coding help that routes tips, donations, or support back to SupportRD can auto-approve.`
+        : "Only coding-help offers that route tips, donations, or support back into SupportRD auto-approve. Rights, legal, and change requests stay manual.";
+      if(!offers.length){
+        offerInboxList.innerHTML = `<div class="inbox-item"><strong>No offers yet</strong><span>When websites, systems, computers, or organizations want in, they will be flagged here first.</span></div>`;
+        return;
+      }
+      offerInboxList.innerHTML = offers.slice(0, 4).map((offer)=>`
+        <div class="inbox-item">
+          <strong>${offer.offer_title || "Integration offer"} · ${(offer.status || "pending").toUpperCase()}</strong>
+          <span>${offer.source_name || "Unknown source"} · ${offer.source_type || "website"}${offer.offer_details ? ` · ${offer.offer_details}` : ""}</span>
+          <div class="inbox-actions">
+            ${offer.target_url ? `<a href="${offer.target_url}" target="_blank" rel="noreferrer">Open Source</a>` : ""}
+            <button type="button" data-offer-action="approved" data-offer-id="${offer.id}">Approve</button>
+            <button type="button" data-offer-action="rejected" data-offer-id="${offer.id}">Reject</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderConversionSummary(){
+      const conversions = bootstrapData?.conversions || {};
+      const top = (conversions.top_events || []).slice(0, 3).map((item)=>`${item.event_key} (${item.hits})`).join(" · ");
+      conversionMeta.textContent = `Conversion watch: ${conversions.total || 0} tracked actions in the last ${conversions.window_days || 7} days${top ? ` · top routes: ${top}` : "."}`;
+    }
+
+    async function setOfferStatus(offerId, status){
+      try{
+        const response = await fetch(`/api/local-remote/inbox/offers/${offerId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ status })
+        });
+        const data = await response.json();
+        if(data?.ok){
+          bootstrapData = { ...(bootstrapData || {}), inbox: { offers: data.offers || [] } };
+          renderOfferInbox();
+        }
+      }catch{}
+    }
+
+    async function logConversion(eventKey, surface, detail = {}){
+      try{
+        const response = await fetch("/api/local-remote/conversions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            visitor_key: getVisitorKey(),
+            event_key: eventKey,
+            surface,
+            detail
+          })
+        });
+        const data = await response.json();
+        if(data?.ok && data.summary){
+          bootstrapData = { ...(bootstrapData || {}), conversions: data.summary };
+          renderConversionSummary();
+        }
+      }catch{}
+    }
+
     function getPremiumPopupPlan(){
       return String(bootstrapData?.account?.subscription || "free").toLowerCase();
     }
@@ -1424,6 +1538,8 @@
         renderLoginPanel();
         renderStickyLists();
         renderHelpingState();
+        renderOfferInbox();
+        renderConversionSummary();
         renderPremiumPopupCopy();
         schedulePremiumPopup();
         renderPanel(activePanel);
@@ -1843,6 +1959,7 @@
       const button = event.target.closest(".shell-btn");
       if(!button) return;
       renderPanel(button.dataset.panel);
+      logConversion(`panel-${button.dataset.panel}`, "button-grid", { panel: button.dataset.panel });
     });
 
     liveAppOpenBtn.addEventListener("click", ()=>renderPanel(activePanel, true));
@@ -2185,12 +2302,29 @@
       button.addEventListener("click", ()=>{
         renderPanel(button.dataset.miniPanel, true);
         window.scrollTo({ top: 0, behavior: "smooth" });
+        logConversion(`mini-${button.dataset.miniPanel}`, "mini-remote", { panel: button.dataset.miniPanel });
+      });
+    });
+    offerInboxList.addEventListener("click", (event)=>{
+      const actionNode = event.target.closest("[data-offer-action]");
+      if(!actionNode) return;
+      setOfferStatus(actionNode.dataset.offerId, actionNode.dataset.offerAction);
+      logConversion(`offer-${actionNode.dataset.offerAction}`, "offer-inbox", {
+        offer_id: actionNode.dataset.offerId,
+        status: actionNode.dataset.offerAction
       });
     });
     document.querySelectorAll(".logout-link").forEach((link)=>{
       link.addEventListener("click", ()=>{
         providerConfirmed = false;
         window.localStorage.removeItem("supportrdProviderConfirmed");
+      });
+    });
+    document.querySelectorAll(".buy-now").forEach((link)=>{
+      link.addEventListener("click", ()=>{
+        logConversion(`buy-${(link.textContent || "premium").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, "buy-now", {
+          href: link.getAttribute("href") || ""
+        });
       });
     });
     updateMiniRemoteVisibility();

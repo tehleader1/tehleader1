@@ -1806,6 +1806,31 @@ def init_local_remote_db():
             "created_at TEXT"
             ")"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS local_remote_inbox_offers ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "owner_email TEXT,"
+            "source_name TEXT,"
+            "source_type TEXT,"
+            "offer_title TEXT,"
+            "offer_details TEXT,"
+            "target_url TEXT,"
+            "status TEXT DEFAULT 'pending',"
+            "created_at TEXT,"
+            "updated_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS local_remote_conversion_events ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "owner_email TEXT,"
+            "visitor_key TEXT,"
+            "event_key TEXT,"
+            "surface TEXT,"
+            "detail_json TEXT,"
+            "created_at TEXT"
+            ")"
+        )
         conn.commit()
         conn.close()
     except:
@@ -1976,6 +2001,144 @@ def summarize_local_remote_traffic(window_minutes=5):
             "hot": False,
             "top_paths": [],
             "mode": "steady_state",
+        }
+
+
+def list_local_remote_inbox_offers(owner_email, limit=8):
+    safe_email = (owner_email or "guest").strip().lower() or "guest"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        rows = cur.execute(
+            "SELECT id, source_name, source_type, offer_title, offer_details, target_url, status, created_at, updated_at "
+            "FROM local_remote_inbox_offers WHERE owner_email = ? ORDER BY id DESC LIMIT ?",
+            (safe_email, max(1, min(25, int(limit or 8)))),
+        ).fetchall() or []
+        conn.close()
+        return [
+            {
+                "id": int(row[0]),
+                "source_name": row[1] or "",
+                "source_type": row[2] or "",
+                "offer_title": row[3] or "",
+                "offer_details": row[4] or "",
+                "target_url": row[5] or "",
+                "status": row[6] or "pending",
+                "created_at": row[7] or "",
+                "updated_at": row[8] or "",
+            }
+            for row in rows
+        ]
+    except:
+        return []
+
+
+def create_local_remote_inbox_offer(owner_email, payload):
+    safe_email = (owner_email or "guest").strip().lower() or "guest"
+    body = payload or {}
+    now_iso = _local_remote_now()
+    normalized = " ".join([
+        str(body.get("source_type") or ""),
+        str(body.get("offer_title") or ""),
+        str(body.get("offer_details") or ""),
+        str(body.get("target_url") or ""),
+    ]).lower()
+    is_coding_help = any(token in normalized for token in ("coding", "developer", "dev", "engineering", "technical help", "code support"))
+    routes_money_back = any(token in normalized for token in ("tip", "tips", "donation", "donations", "support", "company", "supportrd", "shop.supportrd.com"))
+    needs_manual_approval = any(token in normalized for token in ("legal", "rights", "ownership", "policy", "terms", "contract", "agreement", "change request", "changes"))
+    initial_status = "approved" if (is_coding_help and routes_money_back and not needs_manual_approval) else "pending"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO local_remote_inbox_offers (owner_email, source_name, source_type, offer_title, offer_details, target_url, status, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                safe_email,
+                (body.get("source_name") or "Unknown source")[:160],
+                (body.get("source_type") or "website")[:80],
+                (body.get("offer_title") or "Integration offer")[:180],
+                (body.get("offer_details") or "")[:600],
+                (body.get("target_url") or "")[:280],
+                initial_status,
+                now_iso,
+                now_iso,
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def update_local_remote_inbox_offer(owner_email, offer_id, status):
+    safe_email = (owner_email or "guest").strip().lower() or "guest"
+    safe_status = (status or "pending").strip().lower()
+    if safe_status not in ("pending", "approved", "rejected"):
+        safe_status = "pending"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE local_remote_inbox_offers SET status = ?, updated_at = ? WHERE owner_email = ? AND id = ?",
+            (safe_status, _local_remote_now(), safe_email, int(offer_id or 0)),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def log_local_remote_conversion(owner_email, visitor_key, event_key, surface, detail):
+    safe_email = (owner_email or "guest").strip().lower() or "guest"
+    safe_visitor = (visitor_key or "guest").strip()[:120] or "guest"
+    safe_event = (event_key or "unknown").strip()[:120] or "unknown"
+    safe_surface = (surface or "shell").strip()[:120] or "shell"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO local_remote_conversion_events (owner_email, visitor_key, event_key, surface, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                safe_email,
+                safe_visitor,
+                safe_event,
+                safe_surface,
+                json.dumps(detail or {}),
+                _local_remote_now(),
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def summarize_local_remote_conversions(owner_email, window_days=7):
+    safe_email = (owner_email or "guest").strip().lower() or "guest"
+    cutoff = (datetime.utcnow() - timedelta(days=max(1, int(window_days or 7)))).isoformat() + "Z"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        rows = cur.execute(
+            "SELECT event_key, COUNT(*) AS hits FROM local_remote_conversion_events WHERE owner_email = ? AND created_at >= ? GROUP BY event_key ORDER BY hits DESC LIMIT 6",
+            (safe_email, cutoff),
+        ).fetchall() or []
+        total = cur.execute(
+            "SELECT COUNT(*) FROM local_remote_conversion_events WHERE owner_email = ? AND created_at >= ?",
+            (safe_email, cutoff),
+        ).fetchone()
+        conn.close()
+        return {
+            "window_days": max(1, int(window_days or 7)),
+            "total": int((total or [0])[0] or 0),
+            "top_events": [{"event_key": row[0] or "", "hits": int(row[1] or 0)} for row in rows],
+        }
+    except:
+        return {
+            "window_days": max(1, int(window_days or 7)),
+            "total": 0,
+            "top_events": [],
         }
 
 
@@ -6487,6 +6650,8 @@ def local_remote_bootstrap():
         settings_summary["voice_profile"] = preferences.get("voice_profile") or ""
     faq_posts = list_faq_developer_posts(limit=7)
     traffic_summary = summarize_local_remote_traffic(window_minutes=5)
+    inbox_offers = list_local_remote_inbox_offers(email or "guest", limit=8)
+    conversion_summary = summarize_local_remote_conversions(email or "guest", window_days=7)
 
     studio_access = {
         "authenticated": bool(email),
@@ -6523,6 +6688,10 @@ def local_remote_bootstrap():
             "developer_posts": faq_posts,
         },
         "traffic": traffic_summary,
+        "inbox": {
+            "offers": inbox_offers,
+        },
+        "conversions": conversion_summary,
     }
 
 
@@ -6584,6 +6753,48 @@ def local_remote_traffic_ping():
     path = body.get("path") or request.referrer or "/"
     record_local_remote_traffic(visitor_key, path, request.remote_addr or "")
     return {"ok": True, "traffic": summarize_local_remote_traffic(window_minutes=5)}
+
+
+@app.route("/api/local-remote/inbox/offers")
+def local_remote_inbox_offers():
+    owner_email = _studio_owner_email()
+    return {"ok": True, "offers": list_local_remote_inbox_offers(owner_email, limit=request.args.get("limit") or 8)}
+
+
+@app.route("/api/local-remote/inbox/offers", methods=["POST"])
+def local_remote_inbox_offers_create():
+    owner_email = _studio_owner_email()
+    body = request.json if request.is_json else {}
+    create_local_remote_inbox_offer(owner_email, body)
+    return {"ok": True, "offers": list_local_remote_inbox_offers(owner_email, limit=8)}
+
+
+@app.route("/api/local-remote/inbox/offers/<int:offer_id>", methods=["POST"])
+def local_remote_inbox_offer_update(offer_id):
+    owner_email = _studio_owner_email()
+    body = request.json if request.is_json else {}
+    update_local_remote_inbox_offer(owner_email, offer_id, body.get("status"))
+    return {"ok": True, "offers": list_local_remote_inbox_offers(owner_email, limit=8)}
+
+
+@app.route("/api/local-remote/conversions", methods=["POST"])
+def local_remote_conversion_create():
+    owner_email = _studio_owner_email()
+    body = request.json if request.is_json else {}
+    visitor_key = (
+        body.get("visitor_key")
+        or request.headers.get("X-Forwarded-For")
+        or request.remote_addr
+        or owner_email
+    )
+    log_local_remote_conversion(
+        owner_email,
+        visitor_key,
+        body.get("event_key"),
+        body.get("surface"),
+        body.get("detail"),
+    )
+    return {"ok": True, "summary": summarize_local_remote_conversions(owner_email, window_days=7)}
 
 @app.route("/studio")
 def studio_home():
