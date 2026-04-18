@@ -6652,6 +6652,66 @@ def local_remote_bootstrap():
     traffic_summary = summarize_local_remote_traffic(window_minutes=5)
     inbox_offers = list_local_remote_inbox_offers(email or "guest", limit=8)
     conversion_summary = summarize_local_remote_conversions(email or "guest", window_days=7)
+    corporate_viewer = {
+        "sources": [
+            {
+                "key": "supportrd",
+                "label": "SupportRD.com",
+                "url": "https://supportrd.com/",
+                "kind": "website",
+            },
+            {
+                "key": "options",
+                "label": "Options Market",
+                "url": "http://127.0.0.1:3000/",
+                "kind": "local-live",
+            },
+            {
+                "key": "plantman",
+                "label": "ThePlantManInc.com",
+                "url": "https://theplantmaninc.com/",
+                "kind": "website",
+            },
+        ],
+        "events": [
+            {
+                "title": "ChatGPT Codex build watch",
+                "detail": "Track current shell changes, studio maturity, and any major SupportRD release momentum.",
+                "lane": "SupportRD",
+            },
+            {
+                "title": "Shipment came in of plants",
+                "detail": "Use this lane for plant arrivals, supply company lag notes, and transportation cycle updates from east coast to midwest.",
+                "lane": "ThePlantManInc",
+            },
+            {
+                "title": "Bulk plants were sold",
+                "detail": "Log sales, imported cut flowers, roses for occasions, and dropshipping expansion as the year progresses.",
+                "lane": "ThePlantManInc",
+            },
+            {
+                "title": "Options play went through and money was made",
+                "detail": "Show live market wins, capitalization progress, and what is happening now in the options market view.",
+                "lane": "Options Market",
+            },
+            {
+                "title": "Trip to Miami for live verification",
+                "detail": "Capture major company events, meetings, and any effort to verify SupportRD systems into outside organizations.",
+                "lane": "Corporate",
+            },
+            {
+                "title": "Owner legal briefing still needed",
+                "detail": "Keep the legal briefing visible as a founder priority before deeper corporate approvals expand.",
+                "lane": "Corporate",
+            },
+        ],
+        "advisors": [
+            "Accountant / business advisor lane",
+            "Supply company lag period week 1 through end of year",
+            "Transportation cycle: east coast to midwest",
+            "Dropshipping eventually taking over everything",
+        ],
+    }
 
     studio_access = {
         "authenticated": bool(email),
@@ -6692,6 +6752,7 @@ def local_remote_bootstrap():
             "offers": inbox_offers,
         },
         "conversions": conversion_summary,
+        "corporate_viewer": corporate_viewer,
     }
 
 

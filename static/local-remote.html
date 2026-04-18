@@ -239,6 +239,98 @@
       grid-template-columns:repeat(3,minmax(0,1fr));
       gap:14px;
     }
+    .gig-viewer{
+      padding:16px;
+      border-radius:26px;
+      border:1px solid rgba(213,235,255,.2);
+      background:linear-gradient(180deg, rgba(9,18,33,.9), rgba(7,14,27,.96));
+      box-shadow:0 22px 46px rgba(0,0,0,.28);
+      display:grid;
+      gap:14px;
+    }
+    .gig-viewer-head{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+    .gig-viewer-head h2{margin:0;font-size:32px;font-family:"Cormorant Garamond", Georgia, serif}
+    .gig-viewer-head p{margin:6px 0 0;color:var(--muted);line-height:1.5;max-width:760px}
+    .gig-connector-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .gig-connector-actions button,.gig-connector-actions a{
+      min-height:40px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      text-decoration:none;
+    }
+    .gig-connector-stage{
+      position:relative;
+      min-height:420px;
+      border-radius:22px;
+      overflow:hidden;
+      border:1px solid rgba(213,235,255,.16);
+      background:rgba(4,10,20,.96);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .gig-connector-loader,.gig-connector-fallback{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      text-align:center;
+      background:linear-gradient(180deg, rgba(8,18,33,.88), rgba(4,10,20,.95));
+      z-index:2;
+    }
+    .gig-connector-loader.active,.gig-connector-fallback.active{display:flex}
+    .gig-connector-loader-card,.gig-connector-fallback-card{
+      max-width:560px;
+      padding:24px;
+      border-radius:24px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      box-shadow:0 18px 36px rgba(0,0,0,.26);
+      display:grid;
+      gap:10px;
+    }
+    .gig-spinner{
+      width:70px;height:70px;border-radius:50%;
+      margin:0 auto 8px;
+      border:3px solid rgba(255,255,255,.12);
+      border-top-color:var(--gold);
+      border-right-color:var(--blue);
+      animation:gigSpin 1s linear infinite;
+    }
+    .gig-connector-loader strong,.gig-connector-fallback strong{font-size:28px;font-family:"Cormorant Garamond", Georgia, serif}
+    .gig-connector-loader span,.gig-connector-fallback span{color:var(--muted);line-height:1.5}
+    .gig-connector-sources{display:flex;gap:10px;flex-wrap:wrap}
+    .gig-source-btn{
+      min-height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);
+      color:var(--text);font-weight:700;cursor:pointer;
+    }
+    .gig-source-btn.active{background:linear-gradient(180deg, rgba(109,173,255,.34), rgba(38,78,137,.42));border-color:rgba(207,235,255,.34)}
+    .gig-connector-frame{width:100%;height:420px;border:none;background:#06101b}
+    .gig-viewer-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+    .gig-events,.gig-advisors{
+      padding:14px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05);display:grid;gap:10px;
+    }
+    .gig-events h3,.gig-advisors h3{margin:0;font-size:26px;font-family:"Cormorant Garamond", Georgia, serif}
+    .gig-event-list,.gig-advisor-list{display:grid;gap:10px}
+    .gig-event-item,.gig-advisor-item{
+      padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(181,224,255,.12);
+    }
+    .gig-event-item strong,.gig-advisor-item strong{display:block}
+    .gig-event-item span,.gig-advisor-item span{color:var(--muted);font-size:14px;line-height:1.45}
     .shell-btn{
       min-height:132px;padding:16px;border-radius:24px;border:1px solid rgba(196,228,255,.2);
       background:
@@ -652,9 +744,13 @@
       0%,100%{transform:scale(1);filter:brightness(1)}
       50%{transform:scale(1.06);filter:brightness(1.15)}
     }
+    @keyframes gigSpin{
+      from{transform:rotate(0deg)}
+      to{transform:rotate(360deg)}
+    }
     @media (max-width: 1280px){
       .local-shell{grid-template-columns:1fr;grid-template-rows:auto auto auto;overflow:auto;height:auto}
-      .panel-stack,.button-grid,.catalog-strip{grid-template-columns:1fr}
+      .panel-stack,.button-grid,.catalog-strip,.gig-viewer-grid{grid-template-columns:1fr}
       .assistant-layer{position:fixed;inset:0}
       .right-rail{position:static}
       .live-app-frame{height:620px}
@@ -748,6 +844,47 @@
           </div>
         </div>
       </div>
+
+      <section class="gig-viewer glass">
+        <div class="gig-viewer-head">
+          <div>
+            <div class="eyebrow">Gig Connector Live Viewer</div>
+            <h2>SupportRD + Options Market + ThePlantManInc</h2>
+            <p>This is the real-life viewer lane for capitalization, market moves, shipments, corporate moments, and founder activity using the old gig connector style: click, loading screen, then live watch.</p>
+          </div>
+          <div class="gig-connector-actions">
+            <button type="button" id="gigConnectorLaunchBtn">Open Gig Connector</button>
+            <a id="gigConnectorSourceLink" href="https://supportrd.com/" target="_blank" rel="noreferrer">Open Current Source</a>
+          </div>
+        </div>
+        <div class="gig-connector-sources" id="gigConnectorSources"></div>
+        <div class="gig-connector-stage">
+          <div class="gig-connector-loader" id="gigConnectorLoader">
+            <div class="gig-connector-loader-card">
+              <div class="gig-spinner"></div>
+              <strong>Gig connector loading</strong>
+              <span id="gigConnectorLoaderText">Building the live business view for SupportRD, the options market, and ThePlantManInc.</span>
+            </div>
+          </div>
+          <div class="gig-connector-fallback" id="gigConnectorFallback">
+            <div class="gig-connector-fallback-card">
+              <strong>Local stream needs direct open</strong>
+              <span id="gigConnectorFallbackText">This source may need to open in a new tab because localhost and secure browser rules do not always embed together.</span>
+            </div>
+          </div>
+          <iframe class="gig-connector-frame" id="gigConnectorFrame" title="Gig connector live viewer" loading="lazy"></iframe>
+        </div>
+        <div class="gig-viewer-grid">
+          <section class="gig-events">
+            <h3>Major Company Events</h3>
+            <div class="gig-event-list" id="gigEventList"></div>
+          </section>
+          <section class="gig-advisors">
+            <h3>Business Reality Lane</h3>
+            <div class="gig-advisor-list" id="gigAdvisorList"></div>
+          </section>
+        </div>
+      </section>
 
       <section class="button-grid" id="buttonGrid">
         <button class="shell-btn active" data-panel="diary">
@@ -1146,6 +1283,16 @@
     const premiumPopupBuy = document.getElementById("premiumPopupBuy");
     const premiumPopupNote = document.getElementById("premiumPopupNote");
     const premiumPopupClose = document.getElementById("premiumPopupClose");
+    const gigConnectorLaunchBtn = document.getElementById("gigConnectorLaunchBtn");
+    const gigConnectorSourceLink = document.getElementById("gigConnectorSourceLink");
+    const gigConnectorSources = document.getElementById("gigConnectorSources");
+    const gigConnectorLoader = document.getElementById("gigConnectorLoader");
+    const gigConnectorLoaderText = document.getElementById("gigConnectorLoaderText");
+    const gigConnectorFallback = document.getElementById("gigConnectorFallback");
+    const gigConnectorFallbackText = document.getElementById("gigConnectorFallbackText");
+    const gigConnectorFrame = document.getElementById("gigConnectorFrame");
+    const gigEventList = document.getElementById("gigEventList");
+    const gigAdvisorList = document.getElementById("gigAdvisorList");
     const offerInboxList = document.getElementById("offerInboxList");
     const inboxMeta = document.getElementById("inboxMeta");
     const conversionMeta = document.getElementById("conversionMeta");
@@ -1160,6 +1307,7 @@
     let providerConfirmed = false;
     let visitorPingInterval = null;
     let premiumPopupTimer = null;
+    let activeGigSource = "supportrd";
 
     const voiceKnowledge = {
       Aria: {
@@ -1416,6 +1564,69 @@
       conversionMeta.textContent = `Conversion watch: ${conversions.total || 0} tracked actions in the last ${conversions.window_days || 7} days${top ? ` · top routes: ${top}` : "."}`;
     }
 
+    function getGigSources(){
+      return bootstrapData?.corporate_viewer?.sources || [];
+    }
+
+    function renderGigViewerMeta(){
+      const corporate = bootstrapData?.corporate_viewer || {};
+      const events = corporate.events || [];
+      const advisors = corporate.advisors || [];
+      gigEventList.innerHTML = events.length
+        ? events.map((item)=>`<div class="gig-event-item"><strong>${item.title}</strong><span>${item.lane} · ${item.detail}</span></div>`).join("")
+        : `<div class="gig-event-item"><strong>Waiting for company events</strong><span>SupportRD, options market, and ThePlantManInc updates will stack here.</span></div>`;
+      gigAdvisorList.innerHTML = advisors.length
+        ? advisors.map((item)=>`<div class="gig-advisor-item"><strong>${item}</strong><span>Keep this reality lane visible while capitalizing and planning the corporation branch.</span></div>`).join("")
+        : `<div class="gig-advisor-item"><strong>Business lane</strong><span>Accountant, supply, transportation, and dropshipping planning will show here.</span></div>`;
+    }
+
+    function renderGigSourceButtons(){
+      const sources = getGigSources();
+      gigConnectorSources.innerHTML = sources.map((source)=>`<button type="button" class="gig-source-btn ${source.key === activeGigSource ? "active" : ""}" data-gig-source="${source.key}">${source.label}</button>`).join("");
+    }
+
+    function getGigSourceByKey(key){
+      return getGigSources().find((item)=>item.key === key) || getGigSources()[0] || null;
+    }
+
+    function updateGigSourceUI(){
+      const source = getGigSourceByKey(activeGigSource);
+      if(!source) return;
+      gigConnectorSourceLink.href = source.url || "https://supportrd.com/";
+      gigConnectorSourceLink.textContent = `Open ${source.label}`;
+      renderGigSourceButtons();
+    }
+
+    function canEmbedGigSource(source){
+      if(!source?.url) return false;
+      if(/^http:\/\/127\.0\.0\.1:3000/i.test(source.url)){
+        return window.location.protocol !== "https:";
+      }
+      return true;
+    }
+
+    function launchGigConnector(sourceKey = activeGigSource){
+      const source = getGigSourceByKey(sourceKey);
+      if(!source) return;
+      activeGigSource = source.key;
+      updateGigSourceUI();
+      gigConnectorLoader.classList.add("active");
+      gigConnectorFallback.classList.remove("active");
+      gigConnectorLoaderText.textContent = `Loading ${source.label} through the gig connector method so the live corporate state can come up cleanly.`;
+      gigConnectorFrame.src = "about:blank";
+      window.setTimeout(()=>{
+        gigConnectorLoader.classList.remove("active");
+        if(!canEmbedGigSource(source)){
+          gigConnectorFallback.classList.add("active");
+          gigConnectorFallbackText.textContent = `${source.label} needs direct open here because localhost and secure browser rules do not always embed together. Use the open button and keep the live company events beside it.`;
+          return;
+        }
+        gigConnectorFallback.classList.remove("active");
+        gigConnectorFrame.src = source.url;
+      }, 1400);
+      logConversion(`gig-${source.key}`, "gig-connector", { source: source.key, url: source.url });
+    }
+
     async function setOfferStatus(offerId, status){
       try{
         const response = await fetch(`/api/local-remote/inbox/offers/${offerId}`, {
@@ -1540,6 +1751,8 @@
         renderHelpingState();
         renderOfferInbox();
         renderConversionSummary();
+        renderGigViewerMeta();
+        updateGigSourceUI();
         renderPremiumPopupCopy();
         schedulePremiumPopup();
         renderPanel(activePanel);
@@ -2292,6 +2505,12 @@
     loginSaveBtn.addEventListener("click", ()=>saveLoginPanel().catch((error)=>renderLoginPanel(`Login save error: ${error.message}`)));
     loginOpenAccountBtn.addEventListener("click", ()=>window.open("/login", "_blank", "noopener,noreferrer"));
     miniVoiceBtn.addEventListener("click", ()=>runVoiceSequence("Aria"));
+    gigConnectorLaunchBtn.addEventListener("click", ()=>launchGigConnector(activeGigSource));
+    gigConnectorSources.addEventListener("click", (event)=>{
+      const button = event.target.closest("[data-gig-source]");
+      if(!button) return;
+      launchGigConnector(button.dataset.gigSource);
+    });
     premiumPopupClose.addEventListener("click", closePremiumPopup);
     premiumPopup.addEventListener("click", (event)=>{
       if(event.target === premiumPopup){
