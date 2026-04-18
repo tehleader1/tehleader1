@@ -1797,6 +1797,15 @@ def init_local_remote_db():
             "created_at TEXT"
             ")"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS local_remote_traffic_events ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "visitor_key TEXT,"
+            "path TEXT,"
+            "ip_address TEXT,"
+            "created_at TEXT"
+            ")"
+        )
         conn.commit()
         conn.close()
     except:
@@ -1903,6 +1912,71 @@ def list_faq_developer_posts(limit=7):
         ]
     except:
         return []
+
+
+def _local_remote_now():
+    return datetime.utcnow().isoformat() + "Z"
+
+
+def record_local_remote_traffic(visitor_key, path, ip_address=""):
+    safe_key = (visitor_key or "guest").strip()[:120] or "guest"
+    safe_path = (path or "/").strip()[:120] or "/"
+    safe_ip = (ip_address or "").strip()[:80]
+    now_iso = _local_remote_now()
+    cutoff = (datetime.utcnow() - timedelta(minutes=20)).isoformat() + "Z"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO local_remote_traffic_events (visitor_key, path, ip_address, created_at) VALUES (?, ?, ?, ?)",
+            (safe_key, safe_path, safe_ip, now_iso),
+        )
+        cur.execute("DELETE FROM local_remote_traffic_events WHERE created_at < ?", (cutoff,))
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def summarize_local_remote_traffic(window_minutes=5):
+    window_minutes = max(1, int(window_minutes or 5))
+    cutoff = (datetime.utcnow() - timedelta(minutes=window_minutes)).isoformat() + "Z"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        recent_events = cur.execute(
+            "SELECT COUNT(*) FROM local_remote_traffic_events WHERE created_at >= ?",
+            (cutoff,),
+        ).fetchone()
+        recent_visitors = cur.execute(
+            "SELECT COUNT(DISTINCT visitor_key) FROM local_remote_traffic_events WHERE created_at >= ?",
+            (cutoff,),
+        ).fetchone()
+        recent_paths = cur.execute(
+            "SELECT path, COUNT(*) AS hits FROM local_remote_traffic_events WHERE created_at >= ? GROUP BY path ORDER BY hits DESC LIMIT 4",
+            (cutoff,),
+        ).fetchall() or []
+        conn.close()
+        visitors = int((recent_visitors or [0])[0] or 0)
+        events = int((recent_events or [0])[0] or 0)
+        hot = visitors >= 3 or events >= 5
+        return {
+            "window_minutes": window_minutes,
+            "events": events,
+            "visitors": visitors,
+            "hot": hot,
+            "top_paths": [{"path": row[0], "hits": int(row[1] or 0)} for row in recent_paths],
+            "mode": "active_helping_state" if hot else "steady_state",
+        }
+    except:
+        return {
+            "window_minutes": window_minutes,
+            "events": 0,
+            "visitors": 0,
+            "hot": False,
+            "top_paths": [],
+            "mode": "steady_state",
+        }
 
 
 def append_faq_developer_post(email, display_name, message):
@@ -6305,6 +6379,8 @@ def local_remote_bootstrap():
     user = session.get("user") or {}
     email = (user.get("email") or "").strip().lower()
     display_name = (user.get("name") or user.get("username") or email.split("@")[0] if email else "Guest").strip()
+    visitor_key = request.headers.get("X-Forwarded-For") or request.remote_addr or email or "guest"
+    record_local_remote_traffic(visitor_key, request.path, request.remote_addr or "")
     subscription = get_subscription_details_for_email(email) if email else {}
     plan = (subscription.get("plan") or "free").strip().lower()
     system = system_map_status()
@@ -6410,6 +6486,7 @@ def local_remote_bootstrap():
         settings_summary["push_notifications"] = "enabled" if preferences.get("push_notifications") else "browser-driven"
         settings_summary["voice_profile"] = preferences.get("voice_profile") or ""
     faq_posts = list_faq_developer_posts(limit=7)
+    traffic_summary = summarize_local_remote_traffic(window_minutes=5)
 
     studio_access = {
         "authenticated": bool(email),
@@ -6445,6 +6522,7 @@ def local_remote_bootstrap():
         "faq": {
             "developer_posts": faq_posts,
         },
+        "traffic": traffic_summary,
     }
 
 
@@ -6492,6 +6570,20 @@ def local_remote_faq_posts_create():
         return {"ok": False, "error": "message_required"}, 400
     append_faq_developer_post(owner_email, display_name, message)
     return {"ok": True, "posts": list_faq_developer_posts(limit=7)}
+
+
+@app.route("/api/local-remote/traffic/ping", methods=["POST"])
+def local_remote_traffic_ping():
+    body = request.json if request.is_json else {}
+    visitor_key = (
+        body.get("visitor_key")
+        or request.headers.get("X-Forwarded-For")
+        or request.remote_addr
+        or _studio_owner_email()
+    )
+    path = body.get("path") or request.referrer or "/"
+    record_local_remote_traffic(visitor_key, path, request.remote_addr or "")
+    return {"ok": True, "traffic": summarize_local_remote_traffic(window_minutes=5)}
 
 @app.route("/studio")
 def studio_home():

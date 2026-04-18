@@ -3,7 +3,55 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SupportRD Local Remote Sandbox</title>
+  <title>SupportRD | Natural Hair Products, Studio, Live Diary, Identity, and Premium Support</title>
+  <meta name="description" content="SupportRD brings Dominican Republic all natural hair products, live diary support, studio editing, hair identity tools, and premium routes together in one on-the-go platform.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://supportrd.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="SupportRD | Natural Hair Products, Studio, Live Diary, and Identity Support">
+  <meta property="og:description" content="Hair problem help, live diary support, studio editing, profile identity, premium access, and Dominican Republic product energy in one SupportRD shell.">
+  <meta property="og:url" content="https://supportrd.com/">
+  <meta property="og:image" content="https://supportrd.com/static/images/aria-premium-pro-main-ad.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SupportRD | Hair Problem, Studio, Live, and Identity Routes">
+  <meta name="twitter:description" content="SupportRD blends natural hair products, studio power, live support, and identity tools into one premium route.">
+  <meta name="twitter:image" content="https://supportrd.com/static/images/aria-premium-pro-main-ad.jpg">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "name": "SupportRD",
+          "url": "https://supportrd.com/",
+          "logo": "https://supportrd.com/static/images/aria-premium-pro-main-ad.jpg",
+          "sameAs": ["https://shop.supportrd.com/"]
+        },
+        {
+          "@type": "WebSite",
+          "name": "SupportRD",
+          "url": "https://supportrd.com/",
+          "description": "SupportRD natural hair products, premium studio, live diary support, and identity routes."
+        },
+        {
+          "@type": "Product",
+          "name": "Jake Studio Premium",
+          "category": "Hair and Studio Premium Access",
+          "brand": {
+            "@type": "Brand",
+            "name": "SupportRD"
+          },
+          "offers": {
+            "@type": "Offer",
+            "priceCurrency": "USD",
+            "price": "100",
+            "url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "availability": "https://schema.org/InStock"
+          }
+        }
+      ]
+    }
+  </script>
   <style>
     :root{
       --bg:#07111f;
@@ -102,6 +150,21 @@
     .catalog-copy{display:grid;gap:8px;max-width:72%;position:relative;z-index:1}
     .catalog-card strong{display:block;font-size:28px;font-family:"Cormorant Garamond", Georgia, serif;line-height:.94}
     .catalog-card span{display:block;color:rgba(236,244,255,.84);font-size:13px;line-height:1.45}
+    .seo-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .seo-chip{
+      display:inline-flex;
+      align-items:center;
+      min-height:24px;
+      padding:0 10px;
+      border-radius:999px;
+      background:rgba(5,14,26,.55);
+      border:1px solid rgba(213,235,255,.18);
+      color:rgba(244,250,255,.86);
+      font-size:10px;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      box-shadow:0 10px 18px rgba(0,0,0,.18);
+    }
     .promo-chip{
       display:inline-flex;
       align-items:center;
@@ -151,6 +214,19 @@
       cursor:pointer;
     }
     .top-bar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+    .help-banner{
+      display:none;
+      margin-top:14px;
+      padding:14px 16px;
+      border-radius:20px;
+      border:1px solid rgba(255,208,134,.3);
+      background:linear-gradient(180deg, rgba(32,52,84,.88), rgba(11,20,36,.92));
+      box-shadow:0 18px 32px rgba(0,0,0,.22);
+      color:var(--text);
+    }
+    .help-banner.active{display:grid;gap:8px}
+    .help-banner strong{font-size:20px;font-family:"Cormorant Garamond", Georgia, serif}
+    .help-banner span{color:var(--muted);line-height:1.45}
     .voice-console{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
     .voice-pill{
       min-height:42px;padding:0 16px;border-radius:999px;border:1px solid var(--line);
@@ -387,6 +463,12 @@
       display:grid;
       align-content:space-between;
     }
+    .ad-card.featured{
+      min-height:220px;
+      transform:scale(1.02);
+      border-color:rgba(255,208,134,.34);
+      box-shadow:0 26px 48px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.16);
+    }
     .ad-card::before{
       content:"";
       position:absolute;
@@ -489,6 +571,32 @@
     .voice-bubble.active{display:block}
     .voice-bubble strong{display:block;margin-bottom:6px}
     .voice-bubble span{color:var(--muted)}
+    .premium-popup{
+      position:fixed;
+      right:22px;
+      bottom:22px;
+      width:min(380px, calc(100vw - 32px));
+      padding:18px;
+      border-radius:24px;
+      border:1px solid rgba(255,208,134,.34);
+      background:
+        linear-gradient(180deg, rgba(15,25,44,.98), rgba(7,13,25,.96)),
+        radial-gradient(circle at top right, rgba(255,208,134,.12), transparent 46%);
+      box-shadow:0 26px 56px rgba(0,0,0,.34);
+      z-index:11;
+      display:none;
+      gap:12px;
+    }
+    .premium-popup.active{display:grid}
+    .premium-popup-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .premium-popup h3{margin:0;font-size:30px;font-family:"Cormorant Garamond", Georgia, serif}
+    .premium-popup p{margin:0;color:var(--muted);line-height:1.5}
+    .premium-popup-close{
+      width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.08);
+      color:var(--text);font-size:20px;font-weight:700;cursor:pointer;
+    }
+    .premium-popup-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .premium-popup-note{color:rgba(255,208,134,.88);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
     @keyframes orbPulse{
       0%,100%{transform:scale(1)}
       50%{transform:scale(1.06)}
@@ -549,6 +657,11 @@
             <span class="promo-chip">Studio Upgrade</span>
             <strong>Jake Studio Premium</strong>
             <span>Late-2000s glossy booth energy with real motherboard editing and premium studio lane access.</span>
+            <div class="seo-row">
+              <span class="seo-chip">Studio</span>
+              <span class="seo-chip">Motherboard</span>
+              <span class="seo-chip">Premium Booth</span>
+            </div>
             <a class="buy-now" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Studio Access</a>
           </div>
         </article>
@@ -558,6 +671,11 @@
             <span class="promo-chip">Professional Lane</span>
             <strong>Premium / Pro</strong>
             <span>Professional identity, faster routes, polished voice, and a cleaner SupportRD ownership package.</span>
+            <div class="seo-row">
+              <span class="seo-chip">Identity</span>
+              <span class="seo-chip">Premium Voice</span>
+              <span class="seo-chip">5 Star Care</span>
+            </div>
             <a class="buy-now" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Upgrade Now</a>
           </div>
         </article>
@@ -567,6 +685,11 @@
             <span class="promo-chip">Support Network</span>
             <strong>Representatives</strong>
             <span>Professional hair-support faces, concierge feel, and a direct lane into SupportRD help and guided setup.</span>
+            <div class="seo-row">
+              <span class="seo-chip">Hair Problem</span>
+              <span class="seo-chip">Live Support</span>
+              <span class="seo-chip">On-The-Go</span>
+            </div>
             <a class="buy-now" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Meet SupportRD</a>
           </div>
         </article>
@@ -576,6 +699,10 @@
         <div>
           <div class="eyebrow">SupportRD Remote Sandbox</div>
           <h2 class="title" style="font-size:46px">SupportRD All Natural Hair Products from Dominican Republic. We are a get it done app. No games this app is made for On-the-Go.</h2>
+          <div class="help-banner" id="helpBanner">
+            <strong>Active Helping State</strong>
+            <span id="helpBannerText">When traffic rises, SupportRD points people toward FAQ Lounge and the Edits Menu so more visitors get answers fast.</span>
+          </div>
         </div>
         <div class="voice-console">
           <div class="voice-pill">Local Route: <span id="activePanelName" style="margin-left:8px">Diary Mode</span></div>
@@ -716,12 +843,17 @@
             </div>
             <div class="login-status" id="loginStatusBox">Login panel is attached and waiting for provider confirmation.</div>
           </section>
-          <article class="ad-card" style="--bg-image:url('/static/images/jake-studio-premium.jpg')">
+          <article class="ad-card featured" style="--bg-image:url('/static/images/jake-studio-premium.jpg')">
             <div class="ad-price"><strong>$100</strong><small>Flash</small></div>
             <div class="ad-copy">
               <span class="promo-chip">Studio Hero</span>
               <h3>Jake Studio Premium</h3>
               <p>Professional booth power with polished editing, stacked playback, and premium studio style.</p>
+              <div class="seo-row">
+                <span class="seo-chip">Studio</span>
+                <span class="seo-chip">Creator</span>
+                <span class="seo-chip">Export</span>
+              </div>
             </div>
             <div class="ad-actions">
               <a class="buy-now" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Now</a>
@@ -733,6 +865,11 @@
               <span class="promo-chip">Professional Access</span>
               <h3>SupportRD Pro</h3>
               <p>Professional profile lanes, polished SupportRD routes, and a cleaner account-plus-payments package.</p>
+              <div class="seo-row">
+                <span class="seo-chip">Identity</span>
+                <span class="seo-chip">Hair Problem</span>
+                <span class="seo-chip">Premium</span>
+              </div>
             </div>
             <div class="ad-actions">
               <a class="buy-now" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Go Pro</a>
@@ -801,6 +938,22 @@
       <button type="button" id="miniVoiceBtn">Talk To Aria</button>
     </div>
   </aside>
+
+  <section class="premium-popup" id="premiumPopup" aria-live="polite">
+    <div class="premium-popup-head">
+      <div>
+        <div class="eyebrow" id="premiumPopupEyebrow">Premium Route</div>
+        <h3 id="premiumPopupTitle">Upgrade to Premium</h3>
+      </div>
+      <button class="premium-popup-close" type="button" id="premiumPopupClose" aria-label="Close premium popup">×</button>
+    </div>
+    <p id="premiumPopupText">Get the polished SupportRD route with better studio access, premium hair support lanes, and faster identity help.</p>
+    <div class="premium-popup-actions">
+      <a class="buy-now" id="premiumPopupBuy" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Buy Premium</a>
+      <a class="provider-btn" href="/login" target="_blank" rel="noreferrer">Login First</a>
+    </div>
+    <div class="premium-popup-note" id="premiumPopupNote">Ad cadence: every 5 minutes for guests. Premium sees fantasy every 15 minutes.</div>
+  </section>
 
   <script>
     const panelMeta = {
@@ -939,6 +1092,15 @@
     const loginOpenAccountBtn = document.getElementById("loginOpenAccountBtn");
     const miniRemotePopup = document.getElementById("miniRemotePopup");
     const miniVoiceBtn = document.getElementById("miniVoiceBtn");
+    const helpBanner = document.getElementById("helpBanner");
+    const helpBannerText = document.getElementById("helpBannerText");
+    const premiumPopup = document.getElementById("premiumPopup");
+    const premiumPopupEyebrow = document.getElementById("premiumPopupEyebrow");
+    const premiumPopupTitle = document.getElementById("premiumPopupTitle");
+    const premiumPopupText = document.getElementById("premiumPopupText");
+    const premiumPopupBuy = document.getElementById("premiumPopupBuy");
+    const premiumPopupNote = document.getElementById("premiumPopupNote");
+    const premiumPopupClose = document.getElementById("premiumPopupClose");
 
     let activePanel = "diary";
     let panelBootToken = 0;
@@ -948,6 +1110,8 @@
     let premiumVoicePlayer = null;
     let unlockedAudioContext = null;
     let providerConfirmed = false;
+    let visitorPingInterval = null;
+    let premiumPopupTimer = null;
 
     const voiceKnowledge = {
       Aria: {
@@ -1151,15 +1315,100 @@
       const lobby = bootstrapData.diary?.lobby || [];
       diaryLobbyList.innerHTML = (lobby.length ? lobby.slice(0, 3).map((feed)=>`<div class="mini-item"><strong>${feed.profile_tag || feed.display_name || feed.owner_email || "SupportRD feed"}</strong><span>${feed.preview_text || feed.owner_email || "Diary live session ready."}</span></div>`).join("") : `<div class="mini-item"><strong>Diary Lobby</strong><span>No diary feeds yet. Start a diary live session to populate this lobby.</span></div>`) + `<div class="mini-item"><strong>Search / Sort</strong><span>Name · Email · Tag ^^ · URL</span></div>`;
       const settings = bootstrapData.settings || {};
+      const traffic = bootstrapData.traffic || {};
       editsMenuList.innerHTML = `
         <button class="menu-chip" type="button">Saved Tag: ${settings.saved_tag || "waiting"}</button>
         <button class="menu-chip" type="button">Last Map: ${settings.last_map_used || "none"}</button>
+        <button class="menu-chip" type="button">${traffic.hot ? `Crowd Active: ${traffic.visitors} visitors` : "Crowd Watch: calm"}</button>
       `;
       const studio = bootstrapData.studio?.access || {};
       paymentsMenuList.innerHTML = `
         <button class="menu-chip" type="button">Plan: ${(bootstrapData.account?.subscription || "free").toUpperCase()}</button>
         <button class="menu-chip" type="button">${studio.access ? "Studio Access Ready" : "Unlock Studio Access"}</button>
       `;
+    }
+
+    function renderHelpingState(){
+      const traffic = bootstrapData?.traffic || {};
+      if(traffic.hot){
+        helpBanner.classList.add("active");
+        helpBannerText.textContent = `${traffic.visitors} visitors are active in the last ${traffic.window_minutes} minutes. SupportRD is steering people toward FAQ Lounge and Edits Menu for faster answers.`;
+      }else{
+        helpBanner.classList.remove("active");
+        helpBannerText.textContent = "When traffic rises, SupportRD points people toward FAQ Lounge and the Edits Menu so more visitors get answers fast.";
+      }
+    }
+
+    function getPremiumPopupPlan(){
+      return String(bootstrapData?.account?.subscription || "free").toLowerCase();
+    }
+
+    function renderPremiumPopupCopy(){
+      const plan = getPremiumPopupPlan();
+      const premium = /(premium|pro|family|team|vip)/.test(plan);
+      if(premium){
+        premiumPopupEyebrow.textContent = "Fantasy Premium Hint";
+        premiumPopupTitle.textContent = "Keep the fantasy lane polished";
+        premiumPopupText.textContent = "Premium is active, so SupportRD only shows a lighter fantasy reminder every 15 minutes for upgrades, gifts, and team add-ons.";
+        premiumPopupBuy.textContent = "View Premium Extras";
+        premiumPopupBuy.href = "https://shop.supportrd.com/collections/all";
+        premiumPopupNote.textContent = "Ad cadence: fantasy reminder every 15 minutes for premium plans.";
+      }else{
+        premiumPopupEyebrow.textContent = "Premium Route";
+        premiumPopupTitle.textContent = "Upgrade to Premium";
+        premiumPopupText.textContent = "Get the polished SupportRD route with better studio access, premium hair support lanes, and faster identity help.";
+        premiumPopupBuy.textContent = "Buy Premium";
+        premiumPopupBuy.href = "https://shop.supportrd.com/collections/all";
+        premiumPopupNote.textContent = "Ad cadence: every 5 minutes for guests. Premium sees fantasy every 15 minutes.";
+      }
+    }
+
+    function openPremiumPopup(){
+      renderPremiumPopupCopy();
+      premiumPopup.classList.add("active");
+    }
+
+    function closePremiumPopup(){
+      premiumPopup.classList.remove("active");
+    }
+
+    function schedulePremiumPopup(){
+      if(premiumPopupTimer){
+        window.clearInterval(premiumPopupTimer);
+      }
+      const premium = /(premium|pro|family|team|vip)/.test(getPremiumPopupPlan());
+      const delay = premium ? 15 * 60 * 1000 : 5 * 60 * 1000;
+      premiumPopupTimer = window.setInterval(openPremiumPopup, delay);
+    }
+
+    function getVisitorKey(){
+      const keyName = "supportrdVisitorKey";
+      let key = window.localStorage.getItem(keyName);
+      if(!key){
+        key = `visitor-${Math.random().toString(36).slice(2, 10)}`;
+        window.localStorage.setItem(keyName, key);
+      }
+      return key;
+    }
+
+    async function pingTraffic(){
+      try{
+        const response = await fetch("/api/local-remote/traffic/ping", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            visitor_key: getVisitorKey(),
+            path: window.location.pathname
+          })
+        });
+        const data = await response.json();
+        if(data?.ok && data.traffic){
+          bootstrapData = { ...(bootstrapData || {}), traffic: data.traffic };
+          renderHelpingState();
+          renderStickyLists();
+        }
+      }catch{}
     }
 
     async function loadBootstrap(){
@@ -1174,6 +1423,9 @@
         providerConfirmed = window.localStorage.getItem("supportrdProviderConfirmed") === "yes";
         renderLoginPanel();
         renderStickyLists();
+        renderHelpingState();
+        renderPremiumPopupCopy();
+        schedulePremiumPopup();
         renderPanel(activePanel);
       }catch{}
     }
@@ -1923,6 +2175,12 @@
     loginSaveBtn.addEventListener("click", ()=>saveLoginPanel().catch((error)=>renderLoginPanel(`Login save error: ${error.message}`)));
     loginOpenAccountBtn.addEventListener("click", ()=>window.open("/login", "_blank", "noopener,noreferrer"));
     miniVoiceBtn.addEventListener("click", ()=>runVoiceSequence("Aria"));
+    premiumPopupClose.addEventListener("click", closePremiumPopup);
+    premiumPopup.addEventListener("click", (event)=>{
+      if(event.target === premiumPopup){
+        closePremiumPopup();
+      }
+    });
     miniRemotePopup.querySelectorAll("[data-mini-panel]").forEach((button)=>{
       button.addEventListener("click", ()=>{
         renderPanel(button.dataset.miniPanel, true);
@@ -1938,6 +2196,11 @@
     updateMiniRemoteVisibility();
     renderPanel("diary", true);
     loadBootstrap();
+    pingTraffic();
+    if(visitorPingInterval){
+      window.clearInterval(visitorPingInterval);
+    }
+    visitorPingInterval = window.setInterval(pingTraffic, 45000);
   </script>
 </body>
 </html>
