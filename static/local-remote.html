@@ -813,7 +813,7 @@
               <span class="seo-chip">Motherboard</span>
               <span class="seo-chip">Premium Booth</span>
             </div>
-            <a class="buy-now" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Studio Access</a>
+            <a class="buy-now" id="catalogStudioBuyLink" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Studio Access</a>
           </div>
         </article>
         <article class="catalog-card" style="--bg-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
@@ -827,7 +827,7 @@
               <span class="seo-chip">Premium Voice</span>
               <span class="seo-chip">5 Star Care</span>
             </div>
-            <a class="buy-now" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Upgrade Now</a>
+            <a class="buy-now" id="catalogPremiumBuyLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Upgrade Now</a>
           </div>
         </article>
         <article class="catalog-card" style="--bg-image:url('/static/images/brochure-contacts-remote.jpg')">
@@ -841,7 +841,7 @@
               <span class="seo-chip">Live Support</span>
               <span class="seo-chip">On-The-Go</span>
             </div>
-            <a class="buy-now" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Meet SupportRD</a>
+            <a class="buy-now" id="catalogFamilyBuyLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Meet SupportRD</a>
           </div>
         </article>
       </section>
@@ -1081,7 +1081,7 @@
               </div>
             </div>
             <div class="ad-actions">
-              <a class="buy-now" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Now</a>
+              <a class="buy-now" id="sideStudioBuyLink" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Now</a>
             </div>
           </article>
           <article class="ad-card" style="--bg-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
@@ -1097,7 +1097,7 @@
               </div>
             </div>
             <div class="ad-actions">
-              <a class="buy-now" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Go Pro</a>
+              <a class="buy-now" id="sideProBuyLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Go Pro</a>
             </div>
           </article>
         </section>
@@ -1343,6 +1343,11 @@
     const premiumPopupBuy = document.getElementById("premiumPopupBuy");
     const premiumPopupNote = document.getElementById("premiumPopupNote");
     const premiumPopupClose = document.getElementById("premiumPopupClose");
+    const catalogStudioBuyLink = document.getElementById("catalogStudioBuyLink");
+    const catalogPremiumBuyLink = document.getElementById("catalogPremiumBuyLink");
+    const catalogFamilyBuyLink = document.getElementById("catalogFamilyBuyLink");
+    const sideStudioBuyLink = document.getElementById("sideStudioBuyLink");
+    const sideProBuyLink = document.getElementById("sideProBuyLink");
     const pageAuthTitle = document.getElementById("pageAuthTitle");
     const pageAuthText = document.getElementById("pageAuthText");
     const gigBuildStrip = document.getElementById("gigBuildStrip");
@@ -1368,6 +1373,7 @@
     let activePanel = "diary";
     let panelBootToken = 0;
     let bootstrapData = null;
+    let shopifyConfig = null;
     let currentDiarySessionId = "";
     let currentStudioSessionId = "";
     let premiumVoicePlayer = null;
@@ -1759,6 +1765,7 @@
         premiumPopupBuy.href = "https://shop.supportrd.com/collections/all";
         premiumPopupNote.textContent = "Ad cadence: every 5 minutes for guests. Premium sees fantasy every 15 minutes.";
       }
+      refreshBuyRoutes();
     }
 
     function openPremiumPopup(){
@@ -1789,6 +1796,89 @@
       return key;
     }
 
+    function inferProviderLabel(user = {}){
+      const identities = Array.isArray(user.identities) ? user.identities : [];
+      const providerTokens = identities.map((item)=>String(item.provider || item.connection || "").toLowerCase());
+      providerTokens.push(String(user.sub || "").split("|")[0].toLowerCase());
+      for(const token of providerTokens){
+        if(token.includes("google")) return "google";
+        if(token.includes("windows") || token.includes("microsoft") || token.includes("live")) return "microsoft";
+      }
+      return "provider";
+    }
+
+    function buildMemberTag(seed){
+      const cleaned = String(seed || "")
+        .replace(/\^+/g, " ")
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      return cleaned ? `^^${cleaned.slice(0, 24)}` : "^^member";
+    }
+
+    function getExactCheckoutHref(planKey, fallbackHref){
+      const checkoutMap = shopifyConfig?.checkout_map || {};
+      const checkoutPath = checkoutMap?.[planKey]?.checkout_path || "";
+      return checkoutPath || fallbackHref;
+    }
+
+    function refreshBuyRoutes(){
+      const routeMap = [
+        [catalogStudioBuyLink, getExactCheckoutHref("pro", "https://shop.supportrd.com/products/jake-premium-studio")],
+        [catalogPremiumBuyLink, getExactCheckoutHref("premium", "https://shop.supportrd.com/collections/all")],
+        [catalogFamilyBuyLink, getExactCheckoutHref("family200", "https://shop.supportrd.com/collections/all")],
+        [sideStudioBuyLink, getExactCheckoutHref("pro", "https://shop.supportrd.com/products/jake-premium-studio")],
+        [sideProBuyLink, getExactCheckoutHref("pro", "https://shop.supportrd.com/collections/all")],
+        [premiumPopupBuy, /(premium|pro|family|team|vip)/.test(getPremiumPopupPlan())
+          ? getExactCheckoutHref("fantasy300", "https://shop.supportrd.com/collections/all")
+          : getExactCheckoutHref("premium", "https://shop.supportrd.com/collections/all")]
+      ];
+      routeMap.forEach(([node, href])=>{
+        if(node && href){
+          node.href = href;
+        }
+      });
+    }
+
+    async function syncAuthenticatedAccount(meData){
+      if(!meData?.authenticated || !meData?.user?.email) return;
+      const email = String(meData.user.email || "").trim().toLowerCase();
+      if(!email) return;
+      const provider = inferProviderLabel(meData.user);
+      const tag = buildMemberTag(meData.user.name || meData.user.nickname || email.split("@")[0]);
+      const data = await callJson("/api/local-remote/preferences", {
+        method: "POST",
+        body: JSON.stringify({
+          display_name: meData.user.name || bootstrapData?.settings?.display_name || meData.user.nickname || email.split("@")[0],
+          account_email: email,
+          account_username: meData.user.nickname || email.split("@")[0],
+          saved_tag: bootstrapData?.settings?.saved_tag || tag,
+          login_provider: provider,
+          login_confirmed: true,
+          membership_plan: meData.subscription || bootstrapData?.account?.subscription || "free",
+          voice_profile: bootstrapData?.settings?.voice_profile || "premium-voice",
+        }),
+      });
+      providerConfirmed = true;
+      window.localStorage.setItem("supportrdProviderConfirmed", "yes");
+      bootstrapData = {
+        ...(bootstrapData || {}),
+        account: {
+          ...(bootstrapData?.account || {}),
+          authenticated: true,
+          email,
+          display_name: meData.user.name || bootstrapData?.account?.display_name || "",
+          subscription: meData.subscription || bootstrapData?.account?.subscription || "free",
+          login_provider: provider,
+          login_confirmed: true,
+        },
+        settings: {
+          ...(bootstrapData?.settings || {}),
+          ...(data.preferences || {}),
+        }
+      };
+    }
+
     async function pingTraffic(){
       try{
         const response = await fetch("/api/local-remote/traffic/ping", {
@@ -1811,13 +1901,20 @@
 
     async function loadBootstrap(){
       try{
-        const response = await fetch("/api/local-remote/bootstrap", { credentials: "same-origin" });
-        const data = await response.json();
+        const [bootstrapResponse, meResponse, shopifyResponse] = await Promise.all([
+          fetch("/api/local-remote/bootstrap", { credentials: "same-origin" }),
+          fetch("/api/me", { credentials: "same-origin" }).catch(()=>null),
+          fetch("/api/shopify/public-config", { credentials: "same-origin" }).catch(()=>null)
+        ]);
+        const data = await bootstrapResponse.json();
         if(!data?.ok) return;
         bootstrapData = data;
+        const meData = meResponse ? await meResponse.json().catch(()=>({ authenticated:false })) : { authenticated:false };
+        shopifyConfig = shopifyResponse ? await shopifyResponse.json().catch(()=>null) : null;
+        await syncAuthenticatedAccount(meData).catch(()=>{});
         currentDiarySessionId = data.diary?.recent_sessions?.[0]?.session_id || currentDiarySessionId;
         currentStudioSessionId = data.studio?.recent_sessions?.[0]?.session_id || currentStudioSessionId;
-        loginEmail.value = data.settings?.account_email || data.account?.email || "";
+        loginEmail.value = bootstrapData?.settings?.account_email || bootstrapData?.account?.email || "";
         providerConfirmed = window.localStorage.getItem("supportrdProviderConfirmed") === "yes";
         renderLoginPanel();
         renderStickyLists();
@@ -1827,6 +1924,7 @@
         renderGigViewerMeta();
         updateGigSourceUI();
         renderPremiumPopupCopy();
+        refreshBuyRoutes();
         schedulePremiumPopup();
         renderPanel(activePanel);
       }catch{}
@@ -2554,12 +2652,12 @@
     localJake.addEventListener("click", ()=>runVoiceSequence("Jake"));
 
     const roamTargets = {
-      diary: [{x:.55,y:134},{x:.77,y:182},{x:.67,y:292},{x:.48,y:238}],
-      studio: [{x:.56,y:146},{x:.78,y:190},{x:.66,y:314},{x:.5,y:254}],
-      settings: [{x:.54,y:130},{x:.77,y:178},{x:.63,y:286},{x:.46,y:232}],
-      map: [{x:.55,y:142},{x:.77,y:188},{x:.64,y:302},{x:.48,y:246}],
-      faq: [{x:.54,y:124},{x:.78,y:176},{x:.63,y:278},{x:.47,y:224}],
-      profile: [{x:.57,y:136},{x:.79,y:186},{x:.68,y:296},{x:.5,y:238}]
+      diary: [{x:.2,y:150},{x:.83,y:210},{x:.74,y:420},{x:.18,y:520},{x:.54,y:620}],
+      studio: [{x:.22,y:168},{x:.84,y:224},{x:.72,y:446},{x:.19,y:548},{x:.57,y:652}],
+      settings: [{x:.24,y:156},{x:.82,y:208},{x:.7,y:404},{x:.2,y:500},{x:.56,y:608}],
+      map: [{x:.21,y:164},{x:.81,y:218},{x:.69,y:432},{x:.18,y:536},{x:.58,y:640}],
+      faq: [{x:.23,y:148},{x:.83,y:204},{x:.71,y:414},{x:.19,y:516},{x:.55,y:624}],
+      profile: [{x:.22,y:160},{x:.84,y:214},{x:.73,y:438},{x:.2,y:540},{x:.59,y:646}]
     };
     const assistantMotion = {
       Aria: { node: localAria, x: 0, y: 0, targetX: 0, targetY: 0, phase: 0, step: 0 },

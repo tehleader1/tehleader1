@@ -23,6 +23,12 @@
     .auth-badge span{display:block;color:var(--muted);font-size:13px;line-height:1.5}
     .auth-badge a{color:var(--gold);font-weight:700;text-decoration:none}
     .comment-composer{display:grid;grid-template-columns:minmax(0,1fr) 200px auto;gap:10px;margin-top:12px}
+    .payment-rail{display:grid;gap:12px;margin-top:14px}
+    .payment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .payment-chip{min-height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,208,134,.12);color:var(--text);font-weight:700;cursor:pointer}
+    .payment-chip:hover{background:rgba(255,208,134,.2)}
+    .payment-links{display:flex;flex-wrap:wrap;gap:10px}
+    .payment-links a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(121,184,255,.12);color:var(--text);text-decoration:none;font-weight:700}
     @media (max-width:1280px){.shell,.grid,.columns,.action-grid,.video-meta{grid-template-columns:1fr}}
   </style>
 </head>
@@ -114,6 +120,22 @@
                 <div class="screen-comments" id="screenComments"></div>
               </div>
               <div class="panel" style="margin-top:14px;padding:14px">
+                <div class="eyebrow">Tip Tab</div>
+                <h3 style="font-size:26px">Live payments + paid guest lane</h3>
+                <div class="payment-rail">
+                  <div class="payment-grid">
+                    <button class="payment-chip" id="tip5Btn" type="button">$5 Tip</button>
+                    <button class="payment-chip" id="tip20Btn" type="button">$20 Hearts</button>
+                    <button class="payment-chip" id="paidGuestBtn" type="button">Paid Guest Route</button>
+                  </div>
+                  <div class="payment-links">
+                    <a id="premiumLaneLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Unlock Premium</a>
+                    <a id="proLaneLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Go Pro</a>
+                    <a id="fantasyLaneLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Fantasy Lane</a>
+                  </div>
+                </div>
+              </div>
+              <div class="panel" style="margin-top:14px;padding:14px">
                 <div class="eyebrow">Guest Webcam Room</div>
                 <h3 style="font-size:26px">Oncoming guest chat</h3>
                 <div class="chat-list" id="chatList"></div>
@@ -201,14 +223,20 @@
   </div>
 
   <script>
-    const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[], loginBadge:{ title:"Guest Route", text:"Logged in. Confirmed ^^ URL TAG will stay visible here when the account is attached." } };
+    const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[], shopifyConfig:null, loginBadge:{ title:"Guest Route", text:"Logged in. Confirmed ^^ URL TAG will stay visible here when the account is attached." } };
     const els = {
-      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), guestChatText: document.getElementById('guestChatText'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments'), chatList: document.getElementById('chatList'), authBadgeTitle: document.getElementById('authBadgeTitle'), authBadgeText: document.getElementById('authBadgeText'), liveCommentName: document.getElementById('liveCommentName'), liveCommentSupport: document.getElementById('liveCommentSupport'), postLiveCommentBtn: document.getElementById('postLiveCommentBtn') };
+      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), guestChatText: document.getElementById('guestChatText'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments'), chatList: document.getElementById('chatList'), authBadgeTitle: document.getElementById('authBadgeTitle'), authBadgeText: document.getElementById('authBadgeText'), liveCommentName: document.getElementById('liveCommentName'), liveCommentSupport: document.getElementById('liveCommentSupport'), postLiveCommentBtn: document.getElementById('postLiveCommentBtn'), tip5Btn: document.getElementById('tip5Btn'), tip20Btn: document.getElementById('tip20Btn'), paidGuestBtn: document.getElementById('paidGuestBtn'), premiumLaneLink: document.getElementById('premiumLaneLink'), proLaneLink: document.getElementById('proLaneLink'), fantasyLaneLink: document.getElementById('fantasyLaneLink') };
 
     function setStatus(message){ els.statusBox.textContent = message; }
     function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='feed-item'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
     function getRemoteVoiceHistory(){ try{ return JSON.parse(window.localStorage.getItem('supportrdDiaryVoiceHistory') || '[]'); }catch{ return []; } }
     async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
+    function checkoutHref(planKey, fallbackHref){ return state.shopifyConfig?.checkout_map?.[planKey]?.checkout_path || fallbackHref; }
+    function refreshPaymentLinks(){
+      els.premiumLaneLink.href = checkoutHref('premium', 'https://shop.supportrd.com/collections/all');
+      els.proLaneLink.href = checkoutHref('pro', 'https://shop.supportrd.com/collections/all');
+      els.fantasyLaneLink.href = checkoutHref('fantasy300', 'https://shop.supportrd.com/collections/all');
+    }
 
     function buildHairResponse(name, problem){
       const text = (problem || '').toLowerCase();
@@ -277,16 +305,16 @@
         els.screenEditor.innerHTML = `<h2>${els.profileTag.value || 'Diary Live Screen'}</h2><p>${els.entryText.value || 'Write the live presentation, hair problem note, or docx-style summary here.'}</p>`;
       }
       renderList(els.historyList, state.history, 'No diary history yet', 'Save a diary record to start history.', item=>`<div class="history-item"><strong>${item.profile_tag || item.session_id}</strong><span>${item.entry_text || item.transcript || 'Saved diary entry.'}</span></div>`, 'history-item');
-      renderList(els.commentsList, publicComments, 'No comments yet', 'Public comments will show up here.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
-      renderList(els.screenComments, publicComments.slice(0,5), 'No comments under screen yet', 'Live viewer comments will pin directly under the main screen.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
+      renderList(els.commentsList, publicComments, 'No comments yet', 'Public comments will show up here.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}${item.amount_label ? ` · ${item.amount_label}` : ''}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
+      renderList(els.screenComments, publicComments.slice(0,5), 'No comments under screen yet', 'Live viewer comments will pin directly under the main screen.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}${item.amount_label ? ` · ${item.amount_label}` : ''}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
       renderList(els.chatList, chatMessages, 'No guest chat yet', 'This webcam-room lane will hold the back-and-forth with oncoming guests.', item=>`<div class="chat-item"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || 'Chat message'}</span></div>`, 'chat-item');
       renderList(els.lobbyList, state.lobby, 'Lobby is empty', 'Start a live diary session to appear here.', item=>`<div class="feed-item"><strong>${item.profile_tag || item.display_name || item.owner_email}</strong><span>${item.preview_text || item.owner_email || 'Diary feed ready.'}</span></div>`);
       renderList(els.socialList, state.socialPosts, 'No social posts yet', 'Use Post To Feed after you save a diary entry.', item=>`<div class="social-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'social-item');
       renderList(els.socialFeed, state.socialPosts.slice(0,2), 'Live feed lane', 'Social posting cards will appear here.', item=>`<div class="response-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'response-item');
       renderList(els.responseList, state.response ? [state.response] : [], 'Waiting for hair problem', 'Use Generate Hair Response after entering the issue.', item=>`<div class="response-item"><strong>${item.lane.toUpperCase()} · ${els.assistantSelect.value}</strong><span>${item.body}</span></div>`, 'response-item');
       renderList(els.notificationList, [
-        { title:'Payments', body: els.guestSupport.value ? `Guest support queued: ${els.guestSupport.value}` : 'No support payment entered yet.' },
-        { title:'Hearts / Likes', body: els.guestSupport.value ? `Revolving support lane armed around ${els.guestSupport.value}.` : 'Pay for likes or hearts can live here.' },
+        { title:'Payments', body: publicComments.find((item)=>item.comment_kind === 'tip' || item.comment_kind === 'paid_guest')?.comment_text || (els.guestSupport.value ? `Guest support queued: ${els.guestSupport.value}` : 'No support payment entered yet.') },
+        { title:'Hearts / Likes', body: publicComments.find((item)=>item.comment_kind === 'hearts')?.comment_text || (els.guestSupport.value ? `Revolving support lane armed around ${els.guestSupport.value}.` : 'Pay for likes or hearts can live here.') },
         { title:'Comments', body: state.comments[0]?.comment_text || 'Live comments will pin here.' },
         { title:'Notifications', body: payload.live_active ? 'Followers can be notified when this feed goes live.' : 'Turn Live on to arm notifications.' }
       ], 'No notifications yet', 'Live actions will pin here.', item=>`<div class="assistant-bubble"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'assistant-bubble');
@@ -304,7 +332,11 @@
     }
 
     async function bootstrapData(){
-      const bootstrap = await fetchJson('/api/local-remote/bootstrap');
+      const [bootstrap, shopifyConfig] = await Promise.all([
+        fetchJson('/api/local-remote/bootstrap'),
+        fetchJson('/api/shopify/public-config').catch(()=>null)
+      ]);
+      state.shopifyConfig = shopifyConfig;
       state.ownerEmail = bootstrap.account?.email || 'guest';
       state.loginBadge = buildLoginBadge(bootstrap);
       state.history = bootstrap.diary?.recent_sessions || [];
@@ -316,11 +348,28 @@
       els.entryText.value = latest.entry_text || latest.transcript || '';
       state.sessionId = latest.session_id || state.sessionId;
       state.liveSlug = latest.live_slug || state.liveSlug;
+      refreshPaymentLinks();
       if(state.sessionId){ await refreshFeed(); }
       render();
     }
 
     async function refreshFeed(){ if(!state.sessionId) return; const data = await fetchJson(`/api/diary/session/feed?session_id=${encodeURIComponent(state.sessionId)}`); state.payload = data.payload || {}; state.comments = data.comments || []; state.liveSlug = state.payload.live_slug || state.liveSlug; render(); }
+
+    async function postPaymentEvent(commentKind, amountLabel, commentText){
+      if(!state.sessionId) throw new Error('bootstrap_first');
+      const data = await fetchJson('/api/diary/comment', {
+        method:'POST',
+        body: JSON.stringify({
+          session_id: state.sessionId,
+          author_name: els.guestName.value || 'Viewer',
+          comment_text: commentText,
+          comment_kind: commentKind,
+          amount_label: amountLabel
+        })
+      });
+      state.comments = data.comments || [];
+      render();
+    }
 
     async function primeCamera(){
       if(state.mediaStream) return state.mediaStream;
@@ -401,6 +450,27 @@
       state.socialPosts = state.socialPosts.slice(0,6);
       setStatus('Diary live post added to the social feed lane.');
       render();
+    });
+    els.tip5Btn.addEventListener('click', async ()=>{
+      try{
+        els.guestSupport.value = '$5';
+        await postPaymentEvent('tip', '$5', `${els.guestName.value || 'Viewer'} sent a live tip into the SupportRD diary lane.`);
+        setStatus('Live $5 tip added to the Diary payments rail.');
+      }catch(error){ setStatus(`Error: ${error.message}`); }
+    });
+    els.tip20Btn.addEventListener('click', async ()=>{
+      try{
+        els.guestSupport.value = '$20';
+        await postPaymentEvent('hearts', '$20', `${els.guestName.value || 'Viewer'} paid for hearts / likes on the live session.`);
+        setStatus('Hearts / likes support posted into the Diary payments rail.');
+      }catch(error){ setStatus(`Error: ${error.message}`); }
+    });
+    els.paidGuestBtn.addEventListener('click', async ()=>{
+      try{
+        const amount = els.guestSupport.value.trim() || '$50';
+        await postPaymentEvent('paid_guest', amount, `${els.guestName.value || 'Guest'} entered the paid guest route for this live diary session.`);
+        setStatus('Paid guest route attached to the live Diary session.');
+      }catch(error){ setStatus(`Error: ${error.message}`); }
     });
     document.getElementById('respondBtn').addEventListener('click', ()=>{ state.response = buildHairResponse(els.assistantSelect.value, els.hairProblem.value); render(); setStatus(`${els.assistantSelect.value} built a ${state.response.lane} response.`); });
     document.getElementById('boldBtn').addEventListener('click', ()=>document.execCommand('bold'));

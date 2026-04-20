@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory, Response, session, redirect
+from flask import Flask, jsonify, request, send_from_directory, Response, session, redirect, render_template_string
 import json
 import random
 import smtplib
@@ -2261,6 +2261,77 @@ def normalize_diary_profile_tag(raw_tag):
     if not tag:
         return ""
     return f"^^{tag[:24]}"
+
+
+def infer_login_provider(user):
+    user = user or {}
+    provider_candidates = []
+    if isinstance(user.get("identities"), list):
+        provider_candidates.extend(
+            [str(identity.get("provider") or identity.get("connection") or "").strip().lower() for identity in user.get("identities")]
+        )
+    provider_candidates.append(str(user.get("sub") or "").split("|")[0].strip().lower())
+    provider_candidates.append(str(user.get("nickname") or "").strip().lower())
+    for candidate in provider_candidates:
+        if not candidate:
+            continue
+        if candidate in ("google-oauth2", "google"):
+            return "google"
+        if candidate in ("windowslive", "microsoft", "live"):
+            return "microsoft"
+        if candidate in ("auth0", "username-password-authentication", "email", "password"):
+            return "email/password"
+        return candidate[:80]
+    return "provider"
+
+
+def derive_support_route_tag(email="", display_name="", existing_tag=""):
+    preserved = normalize_diary_profile_tag(existing_tag)
+    if preserved:
+        return preserved
+    seed = (
+        (display_name or "").strip()
+        or (email or "").split("@")[0].strip()
+        or "supportrd-member"
+    )
+    return normalize_diary_profile_tag(seed) or "^^member"
+
+
+def sync_authenticated_local_remote_account(user):
+    user = user or {}
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        return load_local_remote_preferences("guest")
+    existing = load_local_remote_preferences(email)
+    subscription = get_subscription_details_for_email(email)
+    plan = (subscription.get("plan") or existing.get("membership_plan") or "free").strip().lower()
+    display_name = (
+        user.get("name")
+        or user.get("username")
+        or existing.get("display_name")
+        or email.split("@")[0]
+    )
+    account_email = existing.get("account_email") or email
+    prefs = {
+        "display_name": display_name,
+        "saved_tag": derive_support_route_tag(email, display_name, existing.get("saved_tag") or ""),
+        "last_map_used": existing.get("last_map_used") or "",
+        "push_notifications": bool(existing.get("push_notifications")),
+        "voice_profile": existing.get("voice_profile") or "",
+        "account_username": existing.get("account_username") or str(display_name).strip().lower().replace(" ", "-")[:80],
+        "account_email": account_email,
+        "account_address": existing.get("account_address") or "",
+        "account_zipcode": existing.get("account_zipcode") or "",
+        "account_phone": existing.get("account_phone") or "",
+        "aria_response_level": existing.get("aria_response_level") or "balanced",
+        "login_provider": infer_login_provider(user),
+        "login_confirmed": True,
+        "membership_plan": plan or "free",
+    }
+    if existing.get("password_hash"):
+        prefs["password_hash"] = existing.get("password_hash")
+    save_local_remote_preferences(email, prefs)
+    return load_local_remote_preferences(email)
 
 
 def diary_payload_preview(payload):
@@ -5518,6 +5589,7 @@ def callback():
         )
         userinfo_res.raise_for_status()
         session["user"] = userinfo_res.json()
+        sync_authenticated_local_remote_account(session["user"])
     except:
         return redirect("/")
     return redirect("/")
@@ -6430,6 +6502,199 @@ def marketing():
 
     }
 
+
+SEO_LANDING_PAGES = {
+    "hair-problems": {
+        "title": "Hair Problems",
+        "headline": "Hair problem support with products, live help, and account continuity.",
+        "description": "SupportRD routes dryness, breakage, color pressure, thinning, and family care into real product guidance, live diary help, and premium account continuity.",
+        "eyebrow": "Hair Problem Lane",
+        "product_plan": "premium",
+        "module_url": "/local-profile",
+        "module_label": "Open Profile Scanner",
+        "hero_image": "/static/images/remote-healthy-hair.jpeg",
+    },
+    "studio": {
+        "title": "Studio",
+        "headline": "Studio motherboard editing, premium booth energy, and export-ready sessions.",
+        "description": "SupportRD Studio gives you motherboard playback, stacked song editing, FX, export, and premium studio routes from one live booth.",
+        "eyebrow": "Studio Lane",
+        "product_plan": "pro",
+        "module_url": "/local-studio",
+        "module_label": "Open Studio",
+        "hero_image": "/static/images/jake-studio-premium.jpg",
+    },
+    "live-diary": {
+        "title": "Live Diary",
+        "headline": "Live diary sessions with comments, paid support lanes, and guest interaction.",
+        "description": "SupportRD Diary Mode connects live video, comments, guest chat, hair problem help, and live account-aware session memory.",
+        "eyebrow": "Diary Lane",
+        "product_plan": "yoda",
+        "module_url": "/local-diary",
+        "module_label": "Open Diary Mode",
+        "hero_image": "/static/images/remote-dayparty.jpg",
+    },
+    "identity-profile": {
+        "title": "Identity Profile",
+        "headline": "Identity, profile confirmation, and hair scan support in one route.",
+        "description": "SupportRD Profile combines camera hair scanning, identity support, confirmation, and export-ready profile history for real account continuity.",
+        "eyebrow": "Identity Lane",
+        "product_plan": "premium",
+        "module_url": "/local-profile",
+        "module_label": "Open Profile",
+        "hero_image": "/static/images/remote-hija-felix.jpeg",
+    },
+    "premium-pro": {
+        "title": "Premium Pro",
+        "headline": "Premium and Pro routes that feel attached to your real account.",
+        "description": "SupportRD Premium and Pro unlock account continuity, polished module access, live support upgrades, and studio-ready routes without losing your identity.",
+        "eyebrow": "Premium / Pro",
+        "product_plan": "pro",
+        "module_url": "/remote",
+        "module_label": "Open Main Shell",
+        "hero_image": "/static/images/aria-premium-pro-main-ad.jpg",
+    },
+    "fantasies": {
+        "title": "Fantasies",
+        "headline": "Fantasy lanes with polished account continuity and premium routing.",
+        "description": "SupportRD fantasy tiers keep premium account continuity, reminders, and upgrade flow attached to one real live shell instead of dropping users into generic collection browsing.",
+        "eyebrow": "Fantasy Lane",
+        "product_plan": "fantasy300",
+        "module_url": "/remote",
+        "module_label": "Open Premium Shell",
+        "hero_image": "/static/images/remote-lezawli.jpeg",
+    },
+}
+
+
+def render_support_seo_page(page_key):
+    page = SEO_LANDING_PAGES.get(page_key)
+    if not page:
+        return {"ok": False, "error": "not_found"}, 404
+    checkout_map = get_public_shopify_checkout_map()
+    plan_key = page.get("product_plan") or "premium"
+    checkout_meta = checkout_map.get(plan_key) or {}
+    checkout_href = checkout_meta.get("checkout_path") or f"https://shop.supportrd.com/collections/all?plan={plan_key}"
+    product_label = (checkout_meta.get("label") or page.get("title") or "SupportRD Premium").strip()
+    page_url = f"https://supportrd.com/{page_key}"
+    json_ld = json.dumps({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": page["title"],
+        "description": page["description"],
+        "url": page_url,
+        "primaryImageOfPage": {"@type": "ImageObject", "url": f"https://supportrd.com{page['hero_image']}"},
+        "isPartOf": {"@type": "WebSite", "name": "SupportRD", "url": "https://supportrd.com/"},
+    })
+    return render_template_string(
+        """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} | SupportRD</title>
+  <meta name="description" content="{{ description }}">
+  <link rel="canonical" href="{{ page_url }}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ title }} | SupportRD">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ page_url }}">
+  <meta property="og:image" content="https://supportrd.com{{ hero_image }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{{ json_ld|safe }}</script>
+  <style>
+    :root{color-scheme:dark;--bg:#07111d;--panel:#0f2033;--text:#f4f7fb;--muted:#b8c4d6;--accent:#87d4ff;--gold:#ffd675}
+    *{box-sizing:border-box} body{margin:0;font-family:Georgia,serif;background:radial-gradient(circle at top,#18324c 0,#07111d 60%);color:var(--text)}
+    .shell{max-width:1180px;margin:0 auto;padding:32px 20px 64px}
+    .hero{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:stretch}
+    .panel{border-radius:28px;padding:28px;background:linear-gradient(180deg,rgba(16,33,53,.94),rgba(8,18,31,.96));border:1px solid rgba(160,200,255,.16);box-shadow:0 24px 80px rgba(0,0,0,.35)}
+    .eyebrow{letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-size:12px}
+    h1{font-size:clamp(36px,6vw,72px);line-height:.95;margin:14px 0 18px}
+    p{font-size:18px;line-height:1.6;color:var(--muted)}
+    .cta-row{display:flex;flex-wrap:wrap;gap:14px;margin-top:22px}
+    .cta{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 18px;border-radius:999px;text-decoration:none;font-weight:700}
+    .cta.primary{background:linear-gradient(135deg,#9fe0ff,#4e8dff);color:#041221}
+    .cta.secondary{border:1px solid rgba(255,255,255,.18);color:var(--text)}
+    .visual{min-height:420px;background-image:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.42)),url('{{ hero_image }}');background-size:cover;background-position:center;border-radius:24px;display:flex;align-items:end}
+    .visual-copy{padding:24px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:22px}
+    .mini{border-radius:22px;padding:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+    .mini strong{display:block;font-size:20px;margin-bottom:8px}
+    @media (max-width:900px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <article class="panel">
+        <div class="eyebrow">{{ eyebrow }}</div>
+        <h1>{{ headline }}</h1>
+        <p>{{ description }}</p>
+        <div class="cta-row">
+          <a class="cta primary" href="{{ checkout_href }}">Buy {{ product_label }}</a>
+          <a class="cta secondary" href="{{ module_url }}">{{ module_label }}</a>
+          <a class="cta secondary" href="/">Return To SupportRD</a>
+        </div>
+      </article>
+      <article class="panel visual">
+        <div class="visual-copy">
+          <div class="eyebrow">SupportRD Live Route</div>
+          <strong style="font-size:28px">{{ title }}</strong>
+          <p style="margin:10px 0 0">{{ headline }}</p>
+        </div>
+      </article>
+    </section>
+    <section class="grid">
+      <article class="mini"><strong>Exact checkout</strong><p>This route uses an exact SupportRD checkout path instead of dropping visitors into broad collection browsing.</p></article>
+      <article class="mini"><strong>Account continuity</strong><p>SupportRD keeps login, plan, URL tag, and module access feeling attached to the same real account state.</p></article>
+      <article class="mini"><strong>Search intent</strong><p>This landing page gives search, sharing, and paid traffic a cleaner entry into a focused SupportRD buying lane.</p></article>
+    </section>
+  </main>
+</body>
+</html>""",
+        title=page["title"],
+        eyebrow=page["eyebrow"],
+        headline=page["headline"],
+        description=page["description"],
+        checkout_href=checkout_href,
+        product_label=product_label,
+        module_url=page["module_url"],
+        module_label=page["module_label"],
+        hero_image=page["hero_image"],
+        page_url=page_url,
+        json_ld=json_ld,
+    )
+
+
+@app.route("/hair-problems")
+def seo_hair_problems():
+    return render_support_seo_page("hair-problems")
+
+
+@app.route("/studio-premium")
+def seo_studio_premium():
+    return render_support_seo_page("studio")
+
+
+@app.route("/live-diary")
+def seo_live_diary():
+    return render_support_seo_page("live-diary")
+
+
+@app.route("/identity-profile")
+def seo_identity_profile():
+    return render_support_seo_page("identity-profile")
+
+
+@app.route("/premium-pro")
+def seo_premium_pro():
+    return render_support_seo_page("premium-pro")
+
+
+@app.route("/fantasies")
+def seo_fantasies():
+    return render_support_seo_page("fantasies")
+
 #################################################
 # BACKGROUND ENGINE
 #################################################
@@ -6553,6 +6818,7 @@ def local_studio_shell():
 def local_remote_bootstrap():
     user = session.get("user") or {}
     email = (user.get("email") or "").strip().lower()
+    preferences = sync_authenticated_local_remote_account(user) if email else load_local_remote_preferences("guest")
     display_name = (user.get("name") or user.get("username") or email.split("@")[0] if email else "Guest").strip()
     visitor_key = request.headers.get("X-Forwarded-For") or request.remote_addr or email or "guest"
     record_local_remote_traffic(visitor_key, request.path, request.remote_addr or "")
@@ -6653,7 +6919,6 @@ def local_remote_bootstrap():
         "push_notifications": "browser-driven",
         "connected_routes": [route.get("path") for route in (system.get("seo") or {}).get("routes", [])[:6]],
     }
-    preferences = load_local_remote_preferences(email or "guest")
     if preferences:
         settings_summary["display_name"] = preferences.get("display_name") or settings_summary["display_name"]
         settings_summary["saved_tag"] = preferences.get("saved_tag") or settings_summary["saved_tag"]
