@@ -12,6 +12,10 @@
     .stack,.cards,.route-list,.fact-list{display:grid;gap:12px}.card,.route-item,.fact-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}.card strong,.route-item strong,.fact-item strong{display:block}.card span,.route-item span,.fact-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.45}
     .hero-card,.action,.panel{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}.hero-card h2,.action h3,.panel h3{font-size:34px;font-family:"Cormorant Garamond",Georgia,serif}
     .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}input,select,button{font:inherit}input,select{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}.status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}
+    .auth-badge{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:18px;border:1px solid rgba(119,224,199,.32);background:rgba(6,15,27,.9);box-shadow:0 18px 36px rgba(0,0,0,.24)}
+    .auth-badge strong{display:block;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+    .auth-badge span{display:block;color:var(--muted);font-size:13px;line-height:1.5}
+    .auth-badge a{color:#ffd086;font-weight:700;text-decoration:none}
     @media (max-width:1200px){.shell,.grid,.action-grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -31,6 +35,13 @@
       </div>
     </aside>
     <main class="stage glass">
+      <section class="auth-badge">
+        <div>
+          <strong id="authBadgeTitle">Guest Route</strong>
+          <span id="authBadgeText">Logged in. Confirmed ^^ URL TAG will show here when the account is attached.</span>
+        </div>
+        <a href="/logout">Logout?</a>
+      </section>
       <section class="hero-card">
         <div class="eyebrow">Settings Control App</div>
         <h2>All buttons that route diary posting URL, password, email, address, phone, push notifications, and Aria response level.</h2>
@@ -85,7 +96,7 @@
     </main>
   </div>
   <script>
-    const els = { displayName: document.getElementById('displayName'), accountUsername: document.getElementById('accountUsername'), accountEmail: document.getElementById('accountEmail'), accountPhone: document.getElementById('accountPhone'), accountAddress: document.getElementById('accountAddress'), accountZipcode: document.getElementById('accountZipcode'), savedTag: document.getElementById('savedTag'), newPassword: document.getElementById('newPassword'), confirmPassword: document.getElementById('confirmPassword'), voiceProfile: document.getElementById('voiceProfile'), ariaResponseLevel: document.getElementById('ariaResponseLevel'), pushNotifications: document.getElementById('pushNotifications'), statusBox: document.getElementById('statusBox'), routeList: document.getElementById('routeList'), factList: document.getElementById('factList'), accountCard: document.getElementById('accountCard'), urlCard: document.getElementById('urlCard'), passwordCard: document.getElementById('passwordCard'), mapCard: document.getElementById('mapCard') };
+    const els = { displayName: document.getElementById('displayName'), accountUsername: document.getElementById('accountUsername'), accountEmail: document.getElementById('accountEmail'), accountPhone: document.getElementById('accountPhone'), accountAddress: document.getElementById('accountAddress'), accountZipcode: document.getElementById('accountZipcode'), savedTag: document.getElementById('savedTag'), newPassword: document.getElementById('newPassword'), confirmPassword: document.getElementById('confirmPassword'), voiceProfile: document.getElementById('voiceProfile'), ariaResponseLevel: document.getElementById('ariaResponseLevel'), pushNotifications: document.getElementById('pushNotifications'), statusBox: document.getElementById('statusBox'), routeList: document.getElementById('routeList'), factList: document.getElementById('factList'), accountCard: document.getElementById('accountCard'), urlCard: document.getElementById('urlCard'), passwordCard: document.getElementById('passwordCard'), mapCard: document.getElementById('mapCard'), authBadgeTitle: document.getElementById('authBadgeTitle'), authBadgeText: document.getElementById('authBadgeText') };
     let bootstrap = null;
     function setStatus(message){ els.statusBox.textContent = message; }
     async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{ 'Content-Type':'application/json', ...(options.headers||{}) }, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
@@ -103,6 +114,10 @@
       els.pushNotifications.value = settings.push_notifications ? 'on' : 'off';
       els.newPassword.value = '';
       els.confirmPassword.value = '';
+      const plan = (settings.membership_plan || bootstrap?.account?.membership || 'free').toUpperCase();
+      const provider = settings.login_provider || 'manual';
+      els.authBadgeTitle.textContent = settings.login_confirmed ? `Logged in. Confirmed ^^ ${tag || 'URL TAG'}` : 'Guest Route';
+      els.authBadgeText.textContent = settings.login_confirmed ? `${email} · ${plan} · provider ${provider} · URL TAG ${tag || 'waiting'}` : `Logged in. Confirmed ^^ URL TAG will show here when the account is attached. Current route: ${email}`;
       els.accountCard.textContent = `${settings.account_username || settings.display_name || 'guest'} · ${email}`;
       els.urlCard.textContent = diaryUrl;
       els.passwordCard.textContent = settings.password_set ? 'Password secured in settings memory.' : 'Password not set yet.';

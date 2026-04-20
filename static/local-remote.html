@@ -257,6 +257,14 @@
     }
     .gig-viewer-head h2{margin:0;font-size:32px;font-family:"Cormorant Garamond", Georgia, serif}
     .gig-viewer-head p{margin:6px 0 0;color:var(--muted);line-height:1.5;max-width:760px}
+    .gig-build-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+    .gig-build-card{min-height:220px;position:relative;overflow:hidden;border-radius:24px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));box-shadow:var(--shadow)}
+    .gig-build-card::before{content:"";position:absolute;inset:0;background:var(--build-image, linear-gradient(135deg,rgba(121,184,255,.2),rgba(255,208,134,.16)));background-size:cover;background-position:center}
+    .gig-build-card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(4,11,20,.84))}
+    .gig-build-copy{position:absolute;left:18px;right:18px;bottom:18px;z-index:1;display:grid;gap:8px}
+    .gig-build-copy strong{font-size:24px;font-family:"Cormorant Garamond", Georgia, serif}
+    .gig-build-copy span{color:rgba(239,244,255,.82);line-height:1.5}
+    .gig-build-copy a{justify-self:start}
     .gig-connector-actions{display:flex;gap:10px;flex-wrap:wrap}
     .gig-connector-actions button,.gig-connector-actions a{
       min-height:40px;
@@ -484,6 +492,17 @@
       color:var(--muted);
       line-height:1.45;
     }
+    .auth-badge{position:sticky;top:14px;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:18px;border:1px solid rgba(119,224,199,.32);background:rgba(6,15,27,.9);box-shadow:0 18px 36px rgba(0,0,0,.24);backdrop-filter:blur(16px);margin-bottom:16px}
+    .auth-badge strong{display:block;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+    .auth-badge span{display:block;color:var(--muted);font-size:13px;line-height:1.5}
+    .auth-badge a{color:var(--gold);font-weight:700;text-decoration:none}
+    .module-access-overlay{position:fixed;inset:0;display:none;place-items:center;padding:24px;background:rgba(2,8,16,.62);backdrop-filter:blur(18px);z-index:120}
+    .module-access-overlay.active{display:grid}
+    .module-access-card{width:min(760px,100%);display:grid;gap:12px;padding:24px;border-radius:28px;border:1px solid rgba(255,255,255,.16);background:linear-gradient(180deg,rgba(7,17,31,.96),rgba(13,28,48,.95));box-shadow:0 40px 90px rgba(0,0,0,.42)}
+    .module-access-card h3{margin:0;font-size:38px;font-family:"Cormorant Garamond", Georgia, serif}
+    .module-access-meta{display:flex;flex-wrap:wrap;gap:10px}
+    .module-access-chip{padding:10px 14px;border-radius:999px;border:1px solid rgba(119,224,199,.26);background:rgba(255,255,255,.05);font-weight:700}
+    .module-access-card p{margin:0;color:var(--muted);line-height:1.6}
     .logout-link{
       min-height:40px;
       padding:0 14px;
@@ -884,6 +903,32 @@
             <div class="gig-advisor-list" id="gigAdvisorList"></div>
           </section>
         </div>
+        <div class="gig-build-strip" id="gigBuildStrip">
+          <article class="gig-build-card" style="--build-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
+            <div class="gig-build-copy">
+              <div class="promo-chip">Recent Build</div>
+              <strong>SupportRD Shell Display</strong>
+              <span>Recent shell work, premium routes, and real account access visuals stay visible here.</span>
+              <a class="buy-now" href="https://supportrd.com/" target="_blank" rel="noreferrer">Open Shell</a>
+            </div>
+          </article>
+          <article class="gig-build-card" style="--build-image:url('/static/images/jake-studio-premium.jpg')">
+            <div class="gig-build-copy">
+              <div class="promo-chip">Studio Build</div>
+              <strong>Motherboard Editor Display</strong>
+              <span>Recent studio motherboard work and playback/export maturity stay surfaced in the gig connector lane.</span>
+              <a class="buy-now" href="/local-studio" target="_blank" rel="noreferrer">Open Studio</a>
+            </div>
+          </article>
+          <article class="gig-build-card" style="--build-image:url('/static/images/remote-healthy-hair.jpeg')">
+            <div class="gig-build-copy">
+              <div class="promo-chip">Developer Access</div>
+              <strong>Founder Coding Access</strong>
+              <span>Anthony coding access to SupportRD, the options market board, and connected corporate lanes stays visible for trust.</span>
+              <a class="buy-now" href="http://127.0.0.1:3000/" target="_blank" rel="noreferrer">Open Market</a>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section class="button-grid" id="buttonGrid">
@@ -916,6 +961,13 @@
 
       <section class="panel-stack">
         <article class="panel-card glass">
+          <div class="auth-badge" id="pageAuthBadge">
+            <div>
+              <strong id="pageAuthTitle">Guest Route</strong>
+              <span id="pageAuthText">Login confirmed state and ^^ URL tag will stay attached to every module route.</span>
+            </div>
+            <a id="pageAuthLogout" href="/logout">Logout?</a>
+          </div>
           <div class="eyebrow" id="panelEyebrow">SupportRD Diary</div>
           <h2 id="panelTitle">Diary Mode</h2>
           <p id="panelBody">The diary workspace is the emotional and live-social center for SupportRD. This local page lets us rebuild that shell without fighting the live site.</p>
@@ -1136,6 +1188,14 @@
     </div>
     <div class="premium-popup-note" id="premiumPopupNote">Ad cadence: every 5 minutes for guests. Premium sees fantasy every 15 minutes.</div>
   </section>
+  <section class="module-access-overlay" id="moduleAccessOverlay" aria-live="polite">
+    <div class="module-access-card">
+      <div class="eyebrow" id="moduleAccessEyebrow">SupportRD Access</div>
+      <h3 id="moduleAccessTitle">Access confirmed</h3>
+      <div class="module-access-meta" id="moduleAccessMeta"></div>
+      <p id="moduleAccessText">Your account route is connecting to the selected module now.</p>
+    </div>
+  </section>
 
   <script>
     const panelMeta = {
@@ -1283,6 +1343,14 @@
     const premiumPopupBuy = document.getElementById("premiumPopupBuy");
     const premiumPopupNote = document.getElementById("premiumPopupNote");
     const premiumPopupClose = document.getElementById("premiumPopupClose");
+    const pageAuthTitle = document.getElementById("pageAuthTitle");
+    const pageAuthText = document.getElementById("pageAuthText");
+    const gigBuildStrip = document.getElementById("gigBuildStrip");
+    const moduleAccessOverlay = document.getElementById("moduleAccessOverlay");
+    const moduleAccessEyebrow = document.getElementById("moduleAccessEyebrow");
+    const moduleAccessTitle = document.getElementById("moduleAccessTitle");
+    const moduleAccessMeta = document.getElementById("moduleAccessMeta");
+    const moduleAccessText = document.getElementById("moduleAccessText");
     const gigConnectorLaunchBtn = document.getElementById("gigConnectorLaunchBtn");
     const gigConnectorSourceLink = document.getElementById("gigConnectorSourceLink");
     const gigConnectorSources = document.getElementById("gigConnectorSources");
@@ -1308,6 +1376,7 @@
     let visitorPingInterval = null;
     let premiumPopupTimer = null;
     let activeGigSource = "supportrd";
+    let moduleAccessTimer = null;
 
     const voiceKnowledge = {
       Aria: {
@@ -1572,12 +1641,16 @@
       const corporate = bootstrapData?.corporate_viewer || {};
       const events = corporate.events || [];
       const advisors = corporate.advisors || [];
+      const builds = corporate.build_displays || [];
       gigEventList.innerHTML = events.length
         ? events.map((item)=>`<div class="gig-event-item"><strong>${item.title}</strong><span>${item.lane} · ${item.detail}</span></div>`).join("")
         : `<div class="gig-event-item"><strong>Waiting for company events</strong><span>SupportRD, options market, and ThePlantManInc updates will stack here.</span></div>`;
       gigAdvisorList.innerHTML = advisors.length
         ? advisors.map((item)=>`<div class="gig-advisor-item"><strong>${item}</strong><span>Keep this reality lane visible while capitalizing and planning the corporation branch.</span></div>`).join("")
         : `<div class="gig-advisor-item"><strong>Business lane</strong><span>Accountant, supply, transportation, and dropshipping planning will show here.</span></div>`;
+      if(builds.length){
+        gigBuildStrip.innerHTML = builds.map((item)=>`<article class="gig-build-card" style="--build-image:url('${item.image || "/static/images/aria-premium-pro-main-ad.jpg"}')"><div class="gig-build-copy"><div class="promo-chip">Build Display</div><strong>${item.title}</strong><span>${item.detail}</span><a class="buy-now" href="${item.link || "https://supportrd.com/"}" target="_blank" rel="noreferrer">Open</a></div></article>`).join("");
+      }
     }
 
     function renderGigSourceButtons(){
@@ -1762,14 +1835,21 @@
     function renderLoginPanel(message = ""){
       const settings = bootstrapData?.settings || {};
       const account = bootstrapData?.account || {};
+      const loginProvider = settings.login_provider || account.login_provider || "";
+      const membershipPlan = (settings.membership_plan || account.subscription || "free").toUpperCase();
+      const savedTag = settings.saved_tag || "^^ waiting";
       const savedPassword = Boolean(loginPassword.value.trim() || settings.password_set);
-      const signedIn = providerConfirmed || (Boolean(loginEmail.value || settings.account_email || account.email) && savedPassword);
-      const sourceLabel = providerConfirmed ? "provider confirmed" : "manual email login";
+      const signedIn = providerConfirmed || settings.login_confirmed || account.login_confirmed || (Boolean(loginEmail.value || settings.account_email || account.email) && savedPassword);
+      const sourceLabel = providerConfirmed || settings.login_confirmed ? (loginProvider || "provider confirmed") : "manual email login";
       const confirmedEmail = loginEmail.value || settings.account_email || account.email || "guest@supportrd.com";
       loginShell.hidden = signedIn;
       signedInCard.hidden = !signedIn;
-      signedInSummary.textContent = `Signed in: ${confirmedEmail} · ${providerConfirmed ? "provider" : "email/password"}`;
-      loginStatusBox.textContent = message || `Account route: ${confirmedEmail} · ${sourceLabel}. ${providerConfirmed ? "Provider lane is attached." : "Use provider confirm or save email/password."}`;
+      signedInSummary.textContent = `Logged in. Confirmed ${savedTag} · ${confirmedEmail} · ${sourceLabel || "email/password"} · ${membershipPlan}`;
+      pageAuthTitle.textContent = signedIn ? `Logged in. Confirmed ${savedTag}` : "Guest Route";
+      pageAuthText.textContent = signedIn
+        ? `URL TAG ${savedTag} · ${confirmedEmail} · ${membershipPlan} access attached to Studio, Profile, Settings, Map, Diary, and FAQ.`
+        : "Login confirmed state and ^^ URL tag will stay attached to every module route.";
+      loginStatusBox.textContent = message || `Account route: ${confirmedEmail} · ${sourceLabel}. ${signedIn ? `SupportRD account access is attached with ${savedTag}.` : "Use provider confirm or save email/password."}`;
     }
 
     async function saveLoginPanel(options = {}){
@@ -1787,6 +1867,10 @@
           account_username: email.split("@")[0],
           password_plain: password,
           voice_profile: bootstrapData?.settings?.voice_profile || "coral / onyx premium",
+          saved_tag: bootstrapData?.settings?.saved_tag || "^^member",
+          login_provider: options.providerConfirmed ? "provider" : "email/password",
+          login_confirmed: true,
+          membership_plan: bootstrapData?.account?.subscription || bootstrapData?.settings?.membership_plan || "free",
         }),
       });
       bootstrapData = { ...(bootstrapData || {}), settings: { ...(bootstrapData?.settings || {}), ...(data.preferences || {}) } };
@@ -1798,6 +1882,27 @@
         loginPassword.value = password;
       }
       renderLoginPanel(options.providerConfirmed ? "Provider login confirmed and attached to the shell." : "Email/password login saved into the attached SupportRD account panel.");
+    }
+
+    function showModuleAccessOverlay(panelKey){
+      const meta = panelMeta[panelKey];
+      const settings = bootstrapData?.settings || {};
+      const account = bootstrapData?.account || {};
+      const savedTag = settings.saved_tag || "^^ waiting";
+      const email = settings.account_email || account.email || "guest@supportrd.com";
+      const plan = (settings.membership_plan || account.subscription || "free").toUpperCase();
+      const provider = settings.login_provider || account.login_provider || (providerConfirmed ? "provider" : "email/password");
+      moduleAccessEyebrow.textContent = `${meta.title} Access`;
+      moduleAccessTitle.textContent = `You have now gained access to ${meta.title}`;
+      moduleAccessMeta.innerHTML = `
+        <span class="module-access-chip">Logged in. Confirmed ${savedTag}</span>
+        <span class="module-access-chip">${plan} route</span>
+        <span class="module-access-chip">${provider}</span>
+      `;
+      moduleAccessText.textContent = `${email} is attached to ${meta.title}. Premium / Pro features, account access, and the live module route are loading as a real SupportRD page takeover.`;
+      moduleAccessOverlay.classList.add("active");
+      if(moduleAccessTimer) window.clearTimeout(moduleAccessTimer);
+      moduleAccessTimer = window.setTimeout(()=>moduleAccessOverlay.classList.remove("active"), 1650);
     }
 
     function updateMiniRemoteVisibility(){
@@ -2166,6 +2271,7 @@
       renderActionBoard(panelKey);
       syncLiveApp(meta, forceReload);
       roamAssistants(true);
+      showModuleAccessOverlay(panelKey);
     }
 
     buttonGrid.addEventListener("click", (event)=>{

@@ -1785,6 +1785,9 @@ def init_local_remote_db():
             ("account_phone", "TEXT"),
             ("password_hash", "TEXT"),
             ("aria_response_level", "TEXT"),
+            ("login_provider", "TEXT"),
+            ("login_confirmed", "INTEGER DEFAULT 0"),
+            ("membership_plan", "TEXT"),
         ]:
             if name not in existing_cols:
                 cur.execute(f"ALTER TABLE local_remote_preferences ADD COLUMN {name} {ddl}")
@@ -1844,7 +1847,8 @@ def load_local_remote_preferences(email):
         cur = conn.cursor()
         cur.execute(
             "SELECT display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at, "
-            "account_username, account_email, account_address, account_zipcode, account_phone, password_hash, aria_response_level "
+            "account_username, account_email, account_address, account_zipcode, account_phone, password_hash, aria_response_level, "
+            "login_provider, login_confirmed, membership_plan "
             "FROM local_remote_preferences WHERE email = ? LIMIT 1",
             (owner_email,),
         )
@@ -1866,6 +1870,9 @@ def load_local_remote_preferences(email):
             "account_phone": row[10] or "",
             "password_set": bool(row[11]),
             "aria_response_level": row[12] or "balanced",
+            "login_provider": row[13] or "",
+            "login_confirmed": bool(row[14]),
+            "membership_plan": row[15] or "",
         }
     except:
         return {}
@@ -1884,15 +1891,17 @@ def save_local_remote_preferences(email, prefs):
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO local_remote_preferences (email, display_name, saved_tag, last_map_used, push_notifications, voice_profile, updated_at, "
-            "account_username, account_email, account_address, account_zipcode, account_phone, password_hash, aria_response_level) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "account_username, account_email, account_address, account_zipcode, account_phone, password_hash, aria_response_level, "
+            "login_provider, login_confirmed, membership_plan) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(email) DO UPDATE SET display_name=excluded.display_name, saved_tag=excluded.saved_tag, "
             "last_map_used=excluded.last_map_used, push_notifications=excluded.push_notifications, "
             "voice_profile=excluded.voice_profile, updated_at=excluded.updated_at, "
             "account_username=excluded.account_username, account_email=excluded.account_email, "
             "account_address=excluded.account_address, account_zipcode=excluded.account_zipcode, account_phone=excluded.account_phone, "
             "password_hash=CASE WHEN excluded.password_hash <> '' THEN excluded.password_hash ELSE local_remote_preferences.password_hash END, "
-            "aria_response_level=excluded.aria_response_level",
+            "aria_response_level=excluded.aria_response_level, login_provider=excluded.login_provider, "
+            "login_confirmed=excluded.login_confirmed, membership_plan=excluded.membership_plan",
             (
                 owner_email,
                 (safe.get("display_name") or "")[:160],
@@ -1908,6 +1917,9 @@ def save_local_remote_preferences(email, prefs):
                 (safe.get("account_phone") or "")[:40],
                 password_hash,
                 (safe.get("aria_response_level") or "balanced")[:80],
+                (safe.get("login_provider") or "")[:80],
+                1 if safe.get("login_confirmed") else 0,
+                (safe.get("membership_plan") or "")[:80],
             ),
         )
         conn.commit()
@@ -6648,6 +6660,9 @@ def local_remote_bootstrap():
         settings_summary["last_map_used"] = preferences.get("last_map_used") or settings_summary["last_map_used"]
         settings_summary["push_notifications"] = "enabled" if preferences.get("push_notifications") else "browser-driven"
         settings_summary["voice_profile"] = preferences.get("voice_profile") or ""
+        settings_summary["login_provider"] = preferences.get("login_provider") or ""
+        settings_summary["login_confirmed"] = bool(preferences.get("login_confirmed"))
+        settings_summary["membership_plan"] = preferences.get("membership_plan") or plan
     faq_posts = list_faq_developer_posts(limit=7)
     traffic_summary = summarize_local_remote_traffic(window_minutes=5)
     inbox_offers = list_local_remote_inbox_offers(email or "guest", limit=8)
@@ -6711,6 +6726,26 @@ def local_remote_bootstrap():
             "Transportation cycle: east coast to midwest",
             "Dropshipping eventually taking over everything",
         ],
+        "build_displays": [
+            {
+                "title": "SupportRD Shell Build",
+                "image": "/static/images/aria-premium-pro-main-ad.jpg",
+                "detail": "Recent live shell display with premium routes, roaming assistants, and sticky account access.",
+                "link": "https://supportrd.com/",
+            },
+            {
+                "title": "Studio Motherboard Build",
+                "image": "/static/images/jake-studio-premium.jpg",
+                "detail": "Recent Studio motherboard editing display with stacked playback and export lanes.",
+                "link": "/local-studio",
+            },
+            {
+                "title": "Developer Coding Access",
+                "image": "/static/images/remote-healthy-hair.jpeg",
+                "detail": "Anthony founder access: coding the shell, options market board, corporate live viewer, and real platform wiring.",
+                "link": "http://127.0.0.1:3000/",
+            },
+        ],
     }
 
     studio_access = {
@@ -6732,6 +6767,8 @@ def local_remote_bootstrap():
             "email": email,
             "display_name": display_name,
             "subscription": plan,
+            "login_provider": preferences.get("login_provider") if preferences else "",
+            "login_confirmed": bool(preferences.get("login_confirmed")) if preferences else False,
         },
         "system": system,
         "diary": {
@@ -6778,6 +6815,9 @@ def local_remote_preferences_save():
         "account_zipcode": body.get("account_zipcode") or existing.get("account_zipcode") or "",
         "account_phone": body.get("account_phone") or existing.get("account_phone") or "",
         "aria_response_level": body.get("aria_response_level") or existing.get("aria_response_level") or "balanced",
+        "login_provider": body.get("login_provider") or existing.get("login_provider") or "",
+        "login_confirmed": bool(body.get("login_confirmed")) if "login_confirmed" in body else bool(existing.get("login_confirmed")),
+        "membership_plan": body.get("membership_plan") or existing.get("membership_plan") or "",
     }
     if body.get("password_plain"):
         prefs["password_plain"] = body.get("password_plain")

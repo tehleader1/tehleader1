@@ -14,10 +14,15 @@
     .stack,.comments,.history,.feed-list,.response-list,.social-list,.chat-list{display:grid;gap:12px}.card,.comment,.history-item,.feed-item,.response-item,.social-item,.chat-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}.card strong,.comment strong,.history-item strong,.feed-item strong,.response-item strong,.social-item strong,.chat-item strong{display:block}.card span,.comment span,.history-item span,.feed-item span,.response-item span,.social-item span,.chat-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.5}
     .hero-card,.action-board,.panel,.screen{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}.hero-card h2,.action-board h3,.panel h3,.screen h2{font-size:34px;font-family:"Cormorant Garamond",Georgia,serif}
     .hero-card p{color:var(--muted);margin-top:10px;line-height:1.6}.grid{display:grid;grid-template-columns:1.15fr .95fr;gap:16px}.columns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
-    .video-shell{position:relative;overflow:hidden;min-height:360px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03)),url('/static/images/brochure-social.jpg') center/cover no-repeat}.video-shell video{width:100%;height:260px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line)}.video-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.live-badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.live-badge{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.07);font-weight:700}
+    .video-shell{position:relative;overflow:hidden;min-height:360px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03)),url('/static/images/brochure-social.jpg') center/cover no-repeat}.video-shell video{width:100%;height:auto;aspect-ratio:16/9;min-height:320px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line)}.video-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.live-badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.live-badge{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.07);font-weight:700}
     .command-center{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start}.center-rail{display:grid;gap:12px}.command-card{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(121,184,255,.14),rgba(255,255,255,.04))}.assistant-fixed{display:grid;gap:10px;max-height:360px;overflow:auto;padding-right:4px}.assistant-bubble{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:rgba(7,16,30,.74)}.assistant-bubble strong{display:block}.assistant-bubble span{display:block;color:var(--muted);margin-top:6px}.main-screen-shell{display:grid;gap:14px}.screen-mode-bar{display:grid;grid-template-columns:150px repeat(5, minmax(0,1fr));gap:10px;align-items:center}.screen-canvas{position:relative;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03));padding:20px;min-height:210px;overflow:hidden}.screen-canvas.presentation{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(121,184,255,.08))}.screen-editor{position:relative;z-index:1;min-height:170px;outline:none}.screen-editor[data-placeholder]:empty::before{content:attr(data-placeholder);color:var(--muted)}.shape-layer{position:absolute;inset:0;pointer-events:none}.shape{position:absolute;border:1px solid rgba(255,255,255,.26);background:rgba(121,184,255,.14)}.screen-comments{display:grid;gap:10px}
     input,textarea,select,button{font:inherit}input,textarea,select{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}textarea{min-height:110px;resize:vertical}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}.buttons button:hover{background:rgba(121,184,255,.18)}.mini-buttons{display:flex;flex-wrap:wrap;gap:8px}.mini-buttons button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);cursor:pointer}
     .status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}.accent{color:var(--green)}.social-item{background:linear-gradient(180deg,rgba(121,184,255,.10),rgba(255,255,255,.04))}
+    .auth-badge{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:18px;border:1px solid rgba(119,224,199,.32);background:rgba(6,15,27,.9);box-shadow:0 18px 36px rgba(0,0,0,.24)}
+    .auth-badge strong{display:block;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+    .auth-badge span{display:block;color:var(--muted);font-size:13px;line-height:1.5}
+    .auth-badge a{color:var(--gold);font-weight:700;text-decoration:none}
+    .comment-composer{display:grid;grid-template-columns:minmax(0,1fr) 200px auto;gap:10px;margin-top:12px}
     @media (max-width:1280px){.shell,.grid,.columns,.action-grid,.video-meta{grid-template-columns:1fr}}
   </style>
 </head>
@@ -37,6 +42,13 @@
       </div>
     </aside>
     <main class="stage glass">
+      <section class="auth-badge" id="authBadge">
+        <div>
+          <strong id="authBadgeTitle">Guest Route</strong>
+          <span id="authBadgeText">Logged in. Confirmed ^^ URL TAG will stay visible here when the account is attached.</span>
+        </div>
+        <a href="/logout">Logout?</a>
+      </section>
       <section class="hero-card">
         <div class="eyebrow">Diary Live Feed</div>
         <h2>Livestream video panel, editable social posting, paid feed routing, and hair-problem assistant responses.</h2>
@@ -94,6 +106,11 @@
               <div class="panel" style="margin-top:14px;padding:14px">
                 <div class="eyebrow">Comments Under Screen</div>
                 <h3 style="font-size:26px">Live comments rail</h3>
+                <div class="comment-composer">
+                  <input id="liveCommentName" placeholder="Viewer / guest name">
+                  <input id="liveCommentSupport" placeholder="$ support / hearts">
+                  <button id="postLiveCommentBtn" type="button">Post Live Comment</button>
+                </div>
                 <div class="screen-comments" id="screenComments"></div>
               </div>
               <div class="panel" style="margin-top:14px;padding:14px">
@@ -184,9 +201,9 @@
   </div>
 
   <script>
-    const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[] };
+    const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[], loginBadge:{ title:"Guest Route", text:"Logged in. Confirmed ^^ URL TAG will stay visible here when the account is attached." } };
     const els = {
-      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), guestChatText: document.getElementById('guestChatText'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments'), chatList: document.getElementById('chatList') };
+      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), guestChatText: document.getElementById('guestChatText'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments'), chatList: document.getElementById('chatList'), authBadgeTitle: document.getElementById('authBadgeTitle'), authBadgeText: document.getElementById('authBadgeText'), liveCommentName: document.getElementById('liveCommentName'), liveCommentSupport: document.getElementById('liveCommentSupport'), postLiveCommentBtn: document.getElementById('postLiveCommentBtn') };
 
     function setStatus(message){ els.statusBox.textContent = message; }
     function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='feed-item'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
@@ -221,6 +238,23 @@
       shape.style.borderRadius = Math.random() > 0.5 ? '18px' : '999px';
       els.shapeLayer.appendChild(shape);
     }
+    function buildLoginBadge(bootstrap){
+      const settings = bootstrap?.settings || {};
+      const tag = settings.saved_tag || '';
+      const provider = settings.login_provider || 'manual';
+      const confirmed = settings.login_confirmed;
+      const plan = (settings.membership_plan || bootstrap?.account?.membership || 'free').toUpperCase();
+      const email = settings.account_email || bootstrap?.account?.email || 'guest';
+      return confirmed
+        ? {
+            title: `Logged in. Confirmed ^^ ${tag || 'URL TAG'}`,
+            text: `${email} · ${plan} · provider ${provider} · URL TAG ${tag || 'waiting'}`
+          }
+        : {
+            title: 'Guest Route',
+            text: `Logged in. Confirmed ^^ URL TAG will stay visible here when the account is attached. Current route: ${email}`
+          };
+    }
 
     function render(){
       const payload = state.payload || {};
@@ -235,6 +269,8 @@
       els.diaryLiveLink.textContent = state.liveSlug ? `${window.location.origin}/?diary-live=${state.liveSlug}` : 'No live link yet.';
       els.diaryHistoryCard.textContent = state.history[0]?.entry_text || state.history[0]?.transcript || 'Diary history will appear after the first saved session.';
       els.assistantLaneCard.textContent = state.response?.body || 'Aria and Jake are ready to read hair problems.';
+      els.authBadgeTitle.textContent = state.loginBadge.title;
+      els.authBadgeText.textContent = state.loginBadge.text;
       els.commandCenterTitle.textContent = payload.live_active ? 'Live feed is armed' : 'Live control ready';
       els.commandCenterBody.textContent = payload.live_active ? 'Comments, payments, and fixed Aria/Jake guidance are attached to this session.' : 'Turn live on, record the camera, and let Aria or Jake answer the actual hair problem.';
       if(!els.screenEditor.textContent.trim()){
@@ -242,7 +278,7 @@
       }
       renderList(els.historyList, state.history, 'No diary history yet', 'Save a diary record to start history.', item=>`<div class="history-item"><strong>${item.profile_tag || item.session_id}</strong><span>${item.entry_text || item.transcript || 'Saved diary entry.'}</span></div>`, 'history-item');
       renderList(els.commentsList, publicComments, 'No comments yet', 'Public comments will show up here.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
-      renderList(els.screenComments, publicComments.slice(0,3), 'No comments under screen yet', 'Live viewer comments will pin directly under the main screen.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
+      renderList(els.screenComments, publicComments.slice(0,5), 'No comments under screen yet', 'Live viewer comments will pin directly under the main screen.', item=>`<div class="comment"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || item.comment_kind || 'Comment'}</span></div>`, 'comment');
       renderList(els.chatList, chatMessages, 'No guest chat yet', 'This webcam-room lane will hold the back-and-forth with oncoming guests.', item=>`<div class="chat-item"><strong>${item.author_name || 'Guest'}</strong><span>${item.comment_text || 'Chat message'}</span></div>`, 'chat-item');
       renderList(els.lobbyList, state.lobby, 'Lobby is empty', 'Start a live diary session to appear here.', item=>`<div class="feed-item"><strong>${item.profile_tag || item.display_name || item.owner_email}</strong><span>${item.preview_text || item.owner_email || 'Diary feed ready.'}</span></div>`);
       renderList(els.socialList, state.socialPosts, 'No social posts yet', 'Use Post To Feed after you save a diary entry.', item=>`<div class="social-item"><strong>${item.title}</strong><span>${item.body}</span></div>`, 'social-item');
@@ -270,6 +306,7 @@
     async function bootstrapData(){
       const bootstrap = await fetchJson('/api/local-remote/bootstrap');
       state.ownerEmail = bootstrap.account?.email || 'guest';
+      state.loginBadge = buildLoginBadge(bootstrap);
       state.history = bootstrap.diary?.recent_sessions || [];
       state.lobby = bootstrap.diary?.lobby || [];
       const latest = state.history[0] || {};
@@ -329,6 +366,21 @@
           .join(' · ') || 'Guest support';
         const data = await fetchJson('/api/diary/comment', { method:'POST', body: JSON.stringify({ session_id: state.sessionId, author_name: els.guestName.value || 'Guest', comment_text: commentText, comment_kind:'comment' })});
         state.comments = data.comments || []; setStatus('Comment posted.'); render();
+      }catch(error){ setStatus(`Error: ${error.message}`); }
+    });
+    els.postLiveCommentBtn.addEventListener('click', async ()=>{
+      try{
+        if(!state.sessionId) throw new Error('bootstrap_first');
+        const commentText = [
+          els.entryText.value.trim() || 'Live viewer checked in.',
+          els.liveCommentSupport.value.trim() ? `Support ${els.liveCommentSupport.value.trim()}` : ''
+        ].filter(Boolean).join(' · ');
+        const data = await fetchJson('/api/diary/comment', { method:'POST', body: JSON.stringify({ session_id: state.sessionId, author_name: els.liveCommentName.value || els.guestName.value || 'Viewer', comment_text: commentText, comment_kind:'comment' })});
+        state.comments = data.comments || [];
+        els.liveCommentName.value = '';
+        els.liveCommentSupport.value = '';
+        setStatus('Live comment posted under the video stream.');
+        render();
       }catch(error){ setStatus(`Error: ${error.message}`); }
     });
     document.getElementById('chatBtn').addEventListener('click', async ()=>{
