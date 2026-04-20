@@ -1485,36 +1485,24 @@
     };
     const modulePackageMap = {
       diary: [
-        { key: "fantasy300", label: "Fantasy Package" },
-        { key: "premium", label: "Premium / Pro" }
+        { key: "premium", label: "Premium / Pro" },
+        { key: "fantasy300", label: "Fantasies" }
       ],
       studio: [
-        { key: "studio", label: "Studio Jake" }
+        { key: "studio", label: "Jake Studio" }
       ],
       profile: [
-        { key: "fantasy300", label: "Fantasy Package" },
-        { key: "premium", label: "Premium / Pro" }
+        { key: "premium", label: "Premium / Pro" },
+        { key: "fantasy300", label: "Fantasies" }
       ],
       settings: [
-        { key: "premium", label: "Premium" },
-        { key: "pro", label: "Pro" },
-        { key: "family200", label: "Family" },
-        { key: "fantasy300", label: "Fantasy" },
-        { key: "studio", label: "Studio Jake" }
+        { key: "all", label: "All Packages" }
       ],
       faq: [
-        { key: "premium", label: "Premium" },
-        { key: "pro", label: "Pro" },
-        { key: "family200", label: "Family" },
-        { key: "fantasy300", label: "Fantasy" },
-        { key: "studio", label: "Studio Jake" }
+        { key: "all", label: "All Packages" }
       ],
       map: [
-        { key: "premium", label: "Premium" },
-        { key: "pro", label: "Pro" },
-        { key: "family200", label: "Family" },
-        { key: "fantasy300", label: "Fantasy" },
-        { key: "studio", label: "Studio Jake" }
+        { key: "all", label: "All Packages" }
       ]
     };
 
@@ -1939,6 +1927,47 @@
         providerConfirmed = providerConfirmed || Boolean(attached.login_confirmed || attached.email);
       }
 
+      function applyUrlLoginState(){
+        const urlState = new URLSearchParams(window.location.search);
+        const loggedIn = urlState.get("logged_in") === "true" || urlState.get("login") === "confirmed";
+        if(!loggedIn) return;
+        const email = String(urlState.get("email") || "").trim().toLowerCase();
+        const displayName = String(urlState.get("name") || "").trim() || (email ? email.split("@")[0] : "Anthony");
+        const existing = readAttachedAccount() || {};
+        const savedTag = existing.saved_tag || buildMemberTag(displayName || email || "member");
+        const attached = {
+          authenticated: true,
+          email: email || existing.email || "",
+          display_name: displayName || existing.display_name || "",
+          subscription: existing.subscription || "pro",
+          login_provider: existing.login_provider || "provider confirmed",
+          login_confirmed: true,
+          saved_tag: savedTag,
+        };
+        writeAttachedAccount(attached);
+        window.localStorage.setItem("supportrdProviderConfirmed", "yes");
+        bootstrapData = bootstrapData || {};
+        bootstrapData.account = {
+          ...(bootstrapData.account || {}),
+          authenticated: true,
+          email: attached.email,
+          display_name: attached.display_name,
+          subscription: attached.subscription,
+          login_provider: attached.login_provider,
+          login_confirmed: true,
+        };
+        bootstrapData.settings = {
+          ...(bootstrapData.settings || {}),
+          account_email: attached.email,
+          display_name: attached.display_name,
+          membership_plan: attached.subscription,
+          login_provider: attached.login_provider,
+          login_confirmed: true,
+          saved_tag: attached.saved_tag,
+        };
+        providerConfirmed = true;
+      }
+
     function getPathRouteTag(){
       const path = decodeURIComponent(window.location.pathname || "").trim();
       if(path.startsWith("/^^")){
@@ -1975,6 +2004,7 @@
         const offers = modulePackageMap[panelKey] || [];
         const ownedPlan = String(bootstrapData?.settings?.membership_plan || bootstrapData?.account?.subscription || "free").toLowerCase();
       const ownsPackage = (packageKey)=>{
+        if(packageKey === "all") return ownedPlan !== "free";
         if(packageKey === "studio") return ["studio", "pro", "premium"].includes(ownedPlan);
         if(packageKey === "premium") return ["premium", "pro"].includes(ownedPlan);
         if(packageKey === "pro") return ownedPlan === "pro";
@@ -1985,14 +2015,16 @@
       signedInPackages.innerHTML = offers.map((offer)=>{
         const href = getExactCheckoutHref(
           offer.key,
-          offer.key === "studio" ? "https://shop.supportrd.com/products/jake-premium-studio" : "https://shop.supportrd.com/collections/all"
+          offer.key === "studio"
+            ? "https://shop.supportrd.com/products/jake-premium-studio"
+            : "https://shop.supportrd.com/collections/all"
         );
         return ownsPackage(offer.key)
           ? `<a href="${href}" class="owned" target="_blank" rel="noreferrer">${offer.label} · Package Already Bought</a>`
           : `<a href="${href}" target="_blank" rel="noreferrer">${offer.label}</a>`;
       }).join("");
       signedInRouteTitle.textContent = `SupportRD URL Tag ${savedTag}`;
-      signedInRouteText.textContent = `${window.location.origin}/${savedTag} · this random ^^ tag is connected to the account and the live SupportRD route. Every module page stays attached to the same logged-in account state.`;
+      signedInRouteText.textContent = `${savedTag} · this random ^^ tag is connected to the confirmed account and the live SupportRD route. Every module page stays attached to the same logged-in diary session.`;
     }
 
       async function syncAuthenticatedAccount(meData){
@@ -2074,6 +2106,7 @@
           const data = await bootstrapResponse.json();
           if(!data?.ok) return;
           bootstrapData = data;
+          applyUrlLoginState();
           hydrateAttachedAccountState();
           if(pathRouteTag && !bootstrapData?.settings?.saved_tag){
             bootstrapData.settings = { ...(bootstrapData.settings || {}), saved_tag: pathRouteTag };
