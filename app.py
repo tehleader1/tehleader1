@@ -5592,7 +5592,7 @@ def callback():
         sync_authenticated_local_remote_account(session["user"])
     except:
         return redirect("/")
-    return redirect("/")
+    return redirect("/?login=confirmed")
 
 @app.route("/logout")
 def logout():

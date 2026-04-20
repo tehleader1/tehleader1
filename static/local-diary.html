@@ -14,7 +14,7 @@
     .stack,.comments,.history,.feed-list,.response-list,.social-list,.chat-list{display:grid;gap:12px}.card,.comment,.history-item,.feed-item,.response-item,.social-item,.chat-item{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05)}.card strong,.comment strong,.history-item strong,.feed-item strong,.response-item strong,.social-item strong,.chat-item strong{display:block}.card span,.comment span,.history-item span,.feed-item span,.response-item span,.social-item span,.chat-item span{display:block;color:var(--muted);margin-top:4px;line-height:1.5}
     .hero-card,.action-board,.panel,.screen{padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.04)}.hero-card h2,.action-board h3,.panel h3,.screen h2{font-size:34px;font-family:"Cormorant Garamond",Georgia,serif}
     .hero-card p{color:var(--muted);margin-top:10px;line-height:1.6}.grid{display:grid;grid-template-columns:1.15fr .95fr;gap:16px}.columns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
-    .video-shell{position:relative;overflow:hidden;min-height:360px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03)),url('/static/images/brochure-social.jpg') center/cover no-repeat}.video-shell video{width:100%;height:auto;aspect-ratio:16/9;min-height:320px;border-radius:18px;object-fit:cover;background:#02070f;border:1px solid var(--line)}.video-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.live-badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.live-badge{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.07);font-weight:700}
+    .video-shell{position:relative;overflow:hidden;min-height:360px;background:linear-gradient(135deg,rgba(3,9,18,.96),rgba(8,19,35,.9) 42%,rgba(14,39,67,.74)),radial-gradient(circle at top left,rgba(119,224,199,.16),transparent 26%),radial-gradient(circle at bottom right,rgba(121,184,255,.18),transparent 34%)}.video-shell::before{content:"";position:absolute;inset:18px;border-radius:28px;border:1px solid rgba(255,255,255,.06);pointer-events:none}.video-shell video{width:100%;height:auto;aspect-ratio:16/9;min-height:320px;border-radius:22px;object-fit:cover;background:#02070f;border:1px solid rgba(192,232,255,.18);box-shadow:0 24px 48px rgba(0,0,0,.34)}.video-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.live-badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.live-badge{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.07);font-weight:700}
     .command-center{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start}.center-rail{display:grid;gap:12px}.command-card{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(121,184,255,.14),rgba(255,255,255,.04))}.assistant-fixed{display:grid;gap:10px;max-height:360px;overflow:auto;padding-right:4px}.assistant-bubble{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:rgba(7,16,30,.74)}.assistant-bubble strong{display:block}.assistant-bubble span{display:block;color:var(--muted);margin-top:6px}.main-screen-shell{display:grid;gap:14px}.screen-mode-bar{display:grid;grid-template-columns:150px repeat(5, minmax(0,1fr));gap:10px;align-items:center}.screen-canvas{position:relative;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03));padding:20px;min-height:210px;overflow:hidden}.screen-canvas.presentation{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(121,184,255,.08))}.screen-editor{position:relative;z-index:1;min-height:170px;outline:none}.screen-editor[data-placeholder]:empty::before{content:attr(data-placeholder);color:var(--muted)}.shape-layer{position:absolute;inset:0;pointer-events:none}.shape{position:absolute;border:1px solid rgba(255,255,255,.26);background:rgba(121,184,255,.14)}.screen-comments{display:grid;gap:10px}
     input,textarea,select,button{font:inherit}input,textarea,select{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}textarea{min-height:110px;resize:vertical}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.buttons button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer}.buttons button:hover{background:rgba(121,184,255,.18)}.mini-buttons{display:flex;flex-wrap:wrap;gap:8px}.mini-buttons button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);cursor:pointer}
     .status{margin-top:14px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted)}.accent{color:var(--green)}.social-item{background:linear-gradient(180deg,rgba(121,184,255,.10),rgba(255,255,255,.04))}
@@ -22,13 +22,28 @@
     .auth-badge strong{display:block;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
     .auth-badge span{display:block;color:var(--muted);font-size:13px;line-height:1.5}
     .auth-badge a{color:var(--gold);font-weight:700;text-decoration:none}
-    .comment-composer{display:grid;grid-template-columns:minmax(0,1fr) 200px auto;gap:10px;margin-top:12px}
+    .comment-composer{display:grid;grid-template-columns:minmax(0,1fr) 180px auto;gap:10px;margin-top:12px}
+    .comment-composer textarea{grid-column:1 / -1;min-height:108px}
     .payment-rail{display:grid;gap:12px;margin-top:14px}
     .payment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
     .payment-chip{min-height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,208,134,.12);color:var(--text);font-weight:700;cursor:pointer}
     .payment-chip:hover{background:rgba(255,208,134,.2)}
     .payment-links{display:flex;flex-wrap:wrap;gap:10px}
     .payment-links a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(121,184,255,.12);color:var(--text);text-decoration:none;font-weight:700}
+    .member-strip{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}
+    .member-card{padding:16px 18px;border-radius:22px;border:1px solid rgba(119,224,199,.2);background:linear-gradient(180deg,rgba(6,15,27,.94),rgba(10,21,39,.82));box-shadow:0 18px 40px rgba(0,0,0,.28)}
+    .member-offers{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .member-offers a,.member-offers button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:var(--text);text-decoration:none;font-weight:700;cursor:pointer}
+    .route-preview{display:grid;gap:10px}
+    .route-preview strong{display:block}
+    .route-preview span{display:block;color:var(--muted);line-height:1.5}
+    .route-preview a{color:var(--gold);text-decoration:none;font-weight:700}
+    .tip-note{padding:12px 14px;border-radius:18px;border:1px solid rgba(255,208,134,.24);background:rgba(255,208,134,.08);color:var(--muted)}
+    .video-stage-frame{padding:14px;border-radius:26px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02))}
+    .stream-headline{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+    .stream-headline strong{font-size:28px;font-family:"Cormorant Garamond",Georgia,serif}
+    .stream-headline span{color:var(--muted);line-height:1.5;max-width:600px}
+    .watch-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(119,224,199,.12);color:var(--text);text-decoration:none;font-weight:700}
     @media (max-width:1280px){.shell,.grid,.columns,.action-grid,.video-meta{grid-template-columns:1fr}}
   </style>
 </head>
@@ -54,6 +69,24 @@
           <span id="authBadgeText">Logged in. Confirmed ^^ URL TAG will stay visible here when the account is attached.</span>
         </div>
         <a href="/logout">Logout?</a>
+      </section>
+      <section class="member-strip">
+        <div class="member-card">
+          <div class="eyebrow">Logged In State</div>
+          <strong id="memberCardTitle">Diary mode premium route</strong>
+          <span id="memberCardText">Logged in. Confirmed ^^ URL TAG, Fantasy Package Offer, and Premium / Pro Package Offer will attach here with the diary session.</span>
+          <div class="member-offers">
+            <a id="memberPremiumLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Premium / Pro Package Offer</a>
+            <a id="memberFantasyLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Fantasy Package Offer</a>
+            <button id="handsFreeModeBtn" type="button">Hands Free Mode Ready</button>
+          </div>
+        </div>
+        <div class="member-card route-preview">
+          <div class="eyebrow">Live Route Preview</div>
+          <strong id="publicRouteTitle">Public diary route waiting</strong>
+          <span id="publicRouteText">Use a ^^ tag to make the diary lane feel like a real live room under the same SupportRD shell.</span>
+          <a id="publicRouteLink" href="#">Open current diary route</a>
+        </div>
       </section>
       <section class="hero-card">
         <div class="eyebrow">Diary Live Feed</div>
@@ -83,7 +116,16 @@
                   <button id="bulletBtn" type="button">Bullet</button>
                   <button id="shapeBtn" type="button">Shape</button>
                 </div>
-                <video id="diaryVideo" playsinline muted autoplay></video>
+                <div class="video-stage-frame">
+                  <div class="stream-headline">
+                    <div>
+                      <strong>Diary live chat room</strong>
+                      <span>One obvious responsive stream window, comments under the stream, tip routing on the side, and the logged-in diary identity staying attached to the room.</span>
+                    </div>
+                    <a id="screenWatchLink" class="watch-link" href="#">Open live route</a>
+                  </div>
+                  <video id="diaryVideo" playsinline muted autoplay></video>
+                </div>
                 <div class="screen-canvas" id="screenCanvas" style="display:none">
                   <div class="shape-layer" id="shapeLayer"></div>
                   <div id="screenEditor" class="screen-editor" contenteditable="true" data-placeholder="Build the main screen here: headline, bullet points, hair problem slide, or doc notes."></div>
@@ -115,6 +157,7 @@
                 <div class="comment-composer">
                   <input id="liveCommentName" placeholder="Viewer / guest name">
                   <input id="liveCommentSupport" placeholder="$ support / hearts">
+                  <textarea id="liveCommentText" placeholder="Type the actual live comment here so it pins under the stream."></textarea>
                   <button id="postLiveCommentBtn" type="button">Post Live Comment</button>
                 </div>
                 <div class="screen-comments" id="screenComments"></div>
@@ -123,6 +166,7 @@
                 <div class="eyebrow">Tip Tab</div>
                 <h3 style="font-size:26px">Live payments + paid guest lane</h3>
                 <div class="payment-rail">
+                  <div class="tip-note">Payments in Diary mode run off the logged-in SupportRD account route and the saved ^^ tag. Once the account is confirmed, tips, hearts, and guest entry can follow that diary identity.</div>
                   <div class="payment-grid">
                     <button class="payment-chip" id="tip5Btn" type="button">$5 Tip</button>
                     <button class="payment-chip" id="tip20Btn" type="button">$20 Hearts</button>
@@ -223,9 +267,9 @@
   </div>
 
   <script>
-    const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[], shopifyConfig:null, loginBadge:{ title:"Guest Route", text:"Logged in. Confirmed ^^ URL TAG will stay visible here when the account is attached." } };
+    const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[], shopifyConfig:null, loginBadge:{ title:"Guest Route", text:"Logged in. Confirmed ^^ URL TAG will stay visible here when the account is attached." }, publicDiaryView:null };
     const els = {
-      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), guestChatText: document.getElementById('guestChatText'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments'), chatList: document.getElementById('chatList'), authBadgeTitle: document.getElementById('authBadgeTitle'), authBadgeText: document.getElementById('authBadgeText'), liveCommentName: document.getElementById('liveCommentName'), liveCommentSupport: document.getElementById('liveCommentSupport'), postLiveCommentBtn: document.getElementById('postLiveCommentBtn'), tip5Btn: document.getElementById('tip5Btn'), tip20Btn: document.getElementById('tip20Btn'), paidGuestBtn: document.getElementById('paidGuestBtn'), premiumLaneLink: document.getElementById('premiumLaneLink'), proLaneLink: document.getElementById('proLaneLink'), fantasyLaneLink: document.getElementById('fantasyLaneLink') };
+      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), guestChatText: document.getElementById('guestChatText'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments'), chatList: document.getElementById('chatList'), authBadgeTitle: document.getElementById('authBadgeTitle'), authBadgeText: document.getElementById('authBadgeText'), liveCommentName: document.getElementById('liveCommentName'), liveCommentSupport: document.getElementById('liveCommentSupport'), liveCommentText: document.getElementById('liveCommentText'), postLiveCommentBtn: document.getElementById('postLiveCommentBtn'), tip5Btn: document.getElementById('tip5Btn'), tip20Btn: document.getElementById('tip20Btn'), paidGuestBtn: document.getElementById('paidGuestBtn'), premiumLaneLink: document.getElementById('premiumLaneLink'), proLaneLink: document.getElementById('proLaneLink'), fantasyLaneLink: document.getElementById('fantasyLaneLink'), memberCardTitle: document.getElementById('memberCardTitle'), memberCardText: document.getElementById('memberCardText'), memberPremiumLink: document.getElementById('memberPremiumLink'), memberFantasyLink: document.getElementById('memberFantasyLink'), publicRouteTitle: document.getElementById('publicRouteTitle'), publicRouteText: document.getElementById('publicRouteText'), publicRouteLink: document.getElementById('publicRouteLink'), screenWatchLink: document.getElementById('screenWatchLink') };
 
     function setStatus(message){ els.statusBox.textContent = message; }
     function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='feed-item'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
@@ -236,6 +280,31 @@
       els.premiumLaneLink.href = checkoutHref('premium', 'https://shop.supportrd.com/collections/all');
       els.proLaneLink.href = checkoutHref('pro', 'https://shop.supportrd.com/collections/all');
       els.fantasyLaneLink.href = checkoutHref('fantasy300', 'https://shop.supportrd.com/collections/all');
+      els.memberPremiumLink.href = els.proLaneLink.href;
+      els.memberFantasyLink.href = els.fantasyLaneLink.href;
+    }
+    function getRequestedDiarySlug(){
+      const params = new URLSearchParams(window.location.search);
+      const rawTag = params.get('tag') || params.get('diaryTag') || '';
+      const liveSlug = params.get('diary-live') || params.get('live_slug') || params.get('slug') || '';
+      if(liveSlug) return liveSlug.trim().replace(/^\^+/, '');
+      return rawTag.trim().replace(/^\^+/, '').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+    }
+    async function loadPublicDiaryView(slug){
+      if(!slug) return null;
+      const data = await fetchJson(`/api/diary/session/public?slug=${encodeURIComponent(slug)}`);
+      state.publicDiaryView = data;
+      return data;
+    }
+    function buildRouteLink(){
+      const routeTag = (state.payload?.profile_tag || els.profileTag.value || '').replace(/^\^+/, '');
+      if(routeTag){
+        return `${window.location.origin}/?diary-live=${routeTag}`;
+      }
+      if(state.liveSlug){
+        return `${window.location.origin}/?diary-live=${state.liveSlug}`;
+      }
+      return `${window.location.origin}/live-diary`;
     }
 
     function buildHairResponse(name, problem){
@@ -288,17 +357,30 @@
       const payload = state.payload || {};
       const publicComments = state.comments.filter(item => (item.comment_kind || 'comment') !== 'chat');
       const chatMessages = state.comments.filter(item => item.comment_kind === 'chat');
+      const routeLink = buildRouteLink();
+      const loginConfirmed = state.loginBadge.title.startsWith('Logged in. Confirmed');
       els.liveScreenTitle.textContent = payload.display_name ? `${payload.display_name}'s diary live feed` : 'Diary live screen is ready.';
       els.liveScreenMeta.textContent = payload.entry_text || payload.transcript || 'Prime the camera, bootstrap a session, then save or post the live diary lane.';
       els.liveBadgeMode.textContent = `Live: ${payload.live_active ? 'on' : 'off'}`;
       els.liveBadgeTag.textContent = `Tag: ${payload.profile_tag || 'waiting'}`;
       els.liveBadgeOwner.textContent = `Owner: ${state.ownerEmail || 'guest'}`;
       els.diarySessionCard.textContent = state.sessionId ? `${state.sessionId} · ${payload.updated_at || 'session active'}` : 'Waiting for session bootstrap.';
-      els.diaryLiveLink.textContent = state.liveSlug ? `${window.location.origin}/?diary-live=${state.liveSlug}` : 'No live link yet.';
+      els.diaryLiveLink.textContent = routeLink;
       els.diaryHistoryCard.textContent = state.history[0]?.entry_text || state.history[0]?.transcript || 'Diary history will appear after the first saved session.';
       els.assistantLaneCard.textContent = state.response?.body || 'Aria and Jake are ready to read hair problems.';
       els.authBadgeTitle.textContent = state.loginBadge.title;
       els.authBadgeText.textContent = state.loginBadge.text;
+      els.memberCardTitle.textContent = loginConfirmed ? `${payload.profile_tag || '^^ route'} diary access is attached` : 'Diary mode premium route';
+      els.memberCardText.textContent = loginConfirmed
+        ? 'Fantasy Package Offer, Premium / Pro Package Offer, live payments, and the current diary identity are attached to this logged-in room.'
+        : 'Logged in. Confirmed ^^ URL TAG, Fantasy Package Offer, and Premium / Pro Package Offer will attach here with the diary session.';
+      els.publicRouteTitle.textContent = payload.profile_tag ? `Current live route ${payload.profile_tag}` : 'Public diary route waiting';
+      els.publicRouteText.textContent = state.publicDiaryView?.summary?.owner_email
+        ? `Currently reading ${state.publicDiaryView.summary.owner_email} through the shared diary route.`
+        : `Use the same SupportRD shell with a ^^ tag or diary-live query to load a different person's room route.`;
+      els.publicRouteLink.href = routeLink;
+      els.publicRouteLink.textContent = routeLink;
+      els.screenWatchLink.href = routeLink;
       els.commandCenterTitle.textContent = payload.live_active ? 'Live feed is armed' : 'Live control ready';
       els.commandCenterBody.textContent = payload.live_active ? 'Comments, payments, and fixed Aria/Jake guidance are attached to this session.' : 'Turn live on, record the camera, and let Aria or Jake answer the actual hair problem.';
       if(!els.screenEditor.textContent.trim()){
@@ -348,8 +430,22 @@
       els.entryText.value = latest.entry_text || latest.transcript || '';
       state.sessionId = latest.session_id || state.sessionId;
       state.liveSlug = latest.live_slug || state.liveSlug;
+      const requestedSlug = getRequestedDiarySlug();
+      if(requestedSlug){
+        const publicView = await loadPublicDiaryView(requestedSlug).catch(()=>null);
+        if(publicView){
+          state.sessionId = publicView.session_id || state.sessionId;
+          state.liveSlug = publicView.summary?.live_slug || requestedSlug;
+          state.payload = publicView.payload || state.payload;
+          state.comments = publicView.comments || state.comments;
+          state.ownerEmail = publicView.summary?.owner_email || state.ownerEmail;
+          els.displayName.value = publicView.payload?.display_name || els.displayName.value;
+          els.profileTag.value = publicView.payload?.profile_tag || els.profileTag.value;
+          els.entryText.value = publicView.payload?.entry_text || publicView.payload?.transcript || els.entryText.value;
+        }
+      }
       refreshPaymentLinks();
-      if(state.sessionId){ await refreshFeed(); }
+      if(state.sessionId && !requestedSlug){ await refreshFeed(); }
       render();
     }
 
@@ -421,13 +517,14 @@
       try{
         if(!state.sessionId) throw new Error('bootstrap_first');
         const commentText = [
-          els.entryText.value.trim() || 'Live viewer checked in.',
+          els.liveCommentText.value.trim() || els.entryText.value.trim() || 'Live viewer checked in.',
           els.liveCommentSupport.value.trim() ? `Support ${els.liveCommentSupport.value.trim()}` : ''
         ].filter(Boolean).join(' · ');
         const data = await fetchJson('/api/diary/comment', { method:'POST', body: JSON.stringify({ session_id: state.sessionId, author_name: els.liveCommentName.value || els.guestName.value || 'Viewer', comment_text: commentText, comment_kind:'comment' })});
         state.comments = data.comments || [];
         els.liveCommentName.value = '';
         els.liveCommentSupport.value = '';
+        els.liveCommentText.value = '';
         setStatus('Live comment posted under the video stream.');
         render();
       }catch(error){ setStatus(`Error: ${error.message}`); }

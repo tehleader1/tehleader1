@@ -1049,13 +1049,13 @@
             </div>
             <div class="login-shell" id="loginShell">
               <div class="provider-row">
-                <a class="provider-btn" href="/login" target="_blank" rel="noreferrer">Provider Login</a>
-                <a class="provider-btn" href="/login?mode=signup" target="_blank" rel="noreferrer">Create Account</a>
+                <a class="provider-btn" href="/login">Provider Login</a>
+                <a class="provider-btn" href="/login?mode=signup">Create Account</a>
                 <button class="provider-btn" type="button" id="providerConfirmBtn">Confirm Provider</button>
               </div>
               <div class="provider-row">
-                <a class="provider-btn" href="/login?provider=google-oauth2&mode=signup" target="_blank" rel="noreferrer">Google Login</a>
-                <a class="provider-btn" href="/login?provider=windowslive&mode=signup" target="_blank" rel="noreferrer">Microsoft Login</a>
+                <a class="provider-btn" href="/login?provider=google-oauth2&mode=signup">Google Login</a>
+                <a class="provider-btn" href="/login?provider=windowslive&mode=signup">Microsoft Login</a>
               </div>
               <div class="login-grid">
                 <input id="loginEmail" type="email" placeholder="Email address">
@@ -1915,7 +1915,7 @@
         currentDiarySessionId = data.diary?.recent_sessions?.[0]?.session_id || currentDiarySessionId;
         currentStudioSessionId = data.studio?.recent_sessions?.[0]?.session_id || currentStudioSessionId;
         loginEmail.value = bootstrapData?.settings?.account_email || bootstrapData?.account?.email || "";
-        providerConfirmed = window.localStorage.getItem("supportrdProviderConfirmed") === "yes";
+        providerConfirmed = window.localStorage.getItem("supportrdProviderConfirmed") === "yes" || Boolean(data?.settings?.login_confirmed || data?.account?.login_confirmed);
         renderLoginPanel();
         renderStickyLists();
         renderHelpingState();
@@ -1938,6 +1938,7 @@
       const savedTag = settings.saved_tag || "^^ waiting";
       const savedPassword = Boolean(loginPassword.value.trim() || settings.password_set);
       const signedIn = providerConfirmed || settings.login_confirmed || account.login_confirmed || (Boolean(loginEmail.value || settings.account_email || account.email) && savedPassword);
+      providerConfirmed = providerConfirmed || Boolean(settings.login_confirmed || account.login_confirmed);
       const sourceLabel = providerConfirmed || settings.login_confirmed ? (loginProvider || "provider confirmed") : "manual email login";
       const confirmedEmail = loginEmail.value || settings.account_email || account.email || "guest@supportrd.com";
       loginShell.hidden = signedIn;
@@ -1947,7 +1948,9 @@
       pageAuthText.textContent = signedIn
         ? `URL TAG ${savedTag} · ${confirmedEmail} · ${membershipPlan} access attached to Studio, Profile, Settings, Map, Diary, and FAQ.`
         : "Login confirmed state and ^^ URL tag will stay attached to every module route.";
-      loginStatusBox.textContent = message || `Account route: ${confirmedEmail} · ${sourceLabel}. ${signedIn ? `SupportRD account access is attached with ${savedTag}.` : "Use provider confirm or save email/password."}`;
+      const urlState = new URLSearchParams(window.location.search);
+      const loginBoost = urlState.get("login") === "confirmed";
+      loginStatusBox.textContent = message || `Account route: ${confirmedEmail} · ${sourceLabel}. ${signedIn ? `SupportRD account access is attached with ${savedTag}.${loginBoost ? " Provider login just completed." : ""}` : "Use provider confirm or save email/password."}`;
     }
 
     async function saveLoginPanel(options = {}){
@@ -2652,12 +2655,12 @@
     localJake.addEventListener("click", ()=>runVoiceSequence("Jake"));
 
     const roamTargets = {
-      diary: [{x:.2,y:150},{x:.83,y:210},{x:.74,y:420},{x:.18,y:520},{x:.54,y:620}],
-      studio: [{x:.22,y:168},{x:.84,y:224},{x:.72,y:446},{x:.19,y:548},{x:.57,y:652}],
-      settings: [{x:.24,y:156},{x:.82,y:208},{x:.7,y:404},{x:.2,y:500},{x:.56,y:608}],
-      map: [{x:.21,y:164},{x:.81,y:218},{x:.69,y:432},{x:.18,y:536},{x:.58,y:640}],
-      faq: [{x:.23,y:148},{x:.83,y:204},{x:.71,y:414},{x:.19,y:516},{x:.55,y:624}],
-      profile: [{x:.22,y:160},{x:.84,y:214},{x:.73,y:438},{x:.2,y:540},{x:.59,y:646}]
+      diary: [{x:.12,y:.2},{x:.84,y:.24},{x:.74,y:.52},{x:.18,y:.7},{x:.58,y:.82}],
+      studio: [{x:.14,y:.22},{x:.85,y:.28},{x:.76,y:.56},{x:.16,y:.72},{x:.61,y:.84}],
+      settings: [{x:.18,y:.18},{x:.82,y:.3},{x:.7,y:.58},{x:.2,y:.74},{x:.55,y:.86}],
+      map: [{x:.14,y:.22},{x:.83,y:.26},{x:.68,y:.54},{x:.17,y:.72},{x:.59,y:.84}],
+      faq: [{x:.16,y:.18},{x:.84,y:.28},{x:.72,y:.56},{x:.19,y:.74},{x:.57,y:.86}],
+      profile: [{x:.15,y:.2},{x:.85,y:.3},{x:.75,y:.58},{x:.21,y:.76},{x:.6,y:.88}]
     };
     const assistantMotion = {
       Aria: { node: localAria, x: 0, y: 0, targetX: 0, targetY: 0, phase: 0, step: 0 },
@@ -2676,7 +2679,7 @@
       Object.values(assistantMotion).forEach((motion)=>{
         motion.step = forceReset ? motion.step % targets.length : (motion.step + 1) % targets.length;
         const target = targets[motion.step];
-        const next = clampAssistant(window.innerWidth * target.x, target.y);
+        const next = clampAssistant(window.innerWidth * target.x, window.innerHeight * target.y);
         motion.targetX = next.x;
         motion.targetY = next.y;
         if(forceReset && !motion.x && !motion.y){
@@ -2701,6 +2704,12 @@
     }
 
     window.addEventListener("resize", ()=>chooseAssistantTargets(true));
+    window.addEventListener("focus", ()=>loadBootstrap());
+    document.addEventListener("visibilitychange", ()=>{
+      if(document.visibilityState === "visible"){
+        loadBootstrap();
+      }
+    });
     chooseAssistantTargets(true);
     setInterval(()=>chooseAssistantTargets(false), 3200);
     window.requestAnimationFrame(animateAssistants);
