@@ -113,5 +113,6 @@
     fetchJson('/api/local-remote/bootstrap').then((data)=>{ bootstrap = data; renderAuth(); }).catch(()=>{});
     renderReel(); renderFaq(FAQS); startReel(); refreshFeed().then(()=>setStatus('FAQ Lounge loaded.')).catch((error)=>setStatus(`Error: ${error.message}`));
   </script>
+  <script src="/static/global-auth.js"></script>
 </body>
 </html>
