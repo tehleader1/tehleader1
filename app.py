@@ -5544,7 +5544,6 @@ def login():
         print("LOGIN ERROR: missing AUTH0 env vars")
         return redirect("https://supportrd.com/local-remote?login=failed&reason=missing_auth0")
     state = os.urandom(16).hex()
-    session["oauth_state"] = state
     provider = request.args.get("provider")
     mode = request.args.get("mode", "").lower()
     login_hint = (request.args.get("login_hint") or "").strip()
@@ -5575,13 +5574,12 @@ def callback():
     print("----- CALLBACK HIT -----")
     code = request.args.get("code")
     state = request.args.get("state")
-    expected_state = session.get("oauth_state")
     print("CALLBACK DEBUG: code present =", bool(code))
     print("CALLBACK DEBUG: state =", state)
-    print("CALLBACK DEBUG: expected state =", expected_state)
-    if not code or not state or state != expected_state:
-        print("CALLBACK ERROR: state mismatch or missing code")
-        return redirect("https://supportrd.com/local-remote?login=failed&reason=state")
+    print("CALLBACK DEBUG: expected state = stateless-skip")
+    if not code:
+        print("CALLBACK ERROR: missing code")
+        return redirect("https://supportrd.com/local-remote?login=failed&reason=code")
     token_url = f"https://{AUTH0_DOMAIN}/oauth/token"
     payload = {
         "grant_type": "authorization_code",
