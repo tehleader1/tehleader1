@@ -1,1 +1,104 @@
+name: Repo Wide Full File Auto Replace
 
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "incoming/**"
+
+permissions:
+  contents: write
+
+jobs:
+  replace-files:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Show incoming files
+        shell: bash
+        run: |
+          echo "Incoming files:"
+          find incoming -type f | sort || true
+
+      - name: Configure git
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Replace repo files from incoming
+        shell: bash
+        run: |
+          set -e
+
+          if [ ! -d "incoming" ]; then
+            echo "No incoming directory found."
+            exit 0
+          fi
+
+          mapfile -t files < <(find incoming -type f | sort)
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No files inside incoming."
+            exit 0
+          fi
+
+          for src in "${files[@]}"; do
+            dest="${src#incoming/}"
+
+            if [ -z "$dest" ] || [ "$dest" = "$src" ]; then
+              echo "Skipping invalid path: $src"
+              continue
+            fi
+
+            mkdir -p "$(dirname "$dest")"
+            cp "$src" "$dest"
+            echo "Replaced $dest from $src"
+          done
+
+      - name: Verify root app.py replacement
+        shell: bash
+        run: |
+          if [ -f "incoming/app.py" ]; then
+            echo "incoming/app.py exists"
+            if [ ! -f "app.py" ]; then
+              echo "ERROR: root app.py was not created"
+              exit 1
+            fi
+            echo "Root app.py first 20 lines:"
+            sed -n '1,20p' app.py
+          fi
+
+      - name: Commit replacements
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No changes detected."
+            exit 0
+          fi
+
+          git add .
+          git commit -m "Auto replace files from incoming"
+          git push origin main
+
+      - name: Clear incoming folder
+        shell: bash
+        run: |
+          if [ -d "incoming" ]; then
+            find incoming -type f -delete
+          fi
+
+          if git diff --quiet; then
+            echo "No cleanup changes."
+            exit 0
+          fi
+
+          git add incoming || true
+          git commit -m "Clear incoming after auto replace"
+          git push origin main
