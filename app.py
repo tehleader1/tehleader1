@@ -12,6 +12,7 @@ from html import escape
 import os
 import re
 import requests
+from urllib.parse import urlencode
 import time
 import sqlite3
 import zipfile
@@ -109,7 +110,7 @@ AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN", "")
 AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID", "")
 AUTH0_CLIENT_SECRET = os.environ.get("AUTH0_CLIENT_SECRET", "")
 AUTH0_CALLBACK_URL = os.environ.get("AUTH0_CALLBACK_URL", "https://ai-hair-advisor.onrender.com/callback")
-AUTH0_LOGOUT_URL = os.environ.get("AUTH0_LOGOUT_URL", "https://supportrd.com")
+AUTH0_LOGOUT_URL = os.environ.get("AUTH0_LOGOUT_URL", "https://supportrd.com/local-remote")
 
 SMTP_HOST = os.environ.get("SMTP_HOST", "")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
@@ -5572,7 +5573,7 @@ def callback():
     code = request.args.get("code")
     state = request.args.get("state")
     if not code or not state or state != session.get("oauth_state"):
-        return redirect("/")
+        return redirect("https://supportrd.com/local-remote?login=failed")
     token_url = f"https://{AUTH0_DOMAIN}/oauth/token"
     payload = {
         "grant_type": "authorization_code",
@@ -5594,8 +5595,13 @@ def callback():
         session["user"] = userinfo_res.json()
         sync_authenticated_local_remote_account(session["user"])
     except:
-        return redirect("/")
-    return redirect("/?login=confirmed")
+        return redirect("https://supportrd.com/local-remote?login=failed")
+    user = session.get("user") or {}
+    email = (user.get("email") or "").strip()
+    name = (user.get("name") or user.get("nickname") or "").strip()
+    params = {"logged_in": "true", "login": "confirmed", "email": email, "name": name}
+    query = urlencode(params)
+    return redirect(f"https://supportrd.com/local-remote?{query}")
 
 @app.route("/logout")
 def logout():
