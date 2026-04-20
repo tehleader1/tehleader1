@@ -1,0 +1,3057 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SupportRD - Premium Hair Industry Brand</title>
+<meta name="theme-color" content="#1f2329">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/static/icons/app-192.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="/static/images/woman-waking-up12.jpg">
+<link rel="stylesheet" href="/static/style.v20260320h.css?v=20260414t">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8NTL8D64M1"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag("js", new Date());
+gtag("config", "G-8NTL8D64M1", { send_page_view: true });
+</script>
+<script src="https://cdn.auth0.com/js/auth0/9.24/auth0.min.js"></script>
+<style id="supportRebuildBootStyle">
+body .float-launch-btn {
+  background-image: linear-gradient(180deg, rgba(5,10,20,.18), rgba(5,10,20,.74)), url('/static/images/woman-waking-up12.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+</style>
+</head>
+<body class="theme-aurora system-theme natural-pro resort-brochure competition-world">
+<div id="launchMenu" class="launch-menu">
+  <div class="launch-topbar">
+    <button class="btn ghost" id="launchPaymentBtn">Payment Options</button>
+    <select id="launchLang" class="launch-lang">
+      <option value="en">English</option>
+      <option value="es">Espanol</option>
+      <option value="fr">Francais</option>
+      <option value="de">Deutsch</option>
+      <option value="ar">Arabic</option>
+      <option value="sw">Swahili</option>
+    </select>
+  </div>
+  <div class="launch-watermark">
+    <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD Watermark">
+  </div>
+  <div class="launch-center">
+    <h1 id="launchTitle">SupportRD Check-In</h1>
+    <div class="launch-main-actions">
+      <button id="launchMenuBtn" class="launch-main-btn">Enter SupportRD</button>
+      <button id="quickBoothStart" class="launch-main-btn alt">Open Booth</button>
+    </div>
+    <div id="launchPanel" class="launch-panel launch-checkin-card collapsed">
+      <div class="launch-panel-head">
+        <div>
+          <div class="launch-panel-title" id="menuTitle">Support Check-In</div>
+          <div class="system-sub">Optional account access while Remote keeps running in the background.</div>
+        </div>
+        <button class="btn ghost launch-panel-toggle" id="launchPanelToggle" type="button" aria-expanded="false">Open</button>
+      </div>
+      <div class="launch-panel-body">
+        <div class="launch-checkin-grid">
+          <input id="launchAccountEmail" class="input" placeholder="Email or Username">
+          <input id="launchAccountPassword" class="input" type="password" placeholder="Password">
+          <input id="launchCheckinChangeEmail" class="input" placeholder="Change Email">
+          <input id="launchCheckinChangePassword" class="input" type="password" placeholder="Change Password">
+        </div>
+        <label class="launch-checkin-option"><input type="checkbox" id="launchNewsletterOptIn"> Sign up for SupportRD subscriber letter</label>
+        <div class="launch-actions launch-checkin-actions">
+          <button class="btn" id="launchAccountLogin">Log In</button>
+          <button class="btn ghost" id="launchAccountCreate">Create Account</button>
+          <button class="btn ghost" id="launchAccountForgot">Forgot Password</button>
+          <button class="btn ghost" id="menuPayment">Payment Options</button>
+          <button class="btn ghost" id="menuBrochure">Open Brochure</button>
+          <button class="btn" id="menuEnter">Enter App</button>
+        </div>
+        <div class="launch-provider-row">
+          <a class="btn ghost launch-provider-btn" href="/login?provider=google-oauth2">Google</a>
+          <a class="btn ghost launch-provider-btn" href="/login?provider=windowslive">Microsoft</a>
+          <a class="btn ghost launch-provider-btn" href="/login?provider=yahoo">Yahoo</a>
+        </div>
+        <div class="launch-checkin-footer">
+          <span>Need direct help? `xxfigueroa1993@yahoo.com` · `980-375-9197`</span>
+        </div>
+      </div>
+    </div>
+    <div id="launchPaymentPanel" class="launch-payment-panel">
+      <div class="launch-panel-title">Payment Options</div>
+      <div class="launch-offers">
+        <button class="btn" data-pay="family200">$200 Family Pack</button>
+        <button class="btn" data-pay="premium">$35 ARIA Original</button>
+        <button class="btn" data-pay="pro">$50 ARIA Professional</button>
+        <button class="btn" data-pay="bingo100">Bingo $100</button>
+        <button class="btn" data-pay="yoda">$20 Slow / Yoda</button>
+        <button class="btn ghost" data-pay="tip">Tip Owners & Workers</button>
+      </div>
+      <button class="btn ghost" id="closeLaunchPayment">Close</button>
+    </div>
+  </div>
+  <div class="launch-sponsors">
+    <strong>Sponsors:</strong> Visa · Mastercard · U.S. Bank · Bank of America · Wells Fargo · Woodforest
+  </div>
+</div>
+<div id="launchSplash" class="launch-splash" aria-hidden="true">
+  <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD Launch">
+  <div class="launch-splash-copy">
+    <div class="launch-splash-kicker">Transmit From Far</div>
+    <div class="launch-splash-title">Old school ruins staircase loading in.</div>
+    <div class="launch-splash-sub" id="launchSplashMessage">Beauty can show up even in the stairs. SupportRD is lining up your next route.</div>
+    <div class="launch-stairs" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+</div>
+<button class="sat-quick-btn" id="satQuickOpen" title="Satellite Search and Rescue">SAR</button>
+<div id="satQuickModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Satellite Quick Contact</h2>
+      <button class="btn ghost" id="satQuickClose">Close</button>
+    </div>
+    <div class="system-sub">Fast front-phone access for launch alerts, prayer support, and secure transfer lane.</div>
+    <div class="request-grid" style="margin-top:10px;">
+      <button class="btn" id="satQuickDirect">Direct Contact</button>
+      <button class="btn ghost" id="satQuickPrayer">Prayer</button>
+      <button class="btn ghost" id="satQuickTransfer">Transfer Data Lane</button>
+      <button class="btn ghost" id="satQuickBrochure">Open Brochure</button>
+      <button class="btn danger" id="satQuickRescue">Search & Rescue (Red)</button>
+    </div>
+    <div id="satQuickStatus" class="system-sub sat-status" style="margin-top:8px;">CEO + Inner Circle only for transfer data capabilities.</div>
+  </div>
+</div>
+<div class="bg-layers"></div>
+      <div id="app">
+  <div id="loginGate" class="login-gate">
+    <button class="login-route-pill" id="loginGateRoute" type="button" hidden>Sign In</button>
+    <div class="login-card glass">
+      <div class="modal-head" style="padding:0;margin-bottom:6px;">
+        <h2>SupportRD Login</h2>
+        <button class="btn ghost" id="collapseLoginGate">Hide</button>
+        <button class="btn ghost" id="closeLoginGate">Close</button>
+      </div>
+      <p>Select a provider to continue.</p>
+      <div class="login-actions">
+        <a class="btn" id="loginGoogle" href="/login?provider=google-oauth2">Login with Google</a>
+        <a class="btn" id="loginMicrosoft" href="/login?provider=windowslive">Login with Microsoft</a>
+        <a class="btn" id="loginPhone" href="/login?provider=sms">Login with Phone Number</a>
+        <a class="btn" id="loginYahoo" href="/login?provider=yahoo">Login with Yahoo</a>
+        <a class="btn ghost" id="loginOther" href="/login">Login with Other</a>
+        <a class="btn ghost" id="signupBtn" href="/login?mode=signup">Create Account</a>
+      </div>
+    </div>
+  </div>
+  <header class="topbar glass">
+    <div class="brand">
+      <div class="logo">SupportRD Free Roam World</div>
+      <div class="system-badge">Core Build Active</div>
+      <div class="tagline">Remote on top. Open what you need fast.</div>
+    </div>
+    <div class="top-middle">
+      <button class="btn ghost" id="liteModeBtn">Accessible Version</button>
+      <button class="btn ghost" id="simpleUiToggle">Simple View: On</button>
+      <button class="btn ghost" id="openStudioTop">Go To Jake (2s)</button>
+    </div>
+    <div class="status">
+      <div class="big-menu">
+        <button class="menu-btn advanced-menu" id="menuOccasion">Occasion Editor</button>
+        <button class="menu-btn" id="menuGift">Gift Shop</button>
+        <button class="menu-btn" id="menuCustomOrderTop">Custom Order</button>
+        <button class="menu-btn advanced-menu" id="menuSellAria">Sell ARIA</button>
+        <button class="menu-btn advanced-menu" id="menuCreditTop">Credit</button>
+        <button class="menu-btn advanced-menu" id="menuStudio">In the Booth</button>
+        <button class="menu-btn advanced-menu" id="menuFloatMode">Float Mode</button>
+        <button class="menu-btn" id="menuSettings">Settings</button>
+        <button class="menu-btn glow" id="menuSubscription">Product Purchase</button>
+      </div>
+      <div class="toggle-wrap">
+        <div class="login-actions-top">
+          <div id="userBadge" class="user-badge" style="display:none"></div>
+          <div id="shopifyConnectorBadge" class="user-badge">Shopify: checking...</div>
+          <button class="btn ghost" id="loginBtn">Log In</button>
+          <button class="btn ghost" id="signupTop">Create Account</button>
+          <button class="btn" id="logoutBtn">Log Out</button>
+        </div>
+      </div>
+      <button class="btn primary" id="installBtn" style="display:none">Install + Subscribe</button>
+    </div>
+  </header>
+
+  <div class="main-content-row">
+    <section class="center-stage glass" id="centerStage">
+    <div class="center-icon">
+      <img src="/static/images/woman-waking-up12.jpg" alt="SupportRD">
+    </div>
+      <div class="center-head">
+        <div class="center-hero">
+          <img id="heroIcon" class="hero-icon" src="/static/images/woman-waking-up12.jpg" alt="SupportRD">
+            <h2>SupportRD Serious Next Step</h2>
+            <p>SupportRD is being tightened for stronger money, cleaner live service, sharper studio performance, and serious next-step growth with 100K+ in the works.</p>
+            <div class="sale-summary-strip">
+              <span class="sale-pill">100K+ In Motion</span>
+              <span class="sale-pill">Main Page Included</span>
+              <span class="sale-pill">Studio Included</span>
+              <span class="sale-pill">Remote Included</span>
+              <span class="sale-pill">Founder Transition Included</span>
+            </div>
+            <div class="center-checkout-menu glass" id="centerCheckoutMenu">
+              <div class="center-checkout-title">SupportRD Checkout Lane</div>
+              <div class="center-checkout-actions">
+                <button class="btn" id="checkoutPremiumBtn">$35 Premium</button>
+                <button class="btn" id="checkoutProBtn">$50 Pro</button>
+                <button class="btn" id="checkoutFamilyBtn">$200 Family</button>
+                <button class="btn" id="checkoutBingoBtn">$100 Bingo</button>
+                <button class="btn ghost" id="checkoutDonateBtn">Tip / Donate</button>
+                <button class="btn ghost" id="checkoutCartBtn">Cart</button>
+                <button class="btn ghost" id="checkoutOrdersBtn">My Orders</button>
+                <button class="btn ghost" id="checkoutInquiryBtn">Custom Inquiry</button>
+              </div>
+            </div>
+            <div class="sale-cta-row">
+              <button class="btn primary" id="centerSaleCallBtn">Request Buyer Call</button>
+              <button class="btn ghost" id="centerSaleBriefBtn">Sale Details</button>
+            </div>
+        </div>
+        <div class="competition-world-ribbon"><span class="world-pill">Free Roam Active</span><span class="world-pill">Live Stream Pressure</span><span class="world-pill">Hair Mission First</span><span class="world-pill">Studio Open Anytime</span></div>
+        <div class="center-actions">
+          <div class="aria-badge">
+            <div class="aria-title">World Hair Command</div>
+            <div class="aria-sub" id="ariaAssistantSub">ARIA · Free Roam / Solutions</div>
+          </div>
+          <button class="unlock-views-btn" id="unlockViewsBtn">
+            <span class="unlock-main-label">Unlock + Change Views</span>
+            <span class="unlock-main-sub">Tap into the next world</span>
+          </button>
+          <button class="aria-sphere" id="ariaSphere" aria-label="Open ARIA"></button>
+        </div>
+      </div>
+
+      <div class="center-tabs-row">
+        <div class="center-tabs">
+          <button class="tab-btn active" data-tab="post">Post</button>
+          <button class="tab-btn advanced-tab" data-tab="gps">GPS</button>
+          <button class="tab-btn" data-tab="handsfree">Hands‑Free</button>
+          <button class="tab-btn" data-tab="analysis">Hair Analysis</button>
+          <button class="tab-btn" data-tab="ariahelp">Aria Help!</button>
+          <button class="tab-btn advanced-tab" data-tab="ai">AI Millionaire</button>
+          <button class="tab-btn advanced-tab" data-tab="communications">Communications</button>
+          <button class="tab-btn advanced-tab" data-tab="adult">Aria Narrative</button>
+        </div>
+        <div class="level-select">
+          <label class="analysis-level">ARIA Level
+            <select id="ariaLevelSelect">
+              <option value="greeting">Greetings</option>
+              <option value="thorough">Thorough Info</option>
+              <option value="inner">Inner Circle</option>
+              <option value="pro">Professional</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+    <div class="tab-panel active" id="tab-post">
+      <div class="post-card">
+        <div class="post-top">
+          <div class="post-user">You · Santiago, Dominican Republic</div>
+          <div class="post-actions">
+            <button class="chip" id="liveStatus">Live Status</button>
+            <button class="chip advanced-chip" id="sendSocials">Send to All Socials</button>
+            <button class="chip advanced-chip" id="vrScanBtn">VR Code Scan</button>
+            <button class="chip advanced-chip admin-only" id="seoQuick">Activate SEO 4x/Day</button>
+            <button class="chip advanced-chip admin-only" id="testEmailQuick">Send Test Email</button>
+          </div>
+        </div>
+
+        <div class="post-input">
+          <textarea id="postInput" placeholder="Add a new post"></textarea>
+          <div class="smoke">Add a new post</div>
+        </div>
+        <div class="inhouse-ad glass" id="inhouseAdSlot">
+          <div class="inhouse-eyebrow">In‑House Spotlight</div>
+          <div class="inhouse-title" id="inhouseAdTitle">Fresh support idea loading...</div>
+          <div class="inhouse-body" id="inhouseAdBody">Colorful ad-friendly space that rotates every time.</div>
+        </div>
+
+
+        <div class="scan-row">
+          <button class="scan-pill" data-aria="Moisture check">Moisture Check</button>
+          <button class="scan-pill" data-aria="Tangles">Tangles</button>
+          <button class="scan-pill" data-aria="Dry">Dry</button>
+          <button class="scan-pill" data-aria="Frizzy">Frizzy</button>
+          <button class="scan-pill" data-aria="Oily">Oily</button>
+          <button class="scan-pill" data-aria="Damage">Damage</button>
+          <button class="scan-pill" data-aria="No bounce">No Bounce</button>
+          <button class="scan-pill" data-aria="Color loss">Color Loss</button>
+          <button class="scan-pill" data-aria="All-in-one product">All‑in‑one Product</button>
+        </div>
+
+        <div class="post-bottom">
+          <button class="btn primary" id="openEmergencyAssist">Hair Emergency Assist</button>
+          <button class="btn" id="postSocials">Post to All Socials</button>
+          <button class="btn ghost" id="askAriaProductsAgain">What products again?</button>
+          <select class="payment-dropdown" id="socialSelect">
+            <option value="all">All Feeds</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="facebook">Facebook</option>
+            <option value="youtube">YouTube</option>
+            <option value="x">X (Twitter)</option>
+            <option value="threads">Threads</option>
+          </select>
+          <div class="social-indicator" id="socialIndicator">Feeds: Instagram, TikTok, Facebook</div>
+          <button class="btn ghost" id="tipTeam">Tip SupportRD Family Team</button>
+          <div class="tip-frontier" id="tipFrontier">
+            <div class="tip-frontier-title">Tip Frontier</div>
+            <div class="tip-frontier-body" id="tipFrontierBody">$0 tipped · Frontier pending</div>
+          </div>
+          <select class="payment-dropdown" id="paySelect">
+            <option>Custom Order Payment</option>
+          </select>
+        </div>
+      </div>
+      <div class="live-tag-modal" id="sponsorTagModal" hidden>
+        <div class="live-tag-card glass">
+          <div class="live-tag-kicker">One-Time SupportRD Tag</div>
+          <div class="system-title">Claim Your SponsorTag</div>
+          <div class="system-sub">Create the one tag people will know you by when it matters. It stays subtle until you need it.</div>
+          <label class="live-tag-label" for="sponsorTagInput">Use letters and numbers after <strong>^^</strong></label>
+          <div class="live-tag-row">
+            <span class="live-tag-prefix">^^</span>
+            <input id="sponsorTagInput" class="live-tag-input" maxlength="24" placeholder="AgentAnthony" autocomplete="off">
+          </div>
+          <div class="live-tag-examples">Examples: ^^AgentAnthony · ^^SupportRD · ^^FreeRoam</div>
+          <div class="live-tag-actions">
+            <button class="btn ghost" id="sponsorTagSkipBtn">Not Now</button>
+            <button class="btn" id="sponsorTagCreateBtn">Create SponsorTag</button>
+          </div>
+        </div>
+      </div>
+      <div class="live-tag-modal" id="liveAgreementModal" hidden>
+        <div class="live-tag-card glass">
+          <div class="live-tag-kicker">Payment Agreement</div>
+          <div class="system-title">Accept Stream Payment Agreement</div>
+          <div class="system-sub">Before you receive payment on your stream, agree to keep the route honest, show what you are actually doing, and let SupportRD route real checkout through secure payment lanes.</div>
+          <div class="live-tag-examples">This agreement keeps payment, support, and glitch routing cleaner for everyone on the page.</div>
+          <div class="live-tag-actions">
+            <button class="btn ghost" id="liveAgreementLaterBtn">Later</button>
+            <button class="btn" id="liveAgreementAcceptBtn">Accept Agreement</button>
+          </div>
+        </div>
+      </div>
+      <div class="live-tag-modal" id="liveGiftModal" hidden>
+        <div class="live-tag-card glass">
+          <div class="live-tag-kicker">Gift Giver</div>
+          <div class="system-title">Support This Session</div>
+          <div class="system-sub" id="liveGiftSummary">Choose an amount to support this session. Gift support appears in the session balance and purchase history.</div>
+          <div class="gift-amount-grid">
+            <button class="btn ghost" data-gift-amount="5">$5</button>
+            <button class="btn ghost" data-gift-amount="10">$10</button>
+            <button class="btn ghost" data-gift-amount="25">$25</button>
+            <button class="btn ghost" data-gift-amount="50">$50</button>
+          </div>
+          <div class="live-tag-actions">
+            <button class="btn ghost" id="closeLiveGiftBtn">Close</button>
+            <button class="btn" id="openLiveGiftCheckout">Open Checkout</button>
+          </div>
+        </div>
+      </div>
+      <div class="world-map-panel glass" id="worldMapPanel" hidden>
+        <div class="world-map-head">
+          <div>
+            <div class="system-title">SupportRD World Map</div>
+            <div class="system-sub">Pick the next area and let the page restyle itself around the route.</div>
+          </div>
+          <button class="btn ghost" id="closeWorldMapPanel">Close</button>
+        </div>
+        <div class="world-map-bubbles" id="worldMapBubbles"></div>
+        <div class="world-map-loader" id="worldMapLoader" hidden>
+          <div class="world-map-loader-label" id="worldMapLoaderLabel">Loading world view...</div>
+          <div class="world-map-loader-bar"><span id="worldMapLoaderBar"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-gps">
+      <div class="gps-wrap">
+        <div class="map-box">
+          <iframe id="gpsMap" title="OpenStreetMap" loading="lazy"></iframe>
+          <div class="map-overlay" id="gpsMapOverlay">OpenStreetMap · salons + coding stores</div>
+        </div>
+          <div class="gps-actions">
+            <input id="gpsDestination" class="gps-input" placeholder="Enter destination (address or lat,lng)">
+            <button class="btn" id="gpsRoute">Route Me</button>
+            <button class="btn" id="findSalons">Find Salons Near Me</button>
+            <button class="btn ghost" id="openKeitoRoute">Keito Pickup Route</button>
+            <button class="btn ghost" id="openRolloutRoute">SupportRD Rollout</button>
+            <button class="btn primary" id="gpsRerouteStorefront">Reroute To Live Storefront</button>
+            <button class="btn ghost" id="gpsHandsFree">Hands‑Free ARIA</button>
+          </div>
+        <div class="gps-storefront-card">
+          <div class="gps-storefront-head">
+            <div>
+              <div class="system-title">Reroute to Directions to Live Storefront of the Actual Shampoo Product</div>
+              <div class="system-sub">Supporting by Aria AI technology · Serving You</div>
+            </div>
+            <div class="wait-badge">Live Storefront</div>
+          </div>
+          <div class="gps-storefront-grid">
+            <div class="gps-storefront-stat">
+              <div class="system-sub">Live Storefront Balance</div>
+              <strong id="gpsStorefrontBalance">$0.00</strong>
+            </div>
+            <div class="gps-storefront-stat">
+              <div class="system-sub">Products Available</div>
+              <strong id="gpsStorefrontInventory">128</strong>
+            </div>
+            <div class="gps-storefront-stat">
+              <div class="system-sub">In Route Right Now</div>
+              <strong id="gpsStorefrontEnroute">0</strong>
+            </div>
+          </div>
+          <div class="gps-storefront-actions">
+            <button class="btn" id="gpsStorefrontCheckout">Open Storefront Product</button>
+            <button class="btn ghost" id="gpsStorefrontRefresh">Refresh Route Stats</button>
+          </div>
+          <div class="system-sub" id="gpsStorefrontStatus">Keito live storefront route ready. Bot can zoom the map from Santiago into Villa Gonzalez and prep the next move.</div>
+        </div>
+        <div class="offroad-panel">
+          <div class="offroad-head">
+            <strong>Off-Road Feature</strong>
+            <span id="cautionAriaBadge" class="caution-aria-badge">! Caution ARIA</span>
+          </div>
+        <div class="offroad-grid">
+          <select id="offRoadLevel">
+            <option value="airport">Level AirPort</option>
+            <option value="caution">Level Caution</option>
+            <option value="organic">Level Organic</option>
+            </select>
+            <select id="offRoadOption">
+              <option value="eat">Get a bite to eat</option>
+              <option value="meet">Meet someone personally</option>
+              <option value="trails">Trails</option>
+              <option value="haircuts">Haircuts</option>
+              <option value="music">Music Scene</option>
+            </select>
+            <button class="btn" id="offRoadGo">Run Off-Road</button>
+            <button class="btn ghost" id="offRoadDRPing">DR Contact Ping</button>
+            <button class="btn ghost" id="offRoadToHelp">Switch to Aria Help</button>
+          </div>
+          <div id="offRoadStatus" class="system-sub">Off-Road ready. Pick level + option for guided direction.</div>
+          <div class="system-sub">Emergency reference: for severe damage (burned, broken apart, heavy tangles, parasites, color reaction), use Caution ARIA + 911/988.</div>
+          <div class="system-sub"><strong>Direct Contacts (always):</strong> Agentnthony@supportrd.com · Dominican Family (Figueroa, Toribio, Nunez, Tavarez): 829-233-2670</div>
+        </div>
+        <div id="salonResults" class="mini-list">Waiting for location.</div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-handsfree">
+        <div class="handsfree-wrap">
+          <div class="aria-large" id="assistantLargeTitle">ARIA Professional Hair Specialist</div>
+          <div class="system-actions">
+            <button class="btn" id="assistantSwitchBtn">Switch Assistant</button>
+            <span class="system-badge" id="assistantNowBadge">Now: ARIA</span>
+            <button class="btn ghost" id="openProJakeStudio">Transfer To Jake (2s)</button>
+          </div>
+          <label class="analysis-level">Assistant Topic
+            <select id="assistantTopic">
+              <option value="hair_core">Hair Problems and Solutions</option>
+              <option value="women_support">Stand up for women facing hair damage abuse</option>
+              <option value="cancer_support">Cancer hair-loss support and confidence</option>
+              <option value="burning_recovery">Burning incidents and no-growth recovery</option>
+              <option value="tiktok_love">TikTok love for hair bloggers</option>
+              <option value="stress_business">Stress hair support for business people</option>
+              <option value="pricing_value">Premium value without charging thousands</option>
+            </select>
+          </label>
+          <div class="aria-tools">
+              <button class="btn ghost aria-pulse" id="voiceToggle">ARIA • Tap to Talk</button>
+              <button class="btn" id="handsfreeToggle">Hands‑Free Mode: Off</button>
+            <select id="ariaLanguage">
+              <option value="en-US">English (US)</option>
+              <option value="es-ES">Español</option>
+              <option value="fr-FR">Français</option>
+              <option value="ar-SA">العربية (Arabic)</option>
+              <option value="sw-KE">Kiswahili</option>
+              <option value="de-DE">Deutsch</option>
+              <option value="it-IT">Italiano</option>
+              <option value="pt-BR">Português (BR)</option>
+              <option value="hi-IN">हिन्दी (Hindi)</option>
+            </select>
+          </div>
+          <div class="system-sub now-playing" id="audioNowPlaying">Currently Playing Audio Feedback: Idle</div>
+          <div class="history">
+            <h3>Recorded History</h3>
+            <div id="ariaHistory" class="mini-list">No history yet.</div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-analysis">
+        <div class="analysis-wrap">
+          <div class="analysis-title">Hair Analysis</div>
+          <div class="analysis-sub">Move your head left to right and follow the on‑screen guide. ARIA will read your scan out loud and summarize the result.</div>
+          <div class="analysis-grid">
+            <div class="analysis-video">
+              <div class="profile-preview" id="profilePreview">Upload Profile</div>
+              <label class="btn ghost scan-upload">Upload Hair Scan<input type="file" id="scanUpload" accept="image/*,video/*"></label>
+              <div id="scanPreview" class="scan-preview"></div>
+              <button class="btn" id="startHairScan">Start Hair Scan</button>
+            </div>
+            <div class="analysis-steps">
+              <div class="step">1. Center your face and shoulders in view.</div>
+              <div class="step">2. Slowly turn left, then right.</div>
+              <div class="step">3. Follow ARIA’s voice while the scan runs.</div>
+              <div class="marinate-timer">
+                <div class="system-title" style="font-size:13px;">Product Marination Timer</div>
+                <div class="system-sub">Set how long product stays in your hair, then ARIA reminds you when time is up.</div>
+                <div class="system-actions">
+                  <select id="marinateMinutes">
+                    <option value="5">5 minutes</option>
+                    <option value="10">10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="20">20 minutes</option>
+                    <option value="30">30 minutes</option>
+                  </select>
+                  <button class="btn" id="startMarinateTimer">Start Timer</button>
+                  <button class="btn ghost" id="stopMarinateTimer">Stop</button>
+                </div>
+                <div class="system-sub" id="marinateTimerStatus">Timer not running.</div>
+              </div>
+              <div class="analysis-result" id="analysisResult">Awaiting scan…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-ariahelp">
+        <div class="system-card glass">
+          <div class="system-head">
+            <div>
+              <div class="system-title">Aria Help! Fast Route</div>
+              <div class="system-sub">3-line emergency-friendly guidance, scan first, premium fast route, store route, and safety hotlines.</div>
+            </div>
+            <span class="system-badge">HELP</span>
+          </div>
+          <div class="system-log" id="ariaHelpLines">Tap “Generate 3-Line Help” to load direct action steps.</div>
+          <div class="system-actions">
+            <button class="btn" id="ariaHelpGenerate">Generate 3-Line Help</button>
+            <button class="btn" id="ariaHelpScan">Start Hair Scan</button>
+            <button class="btn ghost" id="ariaHelpVR">Open Personal VR Code</button>
+            <button class="btn ghost" id="ariaHelpToOffRoad">Switch to Off-Road</button>
+          </div>
+          <div class="system-actions">
+            <button class="btn" id="ariaHelpPremium">Fastest Route to Premium</button>
+            <button class="btn ghost" id="ariaHelpStores">Healthy Hair Stores + SupportRD</button>
+            <button class="btn ghost" id="ariaHelpRedCross">Red Cross Assistance</button>
+          </div>
+          <div class="system-sub">Dominican Republic pickup reference (best-case founder route): Santiago, Villa Gonzalez — ask for Kito/Keeto for SupportRD stock availability details.</div>
+          <div class="system-actions">
+            <button class="btn ghost" id="ariaHelp911">Emergency 911</button>
+            <button class="btn ghost" id="ariaHelp988">988 Suicide & Crisis Lifeline</button>
+          </div>
+          <div class="system-sub"><strong>Direct Contacts (always):</strong> Agentnthony@supportrd.com · Dominican Family (Figueroa, Toribio, Nunez, Tavarez): 829-233-2670</div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-ai">
+        <div class="ai-wrap">
+          <div class="ai-hero">
+            <div class="ai-title">AI Millionaire Source Hub</div>
+            <div class="ai-sub">Live reels, creator spotlights, and fast-start playbooks to help you become a public source for AI wealth creation.</div>
+            <div class="ai-actions">
+              <button class="btn ghost" id="aiStartBrief">Generate 5 AI Money Paths</button>
+            </div>
+          </div>
+          <div class="ai-grid">
+            <div class="ai-card">
+              <div class="ai-card-title">Creator Spotlights</div>
+              <div class="ai-card-sub">Launch points for audience-ready AI business lessons.</div>
+              <div class="ai-links">
+                <button class="chip ai-link" data-ai-link="dan_martell">Dan Martell</button>
+                <button class="chip ai-link" data-ai-link="ai_millionaire">AI Making Millionaires</button>
+                <button class="chip ai-link" data-ai-link="ai_saas">AI SaaS Case Studies</button>
+              </div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-title">Best AI Stack (2026)</div>
+              <div class="ai-card-sub">Curate your “top tools” list for customers.</div>
+              <div class="ai-links">
+                <button class="chip ai-link" data-ai-link="best_ai_2026">Best AI Tools 2026</button>
+                <button class="chip ai-link" data-ai-link="agent_workflows">AI Agent Workflows</button>
+                <button class="chip ai-link" data-ai-link="automation_agency">Automation Agency Playbooks</button>
+              </div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-title">AI 2026 Tech Radar</div>
+              <div class="ai-card-sub">Trends, launches, and breakthroughs to narrate.</div>
+              <div class="ai-links">
+                <button class="chip ai-link" data-ai-link="ai_2026">AI 2026 Technology Advances</button>
+                <button class="chip ai-link" data-ai-link="ai_research">AI Research Highlights</button>
+                <button class="chip ai-link" data-ai-link="future_jobs">AI Jobs & Income</button>
+              </div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-title">Millionaire Playbooks</div>
+              <div class="ai-card-sub">Turn ideas into content, funnels, and offers.</div>
+              <div class="ai-links">
+                <button class="chip ai-link" data-ai-link="ai_agency">AI Agency Blueprint</button>
+                <button class="chip ai-link" data-ai-link="ai_saas_builder">AI SaaS Builder</button>
+                <button class="chip ai-link" data-ai-link="ai_consulting">AI Consulting Offers</button>
+              </div>
+            </div>
+          </div>
+          <div class="ai-strip">
+            <div class="ai-strip-title">Your “Source of AI Millionaires” Script</div>
+            <div class="ai-strip-body">Post daily: 1) a real AI revenue story, 2) a tool stack breakdown, 3) a 60‑second tutorial, 4) a CTA to your premium plan.</div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-seo">
+        <div class="system-card glass engine-glass-card">
+          <div class="system-head">
+            <div>
+              <div class="system-title">Engine Glass Viewer</div>
+              <div class="system-sub">Switch views across Action Bot, Render Logging, and Ecosystem resort mode.</div>
+            </div>
+            <span class="system-badge">Live</span>
+          </div>
+          <div class="engine-switch">
+            <button class="btn ghost active" data-engine-view="action">Action Bot</button>
+            <button class="btn ghost" data-engine-view="render">Render Logging</button>
+            <button class="btn ghost" data-engine-view="ecosystem">Ecosystem</button>
+          </div>
+          <div class="engine-pane active" id="engineViewAction">
+            <div class="system-actions">
+              <button class="btn ghost" id="engineRefreshAction">Refresh Action Bot</button>
+              <button class="btn ghost admin-only" id="engineActivateWeekdaySeo">Activate Workweek SEO</button>
+            </div>
+            <pre class="engine-feed" id="engineActionFeed">Loading action bot stream...</pre>
+            <div class="engine-weekday-grid">
+              <section class="system-card glass engine-weekday-card">
+                <div class="system-head">
+                  <div>
+                    <div class="system-title">Workday Hair Engine</div>
+                    <div class="system-sub">Friendly workplace hair topics that move with the week and keep SupportRD current.</div>
+                  </div>
+                  <span class="system-badge" id="seoWeekdayBadge">Today</span>
+                </div>
+                <div class="engine-weekday-strip" id="seoWeekdayStrip"></div>
+                <div class="engine-weekday-copy">
+                  <strong id="seoWeekdayTitle">Monday Rush</strong>
+                  <p id="seoWeekdayBody">Start the week clean with quick workplace hair resets and polished confidence.</p>
+                  <div class="engine-weekday-tags" id="seoWeekdayTags"></div>
+                </div>
+              </section>
+              <section class="system-card glass engine-weekday-card">
+                <div class="system-head">
+                  <div>
+                    <div class="system-title">Market Pulse</div>
+                    <div class="system-sub">Keep the page feeling current with money-moving language and a finance snapshot when available.</div>
+                  </div>
+                  <span class="system-badge" id="marketPulseBadge">Live</span>
+                </div>
+                <div class="system-actions">
+                  <button class="btn ghost" id="marketPulseRefresh">Refresh Pulse</button>
+                </div>
+                <pre class="engine-feed market-pulse-feed" id="marketPulseFeed">Loading market pulse...</pre>
+              </section>
+            </div>
+          </div>
+          <div class="engine-pane" id="engineViewRender">
+            <div class="system-actions">
+              <button class="btn ghost" id="engineRefreshRender">Refresh Render Logging</button>
+            </div>
+            <pre class="engine-feed" id="engineRenderFeed">Loading render stream...</pre>
+          </div>
+          <div class="engine-pane" id="engineViewEcosystem">
+            <div class="system-actions">
+              <button class="btn ghost" id="engineApplyResortLook">Apply Resort Brochure Look</button>
+            </div>
+            <div class="request-grid">
+              <input id="engineSnapInput" placeholder="Type your next words snapshot for ecosystem feed">
+              <button class="btn ghost" id="engineSnapBtn">Snap To Ecosystem Feed</button>
+            </div>
+            <div class="system-actions">
+              <button class="btn ghost" id="engineMyFreqBtn">Watch My Frequency (Pro)</button>
+            </div>
+            <pre class="engine-feed" id="engineMyFreqFeed" style="display:none;">Pro frequency stream loading...</pre>
+            <pre class="engine-feed" id="engineEcoFeed">Ecosystem luxury profile loading...</pre>
+            <div class="engine-live-video" id="engineEcoVideoWrap" style="display:none;">
+              <div class="system-sub">Live Ecosystem Video</div>
+              <iframe id="engineEcoVideo" src="/static/reel.html?v=20260322b" title="Ecosystem Live Video" loading="lazy"></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-credit">
+        <div class="system-card glass">
+          <div class="system-head">
+            <div>
+              <div class="system-title">SupportRD Credit Console</div>
+              <div class="system-sub">Friendly 2-click pre-check with a 30% payment capacity limit, built for international customers and fair treatment.</div>
+            </div>
+            <span class="system-badge">Live System</span>
+          </div>
+          <div class="credit-tier-strip">
+            <div class="tier-card">
+              <strong>$35 ARIA Puzzle Tier</strong>
+              <span>Smart puzzle support, guided routines, and growth prompts.</span>
+            </div>
+            <div class="tier-card">
+              <strong>$50 Unlimited ARIA Tier</strong>
+              <span>Main perk: unlock <em>Talk to us for a deal</em> with professional handling.</span>
+            </div>
+          </div>
+          <div class="credit-grid">
+            <input id="creditEmail" placeholder="Email">
+            <input id="creditCountry" placeholder="Country Code (US, DO, etc)">
+            <input id="creditIncome" type="number" min="0" step="0.01" placeholder="Monthly Income">
+            <input id="creditDebt" type="number" min="0" step="0.01" placeholder="Monthly Debt Payments">
+            <input id="creditAmount" type="number" min="0" step="0.01" placeholder="Requested Credit Amount">
+            <input id="creditTerm" type="number" min="1" max="24" placeholder="Term Months (1-24)">
+          </div>
+          <label class="system-check"><input id="creditRiskFlag" type="checkbox"> Previous payment issues on file</label>
+          <div class="system-actions">
+            <button class="btn" id="creditEvaluate">Check Eligibility</button>
+            <button class="btn ghost" id="creditLoadStatus">Load My Last Result</button>
+          </div>
+          <div class="system-log" id="creditDecisionLog">No decision yet.</div>
+          <div class="system-actions">
+            <button class="btn primary buy-optional" id="creditPayMembership">Pay Membership</button>
+            <button class="btn ghost buy-optional" id="creditPayProducts">Pay Products</button>
+            <button class="btn ghost" id="talkDealBtn" disabled>Talk to us for a deal (Unlimited ARIA)</button>
+          </div>
+          <div class="system-sub" id="dealLockNote">Locked: upgrade to Unlimited ARIA ($50) to unlock deal channel.</div>
+          <div class="system-sub">Sell Your ARIA moved to top menu for faster access.</div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-communications">
+        <div class="comms-panel glass">
+          <div class="comms-title">SupportRD Communications & Frequencies</div>
+          <div class="comms-sub">Live coding + audience connection strategy across regions, languages, and content streams.</div>
+          <div class="comms-finance">
+            <div class="comms-flow-title">Ads + Money Guard</div>
+            <div class="comms-flow-sub">Protege anuncios y monitorea Shopify para que tu flujo no se caiga.</div>
+            <div class="comms-balance" id="shopifyGuardView">Shopify Guard: esperando chequeo...</div>
+            <div class="comms-actions">
+              <button class="btn admin-only" id="shopifyGuardCheck">Check Shopify Guard</button>
+              <button class="btn ghost admin-only" id="shopifyGuardNotify">Send Money Alert</button>
+              <button class="btn ghost" id="adsGuardBtn">Ads Safeguard: On</button>
+            </div>
+          </div>
+          <div class="comms-finance">
+            <div class="comms-flow-title">AI Resolver Emit</div>
+            <div class="comms-flow-sub">Emit location and device context to resolve hair issues with a low-cost support focus.</div>
+            <div class="comms-balance" id="resolverEmitView">Resolver emit: waiting...</div>
+            <div class="comms-actions">
+              <button class="btn" id="emitResolverNow">Emit Resolver Profile</button>
+            </div>
+          </div>
+          <div class="comms-block">
+            <strong>SupportRD Mission Statement</strong>
+            <p>We are getting a satellite up via our SEO engine growth, and we will do it through clean business and compliant operations.</p>
+            <p>The satellite is important because well at the end of the day im in to clean business.</p>
+            <p><strong>Regulatory Track:</strong> ITU Radio Regulations Appendix 30B (radio satellite planning workflow).</p>
+          </div>
+          <div class="comms-list">
+            <div class="comms-item"><strong>Daily Focus:</strong> run international rotation by need + global upgrade cadence.</div>
+            <div class="comms-item"><strong>Founder Alerts:</strong> only escalate direct-assistance cases to your contact channels.</div>
+            <div class="comms-item"><strong>Live Coding:</strong> publish progress posts so the community can move with SupportRD.</div>
+            <div class="comms-item"><strong>Reference:</strong> FCC filing path via 47 CFR 25.110 — <a href="https://www.law.cornell.edu/cfr/text/47/25.110" target="_blank" rel="noopener">open section</a>.</div>
+          </div>
+          <div class="comms-challenge">
+            <div class="comms-flow-title">Attention Builds + Jackpot Competition</div>
+            <div class="comms-flow-sub">Sell exactly what you have with build titles people can instantly understand.</div>
+            <div class="comms-tags">
+              <span class="chip">Curly Hair Men Upgrade</span>
+              <span class="chip">Short Nice Hairline Fade</span>
+              <span class="chip">Wavy + Direct</span>
+              <span class="chip">Long Hair Pony Tail</span>
+              <span class="chip">Straight Down</span>
+              <span class="chip">Chillen at Home Hair</span>
+            </div>
+          <div class="comms-flow-sub">Soon: 1-hour attention challenge. Winner takes jackpot. Both attractions money.</div>
+          <button class="btn" id="startJackpotBuild">Start 1-Hour Build Challenge</button>
+          <div class="request-grid" style="margin-top:8px;">
+            <input id="compOpponentUrl" placeholder="Other person URL (membership page)">
+            <select id="compTier">
+              <option value="premium">$35 Puzzle Tier</option>
+              <option value="pro">$50 Unlimited ARIA</option>
+              <option value="yoda">$20 Yoda Pass</option>
+            </select>
+            <button class="btn ghost" id="createCompetitionBtn">Create Competition Option</button>
+            <div class="system-sub" id="competitionResult">Set up competition with another URL and tier option.</div>
+          </div>
+          <div class="request-grid" style="margin-top:8px;">
+            <div class="comms-flow-title">Movement vs Movement Challenge</div>
+            <input id="movementUrls" placeholder="Participant URLs (comma separated)">
+            <div class="system-actions">
+              <button class="btn" id="createCompetitionBtn1v1">Start Link-Up</button>
+              <button class="btn ghost" id="createMovementChallengeBtn">Open Group Route</button>
+            </div>
+             <div class="system-sub" id="movementChallengeResult">Movement is judged on 5 keys: Health, Longevity, Care, Love, Issues. Rules: no pornography. Let people link up naturally and figure out the shape of it on their own.</div>
+           </div>
+           <div class="virtual-warzone">
+             <div class="comms-flow-title">Competition Tab: Virtual Paintball Hair Arena</div>
+             <div class="comms-flow-sub">The world is the main thing. Quick matches can still happen inside the map if people cross paths, but the bigger point is to roam, build, stream, and unlock more routes over time.</div>
+             <div class="virtual-warzone-grid">
+               <label>Route Energy
+                 <select id="paintballMode">
+                   <option value="capture">Capture The Flag</option>
+                   <option value="open">Open Drift</option>
+                   <option value="rush">Rush Through</option>
+                   <option value="hold">Hold The Route</option>
+                  </select>
+               </label>
+               <label>Map Set
+                 <select id="paintballMapSet">
+                   <option value="battlegrounds">Battle Grounds Big Field</option>
+                   <option value="quick">Fast Routes</option>
+                 </select>
+               </label>
+               <label>Featured Zone
+                 <select id="paintballZone">
+                   <option value="lumbermill">Lumbermill · Officials Lounge Respawn</option>
+                   <option value="riverhole">River Hole · First Line Defense</option>
+                   <option value="snowhill">Artificial Snow Hill · +2 Defense</option>
+                   <option value="island">Island by the Lake · +2 Defense</option>
+                   <option value="vip">VIP Spot · 2 Months Played = +2 Defense</option>
+                   <option value="tunnels">Tunnels · Fast Route</option>
+                   <option value="market">Market · Fast Route</option>
+                   <option value="lab">The Lab · Fast Route +3 Grenades</option>
+                 </select>
+               </label>
+               <label>Loadout
+                 <select id="paintballLoadout">
+                   <option value="standard">2 Gun Choices</option>
+                   <option value="vip3">3 Gun Choices + Grenades</option>
+                   <option value="simple">Simple No-Perk Loadout</option>
+                 </select>
+               </label>
+               <label>Promotion Goal
+                 <select id="paintballPromoGoal">
+                   <option value="20-hearts">20 hearts in the last 5 minutes</option>
+                   <option value="25-likes">25 likes in the last 5 minutes</option>
+                   <option value="15-comments">15 comments in the last 5 minutes</option>
+                   <option value="10-shares">10 shares in the last 5 minutes</option>
+                 </select>
+               </label>
+               <label>Respawn Style
+                 <select id="paintballRespawnRule">
+                   <option value="officials-lounge">Officials Lounge Lumbermill Respawn</option>
+                   <option value="dance-save">Unlimited if you dance on them 5 minutes</option>
+                   <option value="classic">Classic hit-and-respawn</option>
+                 </select>
+               </label>
+             </div>
+             <div class="comms-tags">
+               <span class="chip">Virtual Armed</span>
+               <span class="chip">Base Capture</span>
+               <span class="chip">Grenades</span>
+               <span class="chip">Respawn Lounge</span>
+               <span class="chip">Dance-On Star Perk</span>
+               <span class="chip">Hearts + Views Boost</span>
+             </div>
+             <div class="system-actions">
+               <button class="btn" id="buildPaintballModeBtn">Build Paintball Mode</button>
+               <button class="btn ghost" id="postPaintballModeBtn">Post To Feed</button>
+             </div>
+             <div class="system-sub" id="paintballBuildResult">Build a virtual route session for SupportRD. If people naturally turn it into a faceoff, that is on them. The world stays open and the money/promo side remains compliance-gated until approved.</div>
+           </div>
+         </div>
+           <div class="comms-launch">
+            <div class="comms-item"><strong>Launch Watch Alert:</strong> send admin alert with day + location so you can fly in for orbit day.</div>
+            <input id="launchDay" placeholder="Launch Day (YYYY-MM-DD or text)">
+            <input id="launchLocation" placeholder="Launch Location">
+            <input id="launchMission" placeholder="Mission Name" value="SupportRD Radio Satellite Mission">
+            <textarea id="launchNotes" placeholder="Notes for admin alert"></textarea>
+            <button class="btn admin-only" id="sendLaunchAlert">Send Launch Alert</button>
+          </div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-adult">
+        <div class="system-card glass">
+          <div class="system-head">
+            <div>
+              <div class="system-title">SupportRD Fantasy Mode</div>
+              <div class="system-sub">4 monthly plans: Bingo Fantasy ($100/mo), Family Fantasy ($200/mo), 21+ Basic Fantasy ($300/mo), 21+ Advanced Fantasy ($600/mo). Drugs and gang-related content are blocked.</div>
+            </div>
+            <span class="system-badge">21+</span>
+          </div>
+          <label class="system-check"><input id="adult21Confirm" type="checkbox"> I confirm I am 21+ for mature fantasy mode (required for $300/$600).</label>
+          <div class="system-actions">
+            <button class="btn" id="adult21Enable">Activate 21+ Mode</button>
+            <button class="btn ghost" id="adult21Disable">Disable 21+ Mode</button>
+          </div>
+          <div class="system-log" id="adult21Status">21+ mode is currently off.</div>
+          <div class="system-sub">Allowed: sensual self-care tone, romantic language, confidence and attraction themes for adults.<br>Blocked: drugs, gangs, violence, illegal activity, minors.</div>
+          <div class="transfer-box">
+            <div class="system-title" style="font-size:14px;">Family Fantasy Pack Selector ($200)</div>
+            <div class="system-sub">Pick the family-safe fantasy scene ARIA should use for your coaching tone.</div>
+            <select id="familyFantasyTheme" class="input">
+              <option value="boat_conductor">Boat Conductor</option>
+              <option value="theme_park_conductor">Theme Park Conductor</option>
+              <option value="museum_greeter">Museum Greeter / Information Guide</option>
+              <option value="nascar_driver">Nascar Driver</option>
+              <option value="jungle_book">Jungle Book</option>
+              <option value="molopy_board">Molopy Board (laid back strategy)</option>
+            </select>
+            <button class="btn ghost" id="saveFamilyFantasyTheme">Save Family Theme</button>
+            <div class="system-log" id="familyFantasyThemeStatus">Current family theme: Boat Conductor</div>
+          </div>
+          <div class="transfer-box">
+            <div class="system-title" style="font-size:14px;">SupportRD Social Source + Electronic Hair Circuits</div>
+            <div class="system-sub">For everybody: establish SupportRD as a source channel with live electronic hair circuits: style pulse, hydration pulse, repair pulse, attraction pulse.</div>
+            <div class="system-actions">
+              <button class="btn" id="openSocialCircuitFeed">Open Social Circuit Feed</button>
+              <button class="btn ghost" id="launchSensualAriaPost">Launch SupportRD Circuit Post</button>
+              <button class="btn ghost" id="startBingoFantasy">Start Bingo Fantasy (5-to-9)</button>
+            </div>
+            <div class="system-log" id="socialCircuitStatus">Source mode idle.</div>
+          </div>
+        </div>
+      </div>
+      <div id="centerBlur" class="center-blur" aria-hidden="true"></div>
+      <div id="speechPopupAnchor" class="speech-anchor"></div>
+      <div id="listeningOverlay" class="listening-overlay">
+        <div class="listen-card">
+          <div class="mini-aria" aria-hidden="true"></div>
+          <div class="listen-copy">
+            <div id="ariaFlowText" class="listen-text">Listening…</div>
+            <div id="ariaTranscript" class="listen-transcript">Say something about your hair…</div>
+          </div>
+        </div>
+      </div>
+      <div id="hairScanOverlay" class="scan-overlay">
+        <div class="scan-card glass">
+          <div class="scan-title">Hair Analysis</div>
+          <div class="scan-sub">Move your head left to right and follow the on-screen guide. ARIA will read your scan out loud.</div>
+          <div id="hairScanStatus" class="scan-status">Initializing scan…</div>
+          <button class="btn ghost" id="closeHairScan">Close</button>
+        </div>
+      </div>
+    </section>
+
+
+
+    <section class="conversation-panel glass" id="conversationPanel">
+      <div class="panel-head">
+        <h3>Live Conversation</h3>
+        <span class="engine-glow">ARIA Flow</span>
+      </div>
+      <div id="conversationLog" class="conversation-log">No conversation yet.</div>
+    </section>
+
+  <button class="theme-side left" id="themePrevSide" aria-label="Previous theme"></button>
+  <button class="theme-side right" id="themeNextSide" aria-label="Next theme"></button>
+
+  <section id="appsDock" class="panel glass">
+    <div class="panel-head">
+      <div>
+        <h2>Selectable Apps</h2>
+        <p>One line tab. Drag to reorder. Swap apps with dropdown.</p>
+      </div>
+      <div class="dock-controls">
+        <select id="appSwapSelect">
+          <option value="">Replace Selected App…</option>
+        </select>
+      </div>
+    </div>
+      <div class="apps-row" id="appsRow">
+        <button class="app-card" draggable="true" data-app="Live Hair Score">Live Hair Score</button>
+          <button class="app-card" draggable="true" data-app="Competition Console">Competition Console</button>
+        <button class="app-card" draggable="true" data-app="TV Reel">TV Reel</button>
+        <button class="app-card" draggable="true" data-app="Brochure">Brochure</button>
+        <button class="app-card" draggable="true" data-app="Studio Mode">Studio Mode</button>
+        <button class="app-card" draggable="true" data-app="Blog">Blog</button>
+        <button class="app-card" draggable="true" data-app="Snapshot Coder Idea">Snapshot Coder Idea</button>
+        <button class="app-card" draggable="true" data-app="Donate to the Poor · Auto Dissolve Bar" data-link="https://supportrd.com/products/auto-dissolve-soap-bar">Donate to the Poor · Auto Dissolve Bar</button>
+        <button class="app-card" draggable="true" data-app="Settings">Settings</button>
+        <button class="app-card" draggable="true" data-app="Contact Anthony">Contact Anthony · Family Support</button>
+      </div>
+      <div class="apps-library">
+        <div class="apps-library-label">Available Apps (Drag onto a tab to replace)</div>
+        <div class="apps-row library" id="appsLibrary">
+            <button class="app-card app-library" draggable="true" data-app="Competition Console">Competition Console</button>
+          <button class="app-card app-library" draggable="true" data-app="TV Reel">TV Reel</button>
+          <button class="app-card app-library" draggable="true" data-app="Brochure">Brochure</button>
+          <button class="app-card app-library" draggable="true" data-app="Studio Mode">Studio Mode</button>
+          <button class="app-card app-library" draggable="true" data-app="Shopify Products">Shopify Products</button>
+          <button class="app-card app-library" draggable="true" data-app="SEO Engine Viewer">SEO Engine Viewer</button>
+          <button class="app-card app-library" draggable="true" data-app="Occasion Editor">Occasion Editor</button>
+          <button class="app-card app-library" draggable="true" data-app="Subscription Banner">Subscription Banner</button>
+          <button class="app-card app-library" draggable="true" data-app="Live Hair Score">Live Hair Score</button>
+        </div>
+      </div>
+  </section>
+</div>
+
+<div id="seoModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>SEO Engine Viewer</h2>
+      <div class="modal-actions">
+        <button class="btn" id="seoPublish">Publish SEO Post</button>
+        <button class="btn admin-only" id="seoAuto">Activate SEO 4x/Day (Random)</button>
+        <button class="btn admin-only" id="testEmailBtn">Send Test Email</button>
+        <button class="btn ghost" id="closeSeo">Close</button>
+      </div>
+    </div>
+    <div class="log-stream" id="logStream"></div>
+  </div>
+</div>
+
+<div id="blogModal" class="modal">
+  <div class="modal-card glass modal-card-blog">
+    <div class="modal-head">
+      <h2 id="blogTitle">Blog Post</h2>
+      <div class="modal-actions">
+        <button class="btn blog-close-x" id="closeBlogX" aria-label="Close Blog Modal">X</button>
+        <button class="btn ghost" id="blogPrev">Prev</button>
+        <button class="btn ghost" id="blogNext">Next</button>
+        <button class="btn ghost" id="closeBlog">Close</button>
+      </div>
+    </div>
+    <div id="blogBody" class="blog-body">Loading...</div>
+  </div>
+</div>
+
+<div id="giftModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Gift Shop</h2>
+      <button class="btn ghost" id="closeGift">Close</button>
+    </div>
+    <p>Gifts you can find everywhere — including competition stores.</p>
+    <div class="gift-grid">
+      <div class="gift-card">
+        <div class="gift-name">CR Natural Full Line</div>
+        <div class="gift-price">$125</div>
+        <div class="system-sub">Referral-ready natural hair bundle with custom order support.</div>
+        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+      </div>
+      <div class="gift-card">
+        <div class="gift-name">Dove · Gift Bundle</div>
+        <div class="gift-price">Custom Order</div>
+        <div class="system-sub">Classic referral bundle option for smooth in-person recommendations.</div>
+        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+      </div>
+      <div class="gift-card">
+        <div class="gift-name">L’Oréal · Gift Set</div>
+        <div class="gift-price">Custom Order</div>
+        <div class="system-sub">Referral gift route with SupportRD custom-order follow-through.</div>
+        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+      </div>
+      <div class="gift-card">
+        <div class="gift-name">SupportRD Referral Gift Link</div>
+        <div class="gift-price">Share + Earn</div>
+        <div class="system-sub">Open the referral-ready product lane and hand the person the direct purchase path.</div>
+        <button class="btn" data-link="https://supportrd.com/products/hair-advisor-premium">Open Referral Product</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="vrScanModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>VR Code Scan</h2>
+      <button class="btn ghost" id="closeVrScan">Close</button>
+    </div>
+    <div class="vr-scan-box">
+      <div class="vr-scan-ring"></div>
+      <div class="vr-scan-status" id="vrScanStatus">Ready to scan brochure.</div>
+      <button class="btn" id="startVrScan">Start VR Scan</button>
+    </div>
+  </div>
+</div>
+
+<div id="occasionModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Occasion Editor</h2>
+      <button class="btn ghost" id="closeOccasion">Close</button>
+    </div>
+      <div class="system-actions" style="margin-bottom:8px;">
+        <button class="btn ghost" id="openOccasion6Q">Open 6-Questionnaire</button>
+      </div>
+      <div class="occasion-boxes">
+        <select class="occasion-select" id="occasionAction"></select>
+        <select class="occasion-select" id="occasionApply"></select>
+        <select class="occasion-select" id="occasionEnjoy"></select>
+        <button class="btn" id="applyOccasion">Apply To 7‑Day Plan</button>
+        <button class="btn ghost" id="addOccasionPost">Add To Post</button>
+      </div>
+      <div class="week-boxes" id="weekBoxes"></div>
+  </div>
+</div>
+
+<div id="subscriptionModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Subscription</h2>
+      <button class="btn ghost" id="closeSubscription">Close</button>
+    </div>
+      <div class="payment-chooser">
+        <label>Choose Payment</label>
+        <select id="paymentSelect">
+          <option value="premium">$35 PREMIUM</option>
+          <option value="pro">$50 PROFESSIONAL</option>
+          <option value="bingo100">$100/MO BINGO FANTASY</option>
+          <option value="family200">$200/MO FAMILY FANTASY</option>
+          <option value="yoda">$20 YODA PASS</option>
+          <option value="fantasy300">$300/MO BASIC FANTASY (21+)</option>
+          <option value="fantasy600">$600/MO ADVANCED FANTASY (21+)</option>
+          <option value="donate">SupportRD Product Tip / Donate</option>
+          <option value="evelyn">Custom Order Inquiry</option>
+          <option value="tip5">$5 Tip</option>
+          <option value="tip10">$10 Tip</option>
+          <option value="tip20">$20 Tip</option>
+      </select>
+      <div id="paymentView"></div>
+    </div>
+  </div>
+</div>
+
+  <div id="appModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2 id="appTitle">App</h2>
+        <button class="btn ghost" id="closeApp">Close</button>
+      </div>
+      <div id="appBody">App details here.</div>
+    </div>
+  </div>
+
+  <div id="puzzleModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2>ARIA Coding Puzzle</h2>
+        <button class="btn ghost" id="closePuzzle">Close</button>
+      </div>
+      <div style="color:var(--muted);margin-bottom:10px;">
+        Solve the quick puzzle to continue the conversation.
+      </div>
+      <div id="puzzleQuestion" style="font-weight:700;margin-bottom:8px;">Loading…</div>
+      <input id="puzzleAnswer" placeholder="Your answer">
+      <button class="btn" id="puzzleSubmit">Unlock ARIA</button>
+  </div>
+</div>
+
+<div id="sellAriaModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Sell Your ARIA System</h2>
+      <button class="btn ghost" id="closeSellAria">Close</button>
+    </div>
+    <div class="transfer-box">
+      <div class="system-title" style="font-size:14px;">Unlimited Only</div>
+      <div class="system-sub">Each account is unique to ARIA. Transfer strips personal profile data and moves plan entitlement only. Trading cap: $50,000. In-house service tax: 5%. Founder must be present before release opens.</div>
+      <div class="credit-grid">
+        <input id="transferToEmail" placeholder="New owner email">
+        <input id="transferAmount" type="number" min="1" max="50000" step="0.01" placeholder="Transfer amount (USD, max 50000)">
+        <input id="transferIdLast4" maxlength="4" placeholder="ID Last 4">
+        <input id="transferVisaLast4" maxlength="4" placeholder="International Visa Last 4">
+      </div>
+      <div class="system-actions">
+        <button class="btn ghost" id="requestTransferBtn">Request Transfer Review</button>
+        <button class="btn ghost" id="reverifyTransferBtn">Re-Verify (2x)</button>
+        <button class="btn ghost admin-only" id="toggleTransferReleaseBtn">Toggle Sell ARIA Release</button>
+        <button class="btn admin-only" id="approveTransferBtn">Approve Transfer (Admin)</button>
+      </div>
+      <div class="system-sub" id="transferStatusNote">Clean trade rules: hand-to-hand clarity, anti-bot checks, two re-verifications. Failing re-verification twice locks trading for one week.</div>
+      <div class="system-sub" id="transferReleaseState">Checking release status...</div>
+      <div id="tradeBotOrbit" class="trade-bot-orbit" aria-label="SupportRD trade bots"></div>
+      <div class="transfer-box">
+        <div class="system-title" style="font-size:14px;">Trade Bot Live Functions</div>
+        <div class="system-actions">
+          <button class="btn ghost" id="refreshTradeBotsBtn">Refresh Bot Status</button>
+          <button class="btn ghost admin-only" id="runTradeBotsBtn">Run Bots Now (Admin)</button>
+        </div>
+        <div id="tradeBotsStatus" class="system-sub">Loading bot functions...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="occasion6qModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Occasion 6-Questionnaire</h2>
+      <button class="btn ghost" id="closeOccasion6Q">Close</button>
+    </div>
+    <div class="request-grid">
+      <input id="qLookGoal" placeholder="1) What look are you going for?">
+      <input id="qHairType" placeholder="2) Hair type today (curly, wavy, straight...)">
+      <input id="qScalp" placeholder="3) Scalp condition (dry, oily, normal)">
+      <input id="qHeat" placeholder="4) Heat tools today? (yes/no)">
+      <input id="qTime" placeholder="5) Minutes available right now">
+      <input id="qEvent" placeholder="6) Occasion/event">
+      <button class="btn" id="applyOccasion6Q">Use These in Occasion Editor</button>
+    </div>
+  </div>
+</div>
+
+<div id="reelModal" class="modal">
+  <div class="modal-card glass" style="max-height:90vh;overflow:auto;">
+    <div class="modal-head">
+      <h2>SupportRD TV Reel</h2>
+      <button class="btn ghost" id="closeReel">Close</button>
+    </div>
+    <iframe class="custom-iframe" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel"></iframe>
+  </div>
+</div>
+
+  <div id="linkModal" class="modal">
+      <div class="modal-card glass">
+        <div class="modal-head">
+        <h2 id="linkTitle">Open Link</h2>
+        <button class="btn ghost" id="closeLink">Close</button>
+      </div>
+      <div id="linkNotice" style="display:none;color:var(--muted);margin-bottom:10px;">
+        This action opens your email app. Use the button below if the embedded view can’t load.
+      </div>
+      <button class="btn" id="linkExternal" style="display:none;margin-bottom:10px;">Open Externally</button>
+      <iframe id="linkFrame" class="custom-iframe" src="about:blank" title="SupportRD Link"></iframe>
+    </div>
+  </div>
+
+<div id="customOrderModal" class="modal">
+  <div class="modal-card glass" style="max-height:90vh;overflow:auto;">
+    <div class="modal-head">
+      <h2>Custom Order</h2>
+      <button class="btn ghost" id="closeCustomOrder">Close</button>
+    </div>
+    <!-- Custom order embed -->
+    <iframe class="custom-iframe" src="/static/custom-order.html" title="Custom Order"></iframe>
+  </div>
+</div>
+
+
+<div id="settingsModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Settings</h2>
+      <button class="btn ghost" id="closeSettings">Close</button>
+    </div>
+    <div class="settings-grid">
+      <div id="settingsAccountSummary" class="settings-account-summary">Logged out · no saved account activity yet.</div>
+      <div id="settingsContinuitySummary" class="settings-account-summary">Network continuity log will appear here.</div>
+      <input id="setName" placeholder="Name">
+      <input id="setEmail" placeholder="Email">
+      <input id="setPhone" placeholder="Phone">
+      <input id="setUsername" placeholder="Username">
+        <input id="setPassword" type="password" placeholder="New Password">
+        <input id="setAddress" placeholder="Address">
+        <input id="setSubscription" placeholder="Current Subscription">
+        <div id="subscriptionStatusSummary" class="subscription-status-summary">Subscription status will appear here.</div>
+        <input id="setCustomOrder" placeholder="Current Custom Order Link">
+      <input id="setEvelyn" placeholder="Evelyn WhatsApp Number">
+      <input id="setIG" placeholder="Instagram link">
+      <input id="setTikTok" placeholder="TikTok link">
+      <input id="setFB" placeholder="Facebook link">
+      <input id="setYT" placeholder="YouTube link">
+      <input id="setX" placeholder="X / Twitter link">
+      <input id="setThreads" placeholder="Threads link">
+      <select id="setVoiceProfile">
+        <option value="shimmer">ARIA Voice: Shimmer</option>
+        <option value="alloy">ARIA Voice: Alloy</option>
+        <option value="nova">ARIA Voice: Nova</option>
+        <option value="sage">ARIA Voice: Sage</option>
+        <option value="echo">ARIA Voice: Echo</option>
+      </select>
+      <label class="system-check"><input type="checkbox" id="setWifeVoiceMode"> Wife Voice Style Mode (consent required)</label>
+      <label class="system-check"><input type="checkbox" id="setWifeVoiceConsent"> Voice consent confirmed</label>
+      <label class="system-check"><input type="checkbox" id="setMuslimGreeting"> Muslim greeting mode (available on $300/$600/Pro)</label>
+      <input id="setCustomGreeting" placeholder="Custom greeting line (optional)">
+      <textarea id="setVoiceReference" placeholder="Voice reference sentence (imagination style)"></textarea>
+      <label class="system-check"><input type="checkbox" id="setSameFeelVoice"> Same Feel Voice (safe consistency mode)</label>
+      <textarea id="setVoiceReferencePack" placeholder="Voice reference pack (one sentence per line)"></textarea>
+      <input id="setThoughtStyle" placeholder="Thought style (ex: calm, descriptive, poetic, concise)">
+      <div class="settings-section-title">Family.Religion Settings</div>
+      <input id="setPrimaryFamily" placeholder="Primary family (wife, daughter, son)">
+      <input id="setExtendedFamily" placeholder="Extended family (cousins, grandma, great grandma, uncle, auntie)">
+      <input id="setReligionChoice" placeholder="Religion / freedom of choice">
+      <input id="setHobbies" placeholder="Hobbies">
+      <input id="setEducation" placeholder="Education">
+      <input id="setInterests" placeholder="Interests">
+      <textarea id="setLifeMoments" placeholder="Life moments: good, rough, random updates, celebration, meme, local news, advanced topic news, juicy fruit moment"></textarea>
+      <button class="btn ghost" id="reflectLifeBtn">Reflect Back With Aria / Jake</button>
+      <div class="system-sub settings-life-status" id="lifeReflectionStatus">Save family, religion, hobbies, education, interests, and life moments so Aria and Jake can play your personal life back to you.</div>
+      <div class="settings-checks">
+        <label><input type="checkbox" id="feedIG"> Post to Instagram</label>
+        <label><input type="checkbox" id="feedTikTok"> Post to TikTok</label>
+        <label><input type="checkbox" id="feedFB"> Post to Facebook</label>
+        <label><input type="checkbox" id="feedYT"> Post to YouTube</label>
+        <label><input type="checkbox" id="feedX"> Post to X</label>
+        <label><input type="checkbox" id="feedThreads"> Post to Threads</label>
+        <label><input type="checkbox" id="pushAria"> Push notifications via ARIA text</label>
+      </div>
+      <button class="btn" id="saveSettings">Save Settings</button>
+      <div class="cash-ops admin-only">
+        <h4>Cash Point Ops (Admin)</h4>
+        <input id="cashRequestId" placeholder="Request ID (SRD-...)">
+        <select id="cashFlowType">
+          <option value="store">Store/Event</option>
+          <option value="bank">Bank Meetup</option>
+          <option value="envelope">Envelope Handoff</option>
+        </select>
+        <input id="cashLocation" placeholder="Meeting location">
+        <input id="cashAmount" type="number" step="0.01" min="0" placeholder="Amount">
+        <input id="cashProof" placeholder="Proof ref (optional)">
+        <button class="btn" id="cashCheckinBtn">Log Cash Point Check-In</button>
+        <input id="cashConfirmedBy" placeholder="Confirmed by (staff name)">
+        <textarea id="cashMemo" placeholder="Memo"></textarea>
+        <button class="btn ghost" id="cashConfirmBtn">Confirm Funds Received</button>
+      </div>
+    </div>
+
+  <div id="keitoRouteModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2>Keito Pickup Route</h2>
+        <button class="btn ghost" id="closeKeitoRoute">Close</button>
+      </div>
+      <div class="system-sub">Founder's local pickup guide for real SupportRD shampoo reference in Santiago, Dominican Republic.</div>
+      <div class="mini-list" style="margin-top:10px;">
+        <div>1. Fly into <strong>STI Airport</strong> in Santiago, Dominican Republic.</div>
+        <div>2. Head toward <strong>Villa Gonzalez</strong>.</div>
+        <div>3. Ask locally for <strong>Keito with the chickens</strong> or say <strong>"Keito con lo pollo"</strong>.</div>
+        <div>4. Let them know you are looking for the <strong>SupportRD shampoo reference</strong>.</div>
+        <div>5. Confirm exact local turn-by-turn directions once you are in the area.</div>
+      </div>
+      <div class="system-sub" style="margin-top:10px;">This is a cultural pickup reference, not a guaranteed map pin. Exact final directions should be confirmed locally.</div>
+    </div>
+  </div>
+
+  <div id="rolloutRouteModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <h2>SupportRD Physical Rollout</h2>
+        <button class="btn ghost" id="closeRolloutRoute">Close</button>
+      </div>
+      <div class="mini-list">
+        <div><strong>Santiago, DR</strong> · founder route / shampoo pickup lane / STI access</div>
+        <div><strong>Santo Domingo, DR</strong> · city scale / broader DR service lane</div>
+        <div><strong>North Carolina</strong> · U.S. growth lane / local support presence</div>
+        <div><strong>South Carolina</strong> · next southeast expansion lane</div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<div id="requestCallModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Request Call · English Family Route</h2>
+      <button class="btn ghost" id="closeRequestCall">Close</button>
+    </div>
+    <div class="request-route-hero">
+      <div class="wait-badge">Accommodations Active</div>
+      <div class="wait-title">American English contacts can check in here.</div>
+      <div class="wait-copy">SupportRD routes this lane back through Anthony first so he can relay the message to family, keep service personal, and move the order faster.</div>
+      <div class="request-route-meta">Relay contact: <strong>xxfigueroa1993@yahoo.com</strong> · Text / call relay: <strong>980-375-9197</strong></div>
+      <div class="request-route-aria">ARIA says: Your order is coming, don't worry.</div>
+    </div>
+    <div class="request-grid" id="requestCallFormWrap">
+      <input id="reqRouteLabel" value="English Family Route to Anthony" readonly>
+      <input id="reqName" placeholder="Name">
+      <input id="reqPhone" placeholder="Phone">
+      <input id="reqEmail" placeholder="Email">
+      <input id="reqAddress" placeholder="Address">
+      <textarea id="reqNotes" placeholder="Notes (optional) · Who reached out, what they need, and anything Anthony should relay back."></textarea>
+      <label class="system-check"><input id="reqConsent" type="checkbox"> I consent to SupportRD follow-up for payment and delivery support.</label>
+      <button class="btn primary" id="submitRequestCall">Submit Request</button>
+    </div>
+    <div class="request-wait" id="requestWaitWrap" style="display:none;">
+      <div class="wait-badge">Pending</div>
+      <div class="wait-title">You are checked in.</div>
+      <div class="wait-copy" id="requestWaitMessage">Request received. Under review.</div>
+      <div class="wait-id" id="requestWaitId"></div>
+      <div class="request-route-next">
+        <div><strong>Next:</strong> Anthony gets the relay first, then family is updated with the cleanest next step.</div>
+        <div><strong>ARIA:</strong> Your order is coming, don't worry.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="acquisitionModal" class="modal">
+  <div class="modal-card glass modal-card-acquisition">
+    <div class="modal-head">
+      <h2>SupportRD Acquisition Window</h2>
+      <button class="btn ghost" id="closeAcquisitionModal">Close</button>
+    </div>
+    <div class="system-sub">This public window explains what likely brought a visitor here, which lane fits them best, and what SupportRD should show next.</div>
+    <div class="acquisition-window-grid">
+      <section class="acquisition-window-hero">
+        <div class="float-mode-kicker">Why You Are Seeing This</div>
+        <h3 id="acquisitionWindowTitle">SupportRD Hair Journey</h3>
+        <p id="acquisitionWindowWhy">SupportRD is reading the current route and matching it to the most likely hair-help journey.</p>
+        <div class="acquisition-window-pills">
+          <span id="acquisitionWindowSource">SupportRD live route</span>
+          <span id="acquisitionWindowLane">Deal With Issues Hair</span>
+        </div>
+      </section>
+      <section class="acquisition-window-ad">
+        <div class="float-mode-kicker">Live Funnel Ad</div>
+        <strong id="acquisitionWindowAdTitle">Start The Hair Journey</strong>
+        <p id="acquisitionWindowAdCopy">SupportRD keeps a small colorful ad in front of the visitor based on what brought them here.</p>
+      </section>
+    </div>
+    <div class="campaign-actions acquisition-window-actions" style="margin-top:14px;">
+      <button class="btn primary" id="acquisitionWindowPrimary">Open The Right Lane</button>
+      <button class="btn ghost" id="acquisitionWindowSecondary">See Secondary Lane</button>
+      <button class="btn ghost" id="acquisitionWindowRefresh">Refresh Window</button>
+      <button class="btn ghost" id="acquisitionBuyerCall">Open Buyer Call</button>
+      <button class="btn ghost" id="acquisitionFounderEmail">Email Founder</button>
+    </div>
+  </div>
+</div>
+
+<div id="emergencyAssistModal" class="modal">
+  <div class="modal-card glass">
+    <div class="modal-head">
+      <h2>Hair Emergency Assist</h2>
+      <button class="btn ghost" id="closeEmergencyAssist">Close</button>
+    </div>
+    <div class="system-sub">For severe injuries, active bleeding, breathing issues, or chemical exposure to eyes: call 911 immediately.</div>
+    <div class="request-grid" style="margin-top:10px;">
+      <select id="emergencyType">
+        <option value="burn">Burn / Chemical Burn</option>
+        <option value="fight">Trauma from Fight / Pulling</option>
+        <option value="blood">Blood / Open Wound Around Hairline</option>
+        <option value="stain">Severe Staining / Reaction</option>
+        <option value="unknown">Unknown Extreme Situation</option>
+      </select>
+      <button class="btn" id="emergencyRunScan">Run Hair Scan Now</button>
+      <button class="btn" id="emergencyAriaTest">Test Run ARIA Emergency</button>
+      <button class="btn ghost" id="emergencyDoctorRoute">Find Hair/Scalp Doctor</button>
+      <button class="btn ghost" id="emergencyDirectBill">Direct Bill Medical Assist</button>
+    </div>
+    <div id="emergencyLog" class="system-log" style="margin-top:10px;">Status: waiting.</div>
+    <div class="lock-pill" style="margin-top:10px;">Extreme Incident Support: 3 months Pro + all themes included.</div>
+  </div>
+</div>
+
+
+<div id="brochureModal" class="modal">
+  <div class="modal-card glass brochure-card">
+    <div class="modal-head">
+      <h2>SupportRD Full Brochure</h2>
+      <button class="btn ghost" id="closeBrochure">Close</button>
+    </div>
+    <div class="request-route-brochure">
+      <div class="wait-badge">English Family Route</div>
+      <div class="wait-copy">For English-speaking American contacts reaching out to wife and family, SupportRD can route the message back through Anthony first at <strong>xxfigueroa1993@yahoo.com</strong> and <strong>980-375-9197</strong> so the order flow stays personal and moves quicker.</div>
+    </div>
+    <iframe class="brochure-embed" src="/static/brochure.html" title="SupportRD Brochure"></iframe>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<div class="info-tray glass" id="infoTray">
+  <div class="info-title">SupportRD Info</div>
+  <div class="info-links">
+    <button class="chip" id="infoAria" data-info="ARIA">ARIA</button>
+    <button class="chip" id="infoAppInstall" data-info="Click the 3 buttons to download the app">Click the 3 buttons to download the app</button>
+    <button class="chip" id="infoBrochure" data-info="Brochure">Brochure</button>
+    <button class="chip" id="infoPrivacy" data-info="Privacy">Privacy</button>
+    <button class="chip" id="infoPolitics" data-info="Politics">Politics</button>
+    <button class="chip" id="infoDonate" data-info="Donate">Donate</button>
+    <button class="chip" id="infoAbout" data-info="About Us">About Us</button>
+    <button class="chip" id="infoTerms" data-info="Terms">Terms</button>
+    <button class="chip" id="infoFaq" data-info="FAQ">FAQ</button>
+    <button class="chip" id="infoContact" data-info="Contact">Contact</button>
+  </div>
+</div>
+
+<div id="miniWindow" class="mini-window">
+  <div class="mini-window-card glass">
+    <div class="mini-window-head">
+      <div id="miniWindowTitle">Action</div>
+      <button class="btn ghost" id="closeMiniWindow">Close</button>
+    </div>
+    <div id="miniWindowBody" class="mini-window-body"></div>
+  </div>
+</div>
+
+<div id="miniAriaCorner" class="mini-aria-corner" aria-hidden="true">
+  <div class="mini-aria-orb"></div>
+  <div class="mini-aria-label">ARIA</div>
+</div>
+
+<div id="levelSide" class="level-side" hidden>
+  <div class="level-side-card glass">
+    <div class="level-side-head">ARIA Levels</div>
+    <div class="level-dot"><span></span> Greetings</div>
+    <div class="level-dot"><span></span> Thorough Info</div>
+    <div class="level-dot"><span></span> Inner Circle</div>
+    <div class="level-dot"><span></span> Professional · Making Money</div>
+  </div>
+</div>
+
+<div id="studioModeShell" class="studio-mode-shell" aria-hidden="true">
+  <div class="studio-static"></div>
+  <div class="studio-mode-topbar glass">
+    <div class="studio-mode-title">
+      <div class="studio-kicker">PRO JAKE</div>
+      <h2>SupportRD Studio Stream Prep</h2>
+      <p>The booth sharpens the dashboard. Get your stream right here, then launch it back into the main world with more force.</p>
+    </div>
+    <div class="studio-mode-actions">
+      <button class="btn ghost" id="studioImportantBtn">Important Information</button>
+      <button class="btn ghost" id="studioSettingsBtn">Settings</button>
+      <button class="btn ghost" id="studioPurchaseBtn">Product Purchase</button>
+      <button class="btn ghost" id="studioFloatBtn">Float Mode</button>
+      <button class="btn ghost" id="studioThemeBtn">Theme Color</button>
+      <button class="btn ghost" id="studioBlogBtn">Blog</button>
+      <button class="btn" id="studioExitBtn">Exit Studio</button>
+    </div>
+  </div>
+  <div class="studio-mode-frame-wrap glass">
+<iframe id="studioModeFrame" class="studio-mode-frame" data-src="/static/studio/index.html?v=20260414t" title="SupportRD Studio"></iframe>
+  </div>
+</div>
+
+<div id="floatModeShell" class="float-mode-shell" hidden aria-hidden="true">
+  <div class="float-mode-backdrop"></div>
+    <div class="supportrd-os-shell" aria-label="SupportRD Operating System">
+      <header class="supportrd-os-shell__top glass">
+        <div class="supportrd-os-shell__brand">
+          <div class="supportrd-os-shell__eyebrow">SupportRD Operating System</div>
+          <h1>Blank system foundation for the whole app.</h1>
+          <p>SupportRD now starts from a clean operating layer: structure first, then APIs, revenue, backend, and frontend with connected boundary logic.</p>
+        </div>
+        <div class="supportrd-os-shell__status">
+          <div class="supportrd-os-shell__status-card">
+            <span>Mode</span>
+            <strong>OS Reset</strong>
+            <small>Blank slate · modern shell · app-grade layers</small>
+          </div>
+          <div class="supportrd-os-shell__status-card">
+            <span>State</span>
+            <strong id="supportrdOSState">Layer scan loading...</strong>
+            <small id="supportrdOSStateMeta">Remote is rebuilding on top of one clean system.</small>
+          </div>
+        </div>
+      </header>
+
+      <div class="supportrd-os-shell__workspace">
+        <aside class="supportrd-os-shell__rail glass">
+          <div class="supportrd-os-shell__eyebrow">SupportRD &gt; Layers</div>
+          <button class="supportrd-os-shell__layer-btn active" type="button" data-os-layer="foundation">1. Structural Foundation</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="apis">2. APIs</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="revenue">3. Revenue</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="backend">4. Back End Layer</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="frontend">5. Front End Layer</button>
+          <button class="supportrd-os-shell__layer-btn" type="button" data-os-layer="boundaries">Connected Boundary Logic</button>
+        </aside>
+
+        <main class="supportrd-os-shell__canvas">
+          <section class="supportrd-os-shell__panel active" data-os-panel="foundation">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Structural Foundation</div>
+                <h2>One clean system floor plan.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">SupportRD Core</span>
+            </div>
+            <div class="supportrd-os-shell__grid">
+              <article class="supportrd-os-shell__card">
+                <span>Main Structure</span>
+                <strong>Remote shell, route engine, motion system, assistant zones.</strong>
+                <p>The app starts with one shell, one route map, one motion language, and one ownership model.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>Account</span>
+                <strong>Identity, premium state, session ownership, diary ownership, studio ownership.</strong>
+                <p>Every lane should know who the person is and what they own without feeling fragmented.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>Statistics</span>
+                <strong>Session movement, conversions, diary traffic, voice state, and scanner reads.</strong>
+                <p>SupportRD should measure the world it is building, not guess at it.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="apis">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">APIs</div>
+                <h2>Connected services instead of hidden glue.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">Service Grid</span>
+            </div>
+            <div class="supportrd-os-shell__service-grid" id="supportrdOSApiGrid"></div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="revenue">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Revenue</div>
+                <h2>Money lanes that unlock the product.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">Shopify + Account</span>
+            </div>
+            <div class="supportrd-os-shell__grid">
+              <article class="supportrd-os-shell__card">
+                <span>Payments</span>
+                <strong>Shopify, guest support, custom orders, diary support, studio premium, premium/pro.</strong>
+                <p>Revenue belongs inside the Remote, not outside the product identity.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>Account Unlock</span>
+                <strong>Purchases should immediately change access, buttons, and assistant behavior.</strong>
+                <p>What gets bought should modify SupportRD memory and boundaries right away.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="backend">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Back End Layer</div>
+                <h2>Persistent systems behind the shell.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">Data + Sessions</span>
+            </div>
+            <div class="supportrd-os-shell__service-grid" id="supportrdOSBackendGrid"></div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="frontend">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Front End Layer</div>
+                <h2>The visible app surfaces built on top of the OS.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">2026 JavaScript Shell</span>
+            </div>
+            <div class="supportrd-os-shell__grid">
+              <article class="supportrd-os-shell__card">
+                <span>Pages</span>
+                <strong>Diary, Studio, Profile, Settings, Map Change, FAQ Lounge, Payments.</strong>
+                <p>Each page should feel like a real app module and still remain part of one system.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>Contacts / Channels</span>
+                <strong>Profile links, direct contact, social feeds, URL entrances, push notifications.</strong>
+                <p>These are the entrances into SupportRD, not random extras.</p>
+              </article>
+              <article class="supportrd-os-shell__card">
+                <span>General Options</span>
+                <strong>Settings, accessibility, language, layout behavior, sticky widgets, route actions.</strong>
+                <p>The shell should feel controlled and intentional from the first click.</p>
+              </article>
+            </div>
+            <div class="supportrd-os-shell__module-grid">
+              <article class="supportrd-os-shell__module supportrd-os-shell__module--diary">
+                <div class="supportrd-os-shell__eyebrow">Diary Module</div>
+                <h3 id="supportrdOSDiaryTitle">Diary live module is loading...</h3>
+                <p id="supportrdOSDiaryBody">Latest sessions, comments, lobby search, and guest support should all feel like one live diary app.</p>
+                <div class="supportrd-os-shell__module-actions">
+                  <button class="btn ghost" id="supportrdOSFocusDiary">Focus Diary Workspace</button>
+                  <button class="btn" id="supportrdOSOpenDiary">Open Diary Module</button>
+                  <button class="btn ghost" id="supportrdOSRefreshDiary">Refresh Feed</button>
+                </div>
+                <div class="supportrd-os-shell__mini-list" id="supportrdOSDiaryList"></div>
+              </article>
+              <article class="supportrd-os-shell__module supportrd-os-shell__module--studio">
+                <div class="supportrd-os-shell__eyebrow">Studio Module</div>
+                <h3 id="supportrdOSStudioTitle">Studio module is loading...</h3>
+                <p id="supportrdOSStudioBody">Recording, waveform, camera, motherboard, and exports should feel like their own creation product.</p>
+                <div class="supportrd-os-shell__module-actions">
+                  <button class="btn ghost" id="supportrdOSFocusStudio">Focus Studio Workspace</button>
+                  <button class="btn" id="supportrdOSOpenStudio">Open Studio Module</button>
+                  <button class="btn ghost" id="supportrdOSPrimeStudioVoice">Prime Jake Voice</button>
+                </div>
+                <div class="supportrd-os-shell__mini-list" id="supportrdOSStudioList"></div>
+              </article>
+              <article class="supportrd-os-shell__module supportrd-os-shell__module--profile">
+                <div class="supportrd-os-shell__eyebrow">Profile Module</div>
+                <h3 id="supportrdOSProfileTitle">Profile verification module is loading...</h3>
+                <p id="supportrdOSProfileBody">Identity, credentials, hair analysis, exports, and scanner access should all read like one premium verification lane.</p>
+                <div class="supportrd-os-shell__module-actions">
+                  <button class="btn ghost" id="supportrdOSFocusProfile">Focus Profile Workspace</button>
+                  <button class="btn" id="supportrdOSOpenProfile">Open Profile Module</button>
+                  <button class="btn ghost" id="supportrdOSRefreshProfile">Refresh Scanner</button>
+                </div>
+                <div class="supportrd-os-shell__mini-list" id="supportrdOSProfileList"></div>
+              </article>
+            </div>
+            <div class="supportrd-os-shell__module-workspace glass">
+              <div class="supportrd-os-shell__panel-head">
+                <div>
+                  <div class="supportrd-os-shell__eyebrow">Module Workspace</div>
+                  <h2 id="supportrdOSWorkspaceTitle">Diary workspace</h2>
+                </div>
+                <span class="supportrd-os-shell__pill" id="supportrdOSWorkspacePill">Diary</span>
+              </div>
+              <div class="supportrd-os-shell__workspace-tabs">
+                <button class="supportrd-os-shell__workspace-tab active" type="button" data-os-workspace="diary">Diary</button>
+                <button class="supportrd-os-shell__workspace-tab" type="button" data-os-workspace="studio">Studio</button>
+                <button class="supportrd-os-shell__workspace-tab" type="button" data-os-workspace="profile">Profile</button>
+              </div>
+              <div class="supportrd-os-shell__workspace-panel active" data-os-workspace-panel="diary">
+                <p id="supportrdOSWorkspaceDiaryBody">Diary workspace is preparing the latest lobby movement, comments, and guest support lane.</p>
+                <div class="supportrd-os-shell__mini-list" id="supportrdOSWorkspaceDiaryList"></div>
+              </div>
+              <div class="supportrd-os-shell__workspace-panel" data-os-workspace-panel="studio">
+                <p id="supportrdOSWorkspaceStudioBody">Studio workspace is preparing recording state, motherboard status, and booth control notes.</p>
+                <div class="supportrd-os-shell__mini-list" id="supportrdOSWorkspaceStudioList"></div>
+              </div>
+              <div class="supportrd-os-shell__workspace-panel" data-os-workspace-panel="profile">
+                <p id="supportrdOSWorkspaceProfileBody">Profile workspace is preparing verification facts, scanner reads, and export readiness.</p>
+                <div class="supportrd-os-shell__mini-list" id="supportrdOSWorkspaceProfileList"></div>
+              </div>
+            </div>
+            <div class="supportrd-os-shell__voice-lane glass">
+              <div class="supportrd-os-shell__panel-head">
+                <div>
+                  <div class="supportrd-os-shell__eyebrow">Website Voice</div>
+                  <h2>Aria / Jake shell-native voice lane.</h2>
+                </div>
+                <span class="supportrd-os-shell__pill">OpenAI Ready</span>
+              </div>
+              <div class="supportrd-os-shell__voice-sequence" id="supportrdOSVoiceSequence">
+                Cue sound → Greeting → Mic ready → Listening → Transcribing → Response → Close sound
+              </div>
+              <div class="supportrd-os-shell__module-actions">
+                <button class="btn" id="supportrdOSVoiceAria">Launch Aria</button>
+                <button class="btn ghost" id="supportrdOSVoiceJake">Launch Jake</button>
+                <button class="btn ghost" id="supportrdOSVoiceHandsfree">Hands Free</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="supportrd-os-shell__panel" data-os-panel="boundaries">
+            <div class="supportrd-os-shell__panel-head">
+              <div>
+                <div class="supportrd-os-shell__eyebrow">Connected Boundary Logic</div>
+                <h2>Every action should lead somewhere real.</h2>
+              </div>
+              <span class="supportrd-os-shell__pill">System Links</span>
+            </div>
+            <div class="supportrd-os-shell__boundary-map" id="supportrdOSBoundaryMap"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <div class="supportrd-shell-v2" aria-label="SupportRD App Shell">
+      <header class="supportrd-shell-v2__hero glass">
+        <div class="supportrd-shell-v2__hero-copy">
+          <div class="supportrd-shell-v2__eyebrow">SupportRD App Shell</div>
+          <h2>One Remote. Real app pages. No old panel underneath.</h2>
+          <p>SupportRD now opens like a route-based app shell for Diary, Studio, Profile, Payments, and the Website Voice instead of dropping you into the old float panel world.</p>
+          <div class="supportrd-shell-v2__hero-actions">
+            <button class="btn" id="shellV2GoDiary">Open Diary Live</button>
+            <button class="btn ghost" id="shellV2GoStudio">Launch Studio</button>
+            <button class="btn ghost" id="shellV2StartVoice">Website Voice</button>
+          </div>
+        </div>
+        <div class="supportrd-shell-v2__hero-status">
+          <article class="supportrd-shell-v2__signal">
+            <span>Shell</span>
+            <strong>Reset Build Active</strong>
+            <small>Route-led layout with controlled widgets and motion staging.</small>
+          </article>
+          <article class="supportrd-shell-v2__signal">
+            <span>Voice</span>
+            <strong>Aria / Jake</strong>
+            <small>Queued for click, cue sound, greeting, mic, transcription, and response.</small>
+          </article>
+          <article class="supportrd-shell-v2__signal">
+            <span>Pages</span>
+            <strong>Diary / Studio / Profile</strong>
+            <small>Built like dedicated app surfaces instead of buried panels.</small>
+          </article>
+        </div>
+      </header>
+
+      <div class="supportrd-shell-v2__nav glass" role="navigation" aria-label="SupportRD routes">
+        <button class="supportrd-shell-v2__nav-btn active" type="button" data-shell-v2-route="home">Remote</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="diary">Diary</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="studio">Studio</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="profile">Profile</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="settings">Settings</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="map">Map Change</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="faq">FAQ Lounge</button>
+        <button class="supportrd-shell-v2__nav-btn" type="button" data-shell-v2-route="payments">Payments</button>
+      </div>
+
+      <div class="supportrd-shell-v2__layout">
+        <main class="supportrd-shell-v2__main">
+          <section class="supportrd-shell-v2__panel active" data-shell-v2-panel="home">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">SupportRD Remote</div>
+                <h3>Modern home base for the whole product.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Remote-first</span>
+            </div>
+            <div class="supportrd-shell-v2__grid">
+              <article class="supportrd-shell-v2__card">
+                <span>Diary App</span>
+                <strong>Live feed discovery, comments, guest support, and direct session links.</strong>
+                <p>The Diary lane is being reset into a live app with lobby, sessions, and direct URL entrances.</p>
+              </article>
+              <article class="supportrd-shell-v2__card">
+                <span>Studio App</span>
+                <strong>Standalone API booth feel for recording, waveform, edits, and exports.</strong>
+                <p>The Studio lane now has to read like its own creation product, not a tucked-away panel.</p>
+              </article>
+              <article class="supportrd-shell-v2__card">
+                <span>Website Voice</span>
+                <strong>Aria and Jake live on the shell, not inside broken click chains.</strong>
+                <p>Click, cue sound, greeting, mic, transcription, response, and close sound all route through one voice path.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="diary">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Diary Live App</div>
+                <h3>Live sessions, direct feed URLs, comments, and guest support.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">API Surface</span>
+            </div>
+            <div class="supportrd-shell-v2__feature-list">
+              <article class="supportrd-shell-v2__feature">
+                <strong>Lobby + Feed Routing</strong>
+                <p>Latest sessions, tags, names, URLs, and sticky lobby discovery all live in one system.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Recording + Live Session</strong>
+                <p>Diary mode is becoming its own record-and-go experience with history and comments tied to the account system.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Support Revenue</strong>
+                <p>Guest payment and paid live support belong directly inside the feed viewer, not outside the Remote.</p>
+              </article>
+            </div>
+            <div class="supportrd-shell-v2__app-grid">
+              <article class="supportrd-shell-v2__app-card supportrd-shell-v2__app-card--spotlight">
+                <div class="supportrd-shell-v2__eyebrow">Live Session Lobby</div>
+                <h4 id="shellV2DiaryTitle">Latest diary sessions are loading...</h4>
+                <p id="shellV2DiarySummary">SupportRD is pulling the latest live diary movement, session tag, and feed-readiness right into the new shell.</p>
+                <div class="supportrd-shell-v2__metric-row">
+                  <span id="shellV2DiaryMetricPrimary">Lobby signal waiting...</span>
+                  <span id="shellV2DiaryMetricSecondary">Guest support + comments ready</span>
+                </div>
+                <div class="supportrd-shell-v2__button-row">
+                  <button class="btn" id="shellV2DiaryRefresh">Refresh Diary Feed</button>
+                  <button class="btn ghost" id="shellV2DiaryOpenViewer">Open Diary Viewer</button>
+                </div>
+              </article>
+              <article class="supportrd-shell-v2__app-card">
+                <div class="supportrd-shell-v2__eyebrow">Search + Discovery</div>
+                <ul class="supportrd-shell-v2__bullet-list">
+                  <li>Search by `Name`, `Email`, `Tag ^^`, or `URL`</li>
+                  <li>Sticky lobby should collapse cleanly and stay off the middle of the app</li>
+                  <li>Direct feed URLs should open the viewer on top of the Remote</li>
+                </ul>
+                <div id="shellV2DiaryFeedList" class="supportrd-shell-v2__mini-list"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="studio">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Studio API App</div>
+                <h3>Recording, waveform, video, motherboard, and exports.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Premium Booth</span>
+            </div>
+            <div class="supportrd-shell-v2__feature-list">
+              <article class="supportrd-shell-v2__feature">
+                <strong>Prime devices first</strong>
+                <p>Mic and camera are prepared before recording so the booth behaves like a real studio product.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Waveform motherboard</strong>
+                <p>Live visuals, highlights, trims, and exports need to feel immediate and professional.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Jake Premium lane</strong>
+                <p>Studio premium gating stays connected to the account system and payment unlock memory.</p>
+              </article>
+            </div>
+            <div class="supportrd-shell-v2__app-grid">
+              <article class="supportrd-shell-v2__app-card supportrd-shell-v2__app-card--spotlight">
+                <div class="supportrd-shell-v2__eyebrow">Studio Command Deck</div>
+                <h4 id="shellV2StudioTitle">Studio API booth is ready for the reset build.</h4>
+                <p id="shellV2StudioSummary">Prime microphone, prime camera, waveform motherboard, and Website Voice support all belong here under one studio-grade surface.</p>
+                <div class="supportrd-shell-v2__metric-row">
+                  <span id="shellV2StudioMetricPrimary">Mic + camera preflight</span>
+                  <span id="shellV2StudioMetricSecondary">Waveform + export lane</span>
+                </div>
+                <div class="supportrd-shell-v2__button-row">
+                  <button class="btn" id="shellV2StudioLaunch">Launch Studio App</button>
+                  <button class="btn ghost" id="shellV2StudioPrimeVoice">Website Voice Assist</button>
+                </div>
+              </article>
+              <article class="supportrd-shell-v2__app-card">
+                <div class="supportrd-shell-v2__eyebrow">Booth Targets</div>
+                <ul class="supportrd-shell-v2__bullet-list">
+                  <li>Live record / pause / stop should behave like a real booth</li>
+                  <li>Motherboard editing and waveform visuals should read instantly</li>
+                  <li>Studio needs to feel like its own API app, not a leftover page</li>
+                </ul>
+                <div id="shellV2StudioStatusList" class="supportrd-shell-v2__mini-list"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="profile">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Profile Verification App</div>
+                <h3>Identity, hair credentials, scanner access, and report exports.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Identity</span>
+            </div>
+            <div class="supportrd-shell-v2__feature-list">
+              <article class="supportrd-shell-v2__feature">
+                <strong>Identity Confirmed</strong>
+                <p>Normal-person account confidence, profile image presence, and account continuity all surface here.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>General Status Reading</strong>
+                <p>History-aware wellness and account status notes belong in the profile, not hidden in random panels.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Hair Analysis Export</strong>
+                <p>PDF and DOCX exports turn scans into a real account artifact that can be revisited later.</p>
+              </article>
+            </div>
+            <div class="supportrd-shell-v2__app-grid">
+              <article class="supportrd-shell-v2__app-card supportrd-shell-v2__app-card--spotlight">
+                <div class="supportrd-shell-v2__eyebrow">Access Scanner</div>
+                <h4 id="shellV2ProfileTitle">Profile verification is loading the SupportRD access deck.</h4>
+                <p id="shellV2ProfileSummary">Identity confirmed, general status, and hair-analysis history all belong to this verification lane.</p>
+                <div class="supportrd-shell-v2__metric-row">
+                  <span id="shellV2ProfileMetricPrimary">API scanner waiting...</span>
+                  <span id="shellV2ProfileMetricSecondary">PDF / DOCX exports ready</span>
+                </div>
+                <div class="supportrd-shell-v2__button-row">
+                  <button class="btn" id="shellV2ProfileRefresh">Refresh Access Scanner</button>
+                  <button class="btn ghost" id="shellV2ProfileExportPdf">Export PDF</button>
+                  <button class="btn ghost" id="shellV2ProfileExportDocx">Export DOCX</button>
+                </div>
+              </article>
+              <article class="supportrd-shell-v2__app-card">
+                <div class="supportrd-shell-v2__eyebrow">Verification Targets</div>
+                <ul class="supportrd-shell-v2__bullet-list">
+                  <li>Identity should read like a real person/account confidence lane</li>
+                  <li>Hair analysis should save as a revisitable SupportRD record</li>
+                  <li>Profile has to feel premium and professional on its own</li>
+                </ul>
+                <div id="shellV2ProfileFactList" class="supportrd-shell-v2__mini-list"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="settings">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Settings Control</div>
+                <h3>Push notifications, URL entrances, passwords, and assistant presets.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Control deck</span>
+            </div>
+            <p class="supportrd-shell-v2__panel-copy">Settings has to feel like a calm pit-stop for account setup, not a leftover menu. That means stronger bot menus, route-aware guidance, and easy scanner visibility.</p>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="map">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Map Change Pit Stop</div>
+                <h3>General info, ads, actual map change, and perks around the route.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Pit stop</span>
+            </div>
+            <p class="supportrd-shell-v2__panel-copy">Map Change is the trail-side adjustment lane. It should hold the map switch itself while still surfacing perks, ads, and general SupportRD route help.</p>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="faq">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">FAQ Lounge</div>
+                <h3>The social-world view into SupportRD.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Trail relax</span>
+            </div>
+            <p class="supportrd-shell-v2__panel-copy">FAQ Lounge should carry the 10-second reel, quick configuration help, and direct FAQ answers without breaking the laid-back SupportRD mood.</p>
+          </section>
+
+          <section class="supportrd-shell-v2__panel" data-shell-v2-panel="payments">
+            <div class="supportrd-shell-v2__panel-head">
+              <div>
+                <div class="supportrd-shell-v2__eyebrow">Payments + Account Unlocks</div>
+                <h3>Checkout, account memory, remote buttons, and premium features.</h3>
+              </div>
+              <span class="supportrd-shell-v2__pill">Revenue</span>
+            </div>
+            <div class="supportrd-shell-v2__feature-list">
+              <article class="supportrd-shell-v2__feature">
+                <strong>Shopify + Remote</strong>
+                <p>Every payment lane should feel native to SupportRD while still landing on the real checkout flow.</p>
+              </article>
+              <article class="supportrd-shell-v2__feature">
+                <strong>Account Unlock Memory</strong>
+                <p>What gets bought should immediately change what the Remote, Studio, and voice assistants can do.</p>
+              </article>
+            </div>
+          </section>
+        </main>
+
+        <aside class="supportrd-shell-v2__sidebar glass">
+          <section class="supportrd-shell-v2__widget">
+            <div class="supportrd-shell-v2__eyebrow">Website Voice</div>
+            <h4>Aria / Jake floor plan</h4>
+            <p>Four-corner home positions. They move into focus only for Diary live display, Studio edits, Settings bot controls, Map trails, Profile scans, and FAQ reels.</p>
+            <div class="supportrd-shell-v2__button-row">
+              <button class="btn" id="shellV2VoiceAria">Talk To Aria</button>
+              <button class="btn ghost" id="shellV2VoiceJake">Talk To Jake</button>
+            </div>
+            <div class="supportrd-shell-v2__voice-sequence" id="shellV2VoiceSequence">
+              Greeting · Mic Ready · Listening · Transcribing · Response
+            </div>
+          </section>
+          <section class="supportrd-shell-v2__widget">
+            <div class="supportrd-shell-v2__eyebrow">Sticky Widgets</div>
+            <h4>Controlled, not floating everywhere</h4>
+            <p>Widgets stay tucked to the shell edges so the core app view stays readable while still keeping support close.</p>
+          </section>
+          <section class="supportrd-shell-v2__widget">
+            <div class="supportrd-shell-v2__eyebrow">SEO Engine</div>
+            <h4>Every URL points back to SupportRD</h4>
+            <p>Remote, Diary, Studio, Profile, Settings, Map, FAQ, and Payments all become proper entrance pages with SupportRD identity built in.</p>
+          </section>
+        </aside>
+      </div>
+    </div>
+    <div class="float-mode-top glass">
+      <div>
+        <div class="float-mode-kicker">SupportRD Personal Remote</div>
+        <h2>Float Mode</h2>
+        <p>Five-star remote control for hair help, maps, profile, and recorded work.</p>
+        <div class="float-mode-resort-note">Aloha from Hawaii · brochure-light pages · international friendly.</div>
+      </div>
+      <div class="float-mode-actions">
+        <button class="btn ghost" id="floatModeReturnMain">Remote Home</button>
+        <button class="btn ghost" id="floatModeOpenStudio">Open All Panels</button>
+        <button class="btn" id="floatModeClose">Close Remote</button>
+      </div>
+      <div class="remote-go-toggle glass" id="remoteGoTogglePanel">
+        <div class="float-mode-kicker">Remote Focus</div>
+        <button class="btn" id="floatModeGoView">Switch To On-The-Go View</button>
+      </div>
+      </div>
+        <div class="remote-guardian-rail">
+          <button class="remote-guardian-btn" id="remoteGuardianAria">
+            <span class="remote-guardian-orb orb-aria" aria-hidden="true"></span>
+            <span class="remote-guardian-copy remote-guardian-copy-solo"><strong>Aria Hair Advisor</strong></span>
+          </button>
+          <button class="remote-guardian-btn" id="remoteGuardianJake">
+            <span class="remote-guardian-orb orb-jake" aria-hidden="true"></span>
+            <span class="remote-guardian-copy remote-guardian-copy-solo"><strong>Jake Studio Specialist</strong></span>
+          </button>
+        </div>
+    <div id="floatPrimeMenu" class="float-prime-menu glass" hidden aria-hidden="true">
+      <div class="float-prime-copy">
+        <div class="float-mode-kicker">SupportRD Prime</div>
+        <h3>Choose Your SupportRD View</h3>
+        <p>Run the view bot for guided support, or continue free for all and let the T-shape helper stay lightly over the Remote.</p>
+      </div>
+      <div class="float-prime-actions">
+        <button class="btn" id="floatPrimeViewBot">Run View Bot</button>
+        <button class="btn ghost" id="floatPrimeContinue">Continue Free For All</button>
+        <button class="btn ghost" id="floatPrimeClose">Close</button>
+      </div>
+    </div>
+    <div id="floatFounderLayer" class="float-founder-layer glass" hidden aria-hidden="true">
+      <div class="float-founder-head">
+        <div>
+          <div class="float-mode-kicker">Founder Priority</div>
+          <h3>Hidden Founder / Veteran / Priority Access</h3>
+        </div>
+        <button class="btn ghost" id="floatFounderClose">X</button>
+      </div>
+      <div class="float-founder-grid">
+        <div class="float-founder-card">
+          <strong>Founder Brain Layer</strong>
+          <span>Assigned helper agents, internal notes, and SupportRD brain routing live here quietly.</span>
+        </div>
+        <div class="float-founder-card">
+          <strong>Veteran Priority</strong>
+          <span>Accessibility-first continuity, direct contact, and owner-preserved session support stay active.</span>
+        </div>
+        <div class="float-founder-card">
+          <strong>Premium Snapshot</strong>
+          <span>$50 Professional active, 3 themes moving, tips registered, and deeper support lanes standing by.</span>
+        </div>
+      </div>
+    </div>
+    <div id="floatTGuide" class="float-t-guide" hidden aria-hidden="true">
+      <div class="float-t-bar">Settings · Payments · Subscribe In · Blog · General Settings</div>
+      <div class="float-t-stem">
+        <div class="float-t-copy">SupportRD keeps Diary, Studio, Profile, FAQ, and Map Change connected in one Remote. Follow the arrows, ask Aria/Jake anything, and close this fast to resume.</div>
+      </div>
+    </div>
+      <div class="float-mode-footer glass">
+        <button class="btn ghost" id="floatFooterGuide">Live Guidance</button>
+        <button class="btn ghost" id="floatFooterSettings">General Settings</button>
+        <button class="btn ghost" id="floatFooterPayments">Payments</button>
+        <button class="btn ghost" id="floatFooterSubscribe">Subscribe In</button>
+        <button class="btn ghost" id="floatFooterBlog">Blog</button>
+        <button class="btn ghost" id="floatFooterOfficial">Official Websites</button>
+      </div>
+      <div class="float-mode-launch glass">
+      <button class="float-launch-btn" id="floatLaunchStudioQuick" data-float-target="floatBoardsBox">
+        <span class="float-launch-letter">B</span>
+        <span class="float-launch-copy"><strong>Studio Quick Panel</strong><small>Booth controls</small></span>
+      </button>
+      <button class="float-launch-btn" id="floatLaunchSettings" data-float-target="floatProfileBox">
+          <span class="float-launch-letter">S</span>
+          <span class="float-launch-copy"><strong>Configuration</strong><small>Account + links</small></span>
+        </button>
+      <button class="float-launch-btn" id="floatLaunchDiary" data-float-target="floatSettingsBox">
+        <span class="float-launch-letter">D</span>
+        <span class="float-launch-copy"><strong>Diary Mode</strong><small>What's on your mind?</small></span>
+      </button>
+      <button class="float-launch-btn" id="floatLaunchMap" data-float-target="floatDeviceBox">
+        <span class="float-launch-letter">M</span>
+        <span class="float-launch-copy"><strong>Map Change</strong><small>Theme rotation</small></span>
+      </button>
+      <button class="float-launch-btn" id="floatLaunchFaq" data-float-target="floatLiveBox">
+          <span class="float-launch-letter">F</span>
+          <span class="float-launch-copy"><strong>FAQ Lounge</strong><small>Answers + reel</small></span>
+        </button>
+        <button class="float-launch-btn" id="floatLaunchProfile" data-float-target="floatAssistantBox">
+          <span class="float-launch-letter">P</span>
+          <span class="float-launch-copy"><strong>Profile</strong><small>Scan + social card</small></span>
+        </button>
+      </div>
+      <div class="remote-display-strip">
+        <div class="remote-display-toolbar">
+          <button class="btn ghost" id="remoteAdsToggleBtn">Hide Ads</button>
+          <button class="btn ghost" id="remoteAdsFocusBtn">Focus On Hair Help</button>
+        </div>
+        <article class="remote-display-ad glass remote-display-ad-primary">
+          <div class="float-mode-kicker">SupportRD Premium Lane</div>
+          <h3>Purchase Premium, Studio, Themes, and AI upgrades without leaving the Remote.</h3>
+          <p>Fast money lanes stay in your face, while the Remote stays right up top guiding every move.</p>
+          <div class="remote-display-chips">
+            <span>Premium / Pro</span>
+            <span>Studio Edition</span>
+            <span>Themes + AI</span>
+            <span>Tip + Credit</span>
+          </div>
+        </article>
+        <article class="remote-display-ad glass remote-display-ad-secondary">
+          <div class="float-mode-kicker">SupportRD Workday Motion</div>
+          <h3>Keep the page current, polished, and moving with tips, contracts, and daily hair-ready content.</h3>
+          <p>The lower stage opens wide for every tab, so visitors can fall into the app without losing the Remote.</p>
+          <div class="remote-display-chips">
+            <span>Blog</span>
+            <span>Subscribe In</span>
+            <span>Payments</span>
+            <span>Official Pages</span>
+          </div>
+        </article>
+      </div>
+      <div class="remote-stage-shell">
+        <aside class="remote-color-tab remote-color-tab-left">
+          <button class="remote-side-arrow" id="remoteColorPrev" type="button" aria-label="Previous color theme">&#10094;</button>
+        </aside>
+        <section class="remote-content-stage glass" id="remoteContentStage">
+          <div class="remote-content-stage-home" id="remoteStageHome">
+            <div class="float-mode-kicker">SupportRD Remote Stage</div>
+            <h3>Remote on top. Open a section below.</h3>
+            <p>Tap a button and go straight to the page.</p>
+            <div class="remote-stage-quickbar">
+              <button class="btn" id="remoteStageGpsBtn">GPS On The Go</button>
+              <button class="btn ghost" id="remoteStageStudioBtn">Video / Audio Edit</button>
+              <button class="btn ghost" id="remoteStagePaymentBtn">Payment Lane</button>
+            </div>
+          <div class="remote-stage-grid">
+              <div class="remote-stage-card">
+                <strong>Premium Purchase Editor</strong>
+                <span>Premium, studio, themes, and support.</span>
+              </div>
+              <div class="remote-stage-card">
+                <strong>Color + Theme Arrows</strong>
+                <span>Fast theme rotation.</span>
+              </div>
+              <div class="remote-stage-card">
+                <strong>One Unified App</strong>
+                <span>Everything stays inside Remote.</span>
+              </div>
+            </div>
+            <div class="remote-stage-scenarios glass">
+              <div class="float-mode-kicker">Aria + Jake Scenario Chapter</div>
+              <h4>Hair moments</h4>
+              <div id="remoteScenarioButtons" class="remote-scenario-buttons">
+                <button class="remote-scenario-btn" type="button" data-aria-scenario="roadtrip">
+                  <strong>Road Trip Frizz</strong>
+                  <span>Aria checks Formula Exclusiva and smooth finish options.</span>
+                </button>
+                <button class="remote-scenario-btn" type="button" data-aria-scenario="tangles">
+                  <strong>Trail Tangles</strong>
+                  <span>Jake and Aria stage a Mascarilla-first recovery lane.</span>
+                </button>
+                <button class="remote-scenario-btn" type="button" data-aria-scenario="oily">
+                  <strong>Oily + Stressed Ends</strong>
+                  <span>Shampoo and lighter gotero guidance for balance.</span>
+                </button>
+                <button class="remote-scenario-btn" type="button" data-aria-scenario="damage">
+                  <strong>Damage Recovery</strong>
+                  <span>Emergency-ready support for weak ends and breakage.</span>
+                </button>
+                <button class="remote-scenario-btn" type="button" data-aria-scenario="sleek">
+                  <strong>Sleek / Laciador</strong>
+                  <span>SupportRD lines up smooth styling with protection.</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="floatRemoteSheet" class="float-remote-sheet glass" hidden aria-hidden="true">
+            <div class="float-remote-sheet-head">
+              <div>
+                <div class="float-mode-kicker">SupportRD Remote Page</div>
+                <h3 id="floatRemoteSheetTitle">Remote Panel</h3>
+              </div>
+              <div class="float-remote-sheet-actions">
+                <button class="btn ghost" id="floatRemoteSheetBack">Back To Remote</button>
+                <button class="btn" id="floatRemoteSheetClose">Close</button>
+              </div>
+            </div>
+            <div id="floatRemoteSheetBody" class="float-remote-sheet-body"></div>
+          </div>
+        </section>
+        <aside class="remote-color-tab remote-color-tab-right">
+          <button class="remote-side-arrow" id="remoteColorNext" type="button" aria-label="Next color theme">&#10095;</button>
+        </aside>
+      </div>
+      <div class="float-mode-nav glass">
+        <button class="btn ghost" id="floatNavHome">Remote Home</button>
+        <button class="btn ghost" id="floatNavDiary">Diary</button>
+        <button class="btn ghost" id="floatNavProfile">Profile</button>
+        <button class="btn ghost" id="floatNavBooth">Booth</button>
+        <button class="btn ghost" id="floatNavGPS">GPS</button>
+        <button class="btn ghost" id="floatNavSettings">Settings</button>
+        <button class="btn ghost" id="floatNavClose">Exit</button>
+      </div>
+        <div class="float-mode-grid">
+    <section class="reel-panel glass float-reel-panel" id="reelPanel">
+      <div class="panel-head">
+        <h3>SupportRD TV Reel</h3>
+        <button class="btn ghost" id="toggleReel">Hide</button>
+      </div>
+      <div class="reel-tab" id="reelTab">REEL</div>
+      <iframe class="custom-iframe reel-embed" src="/static/reel.html?v=20260322b" title="SupportRD TV Reel"></iframe>
+    </section>
+      <section class="float-box glass" id="floatLiveBox">
+        <div class="float-box-head">
+          <span>FAQ Lounge</span>
+          <span class="float-box-badge">TV Reel + FAQ</span>
+        </div>
+        <div class="float-box-body float-live-body">
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatFaqReelBtn">Refresh TV Reel</button>
+            <button class="btn ghost" id="floatFaqPaymentBtn">Fast Pay</button>
+          </div>
+          <div class="float-faq-theme-row">
+            <button class="float-diary-filter-chip active" type="button" data-faq-theme="tiktok">Tiktok Style Hair</button>
+            <button class="float-diary-filter-chip" type="button" data-faq-theme="youtube">Youtube Style Hair</button>
+            <button class="float-diary-filter-chip" type="button" data-faq-theme="movies">Movies Style Hair</button>
+          </div>
+          <div class="float-faq-reel-host" id="floatFaqReelHost">
+            <iframe class="float-faq-reel-frame" id="floatFaqReelFrame" src="/static/reel.html?v=20260322b&theme=tiktok" title="SupportRD TV Reel in FAQ"></iframe>
+          </div>
+          <div class="float-faq-dropdown glass">
+            <label for="floatFaqPromptSelect">FAQ prompt</label>
+            <select class="input" id="floatFaqPromptSelect">
+              <option value="dryness">What helps dryness the fastest?</option>
+              <option value="damage">What if my hair feels damaged?</option>
+              <option value="frizz">How do I calm frizz on the go?</option>
+              <option value="premium">What does premium unlock?</option>
+              <option value="scan">How does the hair scan work?</option>
+              <option value="payment">How do I pay quickly in person?</option>
+            </select>
+            <div class="float-board-preview" id="floatFaqPromptAnswer">SupportRD TV Reel stays open here by default while FAQ responses help people move into the right lane.</div>
+          </div>
+          <div class="float-box-copy" id="floatLiveStatus">FAQ Lounge keeps the reel open, gives dropdown answers for real hair questions, and moves people into products or support without leaving the Remote.</div>
+        </div>
+      </section>
+        <div class="float-mode-sticky-bottom glass">
+          <button class="btn ghost" id="floatFooterOfficialBottom">Official Websites</button>
+        </div>
+      <section class="float-box glass" id="floatAssistantBox">
+        <div class="float-box-head">
+          <span>Profile</span>
+          <span class="float-box-badge">Hair Analysis + Identity</span>
+        </div>
+        <div class="float-assistant-stage">
+          <button class="float-assistant-orb aria" id="floatAriaBtn" type="button">
+            <span class="float-assistant-core" aria-hidden="true"></span>
+            <span class="float-assistant-label">Aria Hair Advisor</span>
+          </button>
+          <button class="float-assistant-orb jake" id="floatJakeBtn" type="button">
+            <span class="float-assistant-core" aria-hidden="true"></span>
+            <span class="float-assistant-label">Jake Studio Specialist</span>
+          </button>
+        </div>
+        <div class="float-box-copy" id="floatAssistantStatus">Profile keeps identity, hair analysis, credentials, and account security in one serious SupportRD lane.</div>
+        <div class="float-profile-hero">
+          <div class="float-profile-image" id="floatProfileHero">Profile Image</div>
+          <div class="float-profile-summary">
+            <strong id="floatProfileQualityTitle">General AI Summary</strong>
+            <span id="floatProfileQualityBody">A professional SupportRD profile summary will appear here.</span>
+          </div>
+        </div>
+        <div class="float-profile-api-masthead glass">
+          <div class="float-profile-api-copy">
+            <div class="float-mode-kicker">Profile API Identity</div>
+            <strong>Scanner, identity, status, and export all stay under one profile lane.</strong>
+            <span>The profile page is the account diagnostics lane now: access scanner, identity reading, general status reading, hair analysis memory, and export history.</span>
+          </div>
+          <div class="float-profile-api-grid">
+            <div class="float-profile-api-card">
+              <div class="float-mode-kicker">Access Deck</div>
+              <strong>OpenAI, Studio, Diary, Shopify, Cloud, and Account status.</strong>
+            </div>
+            <div class="float-profile-api-card">
+              <div class="float-mode-kicker">Analysis Memory</div>
+              <strong>PDF and DOCX history stays tied to the SupportRD account.</strong>
+            </div>
+          </div>
+        </div>
+        <input id="floatProfileUploadInput" type="file" accept="image/*" hidden>
+        <div class="float-mini-actions">
+          <button class="btn ghost" id="floatUploadProfileBtn">Set Profile Picture</button>
+          <button class="btn ghost" id="floatProfileSaveBtn">Save Profile</button>
+        </div>
+        <div class="float-profile-results">
+          <div class="float-profile-result-card">
+            <strong>Latest Results Verified</strong>
+            <span id="floatProfileLatestResult">Hair profile waiting for first saved result.</span>
+          </div>
+          <div class="float-profile-result-card">
+            <strong>Tier 2 Credentials Summary</strong>
+            <span id="floatProfileCredentialsSummary">Pick a credential theme and SupportRD will write the next layer of profile identity.</span>
+          </div>
+        </div>
+        <div class="float-config-grid">
+          <input id="floatProfileDisplayName" class="input" placeholder="Profile name">
+          <select id="floatProfileCredentialTheme" class="input">
+            <option value="laidback">Credentials · Laid Back</option>
+            <option value="professional">Credentials · Professional</option>
+            <option value="sports">Credentials · Sports</option>
+            <option value="event">Credentials · Event-Ready</option>
+          </select>
+        </div>
+        <div class="float-profile-scan glass">
+          <div class="float-profile-scan-head">
+            <strong>Hair Analysis</strong>
+            <span>Look left, look right, then complete the scan.</span>
+          </div>
+          <div class="float-profile-scan-stage" id="floatProfileScanStage">
+            <video id="floatHairScanCamera" class="float-profile-scan-video" playsinline autoplay muted hidden></video>
+            <div class="float-profile-scan-overlay" id="floatHairScanOverlay">Press Hair Scan to open the camera. Begin starts the guided look-left / look-right flow.</div>
+          </div>
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatRunProfileScanBtn">Hair Scan</button>
+            <button class="btn ghost" id="floatHairScanBeginBtn">Begin</button>
+            <button class="btn ghost" id="floatHairScanLeftBtn">Look Left</button>
+            <button class="btn ghost" id="floatHairScanRightBtn">Look Right</button>
+            <button class="btn ghost" id="floatHairScanCompleteBtn">Complete Hair Scan</button>
+          </div>
+          <div class="remote-processing-bar"><div class="remote-processing-fill" id="floatHairScanProgressFill"></div></div>
+          <div class="float-board-preview" id="floatProfileScanSummary">Hair analysis summary will appear here with texture, color, damage signs, and hair type.</div>
+        </div>
+        <div class="float-profile-history" id="floatProfileHistory">Chat history will appear here when account history is available.</div>
+        <div class="float-profile-security glass">
+          <strong>Access Scanner</strong>
+          <span>Detailed system access without exposing secret keys. Use this lane for last-minute identity, status, and hair-analysis checks before a meeting or presentation.</span>
+          <div class="float-profile-results float-profile-results-access">
+            <div class="float-profile-result-card">
+              <strong>API Access Deck</strong>
+              <span id="floatProfileApiDeck">OpenAI, Studio, Diary, Shopify, Cloud, and Account access checks will appear here.</span>
+            </div>
+            <div class="float-profile-result-card">
+              <strong>Identity Confirmed</strong>
+              <span id="floatProfileIdentityReading">Identity check is standing by for a profile picture, account lane, and protected access signal.</span>
+            </div>
+            <div class="float-profile-result-card">
+              <strong>General Status Reading</strong>
+              <span id="floatProfileGeneralStatusReading">General status will read account stability, presentation readiness, and hair crisis level.</span>
+            </div>
+          </div>
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatProfileAccessRefreshBtn">Refresh Access Scanner</button>
+            <button class="btn ghost" id="floatProfileExportPdfBtn">Export Hair Analysis PDF</button>
+            <button class="btn ghost" id="floatProfileExportDocxBtn">Export Hair Analysis DOCX</button>
+          </div>
+          <div class="float-profile-history" id="floatProfileExportStatus">Hair analysis export history will appear here after the first saved analysis export.</div>
+        </div>
+        <div class="float-profile-security glass">
+          <strong>2-Step Verification</strong>
+          <span>After 4 hours away, sign-in can require password plus phone number or a 6-digit personal code.</span>
+          <div class="float-config-grid">
+            <input id="floatProfilePassword" class="input" type="password" placeholder="Profile password">
+            <input id="floatProfile2faPhone" class="input" placeholder="Phone number">
+            <input id="floatProfile2faCode" class="input" maxlength="6" placeholder="6-digit personal code">
+            <input id="floatProfileLinkedInUrl" class="input" placeholder="LinkedIn profile URL">
+          </div>
+          <div class="float-mini-actions">
+            <button class="btn ghost" id="floatProfile2faSaveBtn">Save 2-Step Setup</button>
+            <button class="btn ghost" id="floatProfileLinkedInPostBtn">Post On LinkedIn</button>
+          </div>
+        </div>
+      </section>
+      <section class="float-box glass" id="floatDeviceBox">
+        <div class="float-box-head">
+          <span>Map Change</span>
+          <span class="float-box-badge">Theme Switch</span>
+        </div>
+      <div class="float-map-hero" id="floatMapHero" data-map-view="default">
+        <div class="float-map-hero-image" id="floatMapHeroImage"></div>
+        <div class="float-map-hero-copy">
+          <div class="float-mode-kicker">SupportRD Map Takeover</div>
+          <strong id="floatMapHeroTitle">SupportRD Default</strong>
+          <span id="floatMapHeroBody">The default woman-waking-up takeover stays in place until you choose a different map mood.</span>
+        </div>
+      </div>
+      <div class="float-theme-rail" id="floatThemeCardRail"></div>
+      <div class="float-big-buttons">
+        <button class="float-pill" id="floatMapBtn">Map</button>
+        <button class="float-pill" id="floatThemeBtn">Theme</button>
+        <button class="float-pill" id="floatOccasionBtn">Occasion</button>
+        <button class="float-pill" id="floatThemeRotateBtn">Rotate View</button>
+      </div>
+      <div class="float-map-action-host" id="floatMapActionHost"></div>
+      <div class="float-box-copy" id="floatDeviceStatus">Change the whole feel of the app for different occasions and keep the route sale-ready.</div>
+    </section>
+      <section class="float-box glass" id="floatBoardsBox">
+        <div class="float-box-head">
+          <span>Studio Quick Panel</span>
+          <span class="float-box-badge">3 Boards</span>
+        </div>
+      <button class="btn float-studio-live-btn" id="floatStudioLiveBtn">Open Full Studio Live</button>
+      <div class="float-box-copy">One touch opens the whole Studio for deep editing, and closing Studio brings you right back to Remote.</div>
+      <div class="float-studio-api-masthead glass">
+        <div class="float-studio-api-copy">
+          <div class="float-mode-kicker">Studio API Takeover</div>
+          <strong>Permissions, booth session, motherboard tools, and Premium Jake all stay connected.</strong>
+          <span>Studio Quick Panel is now the fast entrance to the full booth instead of a disconnected side feature.</span>
+        </div>
+      </div>
+      <div class="float-studio-command-deck glass">
+        <div class="float-studio-command-card">
+          <div class="float-mode-kicker">Frontend + Backend</div>
+          <strong>Studio Quick Panel is the fast booth entrance inside Remote.</strong>
+          <span>Record, preview, cut, and export without losing the Remote shell while the full Jake Premium Studio stays attached behind it.</span>
+        </div>
+        <div class="float-studio-command-card">
+          <div class="float-mode-kicker">Scanner Live</div>
+          <strong>Record, pause, stop, video, and FX now report whether they are live or waiting.</strong>
+          <span>The scanner can finally tell us if Studio is blocked by permissions, premium access, or empty motherboards.</span>
+        </div>
+      </div>
+      <div class="float-triangle-grid">
+        <div class="float-subpanel">
+          <strong>Motherboards</strong>
+          <span>Fresh three-board upload flow for .mp3 and .mp4 work.</span>
+        </div>
+        <div class="float-subpanel">
+          <strong>Transport</strong>
+          <span>Back, rewind, forward, next, play, pause, record, and stop.</span>
+        </div>
+        <div class="float-subpanel">
+          <strong>FX Features</strong>
+          <span>Highlight, delete section, undo, full FX change, clear, and export.</span>
+        </div>
+      </div>
+      <div class="float-upload-strip">
+        <input id="floatUploadInput" type="file" accept=".mp3,.mp4,audio/*,video/*" hidden>
+        <button class="btn ghost" id="floatUploadBtn">Upload .mp3 / .mp4</button>
+        <button class="btn ghost" id="floatFreshBoardsBtn">Fresh 3 Boards</button>
+      </div>
+      <div class="float-board-list">
+        <button class="float-board active" data-float-board="1">Motherboard 1</button>
+        <button class="float-board" data-float-board="2">Motherboard 2</button>
+        <button class="float-board" data-float-board="3">Motherboard 3</button>
+      </div>
+      <div class="float-transport-strip">
+        <button class="btn ghost float-transport-btn" id="floatPrevBtn" title="Back Board" aria-label="Back Board">⏮</button>
+        <button class="btn ghost float-transport-btn" id="floatUndoBtn" title="Undo" aria-label="Undo">↶</button>
+        <button class="btn ghost float-transport-btn" id="floatRewindBtn" title="Rewind" aria-label="Rewind">⏪</button>
+        <button class="btn ghost float-transport-btn" id="floatPlayBtn" title="Play" aria-label="Play">▶</button>
+        <button class="btn ghost float-transport-btn" id="floatPauseBtn" title="Pause" aria-label="Pause">⏸</button>
+        <button class="btn ghost float-transport-btn" id="floatStopBtn" title="Stop" aria-label="Stop">⏹</button>
+        <button class="btn ghost float-transport-btn" id="floatRecordVoiceBtn" title="Record" aria-label="Record">⏺</button>
+        <button class="btn ghost float-transport-btn" id="floatNextBtn" title="Next Board" aria-label="Next Board">⏭</button>
+        <button class="btn ghost float-transport-btn" id="floatFastForwardBtn" title="Fast Forward" aria-label="Fast Forward">⏩</button>
+      </div>
+      <div class="float-mini-actions">
+        <button class="btn ghost" id="floatInstrumentRecordBtn">Instrument → Record</button>
+        <button class="btn ghost" id="floatVideoRecordBtn">Video → Live Screen</button>
+        <button class="btn ghost" id="floatGuitarBtn">Guitar Jacked In</button>
+        <button class="btn ghost" id="floatSpeakerBtn">Responding On Speaker</button>
+        <button class="btn ghost" id="floatGigSwitchBtn">Gig Studio Connecter</button>
+        <button class="btn ghost" id="floatUploadBtn">Import MP3 / MP4</button>
+        <button class="btn ghost" id="floatFreshBoardsBtn">Fresh 3 Boards</button>
+      </div>
+      <div class="float-board-editor">
+        <div class="float-board-preview" id="floatBoardPreview">
+          <div class="float-board-preview-media" id="floatBoardPreviewMediaWrap" hidden>
+            <audio id="floatBoardPreviewAudio" controls hidden></audio>
+            <video id="floatBoardPreviewVideo" controls playsinline hidden></video>
+          </div>
+          <canvas id="floatWaveCanvas" class="float-wave-canvas" width="1200" height="180" aria-label="Quick studio waveform preview"></canvas>
+          <div class="float-wave-meta">
+            <strong id="floatBoardTimer">00:00</strong>
+            <span id="floatBoardMode">Audio waveform ready for the active motherboard.</span>
+          </div>
+          <div class="float-board-preview-copy" id="floatBoardPreviewCopy">Upload material to start a fresh 3-board quick edit.</div>
+        </div>
+        <div class="float-trim-row">
+          <label>Start %<input id="floatTrimStart" type="range" min="0" max="95" value="10"></label>
+          <label>End %<input id="floatTrimEnd" type="range" min="5" max="100" value="90"></label>
+        </div>
+        <div class="float-trim-row">
+          <label>Precision Start %<input id="floatTrimStartNumber" class="input" type="number" min="0" max="95" value="10"></label>
+          <label>Precision End %<input id="floatTrimEndNumber" class="input" type="number" min="5" max="100" value="90"></label>
+        </div>
+        <div class="float-config-grid float-studio-fx-grid">
+          <select id="floatInstrumentType" class="input">
+            <option value="voice">Voice / Mic</option>
+            <option value="guitar">Guitar</option>
+            <option value="drums">Drums</option>
+            <option value="keys">Keys / Piano</option>
+            <option value="bass">Bass</option>
+          </select>
+          <select id="floatFxPreset" class="input">
+            <option value="clean">FX Clean</option>
+            <option value="warm">FX Warm</option>
+            <option value="arena">FX Arena</option>
+            <option value="vinyl">FX Vinyl</option>
+            <option value="bright">FX Bright</option>
+          </select>
+        </div>
+        <div class="float-config-grid float-gig-grid" id="floatGigSettings" hidden>
+          <select id="floatGigFilter" class="input">
+            <option value="natural">Filter · Natural</option>
+            <option value="cinema">Filter · Cinema</option>
+            <option value="vivid">Filter · Vivid</option>
+            <option value="mono">Filter · Mono</option>
+            <option value="wave-sweep">Filter · Wave Sweep</option>
+          </select>
+          <select id="floatGigPan" class="input">
+            <option value="standard">Panoramic · Standard</option>
+            <option value="wide">Panoramic · Wide</option>
+            <option value="ultra">Panoramic · Ultra Wide</option>
+          </select>
+          <select id="floatGigFrameRate" class="input">
+            <option value="24">24 FPS</option>
+            <option value="30">30 FPS</option>
+            <option value="60">60 FPS</option>
+            <option value="120">120 FPS</option>
+          </select>
+          <select id="floatGigZoom" class="input">
+            <option value="1x">Zoom · 1x</option>
+            <option value="1.5x">Zoom · 1.5x</option>
+            <option value="2x">Zoom · 2x</option>
+            <option value="3x">Zoom · 3x</option>
+          </select>
+          <select id="floatGigSlowMotion" class="input">
+            <option value="off">Slow Motion · Off</option>
+            <option value="2x">Slow Motion · 2x</option>
+            <option value="4x">Slow Motion · 4x</option>
+            <option value="8x">Slow Motion · 8x</option>
+          </select>
+        </div>
+        <div class="float-mini-actions">
+          <button class="btn ghost" id="floatHighlightBtn">Highlight Section</button>
+          <button class="btn ghost" id="floatDeleteSectionBtn">Delete Highlight</button>
+          <button class="btn ghost" id="floatFxBtn">FX Change</button>
+          <button class="btn ghost" id="floatClearBoardBtn">Clear Board</button>
+        </div>
+        <div class="float-mini-actions">
+          <button class="btn" id="floatExportStudioBtn">Export Into Main Studio</button>
+          <button class="btn ghost" id="floatExportTikTokBtn">Export MP3 / M4A</button>
+          <button class="btn ghost" id="floatExportSocialBtn">Export MP4 / Social</button>
+        </div>
+        <div class="float-box-copy" id="floatQuickEditStatus">Upload fresh material each time to reset the 3 motherboards, make quick edits, export, and keep it moving.</div>
+      </div>
+      <div class="float-mini-actions">
+        <button class="btn ghost" id="floatBoardEditBtn">Edit Board</button>
+        <button class="btn ghost" id="floatBoardAddBtn">Add Board</button>
+      </div>
+      <div class="float-box-copy" id="floatBoardStatus">Three motherboards by default. Big buttons, easy movement, ready for audio or video pieces.</div>
+    </section>
+      <section class="float-box glass" id="floatProfileBox">
+        <div class="float-box-head">
+          <span>Settings</span>
+          <span class="float-box-badge">Absolute Necessary</span>
+        </div>
+        <div class="float-profile-card">
+          <div class="float-profile-avatar"></div>
+          <div class="float-profile-lines">
+            <strong id="floatProfileName">SupportRD Host</strong>
+            <span id="floatProfileMeta">Only the essential account controls live here now.</span>
+          </div>
+        </div>
+        <label class="float-switch-row"><input type="checkbox" id="floatConfigPush"> Push notifications for this phone</label>
+        <div class="float-box-copy" id="floatConfigStatus">Settings only keeps Open Full Settings and Push Notifications so the Remote stays clean.</div>
+        <div class="float-settings-guide glass" id="floatConfigGuide">Open Full Settings for the complete account lane. Push Notifications keeps this phone ready for SupportRD alerts.</div>
+        <div class="float-mini-actions">
+          <button class="btn ghost" id="floatSettingsPushBtn">Push Notifications</button>
+          <button class="btn" id="floatSettingsOpenBtn">Open Full Settings</button>
+        </div>
+      </section>
+      <section class="float-box glass" id="floatSettingsBox">
+        <div class="float-box-head">
+          <span>Diary Mode</span>
+          <span class="float-box-badge">Social + Voice Diary</span>
+        </div>
+        <div class="float-diary-welcome glass">
+          <strong>SupportRD Diary Console</strong>
+          <span>Diary Mode is where on-the-go voice, hair talk, social posting, and handwritten-style diary pages all stay together.</span>
+        </div>
+        <div class="float-diary-api-masthead glass">
+          <div class="float-diary-api-copy">
+            <div class="float-mode-kicker">Diary API Takeover</div>
+            <strong>Voice, live feed, comments, lobby routing, and guest support stay on one lane.</strong>
+            <span>Diary should feel like the social world of SupportRD: owner session, live audience view, direct URL entrance, and account memory all tied together.</span>
+          </div>
+          <div class="float-diary-api-grid">
+            <div class="float-diary-api-card">
+              <div class="float-mode-kicker">Live Feed</div>
+              <strong>Lobby discovery, comments, and guest support routing.</strong>
+            </div>
+            <div class="float-diary-api-card">
+              <div class="float-mode-kicker">Website Voice</div>
+              <strong>Diary Mode uses the faster advanced-response lane of the main website voice.</strong>
+            </div>
+          </div>
+        </div>
+        <div class="float-diary-command-deck glass">
+          <div class="float-diary-command-card">
+            <div class="float-mode-kicker">Website Voice</div>
+            <strong>Diary starts from the same voice backbone as the moving icons.</strong>
+            <span>It opens faster, cuts to the stronger response lane, and keeps the account history, hair questions, and live diary talk in one place.</span>
+          </div>
+          <div class="float-diary-command-card">
+            <div class="float-mode-kicker">Live Feed</div>
+            <strong>Lobby, comments, guest support, and direct diary URLs stay connected.</strong>
+            <span>The sticky lobby is the public entrance while this page remains the owner lane.</span>
+          </div>
+          <div class="float-diary-command-card">
+            <div class="float-mode-kicker">Trail Tools</div>
+            <strong>^^ tags, social routes, and hands-free memory stay inside the same page.</strong>
+            <span>Diary is meant to feel like SupportRD’s social world, not just a note pad.</span>
+          </div>
+        </div>
+        <div class="float-diary-shell" id="floatDiaryShell">
+          <div class="float-diary-panels diary-layout" id="floatDiaryPanels">
+            <section class="float-diary-panel">
+              <div class="float-diary-panel-head">Send To Social</div>
+              <textarea id="floatDiarySocialPost" class="input float-diary-social-input" placeholder="Write the post SupportRD should stage across your selected socials."></textarea>
+              <div class="float-box-copy" id="floatDiaryUseCase">Ex: Use Case — “I just checked my hair on an Uber ride and found the right support lane fast.”</div>
+              <div class="float-diary-link-hub">
+                <div class="float-diary-link-row" id="floatDiarySocialLinkRow"></div>
+                <div class="float-social-check-grid">
+                  <label><input type="checkbox" id="floatDiaryFeedInstagram" checked> Instagram</label>
+                  <label><input type="checkbox" id="floatDiaryFeedFacebook" checked> Facebook</label>
+                  <label><input type="checkbox" id="floatDiaryFeedTikTok" checked> TikTok</label>
+                  <label><input type="checkbox" id="floatDiaryFeedYouTube"> YouTube</label>
+                  <label><input type="checkbox" id="floatDiaryFeedX"> X</label>
+                  <label><input type="checkbox" id="floatDiaryFeedLinkedIn"> LinkedIn</label>
+                  <label><input type="checkbox" id="floatDiaryFeedSnapchat"> Snapchat</label>
+                </div>
+                <details class="float-diary-link-editor" id="floatDiarySocialEditor">
+                  <summary>Edit Social Routes</summary>
+                  <div class="float-config-grid">
+                    <input id="floatLinkFacebook" class="input" placeholder="Facebook URL">
+                    <input id="floatLinkInstagram" class="input" placeholder="Instagram URL">
+                    <input id="floatLinkTikTok" class="input" placeholder="TikTok URL">
+                    <input id="floatLinkYouTube" class="input" placeholder="YouTube URL">
+                    <input id="floatLinkX" class="input" placeholder="X URL">
+                    <input id="floatLinkWhatsApp" class="input" placeholder="WhatsApp URL">
+                    <input id="floatLinkGoogle" class="input" placeholder="Google URL">
+                    <input id="floatLinkBing" class="input" placeholder="Bing URL">
+                    <input id="floatLinkLinkedIn" class="input" placeholder="LinkedIn URL">
+                    <input id="floatLinkSnapchat" class="input" placeholder="Snapchat URL">
+                  </div>
+                </details>
+              </div>
+              <div class="float-mini-actions">
+                <button class="btn" id="floatDiaryPostBtn">Send To Social</button>
+                <button class="btn ghost" id="floatDiarySocialSaveBtn">Save Social Links</button>
+                <button class="btn ghost" id="floatDiaryExportPdfBtn">Export</button>
+              </div>
+            </section>
+            <section class="float-diary-panel">
+              <div class="float-diary-panel-head">Aria / Jake + History</div>
+              <div class="float-diary-assistant-fixed">
+                <button class="float-assistant-orb aria" id="floatDiaryAriaFixed" type="button">
+                  <span class="float-assistant-core" aria-hidden="true"></span>
+                  <span class="float-assistant-label">Aria Hair Advisor</span>
+                </button>
+                <button class="float-assistant-orb jake" id="floatDiaryJakeFixed" type="button">
+                  <span class="float-assistant-core" aria-hidden="true"></span>
+                  <span class="float-assistant-label">Jake Studio Specialist</span>
+                </button>
+              </div>
+              <div class="float-config-grid">
+                <button class="float-pill" id="floatHandsfreeBtn">Hands-Free Mode</button>
+                <select id="floatDiaryLevelSelect" class="input">
+                  <option value="greeting">Level · Intro</option>
+                  <option value="thorough">Level · Advanced</option>
+                  <option value="inner">Level · Inner Circle</option>
+                  <option value="pro">Level · Professional / Making Money</option>
+                </select>
+              </div>
+              <div class="float-config-grid">
+                <select id="floatDiaryHistoryScope" class="input">
+                  <option value="3">History View · Small</option>
+                  <option value="7">History View · Medium</option>
+                  <option value="15">History View · All</option>
+                </select>
+                <button class="btn ghost" id="floatDiaryLiveBtn">Live Session</button>
+              </div>
+              <div class="float-config-grid">
+                <input id="floatDiaryTagInput" class="input" placeholder="^^ URL tag / diary lobby tag">
+                <button class="btn ghost" id="floatDiaryTagSaveBtn">Save Tag</button>
+              </div>
+              <div class="float-profile-history float-diary-history" id="floatDiaryHistory">Chat history is empty and ready to hear everything the person needs to say.</div>
+              <textarea id="floatHandsfreeTranscript" class="input float-handsfree-transcript" placeholder="Hands-free conversation appears here."></textarea>
+              <div class="float-box-copy" id="floatDiaryLiveStatus">Live mode is off. When activated, SupportRD prepares a shareable live session link and easy turn-off.</div>
+            </section>
+            <section class="float-diary-panel">
+              <div class="float-diary-panel-head">Actual Diary</div>
+              <div class="float-diary-page-wrap">
+                <div class="float-diary-page-preview" id="floatDiaryPagePreview">Today · Place: SupportRD&#10;Write your first diary page here.</div>
+              </div>
+              <textarea id="floatDiaryInput" class="input float-diary-input diary-manuscript-input" placeholder="Talk to yourself here. Example: I went on an Uber trip today and it was fun."></textarea>
+              <div class="float-mini-actions">
+                <button class="btn" id="floatDiaryRecordBtn">Diary Record</button>
+                <button class="btn ghost" id="floatDiarySaveBtn">Save Diary</button>
+                <button class="btn ghost" id="floatDiaryFlipPrev">Previous Page</button>
+                <button class="btn ghost" id="floatDiaryFlipNext">Next Page</button>
+              </div>
+            </section>
+          </div>
+          <section class="float-diary-live-stage glass" id="floatDiaryLiveStage" hidden>
+            <div class="float-box-head">
+              <span>Live Session</span>
+              <span class="float-box-badge">Public Diary Feed</span>
+            </div>
+            <div class="float-profile-scan-stage" id="floatDiaryLiveFeed">
+              <video id="floatDiaryLiveVideo" class="float-profile-scan-video" playsinline autoplay muted hidden></video>
+              <div class="float-profile-scan-overlay" id="floatDiaryLiveOverlay">Live Session is off. Press Live Feature to turn this diary page into a public display.</div>
+            </div>
+            <div class="float-mini-actions">
+              <button class="btn ghost" id="floatDiaryLiveFastPay">Fast Pay</button>
+              <button class="btn ghost" id="floatDiaryLiveHeart">Heart</button>
+              <button class="btn ghost" id="floatDiaryLiveThumb">Thumbs Up</button>
+            </div>
+            <div class="float-config-grid">
+              <input id="floatDiaryLiveGuest" class="input" placeholder="Guest name">
+              <input id="floatDiaryLiveComment" class="input" placeholder="Leave a comment for the live session">
+            </div>
+            <div class="float-mini-actions">
+              <button class="btn ghost" id="floatDiaryLiveCommentBtn">Post Comment</button>
+            </div>
+            <div class="float-profile-history float-diary-history" id="floatDiaryLiveComments">Live comments will appear here when the session starts.</div>
+          </section>
+        </div>
+        <div class="float-box-copy" id="floatSettingsStatus">Diary Mode keeps social posting, hands-free hair conversation, chat history, and a real page-flip diary in one place.</div>
+      </section>
+  </div>
+  <section class="remote-diary-viewer" id="remoteDiaryViewer" hidden>
+    <div class="remote-diary-viewer-shell glass">
+      <button class="btn ghost remote-diary-viewer-close" id="remoteDiaryViewerClose" type="button">X</button>
+      <div class="remote-diary-viewer-stage" id="remoteDiaryViewerStage">
+        <div class="remote-diary-viewer-avatar" id="remoteDiaryViewerAvatar"></div>
+        <div class="remote-diary-viewer-overlay" id="remoteDiaryViewerOverlay">Pick a diary feed in the lobby to load the live panel here.</div>
+      </div>
+      <div class="remote-diary-viewer-meta">
+        <div>
+          <div class="float-mode-kicker" id="remoteDiaryViewerTag">^^ support</div>
+          <strong id="remoteDiaryViewerName">Diary Live Feed</strong>
+          <div class="remote-diary-viewer-url" id="remoteDiaryViewerUrl">supportrd.com</div>
+        </div>
+        <div class="remote-diary-viewer-actions">
+          <button class="btn ghost" id="remoteDiaryViewerGuestPay" type="button">Pay Feed Money</button>
+          <button class="btn ghost" id="remoteDiaryViewerOpenRemote" type="button">Back To Remote</button>
+        </div>
+      </div>
+      <div class="remote-diary-viewer-grid">
+        <div class="remote-diary-viewer-column">
+          <div class="remote-diary-viewer-card">
+            <div class="remote-diary-viewer-card-head">Live Comments</div>
+            <div class="remote-diary-viewer-comments" id="remoteDiaryViewerComments">Live comments will show here.</div>
+          </div>
+          <div class="remote-diary-viewer-card">
+            <div class="remote-diary-viewer-card-head">Guest Payment + Comment</div>
+            <div class="float-config-grid">
+              <input id="remoteDiaryViewerGuestName" class="input" placeholder="Guest name">
+              <input id="remoteDiaryViewerGuestComment" class="input" placeholder="Comment for the live feed">
+            </div>
+            <div class="remote-diary-viewer-actions remote-diary-viewer-actions-tight">
+              <button class="btn ghost" id="remoteDiaryViewerPostComment" type="button">Post Comment</button>
+              <button class="btn" id="remoteDiaryViewerSupportNow" type="button">Support This Feed</button>
+            </div>
+          </div>
+        </div>
+        <div class="remote-diary-viewer-card">
+          <div class="remote-diary-viewer-card-head">Session Voice + Feed</div>
+          <div class="remote-diary-viewer-transcript" id="remoteDiaryViewerTranscript">The latest diary voice and feed turns will show here.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="brochure-float" id="brochureFloat">
+    <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
+  </div>
+  <aside class="session-signal glass" id="sessionSignal">
+    <div class="session-signal-head">
+      <strong>Session Signal</strong>
+      <span id="sessionSignalPing">Ping: live</span>
+    </div>
+    <div class="session-signal-row" id="sessionSignalHandle">Handle: ^^SupportRD</div>
+    <div class="session-signal-row" id="sessionSignalRole">Owner device recognized</div>
+    <div class="session-signal-row" id="sessionSignalIp">Local IPv4: hidden</div>
+    <div class="session-signal-row" id="sessionSignalId">Session ID: loading...</div>
+    <div class="session-signal-row" id="sessionSignalContinuity">Network steady · session preserved.</div>
+    <div class="session-signal-row" id="sessionSignalPage">Page: Remote Home</div>
+    <div class="session-signal-row" id="sessionSignalSupport">Hearts: 0 · Gifts: 0</div>
+    <div class="session-signal-row" id="sessionSignalPrivacy">IP hidden for privacy. Remote session stays protected while you browse.</div>
+    <div class="session-signal-log" id="sessionSignalLog">Waiting for live activity...</div>
+  </aside>
+</div>
+
+<div id="remoteFastPayModal" class="remote-fastpay-modal" hidden aria-hidden="true">
+  <div class="remote-fastpay-backdrop"></div>
+  <div class="remote-fastpay-card glass">
+    <div class="remote-fastpay-head">
+      <div>
+        <div class="remote-fastpay-kicker">SupportRD Remote Checkout</div>
+        <h3>Fast Pay</h3>
+        <p>Choose a product, read the purchase details, or go straight into secure Shopify checkout.</p>
+        <div class="remote-fastpay-meta" id="remoteFastPayStatus">SupportRD Remote is ready for the next sale.</div>
+      </div>
+      <button class="btn ghost" id="closeRemoteFastPay">Close</button>
+    </div>
+    <div class="remote-fastpay-confirm glass" id="remoteFastPayConfirm" hidden>
+      <div class="remote-fastpay-confirm-copy">
+        <div class="remote-fastpay-kicker">Purchase Details</div>
+        <h4 id="remoteConfirmTitle">Product Details</h4>
+        <p id="remoteConfirmBody">Select a product to load its checkout details here.</p>
+        <div class="remote-fastpay-meta" id="remoteConfirmMeta">Shopify handles the secure payment page. Apple Pay and Google Pay appear there when enabled and supported on the buyer device.</div>
+      </div>
+      <div class="remote-fastpay-confirm-actions">
+        <button class="btn ghost" id="remoteConfirmCancel">Cancel</button>
+        <button class="btn ghost" id="remoteConfirmShopify">Open Shopify Checkout</button>
+      </div>
+    </div>
+    <div class="remote-fastpay-grid" id="remoteFastPayGrid"></div>
+    <div class="remote-fastpay-receipt glass" id="remoteReceiptPanel">
+      <div class="remote-fastpay-kicker">Saved Receipt Lane</div>
+      <div id="remoteReceiptSummary">No remote checkout launched yet. The next Shopify checkout launch will save here.</div>
+      <div class="remote-fastpay-meta">Apple Pay and Google Pay show on the Shopify checkout page when Shopify Payments is enabled and the visitor device/browser supports them.</div>
+    </div>
+    <div class="remote-fastpay-owner glass" id="remoteOwnerPanel" hidden>
+      <div class="remote-fastpay-kicker">New Owner</div>
+      <h4 id="remoteOwnerTitle">You now own Premium</h4>
+      <p id="remoteOwnerBody">SupportRD is getting your next route ready now.</p>
+      <div class="remote-fastpay-confirm-actions">
+        <button class="btn" id="remoteFindStoreBtn">Find SupportRD Near You</button>
+        <button class="btn ghost" id="remoteOwnerCloseBtn">Keep Shopping</button>
+      </div>
+    </div>
+    <div class="remote-fastpay-processing glass" id="remoteProcessingPanel" hidden>
+      <div class="remote-fastpay-kicker">Tap Received</div>
+      <h4>Search And Capture</h4>
+      <div class="remote-processing-bar">
+        <div class="remote-processing-fill" id="remoteProcessingFill"></div>
+      </div>
+      <div class="remote-fastpay-meta" id="remoteProcessingStatus">Waiting for your tap to move into the 5-second secure handoff.</div>
+    </div>
+  </div>
+  </div>
+  <div class="remote-purchase-editor glass" id="remotePurchaseEditor">
+    <div class="remote-sticky-head">
+      <div class="float-mode-kicker">SupportRD Shop</div>
+      <div class="remote-sticky-controls">
+        <button class="btn ghost remote-sticky-mini" id="remotePurchasePrev" type="button">&#10094;</button>
+        <button class="btn ghost remote-sticky-mini" id="remotePurchaseToggle" type="button">Hide</button>
+        <button class="btn ghost remote-sticky-mini" id="remotePurchaseNext" type="button">&#10095;</button>
+      </div>
+    </div>
+    <div class="remote-sticky-count" id="remotePurchaseCount">Showing 1-2</div>
+    <button class="btn ghost remote-purchase-item" id="remotePurchaseProducts">Product Page</button>
+    <button class="btn remote-purchase-item" id="remotePurchasePremium">Purchase Premium / Pro</button>
+    <button class="btn ghost remote-purchase-item" id="remotePurchaseStudio">Purchase Studio Edition</button>
+    <button class="btn ghost remote-purchase-item" id="remotePurchaseThemes">Purchase Themes &amp; AI Upgrades</button>
+    <button class="btn ghost remote-purchase-item" id="remotePurchaseSupport">Show Support, Donate to the Poor, Tip and Credit</button>
+    <button class="btn ghost remote-purchase-item" id="remotePurchaseCustom">Custom Order</button>
+    <button class="btn ghost remote-purchase-item" id="remotePurchaseOrders">My Orders / Cart</button>
+    <button class="btn ghost remote-purchase-item" id="remotePurchaseSolid">Solid State Project</button>
+  </div>
+  <div class="remote-diary-lobby glass" id="remoteDiaryLobby">
+    <div class="remote-sticky-head">
+      <div class="float-mode-kicker">Diary Live Lobby</div>
+      <div class="remote-sticky-controls">
+        <button class="btn ghost remote-sticky-mini" id="remoteDiaryLobbyRefresh" type="button">Refresh</button>
+        <button class="btn ghost remote-sticky-mini" id="remoteDiaryLobbyToggle" type="button">Hide</button>
+      </div>
+    </div>
+    <div class="remote-sticky-count" id="remoteDiaryLobbyCount">Latest 7 diary feeds</div>
+    <div class="remote-diary-lobby-signal glass" id="remoteDiaryLobbySignal">
+      <div class="float-mode-kicker">This Is What SupportRD Is Doing</div>
+      <div class="remote-diary-lobby-signal-grid">
+        <div class="remote-diary-lobby-signal-card">
+          <strong id="remoteDiaryLobbySignalHeader">SupportRD movement activity is loading...</strong>
+          <span id="remoteDiaryLobbySignalPreview">Waiting for the latest live session movement.</span>
+        </div>
+        <div class="remote-diary-lobby-signal-card">
+          <strong id="remoteDiaryLobbyShopifySummary">Shopify Reader · loading...</strong>
+          <span id="remoteDiaryLobbyShopifyMeta">Sessions, orders, total sales, and risk level will show here.</span>
+        </div>
+      </div>
+    </div>
+    <div class="remote-diary-lobby-search">
+      <select id="remoteDiaryLobbySearchBy" class="input">
+        <option value="name">Search Name</option>
+        <option value="email">Search Email</option>
+        <option value="tag">Search Tag ^^</option>
+        <option value="url">Search URL</option>
+      </select>
+      <input id="remoteDiaryLobbySearch" class="input" placeholder="Search diary lobby">
+    </div>
+    <div class="remote-diary-lobby-search">
+      <select id="remoteDiaryLobbySort" class="input">
+        <option value="recent">Sort · Recent</option>
+        <option value="email">Sort · Email</option>
+        <option value="url">Sort · URL</option>
+        <option value="tag">Sort · Tag ^^</option>
+      </select>
+      <button class="btn ghost remote-diary-lobby-apply" id="remoteDiaryLobbyApply" type="button">Apply</button>
+    </div>
+    <div class="remote-diary-lobby-list" id="remoteDiaryLobbyList"></div>
+  </div>
+  <div class="remote-edits-menu glass" id="remoteEditsMenu">
+    <div class="remote-edits-label">Edit Menu</div>
+    <div class="remote-sticky-head remote-sticky-head-edits">
+      <div class="float-mode-kicker">Sticky Edits Menu</div>
+      <div class="remote-sticky-controls">
+        <button class="btn ghost remote-sticky-mini" id="remoteEditsPrev" type="button">&#10094;</button>
+        <button class="btn ghost remote-sticky-mini" id="remoteEditsToggle" type="button">Hide</button>
+        <button class="btn ghost remote-sticky-mini" id="remoteEditsNext" type="button">&#10095;</button>
+      </div>
+    </div>
+    <div class="remote-sticky-count" id="remoteEditsCount">Showing 1-2</div>
+      <button class="btn remote-edits-item" id="remoteEditsProduct">Product / Premium Purchase</button>
+      <button class="btn remote-edits-item" id="remoteEditsVirtual">Functionality Virtual</button>
+      <button class="btn remote-edits-item" id="remoteEditsActual">Actual Edits</button>
+      <button class="btn ghost remote-edits-item" id="remoteEditsBudget">Purchase and Budgeting Money</button>
+      <button class="btn ghost remote-edits-item" id="remoteEditsMeetings">Meetings and Company Direction</button>
+      <button class="btn ghost remote-edits-item" id="remoteEditsTiming">Remote Timing</button>
+      <button class="btn ghost remote-edits-item" id="remoteEditsStudy">Product Actual Study</button>
+  </div>
+  <div class="remote-latest-ads glass" id="remoteLatestAds">
+    <div class="float-mode-kicker">Latest 2 Support Ads</div>
+    <div class="remote-latest-ads-list">
+      <article class="remote-latest-ad remote-latest-ad-primary" data-latest-ad-card="0">
+        <strong data-latest-ad-title="0">Hair Analyzer Lane</strong>
+        <span data-latest-ad-copy="0">Short reel in front. Deep analysis and route sorting in the background.</span>
+      </article>
+      <article class="remote-latest-ad remote-latest-ad-secondary" data-latest-ad-card="1">
+        <strong data-latest-ad-title="1">Everyday Hair Help</strong>
+        <span data-latest-ad-copy="1">Catch frizz, oil, damage, and color-loss visitors with the right lane before premium.</span>
+      </article>
+    </div>
+  </div>
+  
+  <script>
+(function(){
+const BUILD = "20260414t";
+  const KEY = "sr_force_build";
+  try {
+    const last = localStorage.getItem(KEY);
+    const url = new URL(window.location.href);
+    const cleanUrl = `${url.origin}${url.pathname}${url.hash || ""}`;
+    if (last !== BUILD) {
+      localStorage.setItem(KEY, BUILD);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((reg) => reg.unregister());
+        }).catch(() => {});
+      }
+      if (window.caches && caches.keys) {
+        caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))).catch(() => {});
+      }
+      sessionStorage.setItem("sr_force_reload_build", BUILD);
+      window.location.replace(cleanUrl);
+    } else if (url.searchParams.has('refreshBuild')) {
+      window.history.replaceState({}, "", cleanUrl);
+    }
+  } catch (err) {
+    console.warn('SupportRD cache reset skipped', err);
+  }
+})();
+</script>
+<script src="/static/auth.js"></script>
+<script src="/static/app.v20260320h.js?v=20260414t"></script>
+<script src="/static/remote-rebuild.v20260408c.js?v=20260414t"></script>
+<footer class="launch-footer-links">
+  <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
+  <button class="btn ghost" id="remoteInfoFooter">Important Info</button>
+  <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
+  <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>
+  <a href="https://supportrd.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy</a>
+  <a href="https://supportrd.com/policies/terms-of-service" target="_blank" rel="noopener">Terms</a>
+</footer>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

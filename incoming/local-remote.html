@@ -1,0 +1,2965 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SupportRD | Natural Hair Products, Studio, Live Diary, Identity, and Premium Support</title>
+  <meta name="description" content="SupportRD brings Dominican Republic all natural hair products, live diary support, studio editing, hair identity tools, and premium routes together in one on-the-go platform.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://supportrd.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="SupportRD | Natural Hair Products, Studio, Live Diary, and Identity Support">
+  <meta property="og:description" content="Hair problem help, live diary support, studio editing, profile identity, premium access, and Dominican Republic product energy in one SupportRD shell.">
+  <meta property="og:url" content="https://supportrd.com/">
+  <meta property="og:image" content="https://supportrd.com/static/images/aria-premium-pro-main-ad.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SupportRD | Hair Problem, Studio, Live, and Identity Routes">
+  <meta name="twitter:description" content="SupportRD blends natural hair products, studio power, live support, and identity tools into one premium route.">
+  <meta name="twitter:image" content="https://supportrd.com/static/images/aria-premium-pro-main-ad.jpg">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "name": "SupportRD",
+          "url": "https://supportrd.com/",
+          "logo": "https://supportrd.com/static/images/aria-premium-pro-main-ad.jpg",
+          "sameAs": ["https://shop.supportrd.com/"]
+        },
+        {
+          "@type": "WebSite",
+          "name": "SupportRD",
+          "url": "https://supportrd.com/",
+          "description": "SupportRD natural hair products, premium studio, live diary support, and identity routes."
+        },
+        {
+          "@type": "Product",
+          "name": "Jake Studio Premium",
+          "category": "Hair and Studio Premium Access",
+          "brand": {
+            "@type": "Brand",
+            "name": "SupportRD"
+          },
+          "offers": {
+            "@type": "Offer",
+            "priceCurrency": "USD",
+            "price": "100",
+            "url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "availability": "https://schema.org/InStock"
+          }
+        }
+      ]
+    }
+  </script>
+  <style>
+    :root{
+      --bg:#07111f;
+      --bg2:#0d1c33;
+      --panel:rgba(10,19,34,.84);
+      --panel-soft:rgba(255,255,255,.06);
+      --line:rgba(181,224,255,.14);
+      --text:#edf6ff;
+      --muted:rgba(220,235,255,.72);
+      --blue:#79b8ff;
+      --gold:#ffd086;
+      --green:#77e0c7;
+      --shadow:0 24px 60px rgba(0,0,0,.32);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:Georgia, "Times New Roman", serif;background:
+      radial-gradient(900px 500px at 0% 0%, rgba(82,170,255,.16), transparent 55%),
+      radial-gradient(780px 520px at 100% 0%, rgba(255,208,134,.12), transparent 52%),
+      linear-gradient(180deg, var(--bg), var(--bg2));color:var(--text)}
+    body{overflow:auto}
+    .local-shell{
+      position:relative;
+      min-height:100vh;
+      padding:16px;
+      display:grid;
+      grid-template-columns:220px minmax(0,1fr) 250px;
+      gap:14px;
+    }
+    .glass{
+      background:var(--panel);
+      border:1px solid var(--line);
+      backdrop-filter:blur(18px) saturate(1.08);
+      box-shadow:var(--shadow);
+    }
+    .left-rail,.right-rail,.center-stage{border-radius:28px}
+    .left-rail,.right-rail{padding:18px}
+    .eyebrow{
+      font-size:11px;
+      letter-spacing:.26em;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:10px;
+    }
+    .title{margin:0;font-size:34px;line-height:.95}
+    .sub{color:var(--muted);line-height:1.55;margin-top:12px}
+    .left-rail{display:grid;grid-template-rows:auto auto 1fr;gap:18px}
+    .badge-grid,.stack-list{display:grid;gap:12px}
+    .badge,.stack-card,.sticky-card,.panel-card,.menu-chip,.voice-bubble,.live-app-stage,.api-action-board{
+      border-radius:20px;
+      border:1px solid var(--line);
+      background:var(--panel-soft);
+    }
+    .badge,.stack-card,.sticky-card,.panel-card{padding:14px}
+    .badge strong,.stack-card strong,.panel-card strong{display:block;color:var(--text)}
+    .badge small,.stack-card small,.panel-card small{color:var(--muted)}
+    .center-stage{padding:16px;display:grid;grid-template-rows:auto auto auto auto 1fr;gap:14px;position:relative;overflow:visible}
+    .catalog-strip{
+      display:grid;
+      grid-template-columns:1.2fr 1fr 1fr;
+      gap:12px;
+      position:relative;
+    }
+    .catalog-card{
+      min-height:152px;
+      padding:16px;
+      border-radius:26px;
+      border:1px solid rgba(213,235,255,.22);
+      background:
+        linear-gradient(180deg, rgba(6,15,29,.1), rgba(6,15,29,.44)),
+        var(--bg-image) center/cover no-repeat,
+        rgba(255,255,255,.04);
+      display:flex;
+      align-items:flex-end;
+      box-shadow:0 18px 36px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.14);
+      overflow:hidden;
+      position:relative;
+      isolation:isolate;
+    }
+    .catalog-card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(120deg, rgba(255,255,255,.18), transparent 26%, transparent 62%, rgba(255,255,255,.08));
+      mix-blend-mode:screen;
+      pointer-events:none;
+    }
+    .catalog-card::after{
+      content:"";
+      position:absolute;
+      inset:auto -18% -30% auto;
+      width:180px;
+      height:180px;
+      background:radial-gradient(circle, rgba(121,184,255,.34), transparent 68%);
+      pointer-events:none;
+    }
+    .catalog-copy{display:grid;gap:8px;max-width:72%;position:relative;z-index:1}
+    .catalog-card strong{display:block;font-size:28px;font-family:"Cormorant Garamond", Georgia, serif;line-height:.94}
+    .catalog-card span{display:block;color:rgba(236,244,255,.84);font-size:13px;line-height:1.45}
+    .seo-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .seo-chip{
+      display:inline-flex;
+      align-items:center;
+      min-height:24px;
+      padding:0 10px;
+      border-radius:999px;
+      background:rgba(5,14,26,.55);
+      border:1px solid rgba(213,235,255,.18);
+      color:rgba(244,250,255,.86);
+      font-size:10px;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      box-shadow:0 10px 18px rgba(0,0,0,.18);
+    }
+    .promo-chip{
+      display:inline-flex;
+      align-items:center;
+      width:max-content;
+      min-height:26px;
+      padding:0 12px;
+      border-radius:999px;
+      font-size:10px;
+      letter-spacing:.24em;
+      text-transform:uppercase;
+      background:rgba(6,15,29,.62);
+      border:1px solid rgba(213,235,255,.22);
+      color:rgba(244,250,255,.84);
+      box-shadow:0 10px 20px rgba(0,0,0,.16);
+    }
+    .price-flash{
+      position:absolute;
+      right:14px;
+      top:14px;
+      min-width:110px;
+      padding:12px 14px;
+      border-radius:18px;
+      text-align:center;
+      background:linear-gradient(180deg, rgba(255,214,146,.98), rgba(212,130,44,.92));
+      color:#07111f;
+      border:1px solid rgba(255,245,216,.78);
+      box-shadow:0 18px 28px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.6);
+      animation:priceFlash 1.25s steps(2,end) infinite;
+      z-index:1;
+    }
+    .price-flash strong{display:block;font-size:23px;font-family:"Cormorant Garamond", Georgia, serif;line-height:.9}
+    .price-flash small{display:block;margin-top:4px;font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+    .buy-now{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:max-content;
+      min-height:34px;
+      padding:0 16px;
+      border-radius:999px;
+      background:linear-gradient(180deg, rgba(130,188,255,.98), rgba(46,94,175,.92));
+      border:1px solid rgba(224,240,255,.34);
+      color:var(--text);
+      font-weight:700;
+      box-shadow:0 12px 24px rgba(0,0,0,.22);
+      text-decoration:none;
+      cursor:pointer;
+    }
+    .top-bar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+    .help-banner{
+      display:none;
+      margin-top:14px;
+      padding:14px 16px;
+      border-radius:20px;
+      border:1px solid rgba(255,208,134,.3);
+      background:linear-gradient(180deg, rgba(32,52,84,.88), rgba(11,20,36,.92));
+      box-shadow:0 18px 32px rgba(0,0,0,.22);
+      color:var(--text);
+    }
+    .help-banner.active{display:grid;gap:8px}
+    .help-banner strong{font-size:20px;font-family:"Cormorant Garamond", Georgia, serif}
+    .help-banner span{color:var(--muted);line-height:1.45}
+    .voice-console{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .voice-pill{
+      min-height:42px;padding:0 16px;border-radius:999px;border:1px solid var(--line);
+      background:rgba(255,255,255,.08);display:inline-flex;align-items:center;color:var(--text);font-weight:700
+    }
+    .voice-status{flex:1;min-width:240px;padding:14px 16px;border-radius:22px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+    .voice-status strong{display:block}
+    .button-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+    }
+    .gig-viewer{
+      padding:16px;
+      border-radius:26px;
+      border:1px solid rgba(213,235,255,.2);
+      background:linear-gradient(180deg, rgba(9,18,33,.9), rgba(7,14,27,.96));
+      box-shadow:0 22px 46px rgba(0,0,0,.28);
+      display:grid;
+      gap:14px;
+    }
+    .gig-viewer-head{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+    .gig-viewer-head h2{margin:0;font-size:32px;font-family:"Cormorant Garamond", Georgia, serif}
+    .gig-viewer-head p{margin:6px 0 0;color:var(--muted);line-height:1.5;max-width:760px}
+    .gig-build-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+    .gig-build-card{min-height:220px;position:relative;overflow:hidden;border-radius:24px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));box-shadow:var(--shadow)}
+    .gig-build-card::before{content:"";position:absolute;inset:0;background:var(--build-image, linear-gradient(135deg,rgba(121,184,255,.2),rgba(255,208,134,.16)));background-size:cover;background-position:center}
+    .gig-build-card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(4,11,20,.84))}
+    .gig-build-copy{position:absolute;left:18px;right:18px;bottom:18px;z-index:1;display:grid;gap:8px}
+    .gig-build-copy strong{font-size:24px;font-family:"Cormorant Garamond", Georgia, serif}
+    .gig-build-copy span{color:rgba(239,244,255,.82);line-height:1.5}
+    .gig-build-copy a{justify-self:start}
+    .gig-connector-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .gig-connector-actions button,.gig-connector-actions a{
+      min-height:40px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      text-decoration:none;
+    }
+    .gig-connector-stage{
+      position:relative;
+      min-height:420px;
+      border-radius:22px;
+      overflow:hidden;
+      border:1px solid rgba(213,235,255,.16);
+      background:rgba(4,10,20,.96);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .gig-connector-loader,.gig-connector-fallback{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      text-align:center;
+      background:linear-gradient(180deg, rgba(8,18,33,.88), rgba(4,10,20,.95));
+      z-index:2;
+    }
+    .gig-connector-loader.active,.gig-connector-fallback.active{display:flex}
+    .gig-connector-loader-card,.gig-connector-fallback-card{
+      max-width:560px;
+      padding:24px;
+      border-radius:24px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      box-shadow:0 18px 36px rgba(0,0,0,.26);
+      display:grid;
+      gap:10px;
+    }
+    .gig-spinner{
+      width:70px;height:70px;border-radius:50%;
+      margin:0 auto 8px;
+      border:3px solid rgba(255,255,255,.12);
+      border-top-color:var(--gold);
+      border-right-color:var(--blue);
+      animation:gigSpin 1s linear infinite;
+    }
+    .gig-connector-loader strong,.gig-connector-fallback strong{font-size:28px;font-family:"Cormorant Garamond", Georgia, serif}
+    .gig-connector-loader span,.gig-connector-fallback span{color:var(--muted);line-height:1.5}
+    .gig-connector-sources{display:flex;gap:10px;flex-wrap:wrap}
+    .gig-source-btn{
+      min-height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);
+      color:var(--text);font-weight:700;cursor:pointer;
+    }
+    .gig-source-btn.active{background:linear-gradient(180deg, rgba(109,173,255,.34), rgba(38,78,137,.42));border-color:rgba(207,235,255,.34)}
+    .gig-connector-frame{width:100%;height:420px;border:none;background:#06101b}
+    .gig-viewer-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+    .gig-events,.gig-advisors{
+      padding:14px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05);display:grid;gap:10px;
+    }
+    .gig-events h3,.gig-advisors h3{margin:0;font-size:26px;font-family:"Cormorant Garamond", Georgia, serif}
+    .gig-event-list,.gig-advisor-list{display:grid;gap:10px}
+    .gig-event-item,.gig-advisor-item{
+      padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(181,224,255,.12);
+    }
+    .gig-event-item strong,.gig-advisor-item strong{display:block}
+    .gig-event-item span,.gig-advisor-item span{color:var(--muted);font-size:14px;line-height:1.45}
+    .shell-btn{
+      min-height:132px;padding:16px;border-radius:24px;border:1px solid rgba(196,228,255,.2);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)),
+        radial-gradient(circle at 12% 18%, rgba(121,184,255,.16), transparent 30%);
+      color:var(--text);text-align:left;cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+      position:relative;
+      overflow:hidden;
+    }
+    .shell-btn:hover,.shell-btn.active{transform:translateY(-2px);border-color:rgba(207,235,255,.38);box-shadow:0 16px 34px rgba(0,0,0,.22)}
+    .shell-btn span{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+    .shell-btn strong{display:block;font-size:24px;font-family:"Cormorant Garamond", Georgia, serif}
+    .shell-btn p{margin:10px 0 0;color:var(--muted);line-height:1.5}
+    .shell-btn-media{
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg, rgba(5,14,26,.18), rgba(5,14,26,.74)),
+        var(--media-image) center/cover no-repeat;
+      opacity:.92;
+      pointer-events:none;
+    }
+    .shell-btn::after{
+      content:"";
+      position:absolute;
+      inset:auto -18% -35% auto;
+      width:170px;
+      height:170px;
+      background:radial-gradient(circle, rgba(121,184,255,.28), transparent 68%);
+      pointer-events:none;
+    }
+    .shell-btn-copy{
+      position:relative;
+      z-index:1;
+      max-width:82%;
+    }
+    .shell-btn-flag{
+      position:absolute;
+      right:14px;
+      top:14px;
+      z-index:1;
+      min-width:86px;
+      min-height:48px;
+      padding:6px 8px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.35);
+      background:
+        linear-gradient(90deg, #002d62 0 25%, #ffffff 25% 50%, #ce1126 50% 75%, #ffffff 75% 100%);
+      box-shadow:0 12px 24px rgba(0,0,0,.24);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#07111f;
+      font-weight:700;
+      font-size:10px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+    .panel-stack{position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);gap:18px}
+    .panel-card{min-height:360px}
+    .panel-card h2{margin:0 0 10px;font-size:30px;font-family:"Cormorant Garamond", Georgia, serif}
+    .panel-card p{color:var(--muted);line-height:1.6}
+    .feature-list{display:grid;gap:10px;margin-top:16px}
+    .feature-item{padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted)}
+    .feature-item strong{display:block;color:var(--text);margin-bottom:4px}
+    .launch-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+    .launch-row button{
+      min-height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line);cursor:pointer;
+      background:rgba(255,255,255,.08);color:var(--text);font-weight:700
+    }
+    .live-app-stage{padding:14px;background:rgba(7,15,29,.72)}
+    .live-app-stage__head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .live-app-stage__meta{color:var(--muted);max-width:720px;line-height:1.55}
+    .live-app-stage__actions{display:flex;gap:10px;flex-wrap:wrap}
+    .live-app-stage__actions button,.live-app-stage__actions a{
+      min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);
+      color:var(--text);font-weight:700;text-decoration:none;display:inline-flex;align-items:center
+    }
+    .live-app-frame{
+      width:100%;height:760px;margin-top:14px;border:none;border-radius:18px;background:#06101b;box-shadow:inset 0 0 0 1px rgba(181,224,255,.1)
+    }
+    .api-action-board{padding:16px;background:rgba(8,18,33,.78)}
+    .api-action-board__head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .api-action-board__meta{color:var(--muted);max-width:760px;line-height:1.55}
+    .api-action-board__status{margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted)}
+    .api-action-board__controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+    .api-action-board__controls input,.api-action-board__controls select,.api-action-board__controls textarea{
+      width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);font:inherit
+    }
+    .api-action-board__controls textarea{min-height:120px;resize:vertical}
+    .api-action-board__buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .api-action-board__buttons button{
+      min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);font-weight:700;cursor:pointer
+    }
+    .api-action-board__feed{display:grid;gap:10px;margin-top:14px}
+    .sticky-wrap{display:grid;gap:14px}
+    .login-card{
+      position:relative;
+      padding:18px;
+      border-radius:24px;
+      border:1px solid rgba(213,235,255,.22);
+      background:
+        linear-gradient(180deg, rgba(18,30,52,.94), rgba(8,16,30,.92));
+      box-shadow:0 18px 36px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+      display:grid;
+      gap:12px;
+    }
+    .login-card h3{margin:0;font-size:30px;font-family:"Cormorant Garamond", Georgia, serif}
+    .login-copy{color:var(--muted);line-height:1.5}
+    .login-shell{display:grid;gap:12px}
+    .signed-in-card{display:grid;gap:10px}
+    .signed-in-card[hidden],.login-shell[hidden]{display:none}
+    .signed-in-top{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:12px;align-items:center}
+    .signed-in-line{
+        padding:12px 14px;
+        border-radius:16px;
+        border:1px solid var(--line);
+        background:rgba(255,255,255,.06);
+        color:var(--text);
+        font-weight:700;
+        white-space:nowrap;
+      }
+    .signed-in-packages{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .signed-in-packages a{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:40px;
+      padding:0 14px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      text-decoration:none;
+      font-weight:700;
+      box-shadow:0 10px 22px rgba(0,0,0,.18);
+    }
+    .signed-in-packages .owned{
+      background:rgba(119,224,199,.16);
+      border-color:rgba(119,224,199,.26);
+    }
+    .signed-in-route{
+      padding:12px 14px;
+      border-radius:16px;
+      border:1px solid rgba(119,224,199,.2);
+      background:rgba(119,224,199,.08);
+      color:var(--muted);
+      line-height:1.55;
+    }
+    .signed-in-route strong{display:block;color:var(--text);margin-bottom:4px}
+      @media (max-width:1100px){
+      .signed-in-top{grid-template-columns:1fr}
+      .signed-in-line{white-space:normal}
+      }
+    .login-grid{display:grid;gap:10px}
+    .login-grid input{
+      width:100%;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      font:inherit;
+    }
+    .provider-row,.login-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .provider-btn,.login-actions button{
+      min-height:40px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .login-status{
+      padding:12px 14px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      line-height:1.45;
+    }
+    .auth-badge{position:sticky;top:14px;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:18px;border:1px solid rgba(119,224,199,.32);background:rgba(6,15,27,.9);box-shadow:0 18px 36px rgba(0,0,0,.24);backdrop-filter:blur(16px);margin-bottom:16px}
+    .auth-badge strong{display:block;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+    .auth-badge span{display:block;color:var(--muted);font-size:13px;line-height:1.5}
+    .auth-badge a{color:var(--gold);font-weight:700;text-decoration:none}
+    .module-access-overlay{position:fixed;inset:0;display:none;place-items:center;padding:24px;background:rgba(2,8,16,.62);backdrop-filter:blur(18px);z-index:120}
+    .module-access-overlay.active{display:grid}
+    .module-access-card{width:min(760px,100%);display:grid;gap:12px;padding:24px;border-radius:28px;border:1px solid rgba(255,255,255,.16);background:linear-gradient(180deg,rgba(7,17,31,.96),rgba(13,28,48,.95));box-shadow:0 40px 90px rgba(0,0,0,.42)}
+    .module-access-card h3{margin:0;font-size:38px;font-family:"Cormorant Garamond", Georgia, serif}
+    .module-access-meta{display:flex;flex-wrap:wrap;gap:10px}
+    .module-access-chip{padding:10px 14px;border-radius:999px;border:1px solid rgba(119,224,199,.26);background:rgba(255,255,255,.05);font-weight:700}
+    .module-access-card p{margin:0;color:var(--muted);line-height:1.6}
+    .logout-link{
+      min-height:40px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:max-content;
+    }
+    .mini-remote{
+      position:fixed;
+      left:22px;
+      bottom:22px;
+      width:min(280px, calc(100vw - 32px));
+      padding:16px;
+      border-radius:22px;
+      border:1px solid rgba(213,235,255,.22);
+      background:rgba(10,19,34,.92);
+      box-shadow:0 22px 46px rgba(0,0,0,.34);
+      backdrop-filter:blur(20px) saturate(1.08);
+      z-index:9;
+      display:grid;
+      gap:10px;
+      opacity:0;
+      transform:translateY(18px);
+      pointer-events:none;
+      transition:opacity .25s ease, transform .25s ease;
+    }
+    .mini-remote.active{
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
+    .mini-remote h3{margin:0;font-size:24px;font-family:"Cormorant Garamond", Georgia, serif}
+    .mini-remote p{margin:0;color:var(--muted);line-height:1.45}
+    .mini-remote-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .mini-remote-grid button,.mini-remote-grid a{
+      min-height:38px;
+      padding:0 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      text-decoration:none;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .ad-rail{display:grid;gap:14px;margin-bottom:14px}
+    .ad-card{
+      position:relative;
+      overflow:hidden;
+      min-height:170px;
+      padding:18px;
+      border-radius:24px;
+      border:1px solid rgba(213,235,255,.22);
+      background:
+        linear-gradient(180deg, rgba(6,15,29,.12), rgba(6,15,29,.52)),
+        var(--bg-image) center/cover no-repeat,
+        rgba(255,255,255,.05);
+      box-shadow:0 18px 34px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.12);
+      display:grid;
+      align-content:space-between;
+    }
+    .ad-card.featured{
+      min-height:220px;
+      transform:scale(1.02);
+      border-color:rgba(255,208,134,.34);
+      box-shadow:0 26px 48px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.16);
+    }
+    .ad-card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(135deg, rgba(255,255,255,.18), transparent 30%, transparent 65%, rgba(255,255,255,.06));
+      pointer-events:none;
+    }
+    .ad-copy{position:relative;z-index:1;display:grid;gap:8px;padding-right:116px}
+    .ad-copy h3{margin:0;font-size:30px;font-family:"Cormorant Garamond", Georgia, serif;line-height:.9}
+    .ad-copy p{margin:0;color:rgba(238,246,255,.82);line-height:1.5}
+    .ad-actions{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap}
+    .ad-price{
+      position:absolute;
+      top:16px;
+      right:16px;
+      min-width:92px;
+      padding:12px 10px;
+      border-radius:18px;
+      text-align:center;
+      background:linear-gradient(180deg, rgba(255,227,164,.98), rgba(229,150,56,.92));
+      color:#07111f;
+      border:1px solid rgba(255,245,216,.76);
+      box-shadow:0 16px 28px rgba(0,0,0,.22);
+      animation:priceFlash 1.18s steps(2,end) infinite;
+      z-index:1;
+    }
+    .ad-price strong{display:block;font-size:22px;line-height:.9}
+    .ad-price small{display:block;margin-top:4px;font-size:10px;letter-spacing:.18em;text-transform:uppercase}
+    .right-rail{
+      padding:0;
+      background:transparent;
+      border:none;
+      box-shadow:none;
+      position:sticky;
+      top:16px;
+      align-self:start;
+    }
+    .sticky-card h3{margin:0 0 8px;font-size:26px;font-family:"Cormorant Garamond", Georgia, serif}
+    .sticky-card{
+      background:rgba(12,22,39,.82);
+      box-shadow:0 20px 40px rgba(0,0,0,.28);
+    }
+    .inbox-card{
+      padding:16px;
+      border-radius:24px;
+      border:1px solid rgba(213,235,255,.22);
+      background:linear-gradient(180deg, rgba(15,24,41,.92), rgba(8,15,28,.96));
+      box-shadow:0 22px 40px rgba(0,0,0,.28);
+      display:grid;
+      gap:12px;
+    }
+    .inbox-meta{color:var(--muted);line-height:1.45}
+    .inbox-list{display:grid;gap:10px}
+    .inbox-item{
+      padding:12px 14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--line);
+      display:grid;
+      gap:8px;
+    }
+    .inbox-item strong{display:block}
+    .inbox-item span{color:var(--muted);font-size:14px;line-height:1.45}
+    .inbox-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .inbox-actions button,.inbox-actions a{
+      min-height:34px;
+      padding:0 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+    }
+    .sticky-card:nth-child(1){transform:translateX(-8px)}
+    .sticky-card:nth-child(2){transform:translateX(8px)}
+    .sticky-card:nth-child(3){transform:translateX(-4px)}
+    .sticky-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+    .sticky-controls{display:flex;gap:8px}
+    .sticky-btn,.menu-chip{
+      border:none;cursor:pointer;color:var(--text);font-weight:700
+    }
+    .sticky-btn{
+      min-height:36px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid var(--line)
+    }
+    .mini-list{display:grid;gap:10px}
+    .mini-item{padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+    .mini-item strong{display:block}
+    .mini-item span{color:var(--muted);font-size:14px}
+    .menu-chip{width:100%;padding:14px 16px;border-radius:18px;background:linear-gradient(180deg, rgba(89,151,235,.34), rgba(43,80,132,.42));border:1px solid rgba(195,228,255,.2);text-align:left}
+    .assistant-layer{
+      position:fixed;inset:0;pointer-events:none;z-index:8
+    }
+    .assistant{
+      position:absolute;width:228px;padding:12px 14px;border-radius:999px;background:rgba(12,23,40,.94);
+      border:1px solid rgba(171,220,255,.18);display:flex;align-items:center;gap:14px;color:var(--text);
+      box-shadow:0 18px 42px rgba(0,0,0,.32);pointer-events:auto;cursor:pointer;transition:transform .2s ease
+    }
+    .assistant:hover{transform:translateY(-2px)}
+    .orb{
+      width:54px;height:54px;border-radius:50%;position:relative;overflow:visible;
+      animation:orbPulse 2.7s ease-in-out infinite;
+      box-shadow:0 0 0 0 rgba(121,184,255,.25), 0 0 32px rgba(121,184,255,.22)
+    }
+    .orb::before,.orb::after{
+      content:"";position:absolute;inset:-7px;border-radius:50%;pointer-events:none
+    }
+    .orb::before{
+      border:1px solid rgba(255,255,255,.22);
+      animation:orbHalo 2.3s ease-in-out infinite
+    }
+    .orb::after{
+      inset:-12px;
+      background:
+        radial-gradient(circle at 22% 22%, rgba(255,255,255,.55), transparent 18%),
+        radial-gradient(circle at 72% 34%, rgba(255,255,255,.35), transparent 14%),
+        radial-gradient(circle at 44% 76%, rgba(255,255,255,.28), transparent 12%);
+      mix-blend-mode:screen;opacity:.7;
+      animation:orbGlitter 1.9s linear infinite
+    }
+    .aria-orb{background:radial-gradient(circle at 35% 35%, #a7fbff, #53a7ff 55%, #253f6f)}
+    .jake-orb{background:radial-gradient(circle at 35% 35%, #ffecc1, #d5a96d 55%, #5a3e1f);box-shadow:0 0 0 0 rgba(255,208,134,.2), 0 0 32px rgba(255,208,134,.18)}
+    .assistant:nth-child(2) .orb{animation-duration:2.2s}
+    .assistant:nth-child(2) .orb::before{animation-duration:2.6s}
+    .assistant:nth-child(2) .orb::after{animation-duration:1.6s}
+    .assistant-copy strong{display:block;font-size:16px}
+    .assistant-copy small{color:var(--muted)}
+    .voice-bubble{
+      position:absolute;left:50%;top:26px;transform:translateX(-50%);
+      width:min(720px, calc(100% - 80px));padding:16px 18px;display:none;z-index:4
+    }
+    .voice-bubble.active{display:block}
+    .voice-bubble strong{display:block;margin-bottom:6px}
+    .voice-bubble span{color:var(--muted)}
+    .premium-popup{
+      position:fixed;
+      right:22px;
+      bottom:22px;
+      width:min(380px, calc(100vw - 32px));
+      padding:18px;
+      border-radius:24px;
+      border:1px solid rgba(255,208,134,.34);
+      background:
+        linear-gradient(180deg, rgba(15,25,44,.98), rgba(7,13,25,.96)),
+        radial-gradient(circle at top right, rgba(255,208,134,.12), transparent 46%);
+      box-shadow:0 26px 56px rgba(0,0,0,.34);
+      z-index:11;
+      display:none;
+      gap:12px;
+    }
+    .premium-popup.active{display:grid}
+    .premium-popup-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .premium-popup h3{margin:0;font-size:30px;font-family:"Cormorant Garamond", Georgia, serif}
+    .premium-popup p{margin:0;color:var(--muted);line-height:1.5}
+    .premium-popup-close{
+      width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.08);
+      color:var(--text);font-size:20px;font-weight:700;cursor:pointer;
+    }
+    .premium-popup-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .premium-popup-note{color:rgba(255,208,134,.88);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+    @keyframes orbPulse{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.06)}
+    }
+    @keyframes orbHalo{
+      0%,100%{transform:scale(1);opacity:.45}
+      50%{transform:scale(1.15);opacity:.9}
+    }
+    @keyframes orbGlitter{
+      0%{transform:translate(0,0) rotate(0deg);opacity:.35;filter:hue-rotate(0deg)}
+      25%{transform:translate(2px,-1px) rotate(5deg);opacity:.7}
+      50%{transform:translate(-2px,2px) rotate(-6deg);opacity:.42;filter:hue-rotate(12deg)}
+      75%{transform:translate(1px,-2px) rotate(4deg);opacity:.72}
+      100%{transform:translate(0,0) rotate(0deg);opacity:.35;filter:hue-rotate(0deg)}
+    }
+    @keyframes priceFlash{
+      0%,100%{transform:scale(1);filter:brightness(1)}
+      50%{transform:scale(1.06);filter:brightness(1.15)}
+    }
+    @keyframes gigSpin{
+      from{transform:rotate(0deg)}
+      to{transform:rotate(360deg)}
+    }
+    @media (max-width: 1280px){
+      .local-shell{grid-template-columns:1fr;grid-template-rows:auto auto auto;overflow:auto;height:auto}
+      .panel-stack,.button-grid,.catalog-strip,.gig-viewer-grid{grid-template-columns:1fr}
+      .assistant-layer{position:fixed;inset:0}
+      .right-rail{position:static}
+      .live-app-frame{height:620px}
+    }
+  </style>
+</head>
+<body>
+  <div class="local-shell">
+    <aside class="left-rail glass">
+      <div>
+        <div class="eyebrow">Local Editing Sandbox</div>
+        <h1 class="title">Old big button Remote shell.</h1>
+        <p class="sub">This is a local-only editing page so we can work on the six-panel sticky layout without the live site getting in the way.</p>
+      </div>
+      <div class="badge-grid">
+        <div class="badge"><strong>Mode</strong><small>Local Remote Sandbox</small></div>
+        <div class="badge"><strong>Panels</strong><small>Diary · Studio · Settings · Map · FAQ · Profile</small></div>
+        <div class="badge"><strong>Sticky</strong><small>Diary Lobby · Edits Menu · Payments Menu</small></div>
+      </div>
+      <div class="stack-list">
+        <div class="stack-card"><strong>Aria / Jake</strong><small>Roaming prototype with click-to-voice sequence.</small></div>
+        <div class="stack-card"><strong>Safe Reset</strong><small>This page is for local editing and experimentation.</small></div>
+      </div>
+    </aside>
+
+    <main class="center-stage glass">
+      <div class="voice-bubble" id="voiceBubble">
+        <strong id="voiceBubbleTitle">Website Voice</strong>
+        <span id="voiceBubbleText">Cue sound → greeting → mic ready → listening.</span>
+      </div>
+
+      <section class="catalog-strip">
+        <article class="catalog-card" style="--bg-image:url('/static/images/jake-studio-premium.jpg')">
+          <div class="price-flash"><strong>$100</strong><small>Buy Now</small></div>
+          <div class="catalog-copy">
+            <span class="promo-chip">Studio Upgrade</span>
+            <strong>Jake Studio Premium</strong>
+            <span>Late-2000s glossy booth energy with real motherboard editing and premium studio lane access.</span>
+            <div class="seo-row">
+              <span class="seo-chip">Studio</span>
+              <span class="seo-chip">Motherboard</span>
+              <span class="seo-chip">Premium Booth</span>
+            </div>
+            <a class="buy-now" id="catalogStudioBuyLink" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Studio Access</a>
+          </div>
+        </article>
+        <article class="catalog-card" style="--bg-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
+          <div class="price-flash"><strong>$50</strong><small>Pro / Premium</small></div>
+          <div class="catalog-copy">
+            <span class="promo-chip">Professional Lane</span>
+            <strong>Premium / Pro</strong>
+            <span>Professional identity, faster routes, polished voice, and a cleaner SupportRD ownership package.</span>
+            <div class="seo-row">
+              <span class="seo-chip">Identity</span>
+              <span class="seo-chip">Premium Voice</span>
+              <span class="seo-chip">5 Star Care</span>
+            </div>
+            <a class="buy-now" id="catalogPremiumBuyLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Upgrade Now</a>
+          </div>
+        </article>
+        <article class="catalog-card" style="--bg-image:url('/static/images/brochure-contacts-remote.jpg')">
+          <div class="price-flash"><strong>$200</strong><small>Family / Team</small></div>
+          <div class="catalog-copy">
+            <span class="promo-chip">Support Network</span>
+            <strong>Representatives</strong>
+            <span>Professional hair-support faces, concierge feel, and a direct lane into SupportRD help and guided setup.</span>
+            <div class="seo-row">
+              <span class="seo-chip">Hair Problem</span>
+              <span class="seo-chip">Live Support</span>
+              <span class="seo-chip">On-The-Go</span>
+            </div>
+            <a class="buy-now" id="catalogFamilyBuyLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Meet SupportRD</a>
+          </div>
+        </article>
+      </section>
+
+      <div class="top-bar">
+        <div>
+          <div class="eyebrow">SupportRD Remote Sandbox</div>
+          <h2 class="title" style="font-size:46px">SupportRD All Natural Hair Products from Dominican Republic. We are a get it done app. No games this app is made for On-the-Go.</h2>
+          <div class="help-banner" id="helpBanner">
+            <strong>Active Helping State</strong>
+            <span id="helpBannerText">When traffic rises, SupportRD points people toward FAQ Lounge and the Edits Menu so more visitors get answers fast.</span>
+          </div>
+        </div>
+        <div class="voice-console">
+          <div class="voice-pill">Local Route: <span id="activePanelName" style="margin-left:8px">Diary Mode</span></div>
+          <div class="voice-status">
+            <strong id="voiceConsoleTitle">Website Voice idle</strong>
+            <span id="voiceConsoleText" style="color:var(--muted)">Click Aria or Jake to test the cue → greeting → mic flow.</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="gig-viewer glass">
+        <div class="gig-viewer-head">
+          <div>
+            <div class="eyebrow">Gig Connector Live Viewer</div>
+            <h2>SupportRD + Options Market + ThePlantManInc</h2>
+            <p>This is the real-life viewer lane for capitalization, market moves, shipments, corporate moments, and founder activity using the old gig connector style: click, loading screen, then live watch.</p>
+          </div>
+          <div class="gig-connector-actions">
+            <button type="button" id="gigConnectorLaunchBtn">Open Gig Connector</button>
+            <a id="gigConnectorSourceLink" href="https://supportrd.com/" target="_blank" rel="noreferrer">Open Current Source</a>
+          </div>
+        </div>
+        <div class="gig-connector-sources" id="gigConnectorSources"></div>
+        <div class="gig-connector-stage">
+          <div class="gig-connector-loader" id="gigConnectorLoader">
+            <div class="gig-connector-loader-card">
+              <div class="gig-spinner"></div>
+              <strong>Gig connector loading</strong>
+              <span id="gigConnectorLoaderText">Building the live business view for SupportRD, the options market, and ThePlantManInc.</span>
+            </div>
+          </div>
+          <div class="gig-connector-fallback" id="gigConnectorFallback">
+            <div class="gig-connector-fallback-card">
+              <strong>Local stream needs direct open</strong>
+              <span id="gigConnectorFallbackText">This source may need to open in a new tab because localhost and secure browser rules do not always embed together.</span>
+            </div>
+          </div>
+          <iframe class="gig-connector-frame" id="gigConnectorFrame" title="Gig connector live viewer" loading="lazy"></iframe>
+        </div>
+        <div class="gig-viewer-grid">
+          <section class="gig-events">
+            <h3>Major Company Events</h3>
+            <div class="gig-event-list" id="gigEventList"></div>
+          </section>
+          <section class="gig-advisors">
+            <h3>Business Reality Lane</h3>
+            <div class="gig-advisor-list" id="gigAdvisorList"></div>
+          </section>
+        </div>
+        <div class="gig-build-strip" id="gigBuildStrip">
+          <article class="gig-build-card" style="--build-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
+            <div class="gig-build-copy">
+              <div class="promo-chip">Recent Build</div>
+              <strong>SupportRD Shell Display</strong>
+              <span>Recent shell work, premium routes, and real account access visuals stay visible here.</span>
+              <a class="buy-now" href="https://supportrd.com/" target="_blank" rel="noreferrer">Open Shell</a>
+            </div>
+          </article>
+          <article class="gig-build-card" style="--build-image:url('/static/images/jake-studio-premium.jpg')">
+            <div class="gig-build-copy">
+              <div class="promo-chip">Studio Build</div>
+              <strong>Motherboard Editor Display</strong>
+              <span>Recent studio motherboard work and playback/export maturity stay surfaced in the gig connector lane.</span>
+              <a class="buy-now" href="/local-studio" target="_blank" rel="noreferrer">Open Studio</a>
+            </div>
+          </article>
+          <article class="gig-build-card" style="--build-image:url('/static/images/remote-healthy-hair.jpeg')">
+            <div class="gig-build-copy">
+              <div class="promo-chip">Developer Access</div>
+              <strong>Founder Coding Access</strong>
+              <span>Anthony coding access to SupportRD, the options market board, and connected corporate lanes stays visible for trust.</span>
+              <a class="buy-now" href="http://127.0.0.1:3000/" target="_blank" rel="noreferrer">Open Market</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="button-grid" id="buttonGrid">
+        <button class="shell-btn active" data-panel="diary">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-dayparty.jpg')"></span>
+          <span class="shell-btn-flag" aria-hidden="true"><i></i><em></em><b></b><small>DOM REP</small></span>
+          <span class="shell-btn-copy"><span>Panel 1</span><strong>Diary Mode</strong><p>Live sessions, lobby, comments, and shareable feed links.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="studio">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-artists.jpg')"></span>
+          <span class="shell-btn-copy"><span>Panel 2</span><strong>Studio Quick Panel</strong><p>Recording, waveform, motherboard, and exports.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="settings">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-healthy-hair.jpeg')"></span>
+          <span class="shell-btn-copy"><span>Panel 3</span><strong>Configuration</strong><p>Notifications, links, access, and route controls.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="map">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-hija-felix.jpeg')"></span>
+          <span class="shell-btn-copy"><span>Panel 4</span><strong>Map Change</strong><p>General info, ads, map switch, and perks.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="faq">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-lezawli.jpeg')"></span>
+          <span class="shell-btn-copy"><span>Panel 5</span><strong>FAQ Lounge</strong><p>Social-world reel, quick answers, and relaxed support.</p></span>
+        </button>
+        <button class="shell-btn" data-panel="profile">
+          <span class="shell-btn-media" style="--media-image:url('/static/images/remote-healthy-hair.jpeg')"></span>
+          <span class="shell-btn-copy"><span>Panel 6</span><strong>Profile</strong><p>Identity, hair credentials, scanner, and exports.</p></span>
+        </button>
+        </section>
+
+      <section class="panel-stack">
+        <article class="panel-card glass">
+          <div class="auth-badge" id="pageAuthBadge">
+            <div>
+              <strong id="pageAuthTitle">Guest Route</strong>
+              <span id="pageAuthText">Login confirmed state and ^^ URL tag will stay attached to every module route.</span>
+            </div>
+            <a id="pageAuthLogout" href="/logout">Logout?</a>
+          </div>
+          <div class="eyebrow" id="panelEyebrow">SupportRD Diary</div>
+          <h2 id="panelTitle">Diary Mode</h2>
+          <p id="panelBody">The diary workspace is the emotional and live-social center for SupportRD. This local page lets us rebuild that shell without fighting the live site.</p>
+          <div class="feature-list" id="panelFeatures"></div>
+          <div class="launch-row">
+            <button id="openLiveModuleBtn" type="button">Open working module here</button>
+            <button id="reloadLiveModuleBtn" type="button">Reload module</button>
+          </div>
+        </article>
+        <article class="panel-card glass">
+          <div class="eyebrow">Local Direction</div>
+          <h2 style="font-size:30px">Editing Goals</h2>
+          <div class="feature-list">
+            <div class="feature-item"><strong>Keep the old big button feel</strong><span>Six strong action cards with one clear stage under them.</span></div>
+            <div class="feature-item"><strong>Keep sticky tools</strong><span>Diary Lobby, Edits Menu, and Payments Menu should sit on the page cleanly.</span></div>
+            <div class="feature-item"><strong>Keep roaming assistants</strong><span>Aria and Jake move around this sandbox and can be tuned here.</span></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="live-app-stage glass">
+        <div class="live-app-stage__head">
+          <div>
+            <div class="eyebrow">Working Module Stage</div>
+            <h2 id="liveAppTitle" style="margin:0;font-size:30px;font-family:'Cormorant Garamond', Georgia, serif">Diary module live stage</h2>
+            <p class="live-app-stage__meta" id="liveAppMeta">This panel loads the real SupportRD module inside the sandbox, but the goal is one connected trail shell so Diary, Studio, Profile, Map Change, Settings, and FAQ feel like embedded app surfaces instead of confusing page jumps.</p>
+          </div>
+          <div class="live-app-stage__actions">
+            <button id="liveAppOpenBtn" type="button">Open current module</button>
+            <a id="liveAppNewTab" href="/remote" target="_blank" rel="noreferrer">Open in new tab</a>
+          </div>
+        </div>
+        <iframe class="live-app-frame" id="liveAppFrame" title="SupportRD live module stage" loading="lazy"></iframe>
+      </section>
+
+      <section class="api-action-board glass">
+        <div class="api-action-board__head">
+          <div>
+            <div class="eyebrow">API Action Board</div>
+            <h2 id="apiActionTitle" style="margin:0;font-size:30px;font-family:'Cormorant Garamond', Georgia, serif">Diary API controls</h2>
+            <p class="api-action-board__meta" id="apiActionMeta">Use these local controls to hit the real APIs for the active panel instead of only looking at summaries.</p>
+          </div>
+        </div>
+        <div class="api-action-board__status" id="apiActionStatus">Action board is ready.</div>
+        <div class="api-action-board__controls">
+          <input id="apiFieldOne" placeholder="Primary field">
+          <input id="apiFieldTwo" placeholder="Secondary field">
+          <textarea id="apiFieldBody" placeholder="Main payload text"></textarea>
+          <textarea id="apiResultBody" placeholder="API results will appear here" readonly></textarea>
+        </div>
+        <div class="api-action-board__buttons" id="apiActionButtons"></div>
+        <div class="api-action-board__feed" id="apiActionFeed"></div>
+      </section>
+
+      <div class="assistant-layer">
+        <button class="assistant" id="localAria" type="button" aria-label="Talk to Aria">
+          <span class="orb aria-orb"></span>
+          <span class="assistant-copy"><strong>Aria Hair Advisor</strong><small>Click to test website voice</small></span>
+        </button>
+        <button class="assistant" id="localJake" type="button" aria-label="Talk to Jake">
+          <span class="orb jake-orb"></span>
+          <span class="assistant-copy"><strong>Jake Studio Specialist</strong><small>Click to test website voice</small></span>
+        </button>
+      </div>
+    </main>
+
+    <aside class="right-rail glass">
+      <div class="sticky-wrap">
+        <section class="ad-rail">
+          <section class="login-card">
+            <div class="eyebrow">Account Access</div>
+            <h3>Login Panel</h3>
+            <div class="login-copy">Confirm logged in through your provider or type your email and password so SupportRD stays attached while you move around the site.</div>
+            <div class="signed-in-card" id="signedInCard" hidden>
+              <div class="signed-in-top">
+                <div class="signed-in-line" id="signedInSummary">Signed in.</div>
+                <div class="signed-in-packages" id="signedInPackages"></div>
+              </div>
+              <div class="signed-in-route" id="signedInRouteBox">
+                <strong id="signedInRouteTitle">SupportRD URL Tag</strong>
+                <span id="signedInRouteText">The random ^^ tag will appear here and attach to the live SupportRD route.</span>
+              </div>
+              <div class="provider-row">
+                <a class="logout-link" href="/logout">Logout?</a>
+              </div>
+            </div>
+            <div class="login-shell" id="loginShell">
+              <div class="provider-row">
+                <a class="provider-btn" href="/login">Provider Login</a>
+                <a class="provider-btn" href="/login?mode=signup">Create Account</a>
+                <button class="provider-btn" type="button" id="providerConfirmBtn">Confirm Provider</button>
+              </div>
+              <div class="provider-row">
+                <a class="provider-btn" href="/login?provider=google-oauth2&mode=signup">Google Login</a>
+                <a class="provider-btn" href="/login?provider=windowslive&mode=signup">Microsoft Login</a>
+              </div>
+              <div class="login-grid">
+                <input id="loginEmail" type="email" placeholder="Email address">
+                <input id="loginPassword" type="password" placeholder="Password">
+              </div>
+              <div class="login-actions">
+                <button type="button" id="loginSaveBtn">Save Login</button>
+                <button type="button" id="loginOpenAccountBtn">Open Login Page</button>
+              </div>
+            </div>
+            <div class="login-status" id="loginStatusBox">Login panel is attached and waiting for provider confirmation.</div>
+          </section>
+          <article class="ad-card featured" style="--bg-image:url('/static/images/jake-studio-premium.jpg')">
+            <div class="ad-price"><strong>$100</strong><small>Flash</small></div>
+            <div class="ad-copy">
+              <span class="promo-chip">Studio Hero</span>
+              <h3>Jake Studio Premium</h3>
+              <p>Professional booth power with polished editing, stacked playback, and premium studio style.</p>
+              <div class="seo-row">
+                <span class="seo-chip">Studio</span>
+                <span class="seo-chip">Creator</span>
+                <span class="seo-chip">Export</span>
+              </div>
+            </div>
+            <div class="ad-actions">
+              <a class="buy-now" id="sideStudioBuyLink" href="https://shop.supportrd.com/products/jake-premium-studio" target="_blank" rel="noreferrer">Buy Now</a>
+            </div>
+          </article>
+          <article class="ad-card" style="--bg-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
+            <div class="ad-price"><strong>$50</strong><small>Pro</small></div>
+            <div class="ad-copy">
+              <span class="promo-chip">Professional Access</span>
+              <h3>SupportRD Pro</h3>
+              <p>Professional profile lanes, polished SupportRD routes, and a cleaner account-plus-payments package.</p>
+              <div class="seo-row">
+                <span class="seo-chip">Identity</span>
+                <span class="seo-chip">Hair Problem</span>
+                <span class="seo-chip">Premium</span>
+              </div>
+            </div>
+            <div class="ad-actions">
+              <a class="buy-now" id="sideProBuyLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Go Pro</a>
+            </div>
+          </article>
+        </section>
+        <section class="inbox-card">
+          <div class="eyebrow">Offer Inbox</div>
+          <h3 style="margin:0;font-size:30px;font-family:'Cormorant Garamond', Georgia, serif">Confirm Integrations</h3>
+          <div class="inbox-meta" id="inboxMeta">Only coding-help offers that route tips, donations, or support back into SupportRD auto-approve. Rights, legal, and change requests stay manual.</div>
+          <div class="inbox-list" id="offerInboxList">
+            <div class="inbox-item"><strong>No offers yet</strong><span>When websites, systems, computers, or organizations want in, they will be flagged here first.</span></div>
+          </div>
+          <div class="inbox-meta" id="conversionMeta">Conversion watch is loading.</div>
+        </section>
+        <section class="sticky-card">
+          <div class="sticky-head">
+            <h3>Diary Lobby</h3>
+            <div class="sticky-controls">
+              <button class="sticky-btn" type="button">Refresh</button>
+              <button class="sticky-btn" type="button">Hide</button>
+            </div>
+          </div>
+          <div class="mini-list" id="diaryLobbyList">
+            <div class="mini-item"><strong>^^ silky-route</strong><span>Latest 7 diary feeds will stack here for local editing.</span></div>
+            <div class="mini-item"><strong>Search / Sort</strong><span>Name · Email · Tag ^^ · URL</span></div>
+          </div>
+        </section>
+
+        <section class="sticky-card">
+          <div class="sticky-head">
+            <h3>Edits Menu</h3>
+            <div class="sticky-controls">
+              <button class="sticky-btn" type="button">Prev</button>
+              <button class="sticky-btn" type="button">Hide</button>
+              <button class="sticky-btn" type="button">Next</button>
+            </div>
+          </div>
+          <div class="mini-list" id="editsMenuList">
+            <button class="menu-chip" type="button">Product / Premium Purchase</button>
+            <button class="menu-chip" type="button">Functionality Virtual</button>
+          </div>
+        </section>
+
+        <section class="sticky-card">
+          <div class="sticky-head">
+            <h3>Payments Menu</h3>
+            <div class="sticky-controls">
+              <button class="sticky-btn" type="button">Prev</button>
+              <button class="sticky-btn" type="button">Hide</button>
+              <button class="sticky-btn" type="button">Next</button>
+            </div>
+          </div>
+          <div class="mini-list" id="paymentsMenuList">
+            <button class="menu-chip" type="button">Product Page</button>
+            <button class="menu-chip" type="button">Purchase Premium / Pro</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <aside class="mini-remote" id="miniRemotePopup">
+    <div class="eyebrow">Mini Remote</div>
+    <h3>SupportRD Quick Route</h3>
+    <p>Follow the page and jump into the main buttons, account, or voice lane while you scroll.</p>
+    <div class="mini-remote-grid">
+      <button type="button" data-mini-panel="diary">Diary</button>
+      <button type="button" data-mini-panel="studio">Studio</button>
+      <button type="button" data-mini-panel="profile">Profile</button>
+      <button type="button" data-mini-panel="faq">FAQ</button>
+      <button type="button" data-mini-panel="settings">Settings</button>
+      <button type="button" data-mini-panel="map">Map</button>
+      <a href="/login" target="_blank" rel="noreferrer">Login</a>
+      <button type="button" id="miniVoiceBtn">Talk To Aria</button>
+    </div>
+  </aside>
+
+  <section class="premium-popup" id="premiumPopup" aria-live="polite">
+    <div class="premium-popup-head">
+      <div>
+        <div class="eyebrow" id="premiumPopupEyebrow">Premium Route</div>
+        <h3 id="premiumPopupTitle">Upgrade to Premium</h3>
+      </div>
+      <button class="premium-popup-close" type="button" id="premiumPopupClose" aria-label="Close premium popup">×</button>
+    </div>
+    <p id="premiumPopupText">Get the polished SupportRD route with better studio access, premium hair support lanes, and faster identity help.</p>
+    <div class="premium-popup-actions">
+      <a class="buy-now" id="premiumPopupBuy" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Buy Premium</a>
+      <a class="provider-btn" href="/login" target="_blank" rel="noreferrer">Login First</a>
+    </div>
+    <div class="premium-popup-note" id="premiumPopupNote">Ad cadence: every 5 minutes for guests. Premium sees fantasy every 15 minutes.</div>
+  </section>
+  <section class="module-access-overlay" id="moduleAccessOverlay" aria-live="polite">
+    <div class="module-access-card">
+      <div class="eyebrow" id="moduleAccessEyebrow">SupportRD Access</div>
+      <h3 id="moduleAccessTitle">Access confirmed</h3>
+      <div class="module-access-meta" id="moduleAccessMeta"></div>
+      <p id="moduleAccessText">Your account route is connecting to the selected module now.</p>
+    </div>
+  </section>
+
+  <script>
+    const panelMeta = {
+      diary: {
+        eyebrow: "SupportRD Diary",
+        title: "Diary Mode",
+        body: "Diary is the live feed and recording lane. In this local sandbox, it keeps the old big button feel while we rebuild comments, sessions, and the lobby cleanly.",
+        appTitle: "Diary module live stage",
+          appMeta: "Loads the rebuilt Diary surface inside the shell so paid live feed controls, AI hair-problem responses, lobby discovery, comments, and history stay together in one trail.",
+        appSrc: "/local-diary",
+        appSelector: "",
+        appFocusSelector: "body",
+        features: [
+          ["Live sessions", "Diary lobby, comments, guest support, and direct links."],
+          ["Recording lane", "Hands-free, diary record, and live session flow."],
+          ["Sticky connection", "Diary Lobby stays visible without taking over the whole app."]
+        ]
+      },
+      studio: {
+        eyebrow: "SupportRD Studio",
+        title: "Studio Quick Panel",
+        body: "Studio should feel like its own app. Here we keep the six-button remote feel while giving it a dedicated recording and waveform staging area.",
+        appTitle: "Studio module live stage",
+          appMeta: "Loads the rebuilt Studio surface so recording, waveform, motherboard pieces, playback, exports, and booth behavior stay together inside the same shell.",
+        appSrc: "/local-studio",
+        appSelector: "",
+        appFocusSelector: "body",
+        features: [
+          ["Record", "Mic, camera, waveform, motherboard, and exports."],
+          ["Jake lane", "Jake is tied to the studio voice and editing booth."],
+          ["Local-first editing", "A safe page to tune the studio shell before touching live."]
+        ]
+      },
+      settings: {
+        eyebrow: "SupportRD Configuration",
+        title: "Configuration",
+        body: "Settings stays as the calm pit-stop: notifications, URL entrances, scanner visibility, and route control without the live site getting messy.",
+        appTitle: "Settings module live stage",
+          appMeta: "Loads the rebuilt Settings surface so diary posting URL, password, email, phone, push notifications, and Aria response level are edited without leaving the trail.",
+        appSrc: "/local-settings",
+        appSelector: "#floatNavSettings",
+        appFocusSelector: "body",
+        features: [
+          ["Push notifications", "Clear toggles and route guidance."],
+          ["URL entrances", "SupportRD links and route entry points."],
+          ["Scanner visibility", "A settings lane that still feels premium."]
+        ]
+      },
+      map: {
+        eyebrow: "SupportRD Map",
+        title: "Map Change",
+        body: "Map Change is the pit stop button. It should hold general information, ads, the map itself, and perks details on the side.",
+        appTitle: "Map Change module live stage",
+          appMeta: "Loads the rebuilt Map Change surface so real map images, style/color choices, perks, and remembered route switching stay tied to the same account.",
+        appSrc: "/local-map",
+        appSelector: "#floatLaunchMap",
+        appFocusSelector: "body",
+        features: [
+          ["General info", "Where the route is headed and why."],
+          ["Ads / perks", "Promos and feature support without clutter."],
+          ["Actual map", "A focused place for the map switch and trail logic."]
+        ]
+      },
+      faq: {
+        eyebrow: "SupportRD FAQ Lounge",
+        title: "FAQ Lounge",
+        body: "FAQ Lounge is the social-world view. It should stay relaxing with a reel feel while still helping configure fast support details.",
+        appTitle: "FAQ Lounge live stage",
+          appMeta: "Loads the rebuilt FAQ Lounge surface so the 10-second reel feed, website FAQs, and Developers Feed support stay live without making the menus feel crowded.",
+        appSrc: "/local-faq",
+        appSelector: "#floatLaunchFaq",
+        appFocusSelector: "#floatLiveBox",
+        features: [
+          ["TV reel feel", "Quick relaxed support clips and direct FAQ answers."],
+          ["Trail support", "URL and push changes without stress."],
+          ["SupportRD feel", "Still soft and social, not robotic."]
+        ]
+      },
+      profile: {
+        eyebrow: "SupportRD Profile",
+        title: "Profile",
+        body: "Profile is the identity and hair credential lane. It should hold verification, analysis, and exports in one polished place.",
+        appTitle: "Profile module live stage",
+          appMeta: "Loads the rebuilt Profile surface so Banuba scan flow, Interzoid identity enrichment, hair-analysis history, and exports work as one connected profile system.",
+        appSrc: "/local-profile",
+        appSelector: "#floatNavProfile",
+        appFocusSelector: "body",
+        features: [
+          ["Identity", "Real person, profile picture, and account confidence."],
+          ["Hair credentials", "Texture, damage, type, and summary."],
+          ["Exports", "PDF / DOCX and scanner history."]
+        ]
+      }
+    };
+
+    const buttonGrid = document.getElementById("buttonGrid");
+    const panelEyebrow = document.getElementById("panelEyebrow");
+    const panelTitle = document.getElementById("panelTitle");
+    const panelBody = document.getElementById("panelBody");
+    const panelFeatures = document.getElementById("panelFeatures");
+    const activePanelName = document.getElementById("activePanelName");
+    const voiceConsoleTitle = document.getElementById("voiceConsoleTitle");
+    const voiceConsoleText = document.getElementById("voiceConsoleText");
+    const voiceBubble = document.getElementById("voiceBubble");
+    const voiceBubbleTitle = document.getElementById("voiceBubbleTitle");
+    const voiceBubbleText = document.getElementById("voiceBubbleText");
+    const localAria = document.getElementById("localAria");
+    const localJake = document.getElementById("localJake");
+    const liveAppTitle = document.getElementById("liveAppTitle");
+    const liveAppMeta = document.getElementById("liveAppMeta");
+    const liveAppFrame = document.getElementById("liveAppFrame");
+    const liveAppOpenBtn = document.getElementById("liveAppOpenBtn");
+    const liveAppNewTab = document.getElementById("liveAppNewTab");
+    const openLiveModuleBtn = document.getElementById("openLiveModuleBtn");
+    const reloadLiveModuleBtn = document.getElementById("reloadLiveModuleBtn");
+    const diaryLobbyList = document.getElementById("diaryLobbyList");
+    const editsMenuList = document.getElementById("editsMenuList");
+    const paymentsMenuList = document.getElementById("paymentsMenuList");
+    const apiActionTitle = document.getElementById("apiActionTitle");
+    const apiActionMeta = document.getElementById("apiActionMeta");
+    const apiActionStatus = document.getElementById("apiActionStatus");
+    const apiActionButtons = document.getElementById("apiActionButtons");
+    const apiActionFeed = document.getElementById("apiActionFeed");
+    const apiFieldOne = document.getElementById("apiFieldOne");
+    const apiFieldTwo = document.getElementById("apiFieldTwo");
+    const apiFieldBody = document.getElementById("apiFieldBody");
+    const apiResultBody = document.getElementById("apiResultBody");
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const loginStatusBox = document.getElementById("loginStatusBox");
+    const loginShell = document.getElementById("loginShell");
+    const signedInCard = document.getElementById("signedInCard");
+    const signedInSummary = document.getElementById("signedInSummary");
+    const signedInPackages = document.getElementById("signedInPackages");
+    const signedInRouteTitle = document.getElementById("signedInRouteTitle");
+    const signedInRouteText = document.getElementById("signedInRouteText");
+    const providerConfirmBtn = document.getElementById("providerConfirmBtn");
+    const loginSaveBtn = document.getElementById("loginSaveBtn");
+    const loginOpenAccountBtn = document.getElementById("loginOpenAccountBtn");
+    const miniRemotePopup = document.getElementById("miniRemotePopup");
+    const miniVoiceBtn = document.getElementById("miniVoiceBtn");
+    const helpBanner = document.getElementById("helpBanner");
+    const helpBannerText = document.getElementById("helpBannerText");
+    const premiumPopup = document.getElementById("premiumPopup");
+    const premiumPopupEyebrow = document.getElementById("premiumPopupEyebrow");
+    const premiumPopupTitle = document.getElementById("premiumPopupTitle");
+    const premiumPopupText = document.getElementById("premiumPopupText");
+    const premiumPopupBuy = document.getElementById("premiumPopupBuy");
+    const premiumPopupNote = document.getElementById("premiumPopupNote");
+    const premiumPopupClose = document.getElementById("premiumPopupClose");
+    const catalogStudioBuyLink = document.getElementById("catalogStudioBuyLink");
+    const catalogPremiumBuyLink = document.getElementById("catalogPremiumBuyLink");
+    const catalogFamilyBuyLink = document.getElementById("catalogFamilyBuyLink");
+    const sideStudioBuyLink = document.getElementById("sideStudioBuyLink");
+    const sideProBuyLink = document.getElementById("sideProBuyLink");
+    const pageAuthTitle = document.getElementById("pageAuthTitle");
+    const pageAuthText = document.getElementById("pageAuthText");
+    const gigBuildStrip = document.getElementById("gigBuildStrip");
+    const moduleAccessOverlay = document.getElementById("moduleAccessOverlay");
+    const moduleAccessEyebrow = document.getElementById("moduleAccessEyebrow");
+    const moduleAccessTitle = document.getElementById("moduleAccessTitle");
+    const moduleAccessMeta = document.getElementById("moduleAccessMeta");
+    const moduleAccessText = document.getElementById("moduleAccessText");
+    const gigConnectorLaunchBtn = document.getElementById("gigConnectorLaunchBtn");
+    const gigConnectorSourceLink = document.getElementById("gigConnectorSourceLink");
+    const gigConnectorSources = document.getElementById("gigConnectorSources");
+    const gigConnectorLoader = document.getElementById("gigConnectorLoader");
+    const gigConnectorLoaderText = document.getElementById("gigConnectorLoaderText");
+    const gigConnectorFallback = document.getElementById("gigConnectorFallback");
+    const gigConnectorFallbackText = document.getElementById("gigConnectorFallbackText");
+    const gigConnectorFrame = document.getElementById("gigConnectorFrame");
+    const gigEventList = document.getElementById("gigEventList");
+    const gigAdvisorList = document.getElementById("gigAdvisorList");
+    const offerInboxList = document.getElementById("offerInboxList");
+    const inboxMeta = document.getElementById("inboxMeta");
+    const conversionMeta = document.getElementById("conversionMeta");
+
+    let activePanel = "diary";
+    let panelBootToken = 0;
+    let bootstrapData = null;
+    let shopifyConfig = null;
+    let currentDiarySessionId = "";
+    let currentStudioSessionId = "";
+    let premiumVoicePlayer = null;
+    let unlockedAudioContext = null;
+    const ATTACHED_ACCOUNT_KEY = "supportrdAttachedAccount";
+    let providerConfirmed = false;
+    let visitorPingInterval = null;
+    let premiumPopupTimer = null;
+    let activeGigSource = "supportrd";
+    let moduleAccessTimer = null;
+
+    const voiceKnowledge = {
+      Aria: {
+        diary: [
+          "Aria here. Diary Mode is open, and I can help with the hair problem, the live session, or the account history behind it.",
+          "Diary live is on my side now. Tell me the real hair issue and I will cut straight to the answer, the support lane, and the right package."
+        ],
+        studio: [
+          "Aria here. Studio is open, and I can help connect the recording, the motherboard, the FX lane, and the product support behind it.",
+          "Studio support is live. Tell me whether you need recording, playback, motherboard cleanup, or the premium lane behind Jake."
+        ],
+        settings: [
+          "Aria here. Settings is the pit stop for account changes, push details, saved tags, and the route memory behind your profile.",
+          "Settings is open. I can help with notifications, saved links, account flow, and the profile changes tied to the person."
+        ],
+        map: [
+          "Aria here. Map Change is open. Tell me the route, the mood, or the last map memory you want me to hold for the account.",
+          "Map Change is listening now. I can guide the trail, the remembered route, and the side perks tied to the same person."
+        ],
+        faq: [
+          "Aria here. FAQ Lounge is open, and I can move between relaxed answers, Developer Feed support, and direct SupportRD setup help.",
+          "FAQ Lounge is active. Ask the question, drop the developer note, or let me route you into the exact support lane."
+        ],
+        profile: [
+          "Aria here. Profile is open. I can confirm identity, status, hair scan memory, exports, and the right care lane from account history.",
+          "Profile scanner is active. Tell me if you want identity confirmation, hair texture help, damage review, or the more advanced package talk."
+        ]
+      },
+      Jake: {
+        diary: [
+          "Jake here. Diary Mode is ready. I can help with live support, account continuity, family memory, and the direct hair issue in front of you.",
+          "Diary is active now. Give me the exact problem and I will answer directly with advanced, inner-circle, or professional SupportRD logic."
+        ],
+        studio: [
+          "Jake here. Studio is live. I can guide recording, playback, motherboard building, instrument hookup, and the money-making studio lane.",
+          "Studio support is ready. Tell me if you need the recorded file to play, the motherboard aligned, or the next premium move for the booth."
+        ],
+        settings: [
+          "Jake here. Settings is open. I can help tie account changes, route saves, push state, and profile continuity into one clean system.",
+          "Configuration is listening. Tell me what should change in the account, the route memory, or the voice profile."
+        ],
+        map: [
+          "Jake here. Map Change is open. I can help remember the route, move the theme, and keep the whole remote focused on the right stop.",
+          "Map lane is active. Tell me what trail or remembered route you want locked in for the next session."
+        ],
+        faq: [
+          "Jake here. FAQ Lounge is open. I can answer directly, open Developer Feed thinking, and keep the support world social without losing precision.",
+          "FAQ is active. Ask the question, push a developer note, or let me route you into the exact SupportRD lane."
+        ],
+        profile: [
+          "Jake here. Profile is open. I can work through identity, hair credentials, texture, damage, exports, and the advanced support path.",
+          "Profile verification is live. Tell me if you want the scanner read, the hair summary, or the professional lane behind the account."
+        ]
+      }
+    };
+    const modulePackageMap = {
+      diary: [
+        { key: "fantasy300", label: "Fantasy Package" },
+        { key: "premium", label: "Premium / Pro" }
+      ],
+      studio: [
+        { key: "studio", label: "Studio Jake" }
+      ],
+      profile: [
+        { key: "fantasy300", label: "Fantasy Package" },
+        { key: "premium", label: "Premium / Pro" }
+      ],
+      settings: [
+        { key: "premium", label: "Premium" },
+        { key: "pro", label: "Pro" },
+        { key: "family200", label: "Family" },
+        { key: "fantasy300", label: "Fantasy" },
+        { key: "studio", label: "Studio Jake" }
+      ],
+      faq: [
+        { key: "premium", label: "Premium" },
+        { key: "pro", label: "Pro" },
+        { key: "family200", label: "Family" },
+        { key: "fantasy300", label: "Fantasy" },
+        { key: "studio", label: "Studio Jake" }
+      ],
+      map: [
+        { key: "premium", label: "Premium" },
+        { key: "pro", label: "Pro" },
+        { key: "family200", label: "Family" },
+        { key: "fantasy300", label: "Fantasy" },
+        { key: "studio", label: "Studio Jake" }
+      ]
+    };
+
+    function focusFrameTarget(meta, doc){
+      if(!meta?.appFocusSelector || !doc) return;
+      if(!doc.getElementById("localRemoteIframeFocusStyle")){
+        const injectedFrameStyle = doc.createElement("style");
+        injectedFrameStyle.id = "localRemoteIframeFocusStyle";
+        injectedFrameStyle.textContent = `
+          .supportrd-os-shell,
+          .supportrd-shell-v2,
+          #remotePurchaseEditor,
+          #remoteDiaryLobby,
+          #remoteEditsMenu,
+          .float-mode-bottom,
+          .float-mode-sticky-bottom,
+          #scannerHud,
+          #supportRDMapOverlay,
+          .remote-fastpay-processing,
+          .remote-purchase-editor,
+          .remote-diary-lobby,
+          .remote-edits-menu {
+            display:none !important;
+          }
+          body{
+            overflow:auto !important;
+            background:#091423 !important;
+          }
+          #floatModeShell{
+            padding:0 !important;
+            background:transparent !important;
+          }
+        `;
+        doc.head?.appendChild(injectedFrameStyle);
+      }
+      const focusNode = doc.querySelector(meta.appFocusSelector);
+      if(focusNode && typeof focusNode.scrollIntoView === "function"){
+        focusNode.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    function triggerFramePanel(meta, token, tries = 0){
+      if(token !== panelBootToken) return;
+      let doc;
+      try{
+        doc = liveAppFrame.contentDocument || liveAppFrame.contentWindow?.document;
+      }catch{
+        return;
+      }
+      if(!doc){
+        if(tries < 18){
+          setTimeout(()=>triggerFramePanel(meta, token, tries + 1), 350);
+        }
+        return;
+      }
+      const target = meta?.appSelector ? doc.querySelector(meta.appSelector) : null;
+      if(target){
+        target.click();
+        setTimeout(()=>focusFrameTarget(meta, doc), 260);
+        return;
+      }
+      if(meta?.appFocusSelector){
+        const focusNode = doc.querySelector(meta.appFocusSelector);
+        if(focusNode){
+          focusFrameTarget(meta, doc);
+          return;
+        }
+      }
+      if(tries < 18){
+        setTimeout(()=>triggerFramePanel(meta, token, tries + 1), 350);
+      }
+    }
+
+    function syncLiveApp(meta, forceReload = false){
+      const targetSrc = meta.appSrc;
+      liveAppTitle.textContent = meta.appTitle;
+      liveAppMeta.textContent = meta.appMeta;
+      liveAppNewTab.href = targetSrc;
+      if(forceReload || !liveAppFrame.dataset.currentSrc || liveAppFrame.dataset.currentSrc !== targetSrc){
+        liveAppFrame.dataset.currentSrc = targetSrc;
+        panelBootToken += 1;
+        const token = panelBootToken;
+        liveAppFrame.onload = ()=>triggerFramePanel(meta, token, 0);
+        liveAppFrame.src = targetSrc;
+        return;
+      }
+      panelBootToken += 1;
+      triggerFramePanel(meta, panelBootToken, 0);
+    }
+
+    function getPanelRuntimeFeatures(panelKey){
+      if(!bootstrapData) return panelMeta[panelKey].features;
+      if(panelKey === "diary"){
+        const feeds = bootstrapData.diary?.recent_sessions || [];
+        const lobby = bootstrapData.diary?.lobby || [];
+        return [
+          ["Live sessions", `${lobby.length} latest lobby feeds are loaded into the sticky Diary Lobby.`],
+          ["Diary record history", feeds[0]?.entry_text || feeds[0]?.transcript || "No saved diary record yet."],
+          ["Latest tag / link", feeds[0]?.profile_tag || feeds[0]?.live_slug || "Waiting for a saved ^^ tag or live diary link."]
+        ];
+      }
+      if(panelKey === "studio"){
+        const recent = bootstrapData.studio?.recent_sessions || [];
+        const access = bootstrapData.studio?.access || {};
+        return [
+          ["Recording / motherboard", recent[0] ? `${recent[0].board_count} boards in the latest studio session.` : "No studio session saved yet."],
+          ["Premium Jake access", access.message || "Studio access is waiting."],
+          ["Last 3 sessions", recent.length ? recent.map((item)=>`${item.session_id} (${item.board_count} boards)`).join(" · ") : "No studio history yet."]
+        ];
+      }
+      if(panelKey === "settings"){
+        const settings = bootstrapData.settings || {};
+        return [
+          ["Account state", settings.account_email || "Guest mode is active."],
+          ["Saved map memory", settings.last_map_used || "No map memory saved yet."],
+          ["Connected routes", (settings.connected_routes || []).join(" · ") || "Routes will appear here."]
+        ];
+      }
+      if(panelKey === "map"){
+        const settings = bootstrapData.settings || {};
+        return [
+          ["Last map used", settings.last_map_used || "No remembered map yet."],
+          ["Trail routes", (settings.connected_routes || []).slice(0, 3).join(" · ") || "Route memory is waiting."],
+          ["Perks lane", "Keep general information, ads, and map switching attached to the same remembered route."]
+        ];
+      }
+      if(panelKey === "faq"){
+        return [
+          ["Developers Feed", "This lane is next: posting from FAQ Lounge still needs its dedicated API/post surface."],
+          ["Quick relaxed help", "The FAQ stage can already load, but the social/dev feed post workflow is not rebuilt yet."],
+          ["Trail support", "Use this sandbox to keep the reel feel while we wire the actual posting path."]
+        ];
+      }
+      if(panelKey === "profile"){
+        const profile = bootstrapData.profile || {};
+        const hair = profile.hair_analysis || {};
+        return [
+          ["Identity", profile.identity_confirmed || "Identity confirmation is waiting."],
+          ["Hair scan summary", `Texture: ${hair.texture || "waiting"} · Damage: ${hair.damage || "waiting"} · Color: ${hair.color || "waiting"}`],
+          ["Latest profile export", hair.created_at || "No saved profile export yet."]
+        ];
+      }
+      return panelMeta[panelKey].features;
+    }
+
+    function renderStickyLists(){
+      if(!bootstrapData) return;
+      const lobby = bootstrapData.diary?.lobby || [];
+      diaryLobbyList.innerHTML = (lobby.length ? lobby.slice(0, 3).map((feed)=>`<div class="mini-item"><strong>${feed.profile_tag || feed.display_name || feed.owner_email || "SupportRD feed"}</strong><span>${feed.preview_text || feed.owner_email || "Diary live session ready."}</span></div>`).join("") : `<div class="mini-item"><strong>Diary Lobby</strong><span>No diary feeds yet. Start a diary live session to populate this lobby.</span></div>`) + `<div class="mini-item"><strong>Search / Sort</strong><span>Name · Email · Tag ^^ · URL</span></div>`;
+      const settings = bootstrapData.settings || {};
+      const traffic = bootstrapData.traffic || {};
+      editsMenuList.innerHTML = `
+        <button class="menu-chip" type="button">Saved Tag: ${settings.saved_tag || "waiting"}</button>
+        <button class="menu-chip" type="button">Last Map: ${settings.last_map_used || "none"}</button>
+        <button class="menu-chip" type="button">${traffic.hot ? `Crowd Active: ${traffic.visitors} visitors` : "Crowd Watch: calm"}</button>
+      `;
+      const studio = bootstrapData.studio?.access || {};
+      paymentsMenuList.innerHTML = `
+        <button class="menu-chip" type="button">Plan: ${(bootstrapData.account?.subscription || "free").toUpperCase()}</button>
+        <button class="menu-chip" type="button">${studio.access ? "Studio Access Ready" : "Unlock Studio Access"}</button>
+      `;
+    }
+
+    function renderHelpingState(){
+      const traffic = bootstrapData?.traffic || {};
+      if(traffic.hot){
+        helpBanner.classList.add("active");
+        helpBannerText.textContent = `${traffic.visitors} visitors are active in the last ${traffic.window_minutes} minutes. SupportRD is steering people toward FAQ Lounge and Edits Menu for faster answers.`;
+      }else{
+        helpBanner.classList.remove("active");
+        helpBannerText.textContent = "When traffic rises, SupportRD points people toward FAQ Lounge and the Edits Menu so more visitors get answers fast.";
+      }
+    }
+
+    function renderOfferInbox(){
+      const offers = bootstrapData?.inbox?.offers || [];
+      const pending = offers.filter((offer)=>String(offer.status || "pending").toLowerCase() === "pending").length;
+      inboxMeta.textContent = pending
+        ? `${pending} offer${pending === 1 ? "" : "s"} waiting for manual confirmation before any outside system touches SupportRD. Coding help that routes tips, donations, or support back to SupportRD can auto-approve.`
+        : "Only coding-help offers that route tips, donations, or support back into SupportRD auto-approve. Rights, legal, and change requests stay manual.";
+      if(!offers.length){
+        offerInboxList.innerHTML = `<div class="inbox-item"><strong>No offers yet</strong><span>When websites, systems, computers, or organizations want in, they will be flagged here first.</span></div>`;
+        return;
+      }
+      offerInboxList.innerHTML = offers.slice(0, 4).map((offer)=>`
+        <div class="inbox-item">
+          <strong>${offer.offer_title || "Integration offer"} · ${(offer.status || "pending").toUpperCase()}</strong>
+          <span>${offer.source_name || "Unknown source"} · ${offer.source_type || "website"}${offer.offer_details ? ` · ${offer.offer_details}` : ""}</span>
+          <div class="inbox-actions">
+            ${offer.target_url ? `<a href="${offer.target_url}" target="_blank" rel="noreferrer">Open Source</a>` : ""}
+            <button type="button" data-offer-action="approved" data-offer-id="${offer.id}">Approve</button>
+            <button type="button" data-offer-action="rejected" data-offer-id="${offer.id}">Reject</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderConversionSummary(){
+      const conversions = bootstrapData?.conversions || {};
+      const top = (conversions.top_events || []).slice(0, 3).map((item)=>`${item.event_key} (${item.hits})`).join(" · ");
+      conversionMeta.textContent = `Conversion watch: ${conversions.total || 0} tracked actions in the last ${conversions.window_days || 7} days${top ? ` · top routes: ${top}` : "."}`;
+    }
+
+    function getGigSources(){
+      return bootstrapData?.corporate_viewer?.sources || [];
+    }
+
+    function renderGigViewerMeta(){
+      const corporate = bootstrapData?.corporate_viewer || {};
+      const events = corporate.events || [];
+      const advisors = corporate.advisors || [];
+      const builds = corporate.build_displays || [];
+      gigEventList.innerHTML = events.length
+        ? events.map((item)=>`<div class="gig-event-item"><strong>${item.title}</strong><span>${item.lane} · ${item.detail}</span></div>`).join("")
+        : `<div class="gig-event-item"><strong>Waiting for company events</strong><span>SupportRD, options market, and ThePlantManInc updates will stack here.</span></div>`;
+      gigAdvisorList.innerHTML = advisors.length
+        ? advisors.map((item)=>`<div class="gig-advisor-item"><strong>${item}</strong><span>Keep this reality lane visible while capitalizing and planning the corporation branch.</span></div>`).join("")
+        : `<div class="gig-advisor-item"><strong>Business lane</strong><span>Accountant, supply, transportation, and dropshipping planning will show here.</span></div>`;
+      if(builds.length){
+        gigBuildStrip.innerHTML = builds.map((item)=>`<article class="gig-build-card" style="--build-image:url('${item.image || "/static/images/aria-premium-pro-main-ad.jpg"}')"><div class="gig-build-copy"><div class="promo-chip">Build Display</div><strong>${item.title}</strong><span>${item.detail}</span><a class="buy-now" href="${item.link || "https://supportrd.com/"}" target="_blank" rel="noreferrer">Open</a></div></article>`).join("");
+      }
+    }
+
+    function renderGigSourceButtons(){
+      const sources = getGigSources();
+      gigConnectorSources.innerHTML = sources.map((source)=>`<button type="button" class="gig-source-btn ${source.key === activeGigSource ? "active" : ""}" data-gig-source="${source.key}">${source.label}</button>`).join("");
+    }
+
+    function getGigSourceByKey(key){
+      return getGigSources().find((item)=>item.key === key) || getGigSources()[0] || null;
+    }
+
+    function updateGigSourceUI(){
+      const source = getGigSourceByKey(activeGigSource);
+      if(!source) return;
+      gigConnectorSourceLink.href = source.url || "https://supportrd.com/";
+      gigConnectorSourceLink.textContent = `Open ${source.label}`;
+      renderGigSourceButtons();
+    }
+
+    function canEmbedGigSource(source){
+      if(!source?.url) return false;
+      if(/^http:\/\/127\.0\.0\.1:3000/i.test(source.url)){
+        return window.location.protocol !== "https:";
+      }
+      return true;
+    }
+
+    function launchGigConnector(sourceKey = activeGigSource){
+      const source = getGigSourceByKey(sourceKey);
+      if(!source) return;
+      activeGigSource = source.key;
+      updateGigSourceUI();
+      gigConnectorLoader.classList.add("active");
+      gigConnectorFallback.classList.remove("active");
+      gigConnectorLoaderText.textContent = `Loading ${source.label} through the gig connector method so the live corporate state can come up cleanly.`;
+      gigConnectorFrame.src = "about:blank";
+      window.setTimeout(()=>{
+        gigConnectorLoader.classList.remove("active");
+        if(!canEmbedGigSource(source)){
+          gigConnectorFallback.classList.add("active");
+          gigConnectorFallbackText.textContent = `${source.label} needs direct open here because localhost and secure browser rules do not always embed together. Use the open button and keep the live company events beside it.`;
+          return;
+        }
+        gigConnectorFallback.classList.remove("active");
+        gigConnectorFrame.src = source.url;
+      }, 1400);
+      logConversion(`gig-${source.key}`, "gig-connector", { source: source.key, url: source.url });
+    }
+
+    async function setOfferStatus(offerId, status){
+      try{
+        const response = await fetch(`/api/local-remote/inbox/offers/${offerId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ status })
+        });
+        const data = await response.json();
+        if(data?.ok){
+          bootstrapData = { ...(bootstrapData || {}), inbox: { offers: data.offers || [] } };
+          renderOfferInbox();
+        }
+      }catch{}
+    }
+
+    async function logConversion(eventKey, surface, detail = {}){
+      try{
+        const response = await fetch("/api/local-remote/conversions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            visitor_key: getVisitorKey(),
+            event_key: eventKey,
+            surface,
+            detail
+          })
+        });
+        const data = await response.json();
+        if(data?.ok && data.summary){
+          bootstrapData = { ...(bootstrapData || {}), conversions: data.summary };
+          renderConversionSummary();
+        }
+      }catch{}
+    }
+
+    function getPremiumPopupPlan(){
+      return String(bootstrapData?.account?.subscription || "free").toLowerCase();
+    }
+
+    function renderPremiumPopupCopy(){
+      const plan = getPremiumPopupPlan();
+      const premium = /(premium|pro|family|team|vip)/.test(plan);
+      if(premium){
+        premiumPopupEyebrow.textContent = "Fantasy Premium Hint";
+        premiumPopupTitle.textContent = "Keep the fantasy lane polished";
+        premiumPopupText.textContent = "Premium is active, so SupportRD only shows a lighter fantasy reminder every 15 minutes for upgrades, gifts, and team add-ons.";
+        premiumPopupBuy.textContent = "View Premium Extras";
+        premiumPopupBuy.href = "https://shop.supportrd.com/collections/all";
+        premiumPopupNote.textContent = "Ad cadence: fantasy reminder every 15 minutes for premium plans.";
+      }else{
+        premiumPopupEyebrow.textContent = "Premium Route";
+        premiumPopupTitle.textContent = "Upgrade to Premium";
+        premiumPopupText.textContent = "Get the polished SupportRD route with better studio access, premium hair support lanes, and faster identity help.";
+        premiumPopupBuy.textContent = "Buy Premium";
+        premiumPopupBuy.href = "https://shop.supportrd.com/collections/all";
+        premiumPopupNote.textContent = "Ad cadence: every 5 minutes for guests. Premium sees fantasy every 15 minutes.";
+      }
+      refreshBuyRoutes();
+    }
+
+    function openPremiumPopup(){
+      renderPremiumPopupCopy();
+      premiumPopup.classList.add("active");
+    }
+
+    function closePremiumPopup(){
+      premiumPopup.classList.remove("active");
+    }
+
+    function schedulePremiumPopup(){
+      if(premiumPopupTimer){
+        window.clearInterval(premiumPopupTimer);
+      }
+      const premium = /(premium|pro|family|team|vip)/.test(getPremiumPopupPlan());
+      const delay = premium ? 15 * 60 * 1000 : 5 * 60 * 1000;
+      premiumPopupTimer = window.setInterval(openPremiumPopup, delay);
+    }
+
+    function getVisitorKey(){
+      const keyName = "supportrdVisitorKey";
+      let key = window.localStorage.getItem(keyName);
+      if(!key){
+        key = `visitor-${Math.random().toString(36).slice(2, 10)}`;
+        window.localStorage.setItem(keyName, key);
+      }
+      return key;
+    }
+
+    function inferProviderLabel(user = {}){
+      const identities = Array.isArray(user.identities) ? user.identities : [];
+      const providerTokens = identities.map((item)=>String(item.provider || item.connection || "").toLowerCase());
+      providerTokens.push(String(user.sub || "").split("|")[0].toLowerCase());
+      for(const token of providerTokens){
+        if(token.includes("google")) return "google";
+        if(token.includes("windows") || token.includes("microsoft") || token.includes("live")) return "microsoft";
+      }
+      return "provider";
+    }
+
+    function buildMemberTag(seed){
+      const cleaned = String(seed || "")
+        .replace(/\^+/g, " ")
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const randomSuffix = Math.random().toString(36).slice(2, 8);
+      const prefix = cleaned ? cleaned.slice(0, 14).replace(/-+$/g, "") : "member";
+      return `^^${[prefix, randomSuffix].filter(Boolean).join("-").slice(0, 24)}`;
+    }
+
+    function readAttachedAccount(){
+      try{
+        return JSON.parse(window.localStorage.getItem(ATTACHED_ACCOUNT_KEY) || "null");
+      }catch{
+        return null;
+      }
+    }
+
+    function writeAttachedAccount(account){
+      if(!account) return;
+      window.localStorage.setItem(ATTACHED_ACCOUNT_KEY, JSON.stringify(account));
+    }
+
+      function clearAttachedAccount(){
+        window.localStorage.removeItem(ATTACHED_ACCOUNT_KEY);
+      }
+
+      function hydrateAttachedAccountState(){
+        const attached = readAttachedAccount();
+        if(!attached) return;
+        bootstrapData = bootstrapData || {};
+        bootstrapData.account = {
+          ...(bootstrapData.account || {}),
+          authenticated: attached.authenticated ?? bootstrapData.account?.authenticated ?? true,
+          email: attached.email || bootstrapData.account?.email || "",
+          display_name: attached.display_name || bootstrapData.account?.display_name || "",
+          subscription: attached.subscription || bootstrapData.account?.subscription || "free",
+          login_provider: attached.login_provider || bootstrapData.account?.login_provider || "",
+          login_confirmed: attached.login_confirmed ?? bootstrapData.account?.login_confirmed ?? true,
+        };
+        bootstrapData.settings = {
+          ...(bootstrapData.settings || {}),
+          account_email: attached.email || bootstrapData.settings?.account_email || "",
+          display_name: attached.display_name || bootstrapData.settings?.display_name || "",
+          membership_plan: attached.subscription || bootstrapData.settings?.membership_plan || "free",
+          login_provider: attached.login_provider || bootstrapData.settings?.login_provider || "",
+          login_confirmed: attached.login_confirmed ?? bootstrapData.settings?.login_confirmed ?? true,
+          saved_tag: attached.saved_tag || bootstrapData.settings?.saved_tag || buildMemberTag(attached.email || attached.display_name || "member"),
+        };
+        providerConfirmed = providerConfirmed || Boolean(attached.login_confirmed || attached.email);
+      }
+
+    function getPathRouteTag(){
+      const path = decodeURIComponent(window.location.pathname || "").trim();
+      if(path.startsWith("/^^")){
+        return path.slice(1);
+      }
+      return "";
+    }
+
+    function getExactCheckoutHref(planKey, fallbackHref){
+      const checkoutMap = shopifyConfig?.checkout_map || {};
+      const checkoutPath = checkoutMap?.[planKey]?.checkout_path || "";
+      return checkoutPath || fallbackHref;
+    }
+
+    function refreshBuyRoutes(){
+      const routeMap = [
+        [catalogStudioBuyLink, getExactCheckoutHref("pro", "https://shop.supportrd.com/products/jake-premium-studio")],
+        [catalogPremiumBuyLink, getExactCheckoutHref("premium", "https://shop.supportrd.com/collections/all")],
+        [catalogFamilyBuyLink, getExactCheckoutHref("family200", "https://shop.supportrd.com/collections/all")],
+        [sideStudioBuyLink, getExactCheckoutHref("pro", "https://shop.supportrd.com/products/jake-premium-studio")],
+        [sideProBuyLink, getExactCheckoutHref("pro", "https://shop.supportrd.com/collections/all")],
+        [premiumPopupBuy, /(premium|pro|family|team|vip)/.test(getPremiumPopupPlan())
+          ? getExactCheckoutHref("fantasy300", "https://shop.supportrd.com/collections/all")
+          : getExactCheckoutHref("premium", "https://shop.supportrd.com/collections/all")]
+      ];
+      routeMap.forEach(([node, href])=>{
+        if(node && href){
+          node.href = href;
+        }
+      });
+    }
+
+      function renderSignedInPackages(panelKey, savedTag){
+        const offers = modulePackageMap[panelKey] || [];
+        const ownedPlan = String(bootstrapData?.settings?.membership_plan || bootstrapData?.account?.subscription || "free").toLowerCase();
+      const ownsPackage = (packageKey)=>{
+        if(packageKey === "studio") return ["studio", "pro", "premium"].includes(ownedPlan);
+        if(packageKey === "premium") return ["premium", "pro"].includes(ownedPlan);
+        if(packageKey === "pro") return ownedPlan === "pro";
+        if(packageKey === "family200") return ownedPlan === "family200";
+        if(packageKey === "fantasy300") return ["fantasy300", "fantasy600"].includes(ownedPlan);
+        return ownedPlan === packageKey;
+      };
+      signedInPackages.innerHTML = offers.map((offer)=>{
+        const href = getExactCheckoutHref(
+          offer.key,
+          offer.key === "studio" ? "https://shop.supportrd.com/products/jake-premium-studio" : "https://shop.supportrd.com/collections/all"
+        );
+        return ownsPackage(offer.key)
+          ? `<a href="${href}" class="owned" target="_blank" rel="noreferrer">${offer.label} · Package Already Bought</a>`
+          : `<a href="${href}" target="_blank" rel="noreferrer">${offer.label}</a>`;
+      }).join("");
+      signedInRouteTitle.textContent = `SupportRD URL Tag ${savedTag}`;
+      signedInRouteText.textContent = `${window.location.origin}/${savedTag} · this random ^^ tag is connected to the account and the live SupportRD route. Every module page stays attached to the same logged-in account state.`;
+    }
+
+      async function syncAuthenticatedAccount(meData){
+        if(!meData?.authenticated || !meData?.user?.email) return;
+        const email = String(meData.user.email || "").trim().toLowerCase();
+      if(!email) return;
+      const provider = inferProviderLabel(meData.user);
+      const tag = bootstrapData?.settings?.saved_tag || buildMemberTag(meData.user.name || meData.user.nickname || email.split("@")[0]);
+      const data = await callJson("/api/local-remote/preferences", {
+        method: "POST",
+        body: JSON.stringify({
+          display_name: meData.user.name || bootstrapData?.settings?.display_name || meData.user.nickname || email.split("@")[0],
+          account_email: email,
+          account_username: meData.user.nickname || email.split("@")[0],
+          saved_tag: bootstrapData?.settings?.saved_tag || tag,
+          login_provider: provider,
+          login_confirmed: true,
+          membership_plan: meData.subscription || bootstrapData?.account?.subscription || "free",
+          voice_profile: bootstrapData?.settings?.voice_profile || "premium-voice",
+        }),
+      });
+        providerConfirmed = true;
+        window.localStorage.setItem("supportrdProviderConfirmed", "yes");
+        bootstrapData = {
+        ...(bootstrapData || {}),
+        account: {
+          ...(bootstrapData?.account || {}),
+          authenticated: true,
+          email,
+          display_name: meData.user.name || bootstrapData?.account?.display_name || "",
+          subscription: meData.subscription || bootstrapData?.account?.subscription || "free",
+          login_provider: provider,
+          login_confirmed: true,
+        },
+          settings: {
+            ...(bootstrapData?.settings || {}),
+            ...(data.preferences || {}),
+          }
+        };
+        writeAttachedAccount({
+          authenticated: true,
+          email,
+          display_name: meData.user.name || meData.user.nickname || email.split("@")[0],
+          subscription: meData.subscription || bootstrapData?.account?.subscription || "free",
+          login_provider: provider,
+          login_confirmed: true,
+          saved_tag: data.preferences?.saved_tag || bootstrapData?.settings?.saved_tag || tag,
+        });
+      }
+
+    async function pingTraffic(){
+      try{
+        const response = await fetch("/api/local-remote/traffic/ping", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            visitor_key: getVisitorKey(),
+            path: window.location.pathname
+          })
+        });
+        const data = await response.json();
+        if(data?.ok && data.traffic){
+          bootstrapData = { ...(bootstrapData || {}), traffic: data.traffic };
+          renderHelpingState();
+          renderStickyLists();
+        }
+      }catch{}
+    }
+
+      async function loadBootstrap(){
+        try{
+          const pathRouteTag = getPathRouteTag();
+        const [bootstrapResponse, meResponse, shopifyResponse] = await Promise.all([
+          fetch("/api/local-remote/bootstrap", { credentials: "same-origin" }),
+          fetch("/api/me", { credentials: "same-origin" }).catch(()=>null),
+          fetch("/api/shopify/public-config", { credentials: "same-origin" }).catch(()=>null)
+        ]);
+          const data = await bootstrapResponse.json();
+          if(!data?.ok) return;
+          bootstrapData = data;
+          hydrateAttachedAccountState();
+          if(pathRouteTag && !bootstrapData?.settings?.saved_tag){
+            bootstrapData.settings = { ...(bootstrapData.settings || {}), saved_tag: pathRouteTag };
+          }
+        const meData = meResponse ? await meResponse.json().catch(()=>({ authenticated:false })) : { authenticated:false };
+        shopifyConfig = shopifyResponse ? await shopifyResponse.json().catch(()=>null) : null;
+        await syncAuthenticatedAccount(meData).catch(()=>{});
+        currentDiarySessionId = data.diary?.recent_sessions?.[0]?.session_id || currentDiarySessionId;
+        currentStudioSessionId = data.studio?.recent_sessions?.[0]?.session_id || currentStudioSessionId;
+        loginEmail.value = bootstrapData?.settings?.account_email || bootstrapData?.account?.email || "";
+          providerConfirmed = window.localStorage.getItem("supportrdProviderConfirmed") === "yes" || Boolean(data?.settings?.login_confirmed || data?.account?.login_confirmed);
+          hydrateAttachedAccountState();
+          renderLoginPanel();
+        renderStickyLists();
+        renderHelpingState();
+        renderOfferInbox();
+        renderConversionSummary();
+        renderGigViewerMeta();
+        updateGigSourceUI();
+        renderPremiumPopupCopy();
+        refreshBuyRoutes();
+        schedulePremiumPopup();
+        renderPanel(activePanel);
+      }catch{}
+    }
+
+      function renderLoginPanel(message = ""){
+        hydrateAttachedAccountState();
+        const settings = bootstrapData?.settings || {};
+        const account = bootstrapData?.account || {};
+        const loginProvider = settings.login_provider || account.login_provider || "";
+        const membershipPlan = (settings.membership_plan || account.subscription || "free").toUpperCase();
+        const savedTag = settings.saved_tag || getPathRouteTag() || "^^ waiting";
+        const savedPassword = Boolean(loginPassword.value.trim() || settings.password_set);
+        const signedIn = providerConfirmed || settings.login_confirmed || account.login_confirmed || Boolean(savedTag && savedTag.startsWith("^^") && (settings.account_email || account.email || loginEmail.value));
+        providerConfirmed = providerConfirmed || Boolean(settings.login_confirmed || account.login_confirmed);
+        const sourceLabel = providerConfirmed || settings.login_confirmed ? (loginProvider || "provider confirmed") : "manual email login";
+        const confirmedEmail = loginEmail.value || settings.account_email || account.email || "guest@supportrd.com";
+        loginShell.hidden = signedIn;
+        signedInCard.hidden = !signedIn;
+        signedInSummary.textContent = `Logged in. Confirmed ${savedTag} · ${confirmedEmail} · ${sourceLabel || "email/password"} · ${membershipPlan}`;
+        renderSignedInPackages(activePanel, savedTag);
+        pageAuthTitle.textContent = signedIn ? `Logged in. Confirmed ${savedTag}` : "Guest Route";
+      pageAuthText.textContent = signedIn
+        ? `URL TAG ${savedTag} · ${confirmedEmail} · ${membershipPlan} access attached to ${panelMeta[activePanel]?.title || "SupportRD"} with the package lane visible and ready.`
+        : "Login confirmed state and ^^ URL tag will stay attached to every module route.";
+      const urlState = new URLSearchParams(window.location.search);
+      const loginBoost = urlState.get("login") === "confirmed";
+      loginStatusBox.textContent = message || `Account route: ${confirmedEmail} · ${sourceLabel}. ${signedIn ? `SupportRD account access is attached with ${savedTag}.${loginBoost ? " Provider login just completed." : ""}` : "Use provider confirm or save email/password."}`;
+    }
+
+      async function saveLoginPanel(options = {}){
+        const email = (loginEmail.value || bootstrapData?.settings?.account_email || bootstrapData?.account?.email || "guest@supportrd.com").trim();
+      const password = loginPassword.value.trim();
+      if(!email){
+        renderLoginPanel("Add an email first so the sticky login panel has an account owner.");
+        return;
+      }
+      const data = await callJson("/api/local-remote/preferences", {
+        method: "POST",
+        body: JSON.stringify({
+          display_name: bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || "SupportRD Member",
+          account_email: email,
+          account_username: email.split("@")[0],
+          password_plain: password,
+          voice_profile: bootstrapData?.settings?.voice_profile || "coral / onyx premium",
+          saved_tag: bootstrapData?.settings?.saved_tag || buildMemberTag(email.split("@")[0]),
+          login_provider: options.providerConfirmed ? "provider" : "email/password",
+          login_confirmed: true,
+          membership_plan: bootstrapData?.account?.subscription || bootstrapData?.settings?.membership_plan || "free",
+        }),
+      });
+        bootstrapData = { ...(bootstrapData || {}), settings: { ...(bootstrapData?.settings || {}), ...(data.preferences || {}) } };
+        bootstrapData.account = {
+          ...(bootstrapData?.account || {}),
+          email,
+          authenticated: true,
+          login_confirmed: true,
+          login_provider: options.providerConfirmed ? "provider" : "email/password",
+          subscription: bootstrapData?.account?.subscription || bootstrapData?.settings?.membership_plan || "free",
+        };
+        if(options.providerConfirmed){
+          providerConfirmed = true;
+          window.localStorage.setItem("supportrdProviderConfirmed", "yes");
+        }
+        writeAttachedAccount({
+          authenticated: true,
+          email,
+          display_name: bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || email.split("@")[0],
+          subscription: bootstrapData?.account?.subscription || bootstrapData?.settings?.membership_plan || "free",
+          login_provider: options.providerConfirmed ? "provider" : "email/password",
+          login_confirmed: true,
+          saved_tag: data.preferences?.saved_tag || bootstrapData?.settings?.saved_tag || buildMemberTag(email.split("@")[0]),
+        });
+        if(password){
+          loginPassword.value = password;
+        }
+      renderLoginPanel(options.providerConfirmed ? "Provider login confirmed and attached to the shell." : "Email/password login saved into the attached SupportRD account panel.");
+    }
+
+    function showModuleAccessOverlay(panelKey){
+      const meta = panelMeta[panelKey];
+      const settings = bootstrapData?.settings || {};
+      const account = bootstrapData?.account || {};
+      const savedTag = settings.saved_tag || "^^ waiting";
+      const email = settings.account_email || account.email || "guest@supportrd.com";
+      const plan = (settings.membership_plan || account.subscription || "free").toUpperCase();
+      const provider = settings.login_provider || account.login_provider || (providerConfirmed ? "provider" : "email/password");
+      moduleAccessEyebrow.textContent = `${meta.title} Access`;
+      moduleAccessTitle.textContent = `You have now gained access to ${meta.title}`;
+      moduleAccessMeta.innerHTML = `
+        <span class="module-access-chip">Logged in. Confirmed ${savedTag}</span>
+        <span class="module-access-chip">${plan} route</span>
+        <span class="module-access-chip">${provider}</span>
+      `;
+      moduleAccessText.textContent = `${email} is attached to ${meta.title}. Premium / Pro features, account access, and the live module route are loading as a real SupportRD page takeover.`;
+      moduleAccessOverlay.classList.add("active");
+      if(moduleAccessTimer) window.clearTimeout(moduleAccessTimer);
+      moduleAccessTimer = window.setTimeout(()=>moduleAccessOverlay.classList.remove("active"), 1650);
+    }
+
+    function updateMiniRemoteVisibility(){
+      if(window.scrollY > 260){
+        miniRemotePopup.classList.add("active");
+      }else{
+        miniRemotePopup.classList.remove("active");
+      }
+    }
+
+    function setActionStatus(message){
+      apiActionStatus.textContent = message;
+    }
+
+    function setActionResult(value){
+      apiResultBody.value = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    }
+
+    function renderFeedItems(items, formatter){
+      apiActionFeed.innerHTML = (items || []).length
+        ? items.map(formatter).join("")
+        : `<div class="mini-item"><strong>Waiting</strong><span>No API items yet for this panel.</span></div>`;
+    }
+
+    async function callJson(url, options = {}){
+      const response = await fetch(url, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+      const data = await response.json().catch(()=>({ ok: false, error: "invalid_json" }));
+      if(!response.ok || data?.ok === false){
+        throw new Error(data?.error || `request_failed_${response.status}`);
+      }
+      return data;
+    }
+
+    function withStudioSandbox(url){
+      if(activePanel !== "studio") return url;
+      return url.includes("?") ? `${url}&localSandbox=1` : `${url}?localSandbox=1`;
+    }
+
+    async function exportProfileFile(format){
+      const payload = {
+        display_name: bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || "SupportRD Host",
+        texture: apiFieldOne.value || bootstrapData?.profile?.hair_analysis?.texture || "waiting",
+        damage: apiFieldTwo.value || bootstrapData?.profile?.hair_analysis?.damage || "waiting",
+        color: bootstrapData?.profile?.hair_analysis?.color || "waiting",
+        hair_type: bootstrapData?.profile?.hair_analysis?.hair_type || "waiting",
+        summary_text: apiFieldBody.value || bootstrapData?.profile?.hair_analysis?.summary || "No summary yet.",
+        format,
+      };
+      const response = await fetch("/api/profile/analysis/export", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if(!response.ok) throw new Error(`export_failed_${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = format === "pdf" ? "supportrd-profile.pdf" : "supportrd-profile.docx";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    const panelActions = {
+      diary: {
+        title: "Diary API controls",
+        meta: "Start or save a diary session, toggle live mode, and pull diary history directly from the real diary APIs.",
+        fieldOne: { placeholder: "^^ diary tag", value: ()=>bootstrapData?.settings?.saved_tag || "" },
+        fieldTwo: { placeholder: "Live mode: on or off", value: ()=>bootstrapData?.diary?.recent_sessions?.[0]?.live_active ? "on" : "off" },
+        body: { placeholder: "Diary entry / transcript text", value: ()=>bootstrapData?.diary?.recent_sessions?.[0]?.entry_text || bootstrapData?.diary?.recent_sessions?.[0]?.transcript || "" },
+        actions: [
+          {
+            label: "Bootstrap Diary",
+            run: async ()=>{
+              const data = await callJson("/api/diary/session/bootstrap", {
+                method: "POST",
+                body: JSON.stringify({
+                  session_id: currentDiarySessionId,
+                  profile_tag: apiFieldOne.value,
+                  live_active: apiFieldTwo.value.toLowerCase().includes("on"),
+                  entry_text: apiFieldBody.value,
+                }),
+              });
+              currentDiarySessionId = data.session_id;
+              setActionResult(data);
+              setActionStatus(`Diary session ${data.session_id} bootstrapped.`);
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Save Diary Record",
+            run: async ()=>{
+              if(!currentDiarySessionId) throw new Error("bootstrap_diary_first");
+              const data = await callJson("/api/diary/session/save", {
+                method: "POST",
+                body: JSON.stringify({
+                  session_id: currentDiarySessionId,
+                  profile_tag: apiFieldOne.value,
+                  live_active: apiFieldTwo.value.toLowerCase().includes("on"),
+                  entry_text: apiFieldBody.value,
+                  transcript: apiFieldBody.value,
+                }),
+              });
+              setActionResult(data);
+              setActionStatus("Diary record saved.");
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Load Diary Feed",
+            run: async ()=>{
+              if(!currentDiarySessionId) throw new Error("bootstrap_diary_first");
+              const data = await callJson(`/api/diary/session/feed?session_id=${encodeURIComponent(currentDiarySessionId)}`);
+              setActionResult(data);
+              renderFeedItems(data.comments || [], (item)=>`<div class="mini-item"><strong>${item.author_name || "Guest"}</strong><span>${item.comment_text || item.comment_kind || "Diary comment"}</span></div>`);
+              setActionStatus("Diary feed loaded.");
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems(bootstrapData?.diary?.recent_sessions || [], (item)=>`<div class="mini-item"><strong>${item.profile_tag || item.session_id}</strong><span>${item.entry_text || item.transcript || "Diary history waiting."}</span></div>`),
+      },
+      studio: {
+        title: "Studio API controls",
+        meta: "Bootstrap studio sessions, commit a motherboard piece, apply FX, and inspect the last 3 studio sessions through the real studio APIs.",
+        fieldOne: { placeholder: "Board name", value: ()=>"Motherboard Alpha" },
+        fieldTwo: { placeholder: "Board type: audio / video / recording", value: ()=>"audio" },
+        body: { placeholder: "FX notes / session notes", value: ()=>"Panoramic sway + clean zoom profile." },
+        actions: [
+          {
+            label: "Bootstrap Studio",
+            run: async ()=>{
+              const data = await callJson(withStudioSandbox("/api/studio/session/bootstrap"), {
+                method: "POST",
+                body: JSON.stringify({ session_id: currentStudioSessionId || "", route: "studio" }),
+              });
+              currentStudioSessionId = data.session_id;
+              setActionResult(data);
+              setActionStatus(`Studio session ${data.session_id} bootstrapped.`);
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Commit Motherboard",
+            run: async ()=>{
+              if(!currentStudioSessionId) throw new Error("bootstrap_studio_first");
+              const data = await callJson(withStudioSandbox("/api/studio/board/commit"), {
+                method: "POST",
+                body: JSON.stringify({
+                  session_id: currentStudioSessionId,
+                  board_index: 0,
+                  action_type: "commit",
+                  board: {
+                    name: apiFieldOne.value || "Motherboard Alpha",
+                    kind: apiFieldTwo.value || "audio",
+                    fileName: `${(apiFieldOne.value || "motherboard-alpha").toLowerCase().replace(/\\s+/g, "-")}.${(apiFieldTwo.value || "audio").includes("video") ? "mp4" : "mp3"}`,
+                    trimStart: 0,
+                    trimEnd: 100,
+                    fxPreset: "clean",
+                  },
+                }),
+              });
+              setActionResult(data);
+              setActionStatus("Motherboard piece committed.");
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Apply FX + History",
+            run: async ()=>{
+              if(!currentStudioSessionId) throw new Error("bootstrap_studio_first");
+              await callJson(withStudioSandbox("/api/studio/fx/apply"), {
+                method: "POST",
+                body: JSON.stringify({
+                  session_id: currentStudioSessionId,
+                  board_index: 0,
+                  fxPreset: "panoramic",
+                  gigFilter: "sway",
+                  gigZoom: "1.2x",
+                  fxAppliedRange: apiFieldBody.value || "whole-board",
+                }),
+              });
+              const history = await callJson(withStudioSandbox(`/api/studio/session/history?session_id=${encodeURIComponent(currentStudioSessionId)}`));
+              setActionResult(history);
+              renderFeedItems(history.history || [], (item)=>`<div class="mini-item"><strong>${item.action_type}</strong><span>${JSON.stringify(item.payload || {})}</span></div>`);
+              setActionStatus("Studio FX applied and history loaded.");
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems(bootstrapData?.studio?.recent_sessions || [], (item)=>`<div class="mini-item"><strong>${item.session_id}</strong><span>${item.board_count} boards · ${item.has_audio ? "audio" : "no audio"} · ${item.has_video ? "video" : "no video"}</span></div>`),
+      },
+      settings: {
+        title: "Settings API controls",
+        meta: "Save actual account-facing preferences like display name, voice profile, saved tag, and push notification state.",
+        fieldOne: { placeholder: "Display name", value: ()=>bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || "" },
+        fieldTwo: { placeholder: "Voice profile / push: shimmer / enabled", value: ()=>`${bootstrapData?.settings?.voice_profile || "shimmer"} / ${bootstrapData?.settings?.push_notifications || "browser-driven"}` },
+        body: { placeholder: "Saved tag or settings note", value: ()=>bootstrapData?.settings?.saved_tag || "" },
+        actions: [
+          {
+            label: "Save Settings",
+            run: async ()=>{
+              const [voiceProfile, pushState] = (apiFieldTwo.value || "").split("/").map((part)=>part.trim());
+              const data = await callJson("/api/local-remote/preferences", {
+                method: "POST",
+                body: JSON.stringify({
+                  display_name: apiFieldOne.value,
+                  saved_tag: apiFieldBody.value,
+                  voice_profile: voiceProfile || "shimmer",
+                  push_notifications: /on|enabled|true/i.test(pushState || ""),
+                }),
+              });
+              setActionResult(data);
+              setActionStatus("Settings saved into local remote preferences.");
+              await loadBootstrap();
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems([{ title: "Settings", body: `${bootstrapData?.settings?.display_name || "Guest"} · ${bootstrapData?.settings?.push_notifications || "browser-driven"}` }], (item)=>`<div class="mini-item"><strong>${item.title}</strong><span>${item.body}</span></div>`),
+      },
+      map: {
+        title: "Map API controls",
+        meta: "Remember the last map used and tie the map lane back into real account-facing preferences.",
+        fieldOne: { placeholder: "Map key", value: ()=>bootstrapData?.settings?.last_map_used || "aurora" },
+        fieldTwo: { placeholder: "Saved tag", value: ()=>bootstrapData?.settings?.saved_tag || "" },
+        body: { placeholder: "Map note", value: ()=>"Remember this route for the next visit." },
+        actions: [
+          {
+            label: "Remember Map",
+            run: async ()=>{
+              const data = await callJson("/api/local-remote/preferences", {
+                method: "POST",
+                body: JSON.stringify({
+                  last_map_used: apiFieldOne.value,
+                  saved_tag: apiFieldTwo.value,
+                }),
+              });
+              setActionResult(data);
+              setActionStatus(`Map ${apiFieldOne.value || "route"} saved to account preferences.`);
+              await loadBootstrap();
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems([{ title: "Last map used", body: bootstrapData?.settings?.last_map_used || "none" }], (item)=>`<div class="mini-item"><strong>${item.title}</strong><span>${item.body}</span></div>`),
+      },
+      faq: {
+        title: "FAQ Lounge API controls",
+        meta: "Post to the Developers Feed from FAQ Lounge and load the latest social-world posts from the backend.",
+        fieldOne: { placeholder: "Display name", value: ()=>bootstrapData?.settings?.display_name || bootstrapData?.account?.display_name || "SupportRD Guest" },
+        fieldTwo: { placeholder: "Feed lane", value: ()=>"Developers Feed" },
+        body: { placeholder: "Post to Developers Feed", value: ()=>"" },
+        actions: [
+          {
+            label: "Post To Developers Feed",
+            run: async ()=>{
+              const data = await callJson("/api/local-remote/faq/posts", {
+                method: "POST",
+                body: JSON.stringify({
+                  display_name: apiFieldOne.value,
+                  message: apiFieldBody.value,
+                }),
+              });
+              setActionResult(data);
+              renderFeedItems(data.posts || [], (item)=>`<div class="mini-item"><strong>${item.display_name}</strong><span>${item.message}</span></div>`);
+              setActionStatus("Developers Feed updated.");
+              await loadBootstrap();
+            },
+          },
+          {
+            label: "Load Developers Feed",
+            run: async ()=>{
+              const data = await callJson("/api/local-remote/faq/posts");
+              setActionResult(data);
+              renderFeedItems(data.posts || [], (item)=>`<div class="mini-item"><strong>${item.display_name}</strong><span>${item.message}</span></div>`);
+              setActionStatus("Developers Feed loaded.");
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems(bootstrapData?.faq?.developer_posts || [], (item)=>`<div class="mini-item"><strong>${item.display_name}</strong><span>${item.message}</span></div>`),
+      },
+      profile: {
+        title: "Profile API controls",
+        meta: "Refresh identity + hair scan reads and export PDF/DOCX records directly from the profile APIs.",
+        fieldOne: { placeholder: "Texture", value: ()=>bootstrapData?.profile?.hair_analysis?.texture || "" },
+        fieldTwo: { placeholder: "Damage", value: ()=>bootstrapData?.profile?.hair_analysis?.damage || "" },
+        body: { placeholder: "Profile summary", value: ()=>bootstrapData?.profile?.hair_analysis?.summary || "" },
+        actions: [
+          {
+            label: "Refresh Profile Scanner",
+            run: async ()=>{
+              const query = new URLSearchParams({
+                hair_texture: apiFieldOne.value,
+                hair_damage: apiFieldTwo.value,
+              });
+              const data = await callJson(`/api/profile/access-scanner?${query.toString()}`);
+              bootstrapData = { ...bootstrapData, profile: { ...data, hair_analysis: { ...data.hair_analysis, summary: data.hair_analysis?.latest_summary || bootstrapData?.profile?.hair_analysis?.summary || "" } } };
+              setActionResult(data);
+              setActionStatus("Profile scanner refreshed.");
+              renderPanel("profile");
+            },
+          },
+          {
+            label: "Export PDF",
+            run: async ()=>{
+              await exportProfileFile("pdf");
+              setActionStatus("Profile PDF export downloaded.");
+            },
+          },
+          {
+            label: "Export DOCX",
+            run: async ()=>{
+              await exportProfileFile("docx");
+              setActionStatus("Profile DOCX export downloaded.");
+            },
+          }
+        ],
+        feed: ()=>renderFeedItems([{ title: "Profile scan", body: bootstrapData?.profile?.general_status || "Profile scanner waiting." }], (item)=>`<div class="mini-item"><strong>${item.title}</strong><span>${item.body}</span></div>`),
+      }
+    };
+
+    function renderActionBoard(panelKey){
+      const config = panelActions[panelKey];
+      if(!config) return;
+      apiActionTitle.textContent = config.title;
+      apiActionMeta.textContent = config.meta;
+      apiFieldOne.placeholder = config.fieldOne.placeholder;
+      apiFieldTwo.placeholder = config.fieldTwo.placeholder;
+      apiFieldBody.placeholder = config.body.placeholder;
+      apiFieldOne.value = config.fieldOne.value();
+      apiFieldTwo.value = config.fieldTwo.value();
+      apiFieldBody.value = config.body.value();
+      apiActionButtons.innerHTML = "";
+      config.actions.forEach((action)=>{
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = action.label;
+        button.addEventListener("click", async ()=>{
+          try{
+            setActionStatus(`${action.label} is running...`);
+            await action.run();
+            config.feed();
+          }catch(error){
+            setActionStatus(`Error: ${error.message}`);
+            setActionResult({ ok: false, error: error.message });
+          }
+        });
+        apiActionButtons.appendChild(button);
+      });
+      config.feed();
+    }
+
+    function renderPanel(panelKey, forceReload = false){
+      activePanel = panelKey;
+      const meta = panelMeta[panelKey];
+      buttonGrid.querySelectorAll(".shell-btn").forEach((button)=>button.classList.toggle("active", button.dataset.panel === panelKey));
+      renderLoginPanel();
+      panelEyebrow.textContent = meta.eyebrow;
+      panelTitle.textContent = meta.title;
+      panelBody.textContent = meta.body;
+      activePanelName.textContent = meta.title;
+      panelFeatures.innerHTML = getPanelRuntimeFeatures(panelKey).map(([title, copy])=>`<div class="feature-item"><strong>${title}</strong><span>${copy}</span></div>`).join("");
+      renderActionBoard(panelKey);
+      syncLiveApp(meta, forceReload);
+      roamAssistants(true);
+      showModuleAccessOverlay(panelKey);
+    }
+
+    buttonGrid.addEventListener("click", (event)=>{
+      const button = event.target.closest(".shell-btn");
+      if(!button) return;
+      renderPanel(button.dataset.panel);
+      logConversion(`panel-${button.dataset.panel}`, "button-grid", { panel: button.dataset.panel });
+    });
+
+    liveAppOpenBtn.addEventListener("click", ()=>renderPanel(activePanel, true));
+    openLiveModuleBtn.addEventListener("click", ()=>renderPanel(activePanel, true));
+    reloadLiveModuleBtn.addEventListener("click", ()=>liveAppFrame.contentWindow?.location.reload());
+
+    function cueTone(type){
+      try{
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        const ctx = new Ctx();
+        const gain = ctx.createGain();
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        const notes = type === "close" ? [[640,0,.08],[520,.1,.08]] : [[520,0,.08],[760,.09,.12]];
+        notes.forEach(([freq, offset, dur])=>{
+          const osc = ctx.createOscillator();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + offset);
+          osc.connect(gain);
+          osc.start(ctx.currentTime + offset);
+          osc.stop(ctx.currentTime + offset + dur);
+        });
+        gain.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+        setTimeout(()=>ctx.close().catch(()=>{}), 700);
+      }catch{}
+    }
+
+    const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+    function pickPreferredVoice(kind = "aria"){
+      if(!("speechSynthesis" in window)) return null;
+      const voices = window.speechSynthesis.getVoices() || [];
+      const ariaPreferred = ["ava", "samantha", "zira", "susan", "serena", "nova", "female", "aria"];
+      const jakePreferred = ["david", "guy", "daniel", "matthew", "mark", "male", "onyx", "jake"];
+      const preferred = kind === "Jake" ? jakePreferred : ariaPreferred;
+      for(const hint of preferred){
+        const match = voices.find((voice)=>`${voice.name} ${voice.voiceURI}`.toLowerCase().includes(hint));
+        if(match) return match;
+      }
+      return voices[0] || null;
+    }
+
+    function speakLine(text, options = {}){
+      if(!("speechSynthesis" in window)) return Promise.resolve();
+      window.speechSynthesis.cancel();
+      return new Promise((resolve)=>{
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = options.rate || 1.02;
+        utterance.pitch = options.pitch || 1;
+        utterance.volume = 1;
+        utterance.onend = ()=>resolve();
+        utterance.onerror = ()=>resolve();
+        const match = pickPreferredVoice(options.kind || "aria");
+        if(match) utterance.voice = match;
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+
+    async function unlockPremiumVoice(){
+      if(!unlockedAudioContext){
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(Ctx){
+          unlockedAudioContext = new Ctx();
+        }
+      }
+      if(unlockedAudioContext && unlockedAudioContext.state === "suspended"){
+        try{ await unlockedAudioContext.resume(); }catch{}
+      }
+      if(!premiumVoicePlayer){
+        premiumVoicePlayer = document.createElement("audio");
+        premiumVoicePlayer.preload = "auto";
+        premiumVoicePlayer.playsInline = true;
+        premiumVoicePlayer.style.display = "none";
+        document.body.appendChild(premiumVoicePlayer);
+      }
+    }
+
+    async function primeVoiceMic(){
+      if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      window.setTimeout(()=>{
+        stream.getTracks().forEach((track)=>track.stop());
+      }, 160);
+    }
+
+    async function speakPremiumLine(text, who){
+      try{
+        await unlockPremiumVoice();
+        const response = await fetch("/api/aria/speech", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text,
+            voice_preference: who === "Jake" ? "onyx" : "coral",
+            assistant_id: who === "Jake" ? "projake" : "aria",
+            membership_tier: "premium",
+            same_feel_voice: true,
+            thought_style: who === "Jake" ? "grounded, smooth, premium studio guide with natural pauses and human warmth" : "warm, polished, premium siri-like beauty-tech guide with human cadence and natural warmth"
+          })
+        });
+        if(!response.ok) throw new Error(`speech_failed_${response.status}`);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const played = await new Promise((resolve)=>{
+          let started = false;
+          const audio = premiumVoicePlayer || new Audio();
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = url;
+          audio.load();
+          audio.onplay = ()=>{ started = true; };
+          audio.onended = ()=>{ URL.revokeObjectURL(url); resolve(started); };
+          audio.onerror = ()=>{ URL.revokeObjectURL(url); resolve(false); };
+          audio.play().catch(()=>resolve(false));
+        });
+        return played;
+      }catch{
+        return false;
+      }
+    }
+
+    function getDiaryVoiceHistory(){
+      try{
+        return JSON.parse(window.localStorage.getItem("supportrdDiaryVoiceHistory") || "[]");
+      }catch{
+        return [];
+      }
+    }
+
+    function saveDiaryVoiceHistory(entry){
+      const history = getDiaryVoiceHistory();
+      history.unshift({ ...entry, created_at: new Date().toISOString() });
+      window.localStorage.setItem("supportrdDiaryVoiceHistory", JSON.stringify(history.slice(0, 12)));
+    }
+
+    function buildHairSupportResponse(who, transcript){
+      const heard = (transcript || "").toLowerCase();
+      const productLane = /(dry|dryness|moisture|frizz|soft|hydration)/.test(heard)
+        ? "For dryness and frizz, I would start with a moisture shampoo, a repair mask, and a light sealant so the hair stays soft without getting heavy."
+        : /(break|breakage|damage|split|weak|brittle)/.test(heard)
+          ? "That sounds like a repair lane. I would move you toward a strengthening cleanser, bond support, and a low-heat styling plan so the breakage stops stacking up."
+          : /(color|blonde|bleach|brass|tone|toner)/.test(heard)
+            ? "For color-treated hair, I would protect the tone first, then add hydration and a color-safe mask so the shade stays clean without drying the hair out."
+            : /(growth|thin|thinning|edges|edge|alopecia|shed)/.test(heard)
+              ? "For thinning or growth pressure, I would slow down tension, support the scalp, and build a simple care routine before we start adding more products."
+              : "I can guide the right SupportRD product lane once you tell me whether the pressure is dryness, damage, color, growth, or styling.";
+
+      if(/family|kids|daughter|son|mother|mom|father|dad|husband|wife/.test(heard)){
+        return `${who === "Jake" ? "Jake" : "Aria"} is taking this into Inner Circle. ${productLane} I am also marking this as a family care lane so the history stays personal and easier to continue later.`;
+      }
+      if(/money|package|deal|special treatment|premium|professional|business|sell|income/.test(heard)){
+        return `${who === "Jake" ? "Jake" : "Aria"} is moving this into Professional. ${productLane} From there I can also connect the package, payment, or special-treatment lane without losing the hair goal.`;
+      }
+      if(/price|payment|pay|cost|subscription|account|login|email|password/.test(heard)){
+        return `${productLane} I can also walk you through the account and payment lane if you want pricing, subscription details, or help unlocking the next SupportRD feature.`;
+      }
+      if(/advanced|detail|ingredients|how|why|explain/.test(heard)){
+        return `${who === "Jake" ? "Jake" : "Aria"} is opening Advanced mode. ${productLane} If you want, keep talking and I will break down the product use, order, and why it fits this hair condition.`;
+      }
+      return `${productLane} Keep going if you want the advanced lane, the family lane, or the professional package lane next.`;
+    }
+
+    function listenForHairPrompt(who){
+      if(!SpeechRecognitionApi){
+        return Promise.resolve({ transcript: "", heard: false, error: "speech_recognition_unavailable" });
+      }
+      return new Promise((resolve)=>{
+        let settled = false;
+        let finalTranscript = "";
+        const recognition = new SpeechRecognitionApi();
+        recognition.lang = "en-US";
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+        recognition.continuous = true;
+        const finish = (payload)=>{
+          if(settled) return;
+          settled = true;
+          try{ recognition.stop(); }catch{}
+          resolve(payload);
+        };
+        let silenceTimer = null;
+        const armSilenceTimer = ()=>{
+          clearTimeout(silenceTimer);
+          silenceTimer = setTimeout(()=>{
+            finish({ transcript: finalTranscript.trim(), heard: Boolean(finalTranscript.trim()) });
+          }, 2000);
+        };
+        recognition.onstart = ()=>{
+          voiceConsoleTitle.textContent = `${who} listening`;
+          voiceConsoleText.textContent = "Mic is open. You have a moment to speak, then I will wait for 2 seconds of silence before responding.";
+          voiceBubbleText.textContent = "Listening now. Speak your hair question, then pause for 2 seconds when you are done.";
+        };
+        recognition.onresult = (event)=>{
+          let interim = "";
+          for(let i = event.resultIndex; i < event.results.length; i += 1){
+            const piece = event.results[i][0]?.transcript || "";
+            if(event.results[i].isFinal){
+              finalTranscript = `${finalTranscript} ${piece}`.trim();
+            }else{
+              interim = `${interim} ${piece}`.trim();
+            }
+          }
+          const liveTranscript = [finalTranscript, interim].filter(Boolean).join(" ").trim();
+          if(liveTranscript){
+            voiceConsoleText.textContent = liveTranscript;
+            voiceBubbleText.textContent = `Listening: ${liveTranscript}`;
+            armSilenceTimer();
+          }
+        };
+        recognition.onerror = (event)=>{
+          finish({ transcript: finalTranscript.trim(), heard: Boolean(finalTranscript.trim()), error: event.error || "recognition_error" });
+        };
+        recognition.onend = ()=>{
+          if(!settled){
+            finish({ transcript: finalTranscript.trim(), heard: Boolean(finalTranscript.trim()) });
+          }
+        };
+        try{
+          recognition.start();
+          setTimeout(()=>{
+            if(!settled && !finalTranscript.trim()){
+              finish({ transcript: "", heard: false, error: "no_speech_timeout" });
+            }
+          }, 10000);
+        }catch(error){
+          finish({ transcript: "", heard: false, error: error.message || "recognition_start_failed" });
+        }
+      });
+    }
+
+    async function runVoiceSequence(who){
+      await unlockPremiumVoice();
+      cueTone("intro");
+      voiceBubbleTitle.textContent = `${who} Website Voice`;
+      voiceConsoleTitle.textContent = `${who} mic open`;
+      voiceConsoleText.textContent = "Intro cue sent. Opening the mic and giving you a moment before listening starts.";
+      voiceBubbleText.textContent = "Mic opening now. You have a quick moment to start speaking.";
+      voiceBubble.classList.add("active");
+      try{
+        await primeVoiceMic();
+      }catch{}
+      await new Promise((resolve)=>setTimeout(resolve, 850));
+      const heard = await listenForHairPrompt(who);
+      voiceConsoleTitle.textContent = `${who} transcribing`;
+      voiceConsoleText.textContent = heard.heard ? `Transcribing: ${heard.transcript}` : "No clear speech captured. Preparing a fallback response.";
+      voiceBubbleText.textContent = heard.heard ? `Transcribing: ${heard.transcript}` : "I did not catch that clearly, so I am preparing a fallback hair response.";
+      await new Promise((resolve)=>setTimeout(resolve, 700));
+      const response = heard.heard
+        ? buildHairSupportResponse(who, heard.transcript)
+        : "I did not catch the full hair issue. Say the problem like dryness, breakage, color, growth, payment, or package deal, and I will answer directly.";
+      saveDiaryVoiceHistory({
+        assistant: who,
+        panel: activePanel,
+        transcript: heard.transcript || "",
+        response,
+      });
+      voiceConsoleTitle.textContent = `${who} response`;
+      voiceConsoleText.textContent = response;
+      voiceBubbleText.textContent = response;
+      const usedPremiumVoice = await speakPremiumLine(response, who);
+      voiceConsoleText.textContent = usedPremiumVoice ? response : `${response} (premium voice fallback used browser speech on this device)`;
+      if(!usedPremiumVoice){
+        await speakLine(response, { kind: who, rate: who === "Jake" ? 0.94 : 1, pitch: who === "Jake" ? 0.78 : 1.02 });
+      }
+      cueTone("close");
+      setTimeout(()=>voiceBubble.classList.remove("active"), 900);
+    }
+
+    localAria.addEventListener("click", ()=>runVoiceSequence("Aria"));
+    localJake.addEventListener("click", ()=>runVoiceSequence("Jake"));
+
+    const roamTargets = {
+      diary: [{x:.12,y:.2},{x:.84,y:.24},{x:.74,y:.52},{x:.18,y:.7},{x:.58,y:.82}],
+      studio: [{x:.14,y:.22},{x:.85,y:.28},{x:.76,y:.56},{x:.16,y:.72},{x:.61,y:.84}],
+      settings: [{x:.18,y:.18},{x:.82,y:.3},{x:.7,y:.58},{x:.2,y:.74},{x:.55,y:.86}],
+      map: [{x:.14,y:.22},{x:.83,y:.26},{x:.68,y:.54},{x:.17,y:.72},{x:.59,y:.84}],
+      faq: [{x:.16,y:.18},{x:.84,y:.28},{x:.72,y:.56},{x:.19,y:.74},{x:.57,y:.86}],
+      profile: [{x:.15,y:.2},{x:.85,y:.3},{x:.75,y:.58},{x:.21,y:.76},{x:.6,y:.88}]
+    };
+    const assistantMotion = {
+      Aria: { node: localAria, x: 0, y: 0, targetX: 0, targetY: 0, phase: 0, step: 0 },
+      Jake: { node: localJake, x: 0, y: 0, targetX: 0, targetY: 0, phase: Math.PI / 2, step: 2 }
+    };
+
+    function clampAssistant(x, y){
+      return {
+        x: Math.max(16, Math.min(window.innerWidth - 280, x)),
+        y: Math.max(24, Math.min(window.innerHeight - 110, y))
+      };
+    }
+
+    function chooseAssistantTargets(forceReset = false){
+      const targets = roamTargets[activePanel] || roamTargets.diary;
+      Object.values(assistantMotion).forEach((motion)=>{
+        motion.step = forceReset ? motion.step % targets.length : (motion.step + 1) % targets.length;
+        const target = targets[motion.step];
+        const next = clampAssistant(window.innerWidth * target.x, window.innerHeight * target.y);
+        motion.targetX = next.x;
+        motion.targetY = next.y;
+        if(forceReset && !motion.x && !motion.y){
+          motion.x = next.x;
+          motion.y = next.y;
+        }
+      });
+    }
+
+    function animateAssistants(){
+      const now = performance.now() / 1000;
+      Object.values(assistantMotion).forEach((motion, index)=>{
+        motion.x += (motion.targetX - motion.x) * 0.035;
+        motion.y += (motion.targetY - motion.y) * 0.035;
+        const driftX = Math.cos(now * 0.78 + motion.phase) * 8;
+        const driftY = Math.sin(now * 0.92 + motion.phase) * 10;
+        motion.node.style.left = `${motion.x + driftX}px`;
+        motion.node.style.top = `${motion.y + driftY}px`;
+        motion.node.style.transform = `translate3d(0,0,0) rotate(${Math.sin(now * 0.5 + index) * 1.4}deg)`;
+      });
+      window.requestAnimationFrame(animateAssistants);
+    }
+
+    window.addEventListener("resize", ()=>chooseAssistantTargets(true));
+    window.addEventListener("focus", ()=>loadBootstrap());
+    document.addEventListener("visibilitychange", ()=>{
+      if(document.visibilityState === "visible"){
+        loadBootstrap();
+      }
+    });
+    chooseAssistantTargets(true);
+    setInterval(()=>chooseAssistantTargets(false), 3200);
+    window.requestAnimationFrame(animateAssistants);
+    window.addEventListener("scroll", updateMiniRemoteVisibility, { passive: true });
+    providerConfirmBtn.addEventListener("click", ()=>saveLoginPanel({ providerConfirmed: true }).catch((error)=>renderLoginPanel(`Provider confirmation error: ${error.message}`)));
+    loginSaveBtn.addEventListener("click", ()=>saveLoginPanel().catch((error)=>renderLoginPanel(`Login save error: ${error.message}`)));
+    loginOpenAccountBtn.addEventListener("click", ()=>window.open("/login", "_blank", "noopener,noreferrer"));
+    miniVoiceBtn.addEventListener("click", ()=>runVoiceSequence("Aria"));
+    gigConnectorLaunchBtn.addEventListener("click", ()=>launchGigConnector(activeGigSource));
+    gigConnectorSources.addEventListener("click", (event)=>{
+      const button = event.target.closest("[data-gig-source]");
+      if(!button) return;
+      launchGigConnector(button.dataset.gigSource);
+    });
+    premiumPopupClose.addEventListener("click", closePremiumPopup);
+    premiumPopup.addEventListener("click", (event)=>{
+      if(event.target === premiumPopup){
+        closePremiumPopup();
+      }
+    });
+    miniRemotePopup.querySelectorAll("[data-mini-panel]").forEach((button)=>{
+      button.addEventListener("click", ()=>{
+        renderPanel(button.dataset.miniPanel, true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        logConversion(`mini-${button.dataset.miniPanel}`, "mini-remote", { panel: button.dataset.miniPanel });
+      });
+    });
+    offerInboxList.addEventListener("click", (event)=>{
+      const actionNode = event.target.closest("[data-offer-action]");
+      if(!actionNode) return;
+      setOfferStatus(actionNode.dataset.offerId, actionNode.dataset.offerAction);
+      logConversion(`offer-${actionNode.dataset.offerAction}`, "offer-inbox", {
+        offer_id: actionNode.dataset.offerId,
+        status: actionNode.dataset.offerAction
+      });
+    });
+      document.querySelectorAll(".logout-link").forEach((link)=>{
+        link.addEventListener("click", ()=>{
+          providerConfirmed = false;
+          window.localStorage.removeItem("supportrdProviderConfirmed");
+          clearAttachedAccount();
+        });
+      });
+    document.querySelectorAll(".buy-now").forEach((link)=>{
+      link.addEventListener("click", ()=>{
+        logConversion(`buy-${(link.textContent || "premium").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, "buy-now", {
+          href: link.getAttribute("href") || ""
+        });
+      });
+    });
+    updateMiniRemoteVisibility();
+    renderPanel("diary", true);
+    loadBootstrap();
+    pingTraffic();
+    if(visitorPingInterval){
+      window.clearInterval(visitorPingInterval);
+    }
+    visitorPingInterval = window.setInterval(pingTraffic, 45000);
+  </script>
+</body>
+</html>
+
+
