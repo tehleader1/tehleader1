@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory, Response, session, redirect, render_template_string
+from flask import Flask, jsonify, request, send_from_directory, Response, session, redirect, render_template_string, abort
 import json
 import random
 import smtplib
@@ -6777,6 +6777,12 @@ def home():
 @app.route("/remote/<path:section>")
 def remote_shell(section=None):
     return send_from_directory("static", "local-remote.html")
+
+@app.route("/<route_tag>")
+def tagged_remote_shell(route_tag):
+    if str(route_tag or "").startswith("^^"):
+        return send_from_directory("static", "local-remote.html")
+    abort(404)
 
 @app.route("/legacy")
 def legacy_home():

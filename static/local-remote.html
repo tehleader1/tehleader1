@@ -474,6 +474,10 @@
       font-weight:700;
       box-shadow:0 10px 22px rgba(0,0,0,.18);
     }
+    .signed-in-packages .owned{
+      background:rgba(119,224,199,.16);
+      border-color:rgba(119,224,199,.26);
+    }
     .signed-in-route{
       padding:12px 14px;
       border-radius:16px;
@@ -1884,6 +1888,14 @@
       return `^^${[prefix, randomSuffix].filter(Boolean).join("-").slice(0, 24)}`;
     }
 
+    function getPathRouteTag(){
+      const path = decodeURIComponent(window.location.pathname || "").trim();
+      if(path.startsWith("/^^")){
+        return path.slice(1);
+      }
+      return "";
+    }
+
     function getExactCheckoutHref(planKey, fallbackHref){
       const checkoutMap = shopifyConfig?.checkout_map || {};
       const checkoutPath = checkoutMap?.[planKey]?.checkout_path || "";
@@ -1910,15 +1922,26 @@
 
     function renderSignedInPackages(panelKey, savedTag){
       const offers = modulePackageMap[panelKey] || [];
+      const ownedPlan = String(bootstrapData?.settings?.membership_plan || bootstrapData?.account?.subscription || "free").toLowerCase();
+      const ownsPackage = (packageKey)=>{
+        if(packageKey === "studio") return ["studio", "pro", "premium"].includes(ownedPlan);
+        if(packageKey === "premium") return ["premium", "pro"].includes(ownedPlan);
+        if(packageKey === "pro") return ownedPlan === "pro";
+        if(packageKey === "family200") return ownedPlan === "family200";
+        if(packageKey === "fantasy300") return ["fantasy300", "fantasy600"].includes(ownedPlan);
+        return ownedPlan === packageKey;
+      };
       signedInPackages.innerHTML = offers.map((offer)=>{
         const href = getExactCheckoutHref(
           offer.key,
           offer.key === "studio" ? "https://shop.supportrd.com/products/jake-premium-studio" : "https://shop.supportrd.com/collections/all"
         );
-        return `<a href="${href}" target="_blank" rel="noreferrer">${offer.label}</a>`;
+        return ownsPackage(offer.key)
+          ? `<a href="${href}" class="owned" target="_blank" rel="noreferrer">${offer.label} · Package Already Bought</a>`
+          : `<a href="${href}" target="_blank" rel="noreferrer">${offer.label}</a>`;
       }).join("");
       signedInRouteTitle.textContent = `SupportRD URL Tag ${savedTag}`;
-      signedInRouteText.textContent = `${window.location.origin}/?tag=${encodeURIComponent(savedTag)} · this random ^^ tag is connected to the account and the live SupportRD route.`;
+      signedInRouteText.textContent = `${window.location.origin}/${savedTag} · this random ^^ tag is connected to the account and the live SupportRD route. Every module page stays attached to the same logged-in account state.`;
     }
 
     async function syncAuthenticatedAccount(meData){
@@ -1982,6 +2005,7 @@
 
     async function loadBootstrap(){
       try{
+        const pathRouteTag = getPathRouteTag();
         const [bootstrapResponse, meResponse, shopifyResponse] = await Promise.all([
           fetch("/api/local-remote/bootstrap", { credentials: "same-origin" }),
           fetch("/api/me", { credentials: "same-origin" }).catch(()=>null),
@@ -1990,6 +2014,9 @@
         const data = await bootstrapResponse.json();
         if(!data?.ok) return;
         bootstrapData = data;
+        if(pathRouteTag && !bootstrapData?.settings?.saved_tag){
+          bootstrapData.settings = { ...(bootstrapData.settings || {}), saved_tag: pathRouteTag };
+        }
         const meData = meResponse ? await meResponse.json().catch(()=>({ authenticated:false })) : { authenticated:false };
         shopifyConfig = shopifyResponse ? await shopifyResponse.json().catch(()=>null) : null;
         await syncAuthenticatedAccount(meData).catch(()=>{});
@@ -2016,7 +2043,7 @@
       const account = bootstrapData?.account || {};
       const loginProvider = settings.login_provider || account.login_provider || "";
       const membershipPlan = (settings.membership_plan || account.subscription || "free").toUpperCase();
-      const savedTag = settings.saved_tag || "^^ waiting";
+      const savedTag = settings.saved_tag || getPathRouteTag() || "^^ waiting";
       const savedPassword = Boolean(loginPassword.value.trim() || settings.password_set);
       const signedIn = providerConfirmed || settings.login_confirmed || account.login_confirmed || (Boolean(loginEmail.value || settings.account_email || account.email) && savedPassword);
       providerConfirmed = providerConfirmed || Boolean(settings.login_confirmed || account.login_confirmed);
@@ -2024,7 +2051,7 @@
       const confirmedEmail = loginEmail.value || settings.account_email || account.email || "guest@supportrd.com";
       loginShell.hidden = signedIn;
       signedInCard.hidden = !signedIn;
-      signedInSummary.textContent = `Logged in. Confirmed ${savedTag} · ${confirmedEmail} · ${sourceLabel || "email/password"} · ${membershipPlan}`;
+      signedInSummary.textContent = `Logged in. Confirmed ${savedTag} · ${confirmedEmail} · ${sourceLabel || "email/password"} · ${membershipPlan} · Studio, Profile, Settings, Map, Diary, FAQ attached`;
       renderSignedInPackages(activePanel, savedTag);
       pageAuthTitle.textContent = signedIn ? `Logged in. Confirmed ${savedTag}` : "Guest Route";
       pageAuthText.textContent = signedIn
