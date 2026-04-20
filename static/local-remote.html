@@ -459,6 +459,30 @@
       color:var(--text);
       font-weight:700;
     }
+    .signed-in-packages{display:flex;flex-wrap:wrap;gap:10px}
+    .signed-in-packages a{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:36px;
+      padding:0 14px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      text-decoration:none;
+      font-weight:700;
+      box-shadow:0 10px 22px rgba(0,0,0,.18);
+    }
+    .signed-in-route{
+      padding:12px 14px;
+      border-radius:16px;
+      border:1px solid rgba(119,224,199,.2);
+      background:rgba(119,224,199,.08);
+      color:var(--muted);
+      line-height:1.55;
+    }
+    .signed-in-route strong{display:block;color:var(--text);margin-bottom:4px}
     .login-grid{display:grid;gap:10px}
     .login-grid input{
       width:100%;
@@ -1043,6 +1067,11 @@
             <div class="login-copy">Confirm logged in through your provider or type your email and password so SupportRD stays attached while you move around the site.</div>
             <div class="signed-in-card" id="signedInCard" hidden>
               <div class="signed-in-line" id="signedInSummary">Signed in.</div>
+              <div class="signed-in-route" id="signedInRouteBox">
+                <strong id="signedInRouteTitle">SupportRD URL Tag</strong>
+                <span id="signedInRouteText">The random ^^ tag will appear here and attach to the live SupportRD route.</span>
+              </div>
+              <div class="signed-in-packages" id="signedInPackages"></div>
               <div class="provider-row">
                 <a class="logout-link" href="/logout">Logout?</a>
               </div>
@@ -1329,6 +1358,9 @@
     const loginShell = document.getElementById("loginShell");
     const signedInCard = document.getElementById("signedInCard");
     const signedInSummary = document.getElementById("signedInSummary");
+    const signedInPackages = document.getElementById("signedInPackages");
+    const signedInRouteTitle = document.getElementById("signedInRouteTitle");
+    const signedInRouteText = document.getElementById("signedInRouteText");
     const providerConfirmBtn = document.getElementById("providerConfirmBtn");
     const loginSaveBtn = document.getElementById("loginSaveBtn");
     const loginOpenAccountBtn = document.getElementById("loginOpenAccountBtn");
@@ -1437,6 +1469,40 @@
           "Profile verification is live. Tell me if you want the scanner read, the hair summary, or the professional lane behind the account."
         ]
       }
+    };
+    const modulePackageMap = {
+      diary: [
+        { key: "fantasy300", label: "Fantasy Package" },
+        { key: "premium", label: "Premium / Pro" }
+      ],
+      studio: [
+        { key: "studio", label: "Studio Jake" }
+      ],
+      profile: [
+        { key: "fantasy300", label: "Fantasy Package" },
+        { key: "premium", label: "Premium / Pro" }
+      ],
+      settings: [
+        { key: "premium", label: "Premium" },
+        { key: "pro", label: "Pro" },
+        { key: "family200", label: "Family" },
+        { key: "fantasy300", label: "Fantasy" },
+        { key: "studio", label: "Studio Jake" }
+      ],
+      faq: [
+        { key: "premium", label: "Premium" },
+        { key: "pro", label: "Pro" },
+        { key: "family200", label: "Family" },
+        { key: "fantasy300", label: "Fantasy" },
+        { key: "studio", label: "Studio Jake" }
+      ],
+      map: [
+        { key: "premium", label: "Premium" },
+        { key: "pro", label: "Pro" },
+        { key: "family200", label: "Family" },
+        { key: "fantasy300", label: "Fantasy" },
+        { key: "studio", label: "Studio Jake" }
+      ]
     };
 
     function focusFrameTarget(meta, doc){
@@ -1813,7 +1879,9 @@
         .toLowerCase()
         .replace(/[^a-z0-9_-]+/g, "-")
         .replace(/^-+|-+$/g, "");
-      return cleaned ? `^^${cleaned.slice(0, 24)}` : "^^member";
+      const randomSuffix = Math.random().toString(36).slice(2, 8);
+      const prefix = cleaned ? cleaned.slice(0, 14).replace(/-+$/g, "") : "member";
+      return `^^${[prefix, randomSuffix].filter(Boolean).join("-").slice(0, 24)}`;
     }
 
     function getExactCheckoutHref(planKey, fallbackHref){
@@ -1840,12 +1908,25 @@
       });
     }
 
+    function renderSignedInPackages(panelKey, savedTag){
+      const offers = modulePackageMap[panelKey] || [];
+      signedInPackages.innerHTML = offers.map((offer)=>{
+        const href = getExactCheckoutHref(
+          offer.key,
+          offer.key === "studio" ? "https://shop.supportrd.com/products/jake-premium-studio" : "https://shop.supportrd.com/collections/all"
+        );
+        return `<a href="${href}" target="_blank" rel="noreferrer">${offer.label}</a>`;
+      }).join("");
+      signedInRouteTitle.textContent = `SupportRD URL Tag ${savedTag}`;
+      signedInRouteText.textContent = `${window.location.origin}/?tag=${encodeURIComponent(savedTag)} · this random ^^ tag is connected to the account and the live SupportRD route.`;
+    }
+
     async function syncAuthenticatedAccount(meData){
       if(!meData?.authenticated || !meData?.user?.email) return;
       const email = String(meData.user.email || "").trim().toLowerCase();
       if(!email) return;
       const provider = inferProviderLabel(meData.user);
-      const tag = buildMemberTag(meData.user.name || meData.user.nickname || email.split("@")[0]);
+      const tag = bootstrapData?.settings?.saved_tag || buildMemberTag(meData.user.name || meData.user.nickname || email.split("@")[0]);
       const data = await callJson("/api/local-remote/preferences", {
         method: "POST",
         body: JSON.stringify({
@@ -1944,9 +2025,10 @@
       loginShell.hidden = signedIn;
       signedInCard.hidden = !signedIn;
       signedInSummary.textContent = `Logged in. Confirmed ${savedTag} · ${confirmedEmail} · ${sourceLabel || "email/password"} · ${membershipPlan}`;
+      renderSignedInPackages(activePanel, savedTag);
       pageAuthTitle.textContent = signedIn ? `Logged in. Confirmed ${savedTag}` : "Guest Route";
       pageAuthText.textContent = signedIn
-        ? `URL TAG ${savedTag} · ${confirmedEmail} · ${membershipPlan} access attached to Studio, Profile, Settings, Map, Diary, and FAQ.`
+        ? `URL TAG ${savedTag} · ${confirmedEmail} · ${membershipPlan} access attached to ${panelMeta[activePanel]?.title || "SupportRD"} with the package lane visible and ready.`
         : "Login confirmed state and ^^ URL tag will stay attached to every module route.";
       const urlState = new URLSearchParams(window.location.search);
       const loginBoost = urlState.get("login") === "confirmed";
@@ -1968,7 +2050,7 @@
           account_username: email.split("@")[0],
           password_plain: password,
           voice_profile: bootstrapData?.settings?.voice_profile || "coral / onyx premium",
-          saved_tag: bootstrapData?.settings?.saved_tag || "^^member",
+          saved_tag: bootstrapData?.settings?.saved_tag || buildMemberTag(email.split("@")[0]),
           login_provider: options.providerConfirmed ? "provider" : "email/password",
           login_confirmed: true,
           membership_plan: bootstrapData?.account?.subscription || bootstrapData?.settings?.membership_plan || "free",
@@ -2364,6 +2446,7 @@
       activePanel = panelKey;
       const meta = panelMeta[panelKey];
       buttonGrid.querySelectorAll(".shell-btn").forEach((button)=>button.classList.toggle("active", button.dataset.panel === panelKey));
+      renderLoginPanel();
       panelEyebrow.textContent = meta.eyebrow;
       panelTitle.textContent = meta.title;
       panelBody.textContent = meta.body;

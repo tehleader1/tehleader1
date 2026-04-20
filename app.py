@@ -2289,12 +2289,15 @@ def derive_support_route_tag(email="", display_name="", existing_tag=""):
     preserved = normalize_diary_profile_tag(existing_tag)
     if preserved:
         return preserved
-    seed = (
+    alphabet = "abcdefghjkmnpqrstuvwxyz23456789"
+    prefix_seed = (
         (display_name or "").strip()
         or (email or "").split("@")[0].strip()
-        or "supportrd-member"
+        or "member"
     )
-    return normalize_diary_profile_tag(seed) or "^^member"
+    prefix = re.sub(r"[^a-z0-9]+", "", prefix_seed.lower())[:6] or "member"
+    random_suffix = "".join(random.choice(alphabet) for _ in range(6))
+    return normalize_diary_profile_tag(f"{prefix}-{random_suffix}") or "^^member"
 
 
 def sync_authenticated_local_remote_account(user):
@@ -7084,6 +7087,12 @@ def local_remote_preferences_save():
         "login_confirmed": bool(body.get("login_confirmed")) if "login_confirmed" in body else bool(existing.get("login_confirmed")),
         "membership_plan": body.get("membership_plan") or existing.get("membership_plan") or "",
     }
+    if not prefs.get("saved_tag"):
+        prefs["saved_tag"] = derive_support_route_tag(
+            prefs.get("account_email") or owner_email,
+            prefs.get("display_name") or prefs.get("account_username"),
+            "",
+        )
     if body.get("password_plain"):
         prefs["password_plain"] = body.get("password_plain")
     save_local_remote_preferences(owner_email, prefs)
