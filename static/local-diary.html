@@ -339,13 +339,13 @@
       const settings = bootstrap?.settings || {};
       const tag = settings.saved_tag || '';
       const provider = settings.login_provider || 'manual';
-      const confirmed = settings.login_confirmed;
-      const plan = (settings.membership_plan || bootstrap?.account?.membership || 'free').toUpperCase();
+      const confirmed = Boolean(settings.login_confirmed || bootstrap?.account?.authenticated || tag || ((settings.account_email || bootstrap?.account?.email || '') && (settings.account_email || bootstrap?.account?.email || '') !== 'guest'));
+      const plan = (settings.membership_plan || bootstrap?.account?.membership || bootstrap?.account?.subscription || 'free').toUpperCase();
       const email = settings.account_email || bootstrap?.account?.email || 'guest';
       return confirmed
         ? {
             title: `Logged in. Confirmed ^^ ${tag || 'URL TAG'}`,
-            text: `${email} · ${plan} · provider ${provider} · URL TAG ${tag || 'waiting'}`
+            text: `${email} · ${plan} · provider ${provider} · URL TAG ${tag || 'waiting'} · Fantasy + Premium / Pro ready on this page.`
           }
         : {
             title: 'Guest Route',

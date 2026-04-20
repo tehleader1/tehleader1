@@ -114,10 +114,11 @@
       els.pushNotifications.value = settings.push_notifications ? 'on' : 'off';
       els.newPassword.value = '';
       els.confirmPassword.value = '';
-      const plan = (settings.membership_plan || bootstrap?.account?.membership || 'free').toUpperCase();
-      const provider = settings.login_provider || 'manual';
-      els.authBadgeTitle.textContent = settings.login_confirmed ? `Logged in. Confirmed ^^ ${tag || 'URL TAG'}` : 'Guest Route';
-      els.authBadgeText.textContent = settings.login_confirmed ? `${email} · ${plan} · provider ${provider} · URL TAG ${tag || 'waiting'}` : `Logged in. Confirmed ^^ URL TAG will show here when the account is attached. Current route: ${email}`;
+      const plan = (settings.membership_plan || bootstrap?.account?.membership || bootstrap?.account?.subscription || 'free').toUpperCase();
+      const provider = settings.login_provider || bootstrap?.account?.login_provider || 'manual';
+      const attached = Boolean(settings.login_confirmed || bootstrap?.account?.authenticated || tag || (email && email !== 'guest'));
+      els.authBadgeTitle.textContent = attached ? `Logged in. Confirmed ^^ ${tag || 'URL TAG'}` : 'Guest Route';
+      els.authBadgeText.textContent = attached ? `${email} · ${plan} · provider ${provider} · URL TAG ${tag || 'waiting'} · Premium, Pro, Family, Fantasy, and Studio Jake ready on this page.` : `Logged in. Confirmed ^^ URL TAG will show here when the account is attached. Current route: ${email}`;
       els.accountCard.textContent = `${settings.account_username || settings.display_name || 'guest'} · ${email}`;
       els.urlCard.textContent = diaryUrl;
       els.passwordCard.textContent = settings.password_set ? 'Password secured in settings memory.' : 'Password not set yet.';
