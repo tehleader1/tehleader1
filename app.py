@@ -108,8 +108,48 @@ LAST_SEO_POST = 0
 AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN", "")
 AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID", "")
 AUTH0_CLIENT_SECRET = os.environ.get("AUTH0_CLIENT_SECRET", "")
-AUTH0_CALLBACK_URL = os.environ.get("AUTH0_CALLBACK_URL", "https://ai-hair-advisor.onrender.com/callback")
+AUTH0_CALLBACK_URL = os.environ.get("AUTH0_CALLBACK_URL", "https://supportrd.com/callback")
 AUTH0_LOGOUT_URL = os.environ.get("AUTH0_LOGOUT_URL", "https://supportrd.com/local-remote")
+
+DIRECT_PRODUCT_LINKS = {
+    "studio-jake": {
+        "title": "Jake In The Studio",
+        "headline": "Professional Studio account access with Jake attached to the motherboard lane.",
+        "price": "$100",
+        "eyebrow": "Studio Jake",
+        "description": "Unlock the Studio motherboard, recording flow, exports, and Jake-attended professional studio routing.",
+        "shop_url": "https://shop.supportrd.com/products/jake-in-the-studio-studio-tier-professional-studio-account",
+        "hero_image": "/static/images/jake-studio-premium.jpg",
+    },
+    "pro": {
+        "title": "ARIA Professional",
+        "headline": "Making money tier with polished pro routing, account continuity, and higher trust handling.",
+        "price": "$50",
+        "eyebrow": "Professional",
+        "description": "Unlock ARIA Professional with stronger account continuity, money-minded support, and pro-grade access around the shell.",
+        "shop_url": "https://shop.supportrd.com/products/aria-professional-making-money-tier-professional-account",
+        "hero_image": "/static/images/aria-premium-pro-main-ad.jpg",
+    },
+    "premium": {
+        "title": "ARIA Inner Circle",
+        "headline": "Premium inner-circle voice tier with better account continuity and faster support lanes.",
+        "price": "$35",
+        "eyebrow": "Premium",
+        "description": "Unlock ARIA Premium with better voice handling, stronger profile continuity, and premium account routing across SupportRD.",
+        "shop_url": "https://shop.supportrd.com/products/aria-ai-voice-inner-circle-tier-premium-account",
+        "hero_image": "/static/images/aria-premium-pro-main-ad.jpg",
+    },
+}
+
+
+def resolve_auth0_callback_url():
+    configured = (AUTH0_CALLBACK_URL or "").strip()
+    if configured and "supportrd.com/callback" in configured:
+        return configured
+    host = (request.host or "").strip().lower()
+    if host.endswith("supportrd.com"):
+        return "https://supportrd.com/callback"
+    return configured or "https://supportrd.com/callback"
 
 SMTP_HOST = os.environ.get("SMTP_HOST", "")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
@@ -5543,6 +5583,8 @@ def login():
     if not AUTH0_DOMAIN or not AUTH0_CLIENT_ID or not AUTH0_CLIENT_SECRET:
         print("LOGIN ERROR: missing AUTH0 env vars")
         return redirect("https://supportrd.com/local-remote?login=failed&reason=missing_auth0")
+    callback_url = resolve_auth0_callback_url()
+    callback_url = resolve_auth0_callback_url()
     state = os.urandom(16).hex()
     provider = request.args.get("provider")
     mode = request.args.get("mode", "").lower()
@@ -5551,7 +5593,7 @@ def login():
     params = {
         "response_type": "code",
         "client_id": AUTH0_CLIENT_ID,
-        "redirect_uri": AUTH0_CALLBACK_URL,
+        "redirect_uri": callback_url,
         "scope": "openid profile email",
         "state": state
     }
@@ -5586,7 +5628,7 @@ def callback():
         "client_id": AUTH0_CLIENT_ID,
         "client_secret": AUTH0_CLIENT_SECRET,
         "code": code,
-        "redirect_uri": AUTH0_CALLBACK_URL
+        "redirect_uri": resolve_auth0_callback_url()
     }
     try:
         print("CALLBACK DEBUG: token exchange start")
@@ -6687,6 +6729,102 @@ def render_support_seo_page(page_key):
     )
 
 
+def render_product_mirror_page(product_key):
+    product = DIRECT_PRODUCT_LINKS.get(product_key)
+    if not product:
+        return {"ok": False, "error": "not_found"}, 404
+    page_url = f"https://supportrd.com/products/{product_key}"
+    json_ld = json.dumps({
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": product["title"],
+        "description": product["description"],
+        "url": page_url,
+        "image": f"https://supportrd.com{product['hero_image']}",
+        "offers": {
+            "@type": "Offer",
+            "priceCurrency": "USD",
+            "price": re.sub(r"[^0-9.]", "", product["price"]) or "0",
+            "availability": "https://schema.org/InStock",
+            "url": product["shop_url"],
+        },
+    })
+    return render_template_string(
+        """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} | SupportRD</title>
+  <meta name="description" content="{{ description }}">
+  <link rel="canonical" href="{{ page_url }}">
+  <meta property="og:type" content="product">
+  <meta property="og:title" content="{{ title }} | SupportRD">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ page_url }}">
+  <meta property="og:image" content="https://supportrd.com{{ hero_image }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{{ json_ld|safe }}</script>
+  <style>
+    :root{color-scheme:dark;--bg:#07111d;--panel:#102339;--text:#f5f7fb;--muted:#b9c7d8;--line:rgba(147,198,255,.18);--gold:#ffd675}
+    *{box-sizing:border-box} body{margin:0;font-family:Georgia,serif;background:radial-gradient(circle at top,#18324c 0,#07111d 62%);color:var(--text)}
+    .shell{max-width:1180px;margin:0 auto;padding:32px 20px 64px}
+    .hero{display:grid;grid-template-columns:1.08fr .92fr;gap:24px;align-items:stretch}
+    .panel{border-radius:28px;padding:28px;background:linear-gradient(180deg,rgba(16,35,57,.95),rgba(8,18,31,.97));border:1px solid var(--line);box-shadow:0 24px 80px rgba(0,0,0,.35)}
+    .eyebrow{letter-spacing:.24em;text-transform:uppercase;font:600 12px/1.2 Arial,sans-serif;color:#9cc6ea}
+    h1{margin:12px 0 10px;font-size:clamp(40px,6vw,72px);line-height:.96}
+    .price{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;background:rgba(255,214,117,.12);border:1px solid rgba(255,214,117,.35);color:var(--gold);font:700 18px/1 Arial,sans-serif}
+    p{color:var(--muted);font-size:18px;line-height:1.65}
+    .cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border-radius:16px;border:1px solid var(--line);background:#fff;color:#09121f;text-decoration:none;font:700 15px/1 Arial,sans-serif}
+    .btn.alt{background:rgba(255,255,255,.08);color:var(--text)}
+    .hero-card{min-height:420px;border-radius:28px;background:center/cover no-repeat var(--panel);position:relative;overflow:hidden}
+    .hero-card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,10,18,.1),rgba(3,10,18,.6))}
+    .hero-badge{position:absolute;left:18px;bottom:18px;z-index:1;padding:12px 16px;border-radius:16px;background:rgba(7,17,29,.82);border:1px solid var(--line);font:700 14px/1.4 Arial,sans-serif}
+    .info{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:22px}
+    .info-card{padding:16px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+    .info-card strong{display:block;margin-bottom:8px}
+    @media (max-width:900px){.hero,.info{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <article class="panel">
+        <div class="eyebrow">{{ eyebrow }}</div>
+        <h1>{{ title }}</h1>
+        <div class="price">{{ price }}</div>
+        <p><strong>{{ headline }}</strong></p>
+        <p>{{ description }}</p>
+        <div class="cta-row">
+          <a class="btn" href="{{ shop_url }}" target="_blank" rel="noreferrer">Buy On SupportRD Shop</a>
+          <a class="btn alt" href="/remote">Back To SupportRD</a>
+        </div>
+      </article>
+      <aside class="hero-card" style="background-image:url('{{ hero_image }}')">
+        <div class="hero-badge">{{ title }} · main-domain product mirror</div>
+      </aside>
+    </section>
+    <section class="info">
+      <article class="info-card"><strong>Main domain trust</strong><span>This page stays on `supportrd.com` so the product feels attached to the real SupportRD system.</span></article>
+      <article class="info-card"><strong>Real product backend</strong><span>The buy button still points at the working Shopify product so fulfillment and ownership stay correct.</span></article>
+      <article class="info-card"><strong>Account continuity</strong><span>Use the main-domain product page for trust and let Shopify handle the purchase underneath.</span></article>
+    </section>
+  </main>
+</body>
+</html>""",
+        title=product["title"],
+        eyebrow=product["eyebrow"],
+        headline=product["headline"],
+        description=product["description"],
+        price=product["price"],
+        shop_url=product["shop_url"],
+        hero_image=product["hero_image"],
+        page_url=page_url,
+        json_ld=json_ld,
+    )
+
+
 @app.route("/hair-problems")
 def seo_hair_problems():
     return render_support_seo_page("hair-problems")
@@ -6715,6 +6853,21 @@ def seo_premium_pro():
 @app.route("/fantasies")
 def seo_fantasies():
     return render_support_seo_page("fantasies")
+
+
+@app.route("/products/studio-jake")
+def product_studio_jake():
+    return render_product_mirror_page("studio-jake")
+
+
+@app.route("/products/pro")
+def product_pro():
+    return render_product_mirror_page("pro")
+
+
+@app.route("/products/premium")
+def product_premium():
+    return render_product_mirror_page("premium")
 
 #################################################
 # BACKGROUND ENGINE
