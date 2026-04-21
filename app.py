@@ -7004,6 +7004,33 @@ def _read_static_html(filename: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
+def _proxy_product_fragment(product_key: str) -> Response:
+    product = DIRECT_PRODUCT_LINKS.get(product_key)
+    if not product:
+        return Response('<div class="supportrd-loading">Product not found.</div>', mimetype="text/html", status=404)
+    product_title = escape(product.get("title") or "SupportRD Product")
+    headline = escape(product.get("headline") or "SupportRD product lane")
+    shop_url = escape(product.get("shop_url") or "#")
+    image_url = escape(product.get("hero_image") or "")
+    fragment = f"""
+<section class="supportrd-product-fragment">
+  <div class="supportrd-product-fragment__media">
+    <img src="{image_url}" alt="{product_title}">
+  </div>
+  <div class="supportrd-product-fragment__body">
+    <div class="supportrd-product-fragment__eyebrow">SupportRD Account Lane</div>
+    <h2>{product_title}</h2>
+    <p>{headline}</p>
+    <div class="supportrd-product-fragment__actions">
+      <a class="supportrd-inline-btn primary" href="https://supportrd.com/login">Login / Confirm Account</a>
+      <a class="supportrd-inline-btn" href="{shop_url}">Open Shopify Product</a>
+      <a class="supportrd-inline-btn" href="https://shop.supportrd.com/apps/supportrd">Open Full SupportRD App</a>
+    </div>
+  </div>
+</section>
+"""
+    return Response(fragment, mimetype="text/html")
+
 def _proxy_shell_html(filename: str) -> Response:
     html = _read_static_html(filename)
 
@@ -7066,6 +7093,11 @@ def shopify_proxy_local_map():
 @app.route("/shopify/proxy/local-faq")
 def shopify_proxy_local_faq():
     return _proxy_shell_html("local-faq.html")
+
+@app.route("/proxy/product/<product_key>")
+@app.route("/shopify/proxy/product/<product_key>")
+def shopify_proxy_product_fragment(product_key):
+    return _proxy_product_fragment(product_key)
 
 @app.route("/api/local-remote/bootstrap")
 def local_remote_bootstrap():
