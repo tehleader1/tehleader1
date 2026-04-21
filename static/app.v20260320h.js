@@ -98,17 +98,17 @@ const SHOPIFY_LINK_PATHS = {
     donate: "/products/supportrd-product-tip-donate"
   }
 const LINKS = {
-    myOrders: "https://shop.supportrd.com/account/orders",
-    cart: "https://shop.supportrd.com/cart",
-    premium: "https://shop.supportrd.com/products/hair-advisor-premium-1",
-  bingo100: "https://shop.supportrd.com/products/bingo-fantasy-100",
-  studio100: "https://shop.supportrd.com/products/jake-premium-studio",
-  family200: "https://shop.supportrd.com/products/family-fantasy-200",
-  yoda: "https://shop.supportrd.com/products/yoda-pass",
-  pro: "https://shop.supportrd.com/products/professional-hair-advisor-1",
-  fantasy300: "https://shop.supportrd.com/products/basic-fantasy-21-plus-300",
-  fantasy600: "https://shop.supportrd.com/products/advanced-fantasy-21-plus-600",
-    donate: "https://shop.supportrd.com/products/supportrd-product-tip-donate",
+    myOrders: "https://supportrd.com/account/orders",
+    cart: "https://supportrd.com/cart",
+    premium: "https://supportrd.com/products/hair-advisor-premium-1",
+  bingo100: "https://supportrd.com/products/bingo-fantasy-100",
+  studio100: "https://supportrd.com/products/jake-premium-studio",
+  family200: "https://supportrd.com/products/family-fantasy-200",
+  yoda: "https://supportrd.com/products/yoda-pass",
+  pro: "https://supportrd.com/products/professional-hair-advisor-1",
+  fantasy300: "https://supportrd.com/products/basic-fantasy-21-plus-300",
+  fantasy600: "https://supportrd.com/products/advanced-fantasy-21-plus-600",
+    donate: "https://supportrd.com/products/supportrd-product-tip-donate",
     custom: "https://supportrd.com/pages/custom-order"
   }
   const SHOPIFY_ROLLOUTS = [
@@ -316,15 +316,15 @@ function normalizeShopifyStorefrontBase(raw){
 }
 function normalizeActualShopifyCheckoutBase(raw){
   const base = normalizeShopifyStorefrontBase(raw)
-  const fallback = "https://supportdr-com.myshopify.com"
+  const fallback = "https://supportrd.com"
   if(!base) return fallback
   try{
     const host = new URL(base).host.toLowerCase()
-    if(host === "shop.supportrd.com") return "https://shop.supportrd.com"
-    if((host.includes("supportrd.com") && host !== "shop.supportrd.com") || host.includes("theplantmaninc.com")) return fallback
+    if(host === "supportrd.com") return "https://supportrd.com"
+    if((host.includes("supportrd.com") && host !== "supportrd.com") || host.includes("theplantmaninc.com")) return fallback
   }catch{
     const lowerBase = base.toLowerCase()
-    if(lowerBase === "https://shop.supportrd.com" || lowerBase === "shop.supportrd.com") return "https://shop.supportrd.com"
+    if(lowerBase === "https://supportrd.com" || lowerBase === "supportrd.com") return "https://supportrd.com"
     if(lowerBase.includes("supportrd.com") || lowerBase.includes("theplantmaninc.com")) return fallback
   }
   return base
@@ -360,7 +360,7 @@ function getDirectShopifyBase(){
   }
   const base = normalizeActualShopifyCheckoutBase(state.shopifyStorefrontBase)
   if(base) return base.replace(/\/+$/, "")
-  return "https://supportdr-com.myshopify.com"
+  return "https://supportrd.com"
 }
 async function bootstrapShopifyStorefrontBase(){
   try{
