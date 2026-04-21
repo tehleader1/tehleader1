@@ -417,14 +417,14 @@
       const res = await fetch("/api/shopify/public-config", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
-      const fallbackBase = "https://supportdr-com.myshopify.com";
+      const fallbackBase = "https://supportrd.com";
       const incomingBase = String(data?.storefront_base || "").trim();
       const safeBase = !incomingBase
         ? fallbackBase
         : /theplantmaninc\.com/i.test(incomingBase)
           ? fallbackBase
           : /shop\.supportrd\.com/i.test(incomingBase)
-            ? "https://shop.supportrd.com"
+            ? "https://supportrd.com"
             : /supportrd\.com/i.test(incomingBase)
               ? fallbackBase
               : incomingBase;
@@ -915,13 +915,13 @@
   function getCheckoutUrl(product) {
     const rawBase = String(state.shopify?.storefrontBase || "").trim();
     const safeBase = !rawBase
-      ? "https://supportdr-com.myshopify.com"
+      ? "https://supportrd.com"
       : /theplantmaninc\.com/i.test(rawBase)
-        ? "https://supportdr-com.myshopify.com"
+        ? "https://supportrd.com"
         : /shop\.supportrd\.com/i.test(rawBase)
-          ? "https://shop.supportrd.com"
+          ? "https://supportrd.com"
           : /supportrd\.com/i.test(rawBase)
-            ? "https://supportdr-com.myshopify.com"
+            ? "https://supportrd.com"
             : rawBase;
     const variantId = String(product?.variantId || product?.variants?.[0]?.id || product?.variant || "").replace(/\D/g, "");
     const handle = String(product?.handle || "").trim().replace(/^\/?products\/?/i, "");
