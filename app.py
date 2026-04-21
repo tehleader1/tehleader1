@@ -5584,7 +5584,6 @@ def login():
         print("LOGIN ERROR: missing AUTH0 env vars")
         return redirect("https://supportrd.com/local-remote?login=failed&reason=missing_auth0")
     callback_url = resolve_auth0_callback_url()
-    callback_url = resolve_auth0_callback_url()
     state = os.urandom(16).hex()
     provider = request.args.get("provider")
     mode = request.args.get("mode", "").lower()
@@ -6996,7 +6995,9 @@ def local_studio_shell():
 
 
 
-PROXY_BASE = "https://supportrd.com/apps/supportrd"
+# Keep proxy navigation host-relative so the SupportRD shell works on either
+# the main app domain or the Shopify storefront host.
+PROXY_BASE = "/apps/supportrd"
 
 def _read_static_html(filename: str) -> str:
     path = os.path.join(app.root_path, "static", filename)
@@ -7025,38 +7026,43 @@ def _proxy_shell_html(filename: str) -> Response:
 
     return Response(html, mimetype="text/html")
 
+@app.route("/proxy")
+@app.route("/proxy/")
 @app.route("/shopify/proxy")
 def shopify_proxy_home():
     return _proxy_shell_html("local-remote.html")
 
-@app.route("/shopify/proxy/")
-def shopify_proxy_home_slash():
-    return _proxy_shell_html("local-remote.html")
-
+@app.route("/proxy/local-remote")
 @app.route("/shopify/proxy/local-remote")
 def shopify_proxy_local_remote():
     return _proxy_shell_html("local-remote.html")
 
+@app.route("/proxy/local-diary")
 @app.route("/shopify/proxy/local-diary")
 def shopify_proxy_local_diary():
     return _proxy_shell_html("local-diary.html")
 
+@app.route("/proxy/local-profile")
 @app.route("/shopify/proxy/local-profile")
 def shopify_proxy_local_profile():
     return _proxy_shell_html("local-profile.html")
 
+@app.route("/proxy/local-studio")
 @app.route("/shopify/proxy/local-studio")
 def shopify_proxy_local_studio():
     return _proxy_shell_html("local-studio.html")
 
+@app.route("/proxy/local-settings")
 @app.route("/shopify/proxy/local-settings")
 def shopify_proxy_local_settings():
     return _proxy_shell_html("local-settings.html")
 
+@app.route("/proxy/local-map")
 @app.route("/shopify/proxy/local-map")
 def shopify_proxy_local_map():
     return _proxy_shell_html("local-map.html")
 
+@app.route("/proxy/local-faq")
 @app.route("/shopify/proxy/local-faq")
 def shopify_proxy_local_faq():
     return _proxy_shell_html("local-faq.html")
