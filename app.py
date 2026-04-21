@@ -78,10 +78,10 @@ def normalize_shopify_store_domain(raw_store):
 
 def resolve_shopify_api_domain():
     store = normalize_shopify_store_domain(SHOPIFY_STORE)
-    if store == "shop.supportrd.com":
-        return "supportdr-com.myshopify.com"
+    if store == "supportrd.com":
+        return "supportrd.com"
     if store and store.endswith("supportrd.com"):
-        return "supportdr-com.myshopify.com"
+        return "supportrd.com"
     return store
 
 def resolve_shopify_storefront_domain():
@@ -89,8 +89,8 @@ def resolve_shopify_storefront_domain():
     # Shopify checkout can open on the real store without looping back into
     # the Render-hosted SupportRD app.
     configured_store = normalize_shopify_store_domain(SHOPIFY_STORE)
-    if configured_store == "shop.supportrd.com":
-        return "shop.supportrd.com"
+    if configured_store == "supportrd.com":
+        return "supportrd.com"
     store = resolve_shopify_api_domain()
     if not store:
         return ""
@@ -98,8 +98,8 @@ def resolve_shopify_storefront_domain():
     if store.endswith(".myshopify.com"):
         return store
     if store.endswith("supportrd.com") or store.endswith("theplantmaninc.com"):
-        return "supportdr-com.myshopify.com"
-    return "supportdr-com.myshopify.com"
+        return "supportrd.com"
+    return "supportrd.com"
 
 SEO_ENABLED = os.environ.get("SEO_ENABLED", "false").lower() == "true"
 SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "72"))
@@ -118,7 +118,7 @@ DIRECT_PRODUCT_LINKS = {
         "price": "$100",
         "eyebrow": "Studio Jake",
         "description": "Unlock the Studio motherboard, recording flow, exports, and Jake-attended professional studio routing.",
-        "shop_url": "https://shop.supportrd.com/products/jake-in-the-studio-studio-tier-professional-studio-account",
+        "shop_url": "https://supportrd.com/products/jake-in-the-studio-studio-tier-professional-studio-account",
         "hero_image": "/static/images/jake-studio-premium.jpg",
     },
     "pro": {
@@ -127,7 +127,7 @@ DIRECT_PRODUCT_LINKS = {
         "price": "$50",
         "eyebrow": "Professional",
         "description": "Unlock ARIA Professional with stronger account continuity, money-minded support, and pro-grade access around the shell.",
-        "shop_url": "https://shop.supportrd.com/products/aria-professional-making-money-tier-professional-account",
+        "shop_url": "https://supportrd.com/products/aria-professional-making-money-tier-professional-account",
         "hero_image": "/static/images/aria-premium-pro-main-ad.jpg",
     },
     "premium": {
@@ -136,7 +136,7 @@ DIRECT_PRODUCT_LINKS = {
         "price": "$35",
         "eyebrow": "Premium",
         "description": "Unlock ARIA Premium with better voice handling, stronger profile continuity, and premium account routing across SupportRD.",
-        "shop_url": "https://shop.supportrd.com/products/aria-ai-voice-inner-circle-tier-premium-account",
+        "shop_url": "https://supportrd.com/products/aria-ai-voice-inner-circle-tier-premium-account",
         "hero_image": "/static/images/aria-premium-pro-main-ad.jpg",
     },
 }
@@ -2096,7 +2096,7 @@ def create_local_remote_inbox_offer(owner_email, payload):
         str(body.get("target_url") or ""),
     ]).lower()
     is_coding_help = any(token in normalized for token in ("coding", "developer", "dev", "engineering", "technical help", "code support"))
-    routes_money_back = any(token in normalized for token in ("tip", "tips", "donation", "donations", "support", "company", "supportrd", "shop.supportrd.com"))
+    routes_money_back = any(token in normalized for token in ("tip", "tips", "donation", "donations", "support", "company", "supportrd", "supportrd.com"))
     needs_manual_approval = any(token in normalized for token in ("legal", "rights", "ownership", "policy", "terms", "contract", "agreement", "change request", "changes"))
     initial_status = "approved" if (is_coding_help and routes_money_back and not needs_manual_approval) else "pending"
     try:
@@ -2628,7 +2628,7 @@ def _require_studio_jake_api_access():
             "access": False,
             "error": "login_required",
             "login_url": "/login",
-            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/jake-premium-studio",
             "message": "Log in to SupportRD to open Jake Premium Studio.",
         }, 401)
     details = get_subscription_details_for_email(email)
@@ -2642,7 +2642,7 @@ def _require_studio_jake_api_access():
             "subscription": plan,
             "product_key": "studio100",
             "product_title": "Jake Premium Studio",
-            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/jake-premium-studio",
             "message": "Jake Premium Studio is locked until the $100 Studio / Pro package is active.",
         }, 402)
     return email, details, plan, None
@@ -4627,7 +4627,7 @@ def studio_jake_access():
             "access": False,
             "error": "login_required",
             "login_url": "/login",
-            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/jake-premium-studio",
         }, 401
     details = get_subscription_details_for_email(email)
     plan = (details.get("plan") or "free").strip().lower()
@@ -4643,7 +4643,7 @@ def studio_jake_access():
         "updated_at": details.get("updated_at") or "",
         "product_key": "studio100",
         "product_title": "Jake Premium Studio",
-        "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+        "product_url": "https://supportrd.com/products/jake-premium-studio",
         "login_url": "/login",
         "message": "Jake Premium Studio is ready." if access else "Jake Premium Studio needs a Studio / Pro package before entering the booth.",
     }, (200 if access else 402)
@@ -4659,7 +4659,7 @@ def studio_jake_enter():
             "access": False,
             "error": "login_required",
             "login_url": "/login",
-            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/jake-premium-studio",
         }, 401
     details = get_subscription_details_for_email(email)
     plan = (details.get("plan") or "free").strip().lower()
@@ -4672,7 +4672,7 @@ def studio_jake_enter():
             "subscription": plan,
             "product_key": "studio100",
             "product_title": "Jake Premium Studio",
-            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/jake-premium-studio",
             "message": "Upgrade to Jake Premium Studio or Pro to open the Studio with Jake attending.",
         }, 402
     session_id = f"SES-{uuid.uuid4().hex[:10].upper()}"
@@ -6637,7 +6637,7 @@ def render_support_seo_page(page_key):
     checkout_map = get_public_shopify_checkout_map()
     plan_key = page.get("product_plan") or "premium"
     checkout_meta = checkout_map.get(plan_key) or {}
-    checkout_href = checkout_meta.get("checkout_path") or f"https://shop.supportrd.com/collections/all?plan={plan_key}"
+    checkout_href = checkout_meta.get("checkout_path") or f"https://supportrd.com/collections/all?plan={plan_key}"
     product_label = (checkout_meta.get("label") or page.get("title") or "SupportRD Premium").strip()
     page_url = f"https://supportrd.com/{page_key}"
     json_ld = json.dumps({
@@ -7196,7 +7196,7 @@ def local_remote_bootstrap():
     studio_access = {
         "authenticated": bool(email),
         "access": studio_jake_access_for_plan(plan) if email else False,
-        "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
+        "product_url": "https://supportrd.com/products/jake-premium-studio",
         "message": (
             "Studio access is ready."
             if email and studio_jake_access_for_plan(plan)
