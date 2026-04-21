@@ -5,9 +5,18 @@
   const panelBody = document.getElementById("supportrd-panel-body");
   const closeBtn = document.getElementById("supportrd-close");
   const productHandleMap = {
-    "aria-professional-making-money-tier-professional-account": "/product/pro",
-    "aria-ai-voice-inner-circle-tier-premium-account": "/product/premium",
-    "jake-in-the-studio-studio-tier-professional-studio-account": "/product/studio-jake"
+    "aria-professional-making-money-tier-professional-account": {
+      title: "ARIA Professional",
+      plan: "Professional account lane with SupportRD login and full app access."
+    },
+    "aria-ai-voice-inner-circle-tier-premium-account": {
+      title: "ARIA Premium",
+      plan: "Premium account lane with SupportRD login and full app access."
+    },
+    "jake-in-the-studio-studio-tier-professional-studio-account": {
+      title: "Jake In The Studio",
+      plan: "Studio account lane with SupportRD login and full app access."
+    }
   };
 
   async function fetchHtml(path) {
@@ -66,8 +75,8 @@
   async function mountProductBridge() {
     const match = window.location.pathname.match(/\/products\/([^/?#]+)/);
     if (!match) return;
-    const proxyPath = productHandleMap[match[1]];
-    if (!proxyPath) return;
+    const productMeta = productHandleMap[match[1]];
+    if (!productMeta) return;
     if (document.getElementById("supportrd-product-bridge")) return;
 
     const host = document.querySelector("product-info, .product, .product__info-wrapper, main");
@@ -79,33 +88,17 @@
     bridge.innerHTML = [
       '<div class="supportrd-product-bridge__header">',
       '<div class="supportrd-product-bridge__eyebrow">SupportRD Account Lane</div>',
-      "<h2>SupportRD internal product access</h2>",
-      "<p>Keep the Shopify product public while giving people a clear login and SupportRD app lane.</p>",
+      `<h2>${productMeta.title}</h2>`,
+      `<p>${productMeta.plan}</p>`,
       "</div>",
       '<div class="supportrd-product-bridge__actions">',
       '<a class="supportrd-inline-btn primary" href="https://supportrd.com/login">Login / Confirm Account</a>',
-      `<button class="supportrd-inline-btn" type="button" data-srd-open="${proxyPath}">Open SupportRD Product Panel</button>`,
       '<a class="supportrd-inline-btn" href="/apps/supportrd">Open Full SupportRD App</a>',
       "</div>",
-      '<div class="supportrd-product-bridge__panel"><div class="supportrd-loading">Loading SupportRD product lane...</div></div>'
+      '<div class="supportrd-product-bridge__panel"><p>Already bought this package? Log in first, then open the full SupportRD app to see your confirmed lane.</p></div>'
     ].join("");
 
     host.prepend(bridge);
-    wireInternalLinks(bridge);
-
-    try {
-      const html = await fetchHtml(proxyPath);
-      const panel = bridge.querySelector(".supportrd-product-bridge__panel");
-      if (panel) {
-        panel.innerHTML = html;
-        wireInternalLinks(panel);
-      }
-    } catch (error) {
-      const panel = bridge.querySelector(".supportrd-product-bridge__panel");
-      if (panel) {
-        panel.innerHTML = `<div class="supportrd-loading">${error.message}</div>`;
-      }
-    }
   }
 
   if (closeBtn && modal) {
