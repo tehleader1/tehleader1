@@ -1,0 +1,30 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "a568e85681a8c71701c632c569f853b0"
+name = "SupportRD"
+application_url = "https://supportrd.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2026-04"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_app_proxy,read_customers,write_customers,read_orders,read_products,read_content,write_content,read_themes,write_themes,customer_write_customers,customer_read_customers,unauthenticated_write_checkouts,unauthenticated_read_checkouts,unauthenticated_read_product_inventory,unauthenticated_read_product_listings,unauthenticated_read_content"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://supportrd.com/shopify/auth/callback",
+  "https://supportrd.com/auth/callback",
+  "https://supportrd.com/api/auth/callback"
+]
+
+[app_proxy]
+url = "https://supportrd.com/proxy"
+subpath = "supportrd"
+prefix = "apps"

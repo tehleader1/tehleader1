@@ -1,0 +1,50 @@
+#supportrd-modal[hidden] {
+  display: none;
+}
+
+#supportrd-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.supportrd-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 12, 24, 0.72);
+}
+
+.supportrd-panel {
+  position: relative;
+  margin: 4vh auto;
+  width: min(1100px, 94vw);
+  min-height: 70vh;
+  background: #0d1526;
+  color: #f4f1ea;
+  border-radius: 20px;
+  padding: 24px;
+  overflow: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.supportrd-loading {
+  padding: 40px;
+  border-radius: 18px;
+  background: #101b31;
+  color: #f4f1ea;
+  text-align: center;
+}
+
+.supportrd-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: #e9c27d;
+  color: #0d1526;
+  padding: 10px 16px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
