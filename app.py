@@ -49,7 +49,6 @@ SHOPIFY_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
 SHOPIFY_ADMIN_TOKEN = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
 SHOPIFY_BLOG_ID = os.environ.get("SHOPIFY_BLOG_ID", "")
 SHOPIFY_WEBHOOK_SECRET = os.environ.get("SHOPIFY_WEBHOOK_SECRET", "")
-SHOPIFY_API_SECRET = os.environ.get("SHOPIFY_API_SECRET", "")
 SHOPIFY_PLAN_VARIANT_MAP_JSON = os.environ.get("SHOPIFY_PLAN_VARIANT_MAP_JSON", "")
 SHOPIFY_PLAN_SKU_MAP_JSON = os.environ.get("SHOPIFY_PLAN_SKU_MAP_JSON", "")
 STUDIO_STORAGE_DIR = os.environ.get("STUDIO_STORAGE_DIR", os.path.join(app.root_path, "studio_data"))
@@ -79,10 +78,10 @@ def normalize_shopify_store_domain(raw_store):
 
 def resolve_shopify_api_domain():
     store = normalize_shopify_store_domain(SHOPIFY_STORE)
-    if store == "supportrd.com":
-        return "supportrd.com"
+    if store == "shop.supportrd.com":
+        return "supportdr-com.myshopify.com"
     if store and store.endswith("supportrd.com"):
-        return "supportrd.com"
+        return "supportdr-com.myshopify.com"
     return store
 
 def resolve_shopify_storefront_domain():
@@ -90,8 +89,8 @@ def resolve_shopify_storefront_domain():
     # Shopify checkout can open on the real store without looping back into
     # the Render-hosted SupportRD app.
     configured_store = normalize_shopify_store_domain(SHOPIFY_STORE)
-    if configured_store == "supportrd.com":
-        return "supportrd.com"
+    if configured_store == "shop.supportrd.com":
+        return "shop.supportrd.com"
     store = resolve_shopify_api_domain()
     if not store:
         return ""
@@ -99,30 +98,8 @@ def resolve_shopify_storefront_domain():
     if store.endswith(".myshopify.com"):
         return store
     if store.endswith("supportrd.com") or store.endswith("theplantmaninc.com"):
-        return "supportrd.com"
-    return "supportrd.com"
-
-def verify_shopify_app_proxy_signature(args):
-    if not SHOPIFY_API_SECRET:
-        return True
-    provided = (args.get("signature") or "").strip()
-    if not provided:
-        host = (request.host or "").lower()
-        return host.startswith("127.0.0.1") or host.startswith("localhost")
-    pairs = []
-    for key in sorted(args.keys()):
-        if key == "signature":
-            continue
-        values = args.getlist(key)
-        if values:
-            pairs.append(f"{key}={','.join(values)}")
-    payload = "".join(pairs).encode("utf-8")
-    expected = hmac.new(
-        SHOPIFY_API_SECRET.encode("utf-8"),
-        payload,
-        hashlib.sha256,
-    ).hexdigest()
-    return hmac.compare_digest(expected, provided)
+        return "supportdr-com.myshopify.com"
+    return "supportdr-com.myshopify.com"
 
 SEO_ENABLED = os.environ.get("SEO_ENABLED", "false").lower() == "true"
 SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "72"))
@@ -141,7 +118,7 @@ DIRECT_PRODUCT_LINKS = {
         "price": "$100",
         "eyebrow": "Studio Jake",
         "description": "Unlock the Studio motherboard, recording flow, exports, and Jake-attended professional studio routing.",
-        "shop_url": "https://supportrd.com/products/jake-in-the-studio-studio-tier-professional-studio-account",
+        "shop_url": "https://shop.supportrd.com/products/jake-in-the-studio-studio-tier-professional-studio-account",
         "hero_image": "/static/images/jake-studio-premium.jpg",
     },
     "pro": {
@@ -150,7 +127,7 @@ DIRECT_PRODUCT_LINKS = {
         "price": "$50",
         "eyebrow": "Professional",
         "description": "Unlock ARIA Professional with stronger account continuity, money-minded support, and pro-grade access around the shell.",
-        "shop_url": "https://supportrd.com/products/aria-professional-making-money-tier-professional-account",
+        "shop_url": "https://shop.supportrd.com/products/aria-professional-making-money-tier-professional-account",
         "hero_image": "/static/images/aria-premium-pro-main-ad.jpg",
     },
     "premium": {
@@ -159,7 +136,7 @@ DIRECT_PRODUCT_LINKS = {
         "price": "$35",
         "eyebrow": "Premium",
         "description": "Unlock ARIA Premium with better voice handling, stronger profile continuity, and premium account routing across SupportRD.",
-        "shop_url": "https://supportrd.com/products/aria-ai-voice-inner-circle-tier-premium-account",
+        "shop_url": "https://shop.supportrd.com/products/aria-ai-voice-inner-circle-tier-premium-account",
         "hero_image": "/static/images/aria-premium-pro-main-ad.jpg",
     },
 }
@@ -2119,7 +2096,7 @@ def create_local_remote_inbox_offer(owner_email, payload):
         str(body.get("target_url") or ""),
     ]).lower()
     is_coding_help = any(token in normalized for token in ("coding", "developer", "dev", "engineering", "technical help", "code support"))
-    routes_money_back = any(token in normalized for token in ("tip", "tips", "donation", "donations", "support", "company", "supportrd", "supportrd.com"))
+    routes_money_back = any(token in normalized for token in ("tip", "tips", "donation", "donations", "support", "company", "supportrd", "shop.supportrd.com"))
     needs_manual_approval = any(token in normalized for token in ("legal", "rights", "ownership", "policy", "terms", "contract", "agreement", "change request", "changes"))
     initial_status = "approved" if (is_coding_help and routes_money_back and not needs_manual_approval) else "pending"
     try:
@@ -2651,7 +2628,7 @@ def _require_studio_jake_api_access():
             "access": False,
             "error": "login_required",
             "login_url": "/login",
-            "product_url": "https://supportrd.com/products/studio-jake",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
             "message": "Log in to SupportRD to open Jake Premium Studio.",
         }, 401)
     details = get_subscription_details_for_email(email)
@@ -2665,7 +2642,7 @@ def _require_studio_jake_api_access():
             "subscription": plan,
             "product_key": "studio100",
             "product_title": "Jake Premium Studio",
-            "product_url": "https://supportrd.com/products/studio-jake",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
             "message": "Jake Premium Studio is locked until the $100 Studio / Pro package is active.",
         }, 402)
     return email, details, plan, None
@@ -4650,7 +4627,7 @@ def studio_jake_access():
             "access": False,
             "error": "login_required",
             "login_url": "/login",
-            "product_url": "https://supportrd.com/products/studio-jake",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
         }, 401
     details = get_subscription_details_for_email(email)
     plan = (details.get("plan") or "free").strip().lower()
@@ -4666,7 +4643,7 @@ def studio_jake_access():
         "updated_at": details.get("updated_at") or "",
         "product_key": "studio100",
         "product_title": "Jake Premium Studio",
-        "product_url": "https://supportrd.com/products/studio-jake",
+        "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
         "login_url": "/login",
         "message": "Jake Premium Studio is ready." if access else "Jake Premium Studio needs a Studio / Pro package before entering the booth.",
     }, (200 if access else 402)
@@ -4682,7 +4659,7 @@ def studio_jake_enter():
             "access": False,
             "error": "login_required",
             "login_url": "/login",
-            "product_url": "https://supportrd.com/products/studio-jake",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
         }, 401
     details = get_subscription_details_for_email(email)
     plan = (details.get("plan") or "free").strip().lower()
@@ -4695,7 +4672,7 @@ def studio_jake_enter():
             "subscription": plan,
             "product_key": "studio100",
             "product_title": "Jake Premium Studio",
-            "product_url": "https://supportrd.com/products/studio-jake",
+            "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
             "message": "Upgrade to Jake Premium Studio or Pro to open the Studio with Jake attending.",
         }, 402
     session_id = f"SES-{uuid.uuid4().hex[:10].upper()}"
@@ -5387,230 +5364,6 @@ def diary_lobby_movement():
         }
     }
 
-SUPPORTRD_PROXY_MODULES = {
-    "studio": {
-        "title": "Studio",
-        "eyebrow": "Internal Studio",
-        "headline": "Keep Jake, product access, and studio actions inside one SupportRD shell.",
-        "description": "The Shopify app proxy can render Studio panels internally so users do not bounce across new pages just to keep working.",
-        "primary_path": "/product/studio-jake",
-        "primary_label": "Open Studio Jake",
-        "secondary_path": "/",
-        "secondary_label": "Back To Hub",
-    },
-    "diary": {
-        "title": "Diary",
-        "eyebrow": "Internal Diary",
-        "headline": "Diary, memory, and session movement can stay inside the same embedded SupportRD route.",
-        "description": "This fragment is the place to load Diary notes, internal feed cards, and account-linked continuity once we attach more backend reads.",
-        "primary_path": "/product/premium",
-        "primary_label": "Open Premium",
-        "secondary_path": "/",
-        "secondary_label": "Back To Hub",
-    },
-    "profile": {
-        "title": "Profile",
-        "eyebrow": "Internal Profile",
-        "headline": "Identity, login continuity, and account status can sit beside products instead of opening separate pages.",
-        "description": "This keeps your logged-in SupportRD feel attached to the product lane while we migrate more of the Render shell into Shopify.",
-        "primary_path": "/product/pro",
-        "primary_label": "Open Pro",
-        "secondary_path": "/",
-        "secondary_label": "Back To Hub",
-    },
-}
-
-def _support_proxy_user_state():
-    user = session.get("user") or {}
-    email = (user.get("email") or "").strip().lower()
-    name = (user.get("name") or user.get("nickname") or "").strip() or "SupportRD Guest"
-    return {
-        "logged_in": bool(email),
-        "name": name,
-        "email": email,
-        "plan": (get_subscription_for_email(email) if email else "free"),
-    }
-
-def render_support_proxy_home():
-    user_state = _support_proxy_user_state()
-    return render_template_string(
-        """
-<section class="supportrd-proxy-shell">
-  <style>
-    .supportrd-proxy-shell{display:grid;gap:18px}
-    .supportrd-proxy-hero,.supportrd-proxy-grid article,.supportrd-proxy-status{border-radius:24px;padding:24px;background:linear-gradient(180deg,rgba(12,24,42,.96),rgba(7,14,25,.98));border:1px solid rgba(145,205,255,.16)}
-    .supportrd-proxy-eyebrow{font:700 12px/1.2 Arial,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#ffd675}
-    .supportrd-proxy-title{margin:12px 0 10px;font-size:clamp(34px,5vw,58px);line-height:.95}
-    .supportrd-proxy-copy{color:#bcc8d7;font-size:17px;line-height:1.65;max-width:70ch}
-    .supportrd-proxy-actions,.supportrd-proxy-pills{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
-    .supportrd-proxy-btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:#f0c979;color:#07111d;text-decoration:none;font:700 14px/1 Arial,sans-serif;cursor:pointer}
-    .supportrd-proxy-btn.alt{background:rgba(255,255,255,.06);color:#f4f1ea}
-    .supportrd-proxy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-    .supportrd-proxy-grid article h3{margin:10px 0 8px;font-size:24px}
-    .supportrd-proxy-grid article p,.supportrd-proxy-status p{color:#bcc8d7;line-height:1.6}
-    .supportrd-proxy-pills .pill{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);font:600 13px/1 Arial,sans-serif}
-    @media (max-width:900px){.supportrd-proxy-grid{grid-template-columns:1fr}}
-  </style>
-  <article class="supportrd-proxy-hero">
-    <div class="supportrd-proxy-eyebrow">SupportRD Internal App Proxy</div>
-    <h1 class="supportrd-proxy-title">One SupportRD page with internal opens for Studio, Diary, Profile, and products.</h1>
-    <p class="supportrd-proxy-copy">This is the first backend bridge between your Render Flask system and the Shopify theme app extension. The shell loads internally under <code>/apps/supportrd</code>, and products can open inside the modal panel instead of bouncing visitors away from the experience.</p>
-    <div class="supportrd-proxy-actions">
-      <a href="#" class="supportrd-proxy-btn" data-srd-route="/studio">Open Studio</a>
-      <a href="#" class="supportrd-proxy-btn alt" data-srd-route="/diary">Open Diary</a>
-      <a href="#" class="supportrd-proxy-btn alt" data-srd-route="/profile">Open Profile</a>
-    </div>
-    <div class="supportrd-proxy-pills">
-      <span class="pill">Logged In: {{ "YES" if user_state.logged_in else "NO" }}</span>
-      <span class="pill">Name: {{ user_state.name }}</span>
-      <span class="pill">Plan: {{ user_state.plan|upper }}</span>
-    </div>
-  </article>
-  <section class="supportrd-proxy-grid">
-    <article>
-      <div class="supportrd-proxy-eyebrow">Premium</div>
-      <h3>ARIA Inner Circle</h3>
-      <p>Open the Premium product internally, keep the product story visible, and stay in the same SupportRD shell while the user decides.</p>
-      <div class="supportrd-proxy-actions">
-        <a href="#" class="supportrd-proxy-btn" data-srd-open="/product/premium">Open Premium</a>
-      </div>
-    </article>
-    <article>
-      <div class="supportrd-proxy-eyebrow">Professional</div>
-      <h3>ARIA Professional</h3>
-      <p>Show the making-money tier as an internal product panel so Pro can sit next to login state and account continuity.</p>
-      <div class="supportrd-proxy-actions">
-        <a href="#" class="supportrd-proxy-btn" data-srd-open="/product/pro">Open Pro</a>
-      </div>
-    </article>
-    <article>
-      <div class="supportrd-proxy-eyebrow">Studio Jake</div>
-      <h3>Jake In The Studio</h3>
-      <p>Keep the studio motherboard lane attached to the same live shell with no extra browsing detour before the product details appear.</p>
-      <div class="supportrd-proxy-actions">
-        <a href="#" class="supportrd-proxy-btn" data-srd-open="/product/studio-jake">Open Studio Jake</a>
-      </div>
-    </article>
-  </section>
-  <article class="supportrd-proxy-status">
-    <div class="supportrd-proxy-eyebrow">Migration Notes</div>
-    <p>This proxy route is intentionally lightweight right now: it proves the internal shell, modal opens, and product fragments. Next we can pull more of the Render dashboard into these same proxy endpoints so SupportRD feels native inside Shopify.</p>
-  </article>
-</section>
-""",
-        user_state=user_state,
-    )
-
-def render_support_proxy_module(module_key):
-    module = SUPPORTRD_PROXY_MODULES.get(module_key)
-    if not module:
-        return Response("<div class='supportrd-loading'>Module not found.</div>", status=404, mimetype="text/html")
-    return Response(
-        render_template_string(
-            """
-<section class="supportrd-proxy-module">
-  <div class="supportrd-proxy-eyebrow">{{ module.eyebrow }}</div>
-  <h2 style="margin:12px 0 10px;font-size:clamp(30px,4vw,48px);line-height:1">{{ module.title }}</h2>
-  <p style="color:#bcc8d7;font-size:17px;line-height:1.65"><strong>{{ module.headline }}</strong></p>
-  <p style="color:#bcc8d7;font-size:17px;line-height:1.65">{{ module.description }}</p>
-  <div class="supportrd-proxy-actions">
-    <a href="#" class="supportrd-proxy-btn" data-srd-open="{{ module.primary_path }}">{{ module.primary_label }}</a>
-    <a href="#" class="supportrd-proxy-btn alt" data-srd-route="{{ module.secondary_path }}">{{ module.secondary_label }}</a>
-  </div>
-</section>
-""",
-            module=module,
-        ),
-        mimetype="text/html",
-    )
-
-def render_support_proxy_product(product_key):
-    product = DIRECT_PRODUCT_LINKS.get(product_key)
-    if not product:
-        return Response("<div class='supportrd-loading'>Product not found.</div>", status=404, mimetype="text/html")
-    internal_href = f"/products/{product_key}"
-    return Response(
-        render_template_string(
-            """
-<section class="supportrd-proxy-product">
-  <div class="supportrd-proxy-eyebrow">{{ product.eyebrow }}</div>
-  <h2 style="margin:12px 0 8px;font-size:clamp(30px,4vw,46px);line-height:1">{{ product.title }}</h2>
-  <div style="display:inline-flex;padding:10px 14px;border-radius:999px;background:rgba(255,214,117,.12);border:1px solid rgba(255,214,117,.35);color:#ffd675;font:700 17px/1 Arial,sans-serif">{{ product.price }}</div>
-  <p style="color:#bcc8d7;font-size:17px;line-height:1.65;margin-top:18px"><strong>{{ product.headline }}</strong></p>
-  <p style="color:#bcc8d7;font-size:17px;line-height:1.65">{{ product.description }}</p>
-  <div class="supportrd-proxy-actions">
-    <a href="{{ internal_href }}" class="supportrd-proxy-btn">Open Main-Domain Product Page</a>
-    <a href="#" class="supportrd-proxy-btn alt" data-srd-route="/">Back To SupportRD Hub</a>
-  </div>
-</section>
-""",
-            product=product,
-            internal_href=internal_href,
-        ),
-        mimetype="text/html",
-    )
-
-@app.route("/admin/preferences")
-def shopify_admin_preferences():
-    page = render_template_string(
-        """<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SupportRD Shopify App Preferences</title>
-  <style>
-    body{margin:0;font-family:Arial,sans-serif;background:#07111d;color:#f4f1ea}
-    main{max-width:980px;margin:0 auto;padding:32px 20px 64px}
-    .panel{border-radius:24px;padding:24px;background:linear-gradient(180deg,rgba(12,24,42,.96),rgba(7,14,25,.98));border:1px solid rgba(145,205,255,.16)}
-    .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#ffd675}
-    code{background:rgba(255,255,255,.08);padding:2px 6px;border-radius:8px}
-  </style>
-</head>
-<body>
-  <main>
-    <section class="panel">
-      <div class="eyebrow">SupportRD Preferences</div>
-      <h1>SupportRD Shopify app preferences are live.</h1>
-      <p>This admin page is a simple handoff for now. The important internal path is <code>/apps/supportrd</code>, which points at the Flask proxy route <code>/proxy</code>.</p>
-      <p>Next backend steps can move more of Studio, Diary, Profile, and logged-in continuity into these proxy endpoints without opening new pages.</p>
-    </section>
-  </main>
-</body>
-</html>"""
-    )
-    return Response(page, mimetype="text/html")
-
-@app.route("/shopify/auth/callback")
-@app.route("/api/auth/callback")
-def shopify_app_callback():
-    shop = (request.args.get("shop") or "").strip()
-    host = (request.args.get("host") or "").strip()
-    target = "/admin/preferences"
-    if shop or host:
-        pieces = []
-        if shop:
-            pieces.append(f"shop={requests.utils.quote(shop)}")
-        if host:
-            pieces.append(f"host={requests.utils.quote(host)}")
-        target = f"{target}?{'&'.join(pieces)}"
-    return redirect(target)
-
-@app.route("/proxy")
-@app.route("/proxy/")
-@app.route("/proxy/<path:subpath>")
-def shopify_support_proxy(subpath=""):
-    if not verify_shopify_app_proxy_signature(request.args):
-        return Response("Invalid Shopify app proxy signature.", status=401, mimetype="text/plain")
-    clean = (subpath or "").strip("/").lower()
-    if not clean:
-        return Response(render_support_proxy_home(), mimetype="text/html")
-    if clean in SUPPORTRD_PROXY_MODULES:
-        return render_support_proxy_module(clean)
-    if clean.startswith("product/"):
-        return render_support_proxy_product(clean.split("/", 1)[1])
-    return Response("<div class='supportrd-loading'>SupportRD route not found.</div>", status=404, mimetype="text/html")
-
 @app.route("/products/<path:slug>")
 def shopify_product_redirect(slug):
     store = resolve_shopify_storefront_domain()
@@ -5830,6 +5583,7 @@ def login():
     if not AUTH0_DOMAIN or not AUTH0_CLIENT_ID or not AUTH0_CLIENT_SECRET:
         print("LOGIN ERROR: missing AUTH0 env vars")
         return redirect("https://supportrd.com/local-remote?login=failed&reason=missing_auth0")
+    callback_url = resolve_auth0_callback_url()
     callback_url = resolve_auth0_callback_url()
     state = os.urandom(16).hex()
     provider = request.args.get("provider")
@@ -6883,12 +6637,7 @@ def render_support_seo_page(page_key):
     checkout_map = get_public_shopify_checkout_map()
     plan_key = page.get("product_plan") or "premium"
     checkout_meta = checkout_map.get(plan_key) or {}
-    seo_page_fallbacks = {
-        "premium": "/products/premium",
-        "pro": "/products/pro",
-        "studio100": "/products/studio-jake",
-    }
-    checkout_href = checkout_meta.get("checkout_path") or seo_page_fallbacks.get(plan_key, "/products/premium")
+    checkout_href = checkout_meta.get("checkout_path") or f"https://shop.supportrd.com/collections/all?plan={plan_key}"
     product_label = (checkout_meta.get("label") or page.get("title") or "SupportRD Premium").strip()
     page_url = f"https://supportrd.com/{page_key}"
     json_ld = json.dumps({
@@ -7245,6 +6994,73 @@ def local_studio_shell():
     return send_from_directory("static", "local-studio.html")
 
 
+
+
+PROXY_BASE = "https://supportrd.com/apps/supportrd"
+
+def _read_static_html(filename: str) -> str:
+    path = os.path.join(app.root_path, "static", filename)
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+
+def _proxy_shell_html(filename: str) -> Response:
+    html = _read_static_html(filename)
+
+    replacements = {
+        'href="/local-remote"': f'href="{PROXY_BASE}/local-remote"',
+        'href="/local-diary"': f'href="{PROXY_BASE}/local-diary"',
+        'href="/local-profile"': f'href="{PROXY_BASE}/local-profile"',
+        'href="/local-studio"': f'href="{PROXY_BASE}/local-studio"',
+        'href="/local-settings"': f'href="{PROXY_BASE}/local-settings"',
+        'href="/local-map"': f'href="{PROXY_BASE}/local-map"',
+        'href="/local-faq"': f'href="{PROXY_BASE}/local-faq"',
+        'href="/login"': 'href="https://supportrd.com/login"',
+        'href="/logout"': 'href="https://supportrd.com/logout"',
+        'src="/static/': 'src="https://supportrd.com/static/',
+        'href="/static/': 'href="https://supportrd.com/static/',
+        'fetch("/': 'fetch("https://supportrd.com/',
+    }
+    for old, new in replacements.items():
+        html = html.replace(old, new)
+
+    return Response(html, mimetype="text/html")
+
+@app.route("/shopify/proxy")
+def shopify_proxy_home():
+    return _proxy_shell_html("local-remote.html")
+
+@app.route("/shopify/proxy/")
+def shopify_proxy_home_slash():
+    return _proxy_shell_html("local-remote.html")
+
+@app.route("/shopify/proxy/local-remote")
+def shopify_proxy_local_remote():
+    return _proxy_shell_html("local-remote.html")
+
+@app.route("/shopify/proxy/local-diary")
+def shopify_proxy_local_diary():
+    return _proxy_shell_html("local-diary.html")
+
+@app.route("/shopify/proxy/local-profile")
+def shopify_proxy_local_profile():
+    return _proxy_shell_html("local-profile.html")
+
+@app.route("/shopify/proxy/local-studio")
+def shopify_proxy_local_studio():
+    return _proxy_shell_html("local-studio.html")
+
+@app.route("/shopify/proxy/local-settings")
+def shopify_proxy_local_settings():
+    return _proxy_shell_html("local-settings.html")
+
+@app.route("/shopify/proxy/local-map")
+def shopify_proxy_local_map():
+    return _proxy_shell_html("local-map.html")
+
+@app.route("/shopify/proxy/local-faq")
+def shopify_proxy_local_faq():
+    return _proxy_shell_html("local-faq.html")
+
 @app.route("/api/local-remote/bootstrap")
 def local_remote_bootstrap():
     user = session.get("user") or {}
@@ -7447,7 +7263,7 @@ def local_remote_bootstrap():
     studio_access = {
         "authenticated": bool(email),
         "access": studio_jake_access_for_plan(plan) if email else False,
-        "product_url": "https://supportrd.com/products/studio-jake",
+        "product_url": "https://shop.supportrd.com/products/jake-premium-studio",
         "message": (
             "Studio access is ready."
             if email and studio_jake_access_for_plan(plan)
