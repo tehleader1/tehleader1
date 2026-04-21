@@ -109,6 +109,11 @@
     });
   }
 
+  if (shell && isProductPage) {
+    shell.innerHTML = "";
+    shell.style.display = "none";
+  }
+
   if (shell && !isProductPage) {
     loadIntoShell("");
   }
