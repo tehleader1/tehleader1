@@ -1,6 +1,6 @@
 const qs = (s) => document.querySelector(s);
 const qsa = (s) => Array.from(document.querySelectorAll(s));
-const STUDIO_PREMIUM_URL = "https://supportrd.com/products/jake-premium-studio";
+const STUDIO_PREMIUM_URL = "https://supportrd.com/products/studio-jake";
 const STUDIO_LOGIN_URL = "/login";
 const STUDIO_LOCAL_SANDBOX = new URLSearchParams(window.location.search).get("localSandbox") === "1";
 const STUDIO_SANDBOX_SUFFIX = STUDIO_LOCAL_SANDBOX ? "?localSandbox=1" : "";

@@ -2628,7 +2628,7 @@ def _require_studio_jake_api_access():
             "access": False,
             "error": "login_required",
             "login_url": "/login",
-            "product_url": "https://supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/studio-jake",
             "message": "Log in to SupportRD to open Jake Premium Studio.",
         }, 401)
     details = get_subscription_details_for_email(email)
@@ -2642,7 +2642,7 @@ def _require_studio_jake_api_access():
             "subscription": plan,
             "product_key": "studio100",
             "product_title": "Jake Premium Studio",
-            "product_url": "https://supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/studio-jake",
             "message": "Jake Premium Studio is locked until the $100 Studio / Pro package is active.",
         }, 402)
     return email, details, plan, None
@@ -4627,7 +4627,7 @@ def studio_jake_access():
             "access": False,
             "error": "login_required",
             "login_url": "/login",
-            "product_url": "https://supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/studio-jake",
         }, 401
     details = get_subscription_details_for_email(email)
     plan = (details.get("plan") or "free").strip().lower()
@@ -4643,7 +4643,7 @@ def studio_jake_access():
         "updated_at": details.get("updated_at") or "",
         "product_key": "studio100",
         "product_title": "Jake Premium Studio",
-        "product_url": "https://supportrd.com/products/jake-premium-studio",
+        "product_url": "https://supportrd.com/products/studio-jake",
         "login_url": "/login",
         "message": "Jake Premium Studio is ready." if access else "Jake Premium Studio needs a Studio / Pro package before entering the booth.",
     }, (200 if access else 402)
@@ -4659,7 +4659,7 @@ def studio_jake_enter():
             "access": False,
             "error": "login_required",
             "login_url": "/login",
-            "product_url": "https://supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/studio-jake",
         }, 401
     details = get_subscription_details_for_email(email)
     plan = (details.get("plan") or "free").strip().lower()
@@ -4672,7 +4672,7 @@ def studio_jake_enter():
             "subscription": plan,
             "product_key": "studio100",
             "product_title": "Jake Premium Studio",
-            "product_url": "https://supportrd.com/products/jake-premium-studio",
+            "product_url": "https://supportrd.com/products/studio-jake",
             "message": "Upgrade to Jake Premium Studio or Pro to open the Studio with Jake attending.",
         }, 402
     session_id = f"SES-{uuid.uuid4().hex[:10].upper()}"
@@ -5583,7 +5583,6 @@ def login():
     if not AUTH0_DOMAIN or not AUTH0_CLIENT_ID or not AUTH0_CLIENT_SECRET:
         print("LOGIN ERROR: missing AUTH0 env vars")
         return redirect("https://supportrd.com/local-remote?login=failed&reason=missing_auth0")
-    callback_url = resolve_auth0_callback_url()
     callback_url = resolve_auth0_callback_url()
     state = os.urandom(16).hex()
     provider = request.args.get("provider")
@@ -6637,7 +6636,12 @@ def render_support_seo_page(page_key):
     checkout_map = get_public_shopify_checkout_map()
     plan_key = page.get("product_plan") or "premium"
     checkout_meta = checkout_map.get(plan_key) or {}
-    checkout_href = checkout_meta.get("checkout_path") or f"https://supportrd.com/collections/all?plan={plan_key}"
+    seo_page_fallbacks = {
+        "premium": "/products/premium",
+        "pro": "/products/pro",
+        "studio100": "/products/studio-jake",
+    }
+    checkout_href = checkout_meta.get("checkout_path") or seo_page_fallbacks.get(plan_key, "/products/premium")
     product_label = (checkout_meta.get("label") or page.get("title") or "SupportRD Premium").strip()
     page_url = f"https://supportrd.com/{page_key}"
     json_ld = json.dumps({
@@ -7196,7 +7200,7 @@ def local_remote_bootstrap():
     studio_access = {
         "authenticated": bool(email),
         "access": studio_jake_access_for_plan(plan) if email else False,
-        "product_url": "https://supportrd.com/products/jake-premium-studio",
+        "product_url": "https://supportrd.com/products/studio-jake",
         "message": (
             "Studio access is ready."
             if email and studio_jake_access_for_plan(plan)

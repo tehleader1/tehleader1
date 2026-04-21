@@ -74,10 +74,10 @@
         <div class="member-card">
           <div class="eyebrow">Logged In State</div>
           <strong id="memberCardTitle">Diary mode premium route</strong>
-          <span id="memberCardText">Logged in. Confirmed ^^ URL TAG, Fantasy Package Offer, and Premium / Pro Package Offer will attach here with the diary session.</span>
+          <span id="memberCardText">Logged in. Confirmed ^^ URL TAG, Studio Jake, and Premium / Pro Package Offer will attach here with the diary session.</span>
           <div class="member-offers">
-            <a id="memberPremiumLink" href="https://supportrd.com/collections/all" target="_blank" rel="noreferrer">Premium / Pro Package Offer</a>
-            <a id="memberFantasyLink" href="https://supportrd.com/collections/all" target="_blank" rel="noreferrer">Fantasy Package Offer</a>
+            <a id="memberPremiumLink" href="/products/pro" target="_blank" rel="noreferrer">Premium / Pro Package Offer</a>
+            <a id="memberStudioLink" href="/products/studio-jake" target="_blank" rel="noreferrer">Studio Jake Offer</a>
             <button id="handsFreeModeBtn" type="button">Hands Free Mode Ready</button>
           </div>
         </div>
@@ -173,9 +173,9 @@
                     <button class="payment-chip" id="paidGuestBtn" type="button">Paid Guest Route</button>
                   </div>
                   <div class="payment-links">
-                    <a id="premiumLaneLink" href="https://supportrd.com/collections/all" target="_blank" rel="noreferrer">Unlock Premium</a>
-                    <a id="proLaneLink" href="https://supportrd.com/collections/all" target="_blank" rel="noreferrer">Go Pro</a>
-                    <a id="fantasyLaneLink" href="https://supportrd.com/collections/all" target="_blank" rel="noreferrer">Fantasy Lane</a>
+                    <a id="premiumLaneLink" href="/products/premium" target="_blank" rel="noreferrer">Unlock Premium</a>
+                    <a id="proLaneLink" href="/products/pro" target="_blank" rel="noreferrer">Go Pro</a>
+                    <a id="studioLaneLink" href="/products/studio-jake" target="_blank" rel="noreferrer">Studio Jake</a>
                   </div>
                 </div>
               </div>
@@ -269,7 +269,7 @@
   <script>
     const state = { sessionId:"", liveSlug:"", ownerEmail:"guest", payload:{}, comments:[], lobby:[], history:[], socialPosts:[], mediaStream:null, mediaRecorder:null, recordedChunks:[], shopifyConfig:null, loginBadge:{ title:"Guest Route", text:"Logged in. Confirmed ^^ URL TAG will stay visible here when the account is attached." }, publicDiaryView:null };
     const els = {
-      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), guestChatText: document.getElementById('guestChatText'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments'), chatList: document.getElementById('chatList'), authBadgeTitle: document.getElementById('authBadgeTitle'), authBadgeText: document.getElementById('authBadgeText'), liveCommentName: document.getElementById('liveCommentName'), liveCommentSupport: document.getElementById('liveCommentSupport'), liveCommentText: document.getElementById('liveCommentText'), postLiveCommentBtn: document.getElementById('postLiveCommentBtn'), tip5Btn: document.getElementById('tip5Btn'), tip20Btn: document.getElementById('tip20Btn'), paidGuestBtn: document.getElementById('paidGuestBtn'), premiumLaneLink: document.getElementById('premiumLaneLink'), proLaneLink: document.getElementById('proLaneLink'), fantasyLaneLink: document.getElementById('fantasyLaneLink'), memberCardTitle: document.getElementById('memberCardTitle'), memberCardText: document.getElementById('memberCardText'), memberPremiumLink: document.getElementById('memberPremiumLink'), memberFantasyLink: document.getElementById('memberFantasyLink'), publicRouteTitle: document.getElementById('publicRouteTitle'), publicRouteText: document.getElementById('publicRouteText'), publicRouteLink: document.getElementById('publicRouteLink'), screenWatchLink: document.getElementById('screenWatchLink') };
+      displayName: document.getElementById('displayName'), profileTag: document.getElementById('profileTag'), liveToggle: document.getElementById('liveToggle'), guestName: document.getElementById('guestName'), guestSupport: document.getElementById('guestSupport'), entryText: document.getElementById('entryText'), hairProblem: document.getElementById('hairProblem'), guestChatText: document.getElementById('guestChatText'), assistantSelect: document.getElementById('assistantSelect'), statusBox: document.getElementById('statusBox'), historyList: document.getElementById('historyList'), commentsList: document.getElementById('commentsList'), lobbyList: document.getElementById('lobbyList'), socialList: document.getElementById('socialList'), socialFeed: document.getElementById('socialFeed'), responseList: document.getElementById('responseList'), liveScreenTitle: document.getElementById('liveScreenTitle'), liveScreenMeta: document.getElementById('liveScreenMeta'), liveBadgeMode: document.getElementById('liveBadgeMode'), liveBadgeTag: document.getElementById('liveBadgeTag'), liveBadgeOwner: document.getElementById('liveBadgeOwner'), recordBadge: document.getElementById('recordBadge'), diarySessionCard: document.getElementById('diarySessionCard'), diaryLiveLink: document.getElementById('diaryLiveLink'), diaryHistoryCard: document.getElementById('diaryHistoryCard'), assistantLaneCard: document.getElementById('assistantLaneCard'), diaryVideo: document.getElementById('diaryVideo'), diaryPlayback: document.getElementById('diaryPlayback'), commandCenterTitle: document.getElementById('commandCenterTitle'), commandCenterBody: document.getElementById('commandCenterBody'), notificationList: document.getElementById('notificationList'), assistantHistoryList: document.getElementById('assistantHistoryList'), screenMode: document.getElementById('screenMode'), fontChoice: document.getElementById('fontChoice'), screenCanvas: document.getElementById('screenCanvas'), screenEditor: document.getElementById('screenEditor'), shapeLayer: document.getElementById('shapeLayer'), screenComments: document.getElementById('screenComments'), chatList: document.getElementById('chatList'), authBadgeTitle: document.getElementById('authBadgeTitle'), authBadgeText: document.getElementById('authBadgeText'), liveCommentName: document.getElementById('liveCommentName'), liveCommentSupport: document.getElementById('liveCommentSupport'), liveCommentText: document.getElementById('liveCommentText'), postLiveCommentBtn: document.getElementById('postLiveCommentBtn'), tip5Btn: document.getElementById('tip5Btn'), tip20Btn: document.getElementById('tip20Btn'), paidGuestBtn: document.getElementById('paidGuestBtn'), premiumLaneLink: document.getElementById('premiumLaneLink'), proLaneLink: document.getElementById('proLaneLink'), studioLaneLink: document.getElementById('studioLaneLink'), memberCardTitle: document.getElementById('memberCardTitle'), memberCardText: document.getElementById('memberCardText'), memberPremiumLink: document.getElementById('memberPremiumLink'), memberStudioLink: document.getElementById('memberStudioLink'), publicRouteTitle: document.getElementById('publicRouteTitle'), publicRouteText: document.getElementById('publicRouteText'), publicRouteLink: document.getElementById('publicRouteLink'), screenWatchLink: document.getElementById('screenWatchLink') };
 
     function setStatus(message){ els.statusBox.textContent = message; }
     function renderList(target, items, emptyTitle, emptyCopy, formatter, cls='feed-item'){ target.innerHTML = (items||[]).length ? items.map(formatter).join('') : `<div class="${cls}"><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`; }
@@ -277,11 +277,11 @@
     async function fetchJson(url, options={}){ const response = await fetch(url,{ credentials:'same-origin', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options }); const data = await response.json().catch(()=>({ok:false,error:'invalid_json'})); if(!response.ok || data?.ok===false) throw new Error(data?.error || `request_failed_${response.status}`); return data; }
     function checkoutHref(planKey, fallbackHref){ return state.shopifyConfig?.checkout_map?.[planKey]?.checkout_path || fallbackHref; }
     function refreshPaymentLinks(){
-      els.premiumLaneLink.href = checkoutHref('premium', 'https://supportrd.com/collections/all');
-      els.proLaneLink.href = checkoutHref('pro', 'https://supportrd.com/collections/all');
-      els.fantasyLaneLink.href = checkoutHref('fantasy300', 'https://supportrd.com/collections/all');
+      els.premiumLaneLink.href = checkoutHref('premium', '/products/premium');
+      els.proLaneLink.href = checkoutHref('pro', '/products/pro');
+      els.studioLaneLink.href = checkoutHref('studio100', '/products/studio-jake');
       els.memberPremiumLink.href = els.proLaneLink.href;
-      els.memberFantasyLink.href = els.fantasyLaneLink.href;
+      els.memberStudioLink.href = els.studioLaneLink.href;
     }
     function getRequestedDiarySlug(){
       const params = new URLSearchParams(window.location.search);
@@ -345,7 +345,7 @@
       return confirmed
         ? {
             title: `Logged in. Confirmed ^^ ${tag || 'URL TAG'}`,
-            text: `${email} · ${plan} · provider ${provider} · URL TAG ${tag || 'waiting'} · Fantasy + Premium / Pro ready on this page.`
+            text: `${email} · ${plan} · provider ${provider} · URL TAG ${tag || 'waiting'} · Studio Jake + Premium / Pro ready on this page.`
           }
         : {
             title: 'Guest Route',
@@ -372,8 +372,8 @@
       els.authBadgeText.textContent = state.loginBadge.text;
       els.memberCardTitle.textContent = loginConfirmed ? `${payload.profile_tag || '^^ route'} diary access is attached` : 'Diary mode premium route';
       els.memberCardText.textContent = loginConfirmed
-        ? 'Fantasy Package Offer, Premium / Pro Package Offer, live payments, and the current diary identity are attached to this logged-in room.'
-        : 'Logged in. Confirmed ^^ URL TAG, Fantasy Package Offer, and Premium / Pro Package Offer will attach here with the diary session.';
+        ? 'Studio Jake, Premium / Pro Package Offer, live payments, and the current diary identity are attached to this logged-in room.'
+        : 'Logged in. Confirmed ^^ URL TAG, Studio Jake, and Premium / Pro Package Offer will attach here with the diary session.';
       els.publicRouteTitle.textContent = payload.profile_tag ? `Current live route ${payload.profile_tag}` : 'Public diary route waiting';
       els.publicRouteText.textContent = state.publicDiaryView?.summary?.owner_email
         ? `Currently reading ${state.publicDiaryView.summary.owner_email} through the shared diary route.`
