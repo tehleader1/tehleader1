@@ -1,5 +1,6 @@
 (async function () {
   const shell = document.getElementById("supportrd-app-shell");
+  const isProductPage = /\/products\/[^/?#]+/.test(window.location.pathname);
   const root = (shell && shell.dataset.root) || "/apps/supportrd";
   const modal = document.getElementById("supportrd-modal");
   const panelBody = document.getElementById("supportrd-panel-body");
@@ -108,7 +109,7 @@
     });
   }
 
-  if (shell) {
+  if (shell && !isProductPage) {
     loadIntoShell("");
   }
   mountProductBridge();
