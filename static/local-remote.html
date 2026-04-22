@@ -328,6 +328,21 @@
     }
     .gig-source-btn.active{background:linear-gradient(180deg, rgba(109,173,255,.34), rgba(38,78,137,.42));border-color:rgba(207,235,255,.34)}
     .gig-connector-frame{width:100%;height:420px;border:none;background:#06101b}
+    .gig-connector-canvas{
+      width:100%;
+      height:420px;
+      background:#06101b;
+      display:none;
+    }
+    .gig-connector-canvas.active{
+      display:block;
+    }
+    .gig-connector-canvas iframe{
+      width:100%;
+      height:100%;
+      border:none;
+      background:#06101b;
+    }
     .gig-screenshot-gallery{
       display:none;
       height:420px;
@@ -963,7 +978,8 @@
             </div>
             <button type="button" class="gig-screenshot-nav" id="gigScreenshotNextBtn">&#10095;</button>
           </div>
-          <iframe class="gig-connector-frame" id="gigConnectorFrame" title="Gig connector live viewer" loading="lazy"></iframe>
+          <div class="gig-connector-canvas" id="gigConnectorCanvas" aria-live="polite"></div>
+          <iframe class="gig-connector-frame" id="gigConnectorFrame" title="Gig connector live viewer" loading="lazy" style="display:none;"></iframe>
         </div>
         <div class="gig-viewer-grid">
           <section class="gig-events">
@@ -1445,6 +1461,7 @@
     const gigConnectorLoaderText = document.getElementById("gigConnectorLoaderText");
     const gigConnectorFallback = document.getElementById("gigConnectorFallback");
     const gigConnectorFallbackText = document.getElementById("gigConnectorFallbackText");
+    const gigConnectorCanvas = document.getElementById("gigConnectorCanvas");
     const gigConnectorFrame = document.getElementById("gigConnectorFrame");
     const gigScreenshotGallery = document.getElementById("gigScreenshotGallery");
     const gigScreenshotPrevBtn = document.getElementById("gigScreenshotPrevBtn");
@@ -1831,21 +1848,22 @@
 
     async function renderGigFrameSource(source){
       if(!source?.url){
-        gigConnectorFrame.srcdoc = `<div style="font-family:Arial,Helvetica,sans-serif;background:#07111c;color:#edf4ff;height:100%;display:flex;align-items:center;justify-content:center;">No source available.</div>`;
+        gigConnectorCanvas.classList.add("active");
+        gigConnectorCanvas.innerHTML = `<div style="font-family:Arial,Helvetica,sans-serif;background:#07111c;color:#edf4ff;height:100%;display:flex;align-items:center;justify-content:center;">No source available.</div>`;
         return;
       }
+      gigConnectorCanvas.classList.add("active");
       if(isSameOriginGigSource(source)){
         try{
           const response = await fetch(source.url, { credentials: "same-origin" });
           const html = await response.text();
-          gigConnectorFrame.srcdoc = html;
+          gigConnectorCanvas.innerHTML = `<iframe title="${source.label || "Gig Connector View"}" srcdoc=${JSON.stringify(html)}></iframe>`;
           return;
         }catch(_error){
           // Fall back to src navigation below.
         }
       }
-      gigConnectorFrame.removeAttribute("srcdoc");
-      gigConnectorFrame.src = source.url;
+      gigConnectorCanvas.innerHTML = `<iframe title="${source.label || "Gig Connector View"}" src="${source.url}"></iframe>`;
     }
 
     function launchGigConnector(sourceKey = activeGigSource){
@@ -1857,14 +1875,17 @@
       gigConnectorLoader.classList.add("active");
       gigConnectorFallback.classList.remove("active");
       gigScreenshotGallery.classList.remove("active");
-      gigConnectorFrame.style.display = "block";
+      gigConnectorCanvas.classList.remove("active");
+      gigConnectorCanvas.innerHTML = "";
+      gigConnectorFrame.style.display = "none";
       gigConnectorLoaderText.textContent = `Loading ${source.label} through the gig connector method so the live corporate state can come up cleanly.`;
       gigConnectorFrame.src = "about:blank";
       window.setTimeout(()=>{
         gigConnectorLoader.classList.remove("active");
         if(source.kind === "screenshot-gallery"){
           gigConnectorFallback.classList.remove("active");
-          gigConnectorFrame.style.display = "none";
+          gigConnectorCanvas.classList.remove("active");
+          gigConnectorCanvas.innerHTML = "";
           gigScreenshotGallery.classList.add("active");
           renderGigScreenshot(source);
           return;
