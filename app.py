@@ -7654,39 +7654,38 @@ def local_remote_bootstrap():
     corporate_viewer = {
         "sources": [
             {
-                "key": "supportrd",
-                "label": "SupportRD.com",
-                "url": "https://supportrd.com/",
-                "kind": "website",
-            },
-            {
                 "key": "conversation",
                 "label": "Coding Screenshots",
-                "url": "https://supportrd.com/static/images/Screenshot_2-3-2026_195020_ccrsupport.my.canva.site.jpeg",
+                "url": "https://supportrd.com/static/images/conversation-shot-1.png",
                 "kind": "screenshot-gallery",
                 "slides": [
                     {
-                        "title": "Coding View One",
-                        "detail": "Live coding proof from the SupportRD build period, showing active work and movement across the app.",
-                        "image": "https://supportrd.com/static/images/Screenshot_2-3-2026_195020_ccrsupport.my.canva.site.jpeg",
+                        "title": "Shopify App Settings",
+                        "detail": "A real screenshot from the build session while configuring the SupportRD app credentials and contact lane.",
+                        "image": "https://supportrd.com/static/images/conversation-shot-1.png",
                     },
                     {
-                        "title": "Coding View Two",
-                        "detail": "A second coding screenshot view so the source lane can switch between your live build moments.",
-                        "image": "https://supportrd.com/static/images/Screenshot_2-3-2026_211121_ccrsupport.my.canva.site.jpeg",
+                        "title": "Shopify Version + Proxy Setup",
+                        "detail": "Another real screenshot from the active setup session showing version configuration and proxy wiring.",
+                        "image": "https://supportrd.com/static/images/conversation-shot-2.png",
+                    },
+                    {
+                        "title": "Render Deploy Settings",
+                        "detail": "A live deployment screenshot showing the Render production settings during the SupportRD rollout.",
+                        "image": "https://supportrd.com/static/images/conversation-shot-3.png",
                     },
                 ],
             },
             {
                 "key": "options",
-                "label": "Options Market",
-                "url": "https://supportrd.com/market-live",
-                "kind": "local-live",
+                "label": "Market",
+                "url": "https://market-do8p.onrender.com/",
+                "kind": "website",
             },
             {
                 "key": "plantman",
-                "label": "ThePlantManInc.com",
-                "url": "https://theplantmaninc.com/",
+                "label": "PlantManInc",
+                "url": "https://plant-escapes-in-paradise.onrender.com/",
                 "kind": "website",
             },
         ],
@@ -7738,12 +7737,6 @@ def local_remote_bootstrap():
                 "link": "https://shop.supportrd.com/collections/all",
             },
             {
-                "title": "SupportRD Shell Build",
-                "image": "/static/images/aria-premium-pro-main-ad.jpg",
-                "detail": "Recent live shell display with premium routes, roaming assistants, and sticky account access.",
-                "link": "https://supportrd.com/",
-            },
-            {
                 "title": "Studio Motherboard Build",
                 "image": "/static/images/jake-studio-premium.jpg",
                 "detail": "Recent Studio motherboard editing display with stacked playback and export lanes.",
@@ -7753,7 +7746,7 @@ def local_remote_bootstrap():
                 "title": "Developer Coding Access",
                 "image": "/static/images/remote-healthy-hair.jpeg",
                 "detail": "Anthony founder access: coding the shell, options market board, corporate live viewer, and real platform wiring.",
-                "link": "http://127.0.0.1:3000/",
+                "link": "https://market-do8p.onrender.com/",
             },
         ],
     }

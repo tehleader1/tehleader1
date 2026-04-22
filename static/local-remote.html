@@ -1018,14 +1018,6 @@
           </section>
         </div>
         <div class="gig-build-strip" id="gigBuildStrip">
-          <article class="gig-build-card" style="--build-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
-            <div class="gig-build-copy">
-              <div class="promo-chip">Recent Build</div>
-              <strong>SupportRD Shell Display</strong>
-              <span>Recent shell work, premium routes, and real account access visuals stay visible here.</span>
-              <a class="buy-now" href="https://supportrd.com/" target="_blank" rel="noreferrer">Open Shell</a>
-            </div>
-          </article>
           <article class="gig-build-card" style="--build-image:url('/static/images/jake-studio-premium.jpg')">
             <div class="gig-build-copy">
               <div class="promo-chip">Studio Build</div>
@@ -1037,9 +1029,9 @@
           <article class="gig-build-card" style="--build-image:url('/static/images/remote-healthy-hair.jpeg')">
             <div class="gig-build-copy">
               <div class="promo-chip">Developer Access</div>
-              <strong>Founder Coding Access</strong>
-              <span>Anthony coding access to SupportRD, the options market board, and connected corporate lanes stays visible for trust.</span>
-              <a class="buy-now" href="http://127.0.0.1:3000/" target="_blank" rel="noreferrer">Open Market</a>
+              <strong>Live Market Access</strong>
+              <span>Keep the market board visible beside PlantManInc and the screenshot lane while the business stack keeps moving.</span>
+              <a class="buy-now" href="https://market-do8p.onrender.com/" target="_blank" rel="noreferrer">Open Market</a>
             </div>
           </article>
         </div>
@@ -1812,7 +1804,7 @@
         ? advisors.map((item)=>`<div class="gig-advisor-item"><strong>${item}</strong><span>Keep this reality lane visible while capitalizing and planning the corporation branch.</span></div>`).join("")
         : `<div class="gig-advisor-item"><strong>Business lane</strong><span>Accountant, supply, transportation, and dropshipping planning will show here.</span></div>`;
       if(builds.length){
-        gigBuildStrip.innerHTML = builds.map((item)=>`<article class="gig-build-card" style="--build-image:url('${item.image || "/static/images/aria-premium-pro-main-ad.jpg"}')"><div class="gig-build-copy"><div class="promo-chip">Build Display</div><strong>${item.title}</strong><span>${item.detail}</span><a class="buy-now" href="${item.link || "https://supportrd.com/"}" target="_blank" rel="noreferrer">Open</a></div></article>`).join("");
+        gigBuildStrip.innerHTML = builds.map((item)=>`<article class="gig-build-card" style="--build-image:url('${item.image || "/static/images/aria-premium-pro-main-ad.jpg"}')"><div class="gig-build-copy"><div class="promo-chip">Build Display</div><strong>${item.title}</strong><span>${item.detail}</span><a class="buy-now" href="${item.link || "#"}" target="_blank" rel="noreferrer">Open</a></div></article>`).join("");
       }
     }
 
@@ -1876,39 +1868,18 @@
       });
     }
 
-    function renderGigMarketCanvas(){
+    function renderGigWebsiteCanvas(source){
       gigConnectorCanvas.classList.add("active");
       gigConnectorCanvas.innerHTML = `
-        <div style="height:100%;display:grid;gap:14px;padding:18px;background:radial-gradient(circle at top right, rgba(123,181,255,.14), transparent 28%), linear-gradient(180deg,#07111c,#0a1728);color:#edf4ff;">
-          <div style="display:grid;gap:8px;">
-            <div style="color:#d5b08b;font-size:11px;letter-spacing:.18em;text-transform:uppercase;">Market Live</div>
-            <strong style="font-size:26px;font-family:'Cormorant Garamond', Georgia, serif;">Options Market Finance Lane</strong>
-            <span style="color:rgba(237,244,255,.78);line-height:1.55;">Option Trades with pressure, volume, and delta reading for the chosen option. Need more help? Contact Marcus 704-453-3983.</span>
+        <div style="height:100%;display:grid;grid-template-rows:auto 1fr;gap:12px;padding:16px;background:radial-gradient(circle at top right, rgba(123,181,255,.14), transparent 28%), linear-gradient(180deg,#07111c,#0a1728);color:#edf4ff;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="display:grid;gap:4px;">
+              <div style="color:#d5b08b;font-size:11px;letter-spacing:.18em;text-transform:uppercase;">Live View</div>
+              <strong style="font-size:24px;font-family:'Cormorant Garamond', Georgia, serif;">${source.label || "External View"}</strong>
+            </div>
+            <a href="${source.url || "#"}" target="_blank" rel="noreferrer" style="display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:14px;border:1px solid rgba(191,214,255,.14);background:rgba(255,255,255,.08);color:#edf4ff;text-decoration:none;font-weight:700;">Open Current Source</a>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
-            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
-              <strong style="display:block;margin-bottom:4px;">Pressure</strong>
-              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.45;">Track whether the selected option is getting real force behind the move.</span>
-            </div>
-            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
-              <strong style="display:block;margin-bottom:4px;">Volume</strong>
-              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.45;">Use contract activity to judge whether the lane is alive or fading.</span>
-            </div>
-            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
-              <strong style="display:block;margin-bottom:4px;">Delta</strong>
-              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.45;">Read sensitivity on the chosen option before leaning harder into the trade.</span>
-            </div>
-          </div>
-          <div style="display:grid;gap:10px;">
-            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
-              <strong style="display:block;margin-bottom:4px;">Hair Complete Package</strong>
-              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.55;">This market lane is the finances part of the hair complete package and stays visible inside SupportRD for quick review.</span>
-            </div>
-            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
-              <strong style="display:block;margin-bottom:4px;">Need More Help?</strong>
-              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.55;">Contact Marcus 704-453-3983</span>
-            </div>
-          </div>
+          <iframe src="${source.url || "about:blank"}" title="${source.label || "Gig Connector View"}" style="width:100%;height:100%;border:1px solid rgba(191,214,255,.14);border-radius:18px;background:#08111d;"></iframe>
         </div>
       `;
       gigConnectorSourceLink.textContent = "View Coding Screenshots";
@@ -1976,7 +1947,7 @@
           return;
         }
         gigConnectorFallback.classList.remove("active");
-        renderGigMarketCanvas();
+        renderGigWebsiteCanvas(source);
       }, 1400);
       logConversion(`gig-${source.key}`, "gig-connector", { source: source.key, url: source.url });
     }
