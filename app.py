@@ -7105,6 +7105,203 @@ def sitemap_xml():
     )
     return Response(xml, mimetype="application/xml")
 
+
+@app.route("/market-live")
+def market_live():
+    generated_at = datetime.utcnow().strftime("%B %d, %Y %I:%M %p UTC")
+    return render_template_string(
+        """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SupportRD Market Live</title>
+  <style>
+    :root{
+      --bg:#07111c;
+      --panel:#0d1826;
+      --line:rgba(191,214,255,.14);
+      --text:#edf4ff;
+      --muted:rgba(237,244,255,.72);
+      --gold:#d5b08b;
+      --accent:#7bb5ff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Arial,Helvetica,sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(123,181,255,.18), transparent 28%),
+        linear-gradient(180deg, #07111c, #091524 58%, #0a1728);
+      color:var(--text);
+      padding:16px;
+    }
+    .market-shell{
+      display:grid;
+      gap:14px;
+      min-height:calc(100vh - 32px);
+    }
+    .market-panel{
+      border:1px solid var(--line);
+      border-radius:22px;
+      background:rgba(13,24,38,.9);
+      padding:16px;
+      box-shadow:0 18px 44px rgba(0,0,0,.26);
+    }
+    .eyebrow{
+      color:var(--gold);
+      font-size:11px;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      margin-bottom:8px;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size:30px;
+      line-height:1;
+      font-family:Georgia,serif;
+    }
+    p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.6;
+    }
+    .market-grid{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:14px;
+    }
+    .market-stat-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px;
+      margin-top:14px;
+    }
+    .market-stat{
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:rgba(255,255,255,.03);
+      padding:12px;
+    }
+    .market-stat strong{
+      display:block;
+      font-size:18px;
+      margin-bottom:4px;
+    }
+    .market-stat span{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+    .market-feed{
+      display:grid;
+      gap:10px;
+    }
+    .feed-row{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+      background:rgba(255,255,255,.03);
+    }
+    .feed-row strong{
+      display:block;
+      margin-bottom:4px;
+    }
+    .tag-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:12px;
+    }
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      min-height:30px;
+      padding:0 12px;
+      border-radius:999px;
+      background:rgba(123,181,255,.1);
+      border:1px solid rgba(123,181,255,.24);
+      color:var(--text);
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .contact{
+      color:var(--text);
+      font-weight:700;
+    }
+    @media (max-width: 760px){
+      .market-grid,
+      .market-stat-grid{
+        grid-template-columns:1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="market-shell">
+    <section class="market-panel">
+      <div class="eyebrow">Market Live</div>
+      <h1>Options Market Finance Lane</h1>
+      <p>This is the finance side of the hair complete package. Option trades stay visible here with pressure, volume, and delta reading for the chosen option while SupportRD keeps the live market lane attached to the main system.</p>
+      <div class="tag-row">
+        <span class="tag">Pressure Reading</span>
+        <span class="tag">Volume Watch</span>
+        <span class="tag">Delta Check</span>
+        <span class="tag">Hair Complete Package</span>
+      </div>
+      <div class="market-stat-grid">
+        <div class="market-stat">
+          <strong>Pressure</strong>
+          <span>Track whether the selected option is being bought with conviction or fading under weak demand.</span>
+        </div>
+        <div class="market-stat">
+          <strong>Volume</strong>
+          <span>Keep eyes on the contract activity so the move has real participation behind it.</span>
+        </div>
+        <div class="market-stat">
+          <strong>Delta</strong>
+          <span>Read how sensitive the selected option is to the underlying move before adding more pressure.</span>
+        </div>
+      </div>
+    </section>
+    <div class="market-grid">
+      <section class="market-panel">
+        <div class="eyebrow">Live Feed</div>
+        <div class="market-feed">
+          <div class="feed-row">
+            <strong>Chosen Option Review</strong>
+            <span>Use this lane to talk through the contract, strike, timing, pressure, and whether the flow looks supportive.</span>
+          </div>
+          <div class="feed-row">
+            <strong>Capitalization Reality</strong>
+            <span>SupportRD keeps market work visible beside the storefront so the money conversation stays grounded in real movement.</span>
+          </div>
+          <div class="feed-row">
+            <strong>Updated</strong>
+            <span>{{ generated_at }}</span>
+          </div>
+        </div>
+      </section>
+      <section class="market-panel">
+        <div class="eyebrow">Need More Help?</div>
+        <p class="contact">Contact Marcus 704-453-3983</p>
+        <p style="margin-top:10px;">When the option lane needs a deeper read, Marcus is the direct help contact for the market side of the package.</p>
+        <div class="tag-row">
+          <span class="tag">Marcus</span>
+          <span class="tag">704-453-3983</span>
+          <span class="tag">SupportRD Finance</span>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>""",
+        generated_at=generated_at,
+    )
+
 #################################################
 # BACKGROUND ENGINE
 #################################################
@@ -7483,7 +7680,7 @@ def local_remote_bootstrap():
             {
                 "key": "options",
                 "label": "Options Market",
-                "url": "http://127.0.0.1:3000/",
+                "url": "https://supportrd.com/market-live",
                 "kind": "local-live",
             },
             {
