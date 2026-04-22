@@ -91,15 +91,15 @@ def resolve_shopify_storefront_domain():
     configured_store = normalize_shopify_store_domain(SHOPIFY_STORE)
     if configured_store == "shop.supportrd.com":
         return "shop.supportrd.com"
+    if configured_store and configured_store.endswith("supportrd.com"):
+        return "shop.supportrd.com"
     store = resolve_shopify_api_domain()
     if not store:
         return ""
     store = normalize_shopify_store_domain(store)
-    if store.endswith(".myshopify.com"):
-        return store
-    if store.endswith("supportrd.com") or store.endswith("theplantmaninc.com"):
-        return "supportdr-com.myshopify.com"
-    return "supportdr-com.myshopify.com"
+    if store.endswith("supportrd.com") or store.endswith(".myshopify.com") or store.endswith("theplantmaninc.com"):
+        return "shop.supportrd.com"
+    return "shop.supportrd.com"
 
 SEO_ENABLED = os.environ.get("SEO_ENABLED", "true").lower() == "true"
 SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "24"))
