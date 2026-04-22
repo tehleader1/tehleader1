@@ -966,7 +966,7 @@
               <span id="gigConnectorFallbackText">This source may need to open in a new tab because localhost and secure browser rules do not always embed together.</span>
             </div>
           </div>
-          <div class="gig-screenshot-gallery" id="gigScreenshotGallery">
+          <div class="gig-screenshot-gallery" id="gigScreenshotGallery" style="display:none;">
             <button type="button" class="gig-screenshot-nav" id="gigScreenshotPrevBtn">&#10094;</button>
             <div class="gig-screenshot-stage">
               <div class="gig-screenshot-kicker" id="gigScreenshotKicker">Conversation Movement</div>
@@ -978,7 +978,33 @@
             </div>
             <button type="button" class="gig-screenshot-nav" id="gigScreenshotNextBtn">&#10095;</button>
           </div>
-          <div class="gig-connector-canvas" id="gigConnectorCanvas" aria-live="polite"></div>
+          <div class="gig-connector-canvas active" id="gigConnectorCanvas" aria-live="polite">
+            <div style="height:100%;display:grid;gap:14px;padding:18px;background:radial-gradient(circle at top right, rgba(123,181,255,.14), transparent 28%), linear-gradient(180deg,#07111c,#0a1728);color:#edf4ff;">
+              <div style="display:grid;gap:8px;">
+                <div style="color:#d5b08b;font-size:11px;letter-spacing:.18em;text-transform:uppercase;">Market Live</div>
+                <strong style="font-size:26px;font-family:'Cormorant Garamond', Georgia, serif;">Options Market Finance Lane</strong>
+                <span style="color:rgba(237,244,255,.78);line-height:1.55;">Option Trades with pressure, volume, and delta reading for the chosen option. Need more help? Contact Marcus 704-453-3983.</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
+                <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
+                  <strong style="display:block;margin-bottom:4px;">Pressure</strong>
+                  <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.45;">Track whether the selected option is getting real force behind the move.</span>
+                </div>
+                <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
+                  <strong style="display:block;margin-bottom:4px;">Volume</strong>
+                  <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.45;">Use contract activity to judge whether the lane is alive or fading.</span>
+                </div>
+                <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
+                  <strong style="display:block;margin-bottom:4px;">Delta</strong>
+                  <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.45;">Read sensitivity on the chosen option before leaning harder into the trade.</span>
+                </div>
+              </div>
+              <div style="margin-top:auto;display:flex;flex-wrap:wrap;gap:10px;">
+                <span style="display:inline-flex;align-items:center;min-height:34px;padding:0 14px;border-radius:999px;background:rgba(123,181,255,.1);border:1px solid rgba(123,181,255,.24);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Hair Complete Package</span>
+                <span style="display:inline-flex;align-items:center;min-height:34px;padding:0 14px;border-radius:999px;background:rgba(123,181,255,.1);border:1px solid rgba(123,181,255,.24);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Marcus 704-453-3983</span>
+              </div>
+            </div>
+          </div>
           <iframe class="gig-connector-frame" id="gigConnectorFrame" title="Gig connector live viewer" loading="lazy" style="display:none;"></iframe>
         </div>
         <div class="gig-viewer-grid">
@@ -1822,11 +1848,70 @@
       const normalizedIndex = ((activeGigScreenshotIndex % slides.length) + slides.length) % slides.length;
       activeGigScreenshotIndex = normalizedIndex;
       const slide = slides[normalizedIndex];
-      gigScreenshotImage.src = slide.image || "";
-      gigScreenshotKicker.textContent = `${source.label} · View ${normalizedIndex + 1} / ${slides.length}`;
-      gigScreenshotTitle.textContent = slide.title || source.label || "Live screenshot";
-      gigScreenshotDetail.textContent = slide.detail || "Current screenshot view.";
+      gigConnectorCanvas.classList.add("active");
+      gigConnectorCanvas.innerHTML = `
+        <div style="height:100%;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:18px;background:radial-gradient(circle at top, rgba(109,173,255,.16), transparent 36%), linear-gradient(180deg, rgba(3,10,18,.96), rgba(6,16,27,.98));color:#edf4ff;">
+          <button type="button" id="gigCanvasPrevBtn" style="width:42px;height:42px;border-radius:999px;border:1px solid rgba(191,214,255,.14);background:rgba(255,255,255,.08);color:#edf4ff;font-size:18px;font-weight:700;cursor:pointer;">&#10094;</button>
+          <div style="display:grid;gap:12px;">
+            <div style="color:#d5b08b;font-size:11px;letter-spacing:.18em;text-transform:uppercase;">${source.label} · View ${normalizedIndex + 1} / ${slides.length}</div>
+            <img src="${slide.image || ""}" alt="${slide.title || "Coding screenshot"}" style="width:100%;height:292px;object-fit:contain;border-radius:18px;border:1px solid rgba(213,235,255,.14);background:#08111d;">
+            <div style="display:grid;gap:6px;">
+              <strong style="font-size:24px;font-family:'Cormorant Garamond', Georgia, serif;">${slide.title || source.label || "Live screenshot"}</strong>
+              <span style="color:rgba(236,244,255,.82);line-height:1.55;">${slide.detail || "Current screenshot view."}</span>
+            </div>
+          </div>
+          <button type="button" id="gigCanvasNextBtn" style="width:42px;height:42px;border-radius:999px;border:1px solid rgba(191,214,255,.14);background:rgba(255,255,255,.08);color:#edf4ff;font-size:18px;font-weight:700;cursor:pointer;">&#10095;</button>
+        </div>
+      `;
       gigConnectorSourceLink.textContent = `View ${slide.title || source.label}`;
+      const prevBtn = document.getElementById("gigCanvasPrevBtn");
+      const nextBtn = document.getElementById("gigCanvasNextBtn");
+      prevBtn?.addEventListener("click", ()=>{
+        activeGigScreenshotIndex -= 1;
+        renderGigScreenshot(source);
+      });
+      nextBtn?.addEventListener("click", ()=>{
+        activeGigScreenshotIndex += 1;
+        renderGigScreenshot(source);
+      });
+    }
+
+    function renderGigMarketCanvas(){
+      gigConnectorCanvas.classList.add("active");
+      gigConnectorCanvas.innerHTML = `
+        <div style="height:100%;display:grid;gap:14px;padding:18px;background:radial-gradient(circle at top right, rgba(123,181,255,.14), transparent 28%), linear-gradient(180deg,#07111c,#0a1728);color:#edf4ff;">
+          <div style="display:grid;gap:8px;">
+            <div style="color:#d5b08b;font-size:11px;letter-spacing:.18em;text-transform:uppercase;">Market Live</div>
+            <strong style="font-size:26px;font-family:'Cormorant Garamond', Georgia, serif;">Options Market Finance Lane</strong>
+            <span style="color:rgba(237,244,255,.78);line-height:1.55;">Option Trades with pressure, volume, and delta reading for the chosen option. Need more help? Contact Marcus 704-453-3983.</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
+            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
+              <strong style="display:block;margin-bottom:4px;">Pressure</strong>
+              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.45;">Track whether the selected option is getting real force behind the move.</span>
+            </div>
+            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
+              <strong style="display:block;margin-bottom:4px;">Volume</strong>
+              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.45;">Use contract activity to judge whether the lane is alive or fading.</span>
+            </div>
+            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
+              <strong style="display:block;margin-bottom:4px;">Delta</strong>
+              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.45;">Read sensitivity on the chosen option before leaning harder into the trade.</span>
+            </div>
+          </div>
+          <div style="display:grid;gap:10px;">
+            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
+              <strong style="display:block;margin-bottom:4px;">Hair Complete Package</strong>
+              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.55;">This market lane is the finances part of the hair complete package and stays visible inside SupportRD for quick review.</span>
+            </div>
+            <div style="border:1px solid rgba(191,214,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.03);">
+              <strong style="display:block;margin-bottom:4px;">Need More Help?</strong>
+              <span style="color:rgba(237,244,255,.72);font-size:13px;line-height:1.55;">Contact Marcus 704-453-3983</span>
+            </div>
+          </div>
+        </div>
+      `;
+      gigConnectorSourceLink.textContent = "View Coding Screenshots";
     }
 
     function canEmbedGigSource(source){
@@ -1890,13 +1975,8 @@
           renderGigScreenshot(source);
           return;
         }
-        if(!canEmbedGigSource(source)){
-          gigConnectorFallback.classList.add("active");
-          gigConnectorFallbackText.textContent = `${source.label} needs direct open here because localhost and secure browser rules do not always embed together. Use the open button and keep the live company events beside it.`;
-          return;
-        }
         gigConnectorFallback.classList.remove("active");
-        renderGigFrameSource(source);
+        renderGigMarketCanvas();
       }, 1400);
       logConversion(`gig-${source.key}`, "gig-connector", { source: source.key, url: source.url });
     }
