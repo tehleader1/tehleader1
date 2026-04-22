@@ -28,6 +28,93 @@ body .float-launch-btn {
   background-position: center !important;
   background-repeat: no-repeat !important;
 }
+.catalog-ad-spot{
+  margin-top:18px;
+  padding:18px;
+  border-radius:24px;
+  background:linear-gradient(135deg, rgba(255,255,255,.14), rgba(193,163,162,.18));
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 20px 44px rgba(10,12,18,.18);
+  backdrop-filter:blur(12px);
+}
+.catalog-ad-kicker{
+  margin:0 0 8px;
+  color:#d5b08b;
+  font-size:11px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+}
+.catalog-ad-title{
+  margin:0 0 10px;
+  color:#fff;
+  font-size:clamp(1.3rem,2vw,1.7rem);
+  font-weight:700;
+}
+.catalog-ad-copy{
+  margin:0 0 14px;
+  color:rgba(255,255,255,.82);
+  line-height:1.6;
+}
+.catalog-ad-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-bottom:14px;
+}
+.catalog-ad-card{
+  padding:12px 13px;
+  border-radius:18px;
+  background:rgba(12,16,24,.34);
+  border:1px solid rgba(255,255,255,.1);
+}
+.catalog-ad-card strong{
+  display:block;
+  color:#fff;
+  font-size:14px;
+  margin-bottom:4px;
+}
+.catalog-ad-card span{
+  color:rgba(255,255,255,.72);
+  font-size:12px;
+  line-height:1.45;
+}
+.catalog-ad-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.catalog-ad-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:44px;
+  padding:0 18px;
+  border-radius:999px;
+  text-decoration:none;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.catalog-ad-link--primary{
+  background:linear-gradient(135deg,#c1a3a2,#9d7f6a);
+  color:#fff;
+}
+.catalog-ad-link--secondary{
+  background:rgba(255,255,255,.1);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.16);
+}
+@media (max-width: 900px){
+  .catalog-ad-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width: 560px){
+  .catalog-ad-grid{
+    grid-template-columns:1fr;
+  }
+}
 </style>
 </head>
 <body class="theme-aurora system-theme natural-pro resort-brochure competition-world">
@@ -168,7 +255,7 @@ body .float-launch-btn {
       <div class="big-menu">
         <button class="menu-btn advanced-menu" id="menuOccasion">Occasion Editor</button>
         <button class="menu-btn" id="menuGift">Gift Shop</button>
-        <button class="menu-btn" id="menuCustomOrderTop">Custom Order</button>
+        <button class="menu-btn" id="menuCustomOrderTop">Shop Products</button>
         <button class="menu-btn advanced-menu" id="menuSellAria">Sell ARIA</button>
         <button class="menu-btn advanced-menu" id="menuCreditTop">Credit</button>
         <button class="menu-btn advanced-menu" id="menuStudio">In the Booth</button>
@@ -216,9 +303,38 @@ body .float-launch-btn {
                 <button class="btn ghost" id="checkoutDonateBtn">Tip / Donate</button>
                 <button class="btn ghost" id="checkoutCartBtn">Cart</button>
                 <button class="btn ghost" id="checkoutOrdersBtn">My Orders</button>
-                <button class="btn ghost" id="checkoutInquiryBtn">Custom Inquiry</button>
+                <button class="btn ghost" id="checkoutInquiryBtn">Shop Products</button>
               </div>
             </div>
+            <section class="catalog-ad-spot" aria-label="SupportRD Product Catalog">
+              <div class="catalog-ad-kicker">Product Catalog Live</div>
+              <h3 class="catalog-ad-title">The SupportRD physical product catalog is live and ready to buy.</h3>
+              <p class="catalog-ad-copy">
+                Shampoo, Formula Exclusiva, Mascarilla, Gotero, and Gotika now run through the live product catalog with working buy buttons and direct checkout.
+              </p>
+              <div class="catalog-ad-grid">
+                <article class="catalog-ad-card">
+                  <strong>Shampoo</strong>
+                  <span>Daily wash lane with direct catalog checkout.</span>
+                </article>
+                <article class="catalog-ad-card">
+                  <strong>Formula Exclusiva</strong>
+                  <span>Founder-backed formula lane for premium routine buyers.</span>
+                </article>
+                <article class="catalog-ad-card">
+                  <strong>Mascarilla + Gotero</strong>
+                  <span>Deep-treatment and finish lanes now linked to live products.</span>
+                </article>
+                <article class="catalog-ad-card">
+                  <strong>Gotika</strong>
+                  <span>Gloss and shine lane inside the working Shopify catalog.</span>
+                </article>
+              </div>
+              <div class="catalog-ad-actions">
+                <a class="catalog-ad-link catalog-ad-link--primary" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noopener">Open Product Catalog</a>
+                <a class="catalog-ad-link catalog-ad-link--secondary" href="https://shop.supportrd.com" target="_blank" rel="noopener">Open Storefront</a>
+              </div>
+            </section>
             <div class="sale-cta-row">
               <button class="btn primary" id="centerSaleCallBtn">Request Buyer Call</button>
               <button class="btn ghost" id="centerSaleBriefBtn">Sale Details</button>
@@ -1036,20 +1152,20 @@ body .float-launch-btn {
       <div class="gift-card">
         <div class="gift-name">CR Natural Full Line</div>
         <div class="gift-price">$125</div>
-        <div class="system-sub">Referral-ready natural hair bundle with custom order support.</div>
-        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+        <div class="system-sub">Referral-ready natural hair bundle with direct product checkout.</div>
+        <button class="btn" data-link="https://shop.supportrd.com/collections/all">Shop Products</button>
       </div>
       <div class="gift-card">
         <div class="gift-name">Dove · Gift Bundle</div>
-        <div class="gift-price">Custom Order</div>
+        <div class="gift-price">Direct Checkout</div>
         <div class="system-sub">Classic referral bundle option for smooth in-person recommendations.</div>
-        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+        <button class="btn" data-link="https://shop.supportrd.com/collections/all">Shop Products</button>
       </div>
       <div class="gift-card">
         <div class="gift-name">L’Oréal · Gift Set</div>
-        <div class="gift-price">Custom Order</div>
-        <div class="system-sub">Referral gift route with SupportRD custom-order follow-through.</div>
-        <button class="btn" data-link="https://supportrd.com/pages/custom-order">Custom Order</button>
+        <div class="gift-price">Direct Checkout</div>
+        <div class="system-sub">Referral gift route with SupportRD product follow-through.</div>
+        <button class="btn" data-link="https://shop.supportrd.com/collections/all">Shop Products</button>
       </div>
       <div class="gift-card">
         <div class="gift-name">SupportRD Referral Gift Link</div>
@@ -1228,11 +1344,17 @@ body .float-launch-btn {
 <div id="customOrderModal" class="modal">
   <div class="modal-card glass" style="max-height:90vh;overflow:auto;">
     <div class="modal-head">
-      <h2>Custom Order</h2>
+      <h2>Shop Products</h2>
       <button class="btn ghost" id="closeCustomOrder">Close</button>
     </div>
-    <!-- Custom order embed -->
-    <iframe class="custom-iframe" src="/static/custom-order.html" title="Custom Order"></iframe>
+    <div style="display:grid;gap:14px;">
+      <p style="margin:0;color:var(--muted);line-height:1.6;">
+        Custom orders are retired. Use the live Shopify product pages for shampoo, Formula Exclusiva,
+        Mascarilla, Gotero, and Gotika checkout.
+      </p>
+      <a class="btn" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noopener">Open Product Shop</a>
+      <a class="btn ghost" href="https://shop.supportrd.com" target="_blank" rel="noopener">Open SupportRD Storefront</a>
+    </div>
   </div>
 </div>
 
@@ -2912,7 +3034,7 @@ body .float-launch-btn {
     <button class="btn ghost remote-purchase-item" id="remotePurchaseStudio">Purchase Studio Edition</button>
     <button class="btn ghost remote-purchase-item" id="remotePurchaseThemes">Purchase Themes &amp; AI Upgrades</button>
     <button class="btn ghost remote-purchase-item" id="remotePurchaseSupport">Show Support, Donate to the Poor, Tip and Credit</button>
-    <button class="btn ghost remote-purchase-item" id="remotePurchaseCustom">Custom Order</button>
+    <button class="btn ghost remote-purchase-item" id="remotePurchaseCustom">Shop Products</button>
     <button class="btn ghost remote-purchase-item" id="remotePurchaseOrders">My Orders / Cart</button>
     <button class="btn ghost remote-purchase-item" id="remotePurchaseSolid">Solid State Project</button>
   </div>
@@ -2993,7 +3115,7 @@ body .float-launch-btn {
   
   <script>
 (function(){
-const BUILD = "20260414t";
+const BUILD = "20260421a";
   const KEY = "sr_force_build";
   try {
     const last = localStorage.getItem(KEY);
@@ -3020,10 +3142,10 @@ const BUILD = "20260414t";
 })();
 </script>
 <script src="/static/auth.js"></script>
-<script src="/static/app.v20260320h.js?v=20260414t"></script>
-<script src="/static/remote-rebuild.v20260408c.js?v=20260414t"></script>
+<script src="/static/app.v20260320h.js?v=20260421a"></script>
+<script src="/static/remote-rebuild.v20260408c.js?v=20260421a"></script>
 <footer class="launch-footer-links">
-  <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Custom orders stay founder-reviewed.</div>
+  <div class="launch-footer-contact">SupportRD direct line: xxfigueroa1993@yahoo.com · 980-375-9197 · Physical product orders stay founder-reviewed.</div>
   <button class="btn ghost" id="remoteInfoFooter">Important Info</button>
   <a href="https://supportrd.com/pages/about-us" target="_blank" rel="noopener">About Us</a>
   <a href="https://supportrd.com/pages/contact" target="_blank" rel="noopener">Contact</a>

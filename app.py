@@ -101,9 +101,10 @@ def resolve_shopify_storefront_domain():
         return "supportdr-com.myshopify.com"
     return "supportdr-com.myshopify.com"
 
-SEO_ENABLED = os.environ.get("SEO_ENABLED", "false").lower() == "true"
-SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "72"))
+SEO_ENABLED = os.environ.get("SEO_ENABLED", "true").lower() == "true"
+SEO_INTERVAL_HOURS = int(os.environ.get("SEO_INTERVAL_HOURS", "24"))
 LAST_SEO_POST = 0
+CUSTOM_ORDER_PENDING_WINDOW_DAYS = int(os.environ.get("CUSTOM_ORDER_PENDING_WINDOW_DAYS", "30"))
 
 AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN", "")
 AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID", "")
@@ -156,11 +157,12 @@ SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 FROM_EMAIL = os.environ.get("FROM_EMAIL", "")
-DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL", "")
+DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL", "xxfigueroa1993@yahoo.com")
 ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or DEVELOPER_EMAIL).lower()
 WELLNESS_SUBJECT = os.environ.get("WELLNESS_SUBJECT", "SupportRD Personal Check-In")
 COMMUNITY_ALERT_PRIMARY_EMAIL = os.environ.get("COMMUNITY_ALERT_PRIMARY_EMAIL", "agentanthony@supportrd.com")
 COMMUNITY_ALERT_SECONDARY_EMAIL = os.environ.get("COMMUNITY_ALERT_SECONDARY_EMAIL", "xxfigueroa1993@yahoo.com")
+OWNER_ORDER_FORWARD_EMAIL = (os.environ.get("OWNER_ORDER_FORWARD_EMAIL") or COMMUNITY_ALERT_SECONDARY_EMAIL or DEVELOPER_EMAIL).strip().lower()
 COMMUNITY_ALERT_PHONE = os.environ.get("COMMUNITY_ALERT_PHONE", "980-375-9197")
 COMMUNITY_ALERT_SMS_EMAIL = os.environ.get("COMMUNITY_ALERT_SMS_EMAIL", "")
 COMMUNITY_ALERT_EXTRA_EMAILS = [
@@ -3383,6 +3385,145 @@ def seo_start():
     schedule_random_seo_jobs()
     return "ok"
 
+CUSTOM_ORDER_PRODUCT_ALIASES = {
+    "formula exclusiva": "Formula Exclusiva",
+    "mascarilla": "Mascarilla Capilar",
+    "mascarilla capilar": "Mascarilla Capilar",
+    "gotero": "Gotero Rapido",
+    "gotero rapido": "Gotero Rapido",
+    "gotika": "Gotitas Brillantes",
+    "gotitas": "Gotitas Brillantes",
+    "gotitas brillantes": "Gotitas Brillantes",
+    "shampoo": "Shampoo Aloe Vera",
+    "shampoo aloe vera": "Shampoo Aloe Vera",
+}
+
+
+def normalize_custom_order_item_name(name):
+    cleaned = re.sub(r"\s+", " ", str(name or "").strip())
+    if not cleaned:
+        return "SupportRD Product"
+    return CUSTOM_ORDER_PRODUCT_ALIASES.get(cleaned.lower(), cleaned)
+
+
+def custom_order_pending_deadline():
+    return (datetime.utcnow() + timedelta(days=CUSTOM_ORDER_PENDING_WINDOW_DAYS)).strftime("%B %d, %Y")
+
+
+def custom_order_item_rows(items):
+    normalized_items = []
+    rows_html = ""
+    for item in items:
+        item_name = normalize_custom_order_item_name(item.get("name", ""))
+        qty = max(1, int(item.get("qty", 1) or 1))
+        subtotal = str(item.get("subtotal", "")).strip() or str(item.get("price", "")).strip() or "0"
+        normalized = {
+            "name": item_name,
+            "qty": qty,
+            "subtotal": subtotal,
+        }
+        normalized_items.append(normalized)
+        rows_html += (
+            f"<tr>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #ece7e3;'>{escape(item_name)}</td>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #ece7e3;'>{qty}</td>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #ece7e3;'>${escape(str(subtotal))}</td>"
+            f"</tr>"
+        )
+    return normalized_items, rows_html
+
+
+def send_email_messages(messages):
+    context = ssl.create_default_context()
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+        server.starttls(context=context)
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        for msg in messages:
+            server.sendmail(msg["From"], [msg["To"]], msg.as_string())
+
+
+PHYSICAL_PRODUCT_KEYWORDS = (
+    "shampoo",
+    "formula exclusiva",
+    "mascarilla",
+    "gotero",
+    "gotika",
+    "gotitas",
+    "laciador",
+)
+
+
+def filter_physical_order_items(items):
+    out = []
+    for item in items or []:
+        title = str(item.get("title") or item.get("name") or "").strip()
+        normalized = title.lower()
+        if any(keyword in normalized for keyword in PHYSICAL_PRODUCT_KEYWORDS):
+            out.append(item)
+    return out
+
+
+def send_owner_product_purchase_email(payload, items):
+    if not OWNER_ORDER_FORWARD_EMAIL or not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD:
+        return False
+    customer = payload.get("customer") or {}
+    shipping = payload.get("shipping_address") or {}
+    billing = payload.get("billing_address") or {}
+    order_id = str(payload.get("id") or "")
+    order_name = str(payload.get("name") or order_id or "SupportRD order")
+    email = (payload.get("email") or customer.get("email") or "").strip()
+    customer_name = " ".join(
+        part for part in [
+            str(customer.get("first_name") or "").strip(),
+            str(customer.get("last_name") or "").strip(),
+        ] if part
+    ).strip() or shipping.get("name") or billing.get("name") or "SupportRD customer"
+    address_bits = [
+        shipping.get("address1") or billing.get("address1") or "",
+        shipping.get("city") or billing.get("city") or "",
+        shipping.get("province") or billing.get("province") or "",
+        shipping.get("zip") or billing.get("zip") or "",
+        shipping.get("country") or billing.get("country") or "",
+    ]
+    address = ", ".join(bit for bit in address_bits if bit)
+    total = payload.get("total_price") or payload.get("current_total_price") or ""
+    item_rows = []
+    for item in items:
+        title = normalize_custom_order_item_name(item.get("title") or item.get("name") or "")
+        qty = item.get("quantity") or 1
+        price = item.get("price") or item.get("final_price") or ""
+        item_rows.append(
+            f"<tr><td style='padding:8px 10px;border-bottom:1px solid #ece7e3;'>{escape(str(title))}</td>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #ece7e3;'>{escape(str(qty))}</td>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #ece7e3;'>${escape(str(price))}</td></tr>"
+        )
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+      <h1 style="font-size:26px;font-weight:800;margin:0 0 8px;">SHOPIFY PHYSICAL PRODUCT ORDER</h1>
+      <div style="background:#0b1a0f;color:#fff;padding:12px 16px;border-radius:8px;font-weight:800;display:inline-block;">
+        FORWARD TO OWNER
+      </div>
+      <p style="margin:16px 0 6px;"><strong>Order:</strong> {escape(order_name)}</p>
+      <p style="margin:6px 0;"><strong>Customer:</strong> {escape(str(customer_name))}</p>
+      <p style="margin:6px 0;"><strong>Email:</strong> {escape(email or "N/A")}</p>
+      <p style="margin:6px 0;"><strong>Address:</strong> {escape(address or "N/A")}</p>
+      <p style="margin:6px 0;"><strong>Total:</strong> ${escape(str(total or "0"))}</p>
+      <h3 style="margin:18px 0 6px;">Physical items</h3>
+      <table style="border-collapse:collapse;width:100%;max-width:560px;">
+        <thead><tr><th align="left">Product</th><th align="left">Qty</th><th align="left">Price</th></tr></thead>
+        <tbody>{''.join(item_rows)}</tbody>
+      </table>
+    </div>
+    """
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"SupportRD Physical Order Forward - {order_name}"
+    msg["From"] = FROM_EMAIL or SMTP_USER
+    msg["To"] = OWNER_ORDER_FORWARD_EMAIL
+    msg.attach(MIMEText(html, "html"))
+    send_email_messages([msg])
+    return True
+
+
 @app.route("/api/custom-order", methods=["POST"])
 def custom_order():
     if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and (FROM_EMAIL or SMTP_USER) and DEVELOPER_EMAIL):
@@ -3402,18 +3543,15 @@ def custom_order():
     if not name or not email or not phone or not address:
         return {"ok": False, "error": "Missing required fields"}, 400
 
-    items_html = ""
-    for item in items:
-        iname = str(item.get("name", ""))
-        qty = str(item.get("qty", ""))
-        subtotal = str(item.get("subtotal", ""))
-        items_html += f"<tr><td>{iname}</td><td>{qty}</td><td>${subtotal}</td></tr>"
+    normalized_items, items_html = custom_order_item_rows(items)
+    pending_deadline = custom_order_pending_deadline()
+    from_email = FROM_EMAIL or SMTP_USER
 
-    html = f"""
+    internal_html = f"""
     <div style="font-family:Arial,Helvetica,sans-serif;color:#111;">
-      <h1 style="font-size:26px;font-weight:800;margin:0 0 8px;">CUSTOM ORDER ARRIVED ⭐⭐⭐⭐⭐</h1>
+      <h1 style="font-size:26px;font-weight:800;margin:0 0 8px;">PHYSICAL ORDER PENDING ⭐⭐⭐⭐⭐</h1>
       <div style="background:#0b1a0f;color:#fff;padding:12px 16px;border-radius:8px;font-weight:800;display:inline-block;">
-        CUSTOM ORDER ARRIVED ⭐⭐⭐⭐⭐
+        PHYSICAL ORDER PENDING ⭐⭐⭐⭐⭐
       </div>
       <p style="margin:16px 0 6px;"><strong>Client:</strong> {name}</p>
       <p style="margin:6px 0;"><strong>Email:</strong> {email}</p>
@@ -3422,28 +3560,57 @@ def custom_order():
       <p style="margin:6px 0;"><strong>Delivery:</strong> {delivery or "standard"}</p>
       <p style="margin:6px 0;"><strong>Source:</strong> {source or "N/A"}</p>
       <p style="margin:6px 0;"><strong>Notes:</strong> {notes or "N/A"}</p>
+      <p style="margin:6px 0;"><strong>Status:</strong> Pending review</p>
+      <p style="margin:6px 0;"><strong>Pending deadline:</strong> {pending_deadline}</p>
       <h3 style="margin:18px 0 6px;">Items</h3>
       <table style="border-collapse:collapse;width:100%;max-width:520px;">
         <thead><tr><th align="left">Product</th><th align="left">Qty</th><th align="left">Subtotal</th></tr></thead>
         <tbody>{items_html}</tbody>
       </table>
       <p style="margin-top:12px;"><strong>Total:</strong> ${total}</p>
+      <p style="margin-top:16px;color:#5b4c44;">If this paid physical order is not placed within {CUSTOM_ORDER_PENDING_WINDOW_DAYS} days, it must be refunded.</p>
     </div>
     """
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "CUSTOM ORDER ARRIVED ⭐⭐⭐⭐⭐"
-    msg["From"] = FROM_EMAIL or SMTP_USER
-    msg["To"] = DEVELOPER_EMAIL
-    msg.attach(MIMEText(html, "html"))
+    customer_items_html = "".join(
+        f"<li style='margin:0 0 6px;'><strong>{escape(item['name'])}</strong> x {item['qty']} — ${escape(str(item['subtotal']))}</li>"
+        for item in normalized_items
+    )
+    customer_html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#1b140f;max-width:640px;margin:0 auto;padding:28px 20px;">
+      <div style="letter-spacing:.2em;text-transform:uppercase;color:#b0886c;font-size:12px;margin-bottom:12px;">SupportRD Physical Products</div>
+      <h1 style="font-size:28px;line-height:1.1;margin:0 0 14px;">Your order is pending.</h1>
+      <p style="font-size:16px;line-height:1.7;margin:0 0 12px;">Hi {escape(name.split()[0])}, we received your SupportRD physical product request and your order is now in <strong>pending review</strong>.</p>
+      <p style="font-size:16px;line-height:1.7;margin:0 0 12px;">Your next email will include your <strong>tracking update</strong> as soon as the package is officially placed and moving.</p>
+      <p style="font-size:16px;line-height:1.7;margin:0 0 18px;">If the paid order is not placed within <strong>{CUSTOM_ORDER_PENDING_WINDOW_DAYS} days</strong>, SupportRD will refund that order amount. Your pending window ends on <strong>{pending_deadline}</strong>.</p>
+      <div style="background:#f7f2ee;border:1px solid #eaded5;border-radius:16px;padding:18px 20px;margin:18px 0;">
+        <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#b0886c;margin-bottom:10px;">Pending Summary</div>
+        <ul style="padding-left:18px;margin:0 0 12px;">{customer_items_html}</ul>
+        <p style="margin:0;font-size:15px;"><strong>Estimated total:</strong> ${escape(str(total))}</p>
+      </div>
+      <div style="background:#fff8f1;border:1px solid #e7d4c2;border-radius:16px;padding:16px 18px;">
+        <p style="margin:0 0 8px;font-size:15px;"><strong>Status now:</strong> Pending email sent</p>
+        <p style="margin:0 0 8px;font-size:15px;"><strong>Next email:</strong> Tracking / package movement update</p>
+        <p style="margin:0;font-size:15px;"><strong>Support contact:</strong> {escape(DEVELOPER_EMAIL)}</p>
+      </div>
+    </div>
+    """
 
-    context = ssl.create_default_context()
+    internal_msg = MIMEMultipart("alternative")
+    internal_msg["Subject"] = "PHYSICAL ORDER PENDING ⭐⭐⭐⭐⭐"
+    internal_msg["From"] = from_email
+    internal_msg["To"] = DEVELOPER_EMAIL
+    internal_msg.attach(MIMEText(internal_html, "html"))
+
+    customer_msg = MIMEMultipart("alternative")
+    customer_msg["Subject"] = f"SupportRD Order Pending - tracking update comes next"
+    customer_msg["From"] = from_email
+    customer_msg["To"] = email
+    customer_msg.attach(MIMEText(customer_html, "html"))
+
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
-            server.starttls(context=context)
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(msg["From"], [DEVELOPER_EMAIL], msg.as_string())
-        return {"ok": True}
+        send_email_messages([internal_msg, customer_msg])
+        return {"ok": True, "status": "pending", "pending_deadline": pending_deadline}
     except Exception as e:
         return {"ok": False, "error": "Email send failed", "detail": str(e)[:200]}, 500
 
@@ -4999,16 +5166,23 @@ def shopify_orders_paid_webhook():
     try:
         payload = request.json or {}
         email = (payload.get("email") or ((payload.get("customer") or {}).get("email")) or "").strip().lower()
-        if not email:
-            return {"ok": True, "ignored": "missing_email"}
         order_id = str(payload.get("id") or "")
         items = payload.get("line_items", []) or []
+        physical_items = filter_physical_order_items(items)
+        forwarded = False
+        if physical_items:
+            try:
+                forwarded = bool(send_owner_product_purchase_email(payload, physical_items))
+            except Exception:
+                forwarded = False
+        if not email:
+            return {"ok": True, "ignored": "missing_email", "forwarded_to_owner": forwarded}
         plan, match_reason = infer_shopify_plan_from_line_items(items)
         if not plan:
-            return {"ok": True, "ignored": "not_subscription_order"}
+            return {"ok": True, "ignored": "not_subscription_order", "forwarded_to_owner": forwarded}
         ok = set_subscription_for_email(email, plan, source="shopify_webhook_paid", order_id=order_id)
         remember_purchase_for_email(email, plan, plan, source="shopify_webhook_paid", order_id=order_id)
-        return {"ok": bool(ok), "email": email, "plan": plan, "match_reason": match_reason}
+        return {"ok": bool(ok), "email": email, "plan": plan, "match_reason": match_reason, "forwarded_to_owner": forwarded}
     except Exception as e:
         return {"ok": False, "error": str(e)[:200]}, 500
 
@@ -5808,7 +5982,7 @@ def generate_seo_post(products):
     <p>Limit heat. Use a heat protectant when needed. Sleep on satin to reduce friction and breakage.</p>
     <h2>Product Pairing</h2>
     <p>Match products to your goals: hydration for dryness, protein for bounce, and gentle detangling for fragile strands.</p>
-    <p><strong>Need a custom routine?</strong> Use the SupportRD Custom Order to get a product match and routine plan.</p>
+    <p><strong>Need a custom routine?</strong> Start with the SupportRD product shop and choose the physical item that matches your routine.</p>
     """
     excerpt = "A simple weekly routine to restore moisture, reduce frizz, and bring back bounce."
 
@@ -6656,6 +6830,7 @@ def render_support_seo_page(page_key):
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title }} | SupportRD</title>
   <meta name="description" content="{{ description }}">
+  <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="{{ page_url }}">
   <meta property="og:type" content="website">
   <meta property="og:title" content="{{ title }} | SupportRD">
@@ -6756,6 +6931,7 @@ def render_product_mirror_page(product_key):
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title }} | SupportRD</title>
   <meta name="description" content="{{ description }}">
+  <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="{{ page_url }}">
   <meta property="og:type" content="product">
   <meta property="og:title" content="{{ title }} | SupportRD">
@@ -6867,6 +7043,67 @@ def product_pro():
 @app.route("/products/premium")
 def product_premium():
     return render_product_mirror_page("premium")
+
+
+def load_custom_order_fragment():
+    path = os.path.join(app.root_path, "static", "custom-order.html")
+    with open(path, "r", encoding="utf-8") as f:
+        fragment = f.read()
+    font_link = '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">'
+    return fragment.replace(font_link, "", 1).lstrip()
+
+
+@app.route("/custom-order")
+@app.route("/pages/custom-order")
+def custom_order_page():
+    return redirect("https://shop.supportrd.com/collections/all", code=302)
+
+
+def build_public_sitemap_entries():
+    today = datetime.utcnow().date().isoformat()
+    entries = [
+        ("https://supportrd.com/", "daily", "1.0"),
+        ("https://supportrd.com/remote", "daily", "0.9"),
+        ("https://supportrd.com/local-remote", "daily", "0.9"),
+    ]
+    entries.extend((f"https://supportrd.com/{slug}", "weekly", "0.8") for slug in SEO_LANDING_PAGES.keys())
+    entries.extend((f"https://supportrd.com/products/{slug}", "weekly", "0.8") for slug in DIRECT_PRODUCT_LINKS.keys())
+    return [(loc, today, changefreq, priority) for loc, changefreq, priority in entries]
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    body = "\n".join([
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /api/",
+        "Disallow: /proxy/",
+        "Disallow: /shopify/",
+        "Sitemap: https://supportrd.com/sitemap.xml",
+        "",
+    ])
+    return Response(body, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    rows = []
+    for loc, lastmod, changefreq, priority in build_public_sitemap_entries():
+        rows.append(
+            "  <url>"
+            f"<loc>{escape(loc)}</loc>"
+            f"<lastmod>{lastmod}</lastmod>"
+            f"<changefreq>{changefreq}</changefreq>"
+            f"<priority>{priority}</priority>"
+            "</url>"
+        )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "\n".join(rows) +
+        "\n</urlset>"
+    )
+    return Response(xml, mimetype="application/xml")
 
 #################################################
 # BACKGROUND ENGINE

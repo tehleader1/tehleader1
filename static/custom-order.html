@@ -41,6 +41,32 @@
   letter-spacing: 0.02em;
 }
 
+.srd-policy-note {
+  max-width: 680px;
+  margin: 0 auto 24px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: #fff8f1;
+  border: 1px solid rgba(193,163,162,0.28);
+  color: #4b372a;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.04);
+}
+
+.srd-policy-note strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #b0886c;
+}
+
+.srd-policy-note p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(13,9,6,0.72);
+}
+
 .srd-order-card {
   max-width: 680px;
   margin: 0 auto;
@@ -180,8 +206,13 @@
 <div class="srd-order">
   <div class="srd-order-header">
     <div class="srd-order-eyebrow">SupportRD — Custom Order</div>
-    <div class="srd-order-title">Request your<br><span>personal order.</span></div>
-    <div class="srd-order-sub">Fill in your details below and we'll prepare your order.<br>You'll receive a secure payment link before anything ships.</div>
+    <div class="srd-order-title">Place your<br><span>physical product order.</span></div>
+    <div class="srd-order-sub">Choose your SupportRD physical products below and we'll open your order in pending status first.<br>Your next email will carry tracking once the package is officially placed.</div>
+  </div>
+
+  <div class="srd-policy-note">
+    <strong>Pending + Tracking Policy</strong>
+    <p>Physical product orders for Shampoo, Formula Exclusiva, Mascarilla, Gotero, and Gotika start with a pending confirmation email. Your next email includes your package tracking update once the order is officially placed. If a paid order is not placed within 30 days, SupportRD refunds that order amount.</p>
   </div>
 
   <div class="srd-order-card">
@@ -202,7 +233,7 @@
             <div class="srd-qty-wrap"><button class="srd-qty-btn" onclick="srdQty(this,-1)">−</button><div class="srd-qty-num">0</div><button class="srd-qty-btn" onclick="srdQty(this,1)">+</button></div>
           </div>
           <div class="srd-product-row" data-product="Gotitas Brillantes" data-price="30">
-            <div class="srd-product-info"><div class="srd-product-name">Gotitas Brillantes</div><div class="srd-product-price">$30</div></div>
+            <div class="srd-product-info"><div class="srd-product-name">Gotitas Brillantes (Gotika)</div><div class="srd-product-price">$30</div></div>
             <div class="srd-qty-wrap"><button class="srd-qty-btn" onclick="srdQty(this,-1)">−</button><div class="srd-qty-num">0</div><button class="srd-qty-btn" onclick="srdQty(this,1)">+</button></div>
           </div>
           <div class="srd-product-row" data-product="Mascarilla Capilar" data-price="25">
@@ -241,21 +272,21 @@
       <div class="srd-order-section" style="padding-bottom:28px;">
         <div class="srd-section-label">Delivery Preference</div>
         <div class="srd-form-grid">
-          <div class="srd-field"><label>Delivery Timeframe *</label><select id="srd-delivery" required><option value="">Select timeframe...</option><option value="standard">Standard (7–14 business days)</option><option value="express">Express (3–5 business days)</option><option value="urgent">Urgent (1–2 business days)</option></select></div>
+          <div class="srd-field"><label>Delivery Timeframe *</label><select id="srd-delivery" required><option value="">Select timeframe...</option><option value="standard">Pending physical order</option><option value="express">Pending + priority handling</option><option value="urgent">Pending + urgent review</option></select></div>
           <div class="srd-field"><label>How did you hear about us?</label><select id="srd-source"><option value="">Select...</option><option>Instagram</option><option>TikTok</option><option>Facebook</option><option>Friend / Referral</option><option>Aria AI Advisor</option><option>Google Search</option><option>Other</option></select></div>
           <div class="srd-field full"><label>Special Instructions / Notes</label><textarea id="srd-notes" placeholder="Any special requests, allergies, hair concerns, or notes for your order..."></textarea></div>
         </div>
       </div>
       <div class="srd-order-footer">
-        <button class="srd-submit-btn" id="srd-submit-btn" onclick="srdSubmitOrder()">Send My Order Request</button>
+        <button class="srd-submit-btn" id="srd-submit-btn" onclick="srdSubmitOrder()">Send Pending Order</button>
         <div class="srd-error-msg" id="srd-error-msg"></div>
-        <div class="srd-form-note">No payment required now · You'll receive a secure invoice link · Ships after payment confirmed</div>
+        <div class="srd-form-note">Pending email first · Tracking update in the next email after placement · 30-day refund protection if a paid order is not placed</div>
       </div>
     </div>
     <div class="srd-success" id="srd-success">
       <div class="srd-success-icon">✦</div>
-      <div class="srd-success-title">Order Request Received</div>
-      <div class="srd-success-msg">Thank you! We'll review your order and send you a secure payment link within 24 hours.<br><br>Keep an eye on your inbox at <strong id="srd-confirm-email"></strong></div>
+      <div class="srd-success-title">Pending Email Sent</div>
+      <div class="srd-success-msg">Thank you. Your physical product order is now pending and your confirmation email has been sent to <strong id="srd-confirm-email"></strong>.<br><br>Your next email will include tracking once the package is officially placed. If a paid order is not placed within 30 days, SupportRD refunds that order.</div>
     </div>
   </div>
 </div>
@@ -370,7 +401,7 @@ function srdSubmitOrder() {
     }
   })
   .catch(function(err) {
-    btn.textContent = 'Send My Order Request';
+    btn.textContent = 'Send Pending Order';
     btn.disabled = false;
     errEl.textContent = 'Something went wrong. Please try again or WhatsApp us at 829-233-2670.';
     errEl.style.display = 'block';

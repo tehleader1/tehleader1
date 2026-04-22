@@ -109,7 +109,7 @@ const LINKS = {
   fantasy300: "https://supportrd.com/products/basic-fantasy-21-plus-300",
   fantasy600: "https://supportrd.com/products/advanced-fantasy-21-plus-600",
     donate: "https://supportrd.com/products/supportrd-product-tip-donate",
-    custom: "https://supportrd.com/pages/custom-order"
+    custom: "https://shop.supportrd.com/collections/all"
   }
   const SHOPIFY_ROLLOUTS = [
     { key:"premium", label:"ARIA Puzzle Tier", price:"$35/mo", url: LINKS.premium },
@@ -2438,8 +2438,8 @@ function setupPaymentChooser(){
   function render(){
     const val = select.value
       if(val === "evelyn"){
-        view.innerHTML = `<p>Custom order inquiry lane.</p><div class="lock-pill">Use this for manual intake, not your default checkout.</div><div class="lock-pill">For direct Shopify payout routing, use the product checkout options above.</div><button class="btn" id="openCustomOrder">Open Custom Order</button>`
-        qs("#openCustomOrder").addEventListener("click", ()=>openModal("customOrderModal"))
+        view.innerHTML = `<p>Physical product shopping lane.</p><div class="lock-pill">Custom orders are retired.</div><div class="lock-pill">Use the Shopify product pages above for direct checkout.</div><button class="btn" id="openCustomOrder">Open Product Shop</button>`
+        qs("#openCustomOrder").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Product Shop"))
         return
       }
     if(val === "premium"){
@@ -16663,7 +16663,7 @@ function renderApp(name){
         </div>
       </div>
       <div id="shopifyLineup" class="gift-grid"></div>
-      <button class="btn" id="openCustomShop">Open Custom Order</button>`
+      <button class="btn" id="openCustomShop">Shop Products</button>`
     qs("#openMyOrders").addEventListener("click", ()=>openLinkModal(LINKS.myOrders, "My Orders"))
     qs("#openShopifyCart").addEventListener("click", ()=>openLinkModal(LINKS.cart, "Shopify Cart"))
     let activeProduct = null
@@ -16719,7 +16719,7 @@ function renderApp(name){
         }
       })
     }
-    qs("#openCustomShop").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Custom Order"))
+    qs("#openCustomShop").addEventListener("click", ()=>openLinkModal(LINKS.custom, "Product Shop"))
     loadProducts().then(items=>{
       const fallback = [
         {title:"Shampoo Aloe Vera", price:"20"},
