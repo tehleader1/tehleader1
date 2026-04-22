@@ -1820,6 +1820,34 @@
       return true;
     }
 
+    function isSameOriginGigSource(source){
+      try{
+        if(!source?.url) return false;
+        return new URL(source.url, window.location.origin).origin === window.location.origin;
+      }catch(_error){
+        return false;
+      }
+    }
+
+    async function renderGigFrameSource(source){
+      if(!source?.url){
+        gigConnectorFrame.srcdoc = `<div style="font-family:Arial,Helvetica,sans-serif;background:#07111c;color:#edf4ff;height:100%;display:flex;align-items:center;justify-content:center;">No source available.</div>`;
+        return;
+      }
+      if(isSameOriginGigSource(source)){
+        try{
+          const response = await fetch(source.url, { credentials: "same-origin" });
+          const html = await response.text();
+          gigConnectorFrame.srcdoc = html;
+          return;
+        }catch(_error){
+          // Fall back to src navigation below.
+        }
+      }
+      gigConnectorFrame.removeAttribute("srcdoc");
+      gigConnectorFrame.src = source.url;
+    }
+
     function launchGigConnector(sourceKey = activeGigSource){
       const source = getGigSourceByKey(sourceKey);
       if(!source) return;
@@ -1847,7 +1875,7 @@
           return;
         }
         gigConnectorFallback.classList.remove("active");
-        gigConnectorFrame.src = source.url;
+        renderGigFrameSource(source);
       }, 1400);
       logConversion(`gig-${source.key}`, "gig-connector", { source: source.key, url: source.url });
     }
