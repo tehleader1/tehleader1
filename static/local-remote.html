@@ -932,8 +932,8 @@
             <p>This is the real-life viewer lane for capitalization, market moves, shipments, corporate moments, and founder activity using the old gig connector style: click, loading screen, then live watch. The Market Page now carries the finance side of the hair-complete package with option trades, pressure / volume / delta reading, and Marcus at 704-453-3983 when deeper help is needed.</p>
           </div>
           <div class="gig-connector-actions">
-            <button type="button" id="gigConnectorLaunchBtn">Open Gig Connector</button>
-            <a id="gigConnectorSourceLink" href="https://supportrd.com/" target="_blank" rel="noreferrer">Open Current Source</a>
+            <button type="button" id="gigConnectorLaunchBtn">Open Market Live</button>
+            <a id="gigConnectorSourceLink" href="https://supportrd.com/static/images/Screenshot_2-3-2026_195020_ccrsupport.my.canva.site.jpeg" target="_blank" rel="noreferrer">View Coding Screenshots</a>
           </div>
         </div>
         <div class="gig-connector-sources" id="gigConnectorSources"></div>
@@ -1471,7 +1471,9 @@
     let providerConfirmed = false;
     let visitorPingInterval = null;
     let premiumPopupTimer = null;
-    let activeGigSource = "supportrd";
+    const gigConnectorLiveSource = "options";
+    const gigConnectorScreenshotSource = "conversation";
+    let activeGigSource = gigConnectorLiveSource;
     let moduleAccessTimer = null;
 
     const voiceKnowledge = {
@@ -1791,10 +1793,13 @@
       if(!source) return;
       const slides = getGigScreenshotSlides(source);
       const activeSlide = slides[activeGigScreenshotIndex] || slides[0] || null;
-      gigConnectorSourceLink.href = activeSlide?.image || source.url || "https://supportrd.com/";
+      const screenshotSource = getGigSourceByKey(gigConnectorScreenshotSource);
+      const screenshotSlides = getGigScreenshotSlides(screenshotSource);
+      const screenshotSlide = screenshotSlides[activeGigScreenshotIndex] || screenshotSlides[0] || null;
+      gigConnectorSourceLink.href = screenshotSlide?.image || screenshotSource?.url || "https://supportrd.com/";
       gigConnectorSourceLink.textContent = source.kind === "screenshot-gallery"
-        ? `Open ${activeSlide?.title || source.label}`
-        : `Open ${source.label}`;
+        ? `View ${activeSlide?.title || "Coding Screenshots"}`
+        : "View Coding Screenshots";
       renderGigSourceButtons();
     }
 
@@ -1809,7 +1814,7 @@
       gigScreenshotTitle.textContent = slide.title || source.label || "Live screenshot";
       gigScreenshotDetail.textContent = slide.detail || "Current screenshot view.";
       gigConnectorSourceLink.href = slide.image || source.url || "https://supportrd.com/";
-      gigConnectorSourceLink.textContent = `Open ${slide.title || source.label}`;
+      gigConnectorSourceLink.textContent = `View ${slide.title || source.label}`;
     }
 
     function canEmbedGigSource(source){
@@ -3018,7 +3023,15 @@
     loginSaveBtn.addEventListener("click", ()=>saveLoginPanel().catch((error)=>renderLoginPanel(`Login save error: ${error.message}`)));
     loginOpenAccountBtn.addEventListener("click", ()=>window.open("/login", "_blank", "noopener,noreferrer"));
     miniVoiceBtn.addEventListener("click", ()=>runVoiceSequence("Aria"));
-    gigConnectorLaunchBtn.addEventListener("click", ()=>launchGigConnector(activeGigSource));
+    gigConnectorLaunchBtn.addEventListener("click", ()=>launchGigConnector(gigConnectorLiveSource));
+    gigConnectorSourceLink.addEventListener("click", (event)=>{
+      const currentSource = getGigSourceByKey(activeGigSource);
+      if(currentSource?.kind === "screenshot-gallery"){
+        return;
+      }
+      event.preventDefault();
+      launchGigConnector(gigConnectorScreenshotSource);
+    });
     gigConnectorSources.addEventListener("click", (event)=>{
       const button = event.target.closest("[data-gig-source]");
       if(!button) return;

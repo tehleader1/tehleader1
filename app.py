@@ -7464,18 +7464,18 @@ def local_remote_bootstrap():
             },
             {
                 "key": "conversation",
-                "label": "Conversation Movement",
+                "label": "Coding Screenshots",
                 "url": "https://supportrd.com/static/images/Screenshot_2-3-2026_195020_ccrsupport.my.canva.site.jpeg",
                 "kind": "screenshot-gallery",
                 "slides": [
                     {
-                        "title": "Conversation Momentum",
-                        "detail": "A live SupportRD conversation state showing the build energy and movement between founder and assistant.",
+                        "title": "Coding View One",
+                        "detail": "Live coding proof from the SupportRD build period, showing active work and movement across the app.",
                         "image": "https://supportrd.com/static/images/Screenshot_2-3-2026_195020_ccrsupport.my.canva.site.jpeg",
                     },
                     {
-                        "title": "Conversation Progression",
-                        "detail": "A second live state for switching views while tracking how the SupportRD conversation keeps moving.",
+                        "title": "Coding View Two",
+                        "detail": "A second coding screenshot view so the source lane can switch between your live build moments.",
                         "image": "https://supportrd.com/static/images/Screenshot_2-3-2026_211121_ccrsupport.my.canva.site.jpeg",
                     },
                 ],
