@@ -7656,23 +7656,23 @@ def local_remote_bootstrap():
             {
                 "key": "conversation",
                 "label": "Coding Screenshots",
-                "url": "https://supportrd.com/static/images/conversation-shot-1.png",
+                "url": "https://supportrd.com/static/images/conversation-codex-live-1.png",
                 "kind": "screenshot-gallery",
                 "slides": [
                     {
-                        "title": "Shopify App Settings",
-                        "detail": "A real screenshot from the build session while configuring the SupportRD app credentials and contact lane.",
-                        "image": "https://supportrd.com/static/images/conversation-shot-1.png",
+                        "title": "Codex Conversation View One",
+                        "detail": "A real live screenshot of the ChatGPT Codex conversation window during the SupportRD build session.",
+                        "image": "https://supportrd.com/static/images/conversation-codex-live-1.png",
                     },
                     {
-                        "title": "Shopify Version + Proxy Setup",
-                        "detail": "Another real screenshot from the active setup session showing version configuration and proxy wiring.",
-                        "image": "https://supportrd.com/static/images/conversation-shot-2.png",
+                        "title": "Codex Conversation View Two",
+                        "detail": "Another actual live screen capture from the Codex conversation while we were updating the viewer.",
+                        "image": "https://supportrd.com/static/images/conversation-codex-live-2.png",
                     },
                     {
-                        "title": "Render Deploy Settings",
-                        "detail": "A live deployment screenshot showing the Render production settings during the SupportRD rollout.",
-                        "image": "https://supportrd.com/static/images/conversation-shot-3.png",
+                        "title": "Codex Conversation View Three",
+                        "detail": "A third real conversation screenshot from the same Codex build workflow for the live viewer gallery.",
+                        "image": "https://supportrd.com/static/images/conversation-codex-live-3.png",
                     },
                 ],
             },
