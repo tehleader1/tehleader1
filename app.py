@@ -5545,6 +5545,20 @@ def shopify_product_redirect(slug):
         return {"ok": False, "error": "shopify_store_not_configured"}, 404
     return redirect(f"https://{store}/products/{slug}", code=302)
 
+@app.route("/collections")
+def shopify_collections_redirect():
+    store = resolve_shopify_storefront_domain()
+    if not store:
+        return {"ok": False, "error": "shopify_store_not_configured"}, 404
+    return redirect(f"https://{store}/collections/all", code=302)
+
+@app.route("/collections/<path:slug>")
+def shopify_collection_redirect(slug):
+    store = resolve_shopify_storefront_domain()
+    if not store:
+        return {"ok": False, "error": "shopify_store_not_configured"}, 404
+    return redirect(f"https://{store}/collections/{slug}", code=302)
+
 @app.route("/cart")
 def shopify_cart_redirect():
     store = resolve_shopify_storefront_domain()
@@ -5579,6 +5593,20 @@ def shopify_checkout_redirect(variant_id):
         f"https://{store}/cart/{clean_variant}:1?ref={ref}",
         code=302,
     )
+
+@app.route("/checkout")
+def shopify_checkout_home_redirect():
+    store = resolve_shopify_storefront_domain()
+    if not store:
+        return {"ok": False, "error": "shopify_store_not_configured"}, 404
+    return redirect(f"https://{store}/cart", code=302)
+
+@app.route("/checkouts/<path:slug>")
+def shopify_checkouts_redirect(slug):
+    store = resolve_shopify_storefront_domain()
+    if not store:
+        return {"ok": False, "error": "shopify_store_not_configured"}, 404
+    return redirect(f"https://{store}/checkouts/{slug}", code=302)
 
 @app.route("/account/orders")
 def shopify_orders_redirect():
