@@ -7463,6 +7463,24 @@ def local_remote_bootstrap():
                 "kind": "website",
             },
             {
+                "key": "conversation",
+                "label": "Conversation Movement",
+                "url": "https://supportrd.com/static/images/Screenshot_2-3-2026_195020_ccrsupport.my.canva.site.jpeg",
+                "kind": "screenshot-gallery",
+                "slides": [
+                    {
+                        "title": "Conversation Momentum",
+                        "detail": "A live SupportRD conversation state showing the build energy and movement between founder and assistant.",
+                        "image": "https://supportrd.com/static/images/Screenshot_2-3-2026_195020_ccrsupport.my.canva.site.jpeg",
+                    },
+                    {
+                        "title": "Conversation Progression",
+                        "detail": "A second live state for switching views while tracking how the SupportRD conversation keeps moving.",
+                        "image": "https://supportrd.com/static/images/Screenshot_2-3-2026_211121_ccrsupport.my.canva.site.jpeg",
+                    },
+                ],
+            },
+            {
                 "key": "options",
                 "label": "Options Market",
                 "url": "http://127.0.0.1:3000/",
@@ -7492,8 +7510,8 @@ def local_remote_bootstrap():
                 "lane": "ThePlantManInc",
             },
             {
-                "title": "Options play went through and money was made",
-                "detail": "Show live market wins, capitalization progress, and what is happening now in the options market view.",
+                "title": "Hair complete package finance lane",
+                "detail": "Option Trades with pressure, volume, and delta reading for the chosen option. Need more help? Contact Marcus 704-453-3983.",
                 "lane": "Options Market",
             },
             {
@@ -7509,11 +7527,19 @@ def local_remote_bootstrap():
         ],
         "advisors": [
             "Accountant / business advisor lane",
+            "Option trades with pressure / volume / delta reading on the selected contract",
+            "Need more help on the market page? Contact Marcus 704-453-3983",
             "Supply company lag period week 1 through end of year",
             "Transportation cycle: east coast to midwest",
             "Dropshipping eventually taking over everything",
         ],
         "build_displays": [
+            {
+                "title": "Physical Product Catalog",
+                "image": "/static/images/brochure-shampoo.jpg",
+                "detail": "Shampoo, Formula Exclusiva, Mascarilla, Gotero, and Gotika now run through the live Shopify catalog with working buy buttons.",
+                "link": "https://shop.supportrd.com/collections/all",
+            },
             {
                 "title": "SupportRD Shell Build",
                 "image": "/static/images/aria-premium-pro-main-ad.jpg",

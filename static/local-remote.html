@@ -328,6 +328,32 @@
     }
     .gig-source-btn.active{background:linear-gradient(180deg, rgba(109,173,255,.34), rgba(38,78,137,.42));border-color:rgba(207,235,255,.34)}
     .gig-connector-frame{width:100%;height:420px;border:none;background:#06101b}
+    .gig-screenshot-gallery{
+      display:none;
+      height:420px;
+      background:radial-gradient(circle at top, rgba(109,173,255,.16), transparent 36%), linear-gradient(180deg, rgba(3,10,18,.96), rgba(6,16,27,.98));
+      padding:18px;
+      grid-template-columns:auto 1fr auto;
+      gap:14px;
+      align-items:center;
+    }
+    .gig-screenshot-gallery.active{display:grid}
+    .gig-screenshot-nav{
+      width:42px;height:42px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);
+      color:var(--text);font-size:18px;font-weight:700;cursor:pointer;
+    }
+    .gig-screenshot-stage{
+      display:grid;gap:12px;min-height:100%;
+    }
+    .gig-screenshot-kicker{
+      color:#d5b08b;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    }
+    .gig-screenshot-image{
+      width:100%;height:292px;object-fit:contain;border-radius:18px;border:1px solid rgba(213,235,255,.14);background:#08111d;
+    }
+    .gig-screenshot-caption{display:grid;gap:6px}
+    .gig-screenshot-caption strong{font-size:24px;font-family:"Cormorant Garamond", Georgia, serif}
+    .gig-screenshot-caption span{color:rgba(236,244,255,.82);line-height:1.55}
     .gig-viewer-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
     .gig-events,.gig-advisors{
       padding:14px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.05);display:grid;gap:10px;
@@ -836,46 +862,46 @@
       </div>
 
       <section class="catalog-strip">
-          <article class="catalog-card" style="--bg-image:url('/static/images/jake-studio-premium.jpg')">
-            <div class="price-flash"><strong>$100</strong><small>Studio Jake</small></div>
+          <article class="catalog-card" style="--bg-image:url('/static/images/brochure-shampoo.jpg')">
+            <div class="price-flash"><strong>Live</strong><small>Catalog</small></div>
           <div class="catalog-copy">
-            <span class="promo-chip">Studio Upgrade</span>
-            <strong>Jake Studio Premium</strong>
-            <span>Late-2000s glossy booth energy with real motherboard editing and premium studio lane access.</span>
+            <span class="promo-chip">Physical Products</span>
+            <strong>SupportRD Product Catalog</strong>
+            <span>Shampoo, Formula Exclusiva, Mascarilla, Gotero, and Gotika are now live with working buy buttons and direct Shopify checkout.</span>
             <div class="seo-row">
-              <span class="seo-chip">Studio</span>
-              <span class="seo-chip">Motherboard</span>
-              <span class="seo-chip">Premium Booth</span>
+              <span class="seo-chip">Shampoo</span>
+              <span class="seo-chip">Formula Exclusiva</span>
+              <span class="seo-chip">Gotika</span>
             </div>
-            <a class="buy-now" id="catalogStudioBuyLink" href="/products/studio-jake" target="_blank" rel="noreferrer">Buy Studio Access</a>
+            <a class="buy-now" id="catalogStudioBuyLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Open Catalog</a>
           </div>
         </article>
           <article class="catalog-card" style="--bg-image:url('/static/images/aria-premium-pro-main-ad.jpg')">
-            <div class="price-flash"><strong>$50</strong><small>Professional</small></div>
+            <div class="price-flash"><strong>Buy</strong><small>Now</small></div>
           <div class="catalog-copy">
-            <span class="promo-chip">Professional Lane</span>
-              <strong>ARIA Professional</strong>
-            <span>Professional identity, faster routes, polished voice, and a cleaner SupportRD ownership package.</span>
+            <span class="promo-chip">Catalog Spotlight</span>
+              <strong>Formula + Shampoo Lane</strong>
+            <span>Use the live storefront for the hair-complete package and move straight into product selection without the old custom-order stop.</span>
             <div class="seo-row">
-              <span class="seo-chip">Identity</span>
-              <span class="seo-chip">Premium Voice</span>
-              <span class="seo-chip">5 Star Care</span>
+              <span class="seo-chip">Direct Checkout</span>
+              <span class="seo-chip">Working Buy Buttons</span>
+              <span class="seo-chip">Founder Reviewed</span>
             </div>
-            <a class="buy-now" id="catalogPremiumBuyLink" href="/products/pro" target="_blank" rel="noreferrer">Upgrade Now</a>
+            <a class="buy-now" id="catalogPremiumBuyLink" href="https://shop.supportrd.com/" target="_blank" rel="noreferrer">Open Storefront</a>
           </div>
         </article>
           <article class="catalog-card" style="--bg-image:url('/static/images/brochure-contacts-remote.jpg')">
-            <div class="price-flash"><strong>$35</strong><small>Inner Circle</small></div>
+            <div class="price-flash"><strong>Track</strong><small>Owner</small></div>
             <div class="catalog-copy">
-              <span class="promo-chip">Support Network</span>
-              <strong>ARIA Premium</strong>
-              <span>Premium voice, better inner-circle handling, and a cleaner account route for daily SupportRD help.</span>
+              <span class="promo-chip">Order Handling</span>
+              <strong>Pending + Owner Routing</strong>
+              <span>Physical product purchases route into live Shopify checkout and can be forwarded for founder visibility on the backend.</span>
             <div class="seo-row">
-              <span class="seo-chip">Hair Problem</span>
-                <span class="seo-chip">Premium Voice</span>
-                <span class="seo-chip">On-The-Go</span>
+              <span class="seo-chip">Mascarilla</span>
+                <span class="seo-chip">Gotero</span>
+                <span class="seo-chip">Gotika</span>
               </div>
-            <a class="buy-now" id="catalogFamilyBuyLink" href="/products/premium" target="_blank" rel="noreferrer">Open Premium</a>
+            <a class="buy-now" id="catalogFamilyBuyLink" href="https://shop.supportrd.com/collections/all" target="_blank" rel="noreferrer">Shop Products</a>
           </div>
         </article>
       </section>
@@ -903,7 +929,7 @@
           <div>
             <div class="eyebrow">Gig Connector Live Viewer</div>
             <h2>SupportRD + Options Market + ThePlantManInc</h2>
-            <p>This is the real-life viewer lane for capitalization, market moves, shipments, corporate moments, and founder activity using the old gig connector style: click, loading screen, then live watch.</p>
+            <p>This is the real-life viewer lane for capitalization, market moves, shipments, corporate moments, and founder activity using the old gig connector style: click, loading screen, then live watch. The Market Page now carries the finance side of the hair-complete package with option trades, pressure / volume / delta reading, and Marcus at 704-453-3983 when deeper help is needed.</p>
           </div>
           <div class="gig-connector-actions">
             <button type="button" id="gigConnectorLaunchBtn">Open Gig Connector</button>
@@ -924,6 +950,18 @@
               <strong>Local stream needs direct open</strong>
               <span id="gigConnectorFallbackText">This source may need to open in a new tab because localhost and secure browser rules do not always embed together.</span>
             </div>
+          </div>
+          <div class="gig-screenshot-gallery" id="gigScreenshotGallery">
+            <button type="button" class="gig-screenshot-nav" id="gigScreenshotPrevBtn">&#10094;</button>
+            <div class="gig-screenshot-stage">
+              <div class="gig-screenshot-kicker" id="gigScreenshotKicker">Conversation Movement</div>
+              <img class="gig-screenshot-image" id="gigScreenshotImage" src="" alt="SupportRD conversation movement screenshot">
+              <div class="gig-screenshot-caption">
+                <strong id="gigScreenshotTitle">Live screenshot</strong>
+                <span id="gigScreenshotDetail">Current screenshot view.</span>
+              </div>
+            </div>
+            <button type="button" class="gig-screenshot-nav" id="gigScreenshotNextBtn">&#10095;</button>
           </div>
           <iframe class="gig-connector-frame" id="gigConnectorFrame" title="Gig connector live viewer" loading="lazy"></iframe>
         </div>
@@ -1408,6 +1446,13 @@
     const gigConnectorFallback = document.getElementById("gigConnectorFallback");
     const gigConnectorFallbackText = document.getElementById("gigConnectorFallbackText");
     const gigConnectorFrame = document.getElementById("gigConnectorFrame");
+    const gigScreenshotGallery = document.getElementById("gigScreenshotGallery");
+    const gigScreenshotPrevBtn = document.getElementById("gigScreenshotPrevBtn");
+    const gigScreenshotNextBtn = document.getElementById("gigScreenshotNextBtn");
+    const gigScreenshotImage = document.getElementById("gigScreenshotImage");
+    const gigScreenshotKicker = document.getElementById("gigScreenshotKicker");
+    const gigScreenshotTitle = document.getElementById("gigScreenshotTitle");
+    const gigScreenshotDetail = document.getElementById("gigScreenshotDetail");
     const gigEventList = document.getElementById("gigEventList");
     const gigAdvisorList = document.getElementById("gigAdvisorList");
     const offerInboxList = document.getElementById("offerInboxList");
@@ -1735,12 +1780,36 @@
       return getGigSources().find((item)=>item.key === key) || getGigSources()[0] || null;
     }
 
+    function getGigScreenshotSlides(source){
+      return Array.isArray(source?.slides) ? source.slides : [];
+    }
+
+    let activeGigScreenshotIndex = 0;
+
     function updateGigSourceUI(){
       const source = getGigSourceByKey(activeGigSource);
       if(!source) return;
-      gigConnectorSourceLink.href = source.url || "https://supportrd.com/";
-      gigConnectorSourceLink.textContent = `Open ${source.label}`;
+      const slides = getGigScreenshotSlides(source);
+      const activeSlide = slides[activeGigScreenshotIndex] || slides[0] || null;
+      gigConnectorSourceLink.href = activeSlide?.image || source.url || "https://supportrd.com/";
+      gigConnectorSourceLink.textContent = source.kind === "screenshot-gallery"
+        ? `Open ${activeSlide?.title || source.label}`
+        : `Open ${source.label}`;
       renderGigSourceButtons();
+    }
+
+    function renderGigScreenshot(source){
+      const slides = getGigScreenshotSlides(source);
+      if(!slides.length) return;
+      const normalizedIndex = ((activeGigScreenshotIndex % slides.length) + slides.length) % slides.length;
+      activeGigScreenshotIndex = normalizedIndex;
+      const slide = slides[normalizedIndex];
+      gigScreenshotImage.src = slide.image || "";
+      gigScreenshotKicker.textContent = `${source.label} · View ${normalizedIndex + 1} / ${slides.length}`;
+      gigScreenshotTitle.textContent = slide.title || source.label || "Live screenshot";
+      gigScreenshotDetail.textContent = slide.detail || "Current screenshot view.";
+      gigConnectorSourceLink.href = slide.image || source.url || "https://supportrd.com/";
+      gigConnectorSourceLink.textContent = `Open ${slide.title || source.label}`;
     }
 
     function canEmbedGigSource(source){
@@ -1755,13 +1824,23 @@
       const source = getGigSourceByKey(sourceKey);
       if(!source) return;
       activeGigSource = source.key;
+      activeGigScreenshotIndex = 0;
       updateGigSourceUI();
       gigConnectorLoader.classList.add("active");
       gigConnectorFallback.classList.remove("active");
+      gigScreenshotGallery.classList.remove("active");
+      gigConnectorFrame.style.display = "block";
       gigConnectorLoaderText.textContent = `Loading ${source.label} through the gig connector method so the live corporate state can come up cleanly.`;
       gigConnectorFrame.src = "about:blank";
       window.setTimeout(()=>{
         gigConnectorLoader.classList.remove("active");
+        if(source.kind === "screenshot-gallery"){
+          gigConnectorFallback.classList.remove("active");
+          gigConnectorFrame.style.display = "none";
+          gigScreenshotGallery.classList.add("active");
+          renderGigScreenshot(source);
+          return;
+        }
         if(!canEmbedGigSource(source)){
           gigConnectorFallback.classList.add("active");
           gigConnectorFallbackText.textContent = `${source.label} needs direct open here because localhost and secure browser rules do not always embed together. Use the open button and keep the live company events beside it.`;
@@ -1964,9 +2043,9 @@
 
       function refreshBuyRoutes(){
         const routeMap = [
-          [catalogStudioBuyLink, "/products/studio-jake"],
-          [catalogPremiumBuyLink, "/products/pro"],
-          [catalogFamilyBuyLink, "/products/premium"],
+          [catalogStudioBuyLink, "https://shop.supportrd.com/collections/all"],
+          [catalogPremiumBuyLink, "https://shop.supportrd.com/"],
+          [catalogFamilyBuyLink, "https://shop.supportrd.com/collections/all"],
           [sideStudioBuyLink, "/products/studio-jake"],
           [sideProBuyLink, "/products/pro"],
           [premiumPopupBuy, "/products/premium"]
@@ -2944,6 +3023,18 @@
       const button = event.target.closest("[data-gig-source]");
       if(!button) return;
       launchGigConnector(button.dataset.gigSource);
+    });
+    gigScreenshotPrevBtn.addEventListener("click", ()=>{
+      const source = getGigSourceByKey(activeGigSource);
+      if(source?.kind !== "screenshot-gallery") return;
+      activeGigScreenshotIndex -= 1;
+      renderGigScreenshot(source);
+    });
+    gigScreenshotNextBtn.addEventListener("click", ()=>{
+      const source = getGigSourceByKey(activeGigSource);
+      if(source?.kind !== "screenshot-gallery") return;
+      activeGigScreenshotIndex += 1;
+      renderGigScreenshot(source);
     });
     premiumPopupClose.addEventListener("click", closePremiumPopup);
     premiumPopup.addEventListener("click", (event)=>{
