@@ -135,19 +135,57 @@ body .float-launch-btn {
   </div>
   <div class="launch-center">
     <h1 id="launchTitle">SupportRD Check-In</h1>
+    <p class="launch-intro" id="launchIntro">Boot cleanly, choose your lane, and enter the site without confusion.</p>
     <div class="launch-main-actions">
-      <button id="launchMenuBtn" class="launch-main-btn">Enter SupportRD</button>
-      <button id="quickBoothStart" class="launch-main-btn alt">Open Booth</button>
+      <button id="launchMenuBtn" class="launch-main-btn">Open Boot Menu</button>
+      <button id="quickBoothStart" class="launch-main-btn alt">Enter Main Site</button>
     </div>
     <div id="launchPanel" class="launch-panel launch-checkin-card collapsed">
       <div class="launch-panel-head">
         <div>
-          <div class="launch-panel-title" id="menuTitle">Support Check-In</div>
-          <div class="system-sub">Optional account access while Remote keeps running in the background.</div>
+          <div class="launch-panel-title" id="menuTitle">SupportRD Boot Menu</div>
+          <div class="system-sub">Choose login, payment, brochure, or main-site entry without stacking the whole page at once.</div>
         </div>
         <button class="btn ghost launch-panel-toggle" id="launchPanelToggle" type="button" aria-expanded="false">Open</button>
       </div>
       <div class="launch-panel-body">
+        <div class="launch-status-strip">
+          <article class="launch-status-card">
+            <span>Boot</span>
+            <strong id="launchStatusBoot">Ready for check-in.</strong>
+          </article>
+          <article class="launch-status-card">
+            <span>Access</span>
+            <strong id="launchStatusAccess">Guest mode until login.</strong>
+          </article>
+          <article class="launch-status-card">
+            <span>Shopify</span>
+            <strong id="launchStatusShopify">Trusted store lane connected.</strong>
+          </article>
+        </div>
+        <div class="launch-path-grid" aria-label="SupportRD launch paths">
+          <article class="launch-path-card">
+            <span class="launch-path-kicker">Lane 01</span>
+            <strong>Account Access</strong>
+            <p>Use login, account creation, or password reset before moving deeper into the site.</p>
+            <div class="launch-path-state" id="launchPathAccess">Guest mode until login.</div>
+            <button class="btn ghost" type="button" data-launch-shortcut="login">Open Login</button>
+          </article>
+          <article class="launch-path-card">
+            <span class="launch-path-kicker">Lane 02</span>
+            <strong>Shopify + Payments</strong>
+            <p>Keep the trusted store lane visible so product, checkout, and support routes stay clean.</p>
+            <div class="launch-path-state" id="launchPathShopify">Payment lane standing by.</div>
+            <button class="btn ghost" type="button" data-launch-shortcut="payment">Open Payment</button>
+          </article>
+          <article class="launch-path-card">
+            <span class="launch-path-kicker">Lane 03</span>
+            <strong>Main Site Entry</strong>
+            <p>Once the lane is clear, move straight into the main SupportRD view without extra confusion.</p>
+            <div class="launch-path-state" id="launchPathEnter">Main site is ready for entry.</div>
+            <button class="btn" type="button" data-launch-shortcut="enter">Enter Site</button>
+          </article>
+        </div>
         <div class="launch-checkin-grid">
           <input id="launchAccountEmail" class="input" placeholder="Email or Username">
           <input id="launchAccountPassword" class="input" type="password" placeholder="Password">
@@ -159,9 +197,9 @@ body .float-launch-btn {
           <button class="btn" id="launchAccountLogin">Log In</button>
           <button class="btn ghost" id="launchAccountCreate">Create Account</button>
           <button class="btn ghost" id="launchAccountForgot">Forgot Password</button>
-          <button class="btn ghost" id="menuPayment">Payment Options</button>
+          <button class="btn ghost" id="menuPayment">Open Payment Options</button>
           <button class="btn ghost" id="menuBrochure">Open Brochure</button>
-          <button class="btn" id="menuEnter">Enter App</button>
+          <button class="btn" id="menuEnter">Enter Main Site</button>
         </div>
         <div class="launch-provider-row">
           <a class="btn ghost launch-provider-btn" href="/login?provider=google-oauth2">Google</a>
@@ -269,6 +307,39 @@ body .float-launch-btn {
           <button class="btn" id="logoutBtn">Log Out</button>
         </div>
       </div>
+      <aside class="core-command-deck glass" id="coreCommandDeck" aria-label="SupportRD core controls">
+        <div class="core-command-deck-head">
+          <div>
+            <div class="float-mode-kicker">Dedicated Core</div>
+            <strong>Boot, settings, login, and Shopify in one corner.</strong>
+          </div>
+          <span class="system-badge" id="coreBootBadge">Booting</span>
+        </div>
+        <div class="core-command-grid">
+          <div class="core-command-card">
+            <span>Boot Screen</span>
+            <strong id="coreBootStatus">Launch menu ready.</strong>
+          </div>
+          <div class="core-command-card">
+            <span>View Mode</span>
+            <strong id="coreViewStatus">Simple View active.</strong>
+          </div>
+          <div class="core-command-card">
+            <span>Account Access</span>
+            <strong id="coreLoginStatus">Checking login state...</strong>
+          </div>
+          <div class="core-command-card">
+            <span>Shopify</span>
+            <strong id="coreShopifyStatus">Connector waiting...</strong>
+          </div>
+        </div>
+        <div class="core-command-actions">
+          <button class="btn ghost" id="coreOpenLaunch">Boot Menu</button>
+          <button class="btn ghost" id="coreOpenSettings">Settings</button>
+          <button class="btn ghost" id="coreOpenLogin">Login</button>
+          <button class="btn" id="coreOpenShopify">Shopify</button>
+        </div>
+      </aside>
       <button class="btn primary" id="installBtn" style="display:none">Install + Subscribe</button>
     </div>
   </header>
@@ -289,6 +360,56 @@ body .float-launch-btn {
       <strong>Stable Layout</strong>
       <span>SupportRD stays locked in place on the TV so the page feels trustworthy.</span>
     </article>
+  </section>
+
+  <section class="finished-shell-preview glass" id="finishedShellPreview" aria-label="SupportRD finished shell preview">
+    <div class="finished-shell-preview__copy">
+      <div class="simple-shopify-kicker">Finished Shell Preview</div>
+      <h2>See the completed outer product shape now.</h2>
+      <p>This shell shows the real SupportRD product frame before the backend is fully finished: boot entry, Shopify lanes, Diary, Studio, Profile, FAQ, and Payments all living in one calmer system.</p>
+    </div>
+    <div class="finished-shell-preview__grid">
+      <article class="finished-shell-card">
+        <span>01</span>
+        <strong>Boot + Entry</strong>
+        <p>The first screen is the front door, not just an overlay.</p>
+        <button class="btn ghost" type="button" data-shell-preview-target="launch">Open Boot</button>
+      </article>
+      <article class="finished-shell-card">
+        <span>02</span>
+        <strong>Shopify Flow</strong>
+        <p>Three clear lanes stay near the top where people can actually find them.</p>
+        <button class="btn ghost" type="button" data-shell-preview-target="shopify">View Shopify</button>
+      </article>
+      <article class="finished-shell-card">
+        <span>03</span>
+        <strong>Diary Live</strong>
+        <p>Diary becomes a readable live lane instead of a clutter stack.</p>
+        <button class="btn ghost" type="button" data-shell-preview-target="diary">View Diary</button>
+      </article>
+      <article class="finished-shell-card">
+        <span>04</span>
+        <strong>Studio Full View</strong>
+        <p>Studio gets a real presentation surface in the main flow.</p>
+        <button class="btn ghost" type="button" data-shell-preview-target="studio">View Studio</button>
+      </article>
+      <article class="finished-shell-card">
+        <span>05</span>
+        <strong>Profile + FAQ</strong>
+        <p>Separate premium modules stay visible as proper app surfaces.</p>
+        <div class="finished-shell-card__actions">
+          <button class="btn ghost" type="button" data-shell-preview-target="profile">Profile</button>
+          <button class="btn ghost" type="button" data-shell-preview-target="faq">FAQ</button>
+        </div>
+      </article>
+      <article class="finished-shell-card">
+        <span>06</span>
+        <strong>Payments</strong>
+        <p>Payments hold a trusted lane in the shell instead of appearing randomly.</p>
+        <button class="btn" type="button" data-shell-preview-target="payments">View Payments</button>
+      </article>
+    </div>
+    <div class="finished-shell-preview__status" id="finishedShellPreviewStatus">Shell preview ready. Pick a lane and the site will take you there.</div>
   </section>
 
   <section class="simple-shopify-lanes glass" id="simpleShopifyLanes" aria-label="SupportRD simple Shopify areas">
@@ -3177,26 +3298,61 @@ body .float-launch-btn {
         </div>
       </div>
     </div>
-    <div class="remote-diary-lobby-search">
-      <select id="remoteDiaryLobbySearchBy" class="input">
-        <option value="name">Search Name</option>
-        <option value="email">Search Email</option>
-        <option value="tag">Search Tag ^^</option>
-        <option value="url">Search URL</option>
-      </select>
-      <input id="remoteDiaryLobbySearch" class="input" placeholder="Search diary lobby">
-    </div>
-    <div class="remote-diary-lobby-search">
-      <select id="remoteDiaryLobbySort" class="input">
-        <option value="recent">Sort · Recent</option>
-        <option value="email">Sort · Email</option>
-        <option value="url">Sort · URL</option>
-        <option value="tag">Sort · Tag ^^</option>
-      </select>
-      <button class="btn ghost remote-diary-lobby-apply" id="remoteDiaryLobbyApply" type="button">Apply</button>
+    <div class="remote-diary-lobby-toolbar glass">
+      <div class="remote-diary-lobby-toolbar-copy">
+        <strong>Search the live diary cleanly.</strong>
+        <span>Use one row to filter by person, email, tag, or route without stacking more panels on the page.</span>
+      </div>
+      <div class="remote-diary-lobby-search">
+        <select id="remoteDiaryLobbySearchBy" class="input">
+          <option value="name">Search Name</option>
+          <option value="email">Search Email</option>
+          <option value="tag">Search Tag ^^</option>
+          <option value="url">Search URL</option>
+        </select>
+        <input id="remoteDiaryLobbySearch" class="input remote-diary-lobby-query" placeholder="Search diary lobby">
+        <select id="remoteDiaryLobbySort" class="input">
+          <option value="recent">Sort · Recent</option>
+          <option value="email">Sort · Email</option>
+          <option value="url">Sort · URL</option>
+          <option value="tag">Sort · Tag ^^</option>
+        </select>
+        <button class="btn ghost remote-diary-lobby-apply" id="remoteDiaryLobbyApply" type="button">Apply</button>
+      </div>
     </div>
     <div class="remote-diary-lobby-list" id="remoteDiaryLobbyList"></div>
   </div>
+  <section class="remote-studio-stage glass" id="remoteStudioStage">
+    <div class="remote-studio-stage-head">
+      <div>
+        <div class="float-mode-kicker">Studio Full View</div>
+        <h2>Jake Studio opens here in the main Remote flow.</h2>
+        <p id="remoteStudioStageStatus">Press any Studio button in Remote and this section takes over with the full booth view instead of a cramped side panel.</p>
+      </div>
+      <div class="remote-studio-stage-actions">
+        <button class="btn" id="remoteStudioStageOpen">Open Full Studio</button>
+        <button class="btn ghost" id="remoteStudioStageFocus">Focus Studio</button>
+      </div>
+    </div>
+    <div class="remote-studio-stage-frame glass" id="remoteStudioStageFrame">
+      <iframe id="remoteStudioStageIframe" class="remote-studio-stage-iframe" data-src="/static/studio/index.html?v=20260414t" title="SupportRD Studio Full View"></iframe>
+      <div class="remote-studio-stage-overlay" id="remoteStudioStageOverlay">Studio is standing by. Tap a Studio button and Remote will scroll you into the full booth view here.</div>
+    </div>
+    <div class="remote-studio-stage-notes">
+      <article class="remote-studio-note">
+        <strong>Why this matters</strong>
+        <span>The Studio presentation should feel like its own product, not a compressed utility card.</span>
+      </article>
+      <article class="remote-studio-note">
+        <strong>Remote to Studio</strong>
+        <span>Diary, payments, and Studio stay in one system, but Studio gets the full-size surface it needs.</span>
+      </article>
+      <article class="remote-studio-note">
+        <strong>Presentation mode</strong>
+        <span>This section is built for scrolling into a giant-screen view with your dad without losing clarity.</span>
+      </article>
+    </div>
+  </section>
   <div class="remote-edits-menu glass" id="remoteEditsMenu">
     <div class="remote-edits-label">Edit Menu</div>
     <div class="remote-sticky-head remote-sticky-head-edits">

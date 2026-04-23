@@ -1188,6 +1188,169 @@ function setupMobileZoom(){
   bootScale()
 }
 
+function setupStudioFlow(){
+  const stage = qs("#remoteStudioStage")
+  const iframe = qs("#remoteStudioStageIframe")
+  const overlay = qs("#remoteStudioStageOverlay")
+  const status = qs("#remoteStudioStageStatus")
+  if(!stage || !iframe || !overlay || !status) return
+
+  let studioRequested = false
+
+  function ensureStudioLoaded(){
+    if(!iframe.getAttribute("src")){
+      const src = iframe.dataset.src || "/static/studio/index.html?v=20260414t"
+      iframe.setAttribute("src", src)
+    }
+  }
+
+  function setStudioActive(active){
+    stage.classList.toggle("is-live", !!active)
+    document.body.classList.toggle("remote-studio-live", !!active)
+  }
+
+  function openStudio(reason){
+    studioRequested = true
+    ensureStudioLoaded()
+    overlay.style.display = "none"
+    setStudioActive(true)
+    status.textContent = reason || "Studio is live in the main Remote flow now."
+    stage.scrollIntoView({behavior:"smooth", block:"start"})
+  }
+
+  function resetStudio(reason){
+    setStudioActive(false)
+    status.textContent = reason || "Studio is standing by inside the main Remote flow."
+    overlay.style.display = ""
+  }
+
+  const bindStudioOpen = (id, reason)=>{
+    const el = qs(`#${id}`)
+    if(el){
+      el.addEventListener("click", ()=>{
+        openStudio(reason)
+      })
+    }
+  }
+
+  bindStudioOpen("remotePurchaseStudio", "Remote promoted Studio into the full-width main view.")
+  bindStudioOpen("remoteStudioStageOpen", "Studio opened in full view from the main Remote stage.")
+  bindStudioOpen("remoteStudioStageFocus", "Studio is now the focus of the main Remote presentation.")
+  bindStudioOpen("openProJakeStudio", "Jake handoff sent you into the full Studio booth view.")
+  bindStudioOpen("floatStudioLiveBtn", "Quick Studio panel promoted the full booth into the main Remote flow.")
+  bindStudioOpen("shellV2GoStudio", "SupportRD shell moved you into the full Studio panel.")
+  bindStudioOpen("shellV2StudioLaunch", "SupportRD shell launched the full Studio panel.")
+  bindStudioOpen("supportrdOSOpenStudio", "Operating system view promoted the Studio workspace into the main Remote flow.")
+  bindStudioOpen("openStudioTop", "Top Studio route promoted the full booth into the main Remote flow.")
+
+  const focusStudio = qs("#supportrdOSFocusStudio")
+  if(focusStudio){
+    focusStudio.addEventListener("click", ()=>{
+      ensureStudioLoaded()
+      stage.scrollIntoView({behavior:"smooth", block:"start"})
+      status.textContent = "Studio is centered in the Remote view and ready to be opened full-size."
+    })
+  }
+
+  const exitBtn = qs("#studioExitBtn")
+  if(exitBtn){
+    exitBtn.addEventListener("click", ()=>{
+      stage.scrollIntoView({behavior:"smooth", block:"start"})
+      resetStudio("Studio exited. You are back in the main Remote presentation lane.")
+    })
+  }
+
+  const observer = new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        ensureStudioLoaded()
+        if(studioRequested){
+          overlay.style.display = "none"
+          setStudioActive(true)
+        }
+      }
+    })
+  }, {
+    rootMargin: "220px 0px 220px 0px",
+    threshold: 0.2
+  })
+
+  observer.observe(stage)
+}
+
+function setupFinishedShellPreview(){
+  const status = qs("#finishedShellPreviewStatus")
+  const targets = {
+    launch: { selector: "#launchMenu", before: el=>el.classList.remove("hide"), label: "Boot menu" },
+    shopify: { selector: "#simpleShopifyLanes", label: "Shopify flow" },
+    diary: { selector: "#remoteDiaryLobby", label: "Diary live" },
+    studio: { selector: "#remoteStudioStage", label: "Studio full view" },
+    profile: { selector: '[data-shell-v2-panel="profile"]', label: "Profile module" },
+    faq: { selector: '[data-shell-v2-panel="faq"]', label: "FAQ lounge" },
+    payments: { selector: '[data-shell-v2-panel="payments"]', label: "Payments lane" }
+  }
+  qsa("[data-shell-preview-target]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.dataset.shellPreviewTarget
+      const route = targets[key]
+      if(!route) return
+      const el = qs(route.selector)
+      if(!el){
+        if(status) status.textContent = `${route.label} is not available in this build yet.`
+        return
+      }
+      if(typeof route.before === "function") route.before(el)
+      el.scrollIntoView({behavior:"smooth", block:"start"})
+      if(status) status.textContent = `${route.label} is in view. This is part of the finished shell preview.`
+    })
+  })
+}
+
+function setupCoreCommandDeck(){
+  const bootBadge = qs("#coreBootBadge")
+  const bootStatus = qs("#coreBootStatus")
+  const viewStatus = qs("#coreViewStatus")
+  const loginStatus = qs("#coreLoginStatus")
+  const shopifyStatus = qs("#coreShopifyStatus")
+  const launchMenu = qs("#launchMenu")
+  const launchPanel = qs("#launchPanel")
+  const installBtn = qs("#installBtn")
+  const shopifyBadge = qs("#shopifyConnectorBadge")
+
+  const update = ()=>{
+    const launchVisible = !!(launchMenu && getComputedStyle(launchMenu).display !== "none")
+    const launchOpen = !!(launchPanel && launchPanel.classList.contains("show"))
+    const isLogged = localStorage.getItem("loggedIn") === "true"
+    const simpleView = document.body.classList.contains("simple-view")
+    if(bootBadge) bootBadge.textContent = launchOpen ? "Boot Open" : (launchVisible ? "Ready" : "Live")
+    if(bootStatus) bootStatus.textContent = launchOpen ? "Launch panel is open." : "Launch menu is standing by."
+    if(viewStatus) viewStatus.textContent = simpleView ? "Simple View active." : "Full View active."
+    if(loginStatus) loginStatus.textContent = isLogged ? "Logged in and recognized." : "Guest mode until login."
+    if(shopifyStatus){
+      const badgeText = shopifyBadge ? (shopifyBadge.textContent || "Connector waiting...") : "Connector waiting..."
+      const installReady = !!(installBtn && getComputedStyle(installBtn).display !== "none")
+      shopifyStatus.textContent = installReady ? `${badgeText} Install ready.` : badgeText
+    }
+  }
+
+  const clickForward = (sourceId, targetId)=>{
+    const source = qs(`#${sourceId}`)
+    const target = qs(`#${targetId}`)
+    if(source && target){
+      source.addEventListener("click", ()=>target.click())
+    }
+  }
+
+  clickForward("coreOpenLaunch", "launchMenuBtn")
+  clickForward("coreOpenSettings", "menuSettings")
+  clickForward("coreOpenLogin", "loginBtn")
+  clickForward("coreOpenShopify", "menuShopifyFlow")
+
+  update()
+  window.addEventListener("storage", update)
+  setInterval(update, 1600)
+}
+
 function setupTabs(){
   qsa(".tab-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -3495,22 +3658,31 @@ function setupStartupSplash(){
   setTimeout(()=>{ splash.classList.remove("show") }, 1700)
 }
 
-function setupLaunchMenu(){
-  const launch = qs("#launchMenu")
-  const menuBtn = qs("#launchMenuBtn")
-  const panel = qs("#launchPanel")
+  function setupLaunchMenu(){
+    const launch = qs("#launchMenu")
+    const menuBtn = qs("#launchMenuBtn")
+    const panel = qs("#launchPanel")
+  const panelToggle = qs("#launchPanelToggle")
   const payBtn = qs("#launchPaymentBtn")
   const payPanel = qs("#launchPaymentPanel")
   const payClose = qs("#closeLaunchPayment")
   const lang = qs("#launchLang")
-  if(!launch || !menuBtn) return
+  const statusBoot = qs("#launchStatusBoot")
+    const statusAccess = qs("#launchStatusAccess")
+    const statusShopify = qs("#launchStatusShopify")
+    const shopifyBadge = qs("#shopifyConnectorBadge")
+    const intro = qs("#launchIntro")
+    const pathAccess = qs("#launchPathAccess")
+    const pathShopify = qs("#launchPathShopify")
+    const pathEnter = qs("#launchPathEnter")
+    if(!launch || !menuBtn) return
   const labels = {
-    en: {title:"SupportRD", menu:"SupportRD Menu", menuBtn:"Menu", payment:"Payment Options"},
-    es: {title:"SupportRD", menu:"Menu SupportRD", menuBtn:"Menu", payment:"Opciones de Pago"},
-    fr: {title:"SupportRD", menu:"Menu SupportRD", menuBtn:"Menu", payment:"Options de Paiement"},
-    de: {title:"SupportRD", menu:"SupportRD Menu", menuBtn:"Menu", payment:"Zahlungsoptionen"},
-    ar: {title:"SupportRD", menu:"قائمة SupportRD", menuBtn:"القائمة", payment:"خيارات الدفع"},
-    sw: {title:"SupportRD", menu:"Menyu ya SupportRD", menuBtn:"Menyu", payment:"Chaguo la Malipo"}
+    en: {title:"SupportRD Check-In", menu:"SupportRD Boot Menu", menuBtn:"Open Boot Menu", payment:"Payment Options", intro:"Boot cleanly, choose your lane, and enter the site without confusion."},
+    es: {title:"SupportRD Check-In", menu:"Menu de Inicio SupportRD", menuBtn:"Abrir Menu", payment:"Opciones de Pago", intro:"Entra limpio, elige tu ruta, y sigue sin confusion."},
+    fr: {title:"SupportRD Check-In", menu:"Menu de Demarrage SupportRD", menuBtn:"Ouvrir Menu", payment:"Options de Paiement", intro:"Entrez proprement, choisissez votre voie, puis continuez sans confusion."},
+    de: {title:"SupportRD Check-In", menu:"SupportRD Startmenu", menuBtn:"Startmenu Offnen", payment:"Zahlungsoptionen", intro:"Sauber starten, Spur wahlen, und ohne Verwirrung eintreten."},
+    ar: {title:"SupportRD Check-In", menu:"قائمة تشغيل SupportRD", menuBtn:"افتح قائمة التشغيل", payment:"خيارات الدفع", intro:"ادخل بشكل واضح واختر مسارك بدون تشويش."},
+    sw: {title:"SupportRD Check-In", menu:"Menyu ya Mwanzo ya SupportRD", menuBtn:"Fungua Menyu", payment:"Chaguo la Malipo", intro:"Ingia kwa utulivu, chagua njia yako, kisha endelea bila mkanganyiko."}
   }
   function applyLang(code){
     const t = labels[code] || labels.en
@@ -3520,24 +3692,67 @@ function setupLaunchMenu(){
     if(menuTitle) menuTitle.textContent = t.menu
     menuBtn.textContent = t.menuBtn
     if(payBtn) payBtn.textContent = t.payment
+    if(intro) intro.textContent = t.intro
   }
   if(lang){
     applyLang(lang.value)
     lang.addEventListener("change", ()=>applyLang(lang.value))
   }
-  setInterval(()=>{ menuBtn.classList.toggle("blink") }, 1500)
-  menuBtn.addEventListener("click", ()=>{
-    panel.classList.toggle("show")
-    launch.classList.toggle("open")
+    function syncLaunchStatus(){
+      const panelOpen = !!(panel && panel.classList.contains("show"))
+      const payOpen = !!(payPanel && payPanel.classList.contains("show"))
+      const isLogged = localStorage.getItem("loggedIn") === "true"
+      if(statusBoot) statusBoot.textContent = panelOpen ? "Check-in panel open." : "Ready for check-in."
+      if(statusAccess) statusAccess.textContent = isLogged ? "Logged in path detected." : "Guest mode until login."
+      if(pathAccess) pathAccess.textContent = isLogged ? "Account lane is clear and recognized." : "Guest mode is still active."
+      if(statusShopify){
+        const badgeText = shopifyBadge ? (shopifyBadge.textContent || "Trusted store lane connected.") : "Trusted store lane connected."
+        statusShopify.textContent = payOpen ? "Payment lane open." : badgeText
+        if(pathShopify) pathShopify.textContent = payOpen ? "Payment lane is open right now." : badgeText
+      }
+      if(pathEnter) pathEnter.textContent = panelOpen ? "Boot menu is open. Finish here, then enter." : "Main site is ready for entry."
+      if(panelToggle){
+        panelToggle.textContent = panelOpen ? "Close" : "Open"
+        panelToggle.setAttribute("aria-expanded", panelOpen ? "true" : "false")
+      }
+      menuBtn.classList.toggle("blink", !panelOpen)
+    }
+    function runLaunchAction(action){
+      if(action === "login") window.location.href = "/login"
+      if(action === "signup") window.location.href = "/login?mode=signup"
+      if(action === "forgot") window.location.href = "/login"
+      if(action === "payment" && payPanel) payPanel.classList.add("show")
+      if(action === "satellite") openMiniWindow("Satellite Watch", "We can stage alerts and contact routing. For emergency launch updates, keep your admin contact active.")
+      if(action === "enter") launch.classList.add("hide")
+      if(action === "default"){
+        panel.classList.remove("show")
+        if(payPanel) payPanel.classList.remove("show")
+        launch.classList.remove("open")
+      }
+      syncLaunchStatus()
+    }
+    setInterval(()=>{ menuBtn.classList.toggle("blink") }, 1500)
+    menuBtn.addEventListener("click", ()=>{
+      panel.classList.toggle("show")
+      launch.classList.toggle("open")
+      syncLaunchStatus()
     try{ beep(980, 90) }catch{}
   })
+  if(panelToggle){
+    panelToggle.addEventListener("click", ()=>{
+      panel.classList.toggle("show")
+      launch.classList.toggle("open", panel.classList.contains("show"))
+      syncLaunchStatus()
+    })
+  }
   if(payBtn){
     payBtn.addEventListener("click", ()=>{
       if(payPanel) payPanel.classList.toggle("show")
+      syncLaunchStatus()
       try{ beep(760, 90) }catch{}
     })
   }
-  if(payClose){ payClose.addEventListener("click", ()=>{ if(payPanel) payPanel.classList.remove("show") }) }
+  if(payClose){ payClose.addEventListener("click", ()=>{ if(payPanel) payPanel.classList.remove("show"); syncLaunchStatus() }) }
   qsa("[data-pay]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const k = btn.dataset.pay
@@ -3560,23 +3775,18 @@ function setupLaunchMenu(){
       openLinkModal(map[k] || LINKS.custom, labelMap[k] || "Payment")
     })
   })
-  qsa("[data-launch]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const action = btn.dataset.launch
-      if(action === "login"){ window.location.href = "/login" }
-      if(action === "signup"){ window.location.href = "/login?mode=signup" }
-      if(action === "forgot"){ window.location.href = "/login" }
-      if(action === "payment"){ if(payPanel) payPanel.classList.add("show") }
-      if(action === "satellite"){ openMiniWindow("Satellite Watch", "We can stage alerts and contact routing. For emergency launch updates, keep your admin contact active.") }
-      if(action === "enter"){ launch.classList.add("hide") }
-      if(action === "default"){
-        panel.classList.remove("show")
-        if(payPanel) payPanel.classList.remove("show")
-        launch.classList.remove("open")
-      }
+    qsa("[data-launch]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        runLaunchAction(btn.dataset.launch)
+      })
     })
-  })
-}
+    qsa("[data-launch-shortcut]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        runLaunchAction(btn.dataset.launchShortcut)
+      })
+    })
+    syncLaunchStatus()
+  }
 
 function setupLoginGate(){
   try{
@@ -4636,6 +4846,9 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupSimpleFlow)
   safe(setupDiaryOwnerPayments)
   safe(setupMobileZoom)
+  safe(setupStudioFlow)
+  safe(setupFinishedShellPreview)
+  safe(setupCoreCommandDeck)
   safe(setupAccessibilityMode)
   safe(setupAdult21Mode)
   safe(setupCampaign)
