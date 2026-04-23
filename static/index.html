@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, minimum-scale=0.5, maximum-scale=3, user-scalable=yes">
   <title>SupportRD - Premium Hair Industry Brand</title>
 <meta name="theme-color" content="#1f2329">
 <meta name="mobile-web-app-capable" content="yes">
@@ -244,22 +244,19 @@ body .float-launch-btn {
     <div class="brand">
       <div class="logo">SupportRD Free Roam World</div>
       <div class="system-badge">Core Build Active</div>
-      <div class="tagline">Remote on top. Open what you need fast.</div>
+      <div class="tagline">Simple is the lane. Shopify trust, calm layout, fast decisions.</div>
     </div>
     <div class="top-middle">
       <button class="btn ghost" id="liteModeBtn">Accessible Version</button>
       <button class="btn ghost" id="simpleUiToggle">Simple View: On</button>
-      <button class="btn ghost" id="openStudioTop">Go To Jake (2s)</button>
+      <button class="btn ghost" id="menuWebcamTop">Webcam Chat</button>
     </div>
     <div class="status">
       <div class="big-menu">
-        <button class="menu-btn advanced-menu" id="menuOccasion">Occasion Editor</button>
         <button class="menu-btn" id="menuGift">Gift Shop</button>
         <button class="menu-btn" id="menuCustomOrderTop">Shop Products</button>
-        <button class="menu-btn advanced-menu" id="menuSellAria">Sell ARIA</button>
-        <button class="menu-btn advanced-menu" id="menuCreditTop">Credit</button>
-        <button class="menu-btn advanced-menu" id="menuStudio">In the Booth</button>
-        <button class="menu-btn advanced-menu" id="menuFloatMode">Float Mode</button>
+        <button class="menu-btn" id="menuBlogTop">Blog Page</button>
+        <button class="menu-btn" id="menuShopifyFlow">3 Shopify Areas</button>
         <button class="menu-btn" id="menuSettings">Settings</button>
         <button class="menu-btn glow" id="menuSubscription">Product Purchase</button>
       </div>
@@ -275,6 +272,68 @@ body .float-launch-btn {
       <button class="btn primary" id="installBtn" style="display:none">Install + Subscribe</button>
     </div>
   </header>
+
+  <section class="simple-performance-strip glass" id="simplePerformanceStrip" aria-label="SupportRD core performance focus">
+    <article class="simple-performance-card">
+      <div class="simple-performance-kicker">Shopify Load</div>
+      <strong>Fast Load</strong>
+      <span>Keep the first screen calm, reserved, and ready with no shaking.</span>
+    </article>
+    <article class="simple-performance-card">
+      <div class="simple-performance-kicker">Shopify Response</div>
+      <strong>Fast Tap</strong>
+      <span>Every touch should answer quickly and lead cleanly to the next move.</span>
+    </article>
+    <article class="simple-performance-card">
+      <div class="simple-performance-kicker">Shopify Stability</div>
+      <strong>Stable Layout</strong>
+      <span>SupportRD stays locked in place on the TV so the page feels trustworthy.</span>
+    </article>
+  </section>
+
+  <section class="simple-shopify-lanes glass" id="simpleShopifyLanes" aria-label="SupportRD simple Shopify areas">
+    <div class="simple-shopify-copy">
+      <div class="simple-shopify-kicker">Simple Shopify Flow</div>
+      <h2>Three clean lanes. No clutter. No guessing.</h2>
+      <p>SupportRD now leads with one trusted Shopify-first flow: main support, plant dropship growth, and premium laser charts. The blog and webcam lane stay visible so nothing important disappears off the page.</p>
+      <div class="simple-shopify-actions">
+        <button class="btn" id="simpleBlogBtn">Open Blog Page</button>
+        <button class="btn ghost" id="simpleWebcamBtn">Open Webcam Chat</button>
+      </div>
+    </div>
+    <div class="simple-shopify-grid">
+      <article class="simple-shopify-card">
+        <div class="simple-shopify-kicker">Lane 1</div>
+        <h3>SupportRD</h3>
+        <p>Hair help, Shopify checkout, product support, and the main remote route.</p>
+        <div class="simple-shopify-meta">Live now · trusted Shopify lane</div>
+        <div class="simple-shopify-card-actions">
+          <button class="btn" id="supportLaneBtn">Open SupportRD Lane</button>
+          <button class="btn ghost" id="supportLaneRoute">Open Shopify Store</button>
+        </div>
+      </article>
+      <article class="simple-shopify-card">
+        <div class="simple-shopify-kicker">Lane 2</div>
+        <h3>ThePlantManInc.</h3>
+        <p>Plant dropship lane with simple product routing and a clean future handoff into Shopify.</p>
+        <div class="simple-shopify-meta">Pending custom Shopify link</div>
+        <div class="simple-shopify-card-actions">
+          <button class="btn" id="plantLaneBtn">Open Plant Lane</button>
+          <button class="btn ghost" id="plantLaneRoute">Plant Lane Status</button>
+        </div>
+      </article>
+      <article class="simple-shopify-card">
+        <div class="simple-shopify-kicker">Lane 3</div>
+        <h3>Laser Charts</h3>
+        <p>Premium signals, charts, and live market intelligence prepared as a Shopify-ready digital offer.</p>
+        <div class="simple-shopify-meta">Premium lane · payout links pending</div>
+        <div class="simple-shopify-card-actions">
+          <button class="btn" id="signalsLaneBtn">Open Signals Lane</button>
+          <button class="btn ghost" id="signalsLaneRoute">View Offer Status</button>
+        </div>
+      </article>
+    </div>
+  </section>
 
   <div class="main-content-row">
     <section class="center-stage glass" id="centerStage">
@@ -2885,14 +2944,57 @@ body .float-launch-btn {
               <span>Live Session</span>
               <span class="float-box-badge">Public Diary Feed</span>
             </div>
-            <div class="float-profile-scan-stage" id="floatDiaryLiveFeed">
-              <video id="floatDiaryLiveVideo" class="float-profile-scan-video" playsinline autoplay muted hidden></video>
-              <div class="float-profile-scan-overlay" id="floatDiaryLiveOverlay">Live Session is off. Press Live Feature to turn this diary page into a public display.</div>
-            </div>
-            <div class="float-mini-actions">
-              <button class="btn ghost" id="floatDiaryLiveFastPay">Fast Pay</button>
-              <button class="btn ghost" id="floatDiaryLiveHeart">Heart</button>
-              <button class="btn ghost" id="floatDiaryLiveThumb">Thumbs Up</button>
+            <div class="float-live-broadcast-grid">
+              <div>
+                <div class="float-profile-scan-stage" id="floatDiaryLiveFeed">
+                  <video id="floatDiaryLiveVideo" class="float-profile-scan-video" playsinline autoplay muted hidden></video>
+                  <div class="float-profile-scan-overlay" id="floatDiaryLiveOverlay">Live Session is off. Press Live Feature to turn this diary page into a public display.</div>
+                </div>
+                <div class="float-mini-actions">
+                  <button class="btn ghost" id="floatDiaryLiveFastPay">Fast Pay</button>
+                  <button class="btn ghost" id="floatDiaryLiveHeart">Heart</button>
+                  <button class="btn ghost" id="floatDiaryLiveThumb">Thumbs Up</button>
+                </div>
+                <div class="float-live-audience-strip">
+                  <div class="float-live-audience-card">
+                    <div class="float-mode-kicker">Group Visits</div>
+                    <strong id="floatDiaryGroupVisitsCount">0 active</strong>
+                    <span id="floatDiaryGroupVisitsMeta">No live groups yet. When traffic stacks up, the counter locks here.</span>
+                  </div>
+                  <div class="float-live-audience-card">
+                    <div class="float-mode-kicker">Feed Money</div>
+                    <strong id="floatDiarySupportTotal">$0.00</strong>
+                    <span id="floatDiarySupportMeta">Support and paid comments build in real time during the live session.</span>
+                  </div>
+                </div>
+              </div>
+              <aside class="float-owner-pay-rail glass" id="floatOwnerPayRail">
+                <div class="float-owner-pay-head">
+                  <div>
+                    <div class="float-mode-kicker">Owner Payment Lane</div>
+                    <strong>Bank / Card Details Beside Camera</strong>
+                  </div>
+                  <span class="float-box-badge">Owner</span>
+                </div>
+                <div class="float-owner-pay-copy">Keep the payout route clean for the feed owner. This stays right next to the live camera so the money lane is never hidden.</div>
+                <div class="float-config-grid">
+                  <select id="floatOwnerPayoutType" class="input">
+                    <option value="debit_card">Debit Card</option>
+                    <option value="credit_card">Credit Card</option>
+                    <option value="bank_account">Bank Account</option>
+                  </select>
+                  <input id="floatOwnerBankName" class="input" placeholder="Bank name">
+                  <input id="floatOwnerAccountName" class="input" placeholder="Name on account or card">
+                  <input id="floatOwnerRouting" class="input" placeholder="Routing / transit number">
+                  <input id="floatOwnerAccountNumber" class="input" placeholder="Account or card number">
+                  <input id="floatOwnerPayoutEmail" class="input" placeholder="Owner payout email">
+                </div>
+                <div class="float-mini-actions">
+                  <button class="btn" id="floatOwnerPaySaveBtn">Save Owner Payment</button>
+                  <button class="btn ghost" id="floatOwnerPayUseProfileBtn">Use Logged In Email</button>
+                </div>
+                <div class="float-box-copy" id="floatOwnerPayStatus">Owner payment details are not saved yet.</div>
+              </aside>
             </div>
             <div class="float-config-grid">
               <input id="floatDiaryLiveGuest" class="input" placeholder="Guest name">
@@ -2947,9 +3049,19 @@ body .float-launch-btn {
           <div class="remote-diary-viewer-card-head">Session Voice + Feed</div>
           <div class="remote-diary-viewer-transcript" id="remoteDiaryViewerTranscript">The latest diary voice and feed turns will show here.</div>
         </div>
+        <div class="remote-diary-viewer-card">
+          <div class="remote-diary-viewer-card-head">Group Visits + Feed Pressure</div>
+          <div class="remote-diary-viewer-transcript" id="remoteDiaryViewerGroupVisits">Waiting for group visits and stacked audience movement.</div>
+        </div>
       </div>
     </div>
   </section>
+  <div class="mobile-zoom-dock glass" id="mobileZoomDock" aria-label="Mobile overview controls">
+    <button class="btn ghost mobile-zoom-btn" id="mobileZoomOutBtn" type="button">Fit</button>
+    <button class="btn ghost mobile-zoom-btn" id="mobileZoomResetBtn" type="button">Reset</button>
+    <button class="btn ghost mobile-zoom-btn" id="mobileZoomInBtn" type="button">Read</button>
+    <div class="mobile-zoom-status" id="mobileZoomStatus">Mobile view ready</div>
+  </div>
   <div class="brochure-float" id="brochureFloat">
     <button class="brochure-float-btn" id="openBrochureFloat">BROCHURE</button>
   </div>
@@ -2970,7 +3082,7 @@ body .float-launch-btn {
   </aside>
 </div>
 
-<div id="remoteFastPayModal" class="remote-fastpay-modal" hidden aria-hidden="true">
+  <div id="remoteFastPayModal" class="remote-fastpay-modal" hidden aria-hidden="true">
   <div class="remote-fastpay-backdrop"></div>
   <div class="remote-fastpay-card glass">
     <div class="remote-fastpay-head">
@@ -3018,6 +3130,11 @@ body .float-launch-btn {
       <div class="remote-fastpay-meta" id="remoteProcessingStatus">Waiting for your tap to move into the 5-second secure handoff.</div>
     </div>
   </div>
+  </div>
+  <div class="remote-simple-links glass" id="remoteSimpleLinks">
+    <button class="btn" id="remoteBlogBtn">Blog Page</button>
+    <button class="btn ghost" id="remoteWebcamBtn">Webcam Chat</button>
+    <button class="btn ghost" id="remoteShopifyBtn">3 Shopify Areas</button>
   </div>
   <div class="remote-purchase-editor glass" id="remotePurchaseEditor">
     <div class="remote-sticky-head">

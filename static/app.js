@@ -126,7 +126,8 @@ const state = {
     livePopupActive: false,
     ariaLevel: 'greeting',
     resolverContext: null,
-    adult21: false
+    adult21: false,
+    simpleView: true
 }
 
 const PROHIBITED_TERMS = ["drug","drugs","cocaine","meth","weed","marijuana","heroin","fentanyl","gang","gangs","cartel","crip","bloods","ms-13"]
@@ -855,14 +856,342 @@ async function speakReply(text){
     }
 }
 
-  function setupTabs(){
+function activateTab(id){
+  const panel = qs(`#tab-${id}`)
+  if(!panel) return
+  const targetBtn = qs(`.tab-btn[data-tab="${id}"]`)
+  qsa(".tab-btn").forEach(btn=>btn.classList.toggle("active", btn === targetBtn))
+  qsa(".tab-panel").forEach(p=>p.classList.toggle("active", p === panel))
+}
+
+function openBlogLane(index = 0){
+  state.blogIndex = Math.max(0, Math.min(BLOG_POSTS.length - 1, Number(index) || 0))
+  renderBlog()
+  openModal("blogModal")
+}
+
+function openWebcamLane(){
+  activateTab("analysis")
+  const transcript = qs("#ariaTranscript")
+  const result = qs("#analysisResult")
+  const title = qs("#assistantLargeTitle")
+  if(title){ title.textContent = "ARIA Webcam Chat" }
+  if(transcript){ transcript.textContent = "ARIA webcam lane ready. Tap to talk or run a scan when you catch the curve." }
+  if(result){ result.textContent = "Webcam scan lane armed. Hold steady, then start when you want the clean read." }
+  const center = qs("#centerStage")
+  if(center){ center.scrollIntoView({behavior:"smooth", block:"start"}) }
+}
+
+function openSimpleLane(lane){
+  if(lane === "support"){
+    renderApp("Shopify Products")
+    openModal("appModal")
+    return
+  }
+  const body = qs("#appBody")
+  if(!body) return
+  if(lane === "plant"){
+    body.innerHTML = `
+      <div class="system-card glass">
+        <div class="system-head">
+          <div>
+            <div class="system-title">ThePlantManInc. Lane</div>
+            <div class="system-sub">Simple plant dropship lane prepared inside the same trusted Shopify system.</div>
+          </div>
+          <span class="system-badge">Pending Link</span>
+        </div>
+        <div class="mini-list">Status: waiting for the dedicated Shopify collection or product link for ThePlantManInc.</div>
+        <div class="mini-list">Current fallback: SupportRD Shopify store stays available so the lane never feels dead.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn" id="openPlantFallback">Open Shopify Store</button>
+          <button class="btn ghost" id="openPlantBlog">Open Blog Page</button>
+        </div>
+      </div>
+    `
+    const openPlantFallback = qs("#openPlantFallback")
+    const openPlantBlog = qs("#openPlantBlog")
+    if(openPlantFallback){ openPlantFallback.addEventListener("click", ()=>openLinkModal(LINKS.custom, "ThePlantManInc. Shopify Fallback")) }
+    if(openPlantBlog){ openPlantBlog.addEventListener("click", ()=>openBlogLane(0)) }
+    openModal("appModal")
+    return
+  }
+  if(lane === "signals"){
+    body.innerHTML = `
+      <div class="system-card glass">
+        <div class="system-head">
+          <div>
+            <div class="system-title">Laser Charts Premium Lane</div>
+            <div class="system-sub">Premium signals lane prepared for Shopify checkout with clean routing into the market system.</div>
+          </div>
+          <span class="system-badge">Premium</span>
+        </div>
+        <div class="mini-list">Current live bridge: SupportRD premium and pro products can already represent the premium digital checkout lane.</div>
+        <div class="mini-list">Pending inputs still remembered: custom email, Cash App, Venmo, Telegram, and dedicated Shopify checkout naming.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn" id="openSignalsPremium">Open Premium Product</button>
+          <button class="btn ghost" id="openSignalsPro">Open Pro Product</button>
+        </div>
+      </div>
+    `
+    const openSignalsPremium = qs("#openSignalsPremium")
+    const openSignalsPro = qs("#openSignalsPro")
+    if(openSignalsPremium){ openSignalsPremium.addEventListener("click", ()=>openLinkModal(LINKS.premium, "Laser Charts Premium Lane")) }
+    if(openSignalsPro){ openSignalsPro.addEventListener("click", ()=>openLinkModal(LINKS.pro, "Laser Charts Pro Lane")) }
+    openModal("appModal")
+  }
+}
+
+function setupSimpleView(){
+  const btn = qs("#simpleUiToggle")
+  if(!btn) return
+  const saved = localStorage.getItem("supportRdSimpleView")
+  state.simpleView = saved === null ? true : saved === "true"
+  const apply = ()=>{
+    document.body.classList.toggle("simple-view", state.simpleView)
+    btn.textContent = `Simple View: ${state.simpleView ? "On" : "Off"}`
+  }
+  apply()
+  btn.addEventListener("click", ()=>{
+    state.simpleView = !state.simpleView
+    localStorage.setItem("supportRdSimpleView", String(state.simpleView))
+    apply()
+  })
+}
+
+function setupSimpleFlow(){
+  const bindClick = (id, handler)=>{
+    const el = qs(`#${id}`)
+    if(el){ el.addEventListener("click", handler) }
+  }
+  const scrollShopifyFlow = ()=>{
+    const section = qs("#simpleShopifyLanes")
+    if(section){ section.scrollIntoView({behavior:"smooth", block:"start"}) }
+  }
+  bindClick("menuBlogTop", ()=>openBlogLane(0))
+  bindClick("simpleBlogBtn", ()=>openBlogLane(0))
+  bindClick("remoteBlogBtn", ()=>openBlogLane(0))
+  bindClick("menuWebcamTop", openWebcamLane)
+  bindClick("simpleWebcamBtn", openWebcamLane)
+  bindClick("remoteWebcamBtn", openWebcamLane)
+  bindClick("menuShopifyFlow", scrollShopifyFlow)
+  bindClick("remoteShopifyBtn", scrollShopifyFlow)
+  bindClick("supportLaneBtn", ()=>openSimpleLane("support"))
+  bindClick("supportLaneRoute", ()=>openLinkModal(LINKS.custom, "SupportRD Shopify Store"))
+  bindClick("plantLaneBtn", ()=>openSimpleLane("plant"))
+  bindClick("plantLaneRoute", ()=>openSimpleLane("plant"))
+  bindClick("signalsLaneBtn", ()=>openSimpleLane("signals"))
+  bindClick("signalsLaneRoute", ()=>openSimpleLane("signals"))
+  const voice = qs("#voiceToggle")
+  const scan = qs("#startHairScan")
+  if(voice){ voice.textContent = "ARIA Webcam Chat" }
+  if(scan){ scan.textContent = "Open Webcam Scan" }
+}
+
+function setupDiaryOwnerPayments(){
+  const fields = {
+    type: qs("#floatOwnerPayoutType"),
+    bank: qs("#floatOwnerBankName"),
+    accountName: qs("#floatOwnerAccountName"),
+    routing: qs("#floatOwnerRouting"),
+    accountNumber: qs("#floatOwnerAccountNumber"),
+    email: qs("#floatOwnerPayoutEmail")
+  }
+  const saveBtn = qs("#floatOwnerPaySaveBtn")
+  const useProfileBtn = qs("#floatOwnerPayUseProfileBtn")
+  const status = qs("#floatOwnerPayStatus")
+  const visitsCount = qs("#floatDiaryGroupVisitsCount")
+  const visitsMeta = qs("#floatDiaryGroupVisitsMeta")
+  const supportTotal = qs("#floatDiarySupportTotal")
+  const supportMeta = qs("#floatDiarySupportMeta")
+  const remoteVisits = qs("#remoteDiaryViewerGroupVisits")
+  const liveComments = qs("#floatDiaryLiveComments")
+  const remoteComments = qs("#remoteDiaryViewerComments")
+  const commentBtn = qs("#floatDiaryLiveCommentBtn")
+  const supportBtn = qs("#remoteDiaryViewerSupportNow")
+  const payBtn = qs("#remoteDiaryViewerGuestPay")
+  const fastPayBtn = qs("#floatDiaryLiveFastPay")
+  const heartBtn = qs("#floatDiaryLiveHeart")
+  const thumbBtn = qs("#floatDiaryLiveThumb")
+  const guestName = qs("#floatDiaryLiveGuest")
+  const guestComment = qs("#floatDiaryLiveComment")
+  const remoteGuestName = qs("#remoteDiaryViewerGuestName")
+  const remoteGuestComment = qs("#remoteDiaryViewerGuestComment")
+  const remotePostComment = qs("#remoteDiaryViewerPostComment")
+  if(!saveBtn || !status) return
+
+  const payoutKey = "supportRdOwnerPayout"
+  const statsKey = "supportRdDiaryFeedStats"
+
+  function readPayout(){
+    try{ return JSON.parse(localStorage.getItem(payoutKey) || "{}") }catch{ return {} }
+  }
+  function readStats(){
+    try{
+      return {
+        visits: 0,
+        support: 0,
+        groups: [],
+        comments: [],
+        ...JSON.parse(localStorage.getItem(statsKey) || "{}")
+      }
+    }catch{
+      return {visits:0, support:0, groups:[], comments:[]}
+    }
+  }
+  function saveStats(data){
+    localStorage.setItem(statsKey, JSON.stringify(data))
+  }
+  function renderPayout(){
+    const payout = readPayout()
+    if(fields.type && payout.type){ fields.type.value = payout.type }
+    if(fields.bank){ fields.bank.value = payout.bank || "" }
+    if(fields.accountName){ fields.accountName.value = payout.accountName || "" }
+    if(fields.routing){ fields.routing.value = payout.routing || "" }
+    if(fields.accountNumber){ fields.accountNumber.value = payout.accountNumber || "" }
+    if(fields.email){ fields.email.value = payout.email || ((state.socialLinks && state.socialLinks.email) || "") }
+    const hasSaved = payout.accountNumber || payout.routing || payout.email
+    status.textContent = hasSaved
+      ? `Saved ${payout.type || "payout"} lane for ${payout.accountName || "owner"} · ${payout.bank || "bank pending"}`
+      : "Owner payment details are not saved yet."
+  }
+  function renderStats(){
+    const stats = readStats()
+    const groups = Array.isArray(stats.groups) ? stats.groups.slice(-3) : []
+    if(visitsCount){ visitsCount.textContent = `${Math.max(0, Number(stats.visits) || 0)} active` }
+    if(visitsMeta){
+      visitsMeta.textContent = groups.length
+        ? `Latest group visits: ${groups.join(" · ")}`
+        : "No live groups yet. When traffic stacks up, the counter locks here."
+    }
+    if(supportTotal){ supportTotal.textContent = `$${Number(stats.support || 0).toFixed(2)}` }
+    if(supportMeta){
+      supportMeta.textContent = (stats.support || 0) > 0
+        ? `Support is building from hearts, comments, and paid feed taps.`
+        : "Support and paid comments build in real time during the live session."
+    }
+    if(remoteVisits){
+      remoteVisits.textContent = `Group visits: ${Math.max(0, Number(stats.visits) || 0)} active · Support: $${Number(stats.support || 0).toFixed(2)} · ${groups.length ? `Latest groups: ${groups.join(" · ")}` : "Waiting for the next stack of live visitors."}`
+    }
+    const recentComments = (Array.isArray(stats.comments) ? stats.comments : []).slice(-6).reverse()
+    const commentMarkup = recentComments.length
+      ? recentComments.map(item => `<div><strong>${item.name}</strong> · ${item.comment}</div>`).join("")
+      : "Live comments will appear here when the session starts."
+    if(liveComments){ liveComments.innerHTML = commentMarkup }
+    if(remoteComments){ remoteComments.innerHTML = commentMarkup }
+  }
+  function pushVisit(label, amount = 0){
+    const stats = readStats()
+    stats.visits = Math.max(0, Number(stats.visits) || 0) + 1
+    stats.support = Math.max(0, Number(stats.support) || 0) + amount
+    if(label){
+      stats.groups = Array.isArray(stats.groups) ? stats.groups : []
+      stats.groups.push(label)
+      stats.groups = stats.groups.slice(-8)
+    }
+    saveStats(stats)
+    renderStats()
+  }
+  function pushComment(name, comment){
+    const trimmedName = String(name || "Guest").trim() || "Guest"
+    const trimmedComment = String(comment || "").trim()
+    if(!trimmedComment) return
+    const stats = readStats()
+    stats.visits = Math.max(0, Number(stats.visits) || 0) + 1
+    stats.comments = Array.isArray(stats.comments) ? stats.comments : []
+    stats.comments.push({name: trimmedName, comment: trimmedComment})
+    stats.comments = stats.comments.slice(-24)
+    stats.groups = Array.isArray(stats.groups) ? stats.groups : []
+    stats.groups.push(`${trimmedName} joined`)
+    stats.groups = stats.groups.slice(-8)
+    saveStats(stats)
+    renderStats()
+  }
+
+  saveBtn.addEventListener("click", ()=>{
+    const payout = {
+      type: fields.type ? fields.type.value : "debit_card",
+      bank: fields.bank ? fields.bank.value.trim() : "",
+      accountName: fields.accountName ? fields.accountName.value.trim() : "",
+      routing: fields.routing ? fields.routing.value.trim() : "",
+      accountNumber: fields.accountNumber ? fields.accountNumber.value.trim() : "",
+      email: fields.email ? fields.email.value.trim() : ""
+    }
+    localStorage.setItem(payoutKey, JSON.stringify(payout))
+    state.socialLinks = state.socialLinks || {}
+    state.socialLinks.ownerPayout = payout
+    localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+    renderPayout()
+    toast("Owner payment lane saved")
+  })
+  if(useProfileBtn){
+    useProfileBtn.addEventListener("click", ()=>{
+      if(fields.email){ fields.email.value = ((state.socialLinks && state.socialLinks.email) || "").trim() }
+      renderPayout()
+    })
+  }
+  if(commentBtn){
+    commentBtn.addEventListener("click", ()=>{
+      pushComment(guestName && guestName.value, guestComment && guestComment.value)
+      if(guestComment){ guestComment.value = "" }
+    })
+  }
+  if(remotePostComment){
+    remotePostComment.addEventListener("click", ()=>{
+      pushComment(remoteGuestName && remoteGuestName.value, remoteGuestComment && remoteGuestComment.value)
+      if(remoteGuestComment){ remoteGuestComment.value = "" }
+    })
+  }
+  if(heartBtn){ heartBtn.addEventListener("click", ()=>pushVisit("heart reaction", 10)) }
+  if(thumbBtn){ thumbBtn.addEventListener("click", ()=>pushVisit("thumbs up", 5)) }
+  if(fastPayBtn){ fastPayBtn.addEventListener("click", ()=>pushVisit("fast pay tap", 25)) }
+  if(payBtn){ payBtn.addEventListener("click", ()=>pushVisit("guest pay", 35)) }
+  if(supportBtn){ supportBtn.addEventListener("click", ()=>pushVisit("support feed", 20)) }
+  renderPayout()
+  renderStats()
+}
+
+function setupMobileZoom(){
+  const dock = qs("#mobileZoomDock")
+  const fitBtn = qs("#mobileZoomOutBtn")
+  const resetBtn = qs("#mobileZoomResetBtn")
+  const readBtn = qs("#mobileZoomInBtn")
+  const status = qs("#mobileZoomStatus")
+  if(!dock || !fitBtn || !resetBtn || !readBtn || !status) return
+  const key = "supportRdMobileScale"
+
+  function applyScale(scale, label){
+    const numeric = Math.max(0.72, Math.min(1, Number(scale) || 1))
+    document.documentElement.style.setProperty("--mobile-scale", String(numeric))
+    document.body.classList.toggle("mobile-overview", numeric < 0.99 && window.innerWidth <= 700)
+    localStorage.setItem(key, String(numeric))
+    status.textContent = label || (numeric < 0.99 ? `Mobile fit ${Math.round(numeric * 100)}%` : "Mobile reading view")
+  }
+  function bootScale(){
+    if(window.innerWidth > 700){
+      document.body.classList.remove("mobile-overview")
+      document.documentElement.style.setProperty("--mobile-scale", "1")
+      status.textContent = "Desktop view ready"
+      return
+    }
+    const saved = Number(localStorage.getItem(key) || 0)
+    if(saved){
+      applyScale(saved, saved < 0.99 ? `Mobile fit ${Math.round(saved * 100)}%` : "Mobile reading view")
+      return
+    }
+    applyScale(0.82, "Mobile fit 82%")
+  }
+
+  fitBtn.addEventListener("click", ()=>applyScale(0.78, "Mobile fit 78%"))
+  resetBtn.addEventListener("click", ()=>applyScale(0.88, "Mobile fit 88%"))
+  readBtn.addEventListener("click", ()=>applyScale(1, "Mobile reading view"))
+  window.addEventListener("resize", bootScale)
+  bootScale()
+}
+
+function setupTabs(){
   qsa(".tab-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
-      qsa(".tab-btn").forEach(b=>b.classList.remove("active"))
-      btn.classList.add("active")
-      const id = btn.dataset.tab
-      qsa(".tab-panel").forEach(p=>p.classList.remove("active"))
-      qs(`#tab-${id}`).classList.add("active")
+      activateTab(btn.dataset.tab)
     })
   })
 }
@@ -953,6 +1282,7 @@ function setupModals(){
   bindOpen("openSeo", "seoModal")
   bindClose("closeSeo", "seoModal")
   bindClose("closeBlog", "blogModal")
+  bindClose("closeBlogX", "blogModal")
   bindClose("closeApp", "appModal")
   bindClose("closeLink", "linkModal")
   bindClose("closePuzzle", "puzzleModal")
@@ -3395,10 +3725,10 @@ function setupHairAnalysis(){
   if(!start || !overlay) return
   start.addEventListener("click", ()=>{
     overlay.style.display = "flex"
-    if(status) status.textContent = "Scanning... hold steady and move left to right."
-    if(result) result.textContent = "Scan running..."
+    if(status) status.textContent = "Webcam scan live... hold steady and move left to right."
+    if(result) result.textContent = "Webcam scan running..."
     setTimeout(()=>{
-      const summary = "Scan complete. I see dryness at the ends with light frizz and low bounce at the crown. I recommend a moisture mask, light protein, and a satin wrap.";
+      const summary = "Webcam scan complete. I see dryness at the ends with light frizz and low bounce at the crown. I recommend a moisture mask, light protein, and a satin wrap.";
       if(status) status.textContent = summary
       if(result) result.textContent = summary
       showSpeechPopup("ARIA", summary)
@@ -4302,6 +4632,10 @@ window.addEventListener("DOMContentLoaded", ()=>{
   renderApp("Live Hair Score")
   openModal("appModal")
   safe(setupTabs)
+  safe(setupSimpleView)
+  safe(setupSimpleFlow)
+  safe(setupDiaryOwnerPayments)
+  safe(setupMobileZoom)
   safe(setupAccessibilityMode)
   safe(setupAdult21Mode)
   safe(setupCampaign)
