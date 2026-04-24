@@ -1,0 +1,27 @@
+{
+  "pass": 22,
+  "title": "Deploy Integration + QA Handoff",
+  "deployEntry": "/static/index.html",
+  "staticPreview": "python -m http.server 8000",
+  "verify": [
+    "Open /static/index.html",
+    "Confirm Map Control Dock appears",
+    "Click each map and verify theme changes",
+    "Activate at least one perk and verify rank/seriousness updates",
+    "Refresh Workday SEO pulse and verify Market Reader scan/settled/fallback panel",
+    "Open Studio/Fast Pay/Diary viewer and verify Shell Status changes",
+    "Check mobile width for stacked panels",
+    "Verify no console syntax errors"
+  ],
+  "liveApiVerification": [
+    "/api/finance/shopify-status",
+    "Diary live/session endpoints",
+    "Studio session endpoints",
+    "FAQ/social/acquisition endpoints if used"
+  ],
+  "deferred": [
+    "real optimized map image assets",
+    "final hosted deploy test",
+    "deep legacy DOM cleanup"
+  ]
+}

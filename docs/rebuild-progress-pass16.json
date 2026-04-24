@@ -1,0 +1,49 @@
+{
+  "pass": 16,
+  "title": "Visible Map Change + Perks Activation",
+  "maps": [
+    {
+      "id": "swimmingHole",
+      "perk": "Wet-to-Wetness Conditioner Route",
+      "quality": "wet-to-softness"
+    },
+    {
+      "id": "snowMountainPass",
+      "perk": "Cold Discipline Protocol",
+      "quality": "cold-protection-discipline"
+    },
+    {
+      "id": "autumnTrail",
+      "perk": "Transition Awareness Engine",
+      "quality": "transition-balance-history"
+    },
+    {
+      "id": "desertCliff",
+      "perk": "Dry Survival Mode",
+      "quality": "dry-survival-efficiency"
+    },
+    {
+      "id": "blissfulGeysers",
+      "perk": "Pressure Release Cycle",
+      "quality": "pressure-release-reset"
+    },
+    {
+      "id": "chocolateFactory",
+      "perk": "Final Form Refinement",
+      "quality": "crafted-polish-final-form"
+    }
+  ],
+  "visibleUi": [
+    "Map selector",
+    "Active map hero",
+    "Perk panel",
+    "Account seriousness panel",
+    "Sticky rank board"
+  ],
+  "nextPass17": [
+    "Admin ratings UI",
+    "Account option history UI",
+    "Shopify seriousness/LCP/INP/CLS analysis tie-in",
+    "Map-specific surface effects deeper wiring"
+  ]
+}

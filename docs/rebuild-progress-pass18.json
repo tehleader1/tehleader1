@@ -1,0 +1,27 @@
+{
+  "pass": 18,
+  "title": "Deeper Map-Specific Surface Effects",
+  "visible": [
+    "Map Surface Effects dock",
+    "surface action buttons",
+    "map-specific behavior per surface"
+  ],
+  "surfaces": [
+    "Diary",
+    "Studio",
+    "Profile",
+    "FAQ Lounge",
+    "Payments"
+  ],
+  "maps": [
+    "Swimming Hole",
+    "Snow Mountain Pass",
+    "Autumn Trail",
+    "Desert Cliff",
+    "Blissful Geysers",
+    "Chocolate Factory"
+  ],
+  "nextPass19": [
+    "market laser/reader refinement or unified shell routing cleanup"
+  ]
+}

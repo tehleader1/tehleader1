@@ -1,0 +1,14 @@
+{
+  "pass": 22,
+  "title": "Deploy Integration + QA + Handoff",
+  "status": "built",
+  "newLayer": "sr-deploy-integration.js",
+  "deployReadyForStaticPreview": true,
+  "liveApiVerificationRequired": true,
+  "entry": "/static/index.html",
+  "remaining": [
+    "optimized map image assets",
+    "hosted deploy verification",
+    "deep legacy DOM cleanup"
+  ]
+}

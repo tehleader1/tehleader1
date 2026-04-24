@@ -1,0 +1,21 @@
+{
+  "pass": 21,
+  "title": "Market Reader / Laser Refinement",
+  "focus": [
+    "timing",
+    "shell clarity",
+    "reader state",
+    "fallback",
+    "Shopify/SEO pulse parsing"
+  ],
+  "added": [
+    "sr-market-reader.js",
+    "Market Reader panel",
+    "laser scan/settle/fallback states"
+  ],
+  "nextPass22": [
+    "final integration QA",
+    "optional optimized map assets",
+    "remaining market visual polish"
+  ]
+}

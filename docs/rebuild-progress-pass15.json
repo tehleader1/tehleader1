@@ -1,0 +1,51 @@
+{
+  "pass": 15,
+  "title": "Map Change + Perks + Account Seriousness Foundation",
+  "surfaces": {
+    "profile": {
+      "state": true,
+      "render": true,
+      "status": "premium professional surface"
+    },
+    "faqLounge": {
+      "state": true,
+      "render": true,
+      "status": "social visibility / SEO surface"
+    },
+    "diary": {
+      "state": true,
+      "render": true,
+      "status": "live lane"
+    },
+    "studio": {
+      "state": true,
+      "render": "standalone",
+      "status": "integrated standalone subsystem"
+    },
+    "payments": {
+      "state": true,
+      "render": "partial",
+      "status": "structured payments / Fast Pay"
+    },
+    "mapChange": {
+      "state": true,
+      "render": "foundation",
+      "status": "new pass 15 system"
+    },
+    "perks": {
+      "state": true,
+      "render": "foundation",
+      "status": "behavior modifiers"
+    },
+    "rankSystem": {
+      "state": true,
+      "render": "sticky board foundation",
+      "status": "professional / making money seriousness"
+    }
+  },
+  "shopifyPerformanceLens": {
+    "LCP": "no heavy assets added; map backgrounds use lazy CSS variables/placeholders",
+    "INP": "perks update state locally and dispatch lightweight events",
+    "CLS": "rank board and map/perk panels reserve space before updates"
+  }
+}

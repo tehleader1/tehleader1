@@ -1,0 +1,23 @@
+{
+  "pass": 17,
+  "title": "Admin Seriousness + Ratings + Shopify Lens",
+  "focus": [
+    "admin ratings UI",
+    "account option history",
+    "Shopify LCP/INP/CLS seriousness lens",
+    "who is taking it serious"
+  ],
+  "status": {
+    "adminSeriousnessPanel": "visible",
+    "ratings": "implemented",
+    "optionHistory": "implemented",
+    "shopifyLens": "implemented",
+    "CLS": "tracked as weak area"
+  },
+  "nextPass18": [
+    "deeper map effects per surface",
+    "real map buttons inside remote panels",
+    "admin ratings polish",
+    "Shopify data source refinement"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "pass": 19,
+  "title": "Unified Shell / Routing Cleanup",
+  "focus": [
+    "active surface ownership",
+    "overlay rule coordination",
+    "reserved shell layout",
+    "route handoff status"
+  ],
+  "state": "shell router added",
+  "nextPass20": [
+    "deeper map embedding in legacy panels",
+    "or market laser/reader refinement"
+  ]
+}

@@ -1,3 +1,18 @@
+
+try{
+  window.addEventListener("supportrd-shell-surface-change", ()=>window.SupportRDRebuild?.renderDeployReadinessPanel?.(document.querySelector("#srDeployReadinessPanel")));
+  window.addEventListener("supportrd-perk-activated", ()=>window.SupportRDRebuild?.auditDeploySystems?.());
+  window.addEventListener("supportrd-faq-rendered", ()=>window.SupportRDRebuild?.auditDeploySystems?.());
+  window.addEventListener("supportrd-profile-rendered", ()=>window.SupportRDRebuild?.auditDeploySystems?.());
+}catch{}
+
+try{
+  window.addEventListener("DOMContentLoaded", ()=>{
+    window.SupportRDRebuild?.initMarketReader?.()
+    window.SupportRDRebuild?.initDeployIntegration?.()
+    window.SupportRDRebuild?.renderDeployReadinessPanel?.(document.querySelector("#srDeployReadinessPanel"))
+  })
+}catch{}
 const qs = (sel) => document.querySelector(sel)
 const qsa = (sel) => Array.from(document.querySelectorAll(sel))
 
@@ -2361,6 +2376,7 @@ function appendAria(text){
   state.ariaHistory.unshift(text)
   if(state.ariaHistory.length > 6) state.ariaHistory.pop()
   localStorage.setItem("ariaHistory", JSON.stringify(state.ariaHistory))
+  try{ window.SupportRDRebuild?.activatePerk?.("profileToDiaryHairHistory", { aria:true, source:"aria-history" }); window.SupportRDRebuild?.updateRankBoard?.() }catch{}
   const ariaEl = qs("#ariaHistory")
   if(ariaEl){
     ariaEl.innerHTML = state.ariaHistory.map(x=>`<div>${x}</div>`).join("")
@@ -2823,6 +2839,7 @@ function setupScanUpload(){
       if(!file) return
       const url = URL.createObjectURL(file)
       state.userAvatar = url
+      try{ window.SupportRDRebuild?.onProfileAvatarSelected?.({ url, kind: file.type.startsWith("video") ? "video" : "image", source:"main-profile-upload" }) }catch{}
       if(file.type.startsWith("video")){
       preview.innerHTML = `<video src="${url}" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"></video>`
     } else {
@@ -3696,6 +3713,7 @@ function setupWorkdaySeoEngine(){
     body.textContent = plan.body
     tags.innerHTML = plan.tags.map(tag=>`<span>${tag}</span>`).join("")
     if(badge) badge.textContent = `${plan.label} Active`
+    try{ window.SupportRDRebuild?.patchMarketReaderState?.({ reader:{ ...window.SupportRDRebuild.getMarketReaderState?.().reader, lastPlan:plan.label, clarity:`${plan.label} selected for market reader.` } }); window.SupportRDRebuild?.renderMarketReaderPanel?.() }catch{}
     qsa(".engine-weekday-btn").forEach(btn=>btn.classList.toggle("active", btn.dataset.seoDay === plan.key))
   }
 
@@ -3710,6 +3728,7 @@ function setupWorkdaySeoEngine(){
 
   async function refreshPulse(){
     if(pulseFeed) pulseFeed.textContent = "Loading market pulse..."
+    try{ window.SupportRDRebuild?.startMarketLaser?.({ planLabel: activePlan?.label || "Workday SEO", clarity:"market reader is scanning SEO + Shopify pulse" }) }catch{}
     try{
       const lines = []
       const now = new Date()
@@ -3735,8 +3754,18 @@ function setupWorkdaySeoEngine(){
       lines.push("- Penny-move language should stay contextual: contracts building, premium customers moving, support routes active.")
       lines.push("- Latest public market feed can be added next with Alpha Vantage once the API key is ready.")
       if(pulseFeed) pulseFeed.textContent = lines.join("\n")
+      try{
+        const parsed = window.SupportRDRebuild?.parsePulseText?.(lines.join("\n")) || {}
+        window.SupportRDRebuild?.settleMarketLaser?.({
+          ...parsed,
+          lines,
+          clarity:`${activePlan.label} reader settled with ${lines.length} visible signals.`,
+          confidence: Math.min(96, 42 + (lines.length * 9))
+        })
+      }catch{}
     }catch{
       if(pulseFeed) pulseFeed.textContent = "Market pulse unavailable."
+      try{ window.SupportRDRebuild?.failMarketLaser?.("Market pulse unavailable. Reader is using fallback shell clarity.") }catch{}
     }
   }
 
@@ -5783,6 +5812,9 @@ function setupAppDeepLinks(){
 }
 
 function setupStartupSplash(){
+  if(window.SupportRDRebuild?.setupStartupSplashBridge){
+    return window.SupportRDRebuild.setupStartupSplashBridge()
+  }
   const splash = qs("#launchSplash")
   if(!splash) return
   splash.classList.remove("show")
@@ -5790,6 +5822,9 @@ function setupStartupSplash(){
 }
 
 function setupLaunchMenu(){
+  if(window.SupportRDRebuild?.setupLaunchMenuBridge){
+    return window.SupportRDRebuild.setupLaunchMenuBridge()
+  }
   const launch = qs("#launchMenu")
   const menuBtn = qs("#launchMenuBtn")
   const quickBooth = qs("#quickBoothStart")
@@ -6287,6 +6322,9 @@ function setupShopifyConnectorBadge(){
 }
 
 function setupLoginGate(){
+  if(window.SupportRDRebuild?.setupLoginGateBridge){
+    return window.SupportRDRebuild.setupLoginGateBridge()
+  }
   try{
     const saved = JSON.parse(localStorage.getItem('socialLinks') || '{}')
     if(shouldAutoOwnerEntry() && isTrustedOwnerEmail(saved.email)){
@@ -6665,8 +6703,21 @@ function setupStudioMode(){
     if(data?.session_id){
       remoteState.studioSessionId = data.session_id
       localStorage.setItem("supportrdStudioSessionId", data.session_id)
+      try{ window.SupportRDRebuild?.patchStudioBridgeState?.({ session:{ ...window.SupportRDRebuild.getStudioBridgeState?.().session, active:true, sessionId:data.session_id } }) }catch{}
     }
     try{ window.__mainRadio?.stop?.() }catch{}
+    try{ window.SupportRDRebuild?.setActiveSurface?.("studio", { source:"open-studio" }); window.SupportRDRebuild?.initStudioBridge?.()
+    window.SupportRDRebuild?.initDiaryRenderRuntime?.()
+    window.SupportRDRebuild?.initMapSystem?.()
+    window.SupportRDRebuild?.initPerksEngine?.()
+    window.SupportRDRebuild?.initRankSystem?.()
+    window.SupportRDRebuild?.renderMapSelector?.(document.querySelector("#srMapSelector"))
+    window.SupportRDRebuild?.renderActiveMapHero?.(document.querySelector("#srActiveMapHero"))
+    window.SupportRDRebuild?.renderPerkPanel?.(document.querySelector("#srPerkPanel"))
+    window.SupportRDRebuild?.renderAccountSeriousnessPanel?.(document.querySelector("#srAccountSeriousnessPanel"))
+    window.SupportRDRebuild?.renderRankBoard?.(document.querySelector("#srRankBoard"))
+    window.SupportRDRebuild?.initAdminSeriousness?.()
+    window.SupportRDRebuild?.renderAdminSeriousnessPanel?.(document.querySelector("#srAdminSeriousnessPanel")); window.SupportRDRebuild?.ensureStudioShell?.() }catch{}
     const launch = qs("#launchMenu")
     if(launch){ launch.classList.add("hide") }
     document.body.classList.remove("launch-active")
@@ -6712,6 +6763,7 @@ function setupStudioMode(){
       frame?.contentWindow?.postMessage({ type: "studio-leave" }, "*")
     }catch{}
     document.body.classList.remove("studio-mode-open")
+    try{ window.SupportRDRebuild?.setActiveSurface?.("", { source:"close-studio" }) }catch{}
     shell.classList.remove("active")
     shell.classList.remove("booting")
     shell.classList.remove("ready")
@@ -9564,6 +9616,10 @@ ${line}`
         <h4>Automatic Developer Log</h4>
         <div class="remote-review-wall" data-developer-log></div>
       </div>
+      <div class="float-sheet-panel">
+        <h4>Recent Works + Featured Mentions</h4>
+        <div class="remote-review-wall sr-faq-visibility-wall" data-faq-visibility-wall></div>
+      </div>
       <div class="remote-feedback-board" data-feedback-board></div>
       <div class="float-sheet-panel">
         <h4>Public Reviews</h4>
@@ -9701,6 +9757,10 @@ ${line}`
     }
     const renderDeveloperLog = ()=>{
       if(!developerLog) return
+      try{
+        window.SupportRDRebuild?.syncLegacyFaqState?.()
+        if(window.SupportRDRebuild?.renderFaqFromDocument?.(root)) return
+      }catch{}
       const stats = loadAcquisitionStats()
       const requests = loadSupportContactRequests()
       const signals = (stats.signals || [])
@@ -9736,6 +9796,10 @@ ${line}`
     renderDeveloperLog()
     const renderPublicReviews = ()=>{
       if(!reviewWall) return
+      try{
+        window.SupportRDRebuild?.syncLegacyFaqState?.()
+        if(window.SupportRDRebuild?.renderFaqFromDocument?.(root)) return
+      }catch{}
       const mergedReviews = loadPublicReviews().concat(PUBLIC_REVIEW_ENTRIES)
       reviewWall.innerHTML = mergedReviews.map(review=>`
         <article class="remote-review-card">
@@ -9774,29 +9838,35 @@ ${line}`
       if(status) status.textContent = "Thumbs up sent. Developer Feedback now reflects your signed-in support."
     })
     feedbackSubmit?.addEventListener("click", ()=>{
-      if(!communitySignedIn()){
-        openCommunityLogin("Sign in first to leave a public review on Developer Feedback.")
-        return
-      }
       const text = (feedbackComment?.value || "").trim()
       if(!text){
         if(status) status.textContent = "Write the public review first, then post it."
         return
       }
       const social = JSON.parse(localStorage.getItem("socialLinks") || "{}")
-      const reviews = loadPublicReviews()
-      reviews.unshift({
-        author: social.email || social.name || "Signed In SupportRD Viewer",
-        title: "New public review",
-        body: text
-      })
-      savePublicReviews(reviews.slice(0, 20))
+      if(window.SupportRDRebuild?.postFaqComment){
+        window.SupportRDRebuild.postFaqComment(text, {
+          author: social.email || social.name || (communitySignedIn() ? "Signed In SupportRD Viewer" : "Local SupportRD Viewer"),
+          source: "FAQ Lounge"
+        })
+      }else{
+        const reviews = loadPublicReviews()
+        reviews.unshift({
+          author: social.email || social.name || (communitySignedIn() ? "Signed In SupportRD Viewer" : "Local SupportRD Viewer"),
+          title: "New public review",
+          body: text,
+          when: new Date().toLocaleString()
+        })
+        savePublicReviews(reviews.slice(0, 50))
+      }
       if(feedbackComment) feedbackComment.value = ""
       trackAcquisitionSignal("developer_feedback_review", { lane: ACQUISITION_LANES.app, stage: "feedback-ready", socialFeedback: "A new public review just landed on the Developer Feed." })
       renderPublicReviews()
       renderEngineFeedback()
       renderDeveloperLog()
-      if(status) status.textContent = "Public review posted. The Developer Feedback wall now shows your signed-in comment."
+      if(status) status.textContent = communitySignedIn()
+        ? "Public review posted. The Developer Feedback wall now shows your signed-in comment."
+        : "Public review posted locally. Sign in later if you want it tied to your account."
     })
     feedbackClear?.addEventListener("click", ()=>{
       if(feedbackComment) feedbackComment.value = ""
@@ -9833,13 +9903,15 @@ ${line}`
         return
       }
       const entries = loadFamilySpotlightEntries()
-      entries.unshift({
+      const entry = {
         name,
         media,
         message,
         when: new Date().toLocaleString()
-      })
+      }
+      entries.unshift(entry)
       saveFamilySpotlightEntries(entries)
+      try{ window.SupportRDRebuild?.addFamilySpotlight?.(entry) }catch{}
       if(familyStatus) familyStatus.textContent = "Family Spotlight updated with a real post."
       if(familyName) familyName.value = ""
       if(familyMedia) familyMedia.value = ""
@@ -9854,6 +9926,7 @@ ${line}`
       if(familyStatus) familyStatus.textContent = "Family Spotlight form cleared."
     })
     renderFamilyWall()
+    try{ window.SupportRDRebuild?.initFaqRuntime?.(); window.SupportRDRebuild?.renderFaqFromDocument?.(root) }catch{}
   }
   async function fetchShopifyConnectorHealth(){
     try{
@@ -10827,6 +10900,7 @@ ${line}`
       if(!data?.ok) throw new Error("profile_access_scanner_bad_payload")
       remoteState.profileAccessLoadedAt = now
       remoteState.profileAccessSummary = data
+      try{ window.SupportRDRebuild?.onProfileAccessScanner?.(data) }catch{}
       if(profileApiDeck) profileApiDeck.textContent = summarizeApiAccessDeck(data.api_access || {})
       if(profileIdentityReading) profileIdentityReading.textContent = data.identity_confirmed || "Identity scanner is standing by."
       if(profileGeneralStatusReading){
@@ -10844,10 +10918,12 @@ ${line}`
           ? `Latest analysis export saved ${formatSupportRDStamp(latestAt)}. SupportRD can generate PDF or DOCX again whenever you need a last-minute presentation check.`
           : "No saved hair-analysis export yet. Run a hair scan or refresh the scanner, then export PDF or DOCX from this lane."
       }
+      try{ window.SupportRDRebuild?.renderProfileFromDocument?.() }catch{}
       syncSupportRDShellV2Panels()
       return data
     }catch{
       if(profileApiDeck) profileApiDeck.textContent = "Access scanner could not refresh yet. SupportRD is keeping the profile lane ready."
+      try{ window.SupportRDRebuild?.syncLegacyProfileState?.() }catch{}
       syncSupportRDShellV2Panels()
       return null
     }
@@ -10877,6 +10953,7 @@ ${line}`
       anchor.remove()
       setTimeout(()=>URL.revokeObjectURL(url), 1200)
       if(profileExportStatus) profileExportStatus.textContent = `${safeFormat.toUpperCase()} export downloaded. SupportRD saved the latest analysis snapshot for this profile.`
+      try{ window.SupportRDRebuild?.onProfileExport?.(safeFormat, { fileName, at:new Date().toISOString() }); window.SupportRDRebuild?.renderProfileFromDocument?.() }catch{}
       await refreshProfileAccessScanner(true)
       openMiniWindow("Hair Analysis Export", `${safeFormat.toUpperCase()} export is ready and downloaded for this profile.`)
     }catch{
@@ -10894,6 +10971,18 @@ ${line}`
       if(!data?.ok) throw new Error("diary_lobby_signal_bad_payload")
       remoteState.diaryLobbySignalLoadedAt = now
       remoteState.diaryLobbySignal = data
+      const rebuiltSignal = (()=>{ try{
+        return !!window.SupportRDRebuild?.renderDiarySignalSlots?.({
+          header: diaryLobbySignalHeader,
+          preview: diaryLobbySignalPreview,
+          shopifySummary: diaryLobbyShopifySummary,
+          shopifyMeta: diaryLobbyShopifyMeta
+        }, data)
+      }catch{ return false } })()
+      if(rebuiltSignal){
+        syncSupportRDShellV2Panels()
+        return data
+      }
       const latest = data.latest_activity || {}
       const shopify = data.shopify_reader || {}
       if(diaryLobbySignalHeader){
@@ -11035,6 +11124,17 @@ ${line}`
 
   function renderDiaryLobby(feeds = []){
     remoteState.diaryLobbyItems = Array.isArray(feeds) ? feeds : []
+    const rebuilt = (()=>{ try{
+      return !!window.SupportRDRebuild?.renderDiaryLobbySlots?.({
+        count: diaryLobbyCount,
+        list: diaryLobbyList
+      }, remoteState.diaryLobbyItems, {
+        sort: remoteState.diaryLobbySort,
+        search: remoteState.diaryLobbySearch,
+        searchBy: remoteState.diaryLobbySearchBy
+      })
+    }catch{ return false } })()
+    if(rebuilt) return
     if(diaryLobbyCount){
       diaryLobbyCount.textContent = remoteState.diaryLobbyItems.length
         ? `Showing ${remoteState.diaryLobbyItems.length} of the latest diary feeds`
@@ -11050,30 +11150,20 @@ ${line}`
       const name = escapeHtml(entry.display_name || "SupportRD Member")
       const tag = escapeHtml(entry.profile_tag || "^^ support")
       const url = escapeHtml(`supportrd.com/?diary-live=${entry.live_slug || ""}`)
-      const email = escapeHtml(entry.owner_email || "guest@supportrd.com")
-      const preview = escapeHtml(entry.preview_text || "Hair support session ready in the lobby.")
-      const updated = escapeHtml((entry.updated_at || "").replace("T", " ").slice(0, 16) || "recent")
-      return `
-        <button class="remote-diary-lobby-card" type="button" data-diary-lobby-card data-session-id="${escapeHtml(entry.session_id || "")}" data-live-slug="${escapeHtml(entry.live_slug || "")}">
-          <div class="remote-diary-lobby-avatar" style="background-image:url('${avatar}')"></div>
-          <div class="remote-diary-lobby-copy">
-            <div class="remote-diary-lobby-topline">
-              <strong class="remote-diary-lobby-name">${name}</strong>
-              <span class="remote-diary-lobby-tag">${tag}</span>
-            </div>
-            <div class="remote-diary-lobby-meta">
-              <span class="remote-diary-lobby-url">${url}</span>
-              <span class="remote-diary-lobby-email">${updated}</span>
-            </div>
-            <div class="remote-diary-lobby-email">${email}</div>
-            <div class="remote-diary-lobby-preview">${preview}</div>
-          </div>
-        </button>
-      `
+      const preview = escapeHtml(entry.preview_text || entry.entry_text || "Live diary preview ready.")
+      const updated = escapeHtml(entry.updated_at || entry.created_at || "")
+      return `<article class="remote-diary-card glass" data-diary-session="${escapeHtml(entry.session_id || "")}" data-diary-live-slug="${escapeHtml(entry.live_slug || "")}">
+        <div class="remote-diary-card__avatar" style="background-image:linear-gradient(145deg, rgba(10,22,42,.16), rgba(10,22,42,.06)), url('${avatar}')"></div>
+        <div class="remote-diary-card__copy">
+          <strong>${name}</strong>
+          <span>${tag} · ${url}</span>
+          <p>${preview}</p>
+          <small>${updated}</small>
+        </div>
+        <button class="btn ghost" type="button" data-diary-open-session="${escapeHtml(entry.session_id || "")}" data-diary-open-slug="${escapeHtml(entry.live_slug || "")}">Open Feed</button>
+      </article>`
     }).join("")
-    syncSupportRDShellV2Panels()
   }
-
   async function fetchDiaryLobby(options = {}){
     const sort = options.sort || remoteState.diaryLobbySort || "recent"
     const search = (options.search ?? remoteState.diaryLobbySearch ?? "").trim()
@@ -11100,6 +11190,8 @@ ${line}`
   }
 
   function closeDiaryLobbyViewer(){
+    const rebuilt = (()=>{ try{ return !!window.SupportRDRebuild?.closeDiaryViewerSlots?.({ viewer:diaryViewer }) }catch{ return false } })()
+    if(rebuilt) return
     if(!diaryViewer) return
     diaryViewer.hidden = true
     document.body.classList.remove("diary-viewer-open")
@@ -11107,8 +11199,21 @@ ${line}`
 
   function renderDiaryViewer(feed){
     if(!feed?.summary || !diaryViewer) return
+    remoteState.activeDiaryLobbySessionId = feed.summary?.session_id || ""
+    const rebuilt = (()=>{ try{
+      return !!window.SupportRDRebuild?.renderDiaryViewerSlots?.({
+        viewer: diaryViewer,
+        avatar: diaryViewerAvatar,
+        overlay: diaryViewerOverlay,
+        tag: diaryViewerTag,
+        name: diaryViewerName,
+        url: diaryViewerUrl,
+        comments: diaryViewerComments,
+        transcript: diaryViewerTranscript
+      }, feed)
+    }catch{ return false } })()
+    if(rebuilt) return
     const summary = feed.summary || {}
-    remoteState.activeDiaryLobbySessionId = summary.session_id || ""
     diaryViewer.hidden = false
     document.body.classList.add("diary-viewer-open")
     if(diaryViewerAvatar){
@@ -11195,6 +11300,21 @@ ${line}`
   function renderDiaryApiFeed(feed){
     if(!feed?.payload) return
     const payload = feed.payload || {}
+    const rebuilt = (()=>{ try{
+      return !!window.SupportRDRebuild?.renderDiaryFeedSlots?.({
+        input: qs("#floatDiaryInput"),
+        transcriptInput: handsfreeTranscript,
+        socialPost: diarySocialPost,
+        tagInput: diaryTagInput,
+        liveComments: diaryLiveComments,
+        history: diaryHistory,
+        liveStatus: diaryLiveStatus
+      }, feed)
+    }catch{ return false } })()
+    if(rebuilt){
+      fetchDiaryLobby()
+      return
+    }
     if(qs("#floatDiaryInput") && !qs("#floatDiaryInput").matches(":focus")){
       qs("#floatDiaryInput").value = payload.entry_text || qs("#floatDiaryInput").value || ""
     }
@@ -13372,40 +13492,60 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
 
   function syncProfile(){
     const name = (state.socialLinks && (state.socialLinks.username || state.socialLinks.name)) || "SupportRD Host"
-    if(profileName) profileName.textContent = name
-    if(profileMeta){
-      profileMeta.textContent = `${getActiveAssistant().name} active · ${state.socialLinks?.credentialTheme || "identity ready"} · ${state.socialLinks?.interests || "hair mission route"}`
-    }
-    if(profileHistory){
-      const canViewHistory = localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
-      if(!canViewHistory){
-        profileHistory.textContent = "Sign in to keep Aria / Jake history saved to your account."
-      }else{
-        const history = (state.ariaHistory || []).slice(0,2)
-        profileHistory.textContent = history.length
-          ? `Last 2 Aria / Jake lines: ${history.join(" / ")}`
-          : "Last 2 Aria / Jake lines will appear here after you talk with them."
+    const rebuildProfileRendered = (()=>{ try{
+      window.SupportRDRebuild?.syncLegacyProfileState?.()
+      return !!window.SupportRDRebuild?.renderProfileSlots?.({
+        hero: profileHero,
+        name: profileName,
+        meta: profileMeta,
+        latestResult: profileLatestResult,
+        credentials: profileCredentialsSummary,
+        history: profileHistory,
+        qualityTitle: profileQualityTitle,
+        qualityBody: profileQualityBody,
+        credentialTheme: profileCredentialTheme,
+        apiDeck: profileApiDeck,
+        identityReading: profileIdentityReading,
+        generalStatus: profileGeneralStatusReading,
+        exportStatus: profileExportStatus
+      })
+    }catch{ return false } })()
+    if(!rebuildProfileRendered){
+      if(profileName) profileName.textContent = name
+      if(profileMeta){
+        profileMeta.textContent = `${getActiveAssistant().name} active · ${state.socialLinks?.credentialTheme || "identity ready"} · ${state.socialLinks?.interests || "hair mission route"}`
       }
-    }
-    if(profileQualityTitle){
-      profileQualityTitle.textContent = `General AI Summary · ${String(state.socialLinks?.username || state.socialLinks?.name || "SupportRD").replace(/^\^\^/, "").trim() || "SupportRD"}`
-    }
-    if(profileQualityBody){
-      profileQualityBody.textContent = state.socialLinks?.generalSummary || buildProfileGeneralSummary()
-    }
-    if(profileCredentialsSummary) profileCredentialsSummary.textContent = state.socialLinks?.credentialSummary || buildProfileCredentialSummary()
-    if(profileLatestResult) profileLatestResult.textContent = state.socialLinks?.scanLatestShort || buildLatestVerifiedResult()
-    ;[profileHero].forEach(node=>{
-      if(!node) return
-      if(state.userAvatar){
-        node.style.backgroundImage = `linear-gradient(145deg, rgba(10,22,42,.26), rgba(10,22,42,.1)), url("${state.userAvatar}")`
-        node.style.backgroundSize = "cover"
-        node.style.backgroundPosition = "center"
-        node.textContent = ""
-      }else{
-        node.style.backgroundImage = ""
+      if(profileHistory){
+        const canViewHistory = localStorage.getItem("loggedIn") === "true" || shouldAutoOwnerEntry()
+        if(!canViewHistory){
+          profileHistory.textContent = "Sign in to keep Aria / Jake history saved to your account."
+        }else{
+          const history = (state.ariaHistory || []).slice(0,2)
+          profileHistory.textContent = history.length
+            ? `Last 2 Aria / Jake lines: ${history.join(" / ")}`
+            : "Last 2 Aria / Jake lines will appear here after you talk with them."
+        }
       }
-    })
+      if(profileQualityTitle){
+        profileQualityTitle.textContent = `General AI Summary · ${String(state.socialLinks?.username || state.socialLinks?.name || "SupportRD").replace(/^\^\^\^/, "").trim() || "SupportRD"}`
+      }
+      if(profileQualityBody){
+        profileQualityBody.textContent = state.socialLinks?.generalSummary || buildProfileGeneralSummary()
+      }
+      if(profileCredentialsSummary) profileCredentialsSummary.textContent = state.socialLinks?.credentialSummary || buildProfileCredentialSummary()
+      if(profileLatestResult) profileLatestResult.textContent = state.socialLinks?.scanLatestShort || buildLatestVerifiedResult()
+      ;[profileHero].forEach(node=>{
+        if(!node) return
+        if(state.userAvatar){
+          node.style.backgroundImage = `linear-gradient(145deg, rgba(10,22,42,.26), rgba(10,22,42,.1)), url("${state.userAvatar}")`
+          node.style.backgroundSize = "cover"
+          node.style.backgroundPosition = "center"
+          node.textContent = ""
+        }else{
+          node.style.backgroundImage = ""
+        }
+      })
+    }
     refreshProfileAccessScanner().catch(()=>{})
     syncSupportRDShellV2Panels()
     syncDiaryAndProfileExtras()
@@ -14176,6 +14316,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     const file = profileUploadInput.files?.[0]
     if(file){
       readAvatarFile(file)
+      try{ window.SupportRDRebuild?.onProfileAvatarSelected?.({ url: URL.createObjectURL(file), kind: file.type?.startsWith("video") ? "video" : "image", source:"remote-profile-upload" }) }catch{}
       const focus = getRouteFocusPoint() || { x: window.innerWidth / 2, y: Math.max(170, window.innerHeight * 0.45) }
       holdAssistantTeleport({
         aria: { x: focus.x - 104, y: focus.y - 36 },
@@ -14491,6 +14632,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
     }
     saveProfileState()
     syncProfile()
+    try{ window.SupportRDRebuild?.onProfileSaved?.({ name: profileDisplayName?.value || state.socialLinks?.name || state.socialLinks?.username || "", email: state.socialLinks?.email || "", username: state.socialLinks?.username || "", summary: state.socialLinks?.generalSummary || "" }) }catch{}
     setRemoteStatus("Profile saved with the current AI summary, credentials, and security setup.")
   })
   profileAccessRefreshBtn?.addEventListener("click", ()=>{
@@ -14571,6 +14713,7 @@ Array.from(remoteSheetBody.querySelectorAll("[data-open-world-map]")).forEach(bt
       scanLatestShort: `Hair ${type} and ${damage}`.split(/\s+/).slice(0, 10).join(" ")
     }
     localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+    try{ window.SupportRDRebuild?.onProfileHairScanCompleted?.({ texture, color, damage, hairType:type, summary }) }catch{}
     if(hairScanProgressFill) hairScanProgressFill.style.width = "100%"
     if(hairScanOverlay) hairScanOverlay.textContent = "Hair scan complete. Review the AI summary below."
     if(remoteState.profileScanStream){
@@ -17261,9 +17404,33 @@ function setupDashboardSweep(){
 }
 
 
+
+try{
+  window.addEventListener("supportrd-perk-activated", (event)=>{
+    const perk = event.detail?.perk || {};
+    window.SupportRDRebuild?.recordAccountOptionChange?.(`perk:${perk.id || "unknown"}`, perk.title || "Perk activated", "perk-activation");
+    window.SupportRDRebuild?.deriveShopifyLensFromRebuild?.();
+    window.SupportRDRebuild?.renderAdminSeriousnessPanel?.(document.querySelector("#srAdminSeriousnessPanel"));
+  });
+  window.addEventListener("supportrd-faq-comment-posted", ()=>{
+    window.SupportRDRebuild?.recordAccountOptionChange?.("faq-comment", "posted", "faq-lounge");
+    window.SupportRDRebuild?.updateShopifyLens?.("INP", { status:"healthy", score:72, note:"FAQ comment posted through local rebuild state without blocking network." });
+    window.SupportRDRebuild?.renderAdminSeriousnessPanel?.(document.querySelector("#srAdminSeriousnessPanel"));
+  });
+  window.addEventListener("supportrd-studio-session-saved", ()=>{
+    window.SupportRDRebuild?.recordAccountOptionChange?.("studio-session", "saved", "studio");
+    window.SupportRDRebuild?.updateShopifyLens?.("INP", { status:"healthy", score:74, note:"Studio save notified the bridge without rewriting Studio core." });
+    window.SupportRDRebuild?.renderAdminSeriousnessPanel?.(document.querySelector("#srAdminSeriousnessPanel"));
+  });
+}catch{}
+
 window.addEventListener("DOMContentLoaded", ()=>{
+  try{ window.SupportRDRebuild?.initBootRuntime?.() }catch(e){ console.error(e) }
   try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init start'; }catch{}
   window.__appInit = true;
+  try{ window.SupportRDRebuild?.initProfileRuntime?.()
+    window.SupportRDRebuild?.initProfileRenderRuntime?.()
+    window.SupportRDRebuild?.initStudioBridge?.() }catch{}
   document.body.classList.add("resort-brochure")
   const savedHistory = JSON.parse(localStorage.getItem("ariaHistory") || "[]")
   state.ariaHistory = savedHistory
