@@ -7403,7 +7403,7 @@ except:
 
 @app.route("/")
 def home():
-    return send_from_directory("static", "local-remote.html")
+    return send_from_directory("static", "index.html")
 
 @app.route("/remote")
 @app.route("/remote/<path:section>")
@@ -7418,7 +7418,7 @@ def tagged_remote_shell(route_tag):
 
 @app.route("/legacy")
 def legacy_home():
-    return send_from_directory("static", "index.html")
+    return send_from_directory("static", "local-remote.html")
 
 @app.route("/local-remote")
 def local_remote_shell():
