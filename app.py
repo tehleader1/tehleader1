@@ -2294,6 +2294,16 @@ def build_diary_live_slug(owner_email, payload=None):
     return slug[:60]
 
 
+def build_diary_live_url(host_url, live_slug):
+    origin = (host_url or "").rstrip("/")
+    safe_slug = (live_slug or "").strip()
+    if not origin:
+        return f"/?diary-live={safe_slug}" if safe_slug else "/"
+    if not safe_slug:
+        return origin
+    return f"{origin}/entertainment/{safe_slug}"
+
+
 def normalize_diary_profile_tag(raw_tag):
     tag = (raw_tag or "").strip()
     if not tag:
@@ -5514,6 +5524,57 @@ def profile_analysis_export():
     return response
 
 
+@app.route("/api/contact/live-signals", methods=["POST"])
+def live_signals_contact():
+    body = request.json if request.is_json else {}
+    name = (body.get("name") or "").strip()[:120]
+    email = (body.get("email") or "").strip().lower()[:160]
+    phone = (body.get("phone") or "").strip()[:40]
+    discord = (body.get("discord") or "").strip()[:80]
+    plan = (body.get("plan") or "market-signals").strip()[:80]
+    notes = (body.get("notes") or "").strip()[:800]
+    if not name or not email:
+        return {"ok": False, "error": "name_and_email_required"}, 400
+    created_at = datetime.utcnow().isoformat() + "Z"
+    try:
+        conn = sqlite3.connect(CREDIT_DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS live_signal_contacts ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "name TEXT,"
+            "email TEXT,"
+            "phone TEXT,"
+            "discord TEXT,"
+            "plan TEXT,"
+            "notes TEXT,"
+            "created_at TEXT"
+            ")"
+        )
+        cur.execute(
+            "INSERT INTO live_signal_contacts (name, email, phone, discord, plan, notes, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (name, email, phone, discord, plan, notes, created_at),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        return {"ok": False, "error": "storage_failed", "detail": str(exc)[:200]}, 500
+    summary = (
+        f"Live signals contact form submitted for {plan}. "
+        f"Name: {name}. Email: {email}. Phone: {phone or 'n/a'}. "
+        f"Discord: {discord or 'antonioxz1234'}. Notes: {notes or 'none'}."
+    )
+    alert = send_admin_alert("live_signals_contact", "normal", f"signals-{uuid.uuid4().hex[:8]}", "SupportRD Market Signals", summary)
+    return {
+        "ok": True,
+        "message": "SupportRD saved the live signals contact form.",
+        "alert_sent": bool(alert.get("ok")) if isinstance(alert, dict) else False,
+        "discord": discord or "antonioxz1234",
+        "created_at": created_at,
+    }
+
+
 @app.route("/api/diary/lobby/movement")
 def diary_lobby_movement():
     feeds = list_diary_lobby_sessions("recent", limit=7)
@@ -6323,7 +6384,7 @@ def diary_session_bootstrap():
         "session_id": session_id,
         "owner_email": owner_email,
         "live_slug": live_slug,
-        "live_url": f"{request.host_url.rstrip('/')}/?diary-live={live_slug}",
+        "live_url": build_diary_live_url(request.host_url, live_slug),
         "payload": payload,
         "comments": get_diary_comments(session_id, limit=25),
         "voice_history": get_recent_voice_turns(payload.get("voice_session_id"), limit=12),
@@ -6356,6 +6417,7 @@ def diary_session_save():
         "ok": True,
         "session_id": session_id,
         "live_slug": live_slug,
+        "live_url": build_diary_live_url(request.host_url, live_slug),
         "payload": payload,
         "comments": get_diary_comments(session_id, limit=25),
         "voice_history": get_recent_voice_turns(payload.get("voice_session_id"), limit=12),
@@ -6412,7 +6474,7 @@ def diary_public_session():
     if not public_feed:
         return {"ok": False, "error": "session_not_found"}, 404
     summary = public_feed["summary"]
-    summary["live_url"] = f"{request.host_url.rstrip('/')}/?diary-live={summary.get('live_slug', '')}"
+    summary["live_url"] = build_diary_live_url(request.host_url, summary.get("live_slug", ""))
     return {
         "ok": True,
         "session_id": summary.get("session_id"),
@@ -6421,6 +6483,14 @@ def diary_public_session():
         "comments": public_feed["comments"],
         "voice_history": public_feed["voice_history"],
     }
+
+
+@app.route("/entertainment/<slug>")
+def diary_public_entertainment(slug):
+    safe_slug = (slug or "").strip()
+    if not safe_slug:
+        return redirect("/", code=302)
+    return redirect(f"/?diary-live={safe_slug}", code=302)
 
 
 @app.route("/api/diary/comment", methods=["POST"])

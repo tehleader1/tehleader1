@@ -72,7 +72,10 @@ const LINKS = {
   fantasy300: "https://supportrd.com/products/basic-fantasy-21-plus-300",
   fantasy600: "https://supportrd.com/products/advanced-fantasy-21-plus-600",
   donate: "https://supportrd.com/products/auto-dissolve-soap-bar",
-  custom: "https://shop.supportrd.com/collections/all"
+  custom: "https://shop.supportrd.com/collections/all",
+  diaryLive: "https://shop.supportrd.com/products/supportrd-diary-live",
+  marketSignals: "https://shop.supportrd.com/products/supportrd-market-signals",
+  studioJake: "https://shop.supportrd.com/products/jake-in-the-studio-studio-tier-professional-studio-account"
 }
 const PLAN_MEDIA = {
   premium: {title:"ARIA Puzzle Tier", price:"$35/mo", image:"/static/images/brochure-shampoo.jpg", desc:"Puzzle unlocks + guided routine depth.", link:LINKS.premium},
@@ -131,6 +134,9 @@ const state = {
 }
 
 const PROHIBITED_TERMS = ["drug","drugs","cocaine","meth","weed","marijuana","heroin","fentanyl","gang","gangs","cartel","crip","bloods","ms-13"]
+const PROFILE_SCAN_KEY = "supportRdProfileScanState"
+const DIARY_SESSION_KEY = "supportRdDiaryApiSession"
+const LIVE_SIGNALS_DISCORD = "antonioxz1234"
 
 function detectDeviceTier(){
   try{
@@ -4825,6 +4831,642 @@ function setupEngineGlassViewer(){
   setInterval(refreshFeed, 12000)
 }
 
+function escapeHtml(value){
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+}
+
+function readProfileScanState(){
+  try{
+    return JSON.parse(localStorage.getItem(PROFILE_SCAN_KEY) || "{}")
+  }catch{
+    return {}
+  }
+}
+
+function saveProfileScanState(next){
+  localStorage.setItem(PROFILE_SCAN_KEY, JSON.stringify(next || {}))
+}
+
+function inferHairProfileFromSummary(summary){
+  const text = String(summary || "").toLowerCase()
+  const texture = text.includes("coily") ? "coily" : text.includes("curly") ? "curly" : text.includes("wavy") ? "wavy" : text.includes("straight") ? "straight" : "waiting"
+  const hairType = text.includes("4c") ? "4c" : text.includes("4b") ? "4b" : text.includes("4a") ? "4a" : text.includes("3c") ? "3c" : text.includes("3b") ? "3b" : text.includes("3a") ? "3a" : text.includes("2c") ? "2c" : text.includes("2b") ? "2b" : text.includes("2a") ? "2a" : text.includes("1") ? "1" : "waiting"
+  const damage = text.includes("break") || text.includes("damage") ? "breakage watch" : text.includes("dry") ? "dryness watch" : text.includes("frizz") ? "frizz watch" : "waiting"
+  return { texture, hairType, damage }
+}
+
+function getProfileApiDraft(){
+  const saved = state.socialLinks || {}
+  const scan = readProfileScanState()
+  const displayName = (qs("#floatProfileDisplayName")?.value || saved.name || saved.username || "SupportRD Host").trim()
+  const latestSummary = (scan.summary || qs("#floatProfileScanSummary")?.textContent || "").trim()
+  const inferred = inferHairProfileFromSummary(latestSummary)
+  return {
+    email: (saved.email || "").trim().toLowerCase(),
+    display_name: displayName,
+    summary_text: latestSummary || "SupportRD profile summary is ready for export.",
+    texture: (scan.texture || inferred.texture || "waiting").trim(),
+    color: (scan.color || "waiting").trim(),
+    damage: (scan.damage || inferred.damage || "waiting").trim(),
+    hair_type: (scan.hair_type || inferred.hairType || "waiting").trim(),
+    avatar_set: Boolean(scan.avatar_set || saved.profileImage || state.userAvatar),
+    credential_theme: (qs("#floatProfileCredentialTheme")?.value || "laidback").trim()
+  }
+}
+
+function renderProfileFactList(facts){
+  const containers = [qs("#shellV2ProfileFactList")]
+  containers.forEach((container)=>{
+    if(!container) return
+    container.innerHTML = facts.map((item)=>`<div>${escapeHtml(item)}</div>`).join("")
+  })
+}
+
+function renderLiveProfilePanel(data, draft){
+  if(!(data && data.ok)) return
+  const access = data.api_access || {}
+  const hair = data.hair_analysis || {}
+  const accessEnabled = Object.entries(access).filter(([, enabled])=>enabled).map(([key])=>key)
+  const latestSummary = hair.latest_summary || draft.summary_text || "SupportRD profile lane is ready for the next verified scan."
+  const title = `${data.display_name || draft.display_name || "SupportRD Host"} profile is verified and live.`
+  const summary = latestSummary
+  const metricPrimary = `${accessEnabled.length} access lanes ready`
+  const metricSecondary = hair.latest_export_at ? `Last export ${hair.latest_export_at}` : "PDF / DOCX exports ready"
+  const shellTitle = qs("#shellV2ProfileTitle")
+  const shellSummary = qs("#shellV2ProfileSummary")
+  const shellPrimary = qs("#shellV2ProfileMetricPrimary")
+  const shellSecondary = qs("#shellV2ProfileMetricSecondary")
+  if(shellTitle) shellTitle.textContent = title
+  if(shellSummary) shellSummary.textContent = summary
+  if(shellPrimary) shellPrimary.textContent = metricPrimary
+  if(shellSecondary) shellSecondary.textContent = metricSecondary
+  const apiDeck = qs("#floatProfileApiDeck")
+  const identity = qs("#floatProfileIdentityReading")
+  const general = qs("#floatProfileGeneralStatusReading")
+  const qualityTitle = qs("#floatProfileQualityTitle")
+  const qualityBody = qs("#floatProfileQualityBody")
+  const latest = qs("#floatProfileLatestResult")
+  const creds = qs("#floatProfileCredentialsSummary")
+  const exportStatus = qs("#floatProfileExportStatus")
+  const status = qs("#floatAssistantStatus")
+  if(apiDeck) apiDeck.textContent = accessEnabled.join(", ") || "Account access is still loading."
+  if(identity) identity.textContent = data.identity_confirmed || "Identity confirmation is still loading."
+  if(general) general.textContent = data.general_status || "General status reading is still loading."
+  if(qualityTitle) qualityTitle.textContent = `${data.display_name || draft.display_name || "SupportRD Host"} · Profile AI Summary`
+  if(qualityBody) qualityBody.textContent = latestSummary
+  if(latest) latest.textContent = `${hair.texture || "waiting"} texture · ${hair.hair_type || "waiting"} type · ${hair.damage || "waiting"}`
+  if(creds) creds.textContent = `${draft.credential_theme} credentials active. Email lane: ${data.email || draft.email || "guest"}`
+  if(exportStatus) exportStatus.textContent = hair.latest_export_at ? `Latest export saved at ${hair.latest_export_at}.` : "No profile export has been saved yet."
+  if(status) status.textContent = "Profile is pulling live account access, identity, and hair-analysis memory from SupportRD now."
+  renderProfileFactList([
+    `Identity: ${data.identity_confirmed || "waiting"}`,
+    `Status: ${data.general_status || "waiting"}`,
+    `Texture: ${hair.texture || "waiting"} · Hair type: ${hair.hair_type || "waiting"} · Damage: ${hair.damage || "waiting"}`,
+    `Access deck: ${accessEnabled.join(", ") || "waiting"}`,
+  ])
+}
+
+async function refreshLiveProfilePanel(){
+  const draft = getProfileApiDraft()
+  const query = new URLSearchParams()
+  if(draft.email) query.set("email", draft.email)
+  if(draft.display_name) query.set("display_name", draft.display_name)
+  if(draft.texture && draft.texture !== "waiting") query.set("hair_texture", draft.texture)
+  if(draft.damage && draft.damage !== "waiting") query.set("hair_damage", draft.damage)
+  if(draft.hair_type && draft.hair_type !== "waiting") query.set("hair_type", draft.hair_type)
+  if(draft.avatar_set) query.set("avatar_set", "1")
+  const url = `/api/profile/access-scanner${query.toString() ? `?${query.toString()}` : ""}`
+  try{
+    const response = await fetch(url, {credentials:"same-origin"})
+    const data = await response.json()
+    if(!(data && data.ok)) throw new Error(data && data.error || "profile_access_failed")
+    renderLiveProfilePanel(data, draft)
+    return data
+  }catch(err){
+    renderProfileFactList([`Profile access scanner is temporarily unavailable: ${err && err.message ? err.message : "network error"}`])
+    throw err
+  }
+}
+
+async function exportLiveProfileAnalysis(format){
+  const draft = getProfileApiDraft()
+  const response = await fetch("/api/profile/analysis/export", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({...draft, format})
+  })
+  if(!response.ok){
+    throw new Error(`export_failed_${response.status}`)
+  }
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  const safeName = (draft.display_name || "supportrd-profile").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "supportrd-profile"
+  link.href = url
+  link.download = `${safeName}-hair-analysis.${format}`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setTimeout(()=>URL.revokeObjectURL(url), 1000)
+  const exportStatus = qs("#floatProfileExportStatus")
+  if(exportStatus) exportStatus.textContent = `Hair analysis ${format.toUpperCase()} export generated for ${draft.display_name || "SupportRD Host"}.`
+}
+
+function setupLiveProfilePanels(){
+  const refreshIds = ["shellV2ProfileRefresh", "floatProfileAccessRefreshBtn"]
+  refreshIds.forEach((id)=>{
+    const btn = qs(`#${id}`)
+    if(!btn) return
+    btn.addEventListener("click", async ()=>{
+      btn.disabled = true
+      try{
+        await refreshLiveProfilePanel()
+        toast("Profile scanner refreshed")
+      }catch{
+        toast("Profile scanner unavailable")
+      }finally{
+        btn.disabled = false
+      }
+    })
+  })
+  const exportButtons = [
+    ["shellV2ProfileExportPdf", "pdf"],
+    ["shellV2ProfileExportDocx", "docx"],
+    ["floatProfileExportPdfBtn", "pdf"],
+    ["floatProfileExportDocxBtn", "docx"],
+  ]
+  exportButtons.forEach(([id, format])=>{
+    const btn = qs(`#${id}`)
+    if(!btn) return
+    btn.addEventListener("click", async ()=>{
+      btn.disabled = true
+      try{
+        await exportLiveProfileAnalysis(format)
+        await refreshLiveProfilePanel()
+      }catch{
+        toast(`Profile ${format.toUpperCase()} export failed`)
+      }finally{
+        btn.disabled = false
+      }
+    })
+  })
+  qs("#floatProfileSaveBtn")?.addEventListener("click", ()=>{
+    const draft = getProfileApiDraft()
+    state.socialLinks = {...(state.socialLinks || {}), name: draft.display_name, email: draft.email}
+    localStorage.setItem("socialLinks", JSON.stringify(state.socialLinks))
+    toast("Profile basics saved")
+    refreshLiveProfilePanel().catch(()=>{})
+  })
+  qs("#floatProfileCredentialTheme")?.addEventListener("change", ()=>refreshLiveProfilePanel().catch(()=>{}))
+  qs("#floatProfileDisplayName")?.addEventListener("change", ()=>refreshLiveProfilePanel().catch(()=>{}))
+  refreshLiveProfilePanel().catch(()=>{})
+}
+
+const FAQ_MEDIA_LIBRARY = {
+  tiktok: [
+    { title:"Hair mission first", body:"SupportRD reads the hair issue first, then pushes the viewer into the right product or support lane.", kind:"video", src:"/static/videos/reel-1.mp4" },
+    { title:"Diary Live donations", body:"Use the SupportRD Diary Live product for visible support while the entertainment feed stays moving.", kind:"image", src:"/static/images/conversation-codex-live-1.png" },
+    { title:"Glow route", body:"Hair glow clips, live answers, and direct links belong together in FAQ Lounge now.", kind:"video", src:"/static/videos/sample-10s.mp4" }
+  ],
+  youtube: [
+    { title:"Routine explainer", body:"Longer explainers can sit beside the quick reel so people can learn and still stay on the page.", kind:"video", src:"/static/videos/reel-3.mp4" },
+    { title:"Healthy hair tutorial", body:"Images now rotate in as visual support instead of leaving the FAQ surface empty.", kind:"image", src:"/static/images/brochure-shampoo.jpg" },
+    { title:"Studio crossover", body:"The same lounge can push viewers into studio, profile, or diary without losing the relaxed tone.", kind:"video", src:"/static/videos/reel-2.mp4" }
+  ],
+  movies: [
+    { title:"Cinema bounce", body:"Movie-style clips can show dramatic before-and-after texture, shine, and repair moods.", kind:"video", src:"/static/videos/reel-4.mp4" },
+    { title:"Visual polish stills", body:"Image slides keep playing even when the reel video is not the right format for the moment.", kind:"image", src:"/static/images/jake-studio-premium.jpg" },
+    { title:"Scalp reset scene", body:"Hair concern scenes can still feed right into product and premium routes.", kind:"video", src:"/static/videos/reel-6.mp4" }
+  ]
+}
+
+const FAQ_TOPIC_LIBRARY = [
+  { key:"dryness", label:"Dryness reset", answer:"Start with moisture first: deep conditioner, leave-in, and lower heat. SupportRD usually points dry ends toward Mascarilla Capilar plus a lighter finish product.", search:"dry hair moisture mask support" },
+  { key:"damage", label:"Damage control", answer:"Breakage, rough ends, and heat stress should move into a repair lane: reduce heat, trim weak ends, and stage a protein + moisture balance routine.", search:"hair breakage repair support" },
+  { key:"family_shampoo", label:"Family shampoo help", answer:"If your girlfriend or family member wants a good shampoo, start with scalp condition, texture, and styling routine. A simple safe SupportRD answer is a gentle cleansing shampoo plus a matching conditioner and leave-in.", search:"best family shampoo for healthy hair" },
+  { key:"wedding", label:"Wedding prep", answer:"For a wedding hair plan, SupportRD should route into shine, hold, heat protection, and timeline prep: wash day, styling day, and touch-up products.", search:"wedding hair prep products routine" },
+  { key:"premium", label:"Premium unlocks", answer:"Premium and Pro should unlock the deeper diary prompts, better account routing, and the Studio / Inner Circle / Professional Making Money surfaces.", search:"supportrd premium pro unlocks" },
+  { key:"scan", label:"Hair scan flow", answer:"The profile scanner should now save texture, damage watch, and export memory so the person can come back to the same account lane later.", search:"support hair scan workflow" },
+  { key:"options", label:"Options market lane", answer:"Professional Making Money should ask for budget, style, direction, expiration, and current price range, then return a light general market read instead of a giant wall of detail.", search:"options momentum breakout bullish bearish budget" },
+]
+
+function setupFaqLounge(){
+  const host = qs("#floatFaqReelHost")
+  const answer = qs("#floatFaqPromptAnswer")
+  const select = qs("#floatFaqPromptSelect")
+  const status = qs("#floatLiveStatus")
+  const paymentBtn = qs("#floatFaqPaymentBtn")
+  const refreshBtn = qs("#floatFaqReelBtn")
+  const panel = qs('[data-shell-v2-panel="faq"]')
+  let faqTheme = "tiktok"
+  let faqIndex = 0
+
+  function getFaqThemeItems(){
+    return FAQ_MEDIA_LIBRARY[faqTheme] || FAQ_MEDIA_LIBRARY.tiktok
+  }
+  function renderFaqMedia(){
+    if(!host) return
+    const items = getFaqThemeItems()
+    const item = items[faqIndex % items.length]
+    if(!item) return
+    const media = item.kind === "image"
+      ? `<img src="${item.src}" alt="${escapeHtml(item.title)}" style="width:100%;height:100%;object-fit:cover;border-radius:18px;">`
+      : `<video src="${item.src}" autoplay muted loop playsinline controls style="width:100%;height:100%;object-fit:cover;border-radius:18px;background:#04070f;"></video>`
+    host.innerHTML = `
+      <div class="glass" style="padding:12px;border-radius:22px;display:grid;gap:10px;background:rgba(4,10,18,.82);">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+          <strong>${escapeHtml(item.title)}</strong>
+          <span class="float-box-badge">${escapeHtml(faqTheme)} visual</span>
+        </div>
+        <div style="min-height:240px;">${media}</div>
+        <div class="float-board-preview">${escapeHtml(item.body)}</div>
+      </div>
+    `
+    if(status){
+      status.innerHTML = `FAQ Lounge is now reading real reel media, hair topics, and live links. Diary live support: <a href="${LINKS.diaryLive}" target="_blank" rel="noopener">SupportRD Diary Live</a>`
+    }
+  }
+  function renderFaqTopics(){
+    if(!select) return
+    const currentKey = select.value || FAQ_TOPIC_LIBRARY[0].key
+    select.innerHTML = FAQ_TOPIC_LIBRARY.map((topic)=>`<option value="${topic.key}" ${topic.key === currentKey ? "selected" : ""}>${escapeHtml(topic.label)}</option>`).join("")
+    const selected = FAQ_TOPIC_LIBRARY.find((topic)=>topic.key === (select.value || currentKey)) || FAQ_TOPIC_LIBRARY[0]
+    if(answer && selected){
+      answer.innerHTML = `${escapeHtml(selected.answer)}<br><br><a href="https://www.google.com/search?q=${encodeURIComponent(selected.search)}" target="_blank" rel="noopener">Open search feed</a>`
+    }
+  }
+  function injectSignalsForm(){
+    if(!panel || panel.querySelector("[data-signals-form]")) return
+    const block = document.createElement("div")
+    block.setAttribute("data-signals-form", "1")
+    block.className = "supportrd-shell-v2__app-grid"
+    block.innerHTML = `
+      <article class="supportrd-shell-v2__app-card supportrd-shell-v2__app-card--spotlight">
+        <div class="supportrd-shell-v2__eyebrow">Live Signals Contact</div>
+        <h4>Buy signals, then land back in one clear SupportRD lane.</h4>
+        <p>SupportRD Market Signals now has a direct contact form for the purchasing account, plus a visible Discord and return link structure for future entertainment URLs.</p>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0;">
+          <a href="${LINKS.diaryLive}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">
+            <div class="digital-product-card" style="margin:0;">
+              <img src="/static/images/conversation-codex-live-2.png" alt="SupportRD Diary Live" style="width:100%;height:160px;object-fit:cover;border-radius:16px;">
+              <div class="digital-product-body">
+                <div class="digital-product-title">SupportRD Diary Live</div>
+                <div class="digital-product-desc">Live support / donations lane with the entertainment return URL.</div>
+              </div>
+            </div>
+          </a>
+          <a href="${LINKS.marketSignals}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">
+            <div class="digital-product-card" style="margin:0;">
+              <img src="/static/images/aria-premium-pro-main-ad.jpg" alt="SupportRD Market Signals" style="width:100%;height:160px;object-fit:cover;border-radius:16px;">
+              <div class="digital-product-body">
+                <div class="digital-product-title">SupportRD Market Signals</div>
+                <div class="digital-product-desc">Signal buyers can now leave their name, email, phone, and Discord directly in the site.</div>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="supportrd-shell-v2__metric-row">
+          <span><a href="${LINKS.marketSignals}" target="_blank" rel="noopener">Market Signals Product</a></span>
+          <span>Discord: ${LIVE_SIGNALS_DISCORD}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;">
+          <input class="input" id="signalsContactName" placeholder="Name">
+          <input class="input" id="signalsContactEmail" placeholder="Email">
+          <input class="input" id="signalsContactPhone" placeholder="Phone Number">
+          <input class="input" id="signalsContactDiscord" placeholder="Discord" value="${LIVE_SIGNALS_DISCORD}">
+        </div>
+        <textarea class="input" id="signalsContactNotes" placeholder="What should SupportRD know about this signals account?" style="margin-top:10px;"></textarea>
+        <div class="supportrd-shell-v2__button-row" style="margin-top:10px;">
+          <button class="btn" id="signalsContactSubmit">Send Contact Form</button>
+          <button class="btn ghost" id="signalsContactOpenProduct">Open Product</button>
+        </div>
+        <div id="signalsContactStatus" class="supportrd-shell-v2__mini-list" style="margin-top:10px;">SupportRD is ready to collect the purchasing account contact details.</div>
+      </article>
+    `
+    panel.appendChild(block)
+    qs("#signalsContactOpenProduct")?.addEventListener("click", ()=>openLinkModal(LINKS.marketSignals, "SupportRD Market Signals"))
+    qs("#signalsContactSubmit")?.addEventListener("click", async ()=>{
+      const statusEl = qs("#signalsContactStatus")
+      const payload = {
+        name: (qs("#signalsContactName")?.value || "").trim(),
+        email: (qs("#signalsContactEmail")?.value || "").trim(),
+        phone: (qs("#signalsContactPhone")?.value || "").trim(),
+        discord: (qs("#signalsContactDiscord")?.value || LIVE_SIGNALS_DISCORD).trim(),
+        plan: "market-signals",
+        notes: (qs("#signalsContactNotes")?.value || "").trim()
+      }
+      if(!payload.name || !payload.email){
+        if(statusEl) statusEl.textContent = "Name and email are required before SupportRD can save the contact form."
+        return
+      }
+      try{
+        const response = await fetch("/api/contact/live-signals", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(payload)
+        })
+        const data = await response.json()
+        if(!(data && data.ok)) throw new Error(data && data.error || "submit_failed")
+        if(statusEl) statusEl.textContent = `Saved ${payload.name} for market signals. Discord: ${data.discord || LIVE_SIGNALS_DISCORD}.`
+        toast("Live signals form saved")
+      }catch(err){
+        if(statusEl) statusEl.textContent = `Contact form failed: ${err && err.message ? err.message : "network_error"}`
+      }
+    })
+    const floatLiveBox = qs("#floatLiveBox")
+    if(floatLiveBox && !floatLiveBox.querySelector("[data-float-signal-cards]")){
+      const visualCards = document.createElement("div")
+      visualCards.setAttribute("data-float-signal-cards", "1")
+      visualCards.className = "float-profile-results"
+      visualCards.innerHTML = `
+        <div class="float-profile-result-card">
+          <strong>Diary Live Product</strong>
+          <img src="/static/images/conversation-codex-live-2.png" alt="SupportRD Diary Live" style="width:100%;height:120px;object-fit:cover;border-radius:14px;margin:8px 0;">
+          <span><a href="${LINKS.diaryLive}" target="_blank" rel="noopener">Open SupportRD Diary Live</a></span>
+        </div>
+        <div class="float-profile-result-card">
+          <strong>Market Signals Product</strong>
+          <img src="/static/images/aria-premium-pro-main-ad.jpg" alt="SupportRD Market Signals" style="width:100%;height:120px;object-fit:cover;border-radius:14px;margin:8px 0;">
+          <span><a href="${LINKS.marketSignals}" target="_blank" rel="noopener">Open SupportRD Market Signals</a></span>
+        </div>
+      `
+      floatLiveBox.appendChild(visualCards)
+    }
+  }
+
+  renderFaqTopics()
+  renderFaqMedia()
+  injectSignalsForm()
+  qsa("[data-faq-theme]").forEach((btn)=>{
+    btn.addEventListener("click", ()=>{
+      faqTheme = btn.dataset.faqTheme || "tiktok"
+      faqIndex = 0
+      qsa("[data-faq-theme]").forEach((chip)=>chip.classList.toggle("active", chip === btn))
+      renderFaqMedia()
+    })
+  })
+  if(select){
+    select.addEventListener("change", renderFaqTopics)
+  }
+  if(refreshBtn){
+    refreshBtn.addEventListener("click", ()=>{
+      faqIndex = (faqIndex + 1) % getFaqThemeItems().length
+      renderFaqMedia()
+      toast("FAQ reel refreshed")
+    })
+  }
+  if(paymentBtn){
+    paymentBtn.addEventListener("click", ()=>openLinkModal(LINKS.diaryLive, "SupportRD Diary Live"))
+  }
+}
+
+function setupDiaryLiveApi(){
+  const liveStatus = qs("#floatDiaryLiveStatus")
+  const tagInput = qs("#floatDiaryTagInput")
+  const diaryInput = qs("#floatDiaryInput")
+  const socialPost = qs("#floatDiarySocialPost")
+  const viewer = qs("#remoteDiaryViewer")
+  const viewerOverlay = qs("#remoteDiaryViewerOverlay")
+  const viewerName = qs("#remoteDiaryViewerName")
+  const viewerTag = qs("#remoteDiaryViewerTag")
+  const viewerUrl = qs("#remoteDiaryViewerUrl")
+  const viewerTranscript = qs("#remoteDiaryViewerTranscript")
+  const lobbyList = qs("#remoteDiaryLobbyList")
+  const lobbyCount = qs("#remoteDiaryLobbyCount")
+  const lobbySignalHeader = qs("#remoteDiaryLobbySignalHeader")
+  const lobbySignalPreview = qs("#remoteDiaryLobbySignalPreview")
+  const lobbyShopifySummary = qs("#remoteDiaryLobbyShopifySummary")
+  const lobbyShopifyMeta = qs("#remoteDiaryLobbyShopifyMeta")
+  const history = qs("#floatDiaryHistory")
+  const useCase = qs("#floatDiaryUseCase")
+  let diarySession = {}
+
+  function readDiarySession(){
+    try{
+      return JSON.parse(localStorage.getItem(DIARY_SESSION_KEY) || "{}")
+    }catch{
+      return {}
+    }
+  }
+  function saveDiarySession(session){
+    diarySession = session || {}
+    localStorage.setItem(DIARY_SESSION_KEY, JSON.stringify(diarySession))
+  }
+  function getDiaryIdentity(){
+    const profileTag = (tagInput?.value || "").trim()
+    return {
+      session_id: diarySession.session_id || "",
+      display_name: (state.socialLinks && (state.socialLinks.name || state.socialLinks.username)) || "SupportRD Diary",
+      username: (state.socialLinks && state.socialLinks.username) || "",
+      profile_tag: profileTag,
+      avatar_url: state.socialLinks && state.socialLinks.profileImage || "",
+      entry_text: (diaryInput?.value || "").trim(),
+      social_post: (socialPost?.value || "").trim(),
+      live_active: true
+    }
+  }
+  function renderDiaryPremiumPrompts(){
+    if(!useCase || useCase.querySelector("[data-diary-premium]")) return
+    const wrap = document.createElement("div")
+    wrap.setAttribute("data-diary-premium", "1")
+    wrap.className = "glass"
+    wrap.style.cssText = "margin-top:12px;padding:12px;border-radius:18px;display:grid;gap:10px;"
+    wrap.innerHTML = `
+      <div><strong>Diary premium prompts</strong><div class="float-box-copy">Inner Circle handles family hair buying moments. Professional Making Money handles the options-market lane with lighter analysis.</div></div>
+      <div class="float-mini-actions">
+        <button class="btn ghost" id="floatDiaryFamilyPromptBtn">Inner Circle · Family Hair Help</button>
+        <button class="btn ghost" id="floatDiaryMarketPromptBtn">Professional · Making Money</button>
+      </div>
+      <div class="float-board-preview" id="floatDiaryPremiumPromptStatus">Free accounts can see this lane, but the deeper prompt actions only turn on for Premium / Pro account memory.</div>
+    `
+    useCase.appendChild(wrap)
+    const premiumStatus = qs("#floatDiaryPremiumPromptStatus")
+    const allowFamily = ["premium","bingo100","pro","yoda","fantasy300","fantasy600"].includes(state.subscription) || isProOverride()
+    const allowMarket = state.subscription === "pro" || isProOverride()
+    const familyBtn = qs("#floatDiaryFamilyPromptBtn")
+    const marketBtn = qs("#floatDiaryMarketPromptBtn")
+    if(familyBtn){
+      familyBtn.disabled = !allowFamily
+      familyBtn.addEventListener("click", ()=>{
+        if(!allowFamily){
+          if(premiumStatus) premiumStatus.textContent = "Inner Circle family prompts turn on after Premium+ is active."
+          return
+        }
+        const prompt = "Family issue: my girlfriend wants her hair done and needs a good shampoo. Or a family member is getting married and needs her hair done. Give me the best products to buy and a simple routine."
+        if(diaryInput) diaryInput.value = prompt
+        if(premiumStatus) premiumStatus.textContent = "Inner Circle family hair prompt is active in Diary mode now."
+      })
+    }
+    if(marketBtn){
+      marketBtn.disabled = !allowMarket
+      marketBtn.addEventListener("click", ()=>{
+        if(!allowMarket){
+          if(premiumStatus) premiumStatus.textContent = "Professional Making Money turns on after Pro / professional access is active."
+          return
+        }
+        const prompt = "Professional making money: my dad and I play options. Give the best options play right now using Stock Budget, Style Momentum Breakout, Direction Bullish/Bearish, Expiration Date, and Stock Price around the current range. If I only say I have $100, give a light general analysis."
+        if(diaryInput) diaryInput.value = prompt
+        if(premiumStatus) premiumStatus.textContent = "Professional Making Money prompt is active in Diary mode now."
+      })
+    }
+  }
+  function renderDiaryViewer(feed){
+    if(!feed) return
+    const summary = feed.summary || {}
+    const payload = feed.payload || {}
+    if(viewer) viewer.hidden = false
+    if(viewerOverlay) viewerOverlay.textContent = payload.entry_text || payload.social_post || "Diary live session is active."
+    if(viewerName) viewerName.textContent = summary.display_name || payload.display_name || "Diary Live Feed"
+    if(viewerTag) viewerTag.textContent = summary.profile_tag || payload.profile_tag || "^^support"
+    if(viewerUrl){
+      const liveUrl = summary.live_url || diarySession.live_url || "supportrd.com"
+      viewerUrl.innerHTML = `<a href="${liveUrl}" target="_blank" rel="noopener">${escapeHtml(liveUrl)}</a>`
+    }
+    if(viewerTranscript) viewerTranscript.textContent = (feed.voice_history || []).map((item)=>`${item.speaker || "voice"}: ${item.text || ""}`).join("\n\n") || payload.entry_text || "The latest diary voice and feed turns will show here."
+    const commentMarkup = (feed.comments || []).length
+      ? feed.comments.map((item)=>`<div><strong>${escapeHtml(item.author_name || "Guest")}</strong> · ${escapeHtml(item.comment_text || "")}</div>`).join("")
+      : "Live comments will show here."
+    if(qs("#remoteDiaryViewerComments")) qs("#remoteDiaryViewerComments").innerHTML = commentMarkup
+  }
+  async function bootstrapDiarySession(forceSave = false){
+    const identity = getDiaryIdentity()
+    const response = await fetch("/api/diary/session/bootstrap", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(identity)
+    })
+    const data = await response.json()
+    if(!(data && data.ok)) throw new Error(data && data.error || "diary_bootstrap_failed")
+    saveDiarySession({session_id:data.session_id, live_slug:data.live_slug, live_url:data.live_url})
+    if(liveStatus){
+      liveStatus.innerHTML = `Diary live is active. Visible URL: <a href="${data.live_url}" target="_blank" rel="noopener">${escapeHtml(data.live_url)}</a>`
+    }
+    if(history){
+      history.textContent = identity.entry_text || "Diary session is live and ready for the next page."
+    }
+    if(forceSave){
+      await saveDiaryEntry()
+    }
+    return data
+  }
+  async function saveDiaryEntry(){
+    const sessionId = diarySession.session_id || readDiarySession().session_id
+    if(!sessionId){
+      await bootstrapDiarySession()
+      return
+    }
+    const payload = {...getDiaryIdentity(), session_id: sessionId}
+    const response = await fetch("/api/diary/session/save", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    })
+    const data = await response.json()
+    if(!(data && data.ok)) throw new Error(data && data.error || "diary_save_failed")
+    saveDiarySession({session_id:data.session_id, live_slug:data.live_slug, live_url:data.live_url || diarySession.live_url})
+    if(history) history.textContent = payload.entry_text || "Diary saved."
+    if(liveStatus && (data.live_url || diarySession.live_url)){
+      liveStatus.innerHTML = `Diary live is active. Visible URL: <a href="${data.live_url || diarySession.live_url}" target="_blank" rel="noopener">${escapeHtml(data.live_url || diarySession.live_url)}</a>`
+    }
+    return data
+  }
+  async function loadDiaryLobby(){
+    try{
+      const searchBy = qs("#remoteDiaryLobbySearchBy")?.value || "name"
+      const search = qs("#remoteDiaryLobbySearch")?.value || ""
+      const sort = qs("#remoteDiaryLobbySort")?.value || "recent"
+      const response = await fetch(`/api/diary/lobby?sort=${encodeURIComponent(sort)}&search_by=${encodeURIComponent(searchBy)}&search=${encodeURIComponent(search)}`)
+      const data = await response.json()
+      if(!(data && data.ok)) throw new Error("lobby_failed")
+      const feeds = data.feeds || []
+      if(lobbyCount) lobbyCount.textContent = `Latest ${feeds.length} diary feeds`
+      if(lobbyList){
+        lobbyList.innerHTML = feeds.map((feed)=>`
+          <button class="glass" type="button" data-diary-open="${escapeHtml(feed.live_slug || "")}" style="padding:12px;border-radius:18px;text-align:left;display:grid;gap:6px;">
+            <strong>${escapeHtml(feed.display_name || "SupportRD Diary")}</strong>
+            <span>${escapeHtml(feed.profile_tag || "^^support")}</span>
+            <span>${escapeHtml(feed.preview_text || "Waiting for the next entry.")}</span>
+            <span>${escapeHtml(feed.live_url || `supportrd.com/entertainment/${feed.live_slug || ""}`)}</span>
+          </button>
+        `).join("")
+        qsa("[data-diary-open]").forEach((btn)=>{
+          btn.addEventListener("click", ()=>loadPublicDiaryFeed(btn.getAttribute("data-diary-open") || ""))
+        })
+      }
+    }catch{
+      if(lobbyList) lobbyList.textContent = "Diary lobby could not be loaded yet."
+    }
+    try{
+      const response = await fetch("/api/diary/lobby/movement")
+      const data = await response.json()
+      if(data && data.ok){
+        if(lobbySignalHeader) lobbySignalHeader.textContent = data.latest_activity && data.latest_activity.session_name || "No live session yet"
+        if(lobbySignalPreview) lobbySignalPreview.textContent = data.latest_activity && data.latest_activity.preview || "Waiting for the next live diary session."
+        if(lobbyShopifySummary) lobbyShopifySummary.textContent = `Shopify Reader · ${data.shopify_reader.sessions} sessions · ${data.shopify_reader.orders} orders`
+        if(lobbyShopifyMeta) lobbyShopifyMeta.textContent = `Sales: ${data.shopify_reader.currency} ${data.shopify_reader.total_sales} · Risk: ${data.shopify_reader.risk_level}`
+      }
+    }catch{}
+  }
+  async function loadPublicDiaryFeed(slug){
+    if(!slug) return
+    const response = await fetch(`/api/diary/session/public?slug=${encodeURIComponent(slug)}`)
+    const data = await response.json()
+    if(!(data && data.ok)) throw new Error(data && data.error || "public_diary_failed")
+    renderDiaryViewer(data)
+    return data
+  }
+  qs("#floatDiaryLiveBtn")?.addEventListener("click", async ()=>{
+    try{
+      const data = await bootstrapDiarySession(true)
+      toast("Diary live URL created")
+      renderDiaryViewer({summary:{live_url:data.live_url, live_slug:data.live_slug, display_name:data.payload.display_name, profile_tag:data.payload.profile_tag}, payload:data.payload, comments:data.comments, voice_history:data.voice_history})
+    }catch{
+      toast("Diary live could not start")
+    }
+  })
+  qs("#floatDiarySaveBtn")?.addEventListener("click", async ()=>{
+    try{
+      await saveDiaryEntry()
+      toast("Diary saved")
+    }catch{
+      toast("Diary save failed")
+    }
+  })
+  qs("#floatDiaryTagSaveBtn")?.addEventListener("click", async ()=>{
+    try{
+      const data = await bootstrapDiarySession()
+      if(liveStatus) liveStatus.innerHTML = `Diary tag saved. Visible URL: <a href="${data.live_url}" target="_blank" rel="noopener">${escapeHtml(data.live_url)}</a>`
+    }catch{
+      toast("Diary tag save failed")
+    }
+  })
+  qs("#remoteDiaryLobbyRefresh")?.addEventListener("click", ()=>loadDiaryLobby())
+  qs("#remoteDiaryLobbyApply")?.addEventListener("click", ()=>loadDiaryLobby())
+  qs("#shellV2DiaryOpenViewer")?.addEventListener("click", ()=>{
+    const session = readDiarySession()
+    if(session.live_slug){
+      loadPublicDiaryFeed(session.live_slug).catch(()=>toast("Diary viewer is not ready yet"))
+    }else{
+      toast("Start Diary Live first")
+    }
+  })
+  qs("#remoteDiaryViewerClose")?.addEventListener("click", ()=>{ if(viewer) viewer.hidden = true })
+  qs("#remoteDiaryViewerOpenRemote")?.addEventListener("click", ()=>{ if(viewer) viewer.hidden = true; window.scrollTo({top:0, behavior:"smooth"}) })
+  renderDiaryPremiumPrompts()
+  loadDiaryLobby()
+  const params = new URLSearchParams(window.location.search || "")
+  const liveSlug = (params.get("diary-live") || "").trim()
+  if(liveSlug){
+    loadPublicDiaryFeed(liveSlug).catch(()=>{})
+  }
+}
+
 
 window.addEventListener("DOMContentLoaded", ()=>{
   try{ var d=document.getElementById('debugClick'); if(d) d.textContent='App init start'; }catch{}
@@ -4866,6 +5508,9 @@ window.addEventListener("DOMContentLoaded", ()=>{
   safe(setupScanUpload)
   safe(setupProfileUpload)
   safe(setupHairAnalysis)
+  safe(setupLiveProfilePanels)
+  safe(setupFaqLounge)
+  safe(setupDiaryLiveApi)
   safe(setupGPS)
   safe(setupAria)
   safe(setupPuzzle)

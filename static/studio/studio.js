@@ -25,6 +25,11 @@ let currentMicStream = null;
 let currentAudioContext = null;
 let currentAnalyser = null;
 let currentWaveProbe = null;
+let premiumFxState = {
+  stereoWidth: false,
+  vocalDoubler: false,
+  airLift: false
+};
 let mixHistory = [];
 let deletedSnapshots = [];
 let recentBoards = [];
@@ -131,6 +136,7 @@ function updateStudioDevicePanel() {
   if (apiStatus) apiStatus.textContent = studioAccessState.access
     ? `Premium Jake is active on ${studioAccessState.subscription || "studio100"} and the booth can record live.`
     : "Jake Premium Studio will attach once login and payment are verified.";
+  renderPremiumFxDeck();
 }
 function setStudioLocked(locked, options = {}) {
   studioAccessState.locked = !!locked;
@@ -342,6 +348,62 @@ function buildWaveMarkup(waveData = []) {
     })
     .join("");
   return `<div class="timeline-waveform">${bars}</div>`;
+}
+
+function normalizeWaveData(waveData = [], size = 56) {
+  const input = Array.isArray(waveData) ? waveData.filter((value) => Number.isFinite(Number(value))) : [];
+  if (!input.length) return generateWaveData("SupportRD", size, "steady", 1);
+  const out = [];
+  for (let i = 0; i < size; i += 1) {
+    const start = Math.floor((i / size) * input.length);
+    const end = Math.max(start + 1, Math.floor(((i + 1) / size) * input.length));
+    let peak = 0;
+    for (let j = start; j < Math.min(end, input.length); j += 1) {
+      peak = Math.max(peak, Number(input[j] || 0));
+    }
+    out.push(Math.max(10, Math.min(98, Math.round(peak))));
+  }
+  return out;
+}
+
+function ensureStudioWaveMonitor() {
+  const boardCard = qs(".board-stage-card");
+  if (!boardCard || qs("#studioLiveWaveMonitor")) return;
+  const block = document.createElement("div");
+  block.id = "studioLiveWaveMonitor";
+  block.className = "glass";
+  block.style.cssText = "margin:12px 0;padding:14px;border-radius:18px;display:grid;gap:10px;background:rgba(7,15,28,.78);border:1px solid rgba(132,180,247,.22);";
+  block.innerHTML = `
+    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+      <div>
+        <div class="badge">LIVE WAVE VISUAL</div>
+        <strong id="studioWaveMonitorTitle">Wave monitor standing by</strong>
+      </div>
+      <span id="studioWaveMonitorMeta" class="status">Record live or import .mp3 / .m4a to generate a real wave strip.</span>
+    </div>
+    <div id="studioWaveMonitorBars" style="display:flex;align-items:center;gap:3px;min-height:84px;padding:10px 8px;border-radius:16px;background:linear-gradient(180deg,rgba(9,18,32,.98),rgba(4,9,18,.98));border:1px solid rgba(132,180,247,.16);"></div>
+  `;
+  const meter = qs(".board-meter");
+  if (meter?.parentElement) {
+    meter.parentElement.insertBefore(block, meter.nextSibling);
+  } else {
+    boardCard.appendChild(block);
+  }
+}
+
+function renderStudioWaveMonitor(waveData = [], title = "Wave monitor live", meta = "") {
+  ensureStudioWaveMonitor();
+  const bars = qs("#studioWaveMonitorBars");
+  const titleEl = qs("#studioWaveMonitorTitle");
+  const metaEl = qs("#studioWaveMonitorMeta");
+  if (titleEl) titleEl.textContent = title;
+  if (metaEl) metaEl.textContent = meta || "Wave monitor is reading the current studio source.";
+  if (!bars) return;
+  const normalized = normalizeWaveData(waveData, 64);
+  bars.innerHTML = normalized.map((height, index) => {
+    const glow = Math.max(0.25, Number(height || 0) / 100);
+    return `<span data-monitor-bar="${index}" style="flex:1 1 auto;min-width:3px;height:${Math.max(12, Math.round(Number(height || 0) * 0.72))}px;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(123,205,255,.45));box-shadow:0 0 14px rgba(115,201,255,${glow.toFixed(2)});"></span>`;
+  }).join("");
 }
 
 function updateDbQuickLabel() {
@@ -1398,6 +1460,71 @@ function setupFxBoard() {
   setInterval(update, 500);
 }
 
+function premiumFxAllowed() {
+  return studioAccessState.access || studioAccessState.subscription === "pro" || studioAccessState.subscription === "studio100";
+}
+
+function renderPremiumFxDeck() {
+  const deck = qs("#studioPremiumFxDeck");
+  if (!deck) return;
+  const allowed = premiumFxAllowed();
+  const status = qs("#studioPremiumFxStatus");
+  if (status) {
+    status.textContent = allowed
+      ? "Premium Jake FX are active. Toggle stereo width, vocal doubler, and air lift as exclusive booth features."
+      : "Premium Jake FX stay locked until the Studio / Pro package is verified.";
+  }
+  qsa("[data-premium-fx]").forEach((btn) => {
+    const key = btn.getAttribute("data-premium-fx");
+    btn.disabled = !allowed;
+    btn.classList.toggle("active", !!premiumFxState[key]);
+    btn.style.opacity = allowed ? "1" : ".5";
+  });
+}
+
+function setupPremiumFxDeck() {
+  const boardCard = qs(".board-stage-card");
+  if (!boardCard || qs("#studioPremiumFxDeck")) return;
+  const deck = document.createElement("div");
+  deck.id = "studioPremiumFxDeck";
+  deck.className = "glass";
+  deck.style.cssText = "margin:12px 0;padding:14px;border-radius:18px;display:grid;gap:10px;background:rgba(14,18,34,.78);border:1px solid rgba(173,132,247,.24);";
+  deck.innerHTML = `
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+      <div>
+        <div class="badge">PREMIUM JAKE FX</div>
+        <strong>Three exclusive Studio features</strong>
+      </div>
+      <span class="status" id="studioPremiumFxStatus">Premium Jake FX are loading.</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="clip-chip" data-premium-fx="stereoWidth">Stereo Width</button>
+      <button type="button" class="clip-chip" data-premium-fx="vocalDoubler">Vocal Doubler</button>
+      <button type="button" class="clip-chip" data-premium-fx="airLift">Air Lift</button>
+    </div>
+  `;
+  const statusEl = qs("#fxBoardStatus");
+  if (statusEl?.parentElement) {
+    statusEl.parentElement.insertBefore(deck, statusEl.nextSibling);
+  } else {
+    boardCard.appendChild(deck);
+  }
+  qsa("[data-premium-fx]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!premiumFxAllowed()) {
+        setStatus("#fxStatus", "Premium Jake FX need the Studio / Pro package first.");
+        return;
+      }
+      const key = btn.getAttribute("data-premium-fx");
+      premiumFxState[key] = !premiumFxState[key];
+      renderPremiumFxDeck();
+      const label = key === "stereoWidth" ? "Stereo Width" : key === "vocalDoubler" ? "Vocal Doubler" : "Air Lift";
+      setStatus("#fxStatus", `${label} ${premiumFxState[key] ? "enabled" : "disabled"} in the Premium Jake booth.`);
+    });
+  });
+  renderPremiumFxDeck();
+}
+
 async function runEchoPlacement() {
   const text = (qs("#echoTranscript")?.value || "").trim();
   const results = qs("#echoResults");
@@ -1489,6 +1616,7 @@ function updateLiveWaveFromMic() {
     placement.waveData = generateWaveData("Live", 56, "live", 1);
   }
   placement.durationSec = Math.min(45, (placement.durationSec || 2) + 0.25);
+  renderStudioWaveMonitor(placement.waveData, "Live microphone wave", "SupportRD is drawing the waveform while the person is speaking.");
   renderPlacements();
 }
 
@@ -1542,6 +1670,7 @@ async function startRecording() {
       currentAudioContext = null;
       currentAnalyser = null;
       currentWaveProbe = null;
+      renderStudioWaveMonitor(placement?.waveData || [], placement?.audioName || "Recorded waveform", "Live recording is now saved into the motherboard with its captured wave shape.");
       renderPlacementAudioOptions();
       renderPlacements();
       window.__studioRadio?.loadPlacement?.(placement?.id || 0);
@@ -1623,6 +1752,7 @@ function setupTransport() {
     placement.audioName = audio.name;
     placement.durationSec = audio.durationSec || placement.durationSec || 6;
     placement.waveData = audio.waveData || generateWaveData(audio.name, 48, placement.kind === "instrument" ? "instrument" : "steady", 1);
+    renderStudioWaveMonitor(placement.waveData, audio.name, "Imported audio transformed into a visible motherboard waveform.");
     renderPlacements();
     window.__studioRadio?.refresh?.();
     setStatus("#placementStatus", `Placed ${audio.name} on ${placement.trackId}.`);
@@ -1659,6 +1789,7 @@ function setupTransport() {
         waveData: entry.waveData || generateWaveData(entry.name, 64, "steady", 1)
       });
       placement.audioId = entry.id;
+      renderStudioWaveMonitor(entry.waveData, entry.name, "Uploaded audio generated a new visible waveform preview.");
     }
     renderPlacementAudioOptions();
     renderPlacements();
@@ -2137,6 +2268,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupTransport();
   setupFx();
   setupFxBoard();
+  setupPremiumFxDeck();
   setupBots();
   setupRecordingMath();
   setupGigPanel();
@@ -2145,6 +2277,8 @@ window.addEventListener("DOMContentLoaded", () => {
   setupStickyWorkbench();
   renderPlacementAudioOptions();
   renderPlacements();
+  ensureStudioWaveMonitor();
+  renderStudioWaveMonitor(generateWaveData("Standby", 64, "steady", 0.92), "Wave monitor standing by", "Record live or import .mp3 / .m4a to generate a real wave strip.");
   renderProfileStats();
   renderUndoHistory();
   updateDbQuickLabel();
