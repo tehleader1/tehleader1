@@ -880,6 +880,27 @@ html[data-sr-active-map] #srDeployReadinessPanel,
 html[data-sr-active-map] #srRankBoard{
   transition:opacity .18s ease, transform .18s ease, box-shadow .18s ease;
 }
+
+.github-deploy-test-banner{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:2147483647;
+  width:100%;
+  box-sizing:border-box;
+  padding:14px 18px;
+  text-align:center;
+  background:linear-gradient(90deg,#0f172a,#2563eb,#0f172a);
+  color:#fff;
+  font-family:Outfit, Arial, sans-serif;
+  font-size:clamp(1rem,2vw,1.25rem);
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  box-shadow:0 8px 24px rgba(15,23,42,.24);
+}
+
 @media (max-width: 820px){
   .sr-deploy-readiness-panel{
     position:relative;
@@ -894,8 +915,10 @@ html[data-sr-active-map] #srRankBoard{
 }
 
 </style>
+<script id="supportrd-deploy-test-banner-script" src="/deploy-test-banner.js?v=20260510" defer></script>
 </head>
 <body class="theme-aurora system-theme natural-pro resort-brochure competition-world">
+<div class="github-deploy-test-banner" role="status" aria-label="GitHub deployment test">Testing GitHub update is live</div>
 <section id="srDeployReadinessPanel" class="sr-deploy-readiness-panel" aria-live="polite">
   <div class="sr-deploy-ready__header">
     <span>Deploy Readiness</span>

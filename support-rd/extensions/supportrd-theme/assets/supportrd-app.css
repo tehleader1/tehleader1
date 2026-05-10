@@ -1,3 +1,22 @@
+
+.supportrd-deploy-test-banner{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:2147483647;
+  padding:14px 18px;
+  text-align:center;
+  background:linear-gradient(90deg,#0f172a,#2563eb,#0f172a);
+  color:#fff;
+  font-family:Arial, sans-serif;
+  font-size:clamp(1rem,2vw,1.25rem);
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  box-shadow:0 8px 24px rgba(15,23,42,.24);
+}
+
 #supportrd-modal[hidden] {
   display: none;
 }
