@@ -49,6 +49,7 @@ SHOPIFY_TOKEN = os.environ.get("SHOPIFY_STOREFRONT_TOKEN", "")
 SHOPIFY_ADMIN_TOKEN = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
 SHOPIFY_BLOG_ID = os.environ.get("SHOPIFY_BLOG_ID", "")
 SHOPIFY_WEBHOOK_SECRET = os.environ.get("SHOPIFY_WEBHOOK_SECRET", "")
+APP_PUBLIC_URL = os.environ.get("APP_PUBLIC_URL", "https://supportrd.com").rstrip("/")
 SHOPIFY_PLAN_VARIANT_MAP_JSON = os.environ.get("SHOPIFY_PLAN_VARIANT_MAP_JSON", "")
 SHOPIFY_PLAN_SKU_MAP_JSON = os.environ.get("SHOPIFY_PLAN_SKU_MAP_JSON", "")
 STUDIO_STORAGE_DIR = os.environ.get("STUDIO_STORAGE_DIR", os.path.join(app.root_path, "studio_data"))
@@ -7471,58 +7472,152 @@ except:
 # STATIC FILES
 #################################################
 
+DEPLOY_TEST_BANNER_MESSAGE = "Testing GitHub update is live"
+DEPLOY_TEST_BANNER_CLASS = "github-deploy-test-banner"
+DEPLOY_TEST_BANNER_STYLE = f"""
+<style id="github-deploy-test-banner-style">
+.{DEPLOY_TEST_BANNER_CLASS}{{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:2147483647;
+  width:100%;
+  box-sizing:border-box;
+  padding:14px 18px;
+  text-align:center;
+  background:linear-gradient(90deg,#0f172a,#2563eb,#0f172a);
+  color:#fff;
+  font-family:Outfit, Arial, sans-serif;
+  font-size:clamp(1rem,2vw,1.25rem);
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  box-shadow:0 8px 24px rgba(15,23,42,.24);
+}}
+</style>
+"""
+DEPLOY_TEST_BANNER_HTML = f'<div class="{DEPLOY_TEST_BANNER_CLASS}" role="status" aria-label="GitHub deployment test">{DEPLOY_TEST_BANNER_MESSAGE}</div>'
+DEPLOY_TEST_BANNER_SCRIPT_MARKER = "supportrd-deploy-test-banner-script"
+DEPLOY_TEST_BANNER_SCRIPT_PATH = "/deploy-test-banner.js"
+
+def _deploy_test_banner_script_url() -> str:
+    return f"{APP_PUBLIC_URL}{DEPLOY_TEST_BANNER_SCRIPT_PATH}?v=20260510"
+
+def _deploy_test_banner_script_tag() -> str:
+    return f'<script id="{DEPLOY_TEST_BANNER_SCRIPT_MARKER}" src="{_deploy_test_banner_script_url()}" defer></script>'
+
+def _deploy_test_banner_script() -> str:
+    return f"""
+(function() {{
+  var className = {json.dumps(DEPLOY_TEST_BANNER_CLASS)};
+  var message = {json.dumps(DEPLOY_TEST_BANNER_MESSAGE)};
+  function mount() {{
+    if (!document.body) return;
+    var existing = document.querySelector('.' + className);
+    if (existing) {{
+      existing.textContent = message;
+      return;
+    }}
+    var style = document.getElementById('github-deploy-test-banner-style');
+    if (!style) {{
+      style = document.createElement('style');
+      style.id = 'github-deploy-test-banner-style';
+      style.textContent = '.{DEPLOY_TEST_BANNER_CLASS}{{position:fixed;top:0;left:0;right:0;z-index:2147483647;width:100%;box-sizing:border-box;padding:14px 18px;text-align:center;background:linear-gradient(90deg,#0f172a,#2563eb,#0f172a);color:#fff;font-family:Arial,sans-serif;font-size:clamp(1rem,2vw,1.25rem);font-weight:800;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 8px 24px rgba(15,23,42,.24);}}';
+      document.head.appendChild(style);
+    }}
+    var banner = document.createElement('div');
+    banner.className = className;
+    banner.setAttribute('role', 'status');
+    banner.setAttribute('aria-label', 'GitHub deployment test');
+    banner.textContent = message;
+    document.body.prepend(banner);
+  }}
+  if (document.readyState === 'loading') {{
+    document.addEventListener('DOMContentLoaded', mount, {{ once: true }});
+  }} else {{
+    mount();
+  }}
+}})();
+""".strip()
+
+def _inject_deploy_test_banner(html: str) -> str:
+    has_banner = DEPLOY_TEST_BANNER_CLASS in html
+    has_script = DEPLOY_TEST_BANNER_SCRIPT_MARKER in html or DEPLOY_TEST_BANNER_SCRIPT_PATH in html
+    if "</head>" in html and not has_banner:
+        html = html.replace("</head>", f"{DEPLOY_TEST_BANNER_STYLE}\n</head>", 1)
+    if "</head>" in html and not has_script:
+        html = html.replace("</head>", f"{_deploy_test_banner_script_tag()}\n</head>", 1)
+    if not has_banner and "<body" in html:
+        return re.sub(r"(<body[^>]*>)", r"\1\n" + DEPLOY_TEST_BANNER_HTML, html, count=1, flags=re.I)
+    if not has_banner:
+        return DEPLOY_TEST_BANNER_HTML + html
+    return html
+
+def _static_html_response(filename: str) -> Response:
+    response = Response(_inject_deploy_test_banner(_read_static_html(filename)), mimetype="text/html")
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return response
+
+@app.route(DEPLOY_TEST_BANNER_SCRIPT_PATH)
+def deploy_test_banner_script():
+    response = Response(_deploy_test_banner_script(), mimetype="application/javascript")
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
 @app.route("/")
 def home():
-    return send_from_directory("static", "index.html")
+    return _static_html_response("index.html")
 
 @app.route("/remote")
 @app.route("/remote/<path:section>")
 def remote_shell(section=None):
-    return send_from_directory("static", "local-remote.html")
+    return _static_html_response("local-remote.html")
 
 @app.route("/<route_tag>")
 def tagged_remote_shell(route_tag):
     if str(route_tag or "").startswith("^^"):
-        return send_from_directory("static", "local-remote.html")
+        return _static_html_response("local-remote.html")
     abort(404)
 
 @app.route("/legacy")
 def legacy_home():
-    return send_from_directory("static", "local-remote.html")
+    return _static_html_response("local-remote.html")
 
 @app.route("/local-remote")
 def local_remote_shell():
-    return send_from_directory("static", "local-remote.html")
+    return _static_html_response("local-remote.html")
 
 
 @app.route("/local-diary")
 def local_diary_shell():
-    return send_from_directory("static", "local-diary.html")
+    return _static_html_response("local-diary.html")
 
 
 @app.route("/local-profile")
 def local_profile_shell():
-    return send_from_directory("static", "local-profile.html")
+    return _static_html_response("local-profile.html")
 
 
 @app.route("/local-settings")
 def local_settings_shell():
-    return send_from_directory("static", "local-settings.html")
+    return _static_html_response("local-settings.html")
 
 
 @app.route("/local-map")
 def local_map_shell():
-    return send_from_directory("static", "local-map.html")
+    return _static_html_response("local-map.html")
 
 
 @app.route("/local-faq")
 def local_faq_shell():
-    return send_from_directory("static", "local-faq.html")
+    return _static_html_response("local-faq.html")
 
 
 @app.route("/local-studio")
 def local_studio_shell():
-    return send_from_directory("static", "local-studio.html")
+    return _static_html_response("local-studio.html")
 
 
 
@@ -7564,7 +7659,7 @@ def _proxy_product_fragment(product_key: str) -> Response:
     return Response(fragment, mimetype="text/html")
 
 def _proxy_shell_html(filename: str) -> Response:
-    html = _read_static_html(filename)
+    html = _inject_deploy_test_banner(_read_static_html(filename))
 
     replacements = {
         'href="/local-remote"': f'href="{PROXY_BASE}/local-remote"',
@@ -7583,7 +7678,71 @@ def _proxy_shell_html(filename: str) -> Response:
     for old, new in replacements.items():
         html = html.replace(old, new)
 
-    return Response(html, mimetype="text/html")
+    response = Response(html, mimetype="text/html")
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return response
+
+def _shopify_admin_request(method: str, path: str, **kwargs):
+    api_store = resolve_shopify_api_domain()
+    if not api_store or not SHOPIFY_ADMIN_TOKEN:
+        return None, {"ok": False, "error": "shopify_admin_not_configured"}
+    url = f"https://{api_store}/admin/api/2024-01/{path.lstrip('/')}"
+    headers = kwargs.pop("headers", {}) or {}
+    headers.update({"X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN})
+    if "json" in kwargs:
+        headers.setdefault("Content-Type", "application/json")
+    try:
+        response = requests.request(method, url, headers=headers, timeout=20, **kwargs)
+        if response.status_code >= 400:
+            return response, {"ok": False, "error": f"shopify_error_{response.status_code}", "detail": response.text[:500]}
+        return response, None
+    except Exception as exc:
+        return None, {"ok": False, "error": "shopify_request_failed", "detail": str(exc)[:500]}
+
+def _find_shopify_main_theme_id():
+    response, error = _shopify_admin_request("GET", "themes.json")
+    if error:
+        return None, error
+    themes = (response.json() or {}).get("themes", [])
+    for theme in themes:
+        if theme.get("role") == "main":
+            return theme.get("id"), None
+    if themes:
+        return themes[0].get("id"), None
+    return None, {"ok": False, "error": "no_shopify_theme_found"}
+
+def _install_deploy_test_banner_into_shopify_theme():
+    theme_id, error = _find_shopify_main_theme_id()
+    if error:
+        return error
+    response, error = _shopify_admin_request(
+        "GET",
+        f"themes/{theme_id}/assets.json",
+        params={"asset[key]": "layout/theme.liquid"},
+    )
+    if error:
+        return error
+    asset = (response.json() or {}).get("asset", {})
+    liquid = asset.get("value") or ""
+    if DEPLOY_TEST_BANNER_SCRIPT_MARKER in liquid or DEPLOY_TEST_BANNER_SCRIPT_PATH in liquid:
+        return {"ok": True, "theme_id": theme_id, "installed": False, "message": "banner_already_installed"}
+    script_tag = _deploy_test_banner_script_tag()
+    if "</head>" in liquid:
+        updated = liquid.replace("</head>", f"  {script_tag}\n</head>", 1)
+    else:
+        updated = f"{script_tag}\n{liquid}"
+    _, error = _shopify_admin_request(
+        "PUT",
+        f"themes/{theme_id}/assets.json",
+        json={"asset": {"key": "layout/theme.liquid", "value": updated}},
+    )
+    if error:
+        return error
+    return {"ok": True, "theme_id": theme_id, "installed": True, "script_url": _deploy_test_banner_script_url()}
+
+@app.route("/api/admin/shopify/install-deploy-test-banner", methods=["GET", "POST"])
+def admin_install_shopify_deploy_test_banner():
+    return jsonify(_install_deploy_test_banner_into_shopify_theme())
 
 @app.route("/proxy")
 @app.route("/proxy/")

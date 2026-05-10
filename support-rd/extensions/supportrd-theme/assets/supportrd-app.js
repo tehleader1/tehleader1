@@ -20,6 +20,21 @@
     }
   };
 
+
+  function mountDeployTestBanner() {
+    if (document.querySelector(".supportrd-deploy-test-banner")) return;
+    if (!document.body) {
+      document.addEventListener("DOMContentLoaded", mountDeployTestBanner, { once: true });
+      return;
+    }
+    const banner = document.createElement("div");
+    banner.className = "supportrd-deploy-test-banner";
+    banner.setAttribute("role", "status");
+    banner.setAttribute("aria-label", "GitHub deployment test");
+    banner.textContent = "Testing GitHub update is live";
+    document.body.prepend(banner);
+  }
+
   async function fetchHtml(path) {
     const res = await fetch(`${root}${path}`, { credentials: "same-origin" });
     if (!res.ok) {
@@ -117,5 +132,6 @@
   if (shell && !isProductPage) {
     loadIntoShell("");
   }
+  mountDeployTestBanner();
   mountProductBridge();
 })();
